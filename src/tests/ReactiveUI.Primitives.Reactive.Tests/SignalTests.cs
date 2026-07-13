@@ -32,7 +32,8 @@ public class SignalTests
     {
         var ran = false;
         object? emitted = null;
-        using var sub = Signal.Start((Action)(() => ran = true), ImmediateScheduler.Instance).Subscribe(value => emitted = value);
+        using var sub = Signal.Start((Action)(() => ran = true), ImmediateScheduler.Instance)
+            .Subscribe(value => emitted = value);
 
         await Assert.That(ran).IsTrue();
         await Assert.That(emitted).IsTypeOf<Unit>();

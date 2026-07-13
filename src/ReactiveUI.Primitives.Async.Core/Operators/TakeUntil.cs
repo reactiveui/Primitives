@@ -64,7 +64,9 @@ public static partial class SignalAsyncExtensions
         /// <param name="other">The observable sequence whose first emission or completion terminates the result.</param>
         /// <param name="cancellationToken">A cancellation token that also terminates the result when cancelled.</param>
         /// <returns>An observable sequence that completes on the first of the two signals.</returns>
-        public IObservableAsync<T> TakeUntil<TOther>(IObservableAsync<TOther> other, CancellationToken cancellationToken)
+        public IObservableAsync<T> TakeUntil<TOther>(
+            IObservableAsync<TOther> other,
+            CancellationToken cancellationToken)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(other);
@@ -238,7 +240,9 @@ public static partial class SignalAsyncExtensions
             ArgumentExceptionHelper.ThrowIfNull(asyncPredicate);
 
             return cancellationToken.CanBeCanceled
-                ? new CancellationStopSignal<T>(new AsyncPredicateStopSignal<T>(source, asyncPredicate), cancellationToken)
+                ? new CancellationStopSignal<T>(
+                    new AsyncPredicateStopSignal<T>(source, asyncPredicate),
+                    cancellationToken)
                 : new AsyncPredicateStopSignal<T>(source, asyncPredicate);
         }
 
@@ -307,71 +311,6 @@ public static partial class SignalAsyncExtensions
         }
     }
 
-    /// <summary>Async observable that emits items from the source until the specified predicate returns true.</summary>
-    /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
-    /// <param name="source">The source observable sequence.</param>
-    /// <param name="predicate">The predicate that signals when to stop emitting items.</param>
-    internal sealed class PredicateStopSignal<T>(IObservableAsync<T> source, Func<T, bool> predicate)
-        : IObservableAsync<T>
-    {
-        /// <summary>The predicate that signals when to stop emitting items.</summary>
-        private readonly Func<T, bool> _predicate = predicate;
-
-        /// <summary>The source observable sequence.</summary>
-        private readonly IObservableAsync<T> _source = source;
-
-        /// <inheritdoc/>
-        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
-            IObserverAsync<T> observer,
-            CancellationToken cancellationToken)
-        {
-            PredicateStopCoordinator subscription = new(this, observer);
-            return SubscriptionHelper.SubscribeAndDisposeOnFailureAsync(
-                subscription,
-                () => subscription.SubscribeSourcesAsync(cancellationToken));
-        }
-
-        /// <summary>Observer that forwards items from the source until the predicate returns true.</summary>
-        /// <param name="parent">The parent observable that owns this subscription.</param>
-        /// <param name="observer">The downstream observer to forward items to.</param>
-        internal sealed class PredicateStopCoordinator(PredicateStopSignal<T> parent, IObserverAsync<T> observer)
-            : WitnessAsync<T>
-        {
-            /// <summary>The inner subscription handle.</summary>
-            private IAsyncDisposable? _subscription;
-
-            /// <summary>Subscribes to the source observable.</summary>
-            /// <param name="cancellationToken">A token to cancel the subscription.</param>
-            /// <returns>A task representing the asynchronous subscribe operation.</returns>
-            public async ValueTask SubscribeSourcesAsync(CancellationToken cancellationToken) =>
-                _subscription = await parent._source.SubscribeAsync(this, cancellationToken).ConfigureAwait(false);
-
-            /// <inheritdoc/>
-            protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
-            {
-                return parent._predicate(value) ? OnCompletedAsyncCore(Result.Success) : observer.OnNextAsync(value, cancellationToken);
-            }
-
-            /// <inheritdoc/>
-            protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-                observer.OnErrorResumeAsync(error, cancellationToken);
-
-            /// <inheritdoc/>
-            protected override ValueTask OnCompletedAsyncCore(Result result) => observer.OnCompletedAsync(result);
-
-            /// <inheritdoc/>
-            protected override async ValueTask DisposeAsyncCore()
-            {
-                if (_subscription is not null)
-                {
-                    await _subscription.DisposeAsync().ConfigureAwait(false);
-                }
-
-                await base.DisposeAsyncCore().ConfigureAwait(false);
-            }
-        }
-    }
-
     /// <summary>Async observable that emits items from the source until the specified cancellation token is canceled.</summary>
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
     /// <param name="source">The source observable sequence.</param>
@@ -431,7 +370,8 @@ public static partial class SignalAsyncExtensions
             public async ValueTask SubscribeSourcesAsync(CancellationToken cancellationToken)
             {
                 _tokenRegistration = _parent._cancellationToken.Register(CompleteFromCancellation);
-                _subscription = await _parent._source.SubscribeAsync(new TakeUntilSourceWitness<T>(_lifecycle), cancellationToken).ConfigureAwait(false);
+                _subscription = await _parent._source
+                    .SubscribeAsync(new TakeUntilSourceWitness<T>(_lifecycle), cancellationToken).ConfigureAwait(false);
             }
 
             /// <summary>Asynchronously releases resources used by this subscription.</summary>
@@ -512,6 +452,15 @@ public static partial class SignalAsyncExtensions
             /// <summary>The inner subscription handle.</summary>
             private IAsyncDisposable? _subscription;
 
+            /// <summary>The handle the stop delegate returned, disposed once the signal has been dealt with.</summary>
+            private IAsyncDisposable? _stopRegistration;
+
+            /// <summary>Set once the stop signal has fired, so a second notification is ignored.</summary>
+            private int _stopSignalled;
+
+            /// <summary>Set once <see cref="_stopRegistration"/> has been disposed, so it is disposed once.</summary>
+            private int _stopRegistrationDisposed;
+
             /// <summary>Initializes a new instance of the <see cref="DelegateStopCoordinator"/> class.</summary>
             /// <param name="parent">The parent observable that owns this subscription.</param>
             /// <param name="observer">The downstream observer to forward items to.</param>
@@ -527,7 +476,8 @@ public static partial class SignalAsyncExtensions
             public async ValueTask SubscribeSourcesAsync(CancellationToken cancellationToken)
             {
                 AwaitStopThenComplete();
-                _subscription = await _parent._source.SubscribeAsync(new TakeUntilSourceWitness<T>(_lifecycle), cancellationToken).ConfigureAwait(false);
+                _subscription = await _parent._source
+                    .SubscribeAsync(new TakeUntilSourceWitness<T>(_lifecycle), cancellationToken).ConfigureAwait(false);
             }
 
             /// <summary>Asynchronously releases resources used by this subscription.</summary>
@@ -539,6 +489,7 @@ public static partial class SignalAsyncExtensions
                     await _subscription.DisposeAsync().ConfigureAwait(false);
                 }
 
+                await DisposeStopRegistrationAsync().ConfigureAwait(false);
                 await _lifecycle.DisposeAsync().ConfigureAwait(false);
             }
 
@@ -547,62 +498,84 @@ public static partial class SignalAsyncExtensions
             internal void LinkExternalCancellation(CancellationToken external) =>
                 _lifecycle.LinkExternalCancellation(external);
 
-            /// <summary>Waits for the stop signal to fire, then forwards completion or error to the downstream observer.</summary>
-            internal void AwaitStopThenComplete() => FireAndForgetHelper.Run(async () =>
+            /// <summary>Hands the stop delegate the callback that ends the sequence.</summary>
+            /// <remarks>
+            /// The completion runs on whichever thread calls the callback, not on a waiter parked behind it.
+            /// The caller of a synchronous <c>notify(...)</c> has every right to expect the sequence to have
+            /// ended by the time it returns, and where the downstream observer completes synchronously it now
+            /// does. The previous shape signalled a <c>TaskCompletionSource</c> whose continuations were
+            /// forced asynchronous, so the completion was merely queued and the caller could observe the
+            /// sequence still running.
+            /// </remarks>
+            internal void AwaitStopThenComplete()
             {
-                TaskCompletionSource<object?> tcs = new();
+                Volatile.Write(ref _stopRegistration, _parent._stopSignal(Stop));
 
-                void Stop(Result result)
+                // A delegate is free to notify before it returns, in which case Stop ran without a
+                // registration to release. Release it here so the stop source is never left attached.
+                if (Volatile.Read(ref _stopSignalled) != 1)
                 {
-                    if (result.IsFailure)
-                    {
-                        tcs.SetException(result.Exception);
-                    }
-                    else
-                    {
-                        tcs.SetResult(null);
-                    }
+                    return;
                 }
 
-                var disposable = _parent._stopSignal(Stop);
+                FireAndForgetHelper.Run(DisposeStopRegistrationAsync);
+            }
+
+            /// <summary>Ends the sequence the first time the stop delegate notifies.</summary>
+            /// <param name="result">The result the stop delegate reported.</param>
+            private void Stop(Result result)
+            {
+                if (Interlocked.Exchange(ref _stopSignalled, 1) != 0)
+                {
+                    return;
+                }
+
+                FireAndForgetHelper.Run(() => CompleteAsync(result));
+            }
+
+            /// <summary>Releases the stop registration, then forwards the outcome to the downstream observer.</summary>
+            /// <param name="result">The result the stop delegate reported.</param>
+            /// <returns>A task representing the asynchronous completion.</returns>
+            private async ValueTask CompleteAsync(Result result)
+            {
+                await DisposeStopRegistrationAsync().ConfigureAwait(false);
+
+                if (!result.IsFailure)
+                {
+                    await _lifecycle.RelayCompletionAsync(Result.Success).ConfigureAwait(false);
+                    return;
+                }
+
+                var error = result.Exception;
+                if (_parent._options.SourceFailsWhenOtherFails)
+                {
+                    await _lifecycle.RelayCompletionAsync(Result.Failure(error)).ConfigureAwait(false);
+                    return;
+                }
+
+                await _lifecycle.RelayErrorAsync(error).ConfigureAwait(false);
+            }
+
+            /// <summary>Disposes the handle the stop delegate returned, exactly once.</summary>
+            /// <returns>A task representing the asynchronous dispose operation.</returns>
+            private async ValueTask DisposeStopRegistrationAsync()
+            {
+                if (Volatile.Read(ref _stopRegistration) is not { } registration
+                    || Interlocked.Exchange(ref _stopRegistrationDisposed, 1) != 0)
+                {
+                    return;
+                }
 
                 try
                 {
-                    await tcs.Task.WaitAsync(System.Threading.Timeout.InfiniteTimeSpan, _lifecycle.DisposeToken).ConfigureAwait(false);
-                    try
-                    {
-                        await disposable.DisposeAsync().ConfigureAwait(false);
-                    }
-                    catch (Exception e)
-                    {
-                        // Best-effort: a secondary dispose failure during cleanup goes to the global handler.
-                        UnhandledExceptionHandler.ReportUnhandledException(e);
-                    }
-
-                    await _lifecycle.RelayCompletionAsync(Result.Success).ConfigureAwait(false);
+                    await registration.DisposeAsync().ConfigureAwait(false);
                 }
-                catch (Exception e)
+                catch (Exception disposeError)
                 {
-                    try
-                    {
-                        await disposable.DisposeAsync().ConfigureAwait(false);
-                    }
-                    catch (Exception disposeError)
-                    {
-                        // Best-effort: a secondary dispose failure during error handling goes to the global handler.
-                        UnhandledExceptionHandler.ReportUnhandledException(disposeError);
-                    }
-
-                    if (_parent._options.SourceFailsWhenOtherFails)
-                    {
-                        await _lifecycle.RelayCompletionAsync(Result.Failure(e)).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        await _lifecycle.RelayErrorAsync(e).ConfigureAwait(false);
-                    }
+                    // Best-effort: a secondary dispose failure while ending the sequence goes to the global handler.
+                    UnhandledExceptionHandler.ReportUnhandledException(disposeError);
                 }
-            });
+            }
         }
     }
 
@@ -663,7 +636,8 @@ public static partial class SignalAsyncExtensions
             {
                 var task = _parent._task;
                 AwaitStopThenComplete(task);
-                _subscription = await _parent._source.SubscribeAsync(new TakeUntilSourceWitness<T>(_lifecycle), cancellationToken).ConfigureAwait(false);
+                _subscription = await _parent._source
+                    .SubscribeAsync(new TakeUntilSourceWitness<T>(_lifecycle), cancellationToken).ConfigureAwait(false);
             }
 
             /// <summary>Asynchronously releases resources used by this subscription.</summary>
@@ -689,7 +663,8 @@ public static partial class SignalAsyncExtensions
             {
                 try
                 {
-                    await task.WaitAsync(System.Threading.Timeout.InfiniteTimeSpan, _lifecycle.DisposeToken).ConfigureAwait(false);
+                    await task.WaitAsync(System.Threading.Timeout.InfiniteTimeSpan, _lifecycle.DisposeToken)
+                        .ConfigureAwait(false);
                     await _lifecycle.RelayCompletionAsync(Result.Success).ConfigureAwait(false);
                 }
                 catch (Exception e)
@@ -771,11 +746,13 @@ public static partial class SignalAsyncExtensions
             /// <returns>This subscription as an async disposable.</returns>
             public async ValueTask<IAsyncDisposable> SubscribeSourcesAsync(CancellationToken cancellationToken)
             {
-                var otherSubscription = await _parent._other.SubscribeAsync(new StopSignalWitness(this), cancellationToken).ConfigureAwait(false);
+                var otherSubscription = await _parent._other
+                    .SubscribeAsync(new StopSignalWitness(this), cancellationToken).ConfigureAwait(false);
                 await _otherDisposable.SetDisposableAsync(otherSubscription).ConfigureAwait(false);
 
                 var sourceSubscription =
-                    await _parent._source.SubscribeAsync(new TakeUntilSourceWitness<T>(_lifecycle), cancellationToken).ConfigureAwait(false);
+                    await _parent._source.SubscribeAsync(new TakeUntilSourceWitness<T>(_lifecycle), cancellationToken)
+                        .ConfigureAwait(false);
                 await _disposable.SetDisposableAsync(sourceSubscription).ConfigureAwait(false);
 
                 return this;
@@ -809,7 +786,9 @@ public static partial class SignalAsyncExtensions
                 }
 
                 /// <inheritdoc/>
-                protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken)
+                protected override ValueTask OnErrorResumeAsyncCore(
+                    Exception error,
+                    CancellationToken cancellationToken)
                 {
                     _ = cancellationToken;
                     return parent._lifecycle.RelayErrorAsync(error);
@@ -823,79 +802,6 @@ public static partial class SignalAsyncExtensions
                             parent._parent._options.SourceFailsWhenOtherFails
                                 ? result
                                 : Result.Success);
-            }
-        }
-    }
-
-    /// <summary>Emits source items until an async predicate returns true.</summary>
-    /// <typeparam name="T">The element type.</typeparam>
-    /// <param name="source">The source sequence.</param>
-    /// <param name="asyncPredicate">Predicate that signals when to stop.</param>
-    internal sealed class AsyncPredicateStopSignal<T>(
-        IObservableAsync<T> source,
-        Func<T, CancellationToken, ValueTask<bool>> asyncPredicate) : IObservableAsync<T>
-    {
-        /// <summary>The async predicate that signals when to stop emitting items.</summary>
-        private readonly Func<T, CancellationToken, ValueTask<bool>> _asyncPredicate = asyncPredicate;
-
-        /// <summary>The source observable sequence.</summary>
-        private readonly IObservableAsync<T> _source = source;
-
-        /// <inheritdoc/>
-        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
-            IObserverAsync<T> observer,
-            CancellationToken cancellationToken)
-        {
-            AsyncPredicateStopCoordinator subscription = new(this, observer);
-            return SubscriptionHelper.SubscribeAndDisposeOnFailureAsync(
-                subscription,
-                () => subscription.SubscribeSourcesAsync(cancellationToken));
-        }
-
-        /// <summary>Forwards source items until the async predicate returns true.</summary>
-        /// <param name="parent">The owning signal.</param>
-        /// <param name="observer">The downstream observer.</param>
-        internal sealed class AsyncPredicateStopCoordinator(
-            AsyncPredicateStopSignal<T> parent,
-            IObserverAsync<T> observer) : WitnessAsync<T>
-        {
-            /// <summary>The inner subscription handle.</summary>
-            private IAsyncDisposable? _subscription;
-
-            /// <summary>Subscribes to the source observable.</summary>
-            /// <param name="cancellationToken">A token to cancel the subscription.</param>
-            /// <returns>A task representing the asynchronous subscribe operation.</returns>
-            public async ValueTask SubscribeSourcesAsync(CancellationToken cancellationToken) =>
-                _subscription = await parent._source.SubscribeAsync(this, cancellationToken).ConfigureAwait(false);
-
-            /// <inheritdoc/>
-            protected override async ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
-            {
-                if (await parent._asyncPredicate(value, cancellationToken).ConfigureAwait(false))
-                {
-                    await OnCompletedAsyncCore(Result.Success).ConfigureAwait(false);
-                    return;
-                }
-
-                await observer.OnNextAsync(value, cancellationToken).ConfigureAwait(false);
-            }
-
-            /// <inheritdoc/>
-            protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-                observer.OnErrorResumeAsync(error, cancellationToken);
-
-            /// <inheritdoc/>
-            protected override ValueTask OnCompletedAsyncCore(Result result) => observer.OnCompletedAsync(result);
-
-            /// <inheritdoc/>
-            protected override async ValueTask DisposeAsyncCore()
-            {
-                if (_subscription is not null)
-                {
-                    await _subscription.DisposeAsync().ConfigureAwait(false);
-                }
-
-                await base.DisposeAsyncCore().ConfigureAwait(false);
             }
         }
     }

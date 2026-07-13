@@ -40,12 +40,7 @@ public static partial class SignalAsyncExtensions
             Func<T, CancellationToken, ValueTask> onNextAsync,
             CancellationToken cancellationToken)
         {
-            if (onNextAsync is null)
-            {
-                throw new ArgumentNullException(
-                    nameof(onNextAsync),
-                    "Cannot invoke a null action for each element in the sequence.");
-            }
+            ArgumentExceptionHelper.ThrowIfNull(onNextAsync);
 
             cancellationToken.ThrowIfCancellationRequested();
             ForEachAsyncTaskWitness<T> observer = new(onNextAsync, cancellationToken);

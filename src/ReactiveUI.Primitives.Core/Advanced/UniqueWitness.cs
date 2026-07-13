@@ -6,13 +6,15 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Sink that suppresses adjacent duplicate values.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-public sealed class UniqueWitness<T> : IObserver<T>, IDisposable
+/// <param name="observer">The downstream observer.</param>
+/// <param name="comparer">The comparer used to compare adjacent values.</param>
+public sealed class UniqueWitness<T>(IObserver<T> observer, IEqualityComparer<T> comparer) : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>
-    private readonly IObserver<T> _observer;
+    private readonly IObserver<T> _observer = observer;
 
     /// <summary>The comparer used to compare adjacent values.</summary>
-    private readonly IEqualityComparer<T> _comparer;
+    private readonly IEqualityComparer<T> _comparer = comparer;
 
     /// <summary>A value indicating whether a previous value has been observed.</summary>
     private bool _hasLast;
@@ -22,15 +24,6 @@ public sealed class UniqueWitness<T> : IObserver<T>, IDisposable
 
     /// <summary>The upstream subscription.</summary>
     private IDisposable? _subscription;
-
-    /// <summary>Initializes a new instance of the <see cref="UniqueWitness{T}"/> class.</summary>
-    /// <param name="observer">The downstream observer.</param>
-    /// <param name="comparer">The comparer used to compare adjacent values.</param>
-    public UniqueWitness(IObserver<T> observer, IEqualityComparer<T> comparer)
-    {
-        _observer = observer;
-        _comparer = comparer;
-    }
 
     /// <inheritdoc/>
     public void OnNext(T value)

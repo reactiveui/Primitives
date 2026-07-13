@@ -56,7 +56,9 @@ public sealed class AfterSubscription : IDisposable
     /// <summary>Emits one tick and reschedules when this is a periodic timer.</summary>
     private void Tick()
     {
-        Observer.OnNext(Current++);
+        var tick = Current;
+        Current++;
+        Observer.OnNext(tick);
         if (Slot.IsDisposed)
         {
             return;

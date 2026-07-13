@@ -45,7 +45,7 @@ public class StateSignalTests
     public async Task ReadOnlyStateProjectionForwardsSelectorErrorToLateSubscribers()
     {
         StateSignal<int> source = new(First);
-        using var projection = source.ToReadOnlyState(value =>
+        using var projection = source.ToReadOnlyState(static value =>
             value == Second ? throw new InvalidOperationException("selector") : value);
         Recorder<int> projected = new();
         _ = projection.Subscribe(projected);
@@ -68,10 +68,10 @@ public class StateSignalTests
         Signal<SearchUpdate?> source = new();
         using var state = source.KeepNotNull().ToReadOnlyState(
             new(string.Empty, 0, false),
-            update => new SearchState(update.Query, update.Count, update.OptionalText is not null));
+            static update => new SearchState(update.Query, update.Count, update.OptionalText is not null));
         List<SearchState> firstValues = [];
         var completions = 0;
-        using var first = state.Subscribe(firstValues.Add, _ => { }, () => completions++);
+        using var first = state.Subscribe(firstValues.Add, static _ => { }, () => completions++);
         source.OnNext(null);
         source.OnNext(new("rx", FirstCount, null));
         source.OnNext(new(SearchQuery, SecondCount, "cached"));
@@ -99,7 +99,7 @@ public class StateSignalTests
         List<int> values = [];
         List<string> readonlyValues = [];
         _ = state.Changed.Subscribe(values.Add);
-        using var readOnly = state.ToReadOnlyState(value => $"v:{value}");
+        using var readOnly = state.ToReadOnlyState(static value => $"v:{value}");
         _ = readOnly.Changed.Subscribe(readonlyValues.Add);
         state.Value = UpdatedStateValue;
         state.Refresh();

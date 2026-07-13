@@ -31,10 +31,12 @@ internal static class GroupedAsyncSignalHelper
 
         var subscription = await state.SignalValues.SubscribeAsync(wrap, cancellationToken).ConfigureAwait(false);
         await state.Disposables.AddAsync(subscription).ConfigureAwait(false);
-        return DisposableAsync.Create(async () =>
-        {
-            await state.Disposables.Remove(subscription).ConfigureAwait(false);
-            await subscription.DisposeAsync().ConfigureAwait(false);
-        });
+        return DisposableAsync.Create(
+            (state, subscription),
+            static async s =>
+            {
+                await s.state.Disposables.Remove(s.subscription).ConfigureAwait(false);
+                await s.subscription.DisposeAsync().ConfigureAwait(false);
+            });
     }
 }

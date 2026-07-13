@@ -16,6 +16,9 @@ public sealed class WasmSequencerTests
     /// <summary>Longest a test waits for scheduled work before failing.</summary>
     private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(5);
 
+    /// <summary>How far in the future delayed work is scheduled.</summary>
+    private static readonly TimeSpan ScheduleDelay = TimeSpan.FromMilliseconds(50);
+
     /// <summary>Verifies the shared instance is a singleton.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
@@ -27,8 +30,8 @@ public sealed class WasmSequencerTests
     [Test]
     public async Task ScheduleRejectsNullItem()
     {
-        await Assert.That(() => WasmSequencer.Default.Schedule(null!)).ThrowsExactly<ArgumentNullException>();
-        await Assert.That(() => WasmSequencer.Default.Schedule(null!, 0L)).ThrowsExactly<ArgumentNullException>();
+        await Assert.That(static () => WasmSequencer.Default.Schedule(null!)).ThrowsExactly<ArgumentNullException>();
+        await Assert.That(static () => WasmSequencer.Default.Schedule(null!, 0L)).ThrowsExactly<ArgumentNullException>();
     }
 
     /// <summary>Verifies the clock properties are sane.</summary>
@@ -89,9 +92,8 @@ public sealed class WasmSequencerTests
     {
         var sequencer = WasmSequencer.Default;
         TaskCompletionSource<long> executed = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        var delay = TimeSpan.FromMilliseconds(50);
         var start = sequencer.Timestamp;
-        var due = Sequencer.AddTimestamp(start, delay);
+        var due = Sequencer.AddTimestamp(start, ScheduleDelay);
 
         sequencer.Schedule(new DelegateWorkItem(() => executed.TrySetResult(sequencer.Timestamp)), due);
 
@@ -133,7 +135,7 @@ public sealed class WasmSequencerTests
     [Test]
     public async Task DisposeReleasesDrainTimerAndIsIdempotent()
     {
-        var sequencer = (WasmSequencer)Activator.CreateInstance(typeof(WasmSequencer), nonPublic: true)!;
+        var sequencer = (WasmSequencer)Activator.CreateInstance(typeof(WasmSequencer), true)!;
 
         sequencer.Dispose();
 

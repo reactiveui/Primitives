@@ -590,7 +590,8 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
             return new(null, existingDisposeToken);
         }
 
-        var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, GetOrCreateDisposeCts().Token);
+        var linkedCts =
+            CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, GetOrCreateDisposeCts().Token);
         return new(linkedCts, linkedCts.Token);
     }
 

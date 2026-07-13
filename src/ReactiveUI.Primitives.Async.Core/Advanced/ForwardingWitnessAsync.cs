@@ -4,13 +4,20 @@
 
 namespace ReactiveUI.Primitives.Async.Advanced;
 
-/// <summary>Base observer that forwards every notification to a downstream observer.</summary>
+/// <summary>
+/// Base observer that forwards every notification to a downstream observer. Every notification is already
+/// implemented here, so nothing is left for a derived type to supply: this is a base class, not a contract.
+/// The protected constructor, rather than <c>abstract</c>, is what keeps it from being used on its own.
+/// </summary>
 /// <typeparam name="T">The observed element type.</typeparam>
-/// <param name="downstream">The observer that receives forwarded notifications.</param>
-public abstract class ForwardingWitnessAsync<T>(IObserverAsync<T> downstream) : WitnessAsync<T>
+public class ForwardingWitnessAsync<T> : WitnessAsync<T>
 {
+    /// <summary>Initializes a new instance of the <see cref="ForwardingWitnessAsync{T}"/> class.</summary>
+    /// <param name="downstream">The observer that receives forwarded notifications.</param>
+    protected ForwardingWitnessAsync(IObserverAsync<T> downstream) => Downstream = downstream;
+
     /// <summary>Gets the downstream observer.</summary>
-    protected IObserverAsync<T> Downstream { get; } = downstream;
+    protected IObserverAsync<T> Downstream { get; }
 
     /// <inheritdoc/>
     protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken) =>

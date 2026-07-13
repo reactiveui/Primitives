@@ -6,33 +6,26 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Observer for detecting whether a value is contained in a sequence.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
-public sealed class ContainsWitness<T> : IObserver<T>, IDisposable
+/// <param name="observer">The downstream observer.</param>
+/// <param name="value">The value to locate.</param>
+/// <param name="comparer">The comparer used for equality checks.</param>
+public sealed class ContainsWitness<T>(IObserver<bool> observer, T value, IEqualityComparer<T> comparer)
+    : IObserver<T>, IDisposable
 {
     /// <summary>The value to locate.</summary>
-    private readonly T _value;
+    private readonly T _value = value;
 
     /// <summary>The comparer used for equality checks.</summary>
-    private readonly IEqualityComparer<T> _comparer;
+    private readonly IEqualityComparer<T> _comparer = comparer;
 
     /// <summary>The downstream observer.</summary>
-    private readonly IObserver<bool> _observer;
+    private readonly IObserver<bool> _observer = observer;
 
     /// <summary>A value indicating whether the observer has terminated.</summary>
     private bool _done;
 
     /// <summary>The upstream subscription.</summary>
     private IDisposable? _subscription;
-
-    /// <summary>Initializes a new instance of the <see cref="ContainsWitness{T}"/> class.</summary>
-    /// <param name="observer">The downstream observer.</param>
-    /// <param name="value">The value to locate.</param>
-    /// <param name="comparer">The comparer used for equality checks.</param>
-    public ContainsWitness(IObserver<bool> observer, T value, IEqualityComparer<T> comparer)
-    {
-        _observer = observer;
-        _value = value;
-        _comparer = comparer;
-    }
 
     /// <inheritdoc/>
     public void OnNext(T value)

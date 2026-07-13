@@ -23,7 +23,8 @@ public sealed class CollectWitness<T> : IObserver<T>, IDisposable
 
     /// <summary>Initializes a new instance of the <see cref="CollectWitness{T}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
-    public CollectWitness(IObserver<IList<T>> observer) => Observer = observer ?? throw new ArgumentNullException(nameof(observer));
+    public CollectWitness(IObserver<IList<T>> observer) =>
+        Observer = observer ?? throw new ArgumentNullException(nameof(observer));
 
     /// <summary>Initializes a new instance of the <see cref="CollectWitness{T}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>

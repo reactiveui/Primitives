@@ -10,13 +10,19 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Tests;
 /// <summary>Smoke tests confirming the Reactive Extensions leaf's recompiled shared operators behave correctly.</summary>
 public class ReactiveExtensionsTests
 {
+    /// <summary>Value pushed through the signal conversion; only its type is asserted.</summary>
+    private const int SourceValue = 42;
+
+    /// <summary>Values pushed through the scheduled array source.</summary>
+    private static readonly int[] SourceValues = [1, 2, 3];
+
     /// <summary>The leaf's RxVoid binds to <see cref="Unit"/>, so <c>AsSignal</c> yields a System.Reactive unit.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task AsSignal_YieldsSystemReactiveUnit()
     {
         object? emitted = null;
-        using var sub = Observables.Return(42).AsSignal().Subscribe(value => emitted = value);
+        using var sub = Observables.Return(SourceValue).AsSignal().Subscribe(value => emitted = value);
 
         await Assert.That(emitted).IsTypeOf<Unit>();
     }
@@ -26,10 +32,9 @@ public class ReactiveExtensionsTests
     [Test]
     public async Task FromArray_OnScheduler_EmitsAllValues()
     {
-        int[] values = [1, 2, 3];
         List<int> received = [];
-        using var sub = values.FromArray(ImmediateScheduler.Instance).Subscribe(received.Add);
+        using var sub = SourceValues.FromArray(ImmediateScheduler.Instance).Subscribe(received.Add);
 
-        await Assert.That(received).IsEquivalentTo(values, EqualityComparer<int>.Default);
+        await Assert.That(received).IsEquivalentTo(SourceValues, EqualityComparer<int>.Default);
     }
 }

@@ -9,22 +9,16 @@ namespace ReactiveUI.Primitives.Signals;
 /// <summary>Represents the MapSignal class.</summary>
 /// <typeparam name="TSource">The TSource type.</typeparam>
 /// <typeparam name="TResult">The TResult type.</typeparam>
-public sealed class MapSignal<TSource, TResult> : IRequireCurrentThread<TResult>
+/// <param name="source">The source value.</param>
+/// <param name="selector">The selector value.</param>
+public sealed class MapSignal<TSource, TResult>(IObservable<TSource> source, Func<TSource, TResult> selector)
+    : IRequireCurrentThread<TResult>
 {
     /// <summary>Stores state for the signal implementation.</summary>
-    private readonly IObservable<TSource> _source;
+    private readonly IObservable<TSource> _source = source;
 
     /// <summary>Stores state for the signal implementation.</summary>
-    private readonly Func<TSource, TResult> _selector;
-
-    /// <summary>Initializes a new instance of the <see cref="MapSignal{TSource,TResult}"/> class.</summary>
-    /// <param name="source">The source value.</param>
-    /// <param name="selector">The selector value.</param>
-    public MapSignal(IObservable<TSource> source, Func<TSource, TResult> selector)
-    {
-        _source = source;
-        _selector = selector;
-    }
+    private readonly Func<TSource, TResult> _selector = selector;
 
     /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
     /// <returns>The result.</returns>
@@ -42,25 +36,18 @@ public sealed class MapSignal<TSource, TResult> : IRequireCurrentThread<TResult>
     }
 
     /// <summary>Represents the MapWitness class.</summary>
-    private sealed class MapWitness : IObserver<TSource>
+    /// <param name="observer">The observer value.</param>
+    /// <param name="selector">The selector value.</param>
+    private sealed class MapWitness(IObserver<TResult> observer, Func<TSource, TResult> selector) : IObserver<TSource>
     {
         /// <summary>Stores state for the signal implementation.</summary>
-        private readonly IObserver<TResult> _observer;
+        private readonly IObserver<TResult> _observer = observer;
 
         /// <summary>Stores state for the signal implementation.</summary>
-        private readonly Func<TSource, TResult> _selector;
+        private readonly Func<TSource, TResult> _selector = selector;
 
         /// <summary>Stores state for the signal implementation.</summary>
         private bool _stopped;
-
-        /// <summary>Initializes a new instance of the <see cref="MapWitness"/> class.</summary>
-        /// <param name="observer">The observer value.</param>
-        /// <param name="selector">The selector value.</param>
-        public MapWitness(IObserver<TResult> observer, Func<TSource, TResult> selector)
-        {
-            _observer = observer;
-            _selector = selector;
-        }
 
         /// <summary>Executes the OnCompleted operation.</summary>
         public void OnCompleted()

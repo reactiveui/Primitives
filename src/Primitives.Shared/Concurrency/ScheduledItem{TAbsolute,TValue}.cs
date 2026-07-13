@@ -21,7 +21,12 @@ public static class ScheduledItem
     /// <param name="comparer">Comparer used to compare work items based on their scheduled time.</param>
     /// <returns>The materialized scheduled work item.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="scheduler"/>, <paramref name="action"/>, or <paramref name="comparer"/> is <c>null</c>.</exception>
-    public static ScheduledItem<TAbsolute> Create<TAbsolute, TValue>(ISequencer scheduler, TValue state, Func<ISequencer, TValue, IDisposable> action, TAbsolute dueTime, IComparer<TAbsolute> comparer)
+    public static ScheduledItem<TAbsolute> Create<TAbsolute, TValue>(
+        ISequencer scheduler,
+        TValue state,
+        Func<ISequencer, TValue, IDisposable> action,
+        TAbsolute dueTime,
+        IComparer<TAbsolute> comparer)
         where TAbsolute : IComparable<TAbsolute>
     {
         _ = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
@@ -39,7 +44,11 @@ public static class ScheduledItem
     /// <param name="dueTime">Time at which to run the scheduled action.</param>
     /// <returns>The materialized scheduled work item.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
-    public static ScheduledItem<TAbsolute> Create<TAbsolute, TValue>(ISequencer scheduler, TValue state, Func<ISequencer, TValue, IDisposable> action, TAbsolute dueTime)
+    public static ScheduledItem<TAbsolute> Create<TAbsolute, TValue>(
+        ISequencer scheduler,
+        TValue state,
+        Func<ISequencer, TValue, IDisposable> action,
+        TAbsolute dueTime)
         where TAbsolute : IComparable<TAbsolute> =>
         Create(scheduler, state, action, dueTime, Comparer<TAbsolute>.Default);
 }

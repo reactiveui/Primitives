@@ -24,9 +24,18 @@ public sealed class WasmSequencer : ISequencer, IDisposable
     private DispatchSequencerState _state;
 
     /// <summary>Initializes a new instance of the <see cref="WasmSequencer"/> class.</summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Correctness",
+        "SST2403:Do not let 'this' escape from a constructor",
+        Justification =
+            "The timer is created disarmed, and _state is a struct held inline in this object, so neither reference escapes.")]
     private WasmSequencer()
     {
-        _timer = new(static state => ((WasmSequencer)state!).RunDrain(), this, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+        _timer = new(
+            static state => ((WasmSequencer)state!).RunDrain(),
+            this,
+            Timeout.InfiniteTimeSpan,
+            Timeout.InfiniteTimeSpan);
         _state = new(this, Post, RunDrain);
     }
 
@@ -53,9 +62,12 @@ public sealed class WasmSequencer : ISequencer, IDisposable
     public void Dispose() => _timer.Dispose();
 
     /// <summary>Arms the drain timer to fire on the next event-loop turn.</summary>
-    /// <param name="drain">The drain callback (unused: the timer carries the cached drain).</param>
+    /// <param name="_">
+    /// Ignored. The parameter exists only because <see cref="DispatchSequencerState"/> posts through a
+    /// <see cref="Func{T, TResult}"/> of <see cref="Action"/>; the drain callback is already carried by the timer's state.
+    /// </param>
     /// <returns><see langword="true"/> when the timer accepted the change.</returns>
-    private bool Post(Action drain) => _timer.Change(TimeSpan.Zero, Timeout.InfiniteTimeSpan);
+    private bool Post(Action _) => _timer.Change(TimeSpan.Zero, Timeout.InfiniteTimeSpan);
 
     /// <summary>Forwards the cached drain callback to the engine.</summary>
     private void RunDrain() => _state.RunDrain();

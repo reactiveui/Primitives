@@ -60,7 +60,7 @@ public partial class CombiningOperatorTests
 
         var sub = await new[] { innerSignal.Values }.Merge()
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 (ex, _) =>
                 {
                     errors.Add(ex);
@@ -129,7 +129,7 @@ public partial class CombiningOperatorTests
 
         var sub = await sources.Merge()
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 (ex, _) =>
                 {
                     lock (_gate)
@@ -151,6 +151,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableCompletedTwiceWithError_ThenSecondErrorGoesToUnhandled()
     {
+        const int WaitTimeoutSeconds = 5;
         Exception? unhandledException = null;
         UnhandledExceptionHandler.Register(ex => unhandledException = ex);
 
@@ -160,7 +161,7 @@ public partial class CombiningOperatorTests
 
         await using var sub = await sources.Merge()
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null);
 
         // First source fails - triggers FinishAsync
@@ -171,7 +172,7 @@ public partial class CombiningOperatorTests
 
         await AsyncTestHelpers.WaitForConditionAsync(
             () => unhandledException is not null,
-            TimeSpan.FromSeconds(5));
+            TimeSpan.FromSeconds(WaitTimeoutSeconds));
 
         await Assert.That(unhandledException).IsNotNull();
     }
@@ -235,7 +236,7 @@ public partial class CombiningOperatorTests
 
         var sub = await sources.Merge()
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 (ex, _) =>
                 {
                     lock (_gate)
@@ -271,6 +272,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableCompletedTwiceWithErrorViaDirectSource_ThenUnhandledExceptionFires()
     {
+        const int WaitTimeoutSeconds = 5;
         Exception? unhandledException = null;
         UnhandledExceptionHandler.Register(ex => unhandledException = ex);
 
@@ -280,7 +282,7 @@ public partial class CombiningOperatorTests
 
         await using var sub = await sources.Merge()
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null);
 
         // First source fails – triggers FinishAsync and disposes subscription
@@ -291,7 +293,7 @@ public partial class CombiningOperatorTests
 
         await AsyncTestHelpers.WaitForConditionAsync(
             () => unhandledException is not null,
-            TimeSpan.FromSeconds(5));
+            TimeSpan.FromSeconds(WaitTimeoutSeconds));
 
         await Assert.That(unhandledException).IsNotNull();
     }
@@ -304,6 +306,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableCompletionHandlerThrows_ThenOuterCatchRoutesToUnhandled()
     {
+        const int WaitTimeoutSeconds = 5;
         Exception? unhandledException = null;
         UnhandledExceptionHandler.Register(ex => unhandledException = ex);
 
@@ -315,13 +318,13 @@ public partial class CombiningOperatorTests
 
         await using var sub = await sources.Merge()
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null,
-                _ => throw new InvalidOperationException("completion handler boom"));
+                static _ => throw new InvalidOperationException("completion handler boom"));
 
         await AsyncTestHelpers.WaitForConditionAsync(
             () => unhandledException is not null,
-            TimeSpan.FromSeconds(5));
+            TimeSpan.FromSeconds(WaitTimeoutSeconds));
 
         await Assert.That(unhandledException).IsNotNull();
         await Assert.That(unhandledException!.Message).Contains("completion handler boom");
@@ -336,6 +339,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableThrowsDuringIteration_ThenRoutesToUnhandled()
     {
+        const int WaitTimeoutSeconds = 5;
         using UnhandledExceptionCapture unhandled = new();
 
         // Use an enumerable whose GetEnumerator throws, triggering the error path
@@ -344,10 +348,10 @@ public partial class CombiningOperatorTests
 
         await using var sub = await throwingEnumerable.Merge()
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null);
 
-        var exception = await unhandled.WaitForAsync("enumerable boom", TimeSpan.FromSeconds(5));
+        var exception = await unhandled.WaitForAsync("enumerable boom", TimeSpan.FromSeconds(WaitTimeoutSeconds));
 
         await Assert.That(exception).IsNotNull();
         await Assert.That(exception!.Message).Contains("enumerable boom");
@@ -361,6 +365,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableDisposedWhileGateHeld_ThenOnNextReturnsPostGate()
     {
+        const int SecondEmissionValue = 2;
         DirectSource<int> directSource = new();
         List<int> items = [];
         TaskCompletionSource gateHeld = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -393,7 +398,7 @@ public partial class CombiningOperatorTests
         {
             try
             {
-                await directSource.EmitNext(2, CancellationToken.None);
+                await directSource.EmitNext(SecondEmissionValue, CancellationToken.None);
             }
             catch (OperationCanceledException)
             {
@@ -485,18 +490,19 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableBeginSubscribingThrows_ThenRoutesToUnhandled()
     {
+        const int WaitTimeoutSeconds = 5;
         Exception? unhandled = null;
         UnhandledExceptionHandler.Register(ex => unhandled = ex);
 
         ThrowingEnumerable<int> sources = new();
 
         await using var sub = await sources.Merge().SubscribeAsync(
-            (_, _) => default,
+            static (_, _) => default,
             null);
 
         await AsyncTestHelpers.WaitForConditionAsync(
             () => unhandled is not null,
-            TimeSpan.FromSeconds(5));
+            TimeSpan.FromSeconds(WaitTimeoutSeconds));
 
         await Assert.That(unhandled).IsNotNull();
     }
@@ -552,6 +558,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableDisposedDuringEmission_ThenDropsValues()
     {
+        const int WaitTimeoutSeconds = 5;
         DirectSource<int> innerSource = new();
         List<int> results = [];
 
@@ -569,7 +576,7 @@ public partial class CombiningOperatorTests
 
         await AsyncTestHelpers.WaitForConditionAsync(
             () => results.Count >= 1,
-            TimeSpan.FromSeconds(5));
+            TimeSpan.FromSeconds(WaitTimeoutSeconds));
 
         await sub.DisposeAsync();
 
@@ -587,13 +594,14 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableDisposedDuringErrorResume_ThenDropsErrors()
     {
+        const int WaitTimeoutSeconds = 5;
         DirectSource<int> innerSource = new();
         List<Exception> errors = [];
 
         var sub = await new IObservableAsync<int>[] { innerSource }
             .Merge()
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 (ex, _) =>
                 {
                     errors.Add(ex);
@@ -604,7 +612,7 @@ public partial class CombiningOperatorTests
 
         await AsyncTestHelpers.WaitForConditionAsync(
             () => errors.Count >= 1,
-            TimeSpan.FromSeconds(5));
+            TimeSpan.FromSeconds(WaitTimeoutSeconds));
 
         await sub.DisposeAsync();
 
@@ -667,7 +675,7 @@ public partial class CombiningOperatorTests
 
         await using var sub = await sources.Merge()
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 (ex, _) =>
                 {
                     errors.Add(ex);

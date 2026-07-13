@@ -50,7 +50,11 @@ public sealed class TaskAnyWitness<T> : IObserver<T>, IDisposable
 
     /// <summary>Registers cancellation after construction.</summary>
     public void RegisterCancellation() =>
-        TaskTerminalWitnessHelper.RegisterCancellation(this, static state => ((TaskAnyWitness<T>)state!).Cancel(), ref _registration, _cancellationToken);
+        TaskTerminalWitnessHelper.RegisterCancellation(
+            this,
+            static state => ((TaskAnyWitness<T>)state!).Cancel(),
+            ref _registration,
+            _cancellationToken);
 
     /// <summary>Assigns the source subscription.</summary>
     /// <param name="subscription">The source subscription.</param>
@@ -99,7 +103,7 @@ public sealed class TaskAnyWitness<T> : IObserver<T>, IDisposable
         {
             if (_predicate is null || _predicate(value))
             {
-                Complete(result: true);
+                Complete(true);
             }
         }
         catch (Exception error)

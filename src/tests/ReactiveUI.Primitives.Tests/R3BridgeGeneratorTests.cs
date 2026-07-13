@@ -30,84 +30,82 @@ public class R3BridgeGeneratorTests
     /// <summary>Compiler diagnostic raised when a source type conflicts with an imported type.</summary>
     private const string ConflictingTypeDiagnosticId = "CS0436";
 
+    /// <summary>The smoke source compiled against the fake R3 shapes to prove the emitted bridge binds.</summary>
+    private const string R3SmokeSource = """
+        using System;
+        using ReactiveUI.Primitives;
+        using ReactiveUI.Primitives.Concurrency;
+        using ReactiveUI.Primitives.Disposables;
+        using ReactiveUI.Primitives.Signals;
+        using ReactiveUI.Primitives.R3Bridge;
+
+        namespace R3
+        {
+            public readonly struct Result
+            {
+                public static Result Success => default;
+
+                public static Result Failure(Exception exception) => new Result(exception);
+
+                private Result(Exception exception) => Exception = exception;
+
+                public Exception Exception { get; }
+
+                public bool IsFailure => Exception != null;
+            }
+
+            public abstract class Observer<T> : IDisposable
+            {
+                public void OnNext(T value) => OnNextCore(value);
+
+                public void OnErrorResume(Exception error) => OnErrorResumeCore(error);
+
+                public void OnCompleted(Result result) => OnCompletedCore(result);
+
+                public void Dispose() { }
+
+                protected abstract void OnNextCore(T value);
+
+                protected abstract void OnErrorResumeCore(Exception error);
+
+                protected abstract void OnCompletedCore(Result result);
+            }
+
+            public abstract class Observable<T>
+            {
+                public abstract IDisposable Subscribe(Observer<T> observer);
+            }
+
+            public static class Observable
+            {
+                public static Observable<T> Create<T>(Func<Observer<T>, IDisposable> subscribe) => new DelegateObservable<T>(subscribe);
+
+                private sealed class DelegateObservable<TValue> : Observable<TValue>
+                {
+                    private readonly Func<Observer<TValue>, IDisposable> _subscribe;
+                    public DelegateObservable(Func<Observer<TValue>, IDisposable> subscribe) => _subscribe = subscribe;
+                    public override IDisposable Subscribe(Observer<TValue> observer) => _subscribe(observer);
+                }
+            }
+        }
+
+        public static class BridgeSmoke
+        {
+            public static void Use(R3.Observable<int> r3)
+            {
+                IObservable<int> PrimitivesFromR3 = r3.AsPrimitivesSignal();
+                R3.Observable<int> r3Again = PrimitivesFromR3.AsR3Observable();
+            }
+        }
+        """;
+
     /// <summary>Verifies the R3 bridge generator emits adapters when the R3 shapes are present.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     [RequiresAssemblyFiles]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S138:Functions should not have too many lines",
-        Justification = "Embedded generator smoke source keeps the emitted API contract local to the test.")]
     public async Task R3BridgeGeneratorEmitsWhenR3ShapesArePresentAndCompilesSmokeAdapters()
     {
-        const string Source = """
-                              using System;
-                              using ReactiveUI.Primitives;
-                              using ReactiveUI.Primitives.Concurrency;
-                              using ReactiveUI.Primitives.Disposables;
-                              using ReactiveUI.Primitives.Signals;
-                              using ReactiveUI.Primitives.R3Bridge;
-
-                              namespace R3
-                              {
-                                  public readonly struct Result
-                                  {
-                                      public static Result Success => default;
-
-                                      public static Result Failure(Exception exception) => new Result(exception);
-
-                                      private Result(Exception exception) => Exception = exception;
-
-                                      public Exception Exception { get; }
-
-                                      public bool IsFailure => Exception != null;
-                                  }
-
-                                  public abstract class Observer<T> : IDisposable
-                                  {
-                                      public void OnNext(T value) => OnNextCore(value);
-
-                                      public void OnErrorResume(Exception error) => OnErrorResumeCore(error);
-
-                                      public void OnCompleted(Result result) => OnCompletedCore(result);
-
-                                      public void Dispose() { }
-
-                                      protected abstract void OnNextCore(T value);
-
-                                      protected abstract void OnErrorResumeCore(Exception error);
-
-                                      protected abstract void OnCompletedCore(Result result);
-                                  }
-
-                                  public abstract class Observable<T>
-                                  {
-                                      public abstract IDisposable Subscribe(Observer<T> observer);
-                                  }
-
-                                  public static class Observable
-                                  {
-                                      public static Observable<T> Create<T>(Func<Observer<T>, IDisposable> subscribe) => new DelegateObservable<T>(subscribe);
-
-                                      private sealed class DelegateObservable<TValue> : Observable<TValue>
-                                      {
-                                          private readonly Func<Observer<TValue>, IDisposable> _subscribe;
-                                          public DelegateObservable(Func<Observer<TValue>, IDisposable> subscribe) => _subscribe = subscribe;
-                                          public override IDisposable Subscribe(Observer<TValue> observer) => _subscribe(observer);
-                                      }
-                                  }
-                              }
-
-                              public static class BridgeSmoke
-                              {
-                                  public static void Use(R3.Observable<int> r3)
-                                  {
-                                      IObservable<int> PrimitivesFromR3 = r3.AsPrimitivesSignal();
-                                      R3.Observable<int> r3Again = PrimitivesFromR3.AsR3Observable();
-                                  }
-                              }
-                              """;
-        var (diagnostics, generatedSources) = RunGenerators(Source);
+        var (diagnostics, generatedSources) = RunGenerators(R3SmokeSource);
         await Assert.That(diagnostics.Length).IsEqualTo(0);
         await Assert.That(Array.Exists(
             generatedSources,
@@ -170,7 +168,7 @@ public class R3BridgeGeneratorTests
                                   }
                               }
                               """;
-        var (diagnostics, generatedSources) = RunGenerators(Source, includeAsyncReference: true);
+        var (diagnostics, generatedSources) = RunGenerators(Source, true);
         await Assert.That(diagnostics.Length).IsEqualTo(0);
         await Assert.That(GeneratedBridgeTypeExists(generatedSources, R3BridgeName)).IsFalse();
         await Assert.That(GeneratedBridgeTypeExists(generatedSources, R3AsyncBridgeName)).IsFalse();
@@ -208,7 +206,8 @@ public class R3BridgeGeneratorTests
         bool includeAsyncReference = false)
     {
         var run = RunGeneratorsCore("R3BridgeGeneratorSmoke", source, [], includeAsyncReference);
-        ImmutableArray<Diagnostic> diagnostics = [
+        ImmutableArray<Diagnostic> diagnostics =
+        [
             ..run.GeneratorDiagnostics
                 .Concat(run.Compilation.GetDiagnostics()
                     .Where(IsErrorDiagnostic))
@@ -227,10 +226,10 @@ public class R3BridgeGeneratorTests
         Compilation Compilation,
         ImmutableArray<Diagnostic> GeneratorDiagnostics,
         string[] GeneratedSources) RunGeneratorsCore(
-        string assemblyName,
-        string source,
-        IEnumerable<MetadataReference> additionalReferences,
-        bool includeAsyncReference = false)
+            string assemblyName,
+            string source,
+            IEnumerable<MetadataReference> additionalReferences,
+            bool includeAsyncReference = false)
     {
         var parseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Preview);
         var references = CreateReferences(additionalReferences, includeAsyncReference);
@@ -247,8 +246,8 @@ public class R3BridgeGeneratorTests
             out var updatedCompilation,
             out var generatorDiagnostics);
         var generatedSources = driver.GetRunResult().Results
-            .SelectMany(result => result.GeneratedSources)
-            .Select(sourceText => sourceText.SourceText.ToString())
+            .SelectMany(static result => result.GeneratedSources)
+            .Select(static sourceText => sourceText.SourceText.ToString())
             .ToArray();
         return (updatedCompilation, generatorDiagnostics, generatedSources);
     }
@@ -264,9 +263,9 @@ public class R3BridgeGeneratorTests
     {
         var references = AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!.ToString()!
             .Split(Path.PathSeparator)
-            .Where(path => !Path.GetFileName(path).StartsWith("System.Reactive", StringComparison.OrdinalIgnoreCase)
+            .Where(static path => !Path.GetFileName(path).StartsWith("System.Reactive", StringComparison.OrdinalIgnoreCase)
                            && !Path.GetFileName(path).StartsWith("R3", StringComparison.OrdinalIgnoreCase))
-            .Select(path => MetadataReference.CreateFromFile(path))
+            .Select(static path => MetadataReference.CreateFromFile(path))
             .Cast<MetadataReference>()
             .ToList();
         references.Add(MetadataReference.CreateFromFile(typeof(Signal).Assembly.Location));
@@ -283,12 +282,13 @@ public class R3BridgeGeneratorTests
     /// <summary>Emits an in-memory compilation as a metadata reference.</summary>
     /// <param name="compilation">Compilation to emit.</param>
     /// <returns>The emit diagnostics and metadata reference when emission succeeds.</returns>
-    private static (ImmutableArray<Diagnostic> Diagnostics, PortableExecutableReference? Reference) EmitToMetadataReference(
-        Compilation compilation)
+    private static (ImmutableArray<Diagnostic> Diagnostics, PortableExecutableReference? Reference)
+        EmitToMetadataReference(
+            Compilation compilation)
     {
         using MemoryStream stream = new();
         var result = compilation.Emit(stream);
-        PortableExecutableReference? reference = result.Success
+        var reference = result.Success
             ? MetadataReference.CreateFromImage(stream.ToArray())
             : null;
         return (result.Diagnostics, reference);

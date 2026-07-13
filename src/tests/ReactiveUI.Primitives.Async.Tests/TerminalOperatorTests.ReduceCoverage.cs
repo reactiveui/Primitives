@@ -18,18 +18,18 @@ public partial class TerminalOperatorTests
     public async Task WhenAggregateAsyncCancellationTokenOverloads_ThenComputeFinalValues()
     {
         using CancellationTokenSource cancellation = new();
-        var asyncResult = await SignalAsync.Range(1, 3).AggregateAsync(
+        var asyncResult = await SignalAsync.Range(1, ShortSourceValueCount).AggregateAsync(
             0,
-            async (accumulator, value, token) =>
+            static async (accumulator, value, token) =>
             {
                 await Task.Yield();
                 token.ThrowIfCancellationRequested();
                 return accumulator + value;
             },
             cancellation.Token);
-        var syncResult = await SignalAsync.Range(1, 3)
+        var syncResult = await SignalAsync.Range(1, ShortSourceValueCount)
             .AggregateAsync(0, static (accumulator, value) => accumulator + value, cancellation.Token);
-        var selectedResult = await SignalAsync.Range(1, 3).AggregateAsync(
+        var selectedResult = await SignalAsync.Range(1, ShortSourceValueCount).AggregateAsync(
             0,
             static (accumulator, value) => accumulator + value,
             static accumulator => $"Sum={accumulator}",
@@ -51,7 +51,7 @@ public partial class TerminalOperatorTests
             await observer.OnCompletedAsync(Result.Success);
             return DisposableAsync.Empty;
         });
-        var ex = await Assert.That(async () => await source.ReduceAsync(0, async (accumulator, value, _) =>
+        var ex = await Assert.That(async () => await source.ReduceAsync(0, static async (accumulator, value, _) =>
         {
             await Task.Yield();
             return accumulator + value;
@@ -67,7 +67,7 @@ public partial class TerminalOperatorTests
         InvalidOperationException expectedError = new("async reduce failed");
         var ex = await Assert.That(async () => await SignalAsync.Throw<int>(expectedError).ReduceAsync(
             0,
-            async (accumulator, value, _) =>
+            static async (accumulator, value, _) =>
             {
                 await Task.Yield();
                 return accumulator + value;

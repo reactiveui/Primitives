@@ -102,7 +102,8 @@ public class Continuation : IDisposable
 
     /// <summary>Static state-carrying signal callback; avoids the per-call closure allocation a captured lambda would produce.</summary>
     /// <param name="state">The owning <see cref="Continuation"/> instance.</param>
-    private static void SignalPhaseSync(object? state) => ((Continuation)state!)._phaseSync.SignalAndWait(CancellationToken.None);
+    private static void SignalPhaseSync(object? state) =>
+        ((Continuation)state!)._phaseSync.SignalAndWait(CancellationToken.None);
 
     /// <summary>Schedules <see cref="SignalPhaseSync"/> on the default task scheduler. Hoisted
     /// out of the <see cref="Lock{T}"/> and <see cref="UnLock"/> call sites because cobertura

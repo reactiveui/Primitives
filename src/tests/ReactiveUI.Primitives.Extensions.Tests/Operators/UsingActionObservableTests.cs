@@ -14,6 +14,12 @@ public partial class UsingActionObservableTests
     /// <summary>Synthetic error message attached to action failures.</summary>
     private const string ActionFailedMessage = "action failed";
 
+    /// <summary>How long to spin waiting for the scheduler thread to land the resource dispose before giving up.</summary>
+    private const int DisposeWaitMilliseconds = 5000;
+
+    /// <summary>Guard timeout so a hung rendezvous fails this test rather than stalling the run.</summary>
+    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
+
     /// <summary>Verifies that <c>Using</c> with a null action still emits, completes, and disposes the resource.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -80,12 +86,12 @@ public partial class UsingActionObservableTests
         using var sub = resource.Using(_ => actionRan = true, TaskPoolSequencer.Default)
             .Subscribe(static _ => { }, () => completed.TrySetResult(true));
 
-        await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await completed.Task.WaitAsync(GuardTimeout);
         await Assert.That(actionRan).IsTrue();
 
         // OnCompleted is signalled before the resource is disposed on the scheduler
         // thread, so wait briefly for the dispose to land.
-        var deadline = Environment.TickCount64 + 5000;
+        var deadline = Environment.TickCount64 + DisposeWaitMilliseconds;
         while (resource.DisposeCount == 0 && Environment.TickCount64 < deadline)
         {
             await Task.Yield();

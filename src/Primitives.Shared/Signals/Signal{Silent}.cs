@@ -17,7 +17,8 @@ public static partial class Signal
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Major Code Smell",
         "S4018:Generic methods should provide type parameters",
-        Justification = "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
+        Justification =
+            "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
     public static IObservable<T> Silent<T>() => ImmutableNeverSignal<T>.Instance;
 
     /// <summary>Non-Terminating Signals. It's no returns, never finish. witness is for type inference.</summary>

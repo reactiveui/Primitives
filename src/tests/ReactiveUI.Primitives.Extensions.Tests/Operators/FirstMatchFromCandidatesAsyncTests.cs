@@ -12,6 +12,9 @@ namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 /// and edge cases not exercised by the sync fast-path tests.</summary>
 public class FirstMatchFromCandidatesAsyncTests
 {
+    /// <summary>Transformed result produced from the matching raw value.</summary>
+    private const string MatchResult = "MATCH";
+
     /// <summary>Fallback value emitted when no candidate satisfies the predicate.</summary>
     private const string Fallback = "fallback";
 
@@ -27,10 +30,10 @@ public class FirstMatchFromCandidatesAsyncTests
         var completed = false;
         using var sub = Array.Empty<string>()
             .FirstMatchFromCandidates(
-            static _ => Observable.Empty<string>(),
-            static raw => raw,
-            static _ => true,
-            Fallback).Subscribe(results.Add, () => completed = true);
+                static _ => Observable.Empty<string>(),
+                static raw => raw,
+                static _ => true,
+                Fallback).Subscribe(results.Add, () => completed = true);
         await Assert.That(results).IsCollectionEqualTo([Fallback]);
         await Assert.That(completed).IsTrue();
     }
@@ -50,7 +53,7 @@ public class FirstMatchFromCandidatesAsyncTests
             static transformed => transformed.StartsWith('M'),
             Fallback).Subscribe(results.Add);
         s.OnNext("match");
-        await Assert.That(results).IsCollectionEqualTo(["MATCH"]);
+        await Assert.That(results).IsCollectionEqualTo([MatchResult]);
     }
 
     /// <summary>Verifies that when every async projection completes without a match the fallback is emitted.</summary>
@@ -150,11 +153,11 @@ public class FirstMatchFromCandidatesAsyncTests
                 _ => Observable.Return(key)
             },
             static raw => raw.ToUpperInvariant(),
-            static t => t == "MATCH",
+            static t => t == MatchResult,
             Fallback).Subscribe(results.Add);
 
         // Trigger async sink: complete the first projection so AsyncSink.TryNext walks the rest.
         asyncFirst.OnCompleted();
-        await Assert.That(results).IsCollectionEqualTo(["MATCH"]);
+        await Assert.That(results).IsCollectionEqualTo([MatchResult]);
     }
 }

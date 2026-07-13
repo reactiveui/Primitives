@@ -11,22 +11,15 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <summary>Indexed map signal.</summary>
 /// <typeparam name="TSource">The source value type.</typeparam>
 /// <typeparam name="TResult">The projected value type.</typeparam>
-public sealed class MapIndexedSignal<TSource, TResult> : IRequireCurrentThread<TResult>
+/// <param name="source">The source observable.</param>
+/// <param name="selector">The indexed selector.</param>
+public sealed class MapIndexedSignal<TSource, TResult>(IObservable<TSource> source, Func<TSource, int, TResult> selector) : IRequireCurrentThread<TResult>
 {
     /// <summary>The source observable.</summary>
-    private readonly IObservable<TSource> _source;
+    private readonly IObservable<TSource> _source = source;
 
     /// <summary>The indexed selector.</summary>
-    private readonly Func<TSource, int, TResult> _selector;
-
-    /// <summary>Initializes a new instance of the <see cref="MapIndexedSignal{TSource, TResult}"/> class.</summary>
-    /// <param name="source">The source observable.</param>
-    /// <param name="selector">The indexed selector.</param>
-    public MapIndexedSignal(IObservable<TSource> source, Func<TSource, int, TResult> selector)
-    {
-        _source = source;
-        _selector = selector;
-    }
+    private readonly Func<TSource, int, TResult> _selector = selector;
 
     /// <inheritdoc/>
     public bool IsRequiredSubscribeOnCurrentThread() =>

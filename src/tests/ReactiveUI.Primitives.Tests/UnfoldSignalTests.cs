@@ -17,7 +17,7 @@ public class UnfoldSignalTests
 
     /// <summary>Covers unfold subscribe argument validation.</summary>
     [Test]
-    public void UnfoldValidatesObserver() => Assert.Throws<ArgumentNullException>(() => Signal.Unfold(
+    public void UnfoldValidatesObserver() => Assert.Throws<ArgumentNullException>(static () => Signal.Unfold(
             First,
             static value => value < Second,
             static value => value + 1,
@@ -32,7 +32,7 @@ public class UnfoldSignalTests
         List<int> unfolded = [];
         var unfoldCompleted = 0;
         _ = Signal.Unfold(First, static value => value <= Second, static value => value + 1, static value => value)
-            .Subscribe(unfolded.Add, error => throw error, () => unfoldCompleted++);
+            .Subscribe(unfolded.Add, static error => throw error, () => unfoldCompleted++);
         await Assert.That(unfolded.SequenceEqual([First, Second])).IsTrue();
         await Assert.That(unfoldCompleted).IsEqualTo(1);
     }

@@ -53,8 +53,9 @@ public class BlendUniqueTests
         // source0 emits 1,1,2 (-> 1,2) then source1 emits 2,3,3 (2 == last, dropped -> 3).
         _ = LinqExtensions
             .BlendUnique(
-            Signal.FromEnumerable(_firstDuplicatedThenSecond),
-            Signal.FromEnumerable(_secondThenThirdDuplicated)).Subscribe(values.Add, ex => throw ex, () => completed++);
+                Signal.FromEnumerable(_firstDuplicatedThenSecond),
+                Signal.FromEnumerable(_secondThenThirdDuplicated))
+            .Subscribe(values.Add, static ex => throw ex, () => completed++);
         await Assert.That(values.SequenceEqual(_distinctMerged)).IsTrue();
         await Assert.That(completed).IsEqualTo(Once);
     }
@@ -66,7 +67,7 @@ public class BlendUniqueTests
     {
         List<int> values = [];
         var completed = 0;
-        _ = LinqExtensions.BlendUnique<int>().Subscribe(values.Add, ex => throw ex, () => completed++);
+        _ = LinqExtensions.BlendUnique<int>().Subscribe(values.Add, static ex => throw ex, () => completed++);
         await Assert.That(values.Count).IsEqualTo(0);
         await Assert.That(completed).IsEqualTo(Once);
     }
@@ -93,7 +94,7 @@ public class BlendUniqueTests
         Exception? error = null;
         _ = LinqExtensions
             .BlendUnique(Signal.FromEnumerable(_single), Signal.Fail<int>(new InvalidOperationException("boom")))
-            .Subscribe(values.Add, ex => error = ex, () => { });
+            .Subscribe(values.Add, ex => error = ex, static () => { });
         await Assert.That(values.SequenceEqual(_single)).IsTrue();
         await Assert.That(error).IsNotNull();
         await Assert.That(error is InvalidOperationException).IsTrue();
@@ -139,9 +140,10 @@ public class BlendUniqueTests
     [Test]
     public void NullArgumentsThrow()
     {
-        _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.BlendUnique<int>(null!, comparer: null));
-        _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.BlendUnique(Signal.FromEnumerable(_single), null!));
-        _ = Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(static () => LinqExtensions.BlendUnique<int>(null!, comparer: null));
+        _ = Assert.Throws<ArgumentNullException>(static () =>
+            LinqExtensions.BlendUnique(Signal.FromEnumerable(_single), null!));
+        _ = Assert.Throws<ArgumentNullException>(static () =>
             LinqExtensions.BlendUnique(Signal.FromEnumerable(_single)).Subscribe(null!));
     }
 }

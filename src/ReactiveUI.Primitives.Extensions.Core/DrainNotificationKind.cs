@@ -14,5 +14,5 @@ public enum DrainNotificationKind
     Error,
 
     /// <summary>OnCompleted (no value).</summary>
-    Completed,
+    Completed
 }

@@ -50,7 +50,7 @@ public class FromEnumerableSignalTests
         List<int> listValues = [];
         var listCompleted = 0;
         new FromEnumerableSignal<int>([Three, Four])
-            .Subscribe(listValues.Add, ex => throw ex, () => listCompleted++).Dispose();
+            .Subscribe(listValues.Add, static ex => throw ex, () => listCompleted++).Dispose();
         await Assert.That(listValues.SequenceEqual(ExpectedThreeFour)).IsTrue();
         await Assert.That(listCompleted).IsEqualTo(1);
         RecordingWitness<int> iteratorObserver = new();
@@ -60,12 +60,12 @@ public class FromEnumerableSignalTests
         List<int> iteratorValues = [];
         var iteratorCompleted = 0;
         new FromEnumerableSignal<int>(YieldValues())
-            .Subscribe(iteratorValues.Add, ex => throw ex, () => iteratorCompleted++).Dispose();
+            .Subscribe(iteratorValues.Add, static ex => throw ex, () => iteratorCompleted++).Dispose();
         await Assert.That(iteratorValues.SequenceEqual(ExpectedFiveSix)).IsTrue();
         await Assert.That(iteratorCompleted).IsEqualTo(1);
         _ = Assert.Throws<ArgumentNullException>(() => arraySignal.Subscribe((IObserver<int>)null!));
-        _ = Assert.Throws<ArgumentNullException>(() => arraySignal.Subscribe(null!, ex => { }, () => { }));
-        _ = Assert.Throws<ArgumentNullException>(() => arraySignal.Subscribe(_ => { }, ex => { }, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => arraySignal.Subscribe(null!, static ex => { }, static () => { }));
+        _ = Assert.Throws<ArgumentNullException>(() => arraySignal.Subscribe(static _ => { }, static ex => { }, null!));
     }
 
     /// <summary>Creates an iterator-backed enumerable for the non-indexable enumerable path.</summary>

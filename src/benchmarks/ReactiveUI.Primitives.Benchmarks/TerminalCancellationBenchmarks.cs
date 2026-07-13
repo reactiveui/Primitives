@@ -38,7 +38,7 @@ public class TerminalCancellationBenchmarks : IDisposable
     /// <summary>Disposes the live cancellation source.</summary>
     public void Dispose()
     {
-        Dispose(disposing: true);
+        Dispose(true);
         GC.SuppressFinalize(this);
     }
 
@@ -52,7 +52,9 @@ public class TerminalCancellationBenchmarks : IDisposable
     /// <returns>The first value.</returns>
     [Benchmark]
     public Task<int> SystemReactiveFirstAsyncWithToken() =>
-        RxTask.ToTask(RxObservable.FirstAsync(RxObservable.Range(Start, Count).Select(static x => x)), _liveSource.Token);
+        RxTask.ToTask(
+            RxObservable.FirstAsync(RxObservable.Range(Start, Count).Select(static x => x)),
+            _liveSource.Token);
 
     /// <summary>Benchmarks awaiting the first value with a live token using R3.</summary>
     /// <returns>The first value.</returns>
@@ -60,7 +62,7 @@ public class TerminalCancellationBenchmarks : IDisposable
     public Task<int> R3FirstAsyncWithToken() =>
         R3.ObservableExtensions.FirstAsync(
             R3.ObservableExtensions.Select(R3.Observable.Range(Start, Count), static x => x),
-            cancellationToken: _liveSource.Token);
+            _liveSource.Token);
 
     /// <summary>Benchmarks the task-shim ToTask overload that wraps a token around an existing task.</summary>
     /// <returns>The first value.</returns>
@@ -84,7 +86,9 @@ public class TerminalCancellationBenchmarks : IDisposable
     /// <returns>The last value or default.</returns>
     [Benchmark]
     public Task<int> R3LastOrDefaultAsyncWithToken() =>
-        R3.ObservableExtensions.LastOrDefaultAsync(R3.Observable.Range(Start, Count), cancellationToken: _liveSource.Token);
+        R3.ObservableExtensions.LastOrDefaultAsync(
+            R3.Observable.Range(Start, Count),
+            cancellationToken: _liveSource.Token);
 
     /// <summary>Benchmarks forwarding a completing range through TakeUntil with a live token.</summary>
     /// <returns>The observed total.</returns>
@@ -112,7 +116,8 @@ public class TerminalCancellationBenchmarks : IDisposable
     public int R3TakeUntilToken()
     {
         IntR3Witness observer = new();
-        using var subscription = R3.ObservableExtensions.TakeUntil(R3.Observable.Range(Start, Count), _liveSource.Token).Subscribe(observer);
+        using var subscription = R3.ObservableExtensions.TakeUntil(R3.Observable.Range(Start, Count), _liveSource.Token)
+            .Subscribe(observer);
         return observer.Total;
     }
 
@@ -160,7 +165,7 @@ public class TerminalCancellationBenchmarks : IDisposable
     public async Task<int> R3CancelPendingFirstAsync()
     {
         using CancellationTokenSource cancellation = new();
-        var pending = R3.ObservableExtensions.FirstAsync(R3.Observable.Never<int>(), cancellationToken: cancellation.Token);
+        var pending = R3.ObservableExtensions.FirstAsync(R3.Observable.Never<int>(), cancellation.Token);
         await cancellation.CancelAsync().ConfigureAwait(false);
         try
         {

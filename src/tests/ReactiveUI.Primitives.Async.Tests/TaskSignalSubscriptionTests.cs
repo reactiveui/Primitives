@@ -7,6 +7,9 @@ namespace ReactiveUI.Primitives.Async.Tests;
 /// <summary>Tests for <see cref="TaskSignalSubscription{T}"/> lifecycle and disposal behavior.</summary>
 public sealed class TaskSignalSubscriptionTests
 {
+    /// <summary>Maximum time a reentrant dispose may take before it is treated as a deadlock.</summary>
+    private static readonly TimeSpan ReentrantDisposeTimeout = TimeSpan.FromSeconds(5);
+
     /// <summary>Verifies a reentrant dispose issued from within the job's own async flow does not deadlock,
     /// even after the notification continuation has hopped to a different thread.</summary>
     /// <returns>A task that completes when the subscription disposes; faults on timeout if a deadlock occurs.</returns>
@@ -30,7 +33,7 @@ public sealed class TaskSignalSubscriptionTests
             observer);
         subscriptionReady.SetResult();
 
-        await disposed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await disposed.Task.WaitAsync(ReentrantDisposeTimeout);
     }
 
     /// <summary>Observer that runs a supplied callback from its OnNext notification.</summary>

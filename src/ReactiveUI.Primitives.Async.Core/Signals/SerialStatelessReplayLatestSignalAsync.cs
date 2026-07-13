@@ -28,13 +28,21 @@ public sealed class SerialStatelessReplayLatestSignalAsync<T>(Optional<T> startV
     public ValueTask OnNextAsync(
         T value,
         CancellationToken cancellationToken) =>
-        StatelessReplayLatestSignalAsyncStateHelper.OnNextAsync(_state, SignalBroadcastKind.SerialMulti, value, cancellationToken);
+        StatelessReplayLatestSignalAsyncStateHelper.OnNextAsync(
+            _state,
+            SignalBroadcastKind.SerialMulti,
+            value,
+            cancellationToken);
 
     /// <inheritdoc/>
     public ValueTask OnErrorResumeAsync(
         Exception error,
         CancellationToken cancellationToken) =>
-        StatelessReplayLatestSignalAsyncStateHelper.OnErrorResumeAsync(_state, SignalBroadcastKind.SerialMulti, error, cancellationToken);
+        StatelessReplayLatestSignalAsyncStateHelper.OnErrorResumeAsync(
+            _state,
+            SignalBroadcastKind.SerialMulti,
+            error,
+            cancellationToken);
 
     /// <inheritdoc/>
     public ValueTask OnCompletedAsync(Result result) =>

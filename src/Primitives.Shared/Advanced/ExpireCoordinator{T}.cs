@@ -31,14 +31,16 @@ public sealed class ExpireCoordinator<T> : IObserver<T>, IDisposable
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Usage",
         "CA2213:Disposable fields should be disposed",
-        Justification = "Disposed via the thread-safe Interlocked.Exchange teardown in Dispose; CA2213 does not recognize disposal of a field through Interlocked.Exchange.")]
+        Justification =
+            "Disposed via the thread-safe Interlocked.Exchange teardown in Dispose; CA2213 does not recognize disposal of a field through Interlocked.Exchange.")]
     private IDisposable? _subscription;
 
     /// <summary>The active timeout timer.</summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Usage",
         "CA2213:Disposable fields should be disposed",
-        Justification = "Disposed via the thread-safe Interlocked.Exchange teardown in Dispose; CA2213 does not recognize disposal of a field through Interlocked.Exchange.")]
+        Justification =
+            "Disposed via the thread-safe Interlocked.Exchange teardown in Dispose; CA2213 does not recognize disposal of a field through Interlocked.Exchange.")]
     private IDisposable? _timer;
 
     /// <summary>A value indicating whether the timeout or source has terminated.</summary>
@@ -157,7 +159,7 @@ public sealed class ExpireCoordinator<T> : IObserver<T>, IDisposable
         }
 
         ArmTimer(epoch);
-        _subscription = _source.Subscribe(this);
+        Volatile.Write(ref _subscription, _source.Subscribe(this));
         if (Volatile.Read(ref _done) == 0)
         {
             return this;
@@ -173,7 +175,10 @@ public sealed class ExpireCoordinator<T> : IObserver<T>, IDisposable
     /// sequencer; the publish is re-checked under the gate so a timer never survives a terminal notification.</remarks>
     private void ArmTimer(long epoch)
     {
-        var timer = _sequencer.Schedule((Coordinator: this, Epoch: epoch), _dueTime, static (_, state) => state.Coordinator.EmitTimeout(state.Epoch));
+        var timer = _sequencer.Schedule(
+            (Coordinator: this, Epoch: epoch),
+            _dueTime,
+            static (_, state) => state.Coordinator.EmitTimeout(state.Epoch));
 
         IDisposable? previous;
         lock (_gate)

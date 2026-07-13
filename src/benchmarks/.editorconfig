@@ -1,0 +1,18 @@
+# Relaxations for the benchmark tree. These mirror the test tree's, with one addition: a benchmark
+# harness is a console application whose output is the product, so writing results to the console is
+# what it is for. Everything else inherits the repository-root .editorconfig.
+[*.cs]
+
+###################
+# StyleSharp (SST)
+###################
+dotnet_diagnostic.SST1432.severity = none # Benchmark fixtures need not be static
+dotnet_diagnostic.SST1449.severity = none # Writing results to the console is what a benchmark harness does; there is no application logger to route them to
+
+###################
+# PerformanceSharp (PSH)
+###################
+performancesharp.avoid_linq_on_hot_path = false
+dotnet_diagnostic.PSH1100.severity = none # Benchmarks can use LINQ for clarity
+dotnet_diagnostic.PSH1101.severity = error # In benchmarks, simplify LINQ Where plus terminal calls instead of banning LINQ
+dotnet_diagnostic.PSH1102.severity = error # In benchmarks, simplify LINQ type filters instead of banning LINQ

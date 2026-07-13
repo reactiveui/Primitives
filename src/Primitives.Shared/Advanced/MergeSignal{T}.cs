@@ -14,7 +14,8 @@ public sealed class MergeSignal<T> : IObservable<T>
 {
     /// <summary>Initializes a new instance of the <see cref="MergeSignal{T}"/> class.</summary>
     /// <param name="sources">The enumerable sources to merge.</param>
-    public MergeSignal(IEnumerable<IObservable<T>> sources) => Sources = sources ?? throw new ArgumentNullException(nameof(sources));
+    public MergeSignal(IEnumerable<IObservable<T>> sources) =>
+        Sources = sources ?? throw new ArgumentNullException(nameof(sources));
 
     /// <summary>Initializes a new instance of the <see cref="MergeSignal{T}"/> class.</summary>
     /// <param name="sources">The enumerable sources to merge.</param>

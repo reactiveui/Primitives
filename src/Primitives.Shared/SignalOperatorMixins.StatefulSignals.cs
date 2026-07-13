@@ -18,22 +18,15 @@ public static partial class LinqExtensions
 {
     /// <summary>Dedicated signal for <c>Take</c>.</summary>
     /// <typeparam name="T">The value type.</typeparam>
-    private sealed class TakeSignal<T> : IObservable<T>
+    /// <param name="source">The source observable.</param>
+    /// <param name="count">The maximum number of values to forward.</param>
+    private sealed class TakeSignal<T>(IObservable<T> source, int count) : IObservable<T>
     {
         /// <summary>The source observable.</summary>
-        private readonly IObservable<T> _source;
+        private readonly IObservable<T> _source = source;
 
         /// <summary>The maximum number of values to forward.</summary>
-        private readonly int _count;
-
-        /// <summary>Initializes a new instance of the <see cref="TakeSignal{T}"/> class.</summary>
-        /// <param name="source">The source observable.</param>
-        /// <param name="count">The maximum number of values to forward.</param>
-        internal TakeSignal(IObservable<T> source, int count)
-        {
-            _source = source;
-            _count = count;
-        }
+        private readonly int _count = count;
 
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
@@ -55,22 +48,15 @@ public static partial class LinqExtensions
     /// <summary>Dedicated signal for <c>TakeUntil</c> that holds its sources without a per-subscription closure.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     /// <typeparam name="TOther">The cancellation value type.</typeparam>
-    private sealed class TakeUntilSignal<T, TOther> : IObservable<T>
+    /// <param name="source">The source observable.</param>
+    /// <param name="other">The observable that stops the source when it emits.</param>
+    private sealed class TakeUntilSignal<T, TOther>(IObservable<T> source, IObservable<TOther> other) : IObservable<T>
     {
         /// <summary>The source observable.</summary>
-        private readonly IObservable<T> _source;
+        private readonly IObservable<T> _source = source;
 
         /// <summary>The observable that stops the source when it emits.</summary>
-        private readonly IObservable<TOther> _other;
-
-        /// <summary>Initializes a new instance of the <see cref="TakeUntilSignal{T, TOther}"/> class.</summary>
-        /// <param name="source">The source observable.</param>
-        /// <param name="other">The observable that stops the source when it emits.</param>
-        internal TakeUntilSignal(IObservable<T> source, IObservable<TOther> other)
-        {
-            _source = source;
-            _other = other;
-        }
+        private readonly IObservable<TOther> _other = other;
 
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
@@ -231,22 +217,15 @@ public static partial class LinqExtensions
 
     /// <summary>Dedicated signal for <c>Skip</c>.</summary>
     /// <typeparam name="T">The value type.</typeparam>
-    private sealed class SkipSignal<T> : IObservable<T>
+    /// <param name="source">The source observable.</param>
+    /// <param name="count">The number of leading values to drop.</param>
+    private sealed class SkipSignal<T>(IObservable<T> source, int count) : IObservable<T>
     {
         /// <summary>The source observable.</summary>
-        private readonly IObservable<T> _source;
+        private readonly IObservable<T> _source = source;
 
         /// <summary>The number of leading values to drop.</summary>
-        private readonly int _count;
-
-        /// <summary>Initializes a new instance of the <see cref="SkipSignal{T}"/> class.</summary>
-        /// <param name="source">The source observable.</param>
-        /// <param name="count">The number of leading values to drop.</param>
-        internal SkipSignal(IObservable<T> source, int count)
-        {
-            _source = source;
-            _count = count;
-        }
+        private readonly int _count = count;
 
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
@@ -261,22 +240,15 @@ public static partial class LinqExtensions
 
     /// <summary>Dedicated signal for <c>Distinct</c>.</summary>
     /// <typeparam name="T">The value type.</typeparam>
-    private sealed class DistinctSignal<T> : IObservable<T>
+    /// <param name="source">The source observable.</param>
+    /// <param name="comparer">The comparer used to identify duplicates.</param>
+    private sealed class DistinctSignal<T>(IObservable<T> source, IEqualityComparer<T>? comparer) : IObservable<T>
     {
         /// <summary>The source observable.</summary>
-        private readonly IObservable<T> _source;
+        private readonly IObservable<T> _source = source;
 
         /// <summary>The comparer used to identify duplicates.</summary>
-        private readonly IEqualityComparer<T>? _comparer;
-
-        /// <summary>Initializes a new instance of the <see cref="DistinctSignal{T}"/> class.</summary>
-        /// <param name="source">The source observable.</param>
-        /// <param name="comparer">The comparer used to identify duplicates.</param>
-        internal DistinctSignal(IObservable<T> source, IEqualityComparer<T>? comparer)
-        {
-            _source = source;
-            _comparer = comparer;
-        }
+        private readonly IEqualityComparer<T>? _comparer = comparer;
 
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
@@ -308,22 +280,15 @@ public static partial class LinqExtensions
 
     /// <summary>Dedicated signal for <c>Unique</c> (adjacent distinct).</summary>
     /// <typeparam name="T">The value type.</typeparam>
-    private sealed class UniqueSignal<T> : IObservable<T>
+    /// <param name="source">The source observable.</param>
+    /// <param name="comparer">The comparer used to compare adjacent values.</param>
+    private sealed class UniqueSignal<T>(IObservable<T> source, IEqualityComparer<T> comparer) : IObservable<T>
     {
         /// <summary>The source observable.</summary>
-        private readonly IObservable<T> _source;
+        private readonly IObservable<T> _source = source;
 
         /// <summary>The comparer used to compare adjacent values.</summary>
-        private readonly IEqualityComparer<T> _comparer;
-
-        /// <summary>Initializes a new instance of the <see cref="UniqueSignal{T}"/> class.</summary>
-        /// <param name="source">The source observable.</param>
-        /// <param name="comparer">The comparer used to compare adjacent values.</param>
-        internal UniqueSignal(IObservable<T> source, IEqualityComparer<T> comparer)
-        {
-            _source = source;
-            _comparer = comparer;
-        }
+        private readonly IEqualityComparer<T> _comparer = comparer;
 
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
@@ -339,27 +304,19 @@ public static partial class LinqExtensions
     /// <summary>Dedicated signal for <c>UniqueBy</c> (adjacent distinct by key).</summary>
     /// <typeparam name="T">The value type.</typeparam>
     /// <typeparam name="TKey">The key type.</typeparam>
-    private sealed class UniqueBySignal<T, TKey> : IObservable<T>
+    /// <param name="source">The source observable.</param>
+    /// <param name="keySelector">The key projection.</param>
+    /// <param name="comparer">The comparer used to compare adjacent keys.</param>
+    private sealed class UniqueBySignal<T, TKey>(IObservable<T> source, Func<T, TKey> keySelector, IEqualityComparer<TKey> comparer) : IObservable<T>
     {
         /// <summary>The source observable.</summary>
-        private readonly IObservable<T> _source;
+        private readonly IObservable<T> _source = source;
 
         /// <summary>The key projection.</summary>
-        private readonly Func<T, TKey> _keySelector;
+        private readonly Func<T, TKey> _keySelector = keySelector;
 
         /// <summary>The comparer used to compare adjacent keys.</summary>
-        private readonly IEqualityComparer<TKey> _comparer;
-
-        /// <summary>Initializes a new instance of the <see cref="UniqueBySignal{T, TKey}"/> class.</summary>
-        /// <param name="source">The source observable.</param>
-        /// <param name="keySelector">The key projection.</param>
-        /// <param name="comparer">The comparer used to compare adjacent keys.</param>
-        internal UniqueBySignal(IObservable<T> source, Func<T, TKey> keySelector, IEqualityComparer<TKey> comparer)
-        {
-            _source = source;
-            _keySelector = keySelector;
-            _comparer = comparer;
-        }
+        private readonly IEqualityComparer<TKey> _comparer = comparer;
 
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
@@ -375,27 +332,22 @@ public static partial class LinqExtensions
     /// <summary>Dedicated signal for <c>Fold</c> (running accumulation).</summary>
     /// <typeparam name="TSource">The source value type.</typeparam>
     /// <typeparam name="TAccumulate">The accumulated value type.</typeparam>
-    private sealed class FoldSignal<TSource, TAccumulate> : IObservable<TAccumulate>
+    /// <param name="source">The source observable.</param>
+    /// <param name="seed">The initial accumulated value.</param>
+    /// <param name="accumulator">The accumulator function.</param>
+    private sealed class FoldSignal<TSource, TAccumulate>(
+        IObservable<TSource> source,
+        TAccumulate seed,
+        Func<TAccumulate, TSource, TAccumulate> accumulator) : IObservable<TAccumulate>
     {
         /// <summary>The source observable.</summary>
-        private readonly IObservable<TSource> _source;
+        private readonly IObservable<TSource> _source = source;
 
         /// <summary>The initial accumulated value.</summary>
-        private readonly TAccumulate _seed;
+        private readonly TAccumulate _seed = seed;
 
         /// <summary>The accumulator function.</summary>
-        private readonly Func<TAccumulate, TSource, TAccumulate> _accumulator;
-
-        /// <summary>Initializes a new instance of the <see cref="FoldSignal{TSource, TAccumulate}"/> class.</summary>
-        /// <param name="source">The source observable.</param>
-        /// <param name="seed">The initial accumulated value.</param>
-        /// <param name="accumulator">The accumulator function.</param>
-        internal FoldSignal(IObservable<TSource> source, TAccumulate seed, Func<TAccumulate, TSource, TAccumulate> accumulator)
-        {
-            _source = source;
-            _seed = seed;
-            _accumulator = accumulator;
-        }
+        private readonly Func<TAccumulate, TSource, TAccumulate> _accumulator = accumulator;
 
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TAccumulate> observer)
@@ -411,27 +363,22 @@ public static partial class LinqExtensions
     /// <summary>Dedicated signal for <c>Reduce</c> (final accumulation).</summary>
     /// <typeparam name="TSource">The source value type.</typeparam>
     /// <typeparam name="TAccumulate">The accumulated value type.</typeparam>
-    private sealed class ReduceSignal<TSource, TAccumulate> : IObservable<TAccumulate>
+    /// <param name="source">The source observable.</param>
+    /// <param name="seed">The initial accumulated value.</param>
+    /// <param name="accumulator">The accumulator function.</param>
+    private sealed class ReduceSignal<TSource, TAccumulate>(
+        IObservable<TSource> source,
+        TAccumulate seed,
+        Func<TAccumulate, TSource, TAccumulate> accumulator) : IObservable<TAccumulate>
     {
         /// <summary>The source observable.</summary>
-        private readonly IObservable<TSource> _source;
+        private readonly IObservable<TSource> _source = source;
 
         /// <summary>The initial accumulated value.</summary>
-        private readonly TAccumulate _seed;
+        private readonly TAccumulate _seed = seed;
 
         /// <summary>The accumulator function.</summary>
-        private readonly Func<TAccumulate, TSource, TAccumulate> _accumulator;
-
-        /// <summary>Initializes a new instance of the <see cref="ReduceSignal{TSource, TAccumulate}"/> class.</summary>
-        /// <param name="source">The source observable.</param>
-        /// <param name="seed">The initial accumulated value.</param>
-        /// <param name="accumulator">The accumulator function.</param>
-        internal ReduceSignal(IObservable<TSource> source, TAccumulate seed, Func<TAccumulate, TSource, TAccumulate> accumulator)
-        {
-            _source = source;
-            _seed = seed;
-            _accumulator = accumulator;
-        }
+        private readonly Func<TAccumulate, TSource, TAccumulate> _accumulator = accumulator;
 
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TAccumulate> observer)
@@ -446,22 +393,15 @@ public static partial class LinqExtensions
 
     /// <summary>Dedicated signal for <c>TakeWhile</c>.</summary>
     /// <typeparam name="T">The value type.</typeparam>
-    private sealed class TakeWhileSignal<T> : IObservable<T>
+    /// <param name="source">The source observable.</param>
+    /// <param name="predicate">The predicate that determines whether to keep taking values.</param>
+    private sealed class TakeWhileSignal<T>(IObservable<T> source, Func<T, bool> predicate) : IObservable<T>
     {
         /// <summary>The source observable.</summary>
-        private readonly IObservable<T> _source;
+        private readonly IObservable<T> _source = source;
 
         /// <summary>The predicate that determines whether to keep taking values.</summary>
-        private readonly Func<T, bool> _predicate;
-
-        /// <summary>Initializes a new instance of the <see cref="TakeWhileSignal{T}"/> class.</summary>
-        /// <param name="source">The source observable.</param>
-        /// <param name="predicate">The predicate that determines whether to keep taking values.</param>
-        internal TakeWhileSignal(IObservable<T> source, Func<T, bool> predicate)
-        {
-            _source = source;
-            _predicate = predicate;
-        }
+        private readonly Func<T, bool> _predicate = predicate;
 
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
@@ -476,22 +416,15 @@ public static partial class LinqExtensions
 
     /// <summary>Dedicated signal for <c>SkipWhile</c>.</summary>
     /// <typeparam name="T">The value type.</typeparam>
-    private sealed class SkipWhileSignal<T> : IObservable<T>
+    /// <param name="source">The source observable.</param>
+    /// <param name="predicate">The predicate that determines whether to keep skipping values.</param>
+    private sealed class SkipWhileSignal<T>(IObservable<T> source, Func<T, bool> predicate) : IObservable<T>
     {
         /// <summary>The source observable.</summary>
-        private readonly IObservable<T> _source;
+        private readonly IObservable<T> _source = source;
 
         /// <summary>The predicate that determines whether to keep skipping values.</summary>
-        private readonly Func<T, bool> _predicate;
-
-        /// <summary>Initializes a new instance of the <see cref="SkipWhileSignal{T}"/> class.</summary>
-        /// <param name="source">The source observable.</param>
-        /// <param name="predicate">The predicate that determines whether to keep skipping values.</param>
-        internal SkipWhileSignal(IObservable<T> source, Func<T, bool> predicate)
-        {
-            _source = source;
-            _predicate = predicate;
-        }
+        private readonly Func<T, bool> _predicate = predicate;
 
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)

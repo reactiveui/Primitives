@@ -34,7 +34,7 @@ public class AsyncBridgeBenchmarks
     public int SystemReactiveCompletedTaskBridge()
     {
         IntSignalWitness observer = new();
-        using var subscription = RxObservable.FromAsync(() => CompletedTask).Subscribe(observer);
+        using var subscription = RxObservable.FromAsync(static () => CompletedTask).Subscribe(observer);
         return observer.LastValue;
     }
 
@@ -44,7 +44,7 @@ public class AsyncBridgeBenchmarks
     public int R3CompletedTaskBridge()
     {
         IntR3Witness observer = new();
-        using var subscription = R3.Observable.ToObservable(CompletedTask, configureAwait: false).Subscribe(observer);
+        using var subscription = R3.Observable.ToObservable(CompletedTask, false).Subscribe(observer);
         return observer.LastValue;
     }
 }

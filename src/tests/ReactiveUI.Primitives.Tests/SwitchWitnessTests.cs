@@ -55,11 +55,11 @@ public sealed class SwitchWitnessTests
         outer.OnNext(first);
 
         // The first inner value enters the observer and blocks while the coordinator holds its gate.
-        Task firstDelivery = Task.Run(() => first.Observer!.OnNext(One));
+        var firstDelivery = Task.Run(() => first.Observer!.OnNext(One));
         await Assert.That(observer.FirstEntered.Wait(WaitTimeout)).IsTrue();
 
         // Switching sources is gated too: OnSource cannot subscribe the new inner until the delivery releases.
-        Task switchTask = Task.Run(() => outer.OnNext(second));
+        var switchTask = Task.Run(() => outer.OnNext(second));
         await Assert.That(SpinWait.SpinUntil(() => second.Observer is not null, GateProbeMilliseconds)).IsFalse();
         await Assert.That(observer.ConcurrentOnNext).IsFalse();
 

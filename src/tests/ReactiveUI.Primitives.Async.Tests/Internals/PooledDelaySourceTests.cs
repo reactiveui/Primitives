@@ -10,6 +10,12 @@ public class PooledDelaySourceTests
     /// <summary>The delay used by the happy-path test.</summary>
     private static readonly TimeSpan ShortDelay = TimeSpan.FromMilliseconds(20);
 
+    /// <summary>Lower bound the elapsed time must clear to prove the delay was actually awaited.</summary>
+    private static readonly TimeSpan MinimumObservedDelay = TimeSpan.FromMilliseconds(5);
+
+    /// <summary>A delay long enough that it can only end through cancellation.</summary>
+    private static readonly TimeSpan DelayOutlivingTheTest = TimeSpan.FromSeconds(10);
+
     /// <summary>Verifies that a pre-cancelled token fails the source immediately with <see cref = "OperationCanceledException"/> — the BeginAsync early-return path.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -34,7 +40,7 @@ public class PooledDelaySourceTests
         var elapsed = TimeProvider.System.GetElapsedTime(start);
 
         // Verify the delay actually happened — the source's timer-fired path completed it.
-        await Assert.That(elapsed).IsGreaterThanOrEqualTo(TimeSpan.FromMilliseconds(5));
+        await Assert.That(elapsed).IsGreaterThanOrEqualTo(MinimumObservedDelay);
     }
 
     /// <summary>Verifies that a token cancelled mid-flight propagates an <see cref = "OperationCanceledException"/>.</summary>
@@ -44,7 +50,7 @@ public class PooledDelaySourceTests
     {
         using CancellationTokenSource cts = new();
         var source = PooledDelaySource.Rent();
-        var task = source.BeginAsync(TimeSpan.FromSeconds(10), new NonSystemTimeProvider(), cts.Token);
+        var task = source.BeginAsync(DelayOutlivingTheTest, new NonSystemTimeProvider(), cts.Token);
         await cts.CancelAsync();
         var ex = await Assert.That(async () => await task).ThrowsExactly<OperationCanceledException>();
         await Assert.That(ex).IsNotNull();

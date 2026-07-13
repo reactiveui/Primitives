@@ -114,7 +114,8 @@ public sealed class DisposableBag : IsDisposed
                     _overflow = grown;
                 }
 
-                _overflow[_overflowCount++] = disposable;
+                _overflow[_overflowCount] = disposable;
+                _overflowCount++;
             }
         }
 

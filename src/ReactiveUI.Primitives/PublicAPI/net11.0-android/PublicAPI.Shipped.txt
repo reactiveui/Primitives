@@ -513,20 +513,23 @@ ReactiveUI.Primitives.ConnectableSignalExtensions.extension<T>(ReactiveUI.Primit
 ReactiveUI.Primitives.ConnectableSignalExtensions.extension<T>(ReactiveUI.Primitives.ConnectableSignal<T>!).AutoConnect(int subscriberCount) -> System.IObservable<T>!
 ReactiveUI.Primitives.ConnectableSignalExtensions.extension<T>(ReactiveUI.Primitives.ConnectableSignal<T>!).AutoConnect(int subscriberCount, System.Action<System.IDisposable!>! onConnect) -> System.IObservable<T>!
 ReactiveUI.Primitives.ConnectableSignalExtensions.extension<T>(ReactiveUI.Primitives.ConnectableSignal<T>!).AutoShare() -> System.IObservable<T>!
-ReactiveUI.Primitives.ConnectableSignalExtensions.extension<T>(ReactiveUI.Primitives.ConnectableSignal<T>!).RefCount() -> System.IObservable<T>!
 ReactiveUI.Primitives.ConnectableSignalExtensions.extension<T>(System.IObservable<T>!)
 ReactiveUI.Primitives.ConnectableSignalExtensions.extension<T>(System.IObservable<T>!).Multicast(ReactiveUI.Primitives.Signals.ISignal<T>! hub) -> ReactiveUI.Primitives.ConnectableSignal<T>!
-ReactiveUI.Primitives.ConnectableSignalExtensions.extension<T>(System.IObservable<T>!).Publish() -> ReactiveUI.Primitives.ConnectableSignal<T>!
-ReactiveUI.Primitives.ConnectableSignalExtensions.extension<T>(System.IObservable<T>!).Publish<TResult>(System.Func<System.IObservable<T>!, System.IObservable<TResult>!>! selector) -> System.IObservable<TResult>!
-ReactiveUI.Primitives.ConnectableSignalExtensions.extension<T>(System.IObservable<T>!).Replay() -> ReactiveUI.Primitives.ConnectableSignal<T>!
-ReactiveUI.Primitives.ConnectableSignalExtensions.extension<T>(System.IObservable<T>!).Replay(int bufferSize) -> ReactiveUI.Primitives.ConnectableSignal<T>!
-ReactiveUI.Primitives.ConnectableSignalExtensions.extension<T>(System.IObservable<T>!).Replay(int bufferSize, System.TimeSpan window) -> ReactiveUI.Primitives.ConnectableSignal<T>!
 ReactiveUI.Primitives.ConnectableSignalExtensions.extension<T>(System.IObservable<T>!).ReplayLive() -> ReactiveUI.Primitives.ConnectableSignal<T>!
 ReactiveUI.Primitives.ConnectableSignalExtensions.extension<T>(System.IObservable<T>!).ReplayLive(int bufferSize) -> ReactiveUI.Primitives.ConnectableSignal<T>!
 ReactiveUI.Primitives.ConnectableSignalExtensions.extension<T>(System.IObservable<T>!).ReplayLive(int bufferSize, System.TimeSpan window) -> ReactiveUI.Primitives.ConnectableSignal<T>!
-ReactiveUI.Primitives.ConnectableSignalExtensions.extension<T>(System.IObservable<T>!).Share() -> ReactiveUI.Primitives.ConnectableSignal<T>!
 ReactiveUI.Primitives.ConnectableSignalExtensions.extension<T>(System.IObservable<T>!).ShareLatest() -> System.IObservable<T>!
 ReactiveUI.Primitives.ConnectableSignalExtensions.extension<T>(System.IObservable<T>!).ShareLive() -> ReactiveUI.Primitives.ConnectableSignal<T>!
+ReactiveUI.Primitives.ConnectableSignalRxNameExtensions
+ReactiveUI.Primitives.ConnectableSignalRxNameExtensions.extension<T>(ReactiveUI.Primitives.ConnectableSignal<T>!)
+ReactiveUI.Primitives.ConnectableSignalRxNameExtensions.extension<T>(ReactiveUI.Primitives.ConnectableSignal<T>!).RefCount() -> System.IObservable<T>!
+ReactiveUI.Primitives.ConnectableSignalRxNameExtensions.extension<T>(System.IObservable<T>!)
+ReactiveUI.Primitives.ConnectableSignalRxNameExtensions.extension<T>(System.IObservable<T>!).Publish() -> ReactiveUI.Primitives.ConnectableSignal<T>!
+ReactiveUI.Primitives.ConnectableSignalRxNameExtensions.extension<T>(System.IObservable<T>!).Publish<TResult>(System.Func<System.IObservable<T>!, System.IObservable<TResult>!>! selector) -> System.IObservable<TResult>!
+ReactiveUI.Primitives.ConnectableSignalRxNameExtensions.extension<T>(System.IObservable<T>!).Replay() -> ReactiveUI.Primitives.ConnectableSignal<T>!
+ReactiveUI.Primitives.ConnectableSignalRxNameExtensions.extension<T>(System.IObservable<T>!).Replay(int bufferSize) -> ReactiveUI.Primitives.ConnectableSignal<T>!
+ReactiveUI.Primitives.ConnectableSignalRxNameExtensions.extension<T>(System.IObservable<T>!).Replay(int bufferSize, System.TimeSpan window) -> ReactiveUI.Primitives.ConnectableSignal<T>!
+ReactiveUI.Primitives.ConnectableSignalRxNameExtensions.extension<T>(System.IObservable<T>!).Share() -> ReactiveUI.Primitives.ConnectableSignal<T>!
 ReactiveUI.Primitives.Core.Spark
 ReactiveUI.Primitives.Core.Spark<T>
 ReactiveUI.Primitives.Core.Spark<T>.Accept(System.Action<T>! onNext, System.Action<System.Exception!>! onError, System.Action! onCompleted) -> void
@@ -911,18 +914,18 @@ static ReactiveUI.Primitives.ConnectableSignalExtensions.AutoConnect<T>(this Rea
 static ReactiveUI.Primitives.ConnectableSignalExtensions.AutoConnect<T>(this ReactiveUI.Primitives.ConnectableSignal<T>! source, int subscriberCount, System.Action<System.IDisposable!>! onConnect) -> System.IObservable<T>!
 static ReactiveUI.Primitives.ConnectableSignalExtensions.AutoShare<T>(this ReactiveUI.Primitives.ConnectableSignal<T>! source) -> System.IObservable<T>!
 static ReactiveUI.Primitives.ConnectableSignalExtensions.Multicast<T>(this System.IObservable<T>! source, ReactiveUI.Primitives.Signals.ISignal<T>! hub) -> ReactiveUI.Primitives.ConnectableSignal<T>!
-static ReactiveUI.Primitives.ConnectableSignalExtensions.Publish<T, TResult>(this System.IObservable<T>! source, System.Func<System.IObservable<T>!, System.IObservable<TResult>!>! selector) -> System.IObservable<TResult>!
-static ReactiveUI.Primitives.ConnectableSignalExtensions.Publish<T>(this System.IObservable<T>! source) -> ReactiveUI.Primitives.ConnectableSignal<T>!
-static ReactiveUI.Primitives.ConnectableSignalExtensions.RefCount<T>(this ReactiveUI.Primitives.ConnectableSignal<T>! source) -> System.IObservable<T>!
-static ReactiveUI.Primitives.ConnectableSignalExtensions.Replay<T>(this System.IObservable<T>! source) -> ReactiveUI.Primitives.ConnectableSignal<T>!
-static ReactiveUI.Primitives.ConnectableSignalExtensions.Replay<T>(this System.IObservable<T>! source, int bufferSize) -> ReactiveUI.Primitives.ConnectableSignal<T>!
-static ReactiveUI.Primitives.ConnectableSignalExtensions.Replay<T>(this System.IObservable<T>! source, int bufferSize, System.TimeSpan window) -> ReactiveUI.Primitives.ConnectableSignal<T>!
 static ReactiveUI.Primitives.ConnectableSignalExtensions.ReplayLive<T>(this System.IObservable<T>! source) -> ReactiveUI.Primitives.ConnectableSignal<T>!
 static ReactiveUI.Primitives.ConnectableSignalExtensions.ReplayLive<T>(this System.IObservable<T>! source, int bufferSize) -> ReactiveUI.Primitives.ConnectableSignal<T>!
 static ReactiveUI.Primitives.ConnectableSignalExtensions.ReplayLive<T>(this System.IObservable<T>! source, int bufferSize, System.TimeSpan window) -> ReactiveUI.Primitives.ConnectableSignal<T>!
-static ReactiveUI.Primitives.ConnectableSignalExtensions.Share<T>(this System.IObservable<T>! source) -> ReactiveUI.Primitives.ConnectableSignal<T>!
 static ReactiveUI.Primitives.ConnectableSignalExtensions.ShareLatest<T>(this System.IObservable<T>! source) -> System.IObservable<T>!
 static ReactiveUI.Primitives.ConnectableSignalExtensions.ShareLive<T>(this System.IObservable<T>! source) -> ReactiveUI.Primitives.ConnectableSignal<T>!
+static ReactiveUI.Primitives.ConnectableSignalRxNameExtensions.Publish<T, TResult>(this System.IObservable<T>! source, System.Func<System.IObservable<T>!, System.IObservable<TResult>!>! selector) -> System.IObservable<TResult>!
+static ReactiveUI.Primitives.ConnectableSignalRxNameExtensions.Publish<T>(this System.IObservable<T>! source) -> ReactiveUI.Primitives.ConnectableSignal<T>!
+static ReactiveUI.Primitives.ConnectableSignalRxNameExtensions.RefCount<T>(this ReactiveUI.Primitives.ConnectableSignal<T>! source) -> System.IObservable<T>!
+static ReactiveUI.Primitives.ConnectableSignalRxNameExtensions.Replay<T>(this System.IObservable<T>! source) -> ReactiveUI.Primitives.ConnectableSignal<T>!
+static ReactiveUI.Primitives.ConnectableSignalRxNameExtensions.Replay<T>(this System.IObservable<T>! source, int bufferSize) -> ReactiveUI.Primitives.ConnectableSignal<T>!
+static ReactiveUI.Primitives.ConnectableSignalRxNameExtensions.Replay<T>(this System.IObservable<T>! source, int bufferSize, System.TimeSpan window) -> ReactiveUI.Primitives.ConnectableSignal<T>!
+static ReactiveUI.Primitives.ConnectableSignalRxNameExtensions.Share<T>(this System.IObservable<T>! source) -> ReactiveUI.Primitives.ConnectableSignal<T>!
 static ReactiveUI.Primitives.Core.Spark.CreateOnCompleted<T>() -> ReactiveUI.Primitives.Core.Spark<T>
 static ReactiveUI.Primitives.Core.Spark.CreateOnError<T>(System.Exception! error) -> ReactiveUI.Primitives.Core.Spark<T>
 static ReactiveUI.Primitives.Core.Spark.CreateOnNext<T>(T value) -> ReactiveUI.Primitives.Core.Spark<T>

@@ -15,7 +15,7 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestEnumerableSourceThrowsDuringSubscribe_ThenDisposesAndRethrows()
     {
-        var failing = AsyncObs.Create<int>((_, _) => throw new InvalidOperationException("subscribe fail"));
+        var failing = AsyncObs.Create<int>(static (_, _) => throw new InvalidOperationException("subscribe fail"));
         IObservableAsync<int>[] sources = [AsyncObs.Return(1), failing];
         await Assert.That(async () => await sources.CombineLatest().ToListAsync())
             .ThrowsExactly<InvalidOperationException>();
@@ -30,7 +30,7 @@ public partial class CombineLatestOperatorTests
         var s2 = Signal.Create<int>();
         Exception? received = null;
         IObservableAsync<int>[] sources = [s1.Values, s2.Values];
-        await using var sub = await sources.CombineLatest().SubscribeAsync((_, _) => default, (ex, _) =>
+        await using var sub = await sources.CombineLatest().SubscribeAsync(static (_, _) => default, (ex, _) =>
         {
             received = ex;
             return default;
@@ -52,7 +52,7 @@ public partial class CombineLatestOperatorTests
         var s2 = Signal.Create<int>();
         Exception? received = null;
         IObservableAsync<int>[] sources = [s1.Values, s2.Values];
-        var sub = await sources.CombineLatest().SubscribeAsync((_, _) => default, (ex, _) =>
+        var sub = await sources.CombineLatest().SubscribeAsync(static (_, _) => default, (ex, _) =>
         {
             received = ex;
             return default;
@@ -73,7 +73,7 @@ public partial class CombineLatestOperatorTests
         var s2 = Signal.Create<int>();
         Result? completionResult = null;
         IObservableAsync<int>[] sources = [s1.Values, s2.Values];
-        await using var sub = await sources.CombineLatest().SubscribeAsync((_, _) => default, null, result =>
+        await using var sub = await sources.CombineLatest().SubscribeAsync(static (_, _) => default, null, result =>
         {
             completionResult = result;
             return default;

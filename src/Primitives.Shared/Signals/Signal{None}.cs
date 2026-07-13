@@ -18,11 +18,11 @@ public static partial class Signal
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Major Code Smell",
         "S4018:Generic methods should provide type parameters",
-        Justification = "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
-    public static IObservable<T> None<T>(ISequencer scheduler)
-    {
-        return scheduler == Sequencer.Immediate ? ImmutableEmptySignal<T>.Instance : new EmptySignal<T>(scheduler);
-    }
+        Justification =
+            "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
+    public static IObservable<T> None<T>(ISequencer scheduler) => scheduler == Sequencer.Immediate
+        ? ImmutableEmptySignal<T>.Instance
+        : new EmptySignal<T>(scheduler);
 
     /// <summary>Empty Signals. Returns only OnCompleted on specified scheduler. witness is for type inference.</summary>
     /// <typeparam name="T">The Type.</typeparam>
@@ -39,7 +39,8 @@ public static partial class Signal
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Major Code Smell",
         "S4018:Generic methods should provide type parameters",
-        Justification = "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
+        Justification =
+            "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
     public static IObservable<T> None<T>() =>
         ImmutableEmptySignal<T>.Instance;
 

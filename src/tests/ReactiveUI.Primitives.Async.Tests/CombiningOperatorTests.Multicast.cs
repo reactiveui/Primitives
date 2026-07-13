@@ -14,8 +14,9 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMulticastConnectAsync_ThenEmitsToSubscribers()
     {
+        const int EmittedItemCount = 3;
         var signal = Signal.Create<int>();
-        var source = SignalAsync.Range(1, 3);
+        var source = SignalAsync.Range(1, EmittedItemCount);
         var connectable = source.Multicast(signal);
 
         List<int> items = [];
@@ -40,8 +41,9 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMulticastDisconnectHandleDisposedTwice_ThenSecondCallIsNoop()
     {
+        const int EmittedItemCount = 3;
         var signal = Signal.Create<int>();
-        var source = SignalAsync.Range(1, 3);
+        var source = SignalAsync.Range(1, EmittedItemCount);
         var connectable = source.Multicast(signal);
 
         var disconnectHandle = await connectable.ConnectAsync(CancellationToken.None);
@@ -63,7 +65,7 @@ public partial class CombiningOperatorTests
     public async Task WhenMulticastConnectHandleDisposedTwice_ThenCanReconnectSuccessfully()
     {
         var signal = Signal.Create<int>();
-        var source = SignalAsync.Return(42);
+        var source = SignalAsync.Return(Sentinel42);
         var connectable = source.Multicast(signal);
 
         var handle = await connectable.ConnectAsync(CancellationToken.None);
@@ -94,7 +96,8 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenPublish_ThenEmitsToSubscribersAfterConnect()
     {
-        var source = SignalAsync.Range(1, 3);
+        const int EmittedItemCount = 3;
+        var source = SignalAsync.Range(1, EmittedItemCount);
         var connectable = source.Publish();
 
         List<int> items = [];
@@ -119,7 +122,8 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenPublishWithOptions_ThenEmitsToSubscribers()
     {
-        var source = SignalAsync.Range(1, 3);
+        const int EmittedItemCount = 3;
+        var source = SignalAsync.Range(1, EmittedItemCount);
         var connectable = source.Publish(SignalCreationOptions.Default);
 
         List<int> items = [];
@@ -144,7 +148,8 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenStatelessPublish_ThenEmitsToSubscribers()
     {
-        var source = SignalAsync.Range(1, 3);
+        const int EmittedItemCount = 3;
+        var source = SignalAsync.Range(1, EmittedItemCount);
         var connectable = source.StatelessPublish();
 
         List<int> items = [];
@@ -169,7 +174,8 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenPublishWithInitialValue_ThenSubscriberReceivesInitialValueAndSourceItems()
     {
-        var source = SignalAsync.Range(1, 2);
+        const int EmittedItemCount = 2;
+        var source = SignalAsync.Range(1, EmittedItemCount);
         var connectable = source.Publish(0);
 
         List<int> items = [];
@@ -196,7 +202,8 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenPublishWithInitialValueAndOptions_ThenSubscriberReceivesInitialValueAndSourceItems()
     {
-        var source = SignalAsync.Range(1, 2);
+        const int EmittedItemCount = 2;
+        var source = SignalAsync.Range(1, EmittedItemCount);
         var connectable = source.Publish(0, BehaviorSignalCreationOptions.Default);
 
         List<int> items = [];
@@ -223,7 +230,8 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenStatelessPublishWithInitialValue_ThenSubscriberReceivesInitialValueAndSourceItems()
     {
-        var source = SignalAsync.Range(1, 2);
+        const int EmittedItemCount = 2;
+        var source = SignalAsync.Range(1, EmittedItemCount);
         var connectable = source.StatelessPublish(0);
 
         List<int> items = [];
@@ -250,7 +258,8 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenReplayLatestPublish_ThenEmitsToSubscribers()
     {
-        var source = SignalAsync.Range(1, 3);
+        const int EmittedItemCount = 3;
+        var source = SignalAsync.Range(1, EmittedItemCount);
         var connectable = source.ReplayLatestPublish();
 
         List<int> items = [];
@@ -275,7 +284,8 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenReplayLatestPublishWithOptions_ThenEmitsToSubscribers()
     {
-        var source = SignalAsync.Range(1, 3);
+        const int EmittedItemCount = 3;
+        var source = SignalAsync.Range(1, EmittedItemCount);
         var connectable = source.ReplayLatestPublish(ReplayLatestSignalCreationOptions.Default);
 
         List<int> items = [];
@@ -300,7 +310,8 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenStatelessReplayLatestPublish_ThenEmitsToSubscribers()
     {
-        var source = SignalAsync.Range(1, 3);
+        const int EmittedItemCount = 3;
+        var source = SignalAsync.Range(1, EmittedItemCount);
         var connectable = source.StatelessReplayLatestPublish();
 
         List<int> items = [];
@@ -337,6 +348,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenRefCountDisposedWithActiveConnection_ThenConnectionIsDisposed()
     {
+        const int ItemWaitTimeoutSeconds = 5;
         var source = Signal.Create<int>();
         var connectable = source.Values.Publish();
         var refCounted = connectable.RefCount();
@@ -355,7 +367,7 @@ public partial class CombiningOperatorTests
 
         await AsyncTestHelpers.WaitForConditionAsync(
             () => items.Count == 1,
-            TimeSpan.FromSeconds(5));
+            TimeSpan.FromSeconds(ItemWaitTimeoutSeconds));
 
         // Dispose the RefCountSignal via its IDisposable implementation.
         ((IDisposable)(object)refCounted).Dispose();

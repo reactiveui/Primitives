@@ -32,7 +32,8 @@ internal static class StatelessReplayLatestSignalAsyncStateHelper
                 observers = state.Observers;
             }
 
-            await SignalAsyncStateHelper.BroadcastOnNextAsync(kind, observers, value, cancellationToken).ConfigureAwait(false);
+            await SignalAsyncStateHelper.BroadcastOnNextAsync(kind, observers, value, cancellationToken)
+                .ConfigureAwait(false);
         }
         finally
         {
@@ -62,7 +63,8 @@ internal static class StatelessReplayLatestSignalAsyncStateHelper
                 observers = state.Observers;
             }
 
-            await SignalAsyncStateHelper.BroadcastOnErrorResumeAsync(kind, observers, error, token).ConfigureAwait(false);
+            await SignalAsyncStateHelper.BroadcastOnErrorResumeAsync(kind, observers, error, token)
+                .ConfigureAwait(false);
         }
         finally
         {

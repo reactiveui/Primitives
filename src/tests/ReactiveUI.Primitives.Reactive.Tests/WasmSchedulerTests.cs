@@ -22,6 +22,24 @@ public sealed class WasmSchedulerTests
     /// <summary>Longest a test waits for scheduled work before failing.</summary>
     private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(5);
 
+    /// <summary>Due time of a work item that is expected to run after its delay elapses.</summary>
+    private static readonly TimeSpan DelayedDueTime = TimeSpan.FromMilliseconds(50);
+
+    /// <summary>Due time of a work item that is disposed before it becomes due, so it must never run.</summary>
+    private static readonly TimeSpan CancellationDueTime = TimeSpan.FromMilliseconds(100);
+
+    /// <summary>How long a test waits past <see cref="CancellationDueTime"/> to prove a cancelled item did not run.</summary>
+    private static readonly TimeSpan CancellationObservationWindow = TimeSpan.FromMilliseconds(250);
+
+    /// <summary>Period between ticks of a periodic work item.</summary>
+    private static readonly TimeSpan TickPeriod = TimeSpan.FromMilliseconds(10);
+
+    /// <summary>How long a test waits after disposing a periodic item to prove no further ticks arrive.</summary>
+    private static readonly TimeSpan PostDisposeObservationWindow = TimeSpan.FromMilliseconds(100);
+
+    /// <summary>A positive due time or period, so a null action is the only invalid argument under test.</summary>
+    private static readonly TimeSpan ValidInterval = TimeSpan.FromMilliseconds(100);
+
     /// <summary>Verifies the shared instance is a singleton.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
@@ -46,7 +64,9 @@ public sealed class WasmSchedulerTests
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task SchedulePeriodicRejectsNegativePeriod() =>
-        await Assert.That(() => WasmScheduler.Default.SchedulePeriodic(0, TimeSpan.FromMilliseconds(-1), static s => s))
+        await Assert
+            .That(static () =>
+                WasmScheduler.Default.SchedulePeriodic(0, TimeSpan.FromMilliseconds(-1), static s => s))
             .ThrowsExactly<ArgumentOutOfRangeException>();
 
     /// <summary>Verifies immediate work executes with the scheduler and state passed through.</summary>
@@ -142,7 +162,7 @@ public sealed class WasmSchedulerTests
         TaskCompletionSource<bool> delayed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource<bool> immediate = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        _ = WasmScheduler.Default.Schedule(0, TimeSpan.FromMilliseconds(50), (_, _) =>
+        _ = WasmScheduler.Default.Schedule(0, DelayedDueTime, (_, _) =>
         {
             _ = delayed.TrySetResult(true);
             return Disposable.Empty;
@@ -164,14 +184,14 @@ public sealed class WasmSchedulerTests
     {
         var ran = false;
 
-        var subscription = WasmScheduler.Default.Schedule(0, TimeSpan.FromMilliseconds(100), (_, _) =>
+        var subscription = WasmScheduler.Default.Schedule(0, CancellationDueTime, (_, _) =>
         {
             ran = true;
             return Disposable.Empty;
         });
         subscription.Dispose();
 
-        await Task.Delay(TimeSpan.FromMilliseconds(250));
+        await Task.Delay(CancellationObservationWindow);
         await Assert.That(ran).IsFalse();
     }
 
@@ -183,7 +203,7 @@ public sealed class WasmSchedulerTests
         TaskCompletionSource<bool> reachedTwo = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var count = 0;
 
-        var subscription = WasmScheduler.Default.SchedulePeriodic(0, TimeSpan.FromMilliseconds(10), state =>
+        var subscription = WasmScheduler.Default.SchedulePeriodic(0, TickPeriod, state =>
         {
             count = state + 1;
             if (count >= MinimumTicks)
@@ -198,7 +218,7 @@ public sealed class WasmSchedulerTests
         subscription.Dispose();
         var snapshot = Volatile.Read(ref count);
 
-        await Task.Delay(TimeSpan.FromMilliseconds(100));
+        await Task.Delay(PostDisposeObservationWindow);
         await Assert.That(Volatile.Read(ref count)).IsEqualTo(snapshot);
     }
 
@@ -224,7 +244,7 @@ public sealed class WasmSchedulerTests
     [Test]
     public async Task DisposeReleasesDrainTimerAndIsIdempotent()
     {
-        var scheduler = (WasmScheduler)Activator.CreateInstance(typeof(WasmScheduler), nonPublic: true)!;
+        var scheduler = (WasmScheduler)Activator.CreateInstance(typeof(WasmScheduler), true)!;
 
         scheduler.Dispose();
 
@@ -236,7 +256,8 @@ public sealed class WasmSchedulerTests
     [Test]
     public async Task DisposedDelayedItemDisposeIsIdempotent()
     {
-        var subscription = WasmScheduler.Default.Schedule(0, TimeSpan.FromMinutes(1), static (_, _) => Disposable.Empty);
+        var subscription =
+            WasmScheduler.Default.Schedule(0, TimeSpan.FromMinutes(1), static (_, _) => Disposable.Empty);
 
         subscription.Dispose();
 
@@ -261,7 +282,7 @@ public sealed class WasmSchedulerTests
     public async Task SelfCancellingImmediateActionDisposesReturnedDisposable()
     {
         TaskCompletionSource returnedDisposed = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        var returned = Disposable.Create(() => returnedDisposed.TrySetResult());
+        var returned = Disposable.Create(returnedDisposed, static source => source.TrySetResult());
 
         // Holder to capture subscription in closure (works around race condition on net8.0/Linux)
         var holder = new Holder { Subscription = null };
@@ -279,34 +300,29 @@ public sealed class WasmSchedulerTests
     /// <summary>Verifies that scheduling with a null action returns proper exception.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
-    public async Task ScheduleWithNullActionThrows()
-    {
-        await Assert.That(() => WasmScheduler.Default.Schedule(0, null!)).Throws<ArgumentNullException>();
-    }
+    public async Task ScheduleWithNullActionThrows() =>
+        await Assert.That(static () => WasmScheduler.Default.Schedule(0, null!)).Throws<ArgumentNullException>();
 
     /// <summary>Verifies that scheduling delayed with a null action returns proper exception.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
-    public async Task ScheduleDelayedWithNullActionThrows()
-    {
-        await Assert.That(() => WasmScheduler.Default.Schedule(0, TimeSpan.FromMilliseconds(100), null!)).Throws<ArgumentNullException>();
-    }
+    public async Task ScheduleDelayedWithNullActionThrows() => await Assert
+        .That(static () => WasmScheduler.Default.Schedule(0, ValidInterval, null!))
+        .Throws<ArgumentNullException>();
 
     /// <summary>Verifies that scheduling periodic with negative period throws.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
-    public async Task SchedulePeriodicWithNegativePeriodThrows()
-    {
-        await Assert.That(() => WasmScheduler.Default.SchedulePeriodic(0, TimeSpan.FromMilliseconds(-1), static s => s)).Throws<ArgumentOutOfRangeException>();
-    }
+    public async Task SchedulePeriodicWithNegativePeriodThrows() => await Assert
+        .That(static () => WasmScheduler.Default.SchedulePeriodic(0, TimeSpan.FromMilliseconds(-1), static s => s))
+        .Throws<ArgumentOutOfRangeException>();
 
     /// <summary>Verifies that scheduling periodic with null action returns proper exception.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
-    public async Task SchedulePeriodicWithNullActionThrows()
-    {
-        await Assert.That(() => WasmScheduler.Default.SchedulePeriodic(0, TimeSpan.FromMilliseconds(100), null!)).Throws<ArgumentNullException>();
-    }
+    public async Task SchedulePeriodicWithNullActionThrows() => await Assert
+        .That(static () => WasmScheduler.Default.SchedulePeriodic(0, ValidInterval, null!))
+        .Throws<ArgumentNullException>();
 
     /// <summary>Simple holder to work around race condition in closure.</summary>
     private sealed class Holder

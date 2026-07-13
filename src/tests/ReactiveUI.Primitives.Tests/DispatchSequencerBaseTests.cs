@@ -17,6 +17,12 @@ public sealed class DispatchSequencerBaseTests
     /// <summary>Stateful schedule test value.</summary>
     private const int StatefulScheduleValue = 7;
 
+    /// <summary>The value carried by the second work item of a scheduled burst.</summary>
+    private const int SecondBurstValue = 2;
+
+    /// <summary>The value carried by the third work item of a scheduled burst.</summary>
+    private const int ThirdBurstValue = 3;
+
     /// <summary>Expected burst values.</summary>
     private static readonly int[] ExpectedBurstValues = [1, 2, 3];
 
@@ -28,11 +34,11 @@ public sealed class DispatchSequencerBaseTests
     [Test]
     public async Task DispatchSequencerBaseCoalescesBurstIntoOneDrain()
     {
-        TestDispatchSequencer sequencer = new();
+        var sequencer = TestDispatchSequencer.Create();
         List<int> values = [];
         sequencer.Schedule(new RecordingWorkItem(values, 1));
-        sequencer.Schedule(new RecordingWorkItem(values, 2));
-        sequencer.Schedule(new RecordingWorkItem(values, 3));
+        sequencer.Schedule(new RecordingWorkItem(values, SecondBurstValue));
+        sequencer.Schedule(new RecordingWorkItem(values, ThirdBurstValue));
         await Assert.That(sequencer.PostCount).IsEqualTo(1);
         sequencer.RunNextDrain();
         await Assert.That(values.SequenceEqual(ExpectedBurstValues)).IsTrue();
@@ -44,7 +50,7 @@ public sealed class DispatchSequencerBaseTests
     [Test]
     public async Task DispatchSequencerBaseSkipsCancelledQueuedWork()
     {
-        TestDispatchSequencer sequencer = new();
+        var sequencer = TestDispatchSequencer.Create();
         List<int> values = [];
         RecordingWorkItem item = new(values, 1);
         sequencer.Schedule(item);
@@ -58,7 +64,7 @@ public sealed class DispatchSequencerBaseTests
     [Test]
     public async Task DispatchSequencerBaseDefersReentrantWorkToNextDrain()
     {
-        TestDispatchSequencer sequencer = new();
+        var sequencer = TestDispatchSequencer.Create();
         List<int> values = [];
         sequencer.Schedule(new ReentrantWorkItem(sequencer, values));
         sequencer.RunNextDrain();
@@ -90,7 +96,9 @@ public sealed class DispatchSequencerBaseTests
         private DispatchSequencerState _state;
 
         /// <summary>Initializes a new instance of the <see cref="TestDispatchSequencer"/> class.</summary>
-        public TestDispatchSequencer() => _state = new(this, Post, RunDrain);
+        private TestDispatchSequencer()
+        {
+        }
 
         /// <summary>Gets the number of posted drains.</summary>
         public int PostCount { get; private set; }
@@ -100,6 +108,16 @@ public sealed class DispatchSequencerBaseTests
 
         /// <inheritdoc/>
         public long Timestamp => DispatchSequencerState.Timestamp;
+
+        /// <summary>Creates a sequencer whose dispatch state is wired only after construction has finished,
+        /// so the engine never sees a half-built owner.</summary>
+        /// <returns>The wired sequencer.</returns>
+        public static TestDispatchSequencer Create()
+        {
+            TestDispatchSequencer sequencer = new();
+            sequencer._state = new(sequencer, sequencer.Post, sequencer.RunDrain);
+            return sequencer;
+        }
 
         /// <summary>Runs the next posted drain.</summary>
         public void RunNextDrain() => _drains.Dequeue()();
@@ -125,22 +143,15 @@ public sealed class DispatchSequencerBaseTests
     }
 
     /// <summary>Work item that records one value.</summary>
-    private sealed class RecordingWorkItem : IWorkItem, IsDisposed
+    /// <param name = "values">Recorded values.</param>
+    /// <param name = "value">Value to record.</param>
+    private sealed class RecordingWorkItem(List<int> values, int value) : IWorkItem, IsDisposed
     {
         /// <summary>Recorded values.</summary>
-        private readonly List<int> _values;
+        private readonly List<int> _values = values;
 
         /// <summary>Value to record.</summary>
-        private readonly int _value;
-
-        /// <summary>Initializes a new instance of the <see cref = "RecordingWorkItem"/> class.</summary>
-        /// <param name = "values">Recorded values.</param>
-        /// <param name = "value">Value to record.</param>
-        public RecordingWorkItem(List<int> values, int value)
-        {
-            _values = values;
-            _value = value;
-        }
+        private readonly int _value = value;
 
         /// <inheritdoc/>
         public bool IsDisposed { get; private set; }
@@ -153,28 +164,24 @@ public sealed class DispatchSequencerBaseTests
     }
 
     /// <summary>Work item that schedules more work from inside a drain.</summary>
-    private sealed class ReentrantWorkItem : IWorkItem
+    /// <param name = "sequencer">Sequencer under test.</param>
+    /// <param name = "values">Recorded values.</param>
+    private sealed class ReentrantWorkItem(ISequencer sequencer, List<int> values) : IWorkItem
     {
+        /// <summary>The value recorded by the work item this one schedules from inside the drain.</summary>
+        private const int DeferredValue = 2;
+
         /// <summary>Sequencer under test.</summary>
-        private readonly ISequencer _sequencer;
+        private readonly ISequencer _sequencer = sequencer;
 
         /// <summary>Recorded values.</summary>
-        private readonly List<int> _values;
-
-        /// <summary>Initializes a new instance of the <see cref = "ReentrantWorkItem"/> class.</summary>
-        /// <param name = "sequencer">Sequencer under test.</param>
-        /// <param name = "values">Recorded values.</param>
-        public ReentrantWorkItem(ISequencer sequencer, List<int> values)
-        {
-            _sequencer = sequencer;
-            _values = values;
-        }
+        private readonly List<int> _values = values;
 
         /// <inheritdoc/>
         public void Execute()
         {
             _values.Add(1);
-            _sequencer.Schedule(new RecordingWorkItem(_values, 2));
+            _sequencer.Schedule(new RecordingWorkItem(_values, DeferredValue));
         }
     }
 }

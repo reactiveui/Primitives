@@ -61,8 +61,12 @@ public static partial class SignalAsyncExtensions
                 { PublishingOption: PublishingOption.Serial, IsStateless: false } => new SerialSignalAsync<T>(),
                 { PublishingOption: PublishingOption.Concurrent, IsStateless: false } => new ConcurrentSignalAsync<T>(),
                 { PublishingOption: PublishingOption.Serial, IsStateless: true } => new SerialStatelessSignalAsync<T>(),
-                { PublishingOption: PublishingOption.Concurrent, IsStateless: true } => new ConcurrentStatelessSignalAsync<T>(),
-                _ => throw new ArgumentOutOfRangeException(nameof(options), options, "Unsupported signal creation options.")
+                { PublishingOption: PublishingOption.Concurrent, IsStateless: true } =>
+                    new ConcurrentStatelessSignalAsync<T>(),
+                _ => throw new ArgumentOutOfRangeException(
+                    nameof(options),
+                    options,
+                    "Unsupported signal creation options.")
             });
 
         /// <summary>
@@ -100,7 +104,10 @@ public static partial class SignalAsyncExtensions
                     new SerialStatelessReplayLatestSignalAsync<T>(new(initialValue)),
                 { PublishingOption: PublishingOption.Concurrent, IsStateless: true } =>
                     new ConcurrentStatelessReplayLatestSignalAsync<T>(new(initialValue)),
-                _ => throw new ArgumentOutOfRangeException(nameof(options), options, "Unsupported behavior signal creation options.")
+                _ => throw new ArgumentOutOfRangeException(
+                    nameof(options),
+                    options,
+                    "Unsupported behavior signal creation options.")
             });
 
         /// <summary>
@@ -161,7 +168,10 @@ public static partial class SignalAsyncExtensions
                     new SerialStatelessReplayLatestSignalAsync<T>(Optional<T>.Empty),
                 { PublishingOption: PublishingOption.Concurrent, IsStateless: true } =>
                     new ConcurrentStatelessReplayLatestSignalAsync<T>(Optional<T>.Empty),
-                _ => throw new ArgumentOutOfRangeException(nameof(options), options, "Unsupported replay-latest signal creation options.")
+                _ => throw new ArgumentOutOfRangeException(
+                    nameof(options),
+                    options,
+                    "Unsupported replay-latest signal creation options.")
             });
 
         /// <summary>

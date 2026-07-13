@@ -34,7 +34,6 @@ public static partial class SignalAsyncExtensions
 
             return new ZipSignal<T1, T2, TResult>(first, second, resultSelector);
         }
-
     }
 
     /// <summary>

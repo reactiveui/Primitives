@@ -126,7 +126,8 @@ internal sealed class RunAllObservable(IReadOnlyList<IObservable<RxVoid>> source
             {
                 while (!_done && _index < sources.Count)
                 {
-                    var source = sources[_index++];
+                    var source = sources[_index];
+                    _index++;
                     Volatile.Write(ref _iterationTerminated, 0);
                     var sub = source.Subscribe(this);
                     _ = Interlocked.Exchange(ref _currentSubscription, sub);

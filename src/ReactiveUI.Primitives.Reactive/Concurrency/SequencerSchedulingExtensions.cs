@@ -42,13 +42,15 @@ internal static class SequencerSchedulingExtensions
         /// <param name="dueTime">Relative time after which to execute the action.</param>
         /// <param name="action">Action to execute.</param>
         /// <returns>The disposable used to cancel the scheduled action.</returns>
-        public IDisposable Schedule(TimeSpan dueTime, Action action) => RxScheduler.Schedule(scheduler, dueTime, action);
+        public IDisposable Schedule(TimeSpan dueTime, Action action) =>
+            RxScheduler.Schedule(scheduler, dueTime, action);
 
         /// <summary>Schedules an action to be executed at an absolute due time.</summary>
         /// <param name="dueTime">Absolute time at which to execute the action.</param>
         /// <param name="action">Action to execute.</param>
         /// <returns>The disposable used to cancel the scheduled action.</returns>
-        public IDisposable Schedule(DateTimeOffset dueTime, Action action) => RxScheduler.Schedule(scheduler, dueTime, action);
+        public IDisposable Schedule(DateTimeOffset dueTime, Action action) =>
+            RxScheduler.Schedule(scheduler, dueTime, action);
 
         /// <summary>Schedules a recursive action to be executed.</summary>
         /// <param name="action">Recursive action; invoke its argument to schedule the next iteration.</param>

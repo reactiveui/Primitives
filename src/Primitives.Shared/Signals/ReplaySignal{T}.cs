@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Signals;
 #else
@@ -63,7 +65,10 @@ public sealed class ReplaySignal<T> : ISignal<T>
     /// window.
     /// </exception>
     /// <exception cref="ArgumentNullException">scheduler.</exception>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0001:Simplify Names", Justification = "The argument validation uses ArgumentExceptionHelper")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Style",
+        "IDE0001:Simplify Names",
+        Justification = "The argument validation uses ArgumentExceptionHelper")]
     public ReplaySignal(int bufferSize, TimeSpan window, ISequencer scheduler)
     {
         ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(bufferSize);
@@ -90,20 +95,20 @@ public sealed class ReplaySignal<T> : ISignal<T>
     /// <param name="bufferSize">Size of the buffer.</param>
     /// <param name="window">The window.</param>
     public ReplaySignal(int bufferSize, TimeSpan window)
-      : this(bufferSize, window, Sequencer.CurrentThread)
+        : this(bufferSize, window, Sequencer.CurrentThread)
     {
     }
 
     /// <summary>Initializes a new instance of the <see cref="ReplaySignal{T}"/> class.</summary>
     public ReplaySignal()
-      : this(int.MaxValue, TimeSpan.MaxValue, Sequencer.CurrentThread)
+        : this(int.MaxValue, TimeSpan.MaxValue, Sequencer.CurrentThread)
     {
     }
 
     /// <summary>Initializes a new instance of the <see cref="ReplaySignal{T}"/> class.</summary>
     /// <param name="scheduler">The scheduler.</param>
     public ReplaySignal(ISequencer scheduler)
-      : this(int.MaxValue, TimeSpan.MaxValue, scheduler)
+        : this(int.MaxValue, TimeSpan.MaxValue, scheduler)
     {
     }
 
@@ -111,14 +116,14 @@ public sealed class ReplaySignal<T> : ISignal<T>
     /// <param name="bufferSize">Size of the buffer.</param>
     /// <param name="scheduler">The scheduler.</param>
     public ReplaySignal(int bufferSize, ISequencer scheduler)
-      : this(bufferSize, TimeSpan.MaxValue, scheduler)
+        : this(bufferSize, TimeSpan.MaxValue, scheduler)
     {
     }
 
     /// <summary>Initializes a new instance of the <see cref="ReplaySignal{T}"/> class.</summary>
     /// <param name="bufferSize">Size of the buffer.</param>
     public ReplaySignal(int bufferSize)
-      : this(bufferSize, TimeSpan.MaxValue, Sequencer.CurrentThread)
+        : this(bufferSize, TimeSpan.MaxValue, Sequencer.CurrentThread)
     {
     }
 
@@ -126,12 +131,12 @@ public sealed class ReplaySignal<T> : ISignal<T>
     /// <param name="window">The window.</param>
     /// <param name="scheduler">The scheduler.</param>
     public ReplaySignal(TimeSpan window, ISequencer scheduler)
-      : this(int.MaxValue, window, scheduler) => _window = window;
+        : this(int.MaxValue, window, scheduler) => _window = window;
 
     /// <summary>Initializes a new instance of the <see cref="ReplaySignal{T}"/> class.</summary>
     /// <param name="window">The window.</param>
     public ReplaySignal(TimeSpan window)
-      : this(int.MaxValue, window, Sequencer.CurrentThread)
+        : this(int.MaxValue, window, Sequencer.CurrentThread)
     {
     }
 
@@ -295,7 +300,8 @@ public sealed class ReplaySignal<T> : ISignal<T>
         {
             return subscription;
         }
-        else if (ex is not null)
+
+        if (ex is not null)
         {
             observer.OnError(ex);
         }
@@ -392,26 +398,23 @@ public sealed class ReplaySignal<T> : ISignal<T>
     }
 
     /// <summary>Represents the ObserverHandler class.</summary>
-    private sealed class ObserverHandler : IDisposable
+    /// <param name="subject">The subject value.</param>
+    /// <param name="observer">The observer value.</param>
+    [SuppressMessage(
+        "Usage",
+        "CA2213:Disposable fields should be disposed",
+        Justification = "_subject is the signal that owns this subscription, not a resource it owns; disposing it would tear down the signal when one observer unsubscribes.")]
+    private sealed class ObserverHandler(ReplaySignal<T> subject, IObserver<T> observer) : IDisposable
     {
         /// <summary>Executes the new operation.</summary>
         /// <returns>The result.</returns>
         private readonly Lock _lock = new();
 
         /// <summary>Stores state for the signal implementation.</summary>
-        private ReplaySignal<T>? _subject;
+        private ReplaySignal<T>? _subject = subject;
 
         /// <summary>Stores state for the signal implementation.</summary>
-        private IObserver<T>? _observer;
-
-        /// <summary>Initializes a new instance of the <see cref="ObserverHandler"/> class.</summary>
-        /// <param name="subject">The subject value.</param>
-        /// <param name="observer">The observer value.</param>
-        public ObserverHandler(ReplaySignal<T> subject, IObserver<T> observer)
-        {
-            _subject = subject;
-            _observer = observer;
-        }
+        private IObserver<T>? _observer = observer;
 
         /// <summary>Executes the Dispose operation.</summary>
         public void Dispose()

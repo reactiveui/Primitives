@@ -44,7 +44,8 @@ public readonly struct Moment<T> : IEquatable<Moment<T>>
     public static bool operator !=(Moment<T> first, Moment<T> second) => !first.Equals(second);
 
     /// <inheritdoc/>
-    public bool Equals(Moment<T> other) => Timestamp.Equals(other.Timestamp) && EqualityComparer<T>.Default.Equals(Value, other.Value);
+    public bool Equals(Moment<T> other) =>
+        Timestamp.Equals(other.Timestamp) && EqualityComparer<T>.Default.Equals(Value, other.Value);
 
     /// <inheritdoc/>
     public override bool Equals(object? obj) => obj is Moment<T> other && Equals(other);
@@ -57,5 +58,10 @@ public readonly struct Moment<T> : IEquatable<Moment<T>>
     }
 
     /// <inheritdoc/>
-    public override string ToString() => string.Format(CultureInfo.CurrentCulture, "{0}@{1:o}", Value, Timestamp);
+    public override string ToString() =>
+#if NET8_0_OR_GREATER
+        string.Format(CultureInfo.CurrentCulture, CoreCompositeFormats.Moment, Value, Timestamp);
+#else
+        string.Format(CultureInfo.CurrentCulture, "{0}@{1:o}", Value, Timestamp);
+#endif
 }

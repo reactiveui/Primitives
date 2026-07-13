@@ -90,12 +90,18 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <summary>Executes the <c>SystemReactiveGetMax</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveGetMax</c> result.</returns>
     private static int SystemReactiveGetMax() =>
-        DrainInt(RxObservable.CombineLatest(RxObservable.Return(FirstValue), RxObservable.Return(SecondValue), static (left, right) => Math.Max(left, right)));
+        DrainInt(RxObservable.CombineLatest(
+            RxObservable.Return(FirstValue),
+            RxObservable.Return(SecondValue),
+            Math.Max));
 
     /// <summary>Executes the <c>SystemReactiveGetMin</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveGetMin</c> result.</returns>
     private static int SystemReactiveGetMin() =>
-        DrainInt(RxObservable.CombineLatest(RxObservable.Return(FirstValue), RxObservable.Return(SecondValue), static (left, right) => Math.Min(left, right)));
+        DrainInt(RxObservable.CombineLatest(
+            RxObservable.Return(FirstValue),
+            RxObservable.Return(SecondValue),
+            Math.Min));
 
     /// <summary>Executes the <c>SystemReactiveNot</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveNot</c> result.</returns>
@@ -109,8 +115,8 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         PairWitness observer = new();
         using var subscription = RxObservable.Select(
                 RxObservable.Where(
-                    RxObservable.Buffer(RxObservable.Range(0, Count), 2, 1),
-                    static values => values.Count == 2),
+                    RxObservable.Buffer(RxObservable.Range(0, Count), PairwiseWindow, 1),
+                    static values => values.Count == PairwiseWindow),
                 static values => (Previous: values[0], Current: values[1]))
             .Subscribe(observer);
         return observer.Total;
@@ -129,7 +135,9 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <summary>Executes the <c>SystemReactiveSelectAsyncScenario</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveSelectAsyncScenario</c> result.</returns>
     private static int SystemReactiveSelectAsyncScenario() =>
-        DrainInt(RxObservable.SelectMany(RxObservable.Range(0, Count), static value => RxObservable.FromAsync(() => Task.FromResult(value + 1))));
+        DrainInt(RxObservable.SelectMany(
+            RxObservable.Range(0, Count),
+            static value => RxObservable.FromAsync(() => Task.FromResult(value + 1))));
 
     /// <summary>Executes the <c>SystemReactiveSelectConstant</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveSelectConstant</c> result.</returns>
@@ -139,12 +147,16 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <summary>Executes the <c>SystemReactiveSelectManyThen</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveSelectManyThen</c> result.</returns>
     private static int SystemReactiveSelectManyThen() =>
-        DrainInt(RxObservable.SelectMany(RxObservable.SelectMany(RxObservable.Return(Value), static value => RxObservable.Return(value + 1)), static value => RxObservable.Return(value + 1)));
+        DrainInt(RxObservable.SelectMany(
+            RxObservable.SelectMany(RxObservable.Return(Value), static value => RxObservable.Return(value + 1)),
+            static value => RxObservable.Return(value + 1)));
 
     /// <summary>Executes the <c>SystemReactiveSkipWhileNull</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveSkipWhileNull</c> result.</returns>
     private static int SystemReactiveSkipWhileNull() =>
-        DrainString(RxObservable.Select(RxObservable.ToObservable(NullableStrings).SkipWhile(static value => value is null), static value => value!));
+        DrainString(RxObservable.Select(
+            RxObservable.ToObservable(NullableStrings).SkipWhile(static value => value is null),
+            static value => value!));
 
     /// <summary>Executes the <c>SystemReactiveTakeUntil</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveTakeUntil</c> result.</returns>
@@ -169,12 +181,16 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <summary>Executes the <c>SystemReactiveWhereIsNotNull</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveWhereIsNotNull</c> result.</returns>
     private static int SystemReactiveWhereIsNotNull() =>
-        DrainString(RxObservable.Select(RxObservable.Where(RxObservable.ToObservable(NullableStrings), static value => value is not null), static value => value!));
+        DrainString(RxObservable.Select(
+            RxObservable.Where(RxObservable.ToObservable(NullableStrings), static value => value is not null),
+            static value => value!));
 
     /// <summary>Executes the <c>SystemReactiveWhereSelect</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveWhereSelect</c> result.</returns>
     private static int SystemReactiveWhereSelect() =>
-        DrainInt(RxObservable.Select(RxObservable.Where(RxObservable.Range(0, Count), static value => (value & 1) == 0), static value => value * ResultMultiplier));
+        DrainInt(RxObservable.Select(
+            RxObservable.Where(RxObservable.Range(0, Count), static value => (value & 1) == 0),
+            static value => value * ResultMultiplier));
 
     /// <summary>Executes the <c>SystemReactiveWhereTrue</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveWhereTrue</c> result.</returns>
@@ -186,7 +202,8 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     private static int R3AsSignal()
     {
         IntR3Witness observer = new();
-        using var subscription = R3.ObservableExtensions.Select(R3.Observable.Range(0, Count), static _ => 1).Subscribe(observer);
+        using var subscription = R3.ObservableExtensions.Select(R3.Observable.Range(0, Count), static _ => 1)
+            .Subscribe(observer);
         return observer.Total;
     }
 
@@ -249,7 +266,8 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     private static int R3SelectConstant()
     {
         IntR3Witness observer = new();
-        using var subscription = R3.ObservableExtensions.Select(R3.Observable.Range(0, Count), static _ => Value).Subscribe(observer);
+        using var subscription = R3.ObservableExtensions.Select(R3.Observable.Range(0, Count), static _ => Value)
+            .Subscribe(observer);
         return observer.Total;
     }
 

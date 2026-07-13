@@ -16,10 +16,9 @@ public static partial class Signal
     /// <param name="value">The value.</param>
     /// <param name="scheduler">The scheduler.</param>
     /// <returns>An Signals.</returns>
-    public static IObservable<T> Emit<T>(T value, ISequencer scheduler)
-    {
-        return scheduler == Sequencer.Immediate ? new ImmediateReturnSignal<T>(value) : new ReturnSignal<T>(value, scheduler);
-    }
+    public static IObservable<T> Emit<T>(T value, ISequencer scheduler) => scheduler == Sequencer.Immediate
+        ? new ImmediateReturnSignal<T>(value)
+        : new ReturnSignal<T>(value, scheduler);
 
     /// <summary>Emit a single value immediately.</summary>
     /// <typeparam name="T">The type.</typeparam>

@@ -148,9 +148,9 @@ public class RetryAndThrottleAndFactoryOperatorTests
         {
             attempts++;
             o.OnError(expected);
-            return () => { };
+            return static () => { };
         });
-        using var sub = source.RetryWithDelay(RetryCount, _ => TimeSpan.Zero).Subscribe(
+        using var sub = source.RetryWithDelay(RetryCount, static _ => TimeSpan.Zero).Subscribe(
             static _ => { },
             static _ => { });
 
@@ -177,7 +177,7 @@ public class RetryAndThrottleAndFactoryOperatorTests
                 o.OnCompleted();
             }
 
-            return () => { };
+            return static () => { };
         });
         List<int> results = [];
         using var sub = source.RetryForeverWithDelay(TimeSpan.Zero).Subscribe(results.Add);

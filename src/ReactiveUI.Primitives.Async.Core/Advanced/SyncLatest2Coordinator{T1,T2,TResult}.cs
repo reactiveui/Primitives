@@ -12,11 +12,17 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// <typeparam name="TResult">The projected element type.</typeparam>
 public sealed class SyncLatest2Coordinator<T1, T2, TResult> : SyncLatestCoordinatorBase<TResult>
 {
+    /// <summary>Number of upstream sources this coordinator combines.</summary>
+    private const int SourceCount = 2;
+
     /// <summary>Bit owned by source 1 inside the lifecycle's completion bitmask.</summary>
-    private const int Source1Bit = 1 << 0;
+    private const int Source1Bit = 1;
 
     /// <summary>Bit owned by source 2 inside the lifecycle's completion bitmask.</summary>
     private const int Source2Bit = 1 << 1;
+
+    /// <summary>0-based index of source 1 within the coordinator's subscribe dispatch.</summary>
+    private const int Source1Index = 0;
 
     /// <summary>Initializes a new instance of the <see cref="SyncLatest2Coordinator{T1, T2, TResult}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
@@ -26,12 +32,10 @@ public sealed class SyncLatest2Coordinator<T1, T2, TResult> : SyncLatestCoordina
         IObserverAsync<TResult> observer,
         SyncLatest2State<T1, T2> sources,
         Func<T1, T2, TResult> selector)
-        : base(observer, sourceCount: 2)
+        : base(observer, SourceCount)
     {
         Sources = sources;
         Selector = selector;
-        Observer1 = new(this, Source1Bit, value => Value1 = new(value));
-        Observer2 = new(this, Source2Bit, value => Value2 = new(value));
     }
 
     /// <summary>Gets the bundled source observables.</summary>
@@ -39,12 +43,6 @@ public sealed class SyncLatest2Coordinator<T1, T2, TResult> : SyncLatestCoordina
 
     /// <summary>Gets the selector that projects the latest values.</summary>
     private Func<T1, T2, TResult> Selector { get; }
-
-    /// <summary>Gets the indexed observer for source 1.</summary>
-    private SyncLatestWitness<T1, TResult> Observer1 { get; }
-
-    /// <summary>Gets the indexed observer for source 2.</summary>
-    private SyncLatestWitness<T2, TResult> Observer2 { get; }
 
     /// <summary>Gets or sets the latest value from source 1.</summary>
     private Optional<T1> Value1 { get; set; } = Optional<T1>.Empty;
@@ -68,18 +66,14 @@ public sealed class SyncLatest2Coordinator<T1, T2, TResult> : SyncLatestCoordina
 
     /// <inheritdoc/>
     [SuppressMessage(
-        "Minor Code Smell",
-        "S109:Magic numbers should not be used",
-        Justification = "Switch dispatches on the 0..N-1 source index; naming each numeric arm would just rename the obvious.")]
-    [SuppressMessage(
         "Major Code Smell",
         "S1541:Methods and properties should not be too complex",
         Justification = "Switch arm per source; the high arm count is the dispatch surface.")]
     protected override ValueTask<IAsyncDisposable> SubscribeAtAsync(int index, CancellationToken cancellationToken) =>
         index switch
         {
-            0 => Sources.Source1.SubscribeAsync(Observer1, cancellationToken),
-            _ => Sources.Source2.SubscribeAsync(Observer2, cancellationToken),
+            Source1Index => Sources.Source1.SubscribeAsync(new SyncLatestWitness<T1, TResult>(this, Source1Bit, value => Value1 = new(value)), cancellationToken),
+            _ => Sources.Source2.SubscribeAsync(new SyncLatestWitness<T2, TResult>(this, Source2Bit, value => Value2 = new(value)), cancellationToken)
         };
 
     /// <summary>
@@ -95,7 +89,7 @@ public sealed class SyncLatest2Coordinator<T1, T2, TResult> : SyncLatestCoordina
     private bool TryReadValues(out (T1 V1, T2 V2) values)
     {
         if (Value1.TryGetValue(out var value1)
-                    && Value2.TryGetValue(out var value2))
+            && Value2.TryGetValue(out var value2))
         {
             values = (value1, value2);
             return true;

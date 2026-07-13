@@ -4,6 +4,7 @@
 
 #if REACTIVE_SHIM
 using StartSignal = ReactiveUI.Primitives.Async.Reactive.Advanced.StartSignal;
+
 #else
 using StartSignal = ReactiveUI.Primitives.Async.Advanced.StartSignal;
 #endif

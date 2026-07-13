@@ -66,10 +66,10 @@ public static partial class SignalAsyncExtensions
     internal static ValueTask DelayAsync(
         TimeSpan delay,
         TimeProvider timeProvider,
-        CancellationToken cancellationToken)
-    {
-        return timeProvider == TimeProvider.System ? new(Task.Delay(delay, cancellationToken)) : PooledDelaySource.Rent().BeginAsync(delay, timeProvider, cancellationToken);
-    }
+        CancellationToken cancellationToken) =>
+        timeProvider == TimeProvider.System
+            ? new(Task.Delay(delay, cancellationToken))
+            : PooledDelaySource.Rent().BeginAsync(delay, timeProvider, cancellationToken);
 
     /// <summary>
     /// Async observable that debounces the source sequence, only forwarding elements that are not

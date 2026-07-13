@@ -21,7 +21,7 @@ public partial class SignalTests
         const int FirstMapped = 10;
         const int SecondMapped = 20;
         var signal = Signal.Create<int>();
-        var mapped = signal.MapValues(values => values.Select(x => x * Multiplier));
+        var mapped = signal.MapValues(static values => values.Select(static x => x * Multiplier));
         List<int> items = [];
         TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await mapped.Values.SubscribeAsync(
@@ -39,7 +39,7 @@ public partial class SignalTests
         await mapped.OnNextAsync(FirstInput, CancellationToken.None);
         await mapped.OnNextAsync(SecondInput, CancellationToken.None);
         await mapped.OnCompletedAsync(Result.Success);
-        await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await completed.Task.WaitAsync(WaitTimeout);
         await Assert.That(items).IsCollectionEqualTo([FirstMapped, SecondMapped]);
     }
 
@@ -50,7 +50,7 @@ public partial class SignalTests
     {
         SignalCreationOptions options = new() { PublishingOption = PublishingOption.Serial, IsStateless = true };
         var signal = Signal.Create<int>(options);
-        TaskCompletionSource<Exception> errorTcs = new();
+        TaskCompletionSource<Exception> errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await signal.Values.SubscribeAsync(static (_, _) => default, (ex, _) =>
         {
             IgnoredResult.Of(errorTcs.TrySetResult(ex));
@@ -69,7 +69,7 @@ public partial class SignalTests
     {
         SignalCreationOptions options = new() { PublishingOption = PublishingOption.Concurrent, IsStateless = true };
         var signal = Signal.Create<int>(options);
-        TaskCompletionSource<Exception> errorTcs = new();
+        TaskCompletionSource<Exception> errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await signal.Values.SubscribeAsync(static (_, _) => default, (ex, _) =>
         {
             IgnoredResult.Of(errorTcs.TrySetResult(ex));
@@ -140,7 +140,7 @@ public partial class SignalTests
     {
         SignalCreationOptions options = new() { PublishingOption = PublishingOption.Concurrent, IsStateless = false };
         var signal = Signal.Create<int>(options);
-        TaskCompletionSource<Exception> errorTcs = new();
+        TaskCompletionSource<Exception> errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await signal.Values.SubscribeAsync(static (_, _) => default, (ex, _) =>
         {
             IgnoredResult.Of(errorTcs.TrySetResult(ex));
@@ -159,7 +159,7 @@ public partial class SignalTests
     {
         var signal = Signal.Create<int>();
         List<Exception> errors = [];
-        TaskCompletionSource completionTcs = new();
+        TaskCompletionSource completionTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await signal.Values.SubscribeAsync(
             static (_, _) => default,
             (ex, _) =>
@@ -185,7 +185,7 @@ public partial class SignalTests
     {
         var signal = Signal.Create<int>();
         var completionCount = 0;
-        TaskCompletionSource completionTcs = new();
+        TaskCompletionSource completionTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await signal.Values.SubscribeAsync(static (_, _) => default, null, _ =>
         {
             IgnoredResult.Of(Interlocked.Increment(ref completionCount));
@@ -204,7 +204,7 @@ public partial class SignalTests
     public async Task WhenSubscribingToAlreadyCompletedSignal_ThenObserverReceivesCompletionImmediately()
     {
         var signal = Signal.Create<int>();
-        TaskCompletionSource firstCompletionTcs = new();
+        TaskCompletionSource firstCompletionTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var firstSub = await signal.Values.SubscribeAsync(static (_, _) => default, null, _ =>
         {
             IgnoredResult.Of(firstCompletionTcs.TrySetResult());
@@ -213,7 +213,7 @@ public partial class SignalTests
         await signal.OnCompletedAsync(Result.Success);
         await firstCompletionTcs.Task;
         Result? lateResult = null;
-        TaskCompletionSource lateTcs = new();
+        TaskCompletionSource lateTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var lateSub = await signal.Values.SubscribeAsync(static (_, _) => default, null, result =>
         {
             lateResult = result;
@@ -232,7 +232,7 @@ public partial class SignalTests
     {
         var signal = Signal.Create<int>();
         List<int> items = [];
-        TaskCompletionSource completionTcs = new();
+        TaskCompletionSource completionTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await signal.Values.SubscribeAsync(
             (x, _) =>
             {
@@ -259,7 +259,7 @@ public partial class SignalTests
     public async Task WhenOnErrorResumeAsyncCalledBeforeCompletion_ThenErrorIsForwarded()
     {
         var signal = Signal.Create<int>();
-        TaskCompletionSource<Exception> errorTcs = new();
+        TaskCompletionSource<Exception> errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await signal.Values.SubscribeAsync(static (_, _) => default, (ex, _) =>
         {
             IgnoredResult.Of(errorTcs.TrySetResult(ex));
@@ -277,7 +277,7 @@ public partial class SignalTests
     public async Task WhenOnCompletedAsyncCalled_ThenResultIsForwardedToObservers()
     {
         var signal = Signal.Create<int>();
-        TaskCompletionSource<Result> resultTcs = new();
+        TaskCompletionSource<Result> resultTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await signal.Values.SubscribeAsync(static (_, _) => default, null, result =>
         {
             _ = resultTcs.TrySetResult(result);
@@ -320,17 +320,17 @@ public partial class SignalTests
     /// <summary>Tests that SignalAsync.Create throws ArgumentOutOfRangeException for an invalid options combination.</summary>
     [Test]
     public void WhenCreateWithInvalidOptions_ThenThrowsArgumentOutOfRangeException() =>
-        Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Create<int>(null!));
+        Assert.Throws<ArgumentOutOfRangeException>(static () => Signal.Create<int>(null!));
 
     /// <summary>Tests that Signal.CreateBehavior throws ArgumentOutOfRangeException for an invalid options combination.</summary>
     [Test]
     public void WhenCreateBehaviorWithInvalidOptions_ThenThrowsArgumentOutOfRangeException() =>
-        Assert.Throws<ArgumentOutOfRangeException>(() => Signal.CreateBehavior(0, null!));
+        Assert.Throws<ArgumentOutOfRangeException>(static () => Signal.CreateBehavior(0, null!));
 
     /// <summary>Tests that SignalAsync.CreateReplayLatest throws ArgumentOutOfRangeException for an invalid options combination.</summary>
     [Test]
     public void WhenCreateReplayLatestWithInvalidOptions_ThenThrowsArgumentOutOfRangeException() =>
-        Assert.Throws<ArgumentOutOfRangeException>(() => Signal.CreateReplayLatest<int>(null!));
+        Assert.Throws<ArgumentOutOfRangeException>(static () => Signal.CreateReplayLatest<int>(null!));
 
     /// <summary>Tests that Mappedsignal.SubscribeAsync subscribes an observer through the mapped values observable.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -341,7 +341,7 @@ public partial class SignalTests
         const int Increment = 1;
         const int MappedValue = 11;
         var signal = Signal.Create<int>();
-        var mapped = signal.MapValues(values => values.Select(x => x + Increment));
+        var mapped = signal.MapValues(static values => values.Select(static x => x + Increment));
         var collector = Signal.Create<int>();
         List<int> items = [];
         await using var collectorSub = await collector.Values.SubscribeAsync(
@@ -364,8 +364,8 @@ public partial class SignalTests
     public async Task WhenMappedSignalOnErrorResumeAsync_ThenErrorIsForwardedToOriginal()
     {
         var signal = Signal.Create<int>();
-        var mapped = signal.MapValues(values => values);
-        TaskCompletionSource<Exception> errorTcs = new();
+        var mapped = signal.MapValues(static values => values);
+        TaskCompletionSource<Exception> errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await signal.Values.SubscribeAsync(static (_, _) => default, (ex, _) =>
         {
             IgnoredResult.Of(errorTcs.TrySetResult(ex));
@@ -383,7 +383,7 @@ public partial class SignalTests
     public async Task WhenMappedSignalDisposeAsync_ThenOriginalSignalIsDisposed()
     {
         var signal = Signal.Create<int>();
-        var mapped = signal.MapValues(values => values);
+        var mapped = signal.MapValues(static values => values);
 
         // DisposeAsync on the mapped Signal should dispose the underlying Signal.
         await mapped.DisposeAsync();
@@ -399,7 +399,7 @@ public partial class SignalTests
     {
         var signal = Signal.Create<int>();
         var observer = signal.AsObserverAsync();
-        TaskCompletionSource<Exception> errorTcs = new();
+        TaskCompletionSource<Exception> errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await signal.Values.SubscribeAsync(static (_, _) => default, (ex, _) =>
         {
             IgnoredResult.Of(errorTcs.TrySetResult(ex));
@@ -418,7 +418,7 @@ public partial class SignalTests
     {
         var signal = Signal.Create<int>();
         var observer = signal.AsObserverAsync();
-        TaskCompletionSource<Result> resultTcs = new();
+        TaskCompletionSource<Result> resultTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await signal.Values.SubscribeAsync(static (_, _) => default, null, result =>
         {
             _ = resultTcs.TrySetResult(result);
@@ -528,8 +528,8 @@ public partial class SignalTests
     public async Task WhenConcurrentSignalWithMultipleObservers_ThenAllReceiveOnCompleted()
     {
         var signal = Signal.Create<int>(new() { PublishingOption = PublishingOption.Concurrent, IsStateless = false });
-        TaskCompletionSource completed1 = new();
-        TaskCompletionSource completed2 = new();
+        TaskCompletionSource completed1 = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource completed2 = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub1 = await signal.Values.SubscribeAsync(static (_, _) => default, null, _ =>
         {
             IgnoredResult.Of(completed1.TrySetResult());
@@ -541,7 +541,7 @@ public partial class SignalTests
             return default;
         });
         await signal.OnCompletedAsync(Result.Success);
-        await completed1.Task.WaitAsync(TimeSpan.FromSeconds(5));
-        await completed2.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await completed1.Task.WaitAsync(WaitTimeout);
+        await completed2.Task.WaitAsync(WaitTimeout);
     }
 }

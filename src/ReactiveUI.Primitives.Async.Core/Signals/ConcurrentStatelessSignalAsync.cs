@@ -28,7 +28,11 @@ public sealed class ConcurrentStatelessSignalAsync<T> : ISignalAsync<T>
     public ValueTask OnErrorResumeAsync(
         Exception error,
         CancellationToken cancellationToken) =>
-        StatelessSignalAsyncStateHelper.OnErrorResumeAsync(_state, SignalBroadcastKind.Concurrent, error, cancellationToken);
+        StatelessSignalAsyncStateHelper.OnErrorResumeAsync(
+            _state,
+            SignalBroadcastKind.Concurrent,
+            error,
+            cancellationToken);
 
     /// <inheritdoc/>
     public ValueTask OnCompletedAsync(Result result) =>

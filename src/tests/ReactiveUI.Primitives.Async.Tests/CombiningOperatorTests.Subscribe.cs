@@ -14,14 +14,16 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenSubscribeAsyncWithActionOverload_ThenReceivesItems()
     {
+        const int SourceValueCount = 3;
+
         List<int> items = [];
-        var source = SignalAsync.Range(1, 3);
+        var source = SignalAsync.Range(1, SourceValueCount);
 
         await using var sub = await source.SubscribeAsync(items.Add, CancellationToken.None);
 
         await AsyncTestHelpers.WaitForConditionAsync(
-            () => items.Count >= 3,
-            TimeSpan.FromSeconds(5));
+            () => items.Count >= SourceValueCount,
+            CombiningWaitTimeout);
 
         await Assert.That(items).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3]);
     }
@@ -31,8 +33,10 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenSubscribeAsyncSyncOverloadWithNullHandlers_ThenOnlyOnNextCalled()
     {
+        const int SourceValueCount = 3;
+
         List<int> items = [];
-        var source = SignalAsync.Range(1, 3);
+        var source = SignalAsync.Range(1, SourceValueCount);
 
         await using var sub = await source.SubscribeAsync(
             (Action<int>)items.Add,
@@ -41,8 +45,8 @@ public partial class CombiningOperatorTests
             CancellationToken.None);
 
         await AsyncTestHelpers.WaitForConditionAsync(
-            () => items.Count >= 3,
-            TimeSpan.FromSeconds(5));
+            () => items.Count >= SourceValueCount,
+            CombiningWaitTimeout);
 
         await Assert.That(items).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3]);
     }
@@ -53,7 +57,7 @@ public partial class CombiningOperatorTests
     public async Task WhenSubscribeAsyncSyncOverloadWithErrorHandler_ThenErrorHandlerCalled()
     {
         Exception? receivedError = null;
-        var source = SignalAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(static async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(new InvalidOperationException("test error"), ct);
             await observer.OnCompletedAsync(Result.Success);
@@ -61,14 +65,14 @@ public partial class CombiningOperatorTests
         });
 
         await using var sub = await source.SubscribeAsync(
-            (Action<int>)(_ => { }),
+            (Action<int>)(static _ => { }),
             (Action<Exception>?)(ex => receivedError = ex),
             null,
             CancellationToken.None);
 
         await AsyncTestHelpers.WaitForConditionAsync(
             () => receivedError is not null,
-            TimeSpan.FromSeconds(5));
+            CombiningWaitTimeout);
 
         await Assert.That(receivedError).IsNotNull();
         await Assert.That(receivedError!.Message).IsEqualTo("test error");
@@ -82,14 +86,14 @@ public partial class CombiningOperatorTests
         Result? completionResult = null;
 
         await using var sub = await SignalAsync.Return(1).SubscribeAsync(
-            (Action<int>)(_ => { }),
+            (Action<int>)(static _ => { }),
             (Action<Exception>?)null,
             (Action<Result>?)(result => completionResult = result),
             CancellationToken.None);
 
         await AsyncTestHelpers.WaitForConditionAsync(
             () => completionResult is not null,
-            TimeSpan.FromSeconds(5));
+            CombiningWaitTimeout);
 
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsSuccess).IsTrue();

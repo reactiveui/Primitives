@@ -52,7 +52,10 @@ public abstract class CoalescingDispatchScheduler : LocalScheduler
     /// <param name="action">Action to execute.</param>
     /// <returns>The disposable used to cancel the scheduled action.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="action"/> is <see langword="null"/>.</exception>
-    public override IDisposable Schedule<TState>(TState state, TimeSpan dueTime, Func<IScheduler, TState, IDisposable> action)
+    public override IDisposable Schedule<TState>(
+        TState state,
+        TimeSpan dueTime,
+        Func<IScheduler, TState, IDisposable> action)
     {
         ArgumentExceptionHelper.ThrowIfNull(action);
 
@@ -139,9 +142,13 @@ public abstract class CoalescingDispatchScheduler : LocalScheduler
 
         try
         {
-            var remaining = Volatile.Read(ref _readyCount);
-            while (remaining-- > 0 && _ready.TryDequeue(out var item))
+            for (var remaining = Volatile.Read(ref _readyCount); remaining > 0; remaining--)
             {
+                if (!_ready.TryDequeue(out var item))
+                {
+                    break;
+                }
+
                 _ = Interlocked.Decrement(ref _readyCount);
                 item.Run();
             }

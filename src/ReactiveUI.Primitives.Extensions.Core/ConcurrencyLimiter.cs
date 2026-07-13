@@ -14,16 +14,12 @@ namespace ReactiveUI.Primitives.Extensions;
 /// and therefore needs no boxing through <see cref="object"/>.
 /// </summary>
 /// <typeparam name="T">The type of the task results.</typeparam>
-public sealed class ConcurrencyLimiter<T> : IObservable<T>
+/// <param name="taskFunctions">The task functions to drain.</param>
+/// <param name="maxConcurrency">The maximum concurrency.</param>
+public sealed class ConcurrencyLimiter<T>(IEnumerable<Task<T>> taskFunctions, int maxConcurrency) : IObservable<T>
 {
     /// <summary>The synchronization gate protecting task scheduling and completion state.</summary>
     private readonly Lock _gate = new();
-
-    /// <summary>Source enumerable; the enumerator is pulled lazily on first <see cref="Subscribe"/>.</summary>
-    private readonly IEnumerable<Task<T>> _taskFunctions;
-
-    /// <summary>Maximum concurrent task continuations.</summary>
-    private readonly int _maxConcurrency;
 
     /// <summary>The number of tasks currently in flight that have not yet completed.</summary>
     private int _outstanding;
@@ -36,15 +32,6 @@ public sealed class ConcurrencyLimiter<T> : IObservable<T>
     /// <summary>Lazy enumerator over the source task sequence; <see langword="null"/> once exhausted.</summary>
     private IEnumerator<Task<T>>? _rator;
 
-    /// <summary>Initializes a new instance of the <see cref="ConcurrencyLimiter{T}"/> class.</summary>
-    /// <param name="taskFunctions">The task functions to drain.</param>
-    /// <param name="maxConcurrency">The maximum concurrency.</param>
-    public ConcurrencyLimiter(IEnumerable<Task<T>> taskFunctions, int maxConcurrency)
-    {
-        _taskFunctions = taskFunctions;
-        _maxConcurrency = maxConcurrency;
-    }
-
     /// <summary>Gets the observable sequence — the limiter is its own <see cref="IObservable{T}"/>.</summary>
     public IObservable<T> Observable => this;
 
@@ -54,7 +41,8 @@ public sealed class ConcurrencyLimiter<T> : IObservable<T>
     [SuppressMessage(
         "RoslynCommonAnalyzers",
         "SST2200:Replace this single-use backing field with the 'field' keyword",
-        Justification = "Atomic Volatile.Read/Interlocked.Exchange need an 'int' backing field; the 'field' keyword would force 'bool'.")]
+        Justification =
+            "Atomic Volatile.Read/Interlocked.Exchange need an 'int' backing field; the 'field' keyword would force 'bool'.")]
     internal bool Disposed
     {
         get => Volatile.Read(ref _disposed) != 0;
@@ -67,10 +55,10 @@ public sealed class ConcurrencyLimiter<T> : IObservable<T>
         Subscription subscription = new(this, observer);
         lock (_gate)
         {
-            _rator ??= _taskFunctions.GetEnumerator();
+            _rator ??= taskFunctions.GetEnumerator();
         }
 
-        for (var i = 0; i < _maxConcurrency; i++)
+        for (var i = 0; i < maxConcurrency; i++)
         {
             PullNextTask(subscription);
         }
@@ -99,7 +87,8 @@ public sealed class ConcurrencyLimiter<T> : IObservable<T>
     [SuppressMessage(
         "Major Bug",
         "S4462:Calls to async methods should not be blocking",
-        Justification = "Task is guaranteed complete at this call site (IsFaulted/IsCanceled were both false above); reading .Result drives the synchronous IObserver<T> contract without blocking.")]
+        Justification =
+            "Task is guaranteed complete at this call site (IsFaulted/IsCanceled were both false above); reading .Result drives the synchronous IObserver<T> contract without blocking.")]
     private void ProcessTaskCompletion(Subscription subscription, Task<T> completed)
     {
         lock (_gate)
@@ -109,7 +98,9 @@ public sealed class ConcurrencyLimiter<T> : IObservable<T>
                 ClearRator();
                 if (!subscription.Disposed)
                 {
-                    var innerException = completed.Exception?.InnerExceptions is null ? new OperationCanceledException() : completed.Exception.InnerException!;
+                    var innerException = completed.Exception?.InnerExceptions is null
+                        ? new OperationCanceledException()
+                        : completed.Exception.InnerException!;
                     subscription.Observer.OnError(innerException);
                 }
 
@@ -117,7 +108,8 @@ public sealed class ConcurrencyLimiter<T> : IObservable<T>
             }
 
             subscription.Observer.OnNext(completed.Result);
-            if (--_outstanding == 0 && _rator is null)
+            _outstanding--;
+            if (_outstanding == 0 && _rator is null)
             {
                 subscription.Observer.OnCompleted();
             }

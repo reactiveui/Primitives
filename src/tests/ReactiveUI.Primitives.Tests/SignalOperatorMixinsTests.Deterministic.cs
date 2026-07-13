@@ -44,6 +44,9 @@ public partial class SignalOperatorMixinsTests
     /// <summary>The long constant three.</summary>
     private const long ThreeLong = 3L;
 
+    /// <summary>The number of threads that rendezvous before the disposal race starts.</summary>
+    private const int RacingThreadCount = 2;
+
     /// <summary>A fixed deterministic timestamp used in place of the current time.</summary>
     private static readonly DateTimeOffset FixedTimestamp = new(2024, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
@@ -86,7 +89,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(source.Stabilize(TimeSpan.Zero)).IsNotNull();
         await Assert.That(source.Stabilize(TimeSpan.Zero, Sequencer.Immediate)).IsNotNull();
         List<int> fused = [];
-        _ = Signal.Emit(One).FuseLatest(Signal.FromEnumerable([Two, Three]), (left, right) => left + right)
+        _ = Signal.Emit(One).FuseLatest(Signal.FromEnumerable([Two, Three]), static (left, right) => left + right)
             .Subscribe(fused.Add);
         int[] expectedFused = [Three, Four];
         await Assert.That(fused.SequenceEqual(expectedFused)).IsTrue();
@@ -95,7 +98,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(chainedStrings.SequenceEqual(ExpectedSingleValue)).IsTrue();
         var ignoredCatchCompleted = 0;
         _ = Signal.Fail<int>(new InvalidOperationException("ignored")).Recover<int, Exception>(Handle.CatchIgnore<int>)
-            .Subscribe(_ => { }, ex => throw ex, () => ignoredCatchCompleted++);
+            .Subscribe(static _ => { }, static ex => throw ex, () => ignoredCatchCompleted++);
         await Assert.That(ignoredCatchCompleted).IsEqualTo(1);
     }
 
@@ -108,7 +111,6 @@ public partial class SignalOperatorMixinsTests
         Justification = "Synchronous CollectArray/CollectList operators are deliberately covered.")]
     public async Task RangeAsyncFastPathsAndNullGuardsCoverRemainingLines()
     {
-        var source = Signal.FromEnumerable([Three, Four]);
         IEnumerable<IObservable<int>> blendSources = [Signal.Emit(One), Signal.Emit(Two)];
         List<int> blended = [];
         _ = blendSources.Blend().Subscribe(blended.Add);
@@ -120,69 +122,12 @@ public partial class SignalOperatorMixinsTests
         _ = Signal.Sequence(Five, Three).CollectList().Subscribe(rangeList.Add);
         await Assert.That(rangeArray[0].SequenceEqual([Five, Six, Seven])).IsTrue();
         await Assert.That(rangeList[0].SequenceEqual([Five, Six, Seven])).IsTrue();
-        await Assert.That(await Signal.Sequence(Ten, Three).FirstAsync().ConfigureAwait(false)).IsEqualTo(Ten);
-        await Assert.That(await Signal.Sequence(Ten, Three).FirstOrDefaultAsync().ConfigureAwait(false))
-            .IsEqualTo(Ten);
-        await Assert.That(await Signal.Sequence(Ten, Three).FirstOrDefaultAsync(Nine).ConfigureAwait(false))
-            .IsEqualTo(Ten);
-        await Assert.That(await Signal.Sequence(Ten, Three).LastAsync().ConfigureAwait(false)).IsEqualTo(Twelve);
-        await Assert.That(await Signal.Sequence(Ten, Three).LastOrDefaultAsync().ConfigureAwait(false))
-            .IsEqualTo(Twelve);
-        await Assert.That(await Signal.None<int>().LastOrDefaultAsync(Nine).ConfigureAwait(false)).IsEqualTo(Nine);
-        await Assert.That(await Signal.Sequence(One, Three).CountAsync(CancellationToken.None).ConfigureAwait(false))
-            .IsEqualTo(Three);
-        await Assert.That(
-                await Signal.Sequence(One, Three).CountAsync(value => value > One, CancellationToken.None)
-                    .ConfigureAwait(false))
-            .IsEqualTo(Two);
-        await Assert.That(
-                await Signal.Sequence(One, Three).LongCount().ToTask(CancellationToken.None).ConfigureAwait(false))
-            .IsEqualTo(ThreeLong);
-        await Assert.That(
-                await Signal.Sequence(One, Three).LongCount(value => value > One).ToTask(CancellationToken.None)
-                    .ConfigureAwait(false))
-            .IsEqualTo(TwoLong);
-        await Assert.That(await Signal.Sequence(One, Three).AnyAsync(CancellationToken.None).ConfigureAwait(false))
-            .IsTrue();
-        await Assert.That(
-                await Signal.Sequence(One, Three).AnyAsync(value => value == Two, CancellationToken.None)
-                    .ConfigureAwait(false))
-            .IsTrue();
-        await Assert.That(
-                await Signal.Sequence(One, Three).All(value => value < Four).ToTask(CancellationToken.None)
-                    .ConfigureAwait(false))
-            .IsTrue();
-        await Assert.That(
-                await Signal.Sequence(One, Three).Contains(Three).ToTask(CancellationToken.None).ConfigureAwait(false))
-            .IsTrue();
-        var collectedArray = await Signal.Sequence(Five, Three).CollectArrayAsync().ConfigureAwait(false);
-        var collectedList = await Signal.Sequence(Five, Three).CollectListAsync().ConfigureAwait(false);
-        await Assert.That(collectedArray.SequenceEqual([Five, Six, Seven])).IsTrue();
-        await Assert.That(collectedList.SequenceEqual([Five, Six, Seven])).IsTrue();
+        await AssertRangeTerminalOperatorsAwaitTheSameResultsAsTheGeneralPaths();
         using CancellationTokenSource canceled = new();
         await canceled.CancelAsync().ConfigureAwait(false);
         var canceledTask = Signal.Silent<int>().ToTask(canceled.Token);
         await Assert.That(canceledTask.IsCanceled).IsTrue();
-        _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.Count<int>(null!, value => value > 0));
-        _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.LongCount<int>(null!, value => value > 0));
-        _ = Assert.Throws<ArgumentNullException>(() =>
-            LinqExtensions.Blend<int>((IObservable<IObservable<int>>)null!));
-        _ = Assert.Throws<ArgumentNullException>(() =>
-            LinqExtensions.Blend<int>((IEnumerable<IObservable<int>>)null!));
-        _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.Race<int>(null!));
-        _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.CollectArray<int>(null!));
-        _ = Assert.Throws<ArgumentNullException>(() => SubscribeExtensions.Subscribe<int>(null!, _ => { }));
-        _ = Assert.Throws<ArgumentNullException>(() => source.Subscribe(_ => { }, _ => { }, null!));
-        _ = Assert.Throws<ArgumentNullException>(() => SubscribeExtensions.Subscribe<int>(null!, _ => { }, _ => { }));
-        _ = Assert.Throws<ArgumentNullException>(() => source.Subscribe(null!, _ => { }));
-        _ = Assert.Throws<ArgumentNullException>(() => source.Subscribe(_ => { }, (Action<Exception>)null!));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.None<int>().Recover<int, InvalidOperationException>(null!));
-        _ = Assert.Throws<ArgumentNullException>(() => ((IEnumerable<IObservable<int>>)null!).Recover());
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.CreateSafe<int>(null!));
-        _ = Assert.Throws<ArgumentNullException>(() =>
-            StateSignalExtensions.ToReadOnlyState<int, int>(null!, One, value => value));
-        _ = Assert.Throws<ArgumentNullException>(() => source.ToReadOnlyState(One, null!));
-        _ = Assert.Throws<ArgumentNullException>(() => TaskSignal.Create<int>(null!));
+        AssertOperatorGuardsRejectNullSourcesAndCallbacks();
     }
 
     /// <summary>Verifies non-range task terminal sinks use the observer-backed async paths.</summary>
@@ -193,11 +138,11 @@ public partial class SignalOperatorMixinsTests
         var source = Signal.FromEnumerable([Three, Four]);
         await Assert.That(await source.CountAsync(CancellationToken.None).ConfigureAwait(false)).IsEqualTo(Two);
         await Assert.That(
-                await source.CountAsync(value => value > Three, CancellationToken.None).ConfigureAwait(false))
+                await source.CountAsync(static value => value > Three, CancellationToken.None).ConfigureAwait(false))
             .IsEqualTo(One);
         await Assert.That(await source.AnyAsync(CancellationToken.None).ConfigureAwait(false)).IsTrue();
         await Assert.That(
-                await source.AnyAsync(value => value == One, CancellationToken.None).ConfigureAwait(false))
+                await source.AnyAsync(static value => value == One, CancellationToken.None).ConfigureAwait(false))
             .IsFalse();
         using CancellationTokenSource canceledTerminal = new();
         await canceledTerminal.CancelAsync().ConfigureAwait(false);
@@ -240,6 +185,78 @@ public partial class SignalOperatorMixinsTests
         await VerifyThreadPoolWorkItemBranchesAsync().ConfigureAwait(false);
     }
 
+    /// <summary>Asserts the range-specialized terminal operators await the same results as the general paths.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    private static async Task AssertRangeTerminalOperatorsAwaitTheSameResultsAsTheGeneralPaths()
+    {
+        await Assert.That(await Signal.Sequence(Ten, Three).FirstAsync().ConfigureAwait(false)).IsEqualTo(Ten);
+        await Assert.That(await Signal.Sequence(Ten, Three).FirstOrDefaultAsync().ConfigureAwait(false))
+            .IsEqualTo(Ten);
+        await Assert.That(await Signal.Sequence(Ten, Three).FirstOrDefaultAsync(Nine).ConfigureAwait(false))
+            .IsEqualTo(Ten);
+        await Assert.That(await Signal.Sequence(Ten, Three).LastAsync().ConfigureAwait(false)).IsEqualTo(Twelve);
+        await Assert.That(await Signal.Sequence(Ten, Three).LastOrDefaultAsync().ConfigureAwait(false))
+            .IsEqualTo(Twelve);
+        await Assert.That(await Signal.None<int>().LastOrDefaultAsync(Nine).ConfigureAwait(false)).IsEqualTo(Nine);
+        await Assert.That(await Signal.Sequence(One, Three).CountAsync(CancellationToken.None).ConfigureAwait(false))
+            .IsEqualTo(Three);
+        await Assert.That(
+                await Signal.Sequence(One, Three).CountAsync(static value => value > One, CancellationToken.None)
+                    .ConfigureAwait(false))
+            .IsEqualTo(Two);
+        await Assert.That(
+                await Signal.Sequence(One, Three).LongCount().ToTask(CancellationToken.None).ConfigureAwait(false))
+            .IsEqualTo(ThreeLong);
+        await Assert.That(
+                await Signal.Sequence(One, Three).LongCount(static value => value > One).ToTask(CancellationToken.None)
+                    .ConfigureAwait(false))
+            .IsEqualTo(TwoLong);
+        await Assert.That(await Signal.Sequence(One, Three).AnyAsync(CancellationToken.None).ConfigureAwait(false))
+            .IsTrue();
+        await Assert.That(
+                await Signal.Sequence(One, Three).AnyAsync(static value => value == Two, CancellationToken.None)
+                    .ConfigureAwait(false))
+            .IsTrue();
+        await Assert.That(
+                await Signal.Sequence(One, Three).All(static value => value < Four).ToTask(CancellationToken.None)
+                    .ConfigureAwait(false))
+            .IsTrue();
+        await Assert.That(
+                await Signal.Sequence(One, Three).Contains(Three).ToTask(CancellationToken.None).ConfigureAwait(false))
+            .IsTrue();
+        var collectedArray = await Signal.Sequence(Five, Three).CollectArrayAsync().ConfigureAwait(false);
+        var collectedList = await Signal.Sequence(Five, Three).CollectListAsync().ConfigureAwait(false);
+        await Assert.That(collectedArray.SequenceEqual([Five, Six, Seven])).IsTrue();
+        await Assert.That(collectedList.SequenceEqual([Five, Six, Seven])).IsTrue();
+    }
+
+    /// <summary>Asserts every operator and subscribe overload rejects a null source or callback.</summary>
+    private static void AssertOperatorGuardsRejectNullSourcesAndCallbacks()
+    {
+        var source = Signal.FromEnumerable([Three, Four]);
+        _ = Assert.Throws<ArgumentNullException>(static () => LinqExtensions.Count<int>(null!, static value => value > 0));
+        _ = Assert.Throws<ArgumentNullException>(static () => LinqExtensions.LongCount<int>(null!, static value => value > 0));
+        _ = Assert.Throws<ArgumentNullException>(static () =>
+            LinqExtensions.Blend<int>((IObservable<IObservable<int>>)null!));
+        _ = Assert.Throws<ArgumentNullException>(static () =>
+            LinqExtensions.Blend<int>((IEnumerable<IObservable<int>>)null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => LinqExtensions.Race<int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => LinqExtensions.CollectArray<int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => SubscribeExtensions.Subscribe<int>(null!, static _ => { }));
+        _ = Assert.Throws<ArgumentNullException>(() => source.Subscribe(static _ => { }, static _ => { }, null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => SubscribeExtensions.Subscribe<int>(null!, static _ => { }, static _ => { }));
+        _ = Assert.Throws<ArgumentNullException>(() => source.Subscribe(null!, static _ => { }));
+        _ = Assert.Throws<ArgumentNullException>(() => source.Subscribe(static _ => { }, (Action<Exception>)null!));
+        _ = Assert.Throws<ArgumentNullException>(static () =>
+            Signal.None<int>().Recover<int, InvalidOperationException>(null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => ((IEnumerable<IObservable<int>>)null!).Recover());
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.CreateSafe<int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(static () =>
+            StateSignalExtensions.ToReadOnlyState<int, int>(null!, One, static value => value));
+        _ = Assert.Throws<ArgumentNullException>(() => source.ToReadOnlyState(One, null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => TaskSignal.Create<int>(null!));
+    }
+
     /// <summary>Verifies the scheduled range fast path and the timing factory aliases.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     private static async Task VerifyScheduledRangeAndTimingFactories()
@@ -248,14 +265,15 @@ public partial class SignalOperatorMixinsTests
         List<int> scheduledRange = [];
         var scheduledRangeCompleted = 0;
         _ = Signal.Sequence(Three, Three, scheduledRangeClock)
-            .Subscribe(scheduledRange.Add, ex => throw ex, () => scheduledRangeCompleted++);
+            .Subscribe(scheduledRange.Add, static ex => throw ex, () => scheduledRangeCompleted++);
         scheduledRangeClock.Start();
         await Assert.That(scheduledRange.SequenceEqual([Three, Four, Five])).IsTrue();
         await Assert.That(scheduledRangeCompleted).IsEqualTo(1);
         await Assert.That(Signal.After(TimeSpan.FromTicks(One))).IsNotNull();
         await Assert.That(Signal.Pulse(TimeSpan.FromTicks(One))).IsNotNull();
         await Assert.That(Signal.Pulse(TimeSpan.FromTicks(One))).IsNotNull();
-        await Assert.That(Signal.Pulse(TimeSpan.FromTicks(One), new VirtualClock(DateTimeOffset.UnixEpoch))).IsNotNull();
+        await Assert.That(Signal.Pulse(TimeSpan.FromTicks(One), new VirtualClock(DateTimeOffset.UnixEpoch)))
+            .IsNotNull();
         await Assert.That(Signal.After(TimeSpan.FromTicks(One))).IsNotNull();
         await Assert.That(Signal.After(FixedTimestamp.AddMilliseconds(1))).IsNotNull();
         await Assert.That(Signal.After(TimeSpan.FromTicks(One), TimeSpan.FromTicks(One))).IsNotNull();
@@ -263,7 +281,7 @@ public partial class SignalOperatorMixinsTests
                 Signal.PairLatest(
                     Signal.Sequence(One, Two),
                     Signal.Sequence(Three, Two),
-                    (left, right) => left + right))
+                    static (left, right) => left + right))
             .IsNotNull();
         List<int> toSignalValues = [];
         _ = new[] { One, Two }.ToSignal().Subscribe(toSignalValues.Add);
@@ -276,8 +294,8 @@ public partial class SignalOperatorMixinsTests
     /// <returns>A task representing the asynchronous verification.</returns>
     private static async Task VerifyTaskSignalsCountAndContainsAsync()
     {
-        var firstTaskSignal = await Signal.FromTask(_ => Task.FromResult(Five)).FirstAsync().ConfigureAwait(false);
-        var secondTaskSignal = await Signal.FromTask(_ => Task.FromResult(Six), Sequencer.Immediate).FirstAsync()
+        var firstTaskSignal = await Signal.FromTask(static _ => Task.FromResult(Five)).FirstAsync().ConfigureAwait(false);
+        var secondTaskSignal = await Signal.FromTask(static _ => Task.FromResult(Six), Sequencer.Immediate).FirstAsync()
             .ConfigureAwait(false);
         await Assert.That(firstTaskSignal).IsEqualTo(Five);
         await Assert.That(secondTaskSignal).IsEqualTo(Six);
@@ -285,11 +303,13 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(await Task.FromCanceled<int>(new(true)).HandleCancellation().ConfigureAwait(false))
             .IsEqualTo(0);
         List<long> longCount = [];
-        _ = Signal.Sequence(One, Four).LongCount(value => value % Two == 0).Subscribe(longCount.Add);
+        _ = Signal.Sequence(One, Four).LongCount(static value => value % Two == 0).Subscribe(longCount.Add);
         await Assert.That(longCount.SequenceEqual(ExpectedSingleTwoLong)).IsTrue();
         List<bool> containsWithComparer = [];
-        _ = Signal.Sequence(One, Three).Contains(Three, EqualityComparer<int>.Default).Subscribe(containsWithComparer.Add);
-        _ = Signal.Sequence(One, Three).Contains(Nine, EqualityComparer<int>.Default).Subscribe(containsWithComparer.Add);
+        _ = Signal.Sequence(One, Three).Contains(Three, EqualityComparer<int>.Default)
+            .Subscribe(containsWithComparer.Add);
+        _ = Signal.Sequence(One, Three).Contains(Nine, EqualityComparer<int>.Default)
+            .Subscribe(containsWithComparer.Add);
         _ = Signal.Sequence(One, Three).Contains(Three, new PassthroughComparer()).Subscribe(containsWithComparer.Add);
         _ = Signal.Sequence(One, Three).Contains(Nine, new PassthroughComparer()).Subscribe(containsWithComparer.Add);
         await Assert.That(containsWithComparer.SequenceEqual(ExpectedContainsResults)).IsTrue();
@@ -311,21 +331,21 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(Signal.Emit(One).DelayStart(TimeSpan.Zero)).IsNotNull();
         await Assert.That(await Signal.None<int>().FirstOrDefaultAsync().ConfigureAwait(false)).IsEqualTo(0);
         var noneWitnessCompleted = 0;
-        _ = Signal.None(Sequencer.Immediate, One).Subscribe(_ => { }, ex => throw ex, () => noneWitnessCompleted++);
+        _ = Signal.None(Sequencer.Immediate, One).Subscribe(static _ => { }, static ex => throw ex, () => noneWitnessCompleted++);
         await Assert.That(noneWitnessCompleted).IsEqualTo(1);
-        _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.Buffer<int>(null!, One));
-        _ = Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Emit(One).Buffer(0));
-        _ = Assert.Throws<ArgumentNullException>(() => LinqExtensions.Buffer<int>(null!, One, One));
-        _ = Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Emit(One).Buffer(0, One));
-        _ = Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Emit(One).Buffer(One, 0));
-        _ = Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).FirstAsync());
-        _ = Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).FirstOrDefaultAsync());
-        _ = Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).FirstOrDefaultAsync(One));
-        _ = Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).ToTask());
-        _ = Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).LastOrDefaultAsync(One));
-        _ = Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).AnyAsync());
-        _ = Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).CollectArrayAsync());
-        _ = Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).CollectListAsync());
+        _ = Assert.Throws<ArgumentNullException>(static () => LinqExtensions.Buffer<int>(null!, One));
+        _ = Assert.Throws<ArgumentOutOfRangeException>(static () => Signal.Emit(One).Buffer(0));
+        _ = Assert.Throws<ArgumentNullException>(static () => LinqExtensions.Buffer<int>(null!, One, One));
+        _ = Assert.Throws<ArgumentOutOfRangeException>(static () => Signal.Emit(One).Buffer(0, One));
+        _ = Assert.Throws<ArgumentOutOfRangeException>(static () => Signal.Emit(One).Buffer(One, 0));
+        _ = Assert.Throws<ArgumentNullException>(static () => ((IObservable<int>)null!).FirstAsync());
+        _ = Assert.Throws<ArgumentNullException>(static () => ((IObservable<int>)null!).FirstOrDefaultAsync());
+        _ = Assert.Throws<ArgumentNullException>(static () => ((IObservable<int>)null!).FirstOrDefaultAsync(One));
+        _ = Assert.Throws<ArgumentNullException>(static () => ((IObservable<int>)null!).ToTask());
+        _ = Assert.Throws<ArgumentNullException>(static () => ((IObservable<int>)null!).LastOrDefaultAsync(One));
+        _ = Assert.Throws<ArgumentNullException>(static () => ((IObservable<int>)null!).AnyAsync());
+        _ = Assert.Throws<ArgumentNullException>(static () => ((IObservable<int>)null!).CollectArrayAsync());
+        _ = Assert.Throws<ArgumentNullException>(static () => ((IObservable<int>)null!).CollectListAsync());
         Signal<int> pending = new();
         using CancellationTokenSource cancelAfterSubscribe = new();
         var pendingTask = pending.ToTask(cancelAfterSubscribe.Token);
@@ -337,15 +357,15 @@ public partial class SignalOperatorMixinsTests
     /// <returns>A task representing the asynchronous operation.</returns>
     private static async Task VerifyObserverFailureBranchesAndMap()
     {
-        _ = Assert.Throws<InvalidOperationException>(() => new ReturnSignal<int>(One, Sequencer.Immediate)
+        _ = Assert.Throws<InvalidOperationException>(static () => new ReturnSignal<int>(One, Sequencer.Immediate)
             .Subscribe(new ThrowingWitness<int>(true))
             .Dispose());
-        _ = Assert.Throws<InvalidOperationException>(() => new ReturnSignal<int>(One, Sequencer.Immediate)
+        _ = Assert.Throws<InvalidOperationException>(static () => new ReturnSignal<int>(One, Sequencer.Immediate)
             .Subscribe(new ThrowingWitness<int>(throwOnCompleted: true)).Dispose());
-        _ = Assert.Throws<InvalidOperationException>(() => new EmptySignal<int>(Sequencer.Immediate)
+        _ = Assert.Throws<InvalidOperationException>(static () => new EmptySignal<int>(Sequencer.Immediate)
             .Subscribe(new ThrowingWitness<int>(throwOnCompleted: true))
             .Dispose());
-        _ = Assert.Throws<InvalidOperationException>(() =>
+        _ = Assert.Throws<InvalidOperationException>(static () =>
             new ThrowSignal<int>(new InvalidOperationException("throw-signal"), Sequencer.Immediate)
                 .Subscribe(new ThrowingWitness<int>(throwOnError: true)).Dispose());
         GuardedWitness<int> returnWitness = new(new RecordingWitness<int>(), EmptyDisposable.Instance);
@@ -354,7 +374,7 @@ public partial class SignalOperatorMixinsTests
         emptyWitness.OnNext(One);
         emptyWitness.OnError(new InvalidOperationException("empty-inner"));
         RecordingWitness<int> mapObserver = new();
-        ScriptedObservable<int> badSource = new(observer =>
+        ScriptedObservable<int> badSource = new(static observer =>
         {
             observer.OnNext(One);
             observer.OnCompleted();
@@ -362,7 +382,7 @@ public partial class SignalOperatorMixinsTests
             observer.OnError(new InvalidOperationException("late-map"));
             observer.OnCompleted();
         });
-        badSource.Map(value => value).Subscribe(mapObserver).Dispose();
+        badSource.Map(static value => value).Subscribe(mapObserver).Dispose();
         int[] expectedMapObserver = [One];
         await Assert.That(mapObserver.Values.SequenceEqual(expectedMapObserver)).IsTrue();
         await Assert.That(mapObserver.Completed).IsEqualTo(1);
@@ -392,8 +412,8 @@ public partial class SignalOperatorMixinsTests
         Signal<int> secondInner = new();
         List<int> selectManyValues = [];
         var selectManyCompleted = 0;
-        using (outer.FlatMap(inner => inner)
-                   .Subscribe(selectManyValues.Add, ex => throw ex, () => selectManyCompleted++))
+        using (outer.FlatMap(static inner => inner)
+                   .Subscribe(selectManyValues.Add, static ex => throw ex, () => selectManyCompleted++))
         {
             outer.OnNext(firstInner);
             outer.OnNext(secondInner);
@@ -410,31 +430,33 @@ public partial class SignalOperatorMixinsTests
         Signal<IObservable<int>> disposedOuter = new();
         Signal<int> disposedInner = new();
         List<int> disposedValues = [];
-        var disposedSubscription = disposedOuter.FlatMap(inner => inner).Subscribe(disposedValues.Add);
+        var disposedSubscription = disposedOuter.FlatMap(static inner => inner).Subscribe(disposedValues.Add);
         disposedOuter.OnNext(disposedInner);
         disposedSubscription.Dispose();
         disposedSubscription.Dispose();
         disposedInner.OnNext(Three);
         await Assert.That(disposedValues.Count).IsEqualTo(0);
-        _ = Assert.Throws<ArgumentNullException>(() => outer.FlatMap(inner => inner).Subscribe(null!));
-        _ = Assert.Throws<ArgumentNullException>(() => outer.FlatMap(inner => inner, (_, right) => right).Subscribe(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => outer.FlatMap(static inner => inner).Subscribe(null!));
+        _ = Assert.Throws<ArgumentNullException>(() =>
+            outer.FlatMap(static inner => inner, static (_, right) => right).Subscribe(null!));
         List<string> nullSelectorErrors = [];
-        _ = Signal.Emit(One).FlatMap<int, int>(_ => null!).Subscribe(_ => { }, ex => nullSelectorErrors.Add(ex.Message));
+        _ = Signal.Emit(One).FlatMap<int, int>(static _ => null!)
+            .Subscribe(static _ => { }, ex => nullSelectorErrors.Add(ex.Message));
         await Assert.That(nullSelectorErrors.SequenceEqual(ExpectedFlatMapSelectorNull)).IsTrue();
         List<string> nullCollectionErrors = [];
-        _ = Signal.Emit(One).FlatMap<int, int, int>(_ => null!, (left, right) => left + right)
-            .Subscribe(_ => { }, ex => nullCollectionErrors.Add(ex.Message));
+        _ = Signal.Emit(One).FlatMap<int, int, int>(static _ => null!, static (left, right) => left + right)
+            .Subscribe(static _ => { }, ex => nullCollectionErrors.Add(ex.Message));
         await Assert.That(nullCollectionErrors.SequenceEqual(ExpectedFlatMapCollectionSelectorNull)).IsTrue();
         List<string> resultInnerErrors = [];
         _ = Signal.Emit(One)
             .FlatMap(
-            _ => Signal.Fail<int>(new InvalidOperationException("result-inner")),
-            (left, right) => left + right).Subscribe(_ => { }, ex => resultInnerErrors.Add(ex.Message));
+                static _ => Signal.Fail<int>(new InvalidOperationException("result-inner")),
+                static (left, right) => left + right).Subscribe(static _ => { }, ex => resultInnerErrors.Add(ex.Message));
         await Assert.That(resultInnerErrors.SequenceEqual(ExpectedResultInner)).IsTrue();
         List<string> subscribeErrors = [];
         _ = Signal.Emit(One)
-            .FlatMap(_ => new ThrowOnSubscribeObservable<int>(new InvalidOperationException("inner-subscribe")))
-            .Subscribe(_ => { }, ex => subscribeErrors.Add(ex.Message));
+            .FlatMap(static _ => new ThrowOnSubscribeObservable<int>(new InvalidOperationException("inner-subscribe")))
+            .Subscribe(static _ => { }, ex => subscribeErrors.Add(ex.Message));
         await Assert.That(subscribeErrors.SequenceEqual(ExpectedInnerSubscribe)).IsTrue();
     }
 
@@ -442,9 +464,9 @@ public partial class SignalOperatorMixinsTests
     /// <returns>A task representing the asynchronous verification.</returns>
     private static async Task VerifyAsyncEnumerableShiftAndExpireAsync()
     {
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.FromAsyncEnumerable(AsyncValues(One)).Subscribe(null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.FromAsyncEnumerable(AsyncValues(One)).Subscribe(null!));
         List<int> asyncValues = [];
-        TaskCompletionSource<object?> asyncCompleted = new();
+        TaskCompletionSource<object?> asyncCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using CancellationTokenSource asyncToken = new();
         _ = Signal.FromAsyncEnumerable(AsyncValues(Three), asyncToken.Token).Subscribe(
             asyncValues.Add,
@@ -466,14 +488,14 @@ public partial class SignalOperatorMixinsTests
         shiftedClock.AdvanceBy(TimeSpan.FromTicks(Two));
         int[] expectedShifted = [Three, Four, Five];
         await Assert.That(shifted.SequenceEqual(expectedShifted)).IsTrue();
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.Silent<int>().Expire(TimeSpan.Zero).Subscribe(null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.Silent<int>().Expire(TimeSpan.Zero).Subscribe(null!));
         VirtualClock timeoutClock = new(DateTimeOffset.UnixEpoch);
         RecordingWitness<int> timeout = new();
         _ = Signal.Silent<int>().Expire(TimeSpan.FromTicks(One), timeoutClock).Subscribe(timeout);
         timeoutClock.AdvanceBy(TimeSpan.FromTicks(One));
         await Assert.That(timeout.Errors[0] is TimeoutException).IsTrue();
         RecordingWitness<int> expireCompleted = new();
-        _ = new ScriptedObservable<int>(observer =>
+        _ = new ScriptedObservable<int>(static observer =>
         {
             observer.OnNext(One);
             observer.OnCompleted();
@@ -495,6 +517,17 @@ public partial class SignalOperatorMixinsTests
     /// <returns>A task representing the asynchronous operation.</returns>
     private static async Task VerifyRaceSyncLatestAndSwitchBranches()
     {
+        await VerifyRaceWinnerGatesTheLosingInners();
+        await VerifyRaceDisposesTheLosingSubscriptions();
+        await VerifySyncLatestCombinesTheLatestOfBothSides();
+        await VerifySwitchToForwardsOnlyTheCurrentInner();
+        await VerifySwitchTerminalGatingBranches();
+    }
+
+    /// <summary>Verifies the first inner to emit wins the race and every later inner notification is dropped.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private static async Task VerifyRaceWinnerGatesTheLosingInners()
+    {
         Signal<IObservable<int>> raceOuter = new();
         Signal<int> raceWinner = new();
         Signal<int> raceLoser = new();
@@ -512,18 +545,6 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(race.Values.SequenceEqual(expectedRace)).IsTrue();
         await Assert.That(race.Errors.Count).IsEqualTo(0);
 
-        TrackingDisposableObservable<int> raceLosing = new();
-        TrackingDisposableObservable<int> raceWinning = new();
-        RecordingWitness<int> raceWithDisposables = new();
-        using (Signal.Race(raceWinning, raceLosing).Subscribe(raceWithDisposables))
-        {
-            raceWinning.Observer!.OnNext(Three);
-            await Assert.That(raceLosing.DisposeCount).IsEqualTo(1);
-            await Assert.That(raceWinning.DisposeCount).IsEqualTo(0);
-            await Assert.That(raceWithDisposables.Values.SequenceEqual([Three])).IsTrue();
-        }
-
-        await Assert.That(raceWinning.DisposeCount).IsEqualTo(1);
         Signal<IObservable<int>> raceCompletionOuter = new();
         Signal<int> raceCompletionWinner = new();
         CapturingObservable<int> raceCompletionLoser = new();
@@ -539,10 +560,34 @@ public partial class SignalOperatorMixinsTests
         int[] expectedRaceCompletion = [Two];
         await Assert.That(raceCompletion.Values.SequenceEqual(expectedRaceCompletion)).IsTrue();
         await Assert.That(raceCompletion.Completed).IsEqualTo(0);
+    }
+
+    /// <summary>Verifies a race disposes each losing subscription as soon as a winner emerges.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private static async Task VerifyRaceDisposesTheLosingSubscriptions()
+    {
+        TrackingDisposableObservable<int> raceLosing = new();
+        TrackingDisposableObservable<int> raceWinning = new();
+        RecordingWitness<int> raceWithDisposables = new();
+        using (Signal.Race(raceWinning, raceLosing).Subscribe(raceWithDisposables))
+        {
+            raceWinning.Observer!.OnNext(Three);
+            await Assert.That(raceLosing.DisposeCount).IsEqualTo(1);
+            await Assert.That(raceWinning.DisposeCount).IsEqualTo(0);
+            await Assert.That(raceWithDisposables.Values.SequenceEqual([Three])).IsTrue();
+        }
+
+        await Assert.That(raceWinning.DisposeCount).IsEqualTo(1);
+    }
+
+    /// <summary>Verifies synchronized-latest emits once both sides have a value and completes with the last side.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private static async Task VerifySyncLatestCombinesTheLatestOfBothSides()
+    {
         Signal<int> combineLeft = new();
         Signal<int> combineRight = new();
         RecordingWitness<int> combined = new();
-        using (combineLeft.SyncLatest(combineRight, (left, right) => left + right).Subscribe(combined))
+        using (combineLeft.SyncLatest(combineRight, static (left, right) => left + right).Subscribe(combined))
         {
             combineRight.OnNext(Two);
             combineLeft.OnNext(One);
@@ -553,6 +598,12 @@ public partial class SignalOperatorMixinsTests
         int[] expectedCombined = [Three];
         await Assert.That(combined.Values.SequenceEqual(expectedCombined)).IsTrue();
         await Assert.That(combined.Completed).IsEqualTo(1);
+    }
+
+    /// <summary>Verifies switching forwards nothing from a stale inner, including its error.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private static async Task VerifySwitchToForwardsOnlyTheCurrentInner()
+    {
         Signal<IObservable<int>> switchOuter = new();
         CapturingObservable<int> staleInner = new();
         CapturingObservable<int> currentInner = new();
@@ -568,15 +619,21 @@ public partial class SignalOperatorMixinsTests
 
         await Assert.That(switched.Values.Count).IsEqualTo(0);
         await Assert.That(switched.Errors[0].Message).IsEqualTo("current-switch");
-
-        await VerifySwitchTerminalGatingBranches();
     }
 
     /// <summary>Verifies switch outer-error, deferred-completion, and post-terminal gating branches.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     private static async Task VerifySwitchTerminalGatingBranches()
     {
-        // Outer error is forwarded once and gates all subsequent notifications.
+        await VerifySwitchForwardsTheOuterErrorOnceAndGatesWhatFollows();
+        await VerifySwitchDefersCompletionUntilTheCurrentInnerFinishes();
+        await VerifySwitchGatesEveryNotificationAfterAnInnerError();
+    }
+
+    /// <summary>Verifies an outer error is forwarded once and gates every notification that follows it.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private static async Task VerifySwitchForwardsTheOuterErrorOnceAndGatesWhatFollows()
+    {
         Signal<IObservable<int>> outerErrorOuter = new();
         CapturingObservable<int> outerErrorInner = new();
         RecordingWitness<int> outerErrored = new();
@@ -592,8 +649,15 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(outerErrored.Errors[0].Message).IsEqualTo("outer-switch");
         await Assert.That(outerErrored.Errors.Count).IsEqualTo(1);
         await Assert.That(outerErrored.Values.Count).IsEqualTo(0);
+    }
 
-        // Outer completes while the inner is still active: completion is deferred until the inner finishes.
+    /// <summary>
+    /// Verifies an outer completion waits for the current inner to finish, and that a superseded inner's
+    /// completion never completes the observer.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private static async Task VerifySwitchDefersCompletionUntilTheCurrentInnerFinishes()
+    {
         Signal<IObservable<int>> deferredOuter = new();
         CapturingObservable<int> deferredInner = new();
         RecordingWitness<int> deferred = new();
@@ -607,7 +671,6 @@ public partial class SignalOperatorMixinsTests
 
         await Assert.That(deferred.Completed).IsEqualTo(1);
 
-        // A stale inner completion (superseded version) does not complete the observer.
         Signal<IObservable<int>> staleCompleteOuter = new();
         CapturingObservable<int> staleCompleteFirst = new();
         CapturingObservable<int> staleCompleteSecond = new();
@@ -624,9 +687,15 @@ public partial class SignalOperatorMixinsTests
         }
 
         await Assert.That(staleCompleted.Completed).IsEqualTo(1);
+    }
 
-        // An inner error makes the coordinator terminal while the outer source stays live, so a
-        // later source switch and a later outer error are both gated.
+    /// <summary>
+    /// Verifies an inner error makes the coordinator terminal even though the outer source is still live, so a
+    /// later switch, a later outer error, and a later outer completion are all gated.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private static async Task VerifySwitchGatesEveryNotificationAfterAnInnerError()
+    {
         Signal<IObservable<int>> innerErrorOuter = new();
         CapturingObservable<int> innerErrorFirst = new();
         CapturingObservable<int> innerErrorLate = new();
@@ -643,7 +712,6 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(innerErrored.Errors[0].Message).IsEqualTo("inner-switch");
         await Assert.That(innerErrorLate.Observer).IsNull();
 
-        // A terminal coordinator also gates a later outer completion (outer source still live).
         Signal<IObservable<int>> innerErrorCompleteOuter = new();
         CapturingObservable<int> innerErrorCompleteInner = new();
         RecordingWitness<int> innerErrorCompleted = new();
@@ -662,7 +730,7 @@ public partial class SignalOperatorMixinsTests
     /// <returns>A task representing the asynchronous operation.</returns>
     private static async Task VerifyProbeBranches()
     {
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.Silent<int>().Probe(TimeSpan.Zero).Subscribe(null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.Silent<int>().Probe(TimeSpan.Zero).Subscribe(null!));
         RecordingWitness<int> probeError = new();
         _ = Signal.Fail<int>(new InvalidOperationException("probe-error"))
             .Probe(TimeSpan.FromTicks(One), new VirtualClock(DateTimeOffset.UnixEpoch)).Subscribe(probeError);
@@ -673,7 +741,7 @@ public partial class SignalOperatorMixinsTests
         probeSubscription.Dispose();
         probeSubscription.Dispose();
         RecordingWitness<int> completedProbe = new();
-        _ = new ScriptedObservable<int>(observer =>
+        _ = new ScriptedObservable<int>(static observer =>
         {
             observer.OnCompleted();
             observer.OnNext(One);
@@ -723,8 +791,8 @@ public partial class SignalOperatorMixinsTests
         calmClock.AdvanceBy(TimeSpan.FromTicks(Four));
         int[] expectedCalmValues = [Two];
         await Assert.That(calmValues.SequenceEqual(expectedCalmValues)).IsTrue();
-        _ = Assert.Throws<InvalidOperationException>(() => Signal.Emit(One).Prepend(0).Append(Two).Subscribe(
-            value =>
+        _ = Assert.Throws<InvalidOperationException>(static () => Signal.Emit(One).Prepend(0).Append(Two).Subscribe(
+            static value =>
             {
                 if (value != One)
                 {
@@ -733,15 +801,15 @@ public partial class SignalOperatorMixinsTests
 
                 throw new InvalidOperationException("append-next");
             },
-            _ => { },
-            () => { }).Dispose());
+            static _ => { },
+            static () => { }).Dispose());
         RecordingWitness<int> appendError = new();
         _ = Signal.Fail<int>(new InvalidOperationException("append-error")).Append(One).Subscribe(appendError);
         await Assert.That(appendError.Errors[0].Message).IsEqualTo("append-error");
         RecordingWitness<int> forkLeftFirst = new();
         Signal<int> forkLeft = new();
         Signal<int> forkRight = new();
-        using (forkLeft.ForkJoin(forkRight, (left, right) => left + right).Subscribe(forkLeftFirst))
+        using (forkLeft.ForkJoin(forkRight, static (left, right) => left + right).Subscribe(forkLeftFirst))
         {
             forkLeft.OnNext(One);
             forkLeft.OnCompleted();
@@ -755,7 +823,7 @@ public partial class SignalOperatorMixinsTests
         RecordingWitness<int> forkRightFirst = new();
         Signal<int> forkOtherLeft = new();
         Signal<int> forkOtherRight = new();
-        using (forkOtherLeft.ForkJoin(forkOtherRight, (left, right) => left + right).Subscribe(forkRightFirst))
+        using (forkOtherLeft.ForkJoin(forkOtherRight, static (left, right) => left + right).Subscribe(forkRightFirst))
         {
             forkOtherRight.OnNext(Two);
             forkOtherRight.OnCompleted();
@@ -782,7 +850,7 @@ public partial class SignalOperatorMixinsTests
         List<Moment<int>> clockMoments = [];
         var clockMomentCompleted = 0;
         _ = Signal.Sequence(Four, Two).Timestamp(new VirtualClock(DateTimeOffset.UnixEpoch))
-            .Subscribe(clockMoments.Add, ex => throw ex, () => clockMomentCompleted++);
+            .Subscribe(clockMoments.Add, static ex => throw ex, () => clockMomentCompleted++);
         IEnumerable<int> expectedClockMoments = [Four, Five];
         int[] clockMomentValues = [clockMoments[0].Value, clockMoments[1].Value];
         await Assert.That(clockMomentValues.SequenceEqual(expectedClockMoments)).IsTrue();
@@ -791,7 +859,7 @@ public partial class SignalOperatorMixinsTests
         var immediateMomentCompleted = 0;
         var immediateTimestampSignal =
             (IInlineSignal<Moment<int>>)Signal.Sequence(Two, Two).Timestamp(Sequencer.Immediate);
-        immediateTimestampSignal.Subscribe(immediateMomentActions.Add, ex => throw ex, () => immediateMomentCompleted++)
+        immediateTimestampSignal.Subscribe(immediateMomentActions.Add, static ex => throw ex, () => immediateMomentCompleted++)
             .Dispose();
         IEnumerable<int> expectedImmediateMomentActions = [Two, Three];
         int[] immediateMomentActionValues = [immediateMomentActions[0].Value, immediateMomentActions[1].Value];
@@ -805,9 +873,10 @@ public partial class SignalOperatorMixinsTests
         int[] clockMomentObserverValues = [clockMomentObserver.Values[0].Value, clockMomentObserver.Values[1].Value];
         await Assert.That(clockMomentObserverValues.SequenceEqual(expectedClockMomentObserver)).IsTrue();
         await Assert.That(clockMomentObserver.Completed).IsEqualTo(1);
-        _ = Assert.Throws<ArgumentNullException>(() => immediateTimestampSignal.Subscribe((IObserver<Moment<int>>)null!));
         _ = Assert.Throws<ArgumentNullException>(() =>
-            immediateTimestampSignal.Subscribe((Action<Moment<int>>)null!, _ => { }, () => { }));
+            immediateTimestampSignal.Subscribe((IObserver<Moment<int>>)null!));
+        _ = Assert.Throws<ArgumentNullException>(() =>
+            immediateTimestampSignal.Subscribe((Action<Moment<int>>)null!, static _ => { }, static () => { }));
     }
 
     /// <summary>Verifies the time-interval operator immediate and clock-backed branches.</summary>
@@ -829,7 +898,7 @@ public partial class SignalOperatorMixinsTests
         List<TimeInterval<int>> clockIntervals = [];
         var clockIntervalCompleted = 0;
         _ = Signal.Sequence(Four, Three).TimeInterval(new VirtualClock(DateTimeOffset.UnixEpoch))
-            .Subscribe(clockIntervals.Add, ex => throw ex, () => clockIntervalCompleted++);
+            .Subscribe(clockIntervals.Add, static ex => throw ex, () => clockIntervalCompleted++);
         IEnumerable<int> expectedClockIntervals = [Four, Five, Six];
         int[] clockIntervalValues = [clockIntervals[0].Value, clockIntervals[1].Value, clockIntervals[Two].Value];
         await Assert.That(clockIntervalValues.SequenceEqual(expectedClockIntervals)).IsTrue();
@@ -842,7 +911,7 @@ public partial class SignalOperatorMixinsTests
         var immediateIntervalSignal =
             (IInlineSignal<TimeInterval<int>>)Signal.Sequence(Two, Two).TimeInterval(Sequencer.Immediate);
         immediateIntervalSignal
-            .Subscribe(immediateIntervalActions.Add, ex => throw ex, () => immediateIntervalCompleted++)
+            .Subscribe(immediateIntervalActions.Add, static ex => throw ex, () => immediateIntervalCompleted++)
             .Dispose();
         IEnumerable<int> expectedImmediateIntervalActions = [Two, Three];
         int[] immediateIntervalActionValues = [immediateIntervalActions[0].Value, immediateIntervalActions[1].Value];
@@ -867,7 +936,7 @@ public partial class SignalOperatorMixinsTests
         _ = Assert.Throws<ArgumentNullException>(() =>
             immediateIntervalSignal.Subscribe((IObserver<TimeInterval<int>>)null!));
         _ = Assert.Throws<ArgumentNullException>(() =>
-            immediateIntervalSignal.Subscribe((Action<TimeInterval<int>>)null!, _ => { }, () => { }));
+            immediateIntervalSignal.Subscribe((Action<TimeInterval<int>>)null!, static _ => { }, static () => { }));
     }
 
     /// <summary>Verifies delay-start signal branches, the sequencer work item, and queue guard clauses.</summary>
@@ -882,7 +951,7 @@ public partial class SignalOperatorMixinsTests
         List<int> shiftedActions = [];
         var shiftedActionCompleted = 0;
         _ = Signal.Sequence(Three, Two).DelayStart(TimeSpan.Zero, Sequencer.Immediate)
-            .Subscribe(shiftedActions.Add, ex => throw ex, () => shiftedActionCompleted++);
+            .Subscribe(shiftedActions.Add, static ex => throw ex, () => shiftedActionCompleted++);
         int[] expectedShiftedActions = [Three, Four];
         await Assert.That(shiftedActions.SequenceEqual(expectedShiftedActions)).IsTrue();
         await Assert.That(shiftedActionCompleted).IsEqualTo(1);
@@ -890,16 +959,16 @@ public partial class SignalOperatorMixinsTests
             (IRequireCurrentThread<int>)Signal.Sequence(One, One).DelayStart(TimeSpan.Zero, Sequencer.CurrentThread);
         await Assert.That(currentThreadShift.IsRequiredSubscribeOnCurrentThread()).IsTrue();
         var inlineShift = (IInlineSignal<int>)Signal.Sequence(One, One).DelayStart(TimeSpan.Zero, Sequencer.Immediate);
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.Sequence(One, One)
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.Sequence(One, One)
             .DelayStart(TimeSpan.Zero, Sequencer.Immediate)
             .Subscribe((IObserver<int>)null!));
-        _ = Assert.Throws<ArgumentNullException>(() => inlineShift.Subscribe((Action<int>)null!, _ => { }, () => { }));
-        _ = Assert.Throws<ArgumentNullException>(() => inlineShift.Subscribe(_ => { }, _ => { }, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => inlineShift.Subscribe((Action<int>)null!, static _ => { }, static () => { }));
+        _ = Assert.Throws<ArgumentNullException>(() => inlineShift.Subscribe(static _ => { }, static _ => { }, null!));
         List<int> helperValues = [];
         SequencerWorkItem<ISequencer, int> helper = new(Sequencer.Immediate, One, (_, state) =>
         {
             helperValues.Add(state);
-            return new ActionDisposable(() => { });
+            return new ActionDisposable(static () => { });
         });
         helper.Invoke();
         helper.Dispose();
@@ -907,8 +976,8 @@ public partial class SignalOperatorMixinsTests
         int[] expectedHelperValues = [One];
         await Assert.That(helperValues.SequenceEqual(expectedHelperValues)).IsTrue();
         await VerifySequencerWorkItemDisposalBranches();
-        ScheduledItem<int> unusedScheduled =
-            ScheduledItem.Create(Sequencer.Immediate, "unused", (_, _) => EmptyDisposable.Instance, One);
+        var unusedScheduled =
+            ScheduledItem.Create(Sequencer.Immediate, "unused", static (_, _) => EmptyDisposable.Instance, One);
         await Assert.That(new SequencerQueue<int>().Remove(unusedScheduled)).IsFalse();
         _ = Assert.Throws<ArgumentOutOfRangeException>(CreatePriorityQueueWithInvalidCapacity);
         PriorityQueue<int> shrink = new(ThirtyTwo);
@@ -987,13 +1056,13 @@ public partial class SignalOperatorMixinsTests
                 return new ActionDisposable(() => Interlocked.Increment(ref disposed));
             });
 
-            using Barrier barrier = new(2);
-            Task invoke = Task.Run(() =>
+            using Barrier barrier = new(RacingThreadCount);
+            var invoke = Task.Run(() =>
             {
                 barrier.SignalAndWait();
                 item.Invoke();
             });
-            Task dispose = Task.Run(() =>
+            var dispose = Task.Run(() =>
             {
                 barrier.SignalAndWait();
                 item.Dispose();
@@ -1010,7 +1079,7 @@ public partial class SignalOperatorMixinsTests
     /// <returns>A task representing the asynchronous verification.</returns>
     private static async Task VerifyThreadPoolWorkItemBranchesAsync()
     {
-        TaskCompletionSource<int> absoluteRan = new();
+        TaskCompletionSource<int> absoluteRan = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var absolute = ThreadPoolSequencer.Instance.Schedule(Five, FixedTimestamp, (_, state) =>
         {
             if (!absoluteRan.TrySetResult(state))
@@ -1024,7 +1093,7 @@ public partial class SignalOperatorMixinsTests
             .IsEqualTo(Five);
         absolute.Dispose();
         absolute.Dispose();
-        var delayedDisposed = CreateThreadPoolWorkItem(One, (_, _) => EmptyDisposable.Instance);
+        var delayedDisposed = CreateThreadPoolWorkItem(One, static (_, _) => EmptyDisposable.Instance);
         delayedDisposed.Dispose();
         QueueThreadPoolWorkItem(delayedDisposed, TimeSpan.FromMilliseconds(Ten));
         var skipped = false;

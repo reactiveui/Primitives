@@ -74,7 +74,10 @@ public static class Signal
             (PublishingOption.Concurrent, false) => new ConcurrentReplayLatestSignalAsync<T>(new(startValue)),
             (PublishingOption.Serial, true) => new SerialStatelessReplayLatestSignalAsync<T>(new(startValue)),
             (PublishingOption.Concurrent, true) => new ConcurrentStatelessReplayLatestSignalAsync<T>(new(startValue)),
-            _ => throw new ArgumentOutOfRangeException(nameof(options), options, "Unsupported behavior signal creation options.")
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(options),
+                options,
+                "Unsupported behavior signal creation options.")
         };
 
     /// <summary>Creates a new asynchronous Signal that replays only the most recent value to new subscribers.</summary>
@@ -111,6 +114,9 @@ public static class Signal
             (PublishingOption.Serial, true) => new SerialStatelessReplayLatestSignalAsync<T>(Optional<T>.Empty),
             (PublishingOption.Concurrent, true) =>
                 new ConcurrentStatelessReplayLatestSignalAsync<T>(Optional<T>.Empty),
-            _ => throw new ArgumentOutOfRangeException(nameof(options), options, "Unsupported replay-latest signal creation options.")
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(options),
+                options,
+                "Unsupported replay-latest signal creation options.")
         };
 }

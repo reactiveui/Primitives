@@ -97,7 +97,7 @@ public class OperatorStatefulFilterGcProfileBenchmarks
     {
         IntSignalWitness observer = new();
         using var subscription = Signal.Sequence(StartValue, RangeCount)
-            .TakeWhile(static x => x < (RangeCount - SkipCount))
+            .TakeWhile(static x => x < RangeCount - SkipCount)
             .Subscribe(observer);
         return observer.Total;
     }

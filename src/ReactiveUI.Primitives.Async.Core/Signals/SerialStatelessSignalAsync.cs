@@ -27,7 +27,11 @@ public sealed class SerialStatelessSignalAsync<T> : ISignalAsync<T>
     public ValueTask OnErrorResumeAsync(
         Exception error,
         CancellationToken cancellationToken) =>
-        StatelessSignalAsyncStateHelper.OnErrorResumeAsync(_state, SignalBroadcastKind.Serial, error, cancellationToken);
+        StatelessSignalAsyncStateHelper.OnErrorResumeAsync(
+            _state,
+            SignalBroadcastKind.Serial,
+            error,
+            cancellationToken);
 
     /// <inheritdoc/>
     public ValueTask OnCompletedAsync(Result result) =>

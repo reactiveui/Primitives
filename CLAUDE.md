@@ -1,6 +1,7 @@
 # CLAUDE.md
 
-This file is the single source of truth for AI/agent assistance in this repository. It consolidates build/test commands, repository layout, test runner usage, and the main constraints needed to work safely in `ReactiveUI.Primitives`.
+This file is the single source of truth for AI/agent assistance in this repository. It consolidates build/test commands,
+repository layout, test runner usage, and the main constraints needed to work safely in `ReactiveUI.Primitives`.
 
 If there is any conflict between other agent instruction files and this file, follow **CLAUDE.md**.
 
@@ -29,9 +30,11 @@ This repository uses **SLNX** (XML-based solution format) instead of legacy `.sl
 
 ### Working Directory Rule
 
-**CRITICAL:** Run `dotnet` build/test commands from `./src`, not the repository root, unless the command explicitly uses `src/`-prefixed paths.
+**CRITICAL:** Run `dotnet` build/test commands from `./src`, not the repository root, unless the command explicitly uses
+`src/`-prefixed paths.
 
-Running `dotnet test` from the repository root can trigger Microsoft Testing Platform / VSTest invocation issues on .NET 10+ SDKs.
+Running `dotnet test` from the repository root can trigger Microsoft Testing Platform / VSTest invocation issues on .NET
+10+ SDKs.
 
 ### Restore And Build
 
@@ -135,7 +138,8 @@ dotnet test "tests/ReactiveUI.Primitives.Async.Tests/ReactiveUI.Primitives.Async
 
 - API approval baselines live under `src/tests/**/ApiApprovalTests.*.verified.txt`
 - New TFMs usually require corresponding new `DotNet11_0.verified.txt` files
-- If approval tests fail with `.received.txt` output, inspect the generated snapshot and promote it intentionally if the API change is expected
+- If approval tests fail with `.received.txt` output, inspect the generated snapshot and promote it intentionally if the
+  API change is expected
 
 ---
 
@@ -149,19 +153,22 @@ This repository includes Windows-targeted TFMs and UI adapter projects:
 - WinForms
 - WinUI
 
-Non-Windows builds can still compile much of the tree because Windows targeting is enabled centrally, but some runtime/test behavior is platform-specific.
+Non-Windows builds can still compile much of the tree because Windows targeting is enabled centrally, but some
+runtime/test behavior is platform-specific.
 
 ### MAUI
 
 This repository includes MAUI targets, including an explicit Android leg for `net11`.
 
-Treat Android dependency installation as an environment/setup operation, not normal task guidance. Only do it when a build proves the local machine is missing the required Android platform.
+Treat Android dependency installation as an environment/setup operation, not normal task guidance. Only do it when a
+build proves the local machine is missing the required Android platform.
 
 ---
 
 ## Repository Conventions
 
-- Shared target frameworks and many package conditions are centralized in `src/Directory.Build.props` and `src/Directory.Packages.props`
+- Shared target frameworks and many package conditions are centralized in `src/Directory.Build.props` and
+  `src/Directory.Packages.props`
 - Prefer minimal, centralized changes over per-project duplication when changing TFM policy
 - Keep net11 package conditionals net11-specific; otherwise use established versions
 - Prefer explicit dependency pins only when required by transitive restore behavior
@@ -172,11 +179,22 @@ Treat Android dependency installation as an environment/setup operation, not nor
 
 These rules are authoritative for everything under `src/tests/`.
 
-- **Name test classes/files after the production type under test.** A test class is `<ProductionClass>Tests` (e.g. `SparkTests`, `WitnessTests`, `SequencerTests`, `ReplaySignalTests`). Where a cohesive family has no single umbrella type, name it after the namespace's representative type (e.g. `DisposableTests` for the `Disposables` family).
-- **No invented, purpose-describing names.** Do not name test files after the *reason* they exist. Banned tokens in test file/class names unless they are literally part of a production type's name: `Coverage`, `EdgeCase`, `Edge`, `Contract`, `Runtime`, `Scenario`, `RealWorld`, `Patch`, `Infrastructure`, `Expansion`, `Internal`. ("Edge" is allowed only if the originating production class itself contains it.)
-- **Group each test with the class it exercises.** When a test sits in a "coverage"-style grab-bag file, move it into the `<ProductionClass>Tests` file for the type it actually tests. Split a multi-subject test method by subject only when the split is clean; otherwise home the whole method under its dominant production type.
-- **Split large test files into partial classes.** If a `<ProductionClass>Tests` file exceeds **1000 lines**, split it into partial-class files that group members with similar names together, suffixing by group: `FooTests.cs`, `FooTests.Aggregates.cs`, `FooTests.FlatMap.cs`, etc. All parts keep the same `partial class` name.
-- **No `#pragma warning disable`** (see also the zero-pragma policy): fix the root cause. Long lines (S103), long methods (S138), and long files (S104) are fixed by wrapping/splitting, not suppressing. If a suppression is genuinely unavoidable, use a scoped `[SuppressMessage]` attribute, never a pragma.
+- **Name test classes/files after the production type under test.** A test class is `<ProductionClass>Tests` (e.g.
+  `SparkTests`, `WitnessTests`, `SequencerTests`, `ReplaySignalTests`). Where a cohesive family has no single umbrella
+  type, name it after the namespace's representative type (e.g. `DisposableTests` for the `Disposables` family).
+- **No invented, purpose-describing names.** Do not name test files after the *reason* they exist. Banned tokens in test
+  file/class names unless they are literally part of a production type's name: `Coverage`, `EdgeCase`, `Edge`,
+  `Contract`, `Runtime`, `Scenario`, `RealWorld`, `Patch`, `Infrastructure`, `Expansion`, `Internal`. ("Edge" is allowed
+  only if the originating production class itself contains it.)
+- **Group each test with the class it exercises.** When a test sits in a "coverage"-style grab-bag file, move it into
+  the `<ProductionClass>Tests` file for the type it actually tests. Split a multi-subject test method by subject only
+  when the split is clean; otherwise home the whole method under its dominant production type.
+- **Split large test files into partial classes.** If a `<ProductionClass>Tests` file exceeds **1000 lines**, split it
+  into partial-class files that group members with similar names together, suffixing by group: `FooTests.cs`,
+  `FooTests.Aggregates.cs`, `FooTests.FlatMap.cs`, etc. All parts keep the same `partial class` name.
+- **No `#pragma warning disable`** (see also the zero-pragma policy): fix the root cause. Long lines (S103), long
+  methods (S138), and long files (S104) are fixed by wrapping/splitting, not suppressing. If a suppression is genuinely
+  unavoidable, use a scoped `[SuppressMessage]` attribute, never a pragma.
 
 ---
 

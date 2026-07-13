@@ -18,7 +18,7 @@ public class TaskSignalTests
     {
         List<Exception> canceled = [];
         using CancellationTokenSource cts = new();
-        TaskSignal<int> taskSignal = new(_ => Signal.Silent<int>(), Sequencer.CurrentThread, cts);
+        var taskSignal = TaskSignal<int>.Create(static _ => Signal.Silent<int>(), Sequencer.CurrentThread, cts);
         taskSignal.GetOperationCanceled(Witness.Create<Exception>(canceled.Add));
         await Assert.That(taskSignal.IsCancellationRequested).IsFalse();
         taskSignal.Dispose();
@@ -26,9 +26,9 @@ public class TaskSignalTests
         await Assert.That(taskSignal.IsDisposed).IsTrue();
         await Assert.That(taskSignal.IsCancellationRequested).IsTrue();
         await Assert.That(canceled.Count).IsEqualTo(1);
-        _ = Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(static () =>
         {
-            TaskSignal<int> invalid = new(null!);
+            var invalid = TaskSignal<int>.Create(null!);
             GC.KeepAlive(invalid);
         });
     }

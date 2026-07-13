@@ -149,72 +149,82 @@ internal sealed class CatchSignal<T> : IRequireCurrentThread<T>
                     return;
                 }
 
-                var current = default(IObservable<T>);
-                var hasNext = false;
-                var ex = default(Exception);
-
-                try
+                if (!TryMoveToNextSource(out var next, out var error))
                 {
-                    hasNext = _e!.MoveNext();
-                    if (hasNext)
-                    {
-                        current = _e.Current ?? throw new InvalidOperationException("sequence is null.");
-                    }
-                    else
-                    {
-                        _e.Dispose();
-                    }
-                }
-                catch (Exception exception)
-                {
-                    ex = exception;
-                    _e?.Dispose();
-                }
-
-                if (ex is not null)
-                {
-                    try
-                    {
-                        _observer.OnError(ex);
-                    }
-                    finally
-                    {
-                        Dispose();
-                    }
-
+                    FailAndDispose(error!);
                     return;
                 }
 
-                if (!hasNext)
+                if (next is null)
                 {
-                    if (_lastException is not null)
-                    {
-                        try
-                        {
-                            _observer.OnError(_lastException);
-                        }
-                        finally
-                        {
-                            Dispose();
-                        }
-                    }
-                    else
-                    {
-                        try
-                        {
-                            _observer.OnCompleted();
-                        }
-                        finally
-                        {
-                            Dispose();
-                        }
-                    }
-
+                    FinishAndDispose();
                     return;
                 }
 
-                var source = current;
-                _subscription?.Create(new SingleDisposable(source!.Subscribe(this)));
+                _subscription?.Create(new SingleDisposable(next.Subscribe(this)));
+            }
+        }
+
+        /// <summary>Advances the handler sequence to the next source. Call while holding the gate.</summary>
+        /// <param name="next">The next source, or <see langword="null"/> once the sequence is exhausted.</param>
+        /// <param name="error">The exception the sequence raised, when it raised one.</param>
+        /// <returns><see langword="true"/> when the sequence advanced without raising.</returns>
+        private bool TryMoveToNextSource(out IObservable<T>? next, out Exception? error)
+        {
+            next = null;
+            error = null;
+
+            try
+            {
+                if (_e!.MoveNext())
+                {
+                    next = _e.Current ?? throw new InvalidOperationException("sequence is null.");
+                }
+                else
+                {
+                    _e.Dispose();
+                }
+
+                return true;
+            }
+            catch (Exception exception)
+            {
+                error = exception;
+                _e?.Dispose();
+                return false;
+            }
+        }
+
+        /// <summary>Forwards an error downstream and tears the handler down.</summary>
+        /// <param name="error">The error to forward.</param>
+        private void FailAndDispose(Exception error)
+        {
+            try
+            {
+                _observer.OnError(error);
+            }
+            finally
+            {
+                Dispose();
+            }
+        }
+
+        /// <summary>Ends the sequence once the sources are exhausted, reporting the last error one of them raised.</summary>
+        private void FinishAndDispose()
+        {
+            if (_lastException is not null)
+            {
+                FailAndDispose(_lastException);
+                return;
+            }
+
+            try
+            {
+                _observer.OnCompleted();
+            }
+            finally
+            {
+                Dispose();
             }
         }
     }

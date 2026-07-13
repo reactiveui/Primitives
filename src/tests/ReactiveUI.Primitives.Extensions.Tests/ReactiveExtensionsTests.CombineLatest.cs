@@ -16,7 +16,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenCombineLatestValuesAreAllFalseNullSources_ThenThrowsInvalidOperation()
     {
-        Action call = () => _ = ((IEnumerable<IObservable<bool>>)null!).CombineLatestValuesAreAllFalse();
+        Action call = static () => _ = ((IEnumerable<IObservable<bool>>)null!).CombineLatestValuesAreAllFalse();
         var ex = Assert.Throws<InvalidOperationException>(call);
         await Assert.That(ex).IsNotNull();
     }
@@ -67,9 +67,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task GetMax_WithMultipleSources_ReturnsMaximum()
     {
-        BehaviorSubject<int> subject1 = new(5);
-        BehaviorSubject<int> subject2 = new(10);
-        BehaviorSubject<int> subject3 = new(3);
+        BehaviorSubject<int> subject1 = new(SampleValue5);
+        BehaviorSubject<int> subject2 = new(SampleValue10);
+        BehaviorSubject<int> subject3 = new(SampleValue3);
         int? result = null;
         using var sub = subject1.GetMax(subject2, subject3).Subscribe(x => result = x);
         await Assert.That(result).IsEqualTo(SampleValue10);
@@ -80,9 +80,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task GetMin_WithMultipleSources_ReturnsMinimum()
     {
-        BehaviorSubject<int> subject1 = new(5);
-        BehaviorSubject<int> subject2 = new(10);
-        BehaviorSubject<int> subject3 = new(3);
+        BehaviorSubject<int> subject1 = new(SampleValue5);
+        BehaviorSubject<int> subject2 = new(SampleValue10);
+        BehaviorSubject<int> subject3 = new(SampleValue3);
         int? result = null;
         using var sub = subject1.GetMin(subject2, subject3).Subscribe(x => result = x);
         await Assert.That(result).IsEqualTo(SampleValue3);
@@ -93,9 +93,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task GetMin_TracksMinimumOverTime()
     {
-        BehaviorSubject<int> subject1 = new(5);
-        BehaviorSubject<int> subject2 = new(10);
-        BehaviorSubject<int> subject3 = new(3);
+        BehaviorSubject<int> subject1 = new(SampleValue5);
+        BehaviorSubject<int> subject2 = new(SampleValue10);
+        BehaviorSubject<int> subject3 = new(SampleValue3);
         List<int> results = [];
         using var sub = subject1.GetMin(subject2, subject3).Subscribe(results.Add);
 
@@ -116,9 +116,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task GetMax_TracksMaximumOverTime()
     {
-        BehaviorSubject<int> subject1 = new(5);
-        BehaviorSubject<int> subject2 = new(10);
-        BehaviorSubject<int> subject3 = new(3);
+        BehaviorSubject<int> subject1 = new(SampleValue5);
+        BehaviorSubject<int> subject2 = new(SampleValue10);
+        BehaviorSubject<int> subject3 = new(SampleValue3);
         List<int> results = [];
         using var sub = subject1.GetMax(subject2, subject3).Subscribe(results.Add);
 

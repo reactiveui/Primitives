@@ -15,23 +15,16 @@ namespace ReactiveUI.Primitives.Advanced;
 /// </summary>
 /// <typeparam name="T">The value type.</typeparam>
 /// <typeparam name="TException">The handled exception type.</typeparam>
-internal sealed class RecoverSignal<T, TException> : IRequireCurrentThread<T>
+/// <param name="source">The source observable.</param>
+/// <param name="handler">The handler that selects the fallback sequence for a caught error.</param>
+internal sealed class RecoverSignal<T, TException>(IObservable<T> source, Func<TException, IObservable<T>> handler) : IRequireCurrentThread<T>
     where TException : Exception
 {
     /// <summary>The source observable.</summary>
-    private readonly IObservable<T> _source;
+    private readonly IObservable<T> _source = source;
 
     /// <summary>The handler that selects the fallback sequence for a caught error.</summary>
-    private readonly Func<TException, IObservable<T>> _handler;
-
-    /// <summary>Initializes a new instance of the <see cref="RecoverSignal{T, TException}"/> class.</summary>
-    /// <param name="source">The source observable.</param>
-    /// <param name="handler">The handler that selects the fallback sequence for a caught error.</param>
-    internal RecoverSignal(IObservable<T> source, Func<TException, IObservable<T>> handler)
-    {
-        _source = source;
-        _handler = handler;
-    }
+    private readonly Func<TException, IObservable<T>> _handler = handler;
 
     /// <inheritdoc/>
     public bool IsRequiredSubscribeOnCurrentThread() => true;
@@ -47,7 +40,13 @@ internal sealed class RecoverSignal<T, TException> : IRequireCurrentThread<T>
         }
 
         SingleDisposable subscription = new();
-        _ = Sequencer.CurrentThread.Schedule(() => subscription.Create(Run(observer)));
+        _ = Sequencer.CurrentThread.Schedule(
+            (self: this, subscription, observer),
+            static (_, s) =>
+            {
+                s.subscription.Create(s.self.Run(s.observer));
+                return EmptyDisposable.Instance;
+            });
         return subscription;
     }
 
@@ -57,28 +56,21 @@ internal sealed class RecoverSignal<T, TException> : IRequireCurrentThread<T>
     private RecoverWitness Run(IObserver<T> observer) => new RecoverWitness(observer, _handler).Run(_source);
 
     /// <summary>Forwards source values and, on a caught error, switches to the fallback sequence.</summary>
-    private sealed class RecoverWitness : IObserver<T>, IDisposable
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="handler">The handler that selects the fallback sequence.</param>
+    private sealed class RecoverWitness(IObserver<T> observer, Func<TException, IObservable<T>> handler) : IObserver<T>, IDisposable
     {
         /// <summary>The downstream observer.</summary>
-        private readonly IObserver<T> _observer;
+        private readonly IObserver<T> _observer = observer;
 
         /// <summary>The handler that selects the fallback sequence.</summary>
-        private readonly Func<TException, IObservable<T>> _handler;
+        private readonly Func<TException, IObservable<T>> _handler = handler;
 
         /// <summary>The source subscription slot.</summary>
         private IDisposable? _sourceSubscription;
 
         /// <summary>The fallback subscription slot, populated after a caught error.</summary>
         private IDisposable? _fallbackSubscription;
-
-        /// <summary>Initializes a new instance of the <see cref="RecoverWitness"/> class.</summary>
-        /// <param name="observer">The downstream observer.</param>
-        /// <param name="handler">The handler that selects the fallback sequence.</param>
-        internal RecoverWitness(IObserver<T> observer, Func<TException, IObservable<T>> handler)
-        {
-            _observer = observer;
-            _handler = handler;
-        }
 
         /// <inheritdoc/>
         public void OnNext(T value) => _observer.OnNext(value);
@@ -153,6 +145,7 @@ internal sealed class RecoverSignal<T, TException> : IRequireCurrentThread<T>
 
         /// <summary>Stores the fallback subscription.</summary>
         /// <param name="subscription">The fallback subscription.</param>
-        private void SetFallback(IDisposable subscription) => SubscriptionSlots.Assign(ref _fallbackSubscription, subscription);
+        private void SetFallback(IDisposable subscription) =>
+            SubscriptionSlots.Assign(ref _fallbackSubscription, subscription);
     }
 }

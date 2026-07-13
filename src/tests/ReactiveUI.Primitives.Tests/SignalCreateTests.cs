@@ -30,12 +30,19 @@ public class SignalCreateTests
     /// <summary>Expected values for create-with-state tests.</summary>
     private static readonly int[] CreateWithStateExpected = [Third];
 
+    /// <summary>A delay long enough that the subscription is always disposed before it elapses.</summary>
+    private static readonly TimeSpan NeverElapsingDelay = TimeSpan.FromSeconds(30);
+
+    /// <summary>How long the test waits for the cancellation callback before failing.</summary>
+    private static readonly TimeSpan CancellationTimeout = TimeSpan.FromSeconds(5);
+
     /// <summary>Creates the argument checking.</summary>
     [Test]
     public void Create_ArgumentChecking()
     {
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.Create(default(Func<IObserver<int>, IDisposable>)!));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.Create((Func<IObserver<int>, IDisposable>)null!).Subscribe(null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.Create(default(Func<IObserver<int>, IDisposable>)!));
+        _ = Assert.Throws<ArgumentNullException>(static () =>
+            Signal.Create((Func<IObserver<int>, IDisposable>)null!).Subscribe(null!));
     }
 
     /// <summary>Creates the null coalescing action.</summary>
@@ -43,7 +50,7 @@ public class SignalCreateTests
     [Test]
     public async Task Create_NullCoalescingAction()
     {
-        var xs = Signal.Create<int>(o =>
+        var xs = Signal.Create<int>(static o =>
         {
             o.OnNext(CreatedValue);
             return new ActionDisposable(null!);
@@ -56,38 +63,39 @@ public class SignalCreateTests
 
     /// <summary>Creates the exception.</summary>
     [Test]
-    public void Create_Exception() => Assert.Throws<InvalidOperationException>(() => Signal.Create(
-            new Func<IObserver<int>, IDisposable>(_ => throw new InvalidOperationException()))
+    public void Create_Exception() => Assert.Throws<InvalidOperationException>(static () => Signal.Create(
+            new Func<IObserver<int>, IDisposable>(static _ => throw new InvalidOperationException()))
         .Subscribe());
 
     /// <summary>Creates the observer throws.</summary>
     [Test]
     public void Create_ObserverThrows()
     {
-        _ = Assert.Throws<InvalidOperationException>(() => Signal.Create<int>(o =>
+        _ = Assert.Throws<InvalidOperationException>(static () => Signal.Create<int>(static o =>
         {
             o.OnNext(1);
             return EmptyDisposable.Instance;
-        }).Subscribe(x => throw new InvalidOperationException()));
-        _ = Assert.Throws<InvalidOperationException>(() => Signal.Create<int>(o =>
+        }).Subscribe(static x => throw new InvalidOperationException()));
+        _ = Assert.Throws<InvalidOperationException>(static () => Signal.Create<int>(static o =>
         {
             o.OnError(new InvalidOperationException("source"));
             return EmptyDisposable.Instance;
-        }).Subscribe(x => { }, ex => throw new InvalidOperationException()));
-        _ = Assert.Throws<InvalidOperationException>(() => Signal.Create<int>(o =>
+        }).Subscribe(static x => { }, static ex => throw new InvalidOperationException()));
+        _ = Assert.Throws<InvalidOperationException>(static () => Signal.Create<int>(static o =>
         {
             o.OnCompleted();
             return EmptyDisposable.Instance;
-        }).Subscribe(x => { }, ex => { }, () => throw new InvalidOperationException()));
+        }).Subscribe(static x => { }, static ex => { }, static () => throw new InvalidOperationException()));
     }
 
     /// <summary>Creates the with disposable argument checking.</summary>
     [Test]
     public void CreateWithDisposable_ArgumentChecking()
     {
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.Create(default(Func<IObserver<int>, IDisposable>)!));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.Create<int>(_ => DummyDisposable.Instance).Subscribe(null!));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.Create<int>(o =>
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.Create(default(Func<IObserver<int>, IDisposable>)!));
+        _ = Assert.Throws<ArgumentNullException>(static () =>
+            Signal.Create<int>(static _ => DummyDisposable.Instance).Subscribe(null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.Create<int>(static o =>
         {
             o.OnError(null!);
             return DummyDisposable.Instance;
@@ -99,7 +107,7 @@ public class SignalCreateTests
     [Test]
     public async Task CreateWithDisposable_NullCoalescingAction()
     {
-        var xs = Signal.Create<int>(o =>
+        var xs = Signal.Create<int>(static o =>
         {
             o.OnNext(CreatedValue);
             return null!;
@@ -112,20 +120,20 @@ public class SignalCreateTests
 
     /// <summary>Creates the with disposable exception.</summary>
     [Test]
-    public void CreateWithDisposable_Exception() => Assert.Throws<InvalidOperationException>(() => Signal.Create(
-            new Func<IObserver<int>, IDisposable>(_ => throw new InvalidOperationException()))
+    public void CreateWithDisposable_Exception() => Assert.Throws<InvalidOperationException>(static () => Signal.Create(
+            new Func<IObserver<int>, IDisposable>(static _ => throw new InvalidOperationException()))
         .Subscribe());
 
     /// <summary>Anonymous signals validate the subscribe delegate.</summary>
     [Test]
     public void AnonymousSignal_ArgumentChecking()
     {
-        _ = Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(static () =>
         {
             AnonymousSignal<int> invalid = new(null!);
             GC.KeepAlive(invalid);
         });
-        AnonymousSignal<int> signal = new(_ => EmptyDisposable.Instance);
+        AnonymousSignal<int> signal = new(static _ => EmptyDisposable.Instance);
         _ = Assert.Throws<ArgumentNullException>(() => signal.Subscribe(null!));
     }
 
@@ -159,7 +167,7 @@ public class SignalCreateTests
     [Test]
     public async Task AnonymousSignal_ReturnsEmptyDisposableForNullDelegateResult()
     {
-        AnonymousSignal<int> signal = new(_ => null!);
+        AnonymousSignal<int> signal = new(static _ => null!);
         var disposable = signal.Subscribe(new Recorder<int>());
         await Assert.That(disposable).IsSameReferenceAs(EmptyDisposable.Instance);
     }
@@ -178,23 +186,23 @@ public class SignalCreateTests
             {
                 observer.OnNext(state);
                 observer.OnCompleted();
-                return new ActionDisposable(() => { });
+                return new ActionDisposable(static () => { });
             },
-            false).Subscribe(values.Add, ex => throw ex, () => completed++);
+            false).Subscribe(values.Add, static ex => throw ex, () => completed++);
         var subscription = Signal.CreateWithState<int, int>(Fourth, (state, observer) =>
         {
             observer.OnNext(state);
             return new ActionDisposable(() => disposed++);
-        }).Subscribe(_ => { });
+        }).Subscribe(static _ => { });
         subscription.Dispose();
         await Assert.That(values.SequenceEqual(CreateWithStateExpected)).IsTrue();
         await Assert.That(completed).IsEqualTo(1);
         await Assert.That(disposed).IsEqualTo(1);
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.Create<int>(null!, true));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.CreateSafe<int>(null!, true));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.CreateWithState<int, int>(First, null!));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.CreateWithState<int, int>(First, null!, true));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.Lazy<int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.Create<int>(null!, true));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.CreateSafe<int>(null!, true));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.CreateWithState<int, int>(First, null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.CreateWithState<int, int>(First, null!, true));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.Lazy<int>(null!));
     }
 
     /// <summary>Verifies create overloads preserve current-thread subscription requirements.</summary>
@@ -203,7 +211,7 @@ public class SignalCreateTests
     public async Task CreateWithCurrentThreadRequirementReportsAndEmitsSynchronously()
     {
         var created = Signal.Create<int>(
-            observer =>
+            static observer =>
             {
                 observer.OnNext(CreatedValue);
                 observer.OnCompleted();
@@ -242,17 +250,17 @@ public class SignalCreateTests
         Exception? observed = null;
         InvalidOperationException expected = new("async-create");
         _ = Signal.Create<int>((_, _) => Task.FromException<IDisposable>(expected))
-            .Subscribe(_ => { }, error => observed = error);
+            .Subscribe(static _ => { }, error => observed = error);
         await Task.Yield();
 
         await Assert.That(observed).IsSameReferenceAs(expected);
 
-        TaskCompletionSource canceled = new();
+        TaskCompletionSource canceled = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var cancellable = Signal.Create<int>(async (_, cancellationToken) =>
         {
             try
             {
-                await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken).ConfigureAwait(false);
+                await Task.Delay(NeverElapsingDelay, cancellationToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -263,17 +271,18 @@ public class SignalCreateTests
             return EmptyDisposable.Instance;
         });
 
-        var cancellableSubscription = cancellable.Subscribe(_ => { });
+        var cancellableSubscription = cancellable.Subscribe(static _ => { });
         cancellableSubscription.Dispose();
-        await canceled.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+        await canceled.Task.WaitAsync(CancellationTimeout).ConfigureAwait(false);
 
-        var nullDisposable = Signal.Create<int>((_, _) => Task.FromResult<IDisposable>(null!));
-        var nullSubscription = nullDisposable.Subscribe(_ => { });
+        var nullDisposable = Signal.Create<int>(static (_, _) => Task.FromResult<IDisposable>(null!));
+        var nullSubscription = nullDisposable.Subscribe(static _ => { });
         await Task.Yield();
         nullSubscription.Dispose();
 
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.Create<int>((Func<IObserver<int>, Task<IDisposable>>)null!));
-        _ = Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(static () =>
+            Signal.Create<int>((Func<IObserver<int>, Task<IDisposable>>)null!));
+        _ = Assert.Throws<ArgumentNullException>(static () =>
             Signal.Create<int>((Func<IObserver<int>, CancellationToken, Task<IDisposable>>)null!));
     }
 
@@ -283,8 +292,8 @@ public class SignalCreateTests
     public async Task AsyncDeferFactoriesEmitFailAndHonorCancellation()
     {
         List<int> values = [];
-        _ = Signal.Defer(() => Task.FromResult<IObservable<int>>(Signal.Emit(CreatedValue))).Subscribe(values.Add);
-        _ = Signal.Defer(_ => Task.FromResult<IObservable<int>>(Signal.Emit(First))).Subscribe(values.Add);
+        _ = Signal.Defer(static () => Task.FromResult<IObservable<int>>(Signal.Emit(CreatedValue))).Subscribe(values.Add);
+        _ = Signal.Defer(static _ => Task.FromResult<IObservable<int>>(Signal.Emit(First))).Subscribe(values.Add);
         await Task.Yield();
 
         await Assert.That(values.SequenceEqual([CreatedValue, First])).IsTrue();
@@ -292,12 +301,12 @@ public class SignalCreateTests
         Exception? observed = null;
         InvalidOperationException expected = new("defer");
         _ = Signal.Defer<int>(() => Task.FromException<IObservable<int>>(expected))
-            .Subscribe(_ => { }, error => observed = error);
+            .Subscribe(static _ => { }, error => observed = error);
         await Task.Yield();
 
         await Assert.That(observed).IsSameReferenceAs(expected);
 
-        TaskCompletionSource<IObservable<int>> delayedFactory = new();
+        TaskCompletionSource<IObservable<int>> delayedFactory = new(TaskCreationOptions.RunContinuationsAsynchronously);
         List<int> canceledValues = [];
         var deferred = Signal.Defer(_ => delayedFactory.Task);
         var subscription = deferred.Subscribe(canceledValues.Add);
@@ -307,8 +316,8 @@ public class SignalCreateTests
 
         await Assert.That(canceledValues.Count).IsEqualTo(0);
 
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.Defer<int>((Func<Task<IObservable<int>>>)null!));
-        _ = Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.Defer<int>((Func<Task<IObservable<int>>>)null!));
+        _ = Assert.Throws<ArgumentNullException>(static () =>
             Signal.Defer<int>((Func<CancellationToken, Task<IObservable<int>>>)null!));
     }
 
@@ -339,17 +348,18 @@ public class SignalCreateTests
             Third,
             Fourth,
             First,
-            Second])).IsTrue();
+            Second
+        ])).IsTrue();
 
         var completions = 0;
-        _ = Signal.Empty<int>().Subscribe(_ => { }, ex => throw ex, () => completions++);
-        _ = Signal.Empty<int>(Sequencer.Immediate).Subscribe(_ => { }, ex => throw ex, () => completions++);
+        _ = Signal.Empty<int>().Subscribe(static _ => { }, static ex => throw ex, () => completions++);
+        _ = Signal.Empty<int>(Sequencer.Immediate).Subscribe(static _ => { }, static ex => throw ex, () => completions++);
 
         await Assert.That(completions).IsEqualTo(Second);
 
         List<Exception> errors = [];
         InvalidOperationException expected = new("throw");
-        _ = Signal.Throw<int>(expected, Sequencer.Immediate).Subscribe(_ => { }, errors.Add);
+        _ = Signal.Throw<int>(expected, Sequencer.Immediate).Subscribe(static _ => { }, errors.Add);
 
         await Assert.That(errors.Count).IsEqualTo(1);
         await Assert.That(errors[0]).IsSameReferenceAs(expected);

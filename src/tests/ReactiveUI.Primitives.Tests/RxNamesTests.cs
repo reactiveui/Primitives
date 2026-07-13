@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
@@ -122,57 +123,57 @@ public partial class RxNamesTests
     /// <returns>The unary parity cases.</returns>
     public static IEnumerable<UnaryCase> UnaryCases()
     {
-        yield return new("Select-Map", s => s.Map(Double), s => s.Select(Double), _oneToFive, _doubled);
-        yield return new("Where-Keep", s => s.Keep(IsEven), s => s.Where(IsEven), _oneToFive, _evens);
-        yield return new("Scan-Fold", s => s.Fold(Seed, Add), s => s.Scan(Seed, Add), _oneToFive, _runningSum);
+        yield return new("Select-Map", static s => s.Map(Double), static s => s.Select(Double), _oneToFive, _doubled);
+        yield return new("Where-Keep", static s => s.Keep(IsEven), static s => s.Where(IsEven), _oneToFive, _evens);
+        yield return new("Scan-Fold", static s => s.Fold(Seed, Add), static s => s.Scan(Seed, Add), _oneToFive, _runningSum);
         yield return new(
             "Aggregate-Reduce",
-            s => s.Reduce(Seed, Add),
-            s => s.Aggregate(Seed, Add),
+            static s => s.Reduce(Seed, Add),
+            static s => s.Aggregate(Seed, Add),
             _oneToFive,
             _finalSum);
         yield return new(
             "DistinctUntilChanged-Unique",
-            s => s.Unique(),
-            s => s.DistinctUntilChanged(),
+            static s => s.Unique(),
+            static s => s.DistinctUntilChanged(),
             _adjacentDuplicates,
             _deduplicated);
         yield return new(
             "DistinctUntilChangedBy-UniqueBy",
-            s => s.UniqueBy(Identity),
-            s => s.DistinctUntilChangedBy(Identity),
+            static s => s.UniqueBy(Identity),
+            static s => s.DistinctUntilChangedBy(Identity),
             _adjacentDuplicates,
             _deduplicated);
         yield return new(
             "IgnoreElements-IgnoreValues",
-            s => s.IgnoreValues(),
-            s => s.IgnoreElements(),
+            static s => s.IgnoreValues(),
+            static s => s.IgnoreElements(),
             _oneToFive,
             _empty);
         yield return new(
             "SelectWith-MapWith",
-            s => s.MapWith(Ten, AddState),
-            s => s.SelectWith(Ten, AddState),
+            static s => s.MapWith(Ten, AddState),
+            static s => s.SelectWith(Ten, AddState),
             _oneToFive,
             _plusTen);
         yield return new(
             "WhereWith-KeepWith",
-            s => s.KeepWith(Two, IsMultiple),
-            s => s.WhereWith(Two, IsMultiple),
+            static s => s.KeepWith(Two, IsMultiple),
+            static s => s.WhereWith(Two, IsMultiple),
             _oneToFive,
             _evens);
-        yield return new("Do-Tap", s => s.Tap(Ignore), s => s.Do(Ignore), _oneToFive, _oneToFive);
+        yield return new("Do-Tap", static s => s.Tap(Ignore), static s => s.Do(Ignore), _oneToFive, _oneToFive);
         yield return new(
             "DoWith-TapWith",
-            s => s.TapWith(Ten, IgnoreState),
-            s => s.DoWith(Ten, IgnoreState),
+            static s => s.TapWith(Ten, IgnoreState),
+            static s => s.DoWith(Ten, IgnoreState),
             _oneToFive,
             _oneToFive);
-        yield return new("SelectMany-FlatMap", s => s.FlatMap(Fan), s => s.SelectMany(Fan), _oneToThree, _fanned);
+        yield return new("SelectMany-FlatMap", static s => s.FlatMap(Fan), static s => s.SelectMany(Fan), _oneToThree, _fanned);
         yield return new(
             "Materialize-Spark",
-            s => s.Spark().Unspark(),
-            s => s.Materialize().Dematerialize(),
+            static s => s.Spark().Unspark(),
+            static s => s.Materialize().Dematerialize(),
             _oneToFive,
             _oneToFive);
     }
@@ -181,27 +182,27 @@ public partial class RxNamesTests
     /// <returns>The higher-order parity cases.</returns>
     public static IEnumerable<HigherOrderCase> HigherOrderCases()
     {
-        yield return new("Merge-Blend", o => o.Blend(), o => o.Merge(), _twoInners, _flattened);
-        yield return new("Concat-Chain", o => o.Chain(), o => o.Concat(), _twoInners, _flattened);
-        yield return new("Switch-SwitchTo", o => o.SwitchTo(), o => o.Switch(), _twoInners, _flattened);
-        yield return new("Amb-Race", o => o.Race(), o => o.Amb(), _twoInners, _firstInner);
+        yield return new("Merge-Blend", static o => o.Blend(), static o => o.Merge(), _twoInners, _flattened);
+        yield return new("Concat-Chain", static o => o.Chain(), static o => o.Concat(), _twoInners, _flattened);
+        yield return new("Switch-SwitchTo", static o => o.SwitchTo(), static o => o.Switch(), _twoInners, _flattened);
+        yield return new("Amb-Race", static o => o.Race(), static o => o.Amb(), _twoInners, _firstInner);
     }
 
     /// <summary>Provides the binary <c>(left, right) -&gt; result</c> parity cases.</summary>
     /// <returns>The binary parity cases.</returns>
     public static IEnumerable<BinaryCase> BinaryCases()
     {
-        yield return new("Zip-Pair", (l, r) => l.Pair(r, Add), (l, r) => l.Zip(r, Add), DriveZip, _zipped);
+        yield return new("Zip-Pair", static (l, r) => l.Pair(r, Add), static (l, r) => l.Zip(r, Add), DriveZip, _zipped);
         yield return new(
             "CombineLatest-SyncLatest",
-            (l, r) => l.SyncLatest(r, Add),
-            (l, r) => l.CombineLatest(r, Add),
+            static (l, r) => l.SyncLatest(r, Add),
+            static (l, r) => l.CombineLatest(r, Add),
             DriveCombine,
             _combined);
         yield return new(
             "WithLatestFrom-Latch",
-            (l, r) => l.Latch(r, Add),
-            (l, r) => l.WithLatestFrom(r, Add),
+            static (l, r) => l.Latch(r, Add),
+            static (l, r) => l.WithLatestFrom(r, Add),
             DriveLatch,
             _latched);
     }
@@ -210,7 +211,7 @@ public partial class RxNamesTests
     /// <returns>The CombineLatest arities from 4 through 15.</returns>
     public static IEnumerable<int> MultiSourceCombineLatestArities()
     {
-        for (var arity = 4; arity < Sixteen; arity++)
+        for (var arity = MinMultiSourceArity; arity < Sixteen; arity++)
         {
             yield return arity;
         }
@@ -222,15 +223,15 @@ public partial class RxNamesTests
     {
         yield return new(
             "Delay-Shift",
-            (s, c) => s.Shift(TimeSpan.FromTicks(DueTicks), c),
-            (s, c) => s.Delay(TimeSpan.FromTicks(DueTicks), c),
+            static (s, c) => s.Shift(TimeSpan.FromTicks(DueTicks), c),
+            static (s, c) => s.Delay(TimeSpan.FromTicks(DueTicks), c),
             FromOneToThree,
             _oneToThree,
             false);
         yield return new(
             "Timeout-Expire",
-            (s, c) => s.Expire(TimeSpan.FromTicks(DueTicks), c),
-            (s, c) => s.Timeout(TimeSpan.FromTicks(DueTicks), c),
+            static (s, c) => s.Expire(TimeSpan.FromTicks(DueTicks), c),
+            static (s, c) => s.Timeout(TimeSpan.FromTicks(DueTicks), c),
             Silent,
             _empty,
             true);
@@ -319,7 +320,8 @@ public partial class RxNamesTests
 
         List<string> castValues = [];
         Exception? castError = null;
-        _ = Signal.FromEnumerable<object?>(["a", Two]).Cast<string>().Subscribe(castValues.Add, error => castError = error);
+        _ = Signal.FromEnumerable<object?>(["a", Two]).Cast<string>()
+            .Subscribe(castValues.Add, error => castError = error);
 
         await Assert.That(ofType).IsEquivalentTo(keepType, EqualityComparer<string>.Default);
         await Assert.That(ofType.SequenceEqual(["a", "b"])).IsTrue();
@@ -336,15 +338,15 @@ public partial class RxNamesTests
         var binaryCompleted = 0;
         _ = Signal.Emit(Ten)
             .OnErrorResumeNext(Signal.FromEnumerable(_oneToThree))
-            .Subscribe(binary.Add, ex => throw ex, () => binaryCompleted++);
+            .Subscribe(binary.Add, static ex => throw ex, () => binaryCompleted++);
 
         List<int> staticValues = [];
         var staticCompleted = 0;
         _ = Signal.OnErrorResumeNext(
-            Signal.FromEnumerable([One]),
-            Signal.Fail<int>(new InvalidOperationException(Boom)),
-            Signal.FromEnumerable([Two, Three]))
-            .Subscribe(staticValues.Add, ex => throw ex, () => staticCompleted++);
+                Signal.FromEnumerable([One]),
+                Signal.Fail<int>(new InvalidOperationException(Boom)),
+                Signal.FromEnumerable([Two, Three]))
+            .Subscribe(staticValues.Add, static ex => throw ex, () => staticCompleted++);
 
         await Assert.That(binary.SequenceEqual(_tenThenFallback)).IsTrue();
         await Assert.That(binaryCompleted).IsEqualTo(1);
@@ -418,10 +420,17 @@ public partial class RxNamesTests
         timeoutClock.AdvanceBy(TimeSpan.FromTicks(RemainingTicks));
         await Assert.That(timeout).IsTypeOf<TimeoutException>();
 
-        await Assert.That(((IRequireCurrentThread<int>)Signal.Emit(One).Delay(delayDueTime, Sequencer.CurrentThread)).IsRequiredSubscribeOnCurrentThread()).IsTrue();
-        await Assert.That(((IRequireCurrentThread<int>)Signal.Silent<int>().Timeout(timeoutDueTime, Sequencer.CurrentThread)).IsRequiredSubscribeOnCurrentThread()).IsTrue();
-        await Assert.That(((IRequireCurrentThread<int>)Signal.OnErrorResumeNext(Signal.Silent<int>()).Timeout(timeoutDueTime, Sequencer.Immediate)).IsRequiredSubscribeOnCurrentThread()).IsTrue();
-        await Assert.That(((IRequireCurrentThread<int>)new ManualSource<int>().Timeout(timeoutDueTime, Sequencer.Immediate)).IsRequiredSubscribeOnCurrentThread()).IsFalse();
+        await Assert.That(((IRequireCurrentThread<int>)Signal.Emit(One).Delay(delayDueTime, Sequencer.CurrentThread))
+            .IsRequiredSubscribeOnCurrentThread()).IsTrue();
+        await Assert
+            .That(((IRequireCurrentThread<int>)Signal.Silent<int>().Timeout(timeoutDueTime, Sequencer.CurrentThread))
+                .IsRequiredSubscribeOnCurrentThread()).IsTrue();
+        await Assert
+            .That(((IRequireCurrentThread<int>)Signal.OnErrorResumeNext(Signal.Silent<int>())
+                .Timeout(timeoutDueTime, Sequencer.Immediate)).IsRequiredSubscribeOnCurrentThread()).IsTrue();
+        await Assert
+            .That(((IRequireCurrentThread<int>)new ManualSource<int>().Timeout(timeoutDueTime, Sequencer.Immediate))
+                .IsRequiredSubscribeOnCurrentThread()).IsFalse();
     }
 
     /// <summary>Verifies absolute-time overloads use the default scheduler when no scheduler is supplied.</summary>
@@ -510,9 +519,9 @@ public partial class RxNamesTests
         List<int> values = [];
         var completed = 0;
         using var subscription = source.CombineLatest(
-            source2,
-            source3,
-            static (first, second, third) => first + second + third)
+                source2,
+                source3,
+                static (first, second, third) => first + second + third)
             .Subscribe(values.Add, static _ => { }, () => completed++);
 
         source.OnNext(One);
@@ -528,7 +537,8 @@ public partial class RxNamesTests
             One + Ten + OneHundred,
             Two + Ten + OneHundred,
             Two + Twenty + OneHundred,
-            Two + Twenty + TwoHundred])).IsTrue();
+            Two + Twenty + TwoHundred
+        ])).IsTrue();
 
         source.OnCompleted();
         source2.OnCompleted();
@@ -543,26 +553,27 @@ public partial class RxNamesTests
     [Test]
     public async Task CombineLatestSixteenSourcesPreservesSourceOrdering()
     {
-        var sources = Enumerable.Range(0, Sixteen).Select(_ => new Signal<int>()).ToArray();
+        CombineLatestSources signals = new();
+        var sources = signals.InOrder;
         List<int> values = [];
         var expectedInitial = Enumerable.Range(One, Sixteen).Sum();
-        using var subscription = sources[0].CombineLatest(
-            sources[1],
-            sources[2],
-            sources[3],
-            sources[4],
-            sources[5],
-            sources[6],
-            sources[7],
-            sources[8],
-            sources[9],
-            sources[10],
-            sources[11],
-            sources[12],
-            sources[13],
-            sources[14],
-            sources[15],
-            SumSixteen)
+        using var subscription = signals.First.CombineLatest(
+                signals.Second,
+                signals.Third,
+                signals.Fourth,
+                signals.Fifth,
+                signals.Sixth,
+                signals.Seventh,
+                signals.Eighth,
+                signals.Ninth,
+                signals.Tenth,
+                signals.Eleventh,
+                signals.Twelfth,
+                signals.Thirteenth,
+                signals.Fourteenth,
+                signals.Fifteenth,
+                signals.Sixteenth,
+                SumSixteen)
             .Subscribe(values.Add);
 
         for (var i = 0; i < sources.Length; i++)
@@ -572,7 +583,7 @@ public partial class RxNamesTests
 
         await Assert.That(values.SequenceEqual([expectedInitial])).IsTrue();
 
-        sources[0].OnNext(OneHundred);
+        signals.First.OnNext(OneHundred);
 
         await Assert.That(values.SequenceEqual([expectedInitial, expectedInitial - One + OneHundred])).IsTrue();
     }
@@ -584,19 +595,20 @@ public partial class RxNamesTests
     [MethodDataSource(nameof(MultiSourceCombineLatestArities))]
     public async Task CombineLatestMultiSourceAritiesUseLatestValues(int arity)
     {
-        var sources = Enumerable.Range(0, arity).Select(_ => new Signal<int>()).ToArray();
+        CombineLatestSources signals = new();
+        var sources = signals.InOrder;
         List<int> values = [];
         var expectedInitial = Enumerable.Range(One, arity).Sum();
-        using var subscription = CreateCombineLatest(arity, sources).Subscribe(values.Add);
+        using var subscription = CreateCombineLatest(arity, signals).Subscribe(values.Add);
 
-        for (var i = 0; i < sources.Length; i++)
+        for (var i = 0; i < arity; i++)
         {
             sources[i].OnNext(i + One);
         }
 
         await Assert.That(values.SequenceEqual([expectedInitial])).IsTrue();
 
-        sources[^1].OnNext(OneHundred);
+        sources[arity - One].OnNext(OneHundred);
 
         await Assert.That(values.SequenceEqual([expectedInitial, expectedInitial - arity + OneHundred])).IsTrue();
     }
@@ -615,10 +627,10 @@ public partial class RxNamesTests
         Exception? observed = null;
         var completed = 0;
         using var subscription = source.CombineLatest(
-            source2,
-            source3,
-            source4,
-            static (first, second, third, fourth) => first + second + third + fourth)
+                source2,
+                source3,
+                source4,
+                static (first, second, third, fourth) => first + second + third + fourth)
             .Subscribe(values.Add, error => observed = error, () => completed++);
 
         source.OnNext(One);
@@ -636,44 +648,46 @@ public partial class RxNamesTests
     public void RxNamesThrowOnNullSource()
     {
         var other = Signal.FromEnumerable(_oneToThree);
-        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Select(Double));
-        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.SelectWith(Ten, AddState));
-        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Where(IsEven));
-        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.WhereWith(Two, IsMultiple));
-        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<string?>)!.WhereNotNull());
-        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Do(Ignore));
-        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.DoWith(Ten, IgnoreState));
-        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Scan(Seed, Add));
-        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Aggregate(Seed, Add));
-        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.DistinctUntilChanged());
-        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.DistinctUntilChangedBy(Identity));
-        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.IgnoreElements());
-        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.SelectMany(Fan));
-        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<IObservable<int>>)!.Merge());
-        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<IObservable<int>>)!.Concat());
+        _ = Assert.Throws<ArgumentNullException>(static () => default(IObservable<int>)!.Select(Double));
+        _ = Assert.Throws<ArgumentNullException>(static () => default(IObservable<int>)!.SelectWith(Ten, AddState));
+        _ = Assert.Throws<ArgumentNullException>(static () => default(IObservable<int>)!.Where(IsEven));
+        _ = Assert.Throws<ArgumentNullException>(static () => default(IObservable<int>)!.WhereWith(Two, IsMultiple));
+        _ = Assert.Throws<ArgumentNullException>(static () => default(IObservable<string?>)!.WhereNotNull());
+        _ = Assert.Throws<ArgumentNullException>(static () => default(IObservable<int>)!.Do(Ignore));
+        _ = Assert.Throws<ArgumentNullException>(static () => default(IObservable<int>)!.DoWith(Ten, IgnoreState));
+        _ = Assert.Throws<ArgumentNullException>(static () => default(IObservable<int>)!.Scan(Seed, Add));
+        _ = Assert.Throws<ArgumentNullException>(static () => default(IObservable<int>)!.Aggregate(Seed, Add));
+        _ = Assert.Throws<ArgumentNullException>(static () => default(IObservable<int>)!.DistinctUntilChanged());
+        _ = Assert.Throws<ArgumentNullException>(static () => default(IObservable<int>)!.DistinctUntilChangedBy(Identity));
+        _ = Assert.Throws<ArgumentNullException>(static () => default(IObservable<int>)!.IgnoreElements());
+        _ = Assert.Throws<ArgumentNullException>(static () => default(IObservable<int>)!.SelectMany(Fan));
+        _ = Assert.Throws<ArgumentNullException>(static () => default(IObservable<IObservable<int>>)!.Merge());
+        _ = Assert.Throws<ArgumentNullException>(static () => default(IObservable<IObservable<int>>)!.Concat());
         _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Concat(other));
-        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<IObservable<int>>)!.Amb());
-        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<IObservable<int>>)!.Switch());
+        _ = Assert.Throws<ArgumentNullException>(static () => default(IObservable<IObservable<int>>)!.Amb());
+        _ = Assert.Throws<ArgumentNullException>(static () => default(IObservable<IObservable<int>>)!.Switch());
         _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Zip(other, Add));
         _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.CombineLatest(other, Add));
         _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.WithLatestFrom(other, Add));
-        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Delay(TimeSpan.FromTicks(DueTicks)));
-        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Delay(DateTimeOffset.UnixEpoch));
-        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Timeout(TimeSpan.FromTicks(DueTicks)));
-        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Timeout(DateTimeOffset.UnixEpoch));
-        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Sample(TimeSpan.FromTicks(DueTicks)));
-        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Retry(Two));
-        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Materialize());
-        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<Spark<int>>)!.Dematerialize());
+        _ = Assert.Throws<ArgumentNullException>(static () => default(IObservable<int>)!.Delay(TimeSpan.FromTicks(DueTicks)));
+        _ = Assert.Throws<ArgumentNullException>(static () => default(IObservable<int>)!.Delay(DateTimeOffset.UnixEpoch));
+        _ = Assert.Throws<ArgumentNullException>(static () =>
+            default(IObservable<int>)!.Timeout(TimeSpan.FromTicks(DueTicks)));
+        _ = Assert.Throws<ArgumentNullException>(static () => default(IObservable<int>)!.Timeout(DateTimeOffset.UnixEpoch));
+        _ = Assert.Throws<ArgumentNullException>(static () => default(IObservable<int>)!.Sample(TimeSpan.FromTicks(DueTicks)));
+        _ = Assert.Throws<ArgumentNullException>(static () => default(IObservable<int>)!.Retry(Two));
+        _ = Assert.Throws<ArgumentNullException>(static () => default(IObservable<int>)!.Materialize());
+        _ = Assert.Throws<ArgumentNullException>(static () => default(IObservable<Spark<int>>)!.Dematerialize());
         _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Resume(other));
         _ = Assert.Throws<ArgumentNullException>(() => other.Resume(null!));
         _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.OnErrorResumeNext(other));
         _ = Assert.Throws<ArgumentNullException>(() => other.OnErrorResumeNext(null!));
         _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Chain(other));
         _ = Assert.Throws<ArgumentNullException>(() => other.Chain((IObservable<int>)null!));
-        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<object?>)!.OfType<string>());
-        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<object?>)!.Cast<string>());
-        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.DelaySubscription(DateTimeOffset.UnixEpoch));
+        _ = Assert.Throws<ArgumentNullException>(static () => default(IObservable<object?>)!.OfType<string>());
+        _ = Assert.Throws<ArgumentNullException>(static () => default(IObservable<object?>)!.Cast<string>());
+        _ = Assert.Throws<ArgumentNullException>(static () =>
+            default(IObservable<int>)!.DelaySubscription(DateTimeOffset.UnixEpoch));
     }
 
     /// <summary>Verifies the Rx names throw <see cref = "ArgumentNullException"/> for a null projection/predicate.</summary>
@@ -716,9 +730,9 @@ public partial class RxNamesTests
     [Test]
     public async Task StatefulSinksForwardValueThenError()
     {
-        await Assert.That(RunStatefulError(s => s.SelectWith(Ten, AddState))).IsTrue();
-        await Assert.That(RunStatefulError(s => s.WhereWith(Two, IsMultiple))).IsTrue();
-        await Assert.That(RunStatefulError(s => s.DoWith(Ten, IgnoreState))).IsTrue();
+        await Assert.That(RunStatefulError(static s => s.SelectWith(Ten, AddState))).IsTrue();
+        await Assert.That(RunStatefulError(static s => s.WhereWith(Two, IsMultiple))).IsTrue();
+        await Assert.That(RunStatefulError(static s => s.DoWith(Ten, IgnoreState))).IsTrue();
     }
 
     /// <summary>Verifies the stateful projection sinks forward an exception thrown by the projection (covers their catch path).</summary>
@@ -726,8 +740,8 @@ public partial class RxNamesTests
     [Test]
     public async Task StatefulProjectionForwardsThrownError()
     {
-        await Assert.That(RunStatefulThrow(s => s.SelectWith(Ten, ThrowProjection))).IsTrue();
-        await Assert.That(RunStatefulThrow(s => s.WhereWith(Two, ThrowPredicate))).IsTrue();
+        await Assert.That(RunStatefulThrow(static s => s.SelectWith(Ten, ThrowProjection))).IsTrue();
+        await Assert.That(RunStatefulThrow(static s => s.WhereWith(Two, ThrowPredicate))).IsTrue();
     }
 
     /// <summary>Verifies Resume switches to the fallback sequence after the source errors.</summary>
@@ -781,8 +795,8 @@ public partial class RxNamesTests
     [Test]
     public async Task SampleMatchesProbe()
     {
-        var sample = RunSampling((s, c) => s.Sample(TimeSpan.FromTicks(Two), c));
-        var probe = RunSampling((s, c) => s.Probe(TimeSpan.FromTicks(Two), c));
+        var sample = RunSampling(static (s, c) => s.Sample(TimeSpan.FromTicks(Two), c));
+        var probe = RunSampling(static (s, c) => s.Probe(TimeSpan.FromTicks(Two), c));
         await Assert.That(sample).IsEquivalentTo(probe, EqualityComparer<int>.Default);
     }
 
@@ -842,9 +856,9 @@ public partial class RxNamesTests
     [Test]
     public async Task StatefulSinksDropNotificationsAfterTerminal()
     {
-        await Assert.That(RunStopGuards(s => s.SelectWith(Ten, AddState))).IsTrue();
-        await Assert.That(RunStopGuards(s => s.WhereWith(Two, IsMultiple))).IsTrue();
-        await Assert.That(RunStopGuards(s => s.DoWith(Ten, IgnoreState))).IsTrue();
+        await Assert.That(RunStopGuards(static s => s.SelectWith(Ten, AddState))).IsTrue();
+        await Assert.That(RunStopGuards(static s => s.WhereWith(Two, IsMultiple))).IsTrue();
+        await Assert.That(RunStopGuards(static s => s.DoWith(Ten, IgnoreState))).IsTrue();
     }
 
     /// <summary>Verifies the stateful sinks reject a null observer.</summary>
@@ -852,9 +866,12 @@ public partial class RxNamesTests
     public void StatefulSinksThrowOnNullObserver()
     {
         var source = Signal.FromEnumerable(_oneToFive);
-        _ = Assert.Throws<ArgumentNullException>(() => source.SelectWith(Ten, AddState).Subscribe((IObserver<int>)null!));
-        _ = Assert.Throws<ArgumentNullException>(() => source.WhereWith(Two, IsMultiple).Subscribe((IObserver<int>)null!));
-        _ = Assert.Throws<ArgumentNullException>(() => source.DoWith(Ten, IgnoreState).Subscribe((IObserver<int>)null!));
+        _ = Assert.Throws<ArgumentNullException>(() =>
+            source.SelectWith(Ten, AddState).Subscribe((IObserver<int>)null!));
+        _ = Assert.Throws<ArgumentNullException>(() =>
+            source.WhereWith(Two, IsMultiple).Subscribe((IObserver<int>)null!));
+        _ = Assert.Throws<ArgumentNullException>(() =>
+            source.DoWith(Ten, IgnoreState).Subscribe((IObserver<int>)null!));
     }
 
     /// <summary>Verifies the stateful sinks propagate the source's current-thread subscription requirement.</summary>
@@ -885,7 +902,7 @@ public partial class RxNamesTests
     /// <summary>Verifies Resume rejects a null observer.</summary>
     [Test]
     public void ResumeThrowsOnNullObserver() =>
-        Assert.Throws<ArgumentNullException>(() => Signal.FromEnumerable(_oneToFive)
+        Assert.Throws<ArgumentNullException>(static () => Signal.FromEnumerable(_oneToFive)
             .Resume(Signal.FromEnumerable(_oneToThree))
             .Subscribe((IObserver<int>)null!));
 
@@ -936,8 +953,8 @@ public partial class RxNamesTests
     private static bool IsMultiple(int divisor, int value) => value % divisor == 0;
 
     /// <summary>Consumes a value without effect (the side-effect under test is irrelevant to the output).</summary>
-    /// <param name = "value">The source value.</param>
-    private static void Ignore(int value)
+    /// <param name = "_">The source value, which the side effect deliberately ignores.</param>
+    private static void Ignore(int _)
     {
         // Intentionally empty: Do/Tap forward values unchanged regardless of the side effect.
     }
@@ -945,6 +962,7 @@ public partial class RxNamesTests
     /// <summary>Consumes a state and value without effect.</summary>
     /// <param name = "state">The state value.</param>
     /// <param name = "value">The source value.</param>
+    [SuppressMessage("Maintainability", "SST1461:Remove unread private parameters", Justification = "The signature is fixed by the delegate this method is passed to as a method group.")]
     private static void IgnoreState(int state, int value)
     {
         // Intentionally empty: DoWith/TapWith forward values unchanged regardless of the side effect.

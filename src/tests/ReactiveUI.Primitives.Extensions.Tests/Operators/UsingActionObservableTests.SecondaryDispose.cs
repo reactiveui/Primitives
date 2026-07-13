@@ -38,7 +38,7 @@ public partial class UsingActionObservableTests
         using var sub = resource.Using(_ => throw expected, TaskPoolSequencer.Default)
             .Subscribe(static _ => { }, ex => faulted.TrySetResult(ex));
 
-        var caught = await faulted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var caught = await faulted.Task.WaitAsync(GuardTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
         await Assert.That(resource.DisposeCount).IsEqualTo(1);
     }

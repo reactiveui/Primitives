@@ -64,7 +64,7 @@ public class TaskTerminalCompletionTests
         TaskTerminalCompletion<int> completion = new();
         RecordingDisposable subscription = new();
 
-        var task = completion.Attach(subscription, new CancellationToken(true));
+        var task = completion.Attach(subscription, new(true));
 
         await Assert.That(() => task).Throws<TaskCanceledException>();
         await Assert.That(subscription.DisposeCount).IsEqualTo(1);

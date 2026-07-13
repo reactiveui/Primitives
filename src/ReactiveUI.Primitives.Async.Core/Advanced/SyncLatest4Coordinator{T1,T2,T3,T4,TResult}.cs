@@ -14,8 +14,11 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// <typeparam name="TResult">The projected element type.</typeparam>
 public sealed class SyncLatest4Coordinator<T1, T2, T3, T4, TResult> : SyncLatestCoordinatorBase<TResult>
 {
+    /// <summary>Number of upstream sources this coordinator combines.</summary>
+    private const int SourceCount = 4;
+
     /// <summary>Bit owned by source 1 inside the lifecycle's completion bitmask.</summary>
-    private const int Source1Bit = 1 << 0;
+    private const int Source1Bit = 1;
 
     /// <summary>Bit owned by source 2 inside the lifecycle's completion bitmask.</summary>
     private const int Source2Bit = 1 << 1;
@@ -26,6 +29,15 @@ public sealed class SyncLatest4Coordinator<T1, T2, T3, T4, TResult> : SyncLatest
     /// <summary>Bit owned by source 4 inside the lifecycle's completion bitmask.</summary>
     private const int Source4Bit = 1 << 3;
 
+    /// <summary>0-based index of source 1 within the coordinator's subscribe dispatch.</summary>
+    private const int Source1Index = 0;
+
+    /// <summary>0-based index of source 2 within the coordinator's subscribe dispatch.</summary>
+    private const int Source2Index = 1;
+
+    /// <summary>0-based index of source 3 within the coordinator's subscribe dispatch.</summary>
+    private const int Source3Index = 2;
+
     /// <summary>Initializes a new instance of the <see cref="SyncLatest4Coordinator{T1, T2, T3, T4, TResult}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="sources">The bundled source observables.</param>
@@ -34,14 +46,10 @@ public sealed class SyncLatest4Coordinator<T1, T2, T3, T4, TResult> : SyncLatest
         IObserverAsync<TResult> observer,
         SyncLatest4State<T1, T2, T3, T4> sources,
         Func<T1, T2, T3, T4, TResult> selector)
-        : base(observer, sourceCount: 4)
+        : base(observer, SourceCount)
     {
         Sources = sources;
         Selector = selector;
-        Observer1 = new(this, Source1Bit, value => Value1 = new(value));
-        Observer2 = new(this, Source2Bit, value => Value2 = new(value));
-        Observer3 = new(this, Source3Bit, value => Value3 = new(value));
-        Observer4 = new(this, Source4Bit, value => Value4 = new(value));
     }
 
     /// <summary>Gets the bundled source observables.</summary>
@@ -49,18 +57,6 @@ public sealed class SyncLatest4Coordinator<T1, T2, T3, T4, TResult> : SyncLatest
 
     /// <summary>Gets the selector that projects the latest values.</summary>
     private Func<T1, T2, T3, T4, TResult> Selector { get; }
-
-    /// <summary>Gets the indexed observer for source 1.</summary>
-    private SyncLatestWitness<T1, TResult> Observer1 { get; }
-
-    /// <summary>Gets the indexed observer for source 2.</summary>
-    private SyncLatestWitness<T2, TResult> Observer2 { get; }
-
-    /// <summary>Gets the indexed observer for source 3.</summary>
-    private SyncLatestWitness<T3, TResult> Observer3 { get; }
-
-    /// <summary>Gets the indexed observer for source 4.</summary>
-    private SyncLatestWitness<T4, TResult> Observer4 { get; }
 
     /// <summary>Gets or sets the latest value from source 1.</summary>
     private Optional<T1> Value1 { get; set; } = Optional<T1>.Empty;
@@ -92,20 +88,16 @@ public sealed class SyncLatest4Coordinator<T1, T2, T3, T4, TResult> : SyncLatest
 
     /// <inheritdoc/>
     [SuppressMessage(
-        "Minor Code Smell",
-        "S109:Magic numbers should not be used",
-        Justification = "Switch dispatches on the 0..N-1 source index; naming each numeric arm would just rename the obvious.")]
-    [SuppressMessage(
         "Major Code Smell",
         "S1541:Methods and properties should not be too complex",
         Justification = "Switch arm per source; the high arm count is the dispatch surface.")]
     protected override ValueTask<IAsyncDisposable> SubscribeAtAsync(int index, CancellationToken cancellationToken) =>
         index switch
         {
-            0 => Sources.Source1.SubscribeAsync(Observer1, cancellationToken),
-            1 => Sources.Source2.SubscribeAsync(Observer2, cancellationToken),
-            2 => Sources.Source3.SubscribeAsync(Observer3, cancellationToken),
-            _ => Sources.Source4.SubscribeAsync(Observer4, cancellationToken),
+            Source1Index => Sources.Source1.SubscribeAsync(new SyncLatestWitness<T1, TResult>(this, Source1Bit, value => Value1 = new(value)), cancellationToken),
+            Source2Index => Sources.Source2.SubscribeAsync(new SyncLatestWitness<T2, TResult>(this, Source2Bit, value => Value2 = new(value)), cancellationToken),
+            Source3Index => Sources.Source3.SubscribeAsync(new SyncLatestWitness<T3, TResult>(this, Source3Bit, value => Value3 = new(value)), cancellationToken),
+            _ => Sources.Source4.SubscribeAsync(new SyncLatestWitness<T4, TResult>(this, Source4Bit, value => Value4 = new(value)), cancellationToken)
         };
 
     /// <summary>
@@ -121,9 +113,9 @@ public sealed class SyncLatest4Coordinator<T1, T2, T3, T4, TResult> : SyncLatest
     private bool TryReadValues(out (T1 V1, T2 V2, T3 V3, T4 V4) values)
     {
         if (Value1.TryGetValue(out var value1)
-                    && Value2.TryGetValue(out var value2)
-                    && Value3.TryGetValue(out var value3)
-                    && Value4.TryGetValue(out var value4))
+            && Value2.TryGetValue(out var value2)
+            && Value3.TryGetValue(out var value3)
+            && Value4.TryGetValue(out var value4))
         {
             values = (value1, value2, value3, value4);
             return true;

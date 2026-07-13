@@ -21,7 +21,9 @@ public sealed class SyncLatest10Signal<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
     /// <summary>Initializes a new instance of the <see cref="SyncLatest10Signal{T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult}"/> class.</summary>
     /// <param name="sources">The bundled source observables.</param>
     /// <param name="selector">The selector that projects the latest values.</param>
-    public SyncLatest10Signal(SyncLatest10State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> sources, Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult> selector)
+    public SyncLatest10Signal(
+        SyncLatest10State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> sources,
+        Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult> selector)
     {
         Sources = sources;
         Selector = selector;
@@ -38,7 +40,8 @@ public sealed class SyncLatest10Signal<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
         IObserverAsync<TResult> observer,
         CancellationToken cancellationToken)
     {
-        SyncLatest10Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult> subscription = new(observer, Sources, Selector);
+        SyncLatest10Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult> subscription =
+            new(observer, Sources, Selector);
         subscription.Lifecycle.LinkExternalCancellation(cancellationToken);
         return SubscriptionHelper.SubscribeAndDisposeOnFailureAsync(
             subscription,

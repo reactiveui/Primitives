@@ -49,7 +49,7 @@ public class SignalAliasCoverageTests
         List<int> emptySwitch = [];
         var emptySwitchCompleted = 0;
         _ = Signal.Switch(Signal.FromEnumerable<IObservable<int>>([]))
-            .Subscribe(emptySwitch.Add, ex => throw ex, () => emptySwitchCompleted++);
+            .Subscribe(emptySwitch.Add, static ex => throw ex, () => emptySwitchCompleted++);
         await Assert.That(emptySwitch.Count).IsEqualTo(0);
         await Assert.That(emptySwitchCompleted).IsEqualTo(One);
 
@@ -68,11 +68,11 @@ public class SignalAliasCoverageTests
         await Assert.That(completedTaskValues.SequenceEqual([One])).IsTrue();
 
         List<string> taskErrors = [];
-        _ = Task.FromCanceled<int>(new CancellationToken(true)).ToObservable()
-            .Subscribe(_ => { }, ex => taskErrors.Add(ex.GetType().Name));
+        _ = Task.FromCanceled<int>(new(true)).ToObservable()
+            .Subscribe(static _ => { }, ex => taskErrors.Add(ex.GetType().Name));
         InvalidOperationException expected = new("task-fault");
         Exception? observed = null;
-        _ = Task.FromException<int>(expected).ToObservable().Subscribe(_ => { }, ex => observed = ex);
+        _ = Task.FromException<int>(expected).ToObservable().Subscribe(static _ => { }, ex => observed = ex);
         await Assert.That(taskErrors.SequenceEqual([nameof(TaskCanceledException)])).IsTrue();
         await Assert.That(observed).IsSameReferenceAs(expected);
 
@@ -94,7 +94,7 @@ public class SignalAliasCoverageTests
         await Assert.That(rangeValues.SequenceEqual([One, Two])).IsTrue();
 
         List<int> uniqueValues = [];
-        _ = Signal.FromEnumerable([One, One, Two]).UniqueBy(value => value, EqualityComparer<int>.Default)
+        _ = Signal.FromEnumerable([One, One, Two]).UniqueBy(static value => value, EqualityComparer<int>.Default)
             .Subscribe(uniqueValues.Add);
         await Assert.That(uniqueValues.SequenceEqual([One, Two])).IsTrue();
 
@@ -102,11 +102,11 @@ public class SignalAliasCoverageTests
 
         List<Moment<int>> moments = [];
         _ = Signal.Range(One, Two).Timestamp().Subscribe(moments.Add);
-        await Assert.That(moments.Select(moment => moment.Value).SequenceEqual([One, Two])).IsTrue();
+        await Assert.That(moments.Select(static moment => moment.Value).SequenceEqual([One, Two])).IsTrue();
 
         List<TimeInterval<int>> intervals = [];
         _ = Signal.Range(One, Two).TimeInterval().Subscribe(intervals.Add);
-        await Assert.That(intervals.Select(interval => interval.Value).SequenceEqual([One, Two])).IsTrue();
+        await Assert.That(intervals.Select(static interval => interval.Value).SequenceEqual([One, Two])).IsTrue();
 
         List<int> concatRanges = [];
         _ = Signal.Concat(Signal.Range(One, Two), Signal.Range(Three, Two)).Subscribe(concatRanges.Add);
@@ -117,7 +117,7 @@ public class SignalAliasCoverageTests
         await Assert.That(mergeRanges.SequenceEqual([One, Two, Three, Four])).IsTrue();
 
         List<int> latestRanges = [];
-        _ = Signal.PairLatest(Signal.Range(One, Two), Signal.Range(Three, Two), (left, right) => left + right)
+        _ = Signal.PairLatest(Signal.Range(One, Two), Signal.Range(Three, Two), static (left, right) => left + right)
             .Subscribe(latestRanges.Add);
         await Assert.That(latestRanges.SequenceEqual([Two + Three, Two + Four])).IsTrue();
     }
@@ -128,7 +128,7 @@ public class SignalAliasCoverageTests
     public async Task FromAsyncSubscriptionsCoverConstructorAndSynchronousCompletionPaths()
     {
         RecordingWitness<int> successful = new();
-        FromAsyncSubscription<int> success = new(successful, _ => Task.FromResult(One));
+        FromAsyncSubscription<int> success = new(successful, static _ => Task.FromResult(One));
         using (success.Start())
         {
             await Assert.That(successful.Values.SequenceEqual([One])).IsTrue();

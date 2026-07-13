@@ -293,7 +293,8 @@ public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
             {
                 while (!_done && _index < candidates.Count)
                 {
-                    var key = candidates[_index++];
+                    var key = candidates[_index];
+                    _index++;
 
                     IObservable<TRaw> projected;
                     try

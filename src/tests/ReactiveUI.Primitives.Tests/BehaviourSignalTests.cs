@@ -24,27 +24,27 @@ public class BehaviourSignalTests
     /// <summary>Subscribes the argument checking.</summary>
     [Test]
     public void Subscribe_ArgumentChecking() =>
-        Assert.Throws<ArgumentNullException>(() => new BehaviorSignal<int>(1).Subscribe(null!));
+        Assert.Throws<ArgumentNullException>(static () => new BehaviorSignal<int>(1).Subscribe(null!));
 
     /// <summary>Called when [error argument checking].</summary>
     [Test]
     public void OnError_ArgumentChecking() =>
-        Assert.Throws<ArgumentNullException>(() => new BehaviorSignal<int>(1).OnError(null!));
+        Assert.Throws<ArgumentNullException>(static () => new BehaviorSignal<int>(1).OnError(null!));
 
     /// <summary>Determines whether this instance has observers.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task HasObservers()
     {
-        BehaviorSignal<int> s = new(42);
+        BehaviorSignal<int> s = new(InitialValue);
         await Assert.That(s.HasObservers).IsFalse();
-        var d1 = s.Subscribe(_ => { });
+        var d1 = s.Subscribe(static _ => { });
         await Assert.That(s.HasObservers).IsTrue();
         d1.Dispose();
         await Assert.That(s.HasObservers).IsFalse();
-        var d2 = s.Subscribe(_ => { });
+        var d2 = s.Subscribe(static _ => { });
         await Assert.That(s.HasObservers).IsTrue();
-        var d3 = s.Subscribe(_ => { });
+        var d3 = s.Subscribe(static _ => { });
         await Assert.That(s.HasObservers).IsTrue();
         d2.Dispose();
         await Assert.That(s.HasObservers).IsTrue();
@@ -57,10 +57,10 @@ public class BehaviourSignalTests
     [Test]
     public async Task HasObservers_Dispose1()
     {
-        BehaviorSignal<int> s = new(42);
+        BehaviorSignal<int> s = new(InitialValue);
         await Assert.That(s.HasObservers).IsFalse();
         await Assert.That(s.IsDisposed).IsFalse();
-        var d = s.Subscribe(_ => { });
+        var d = s.Subscribe(static _ => { });
         await Assert.That(s.HasObservers).IsTrue();
         await Assert.That(s.IsDisposed).IsFalse();
         s.Dispose();
@@ -76,10 +76,10 @@ public class BehaviourSignalTests
     [Test]
     public async Task HasObservers_Dispose2()
     {
-        BehaviorSignal<int> s = new(42);
+        BehaviorSignal<int> s = new(InitialValue);
         await Assert.That(s.HasObservers).IsFalse();
         await Assert.That(s.IsDisposed).IsFalse();
-        var d = s.Subscribe(_ => { });
+        var d = s.Subscribe(static _ => { });
         await Assert.That(s.HasObservers).IsTrue();
         await Assert.That(s.IsDisposed).IsFalse();
         d.Dispose();
@@ -95,7 +95,7 @@ public class BehaviourSignalTests
     [Test]
     public async Task HasObservers_Dispose3()
     {
-        BehaviorSignal<int> s = new(42);
+        BehaviorSignal<int> s = new(InitialValue);
         await Assert.That(s.HasObservers).IsFalse();
         await Assert.That(s.IsDisposed).IsFalse();
         s.Dispose();
@@ -108,9 +108,9 @@ public class BehaviourSignalTests
     [Test]
     public async Task HasObservers_OnCompleted()
     {
-        BehaviorSignal<int> s = new(42);
+        BehaviorSignal<int> s = new(InitialValue);
         await Assert.That(s.HasObservers).IsFalse();
-        using var subscription = s.Subscribe(_ => { });
+        using var subscription = s.Subscribe(static _ => { });
         await Assert.That(s.HasObservers).IsTrue();
         s.OnNext(InitialValue);
         await Assert.That(s.HasObservers).IsTrue();
@@ -123,11 +123,11 @@ public class BehaviourSignalTests
     [Test]
     public async Task HasObservers_OnError()
     {
-        BehaviorSignal<int> s = new(42);
+        BehaviorSignal<int> s = new(InitialValue);
         await Assert.That(s.HasObservers).IsFalse();
         using var subscription = s.Subscribe(
-            _ => { },
-            _ => { });
+            static _ => { },
+            static _ => { });
         await Assert.That(s.HasObservers).IsTrue();
         s.OnNext(InitialValue);
         await Assert.That(s.HasObservers).IsTrue();
@@ -247,10 +247,11 @@ public class BehaviourSignalTests
 
         var producer = Task.Run(() =>
         {
-            var value = 1;
+            var value = 0;
             while (!stop.IsCancellationRequested)
             {
-                signal.OnNext(value++);
+                value++;
+                signal.OnNext(value);
             }
         });
 

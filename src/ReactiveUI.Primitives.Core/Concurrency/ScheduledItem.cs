@@ -12,7 +12,8 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// The type used to represent absolute time. The type must be comparable so scheduled items can be ordered.
 /// </typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, IComparable<ScheduledItem<TAbsolute>>, IsDisposed, IComparable
+public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, IComparable<ScheduledItem<TAbsolute>>,
+    IsDisposed, IComparable
     where TAbsolute : IComparable<TAbsolute>
 {
     /// <summary>Due-time comparer.</summary>
@@ -39,8 +40,14 @@ public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICompa
     /// returns a disposable that cancels any work that outlives the invocation.
     /// </param>
     /// <exception cref="ArgumentNullException"><paramref name="comparer"/> or <paramref name="invokeCore"/> is <see langword="null"/>.</exception>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0001:Simplify Names", Justification = "The argument validation uses ArgumentExceptionHelper")]
-    public ScheduledItem(TAbsolute dueTime, IComparer<TAbsolute> comparer, Func<ScheduledItem<TAbsolute>, IDisposable> invokeCore)
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Style",
+        "IDE0001:Simplify Names",
+        Justification = "The argument validation uses ArgumentExceptionHelper")]
+    public ScheduledItem(
+        TAbsolute dueTime,
+        IComparer<TAbsolute> comparer,
+        Func<ScheduledItem<TAbsolute>, IDisposable> invokeCore)
     {
         DueTime = dueTime;
         _comparer = comparer ?? throw new ArgumentNullException(nameof(comparer));
@@ -72,7 +79,8 @@ public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICompa
     /// Equality operators use reference equality. They do not compare <see cref="DueTime"/> values and are therefore
     /// intentionally different from the ordering behavior used by <see cref="CompareTo(ScheduledItem{TAbsolute}?)"/>.
     /// </remarks>
-    public static bool operator !=(ScheduledItem<TAbsolute>? left, ScheduledItem<TAbsolute>? right) => !ReferenceEquals(left, right);
+    public static bool operator !=(ScheduledItem<TAbsolute>? left, ScheduledItem<TAbsolute>? right) =>
+        !ReferenceEquals(left, right);
 
     /// <summary>Determines whether the first scheduled item is due before the second scheduled item.</summary>
     /// <param name="left">The scheduled item on the left side of the comparison.</param>
@@ -84,7 +92,8 @@ public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICompa
     /// <remarks>
     /// This operator uses the same due-time ordering as <see cref="CompareTo(ScheduledItem{TAbsolute}?)"/>.
     /// </remarks>
-    public static bool operator <(ScheduledItem<TAbsolute> left, ScheduledItem<TAbsolute> right) => Comparer<ScheduledItem<TAbsolute>>.Default.Compare(left, right) < 0;
+    public static bool operator <(ScheduledItem<TAbsolute> left, ScheduledItem<TAbsolute> right) =>
+        Comparer<ScheduledItem<TAbsolute>>.Default.Compare(left, right) < 0;
 
     /// <summary>Determines whether the first scheduled item is due before, or at the same time as, the second scheduled item.</summary>
     /// <param name="left">The scheduled item on the left side of the comparison.</param>
@@ -96,7 +105,8 @@ public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICompa
     /// <remarks>
     /// This operator uses the same due-time ordering as <see cref="CompareTo(ScheduledItem{TAbsolute}?)"/>.
     /// </remarks>
-    public static bool operator <=(ScheduledItem<TAbsolute> left, ScheduledItem<TAbsolute> right) => Comparer<ScheduledItem<TAbsolute>>.Default.Compare(left, right) <= 0;
+    public static bool operator <=(ScheduledItem<TAbsolute> left, ScheduledItem<TAbsolute> right) =>
+        Comparer<ScheduledItem<TAbsolute>>.Default.Compare(left, right) <= 0;
 
     /// <summary>Determines whether two scheduled item references are the same object.</summary>
     /// <param name="left">The first scheduled item to compare.</param>
@@ -109,7 +119,8 @@ public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICompa
     /// Equality operators use reference equality. They do not compare <see cref="DueTime"/> values and are therefore
     /// intentionally different from the ordering behavior used by <see cref="CompareTo(ScheduledItem{TAbsolute}?)"/>.
     /// </remarks>
-    public static bool operator ==(ScheduledItem<TAbsolute>? left, ScheduledItem<TAbsolute>? right) => ReferenceEquals(left, right);
+    public static bool operator ==(ScheduledItem<TAbsolute>? left, ScheduledItem<TAbsolute>? right) =>
+        ReferenceEquals(left, right);
 
     /// <summary>Determines whether the first scheduled item is due after the second scheduled item.</summary>
     /// <param name="left">The scheduled item on the left side of the comparison.</param>
@@ -121,7 +132,8 @@ public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICompa
     /// <remarks>
     /// This operator uses the same due-time ordering as <see cref="CompareTo(ScheduledItem{TAbsolute}?)"/>.
     /// </remarks>
-    public static bool operator >(ScheduledItem<TAbsolute> left, ScheduledItem<TAbsolute> right) => Comparer<ScheduledItem<TAbsolute>>.Default.Compare(left, right) > 0;
+    public static bool operator >(ScheduledItem<TAbsolute> left, ScheduledItem<TAbsolute> right) =>
+        Comparer<ScheduledItem<TAbsolute>>.Default.Compare(left, right) > 0;
 
     /// <summary>Determines whether the first scheduled item is due after, or at the same time as, the second scheduled item.</summary>
     /// <param name="left">The scheduled item on the left side of the comparison.</param>
@@ -133,7 +145,8 @@ public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICompa
     /// <remarks>
     /// This operator uses the same due-time ordering as <see cref="CompareTo(ScheduledItem{TAbsolute}?)"/>.
     /// </remarks>
-    public static bool operator >=(ScheduledItem<TAbsolute> left, ScheduledItem<TAbsolute> right) => Comparer<ScheduledItem<TAbsolute>>.Default.Compare(left, right) >= 0;
+    public static bool operator >=(ScheduledItem<TAbsolute> left, ScheduledItem<TAbsolute> right) =>
+        Comparer<ScheduledItem<TAbsolute>>.Default.Compare(left, right) >= 0;
 
     /// <summary>Cancels this scheduled work item.</summary>
     /// <remarks>
@@ -153,11 +166,10 @@ public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICompa
     /// This comparison controls scheduling order. It does not imply object equality; <see cref="Equals(object?)"/> and
     /// the equality operators use reference identity.
     /// </remarks>
-    public int CompareTo(ScheduledItem<TAbsolute>? other)
-    {
+    public int CompareTo(ScheduledItem<TAbsolute>? other) =>
+
         // MSDN: By definition, any object compares greater than null, and two null references compare equal to each other.
-        return other is null ? 1 : _comparer.Compare(DueTime, other.DueTime);
-    }
+        other is null ? 1 : _comparer.Compare(DueTime, other.DueTime);
 
     /// <summary>Compares this scheduled item with another object by due time.</summary>
     /// <param name="obj">The object to compare with this instance.</param>

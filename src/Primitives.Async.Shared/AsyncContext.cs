@@ -21,7 +21,8 @@ namespace ReactiveUI.Primitives.Async;
 /// a desired context, such as a UI thread or a custom scheduler. An AsyncContext can be created from a
 /// SynchronizationContext, TaskScheduler, or ISequencer. The Default context represents the absence of a specific
 /// synchronization or scheduling context, and typically corresponds to the default task scheduler.</remarks>
-[System.Diagnostics.DebuggerDisplay("SynchronizationContext = {SynchronizationContext}, TaskScheduler = {TaskScheduler}, Sequencer = {Sequencer}")]
+[System.Diagnostics.DebuggerDisplay(
+    "SynchronizationContext = {SynchronizationContext}, TaskScheduler = {TaskScheduler}, Sequencer = {Sequencer}")]
 public sealed record AsyncContext
 {
     /// <summary>Initializes a new instance of the <see cref="AsyncContext"/> class.</summary>
@@ -49,8 +50,8 @@ public sealed record AsyncContext
 
     /// <summary>Gets a value indicating whether the current context uses the default task scheduler and no synchronization context.</summary>
     internal bool UsesDefaultSequencer => SynchronizationContext is null &&
-                                      Sequencer is null &&
-                                      (TaskScheduler is null || TaskScheduler == TaskScheduler.Default);
+                                          Sequencer is null &&
+                                          (TaskScheduler is null || TaskScheduler == TaskScheduler.Default);
 
     /// <summary>Creates a new AsyncContext that uses the specified SynchronizationContext for asynchronous operations.</summary>
     /// <remarks>The returned AsyncContext will have its TaskScheduler property set to null. Use this method
@@ -90,12 +91,7 @@ public sealed record AsyncContext
 
         return scheduler is SynchronizationContext sc
             ? From(sc)
-            : new()
-            {
-                SynchronizationContext = null,
-                TaskScheduler = null,
-                Sequencer = scheduler
-            };
+            : new() { SynchronizationContext = null, TaskScheduler = null, Sequencer = scheduler };
     }
 
     /// <summary>Gets the current asynchronous context associated with the calling thread.</summary>
@@ -173,14 +169,18 @@ public sealed record AsyncContext
             var sc = AsyncContext.SynchronizationContext;
             if (sc is not null)
             {
-                sc.Post(c => ((Action)c!).Invoke(), continuation);
+                sc.Post(static c => ((Action)c!).Invoke(), continuation);
                 return;
             }
 
             var ts = AsyncContext.TaskScheduler;
             if (ts is not null && ts != TaskScheduler.Default)
             {
-                _ = Task.Factory.StartNew(continuation, CancellationToken.None, TaskCreationOptions.DenyChildAttach, ts);
+                _ = Task.Factory.StartNew(
+                    continuation,
+                    CancellationToken.None,
+                    TaskCreationOptions.DenyChildAttach,
+                    ts);
                 return;
             }
 
@@ -218,7 +218,8 @@ public sealed record AsyncContext
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Performance",
         "CA1812:Avoid uninstantiated internal classes",
-        Justification = "Kept as an internal adapter for generator and test smoke scenarios that need TaskScheduler-shaped sequencer execution.")]
+        Justification =
+            "Kept as an internal adapter for generator and test smoke scenarios that need TaskScheduler-shaped sequencer execution.")]
     internal sealed class SequencerTaskScheduler(ISequencer scheduler) : TaskScheduler
     {
         /// <summary>Gets the sequencer used by this task-scheduler adapter.</summary>
@@ -240,12 +241,14 @@ public sealed record AsyncContext
 
         /// <inheritdoc/>
         protected override void QueueTask(Task task) =>
-            scheduler.Schedule(task, (sequencer, t) =>
-            {
-                _ = sequencer;
-                _ = TryExecuteTask(t);
-                return EmptyDisposable.Instance;
-            });
+            scheduler.Schedule(
+                (self: this, task),
+                static (sequencer, s) =>
+                {
+                    _ = sequencer;
+                    _ = s.self.TryExecuteTask(s.task);
+                    return EmptyDisposable.Instance;
+                });
 
         /// <inheritdoc/>
         protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued) => false;

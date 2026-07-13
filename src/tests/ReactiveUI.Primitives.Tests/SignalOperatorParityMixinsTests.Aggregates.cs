@@ -119,21 +119,22 @@ public partial class SignalOperatorParityMixinsTests
         List<bool> rangeAllFalse = [];
         List<bool> rangeContainsTrue = [];
         List<bool> rangeContainsFalse = [];
-        _ = Signal.FromEnumerable(AggregateSource).Count(value => value % Second == 0).Subscribe(countPredicate.Add);
-        _ = Signal.FromEnumerable(DuplicateKeySource).DistinctBy(value => value).Count().Subscribe(distinctCount.Add);
+        _ = Signal.FromEnumerable(AggregateSource).Count(static value => value % Second == 0).Subscribe(countPredicate.Add);
+        _ = Signal.FromEnumerable(DuplicateKeySource).DistinctBy(static value => value).Count().Subscribe(distinctCount.Add);
         _ = Signal.FromEnumerable(AggregateSource).LongCount().Subscribe(longCount.Add);
-        _ = Signal.FromEnumerable(AggregateSource).LongCount(value => value > Second).Subscribe(longCountPredicate.Add);
-        _ = Signal.FromEnumerable(DuplicateKeySource).DistinctBy(value => value).LongCount()
+        _ = Signal.FromEnumerable(AggregateSource).LongCount(static value => value > Second).Subscribe(longCountPredicate.Add);
+        _ = Signal.FromEnumerable(DuplicateKeySource).DistinctBy(static value => value).LongCount()
             .Subscribe(distinctLongCount.Add);
         _ = Signal.FromEnumerable(AggregateSource).Any().Subscribe(anyTrue.Add);
         _ = Signal.None<int>().Any().Subscribe(anyFalse.Add);
-        _ = Signal.Sequence(First, Fourth).DistinctBy(value => value / Second).Count().Subscribe(rangeDistinctCount.Add);
-        _ = Signal.Sequence(First, Fourth).DistinctBy(value => value / Second).LongCount()
+        _ = Signal.Sequence(First, Fourth).DistinctBy(static value => value / Second).Count()
+            .Subscribe(rangeDistinctCount.Add);
+        _ = Signal.Sequence(First, Fourth).DistinctBy(static value => value / Second).LongCount()
             .Subscribe(rangeDistinctLongCount.Add);
-        _ = Signal.Sequence(First, Fourth).Any(value => value == Third).Subscribe(rangeAnyTrue.Add);
-        _ = Signal.Sequence(First, Fourth).Any(value => value == MissingRangeValue).Subscribe(rangeAnyFalse.Add);
-        _ = Signal.Sequence(First, Fourth).All(value => value > 0).Subscribe(rangeAllTrue.Add);
-        _ = Signal.Sequence(First, Fourth).All(value => value < Fourth).Subscribe(rangeAllFalse.Add);
+        _ = Signal.Sequence(First, Fourth).Any(static value => value == Third).Subscribe(rangeAnyTrue.Add);
+        _ = Signal.Sequence(First, Fourth).Any(static value => value == MissingRangeValue).Subscribe(rangeAnyFalse.Add);
+        _ = Signal.Sequence(First, Fourth).All(static value => value > 0).Subscribe(rangeAllTrue.Add);
+        _ = Signal.Sequence(First, Fourth).All(static value => value < Fourth).Subscribe(rangeAllFalse.Add);
         _ = Signal.Sequence(First, Fourth).Contains(Third).Subscribe(rangeContainsTrue.Add);
         _ = Signal.Sequence(First, Fourth).Contains(MissingRangeValue).Subscribe(rangeContainsFalse.Add);
         await Assert.That(countPredicate.SequenceEqual(CountTwoExpected)).IsTrue();
@@ -170,11 +171,11 @@ public partial class SignalOperatorParityMixinsTests
         InvalidOperationException anyError = new("any");
         InvalidOperationException distinctError = new("distinct");
         List<Exception> observed = [];
-        _ = Signal.Fail<int>(countError).Count().Subscribe(_ => { }, observed.Add, () => { });
-        _ = Signal.Fail<int>(longCountError).LongCount().Subscribe(_ => { }, observed.Add, () => { });
-        _ = Signal.Fail<int>(anyError).Any().Subscribe(_ => { }, observed.Add, () => { });
-        _ = Signal.Fail<int>(distinctError).DistinctBy(value => value).Count()
-            .Subscribe(_ => { }, observed.Add, () => { });
+        _ = Signal.Fail<int>(countError).Count().Subscribe(static _ => { }, observed.Add, static () => { });
+        _ = Signal.Fail<int>(longCountError).LongCount().Subscribe(static _ => { }, observed.Add, static () => { });
+        _ = Signal.Fail<int>(anyError).Any().Subscribe(static _ => { }, observed.Add, static () => { });
+        _ = Signal.Fail<int>(distinctError).DistinctBy(static value => value).Count()
+            .Subscribe(static _ => { }, observed.Add, static () => { });
         await Assert.That(observed[0]).IsSameReferenceAs(countError);
         await Assert.That(observed[1]).IsSameReferenceAs(longCountError);
         await Assert.That(observed[AnyErrorIndex]).IsSameReferenceAs(anyError);
@@ -188,7 +189,7 @@ public partial class SignalOperatorParityMixinsTests
     {
         InvalidOperationException allError = new(AllMessage);
         List<Exception> observed = [];
-        _ = Signal.Sequence(First, Fourth).All(_ => throw allError).Subscribe(_ => { }, observed.Add, () => { });
+        _ = Signal.Sequence(First, Fourth).All(_ => throw allError).Subscribe(static _ => { }, observed.Add, static () => { });
         await Assert.That(observed[0]).IsSameReferenceAs(allError);
     }
 
@@ -203,7 +204,7 @@ public partial class SignalOperatorParityMixinsTests
         List<int> values = [];
         var completed = 0;
         using var subscription = outer.FlatMap(value => value == First ? firstInner : secondInner)
-            .Subscribe(values.Add, ex => throw ex, () => completed++);
+            .Subscribe(values.Add, static ex => throw ex, () => completed++);
         outer.OnNext(First);
         outer.OnNext(Second);
         outer.OnCompleted();
@@ -222,7 +223,7 @@ public partial class SignalOperatorParityMixinsTests
     {
         List<int> values = [];
         _ = Signal.FromEnumerable(FirstSecondSource)
-            .FlatMap(value => Signal.FromEnumerable(SingleInnerSource), (outer, inner) => outer + inner)
+            .FlatMap(static value => Signal.FromEnumerable(SingleInnerSource), static (outer, inner) => outer + inner)
             .Subscribe(values.Add);
         await Assert.That(values.SequenceEqual(ResultFlatMapExpected)).IsTrue();
     }
@@ -237,10 +238,10 @@ public partial class SignalOperatorParityMixinsTests
         InvalidOperationException outerError = new(OuterMessage);
         List<Exception> observed = [];
         _ = Signal.FromEnumerable(SingleFirstSource).FlatMap<int, int>(_ => throw selectorError)
-            .Subscribe(_ => { }, observed.Add, () => { });
+            .Subscribe(static _ => { }, observed.Add, static () => { });
         _ = Signal.FromEnumerable(SingleFirstSource).FlatMap(_ => Signal.Fail<int>(innerError))
-            .Subscribe(_ => { }, observed.Add, () => { });
-        _ = Signal.Fail<int>(outerError).FlatMap(ReturnValue).Subscribe(_ => { }, observed.Add, () => { });
+            .Subscribe(static _ => { }, observed.Add, static () => { });
+        _ = Signal.Fail<int>(outerError).FlatMap(ReturnValue).Subscribe(static _ => { }, observed.Add, static () => { });
         await Assert.That(observed[0]).IsSameReferenceAs(selectorError);
         await Assert.That(observed[1]).IsSameReferenceAs(innerError);
         await Assert.That(observed[OuterErrorIndex]).IsSameReferenceAs(outerError);
@@ -259,10 +260,10 @@ public partial class SignalOperatorParityMixinsTests
         var source = Signal.FromEnumerable(contacts);
         var collectedArray = await source.CollectArrayAsync();
         var collectedList = await source.CollectListAsync();
-        var firstDefault = await Signal.None<Contact>().FirstOrDefaultAsync(new Contact("empty", null));
+        var firstDefault = await Signal.None<Contact>().FirstOrDefaultAsync(new("empty", null));
         var last = await source.LastAsync();
-        var anyNullLastName = await source.AnyAsync(contact => contact.LastName is null);
-        var countWithLastName = await source.CountAsync(contact => contact.LastName is not null);
+        var anyNullLastName = await source.AnyAsync(static contact => contact.LastName is null);
+        var countWithLastName = await source.CountAsync(static contact => contact.LastName is not null);
         await Assert.That(collectedArray.SequenceEqual(contacts)).IsTrue();
         await Assert.That(collectedList.SequenceEqual(contacts)).IsTrue();
         await Assert.That(firstDefault).IsEqualTo(new("empty", null));

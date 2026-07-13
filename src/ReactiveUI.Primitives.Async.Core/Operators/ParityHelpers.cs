@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
-
 using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async;
@@ -31,18 +30,20 @@ public static partial class SignalAsyncExtensions
             ArgumentExceptionHelper.ThrowIfNull(sources);
 
             var materializedSources = (sources as IObservableAsync<bool>[]) ?? [.. sources];
-            return materializedSources.Length == 0 ? new SignalAsync.ReturnSignalAsync<bool>(true) : new SyncLatestEnumerableSignal<bool, bool>(materializedSources, static values =>
-            {
-                for (var i = 0; i < values.Count; i++)
+            return materializedSources.Length == 0
+                ? new SignalAsync.ReturnSignalAsync<bool>(true)
+                : new SyncLatestEnumerableSignal<bool, bool>(materializedSources, static values =>
                 {
-                    if (values[i])
+                    for (var i = 0; i < values.Count; i++)
                     {
-                        return false;
+                        if (values[i])
+                        {
+                            return false;
+                        }
                     }
-                }
 
-                return true;
-            });
+                    return true;
+                });
         }
 
         /// <summary>Emits <see langword="true"/> when the latest value from every source sequence is <see langword="true"/>.</summary>
@@ -52,18 +53,20 @@ public static partial class SignalAsyncExtensions
             ArgumentExceptionHelper.ThrowIfNull(sources);
 
             var materializedSources = (sources as IObservableAsync<bool>[]) ?? [.. sources];
-            return materializedSources.Length == 0 ? new SignalAsync.ReturnSignalAsync<bool>(true) : new SyncLatestEnumerableSignal<bool, bool>(materializedSources, static values =>
-            {
-                for (var i = 0; i < values.Count; i++)
+            return materializedSources.Length == 0
+                ? new SignalAsync.ReturnSignalAsync<bool>(true)
+                : new SyncLatestEnumerableSignal<bool, bool>(materializedSources, static values =>
                 {
-                    if (!values[i])
+                    for (var i = 0; i < values.Count; i++)
                     {
-                        return false;
+                        if (!values[i])
+                        {
+                            return false;
+                        }
                     }
-                }
 
-                return true;
-            });
+                    return true;
+                });
         }
     }
 
@@ -251,7 +254,7 @@ public static partial class SignalAsyncExtensions
             ArgumentExceptionHelper.ThrowIfNull(source);
 
             return new RefCountSignal<T>(
-                new ConnectableSignalAsync<T>(
+                new(
                     source,
                     new SerialReplayLatestSignalAsync<T>(new(initialValue))));
         }
@@ -424,7 +427,6 @@ public static partial class SignalAsyncExtensions
 
             return new WhereIsNotNullSignal<T>(source);
         }
-
     }
 
     /// <summary>Boolean parity helper operators for a boolean observable source sequence.</summary>

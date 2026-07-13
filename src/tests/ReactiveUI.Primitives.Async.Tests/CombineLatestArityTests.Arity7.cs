@@ -21,18 +21,19 @@ public partial class CombineLatestArityTests
         var s4 = Signal.Create<int>();
         var s5 = Signal.Create<int>();
         var s6 = Signal.Create<int>();
-        var throwingSrc = AsyncObs.Create<int>((_, _) => throw new InvalidOperationException("subscribe failed"));
+        var throwingSrc = AsyncObs.Create<int>(static (_, _) => throw new InvalidOperationException("subscribe failed"));
         await Assert
             .That(async () =>
                 await s1.Values
                     .CombineLatest(
-                    s2.Values,
-                    s3.Values,
-                    s4.Values,
-                    s5.Values,
-                    s6.Values,
-                    throwingSrc,
-                    (v1, v2, v3, v4, v5, v6, v7) => v1 + v2 + v3 + v4 + v5 + v6 + v7).SubscribeAsync((_, _) => default, null)).ThrowsExactly<InvalidOperationException>();
+                        s2.Values,
+                        s3.Values,
+                        s4.Values,
+                        s5.Values,
+                        s6.Values,
+                        throwingSrc,
+                        static (v1, v2, v3, v4, v5, v6, v7) => v1 + v2 + v3 + v4 + v5 + v6 + v7)
+                    .SubscribeAsync(static (_, _) => default, null)).ThrowsExactly<InvalidOperationException>();
     }
 
     /// <summary>Verifies that CombineLatest7 OnNextCombined guard returns when disposed.</summary>
@@ -55,7 +56,7 @@ public partial class CombineLatestArityTests
             s5.Values,
             s6.Values,
             s7.Values,
-            (v1, v2, v3, v4, v5, v6, v7) => v1 + v2 + v3 + v4 + v5 + v6 + v7).SubscribeAsync(
+            static (v1, v2, v3, v4, v5, v6, v7) => v1 + v2 + v3 + v4 + v5 + v6 + v7).SubscribeAsync(
             (x, _) =>
             {
                 results.Add(x);
@@ -89,15 +90,15 @@ public partial class CombineLatestArityTests
         Exception? receivedError = null;
         var sub = await s1.Values
             .CombineLatest(
-            s2.Values,
-            s3.Values,
-            s4.Values,
-            s5.Values,
-            s6.Values,
-            s7.Values,
-            (v1, v2, v3, v4, v5, v6, v7) => v1 + v2 + v3 + v4 + v5 + v6 + v7).SubscribeAsync(
-            (_, _) => default,
-            (ex, _) =>
+                s2.Values,
+                s3.Values,
+                s4.Values,
+                s5.Values,
+                s6.Values,
+                s7.Values,
+                static (v1, v2, v3, v4, v5, v6, v7) => v1 + v2 + v3 + v4 + v5 + v6 + v7).SubscribeAsync(
+                static (_, _) => default,
+                (ex, _) =>
                 {
                     receivedError = ex;
                     return default;
@@ -122,13 +123,13 @@ public partial class CombineLatestArityTests
         List<int> results = [];
         await using var sub = await s1.Values
             .CombineLatest(
-            s2.Values,
-            s3.Values,
-            s4.Values,
-            s5.Values,
-            s6.Values,
-            s7.Values,
-            (v1, v2, v3, v4, v5, v6, v7) => v1 + v2 + v3 + v4 + v5 + v6 + v7).SubscribeAsync(
+                s2.Values,
+                s3.Values,
+                s4.Values,
+                s5.Values,
+                s6.Values,
+                s7.Values,
+                static (v1, v2, v3, v4, v5, v6, v7) => v1 + v2 + v3 + v4 + v5 + v6 + v7).SubscribeAsync(
                 (x, _) =>
                 {
                     results.Add(x);
@@ -161,13 +162,13 @@ public partial class CombineLatestArityTests
         List<int> results = [];
         await using var sub = await s1.Values
             .CombineLatest(
-            s2.Values,
-            s3.Values,
-            s4.Values,
-            s5.Values,
-            s6.Values,
-            s7.Values,
-            (v1, v2, v3, v4, v5, v6, v7) => v1 + v2 + v3 + v4 + v5 + v6 + v7).SubscribeAsync(
+                s2.Values,
+                s3.Values,
+                s4.Values,
+                s5.Values,
+                s6.Values,
+                s7.Values,
+                static (v1, v2, v3, v4, v5, v6, v7) => v1 + v2 + v3 + v4 + v5 + v6 + v7).SubscribeAsync(
                 (x, _) =>
                 {
                     results.Add(x);
@@ -205,13 +206,13 @@ public partial class CombineLatestArityTests
         List<int> results = [];
         await using var sub = await s1.Values
             .CombineLatest(
-            s2.Values,
-            s3.Values,
-            s4.Values,
-            s5.Values,
-            s6.Values,
-            s7.Values,
-            (a, b, c, d, e, f, g) => a + b + c + d + e + f + g).SubscribeAsync(
+                s2.Values,
+                s3.Values,
+                s4.Values,
+                s5.Values,
+                s6.Values,
+                s7.Values,
+                static (a, b, c, d, e, f, g) => a + b + c + d + e + f + g).SubscribeAsync(
                 (x, _) =>
                 {
                     results.Add(x);
@@ -252,13 +253,13 @@ public partial class CombineLatestArityTests
         List<int> results = [];
         await using var sub = await s1.Values
             .CombineLatest(
-            s2.Values,
-            s3.Values,
-            s4.Values,
-            s5.Values,
-            s6.Values,
-            s7.Values,
-            (a, b, c, d, e, f, g) => a + b + c + d + e + f + g).SubscribeAsync(
+                s2.Values,
+                s3.Values,
+                s4.Values,
+                s5.Values,
+                s6.Values,
+                s7.Values,
+                static (a, b, c, d, e, f, g) => a + b + c + d + e + f + g).SubscribeAsync(
                 (x, _) =>
                 {
                     results.Add(x);
@@ -299,13 +300,13 @@ public partial class CombineLatestArityTests
         List<int> results = [];
         await using var sub = await s1.Values
             .CombineLatest(
-            s2.Values,
-            s3.Values,
-            s4.Values,
-            s5.Values,
-            s6.Values,
-            s7.Values,
-            (a, b, c, d, e, f, g) => a + b + c + d + e + f + g).SubscribeAsync(
+                s2.Values,
+                s3.Values,
+                s4.Values,
+                s5.Values,
+                s6.Values,
+                s7.Values,
+                static (a, b, c, d, e, f, g) => a + b + c + d + e + f + g).SubscribeAsync(
                 (x, _) =>
                 {
                     results.Add(x);
@@ -346,13 +347,13 @@ public partial class CombineLatestArityTests
         List<int> results = [];
         await using var sub = await s1.Values
             .CombineLatest(
-            s2.Values,
-            s3.Values,
-            s4.Values,
-            s5.Values,
-            s6.Values,
-            s7.Values,
-            (a, b, c, d, e, f, g) => a + b + c + d + e + f + g).SubscribeAsync(
+                s2.Values,
+                s3.Values,
+                s4.Values,
+                s5.Values,
+                s6.Values,
+                s7.Values,
+                static (a, b, c, d, e, f, g) => a + b + c + d + e + f + g).SubscribeAsync(
                 (x, _) =>
                 {
                     results.Add(x);
@@ -393,13 +394,13 @@ public partial class CombineLatestArityTests
         List<int> results = [];
         await using var sub = await s1.Values
             .CombineLatest(
-            s2.Values,
-            s3.Values,
-            s4.Values,
-            s5.Values,
-            s6.Values,
-            s7.Values,
-            (a, b, c, d, e, f, g) => a + b + c + d + e + f + g).SubscribeAsync(
+                s2.Values,
+                s3.Values,
+                s4.Values,
+                s5.Values,
+                s6.Values,
+                s7.Values,
+                static (a, b, c, d, e, f, g) => a + b + c + d + e + f + g).SubscribeAsync(
                 (x, _) =>
                 {
                     results.Add(x);
@@ -440,13 +441,13 @@ public partial class CombineLatestArityTests
         List<int> results = [];
         await using var sub = await s1.Values
             .CombineLatest(
-            s2.Values,
-            s3.Values,
-            s4.Values,
-            s5.Values,
-            s6.Values,
-            s7.Values,
-            (a, b, c, d, e, f, g) => a + b + c + d + e + f + g).SubscribeAsync(
+                s2.Values,
+                s3.Values,
+                s4.Values,
+                s5.Values,
+                s6.Values,
+                s7.Values,
+                static (a, b, c, d, e, f, g) => a + b + c + d + e + f + g).SubscribeAsync(
                 (x, _) =>
                 {
                     results.Add(x);

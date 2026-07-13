@@ -32,10 +32,10 @@ public partial class SignalFactoriesTests
         List<string> taskErrors = [];
         List<int> asyncValues = [];
         List<string> asyncErrors = [];
-        _ = Signal.Use(() => EmptyDisposable.Instance, _ => (IObservable<int>)null!)
-            .Subscribe(_ => { }, ex => useErrors.Add(ex.Message));
-        _ = Signal.Use<IDisposable, int>(() => throw new InvalidOperationException("resource"), _ => Signal.Emit(1))
-            .Subscribe(_ => { }, ex => useErrors.Add(ex.Message));
+        _ = Signal.Use(static () => EmptyDisposable.Instance, static _ => (IObservable<int>)null!)
+            .Subscribe(static _ => { }, ex => useErrors.Add(ex.Message));
+        _ = Signal.Use<IDisposable, int>(static () => throw new InvalidOperationException("resource"), static _ => Signal.Emit(1))
+            .Subscribe(static _ => { }, ex => useErrors.Add(ex.Message));
         await ObserveTaskError(Task.FromCanceled<int>(new(true)), taskErrors);
         await ObserveTaskError(Task.FromException<int>(new InvalidOperationException("faulted")), taskErrors);
 
@@ -48,15 +48,15 @@ public partial class SignalFactoriesTests
 
         _ = Signal.FromAsyncEnumerable(ThrowingAsyncEnumerable())
             .Subscribe(asyncValues.Add, ex => asyncErrors.Add(ex.Message));
-        await TestPolling.SpinUntil(() => asyncErrors.Count == 1, TimeSpan.FromSeconds(2));
+        await TestPolling.SpinUntil(() => asyncErrors.Count == 1, TimeSpan.FromSeconds(TimeoutSeconds));
         var firstFailure = await AssertTaskFault(
-            () => Signal.None<int>().FirstAsync(),
+            static () => Signal.None<int>().FirstAsync(),
             typeof(InvalidOperationException));
         var collectFailure = await AssertTaskFault(
-            () => Signal.Fail<int>(new InvalidOperationException("collect")).CollectArrayAsync(),
+            static () => Signal.Fail<int>(new InvalidOperationException("collect")).CollectArrayAsync(),
             typeof(InvalidOperationException));
         var listFailure = await AssertTaskFault(
-            () => Signal.Fail<int>(new InvalidOperationException("list")).CollectListAsync(),
+            static () => Signal.Fail<int>(new InvalidOperationException("list")).CollectListAsync(),
             typeof(InvalidOperationException));
         await Assert.That(useErrors.SequenceEqual(ExpectedUseErrors)).IsTrue();
         await Assert.That(taskErrors.SequenceEqual(ExpectedTaskErrors)).IsTrue();
@@ -73,8 +73,8 @@ public partial class SignalFactoriesTests
     /// <returns>A task that completes when the error has been observed.</returns>
     private static async Task ObserveTaskError(Task<int> task, List<string> errors)
     {
-        _ = Signal.FromTask(task).Subscribe(_ => { }, ex => errors.Add(ex.GetType().Name));
-        await TestPolling.SpinUntil(() => errors.Count > 0, TimeSpan.FromSeconds(2));
+        _ = Signal.FromTask(task).Subscribe(static _ => { }, ex => errors.Add(ex.GetType().Name));
+        await TestPolling.SpinUntil(() => errors.Count > 0, TimeSpan.FromSeconds(TimeoutSeconds));
     }
 
     /// <summary>Asserts that a task factory faults with the expected exception type.</summary>

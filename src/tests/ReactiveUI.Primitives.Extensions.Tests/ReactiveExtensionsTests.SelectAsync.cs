@@ -14,14 +14,14 @@ public partial class ReactiveExtensionsTests
     {
         var source = ExpectedSequence123.ToObservable();
         List<int> results = [];
-        TaskCompletionSource<bool> tcs = new();
+        TaskCompletionSource<bool> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        _ = source.SelectAsync((x, _) => Task.FromResult(x * SampleValue2))
+        _ = source.SelectAsync(static (x, _) => Task.FromResult(x * SampleValue2))
             .Subscribe(
                 results.Add,
                 () => tcs.TrySetResult(true));
 
-        await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await tcs.Task.WaitAsync(WaitTimeout);
 
         await Assert.That(results).IsCollectionEqualTo([SampleValue2, SampleValue4, SampleValue6]);
     }
@@ -33,14 +33,14 @@ public partial class ReactiveExtensionsTests
     {
         var source = ExpectedSequence123.ToObservable();
         List<int> results = [];
-        TaskCompletionSource<bool> tcs = new();
+        TaskCompletionSource<bool> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        _ = source.SelectAsync(x => Task.FromResult(x * SampleValue2))
+        _ = source.SelectAsync(static x => Task.FromResult(x * SampleValue2))
             .Subscribe(
                 results.Add,
                 () => tcs.TrySetResult(true));
 
-        await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await tcs.Task.WaitAsync(WaitTimeout);
 
         await Assert.That(results).IsCollectionEqualTo([SampleValue2, SampleValue4, SampleValue6]);
     }
@@ -52,14 +52,14 @@ public partial class ReactiveExtensionsTests
     {
         var source = ExpectedSequence123.ToObservable();
         List<int> results = [];
-        TaskCompletionSource<bool> tcs = new();
+        TaskCompletionSource<bool> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        _ = source.SelectAsyncSequential(x => Task.FromResult(x * SampleValue2))
+        _ = source.SelectAsyncSequential(static x => Task.FromResult(x * SampleValue2))
             .Subscribe(
                 results.Add,
                 () => tcs.TrySetResult(true));
 
-        await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await tcs.Task.WaitAsync(WaitTimeout);
 
         await Assert.That(results).IsCollectionEqualTo([SampleValue2, SampleValue4, SampleValue6]);
     }
@@ -74,7 +74,7 @@ public partial class ReactiveExtensionsTests
         List<int> results = [];
         TaskCompletionSource<bool> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        _ = source.SelectLatestAsync(async x =>
+        _ = source.SelectLatestAsync(static async x =>
         {
             await Task.Delay(AsyncDelayMs);
             return x * SampleValue2;
@@ -82,7 +82,7 @@ public partial class ReactiveExtensionsTests
             results.Add,
             () => tcs.TrySetResult(true));
 
-        await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await tcs.Task.WaitAsync(WaitTimeout);
 
         // Switch means only the latest survives; with sources 1,2,3 and selector x*2, expect [6].
         await Assert.That(results).IsNotEmpty();
@@ -95,18 +95,18 @@ public partial class ReactiveExtensionsTests
     {
         var source = ExpectedSequence123.ToObservable();
         List<int> results = [];
-        TaskCompletionSource<bool> tcs = new();
+        TaskCompletionSource<bool> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         const int MaxConcurrency = 2;
 
         _ = source.SelectAsyncConcurrent(
-            async x =>
+            static async x =>
             {
                 await Task.Delay(1);
                 return x * SampleValue2;
             },
             MaxConcurrency).Subscribe(results.Add, () => tcs.TrySetResult(true));
 
-        await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await tcs.Task.WaitAsync(WaitTimeout);
 
         results.Sort();
         await Assert.That(results).IsCollectionEqualTo([SampleValue2, SampleValue4, SampleValue6]);

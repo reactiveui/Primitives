@@ -42,11 +42,30 @@ public sealed class StartSignal : IRequireCurrentThread<RxVoid>
 
         if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
         {
-            return Scheduler.Schedule(() => Run(observer));
+            return Scheduler.Schedule(
+                (self: this, observer),
+                static (_, s) =>
+                {
+                    s.self.Run(s.observer);
+                    return EmptyDisposable.Instance;
+                });
         }
 
         SingleDisposable subscription = new();
-        _ = Sequencer.CurrentThread.Schedule(() => subscription.Create(Scheduler.Schedule(() => Run(observer))));
+        _ = Sequencer.CurrentThread.Schedule(
+            (self: this, subscription, observer),
+            static (_, s) =>
+            {
+                s.subscription.Create(
+                    s.self.Scheduler.Schedule(
+                        (s.self, s.observer),
+                        static (_, inner) =>
+                        {
+                            inner.self.Run(inner.observer);
+                            return EmptyDisposable.Instance;
+                        }));
+                return EmptyDisposable.Instance;
+            });
         return subscription;
     }
 

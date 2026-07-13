@@ -13,16 +13,19 @@ public static partial class Signal
 {
     /// <summary>Coordinates time-windowed buffering for a single subscription.</summary>
     /// <typeparam name="TSource">The source value type.</typeparam>
-    internal sealed class CollectCoordinator<TSource> : IDisposable
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="timeSpan">The buffer window duration.</param>
+    /// <param name="sequencer">The sequencer used to schedule flushes.</param>
+    internal sealed class CollectCoordinator<TSource>(IObserver<IList<TSource>> observer, TimeSpan timeSpan, ISequencer sequencer) : IDisposable
     {
         /// <summary>The downstream observer.</summary>
-        private readonly IObserver<IList<TSource>> _observer;
+        private readonly IObserver<IList<TSource>> _observer = observer;
 
         /// <summary>The duration of the buffer window.</summary>
-        private readonly TimeSpan _timeSpan;
+        private readonly TimeSpan _timeSpan = timeSpan;
 
         /// <summary>The sequencer used to schedule flushes.</summary>
-        private readonly ISequencer _sequencer;
+        private readonly ISequencer _sequencer = sequencer;
 
         /// <summary>Serializes access to buffered values and terminal state.</summary>
         private readonly Lock _gate = new();
@@ -38,17 +41,6 @@ public static partial class Signal
 
         /// <summary>Whether the source has terminated.</summary>
         private bool _stopped;
-
-        /// <summary>Initializes a new instance of the <see cref="CollectCoordinator{TSource}"/> class.</summary>
-        /// <param name="observer">The downstream observer.</param>
-        /// <param name="timeSpan">The buffer window duration.</param>
-        /// <param name="sequencer">The sequencer used to schedule flushes.</param>
-        public CollectCoordinator(IObserver<IList<TSource>> observer, TimeSpan timeSpan, ISequencer sequencer)
-        {
-            _observer = observer;
-            _timeSpan = timeSpan;
-            _sequencer = sequencer;
-        }
 
         /// <inheritdoc/>
         public void Dispose() => _disposables.Dispose();

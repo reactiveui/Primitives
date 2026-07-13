@@ -13,7 +13,11 @@ namespace ReactiveUI.Primitives.Advanced;
 /// A sealed sequencer holds one inline and injects its platform <c>post</c> (and optionally <c>scheduleDelayed</c>)
 /// delegates plus the cached drain callback; immediate work is queued and drained one batch per post.
 /// </summary>
-[SuppressMessage("Performance", "SST1803:Make record struct readonly", Justification = "Mutable dispatch-coalescing engine: holds the ready queue plus drain/post latches that mutate in place.")]
+[SuppressMessage(
+    "Performance",
+    "SST1803:Make record struct readonly",
+    Justification =
+        "Mutable dispatch-coalescing engine: holds the ready queue plus drain/post latches that mutate in place.")]
 public record struct DispatchSequencerState
 {
     /// <summary>Ready work items awaiting a UI-thread drain.</summary>
@@ -158,9 +162,13 @@ public record struct DispatchSequencerState
 
         try
         {
-            var remaining = Volatile.Read(ref _readyCount);
-            while (remaining-- > 0 && _ready.TryDequeue(out var item))
+            for (var remaining = Volatile.Read(ref _readyCount); remaining > 0; remaining--)
             {
+                if (!_ready.TryDequeue(out var item))
+                {
+                    break;
+                }
+
                 _ = Interlocked.Decrement(ref _readyCount);
                 if (!Sequencer.IsCancelled(item))
                 {
@@ -178,22 +186,15 @@ public record struct DispatchSequencerState
     }
 
     /// <summary>Work item used by the shared timer path to marshal delayed work back to the dispatcher.</summary>
-    private sealed class MarshalOnDueWorkItem : IWorkItem
+    /// <param name="owner">Owning dispatch sequencer.</param>
+    /// <param name="item">Work item to marshal.</param>
+    private sealed class MarshalOnDueWorkItem(ISequencer owner, IWorkItem item) : IWorkItem
     {
         /// <summary>Owning dispatch sequencer.</summary>
-        private readonly ISequencer _owner;
+        private readonly ISequencer _owner = owner;
 
         /// <summary>Work item to marshal.</summary>
-        private readonly IWorkItem _item;
-
-        /// <summary>Initializes a new instance of the <see cref="MarshalOnDueWorkItem"/> class.</summary>
-        /// <param name="owner">Owning dispatch sequencer.</param>
-        /// <param name="item">Work item to marshal.</param>
-        public MarshalOnDueWorkItem(ISequencer owner, IWorkItem item)
-        {
-            _owner = owner;
-            _item = item;
-        }
+        private readonly IWorkItem _item = item;
 
         /// <inheritdoc/>
         public void Execute()

@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
-
 using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async;
@@ -46,7 +45,8 @@ public sealed class ConnectableSignalAsync<T> : IObservableAsync<T>, IDisposable
     [SuppressMessage(
         "Major Bug",
         "S4462:Calls to async methods should not be blocking",
-        Justification = "IDisposable.Dispose is intrinsically synchronous; this method must tear down async connection state on the sync dispose path.")]
+        Justification =
+            "IDisposable.Dispose is intrinsically synchronous; this method must tear down async connection state on the sync dispose path.")]
     public void Dispose() => ConnectableSignalAsyncHelper.Dispose(State);
 
     ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(

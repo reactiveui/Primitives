@@ -26,7 +26,7 @@ public sealed class SignalEmitIfQuietTests
         List<int> delayedValues = [];
         var completed = 0;
         _ = source.EmitIfQuiet(TimeSpan.FromTicks(Third), clock)
-            .Subscribe(delayedValues.Add, ex => throw ex, () => completed++);
+            .Subscribe(delayedValues.Add, static ex => throw ex, () => completed++);
         source.OnNext(First);
         clock.AdvanceBy(TimeSpan.FromTicks(Second));
         source.OnNext(Second);
@@ -40,27 +40,29 @@ public sealed class SignalEmitIfQuietTests
         var emptyCompletion = 0;
         Signal<int> emptySource = new();
         _ = emptySource.EmitIfQuiet(TimeSpan.FromTicks(First), new VirtualClock())
-            .Subscribe(_ => { }, ex => throw ex, () => emptyCompletion++);
+            .Subscribe(static _ => { }, static ex => throw ex, () => emptyCompletion++);
         emptySource.OnCompleted();
         await Assert.That(emptyCompletion).IsEqualTo(1);
         VirtualClock errorClock = new();
         Signal<int> errorSource = new();
         InvalidOperationException expected = new("quiet");
         Exception? observed = null;
-        _ = errorSource.EmitIfQuiet(TimeSpan.FromTicks(First), errorClock).Subscribe(_ => { }, ex => observed = ex);
+        _ = errorSource.EmitIfQuiet(TimeSpan.FromTicks(First), errorClock).Subscribe(static _ => { }, ex => observed = ex);
         errorSource.OnNext(First);
         errorSource.OnError(expected);
         errorClock.AdvanceBy(TimeSpan.FromTicks(First));
         await Assert.That(observed!).IsSameReferenceAs(expected);
-        _ = Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).EmitIfQuiet(TimeSpan.FromTicks(First)));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.Emit(First).EmitIfQuiet(TimeSpan.FromTicks(First), null!));
+        _ = Assert.Throws<ArgumentNullException>(static () =>
+            ((IObservable<int>)null!).EmitIfQuiet(TimeSpan.FromTicks(First)));
+        _ = Assert.Throws<ArgumentNullException>(static () =>
+            Signal.Emit(First).EmitIfQuiet(TimeSpan.FromTicks(First), null!));
         var stoppedGuardCompleted = 0;
-        _ = new ScriptedObservable<int>(observer =>
+        _ = new ScriptedObservable<int>(static observer =>
             {
                 observer.OnCompleted();
                 observer.OnNext(First);
             }).EmitIfQuiet(TimeSpan.FromTicks(First), new VirtualClock())
-            .Subscribe(_ => { }, ex => throw ex, () => stoppedGuardCompleted++);
+            .Subscribe(static _ => { }, static ex => throw ex, () => stoppedGuardCompleted++);
         await Assert.That(stoppedGuardCompleted).IsEqualTo(1);
     }
 }

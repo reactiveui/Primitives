@@ -17,7 +17,7 @@ public partial class TerminalOperatorTests
     public async Task WhenCountAsyncWithCancellationTokenOverload_ThenReturnsCount()
     {
         const int ExpectedCount = 3;
-        var result = await SignalAsync.Range(1, 3).CountAsync(CancellationToken.None);
+        var result = await SignalAsync.Range(1, ShortSourceValueCount).CountAsync(CancellationToken.None);
         await Assert.That(result).IsEqualTo(ExpectedCount);
     }
 
@@ -28,7 +28,7 @@ public partial class TerminalOperatorTests
     public async Task WhenLongCountAsyncWithCancellationTokenOverload_ThenReturnsCount()
     {
         const long ExpectedCount = 3L;
-        var result = await SignalAsync.Range(1, 3).LongCountAsync(CancellationToken.None);
+        var result = await SignalAsync.Range(1, ShortSourceValueCount).LongCountAsync(CancellationToken.None);
         await Assert.That(result).IsEqualTo(ExpectedCount);
     }
 
@@ -38,7 +38,7 @@ public partial class TerminalOperatorTests
     public async Task WhenFirstOrDefaultAsyncWithCancellationTokenOverload_ThenReturnsFirst()
     {
         const int ExpectedFirst = 7;
-        var result = await SignalAsync.Range(ExpectedFirst, 3).FirstOrDefaultAsync(CancellationToken.None);
+        var result = await SignalAsync.Range(ExpectedFirst, ShortSourceValueCount).FirstOrDefaultAsync(CancellationToken.None);
         await Assert.That(result).IsEqualTo(ExpectedFirst);
     }
 
@@ -49,7 +49,7 @@ public partial class TerminalOperatorTests
     {
         const int RangeStart = 7;
         const int ExpectedLast = 9;
-        var result = await SignalAsync.Range(RangeStart, 3).LastOrDefaultAsync(CancellationToken.None);
+        var result = await SignalAsync.Range(RangeStart, ShortSourceValueCount).LastOrDefaultAsync(CancellationToken.None);
         await Assert.That(result).IsEqualTo(ExpectedLast);
     }
 
@@ -70,7 +70,7 @@ public partial class TerminalOperatorTests
     public async Task WhenContainsAsyncWithComparerOverload_ThenForwardsResult()
     {
         const int Match = 2;
-        var result = await SignalAsync.Range(1, 3).ContainsAsync(Match, EqualityComparer<int>.Default);
+        var result = await SignalAsync.Range(1, ShortSourceValueCount).ContainsAsync(Match, EqualityComparer<int>.Default);
         await Assert.That(result).IsTrue();
     }
 
@@ -81,7 +81,7 @@ public partial class TerminalOperatorTests
     public async Task WhenContainsAsyncWithCancellationTokenOverload_ThenForwardsResult()
     {
         const int Match = 2;
-        var result = await SignalAsync.Range(1, 3).ContainsAsync(Match, CancellationToken.None);
+        var result = await SignalAsync.Range(1, ShortSourceValueCount).ContainsAsync(Match, CancellationToken.None);
         await Assert.That(result).IsTrue();
     }
 }

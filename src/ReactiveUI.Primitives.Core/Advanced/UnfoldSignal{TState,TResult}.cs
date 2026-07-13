@@ -9,36 +9,27 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <summary>Finite state expansion signal.</summary>
 /// <typeparam name="TState">State type.</typeparam>
 /// <typeparam name="TResult">Result type.</typeparam>
-public sealed class UnfoldSignal<TState, TResult> : IRequireCurrentThread<TResult>, IInlineSignal<TResult>
+/// <param name="initialState">Initial state.</param>
+/// <param name="condition">Loop condition.</param>
+/// <param name="iterate">State iterator.</param>
+/// <param name="resultSelector">Result selector.</param>
+public sealed class UnfoldSignal<TState, TResult>(
+    TState initialState,
+    Func<TState, bool> condition,
+    Func<TState, TState> iterate,
+    Func<TState, TResult> resultSelector) : IRequireCurrentThread<TResult>, IInlineSignal<TResult>
 {
     /// <summary>Initial state.</summary>
-    private readonly TState _initialState;
+    private readonly TState _initialState = initialState;
 
     /// <summary>Loop condition.</summary>
-    private readonly Func<TState, bool> _condition;
+    private readonly Func<TState, bool> _condition = condition;
 
     /// <summary>State iterator.</summary>
-    private readonly Func<TState, TState> _iterate;
+    private readonly Func<TState, TState> _iterate = iterate;
 
     /// <summary>Result selector.</summary>
-    private readonly Func<TState, TResult> _resultSelector;
-
-    /// <summary>Initializes a new instance of the <see cref="UnfoldSignal{TState,TResult}"/> class.</summary>
-    /// <param name="initialState">Initial state.</param>
-    /// <param name="condition">Loop condition.</param>
-    /// <param name="iterate">State iterator.</param>
-    /// <param name="resultSelector">Result selector.</param>
-    public UnfoldSignal(
-        TState initialState,
-        Func<TState, bool> condition,
-        Func<TState, TState> iterate,
-        Func<TState, TResult> resultSelector)
-    {
-        _initialState = initialState;
-        _condition = condition;
-        _iterate = iterate;
-        _resultSelector = resultSelector;
-    }
+    private readonly Func<TState, TResult> _resultSelector = resultSelector;
 
     /// <inheritdoc/>
     public bool IsRequiredSubscribeOnCurrentThread() => false;

@@ -153,7 +153,8 @@ public static partial class SignalAsyncExtensions
                 {
                     var handlerObservable = handler(result.Exception);
                     var handlerSubscription =
-                        await handlerObservable.SubscribeAsync(downstream.Wrap(), _subscribeToken).ConfigureAwait(false);
+                        await handlerObservable.SubscribeAsync(downstream.Wrap(), _subscribeToken)
+                            .ConfigureAwait(false);
                     await _handlerDisposable.SetDisposableAsync(handlerSubscription).ConfigureAwait(false);
                 }
                 catch (Exception e)

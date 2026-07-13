@@ -6,28 +6,21 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Sink that drops leading values while the predicate holds, then mirrors the source.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-public sealed class SkipWhileWitness<T> : IObserver<T>, IDisposable
+/// <param name="observer">The downstream observer.</param>
+/// <param name="predicate">The predicate that determines whether to keep skipping values.</param>
+public sealed class SkipWhileWitness<T>(IObserver<T> observer, Func<T, bool> predicate) : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>
-    private readonly IObserver<T> _observer;
+    private readonly IObserver<T> _observer = observer;
 
     /// <summary>The predicate that determines whether to keep skipping values.</summary>
-    private readonly Func<T, bool> _predicate;
+    private readonly Func<T, bool> _predicate = predicate;
 
     /// <summary>A value indicating whether the skipping phase is still active.</summary>
     private bool _skipping = true;
 
     /// <summary>The upstream subscription.</summary>
     private IDisposable? _subscription;
-
-    /// <summary>Initializes a new instance of the <see cref="SkipWhileWitness{T}"/> class.</summary>
-    /// <param name="observer">The downstream observer.</param>
-    /// <param name="predicate">The predicate that determines whether to keep skipping values.</param>
-    public SkipWhileWitness(IObserver<T> observer, Func<T, bool> predicate)
-    {
-        _observer = observer;
-        _predicate = predicate;
-    }
 
     /// <inheritdoc/>
     public void OnNext(T value)

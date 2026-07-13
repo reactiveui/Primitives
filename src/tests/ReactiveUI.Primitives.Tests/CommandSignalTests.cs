@@ -19,6 +19,9 @@ public sealed class CommandSignalTests
     /// <summary>Successful command result.</summary>
     private const int CommandResult = 42;
 
+    /// <summary>Number of tasks that race for the lazily allocated stream in the contention test.</summary>
+    private const int ContendingTasks = 2;
+
     /// <summary>Expected command results.</summary>
     private static readonly int[] ExpectedCommandResults = [CommandResult];
 
@@ -32,7 +35,7 @@ public sealed class CommandSignalTests
     {
         StateSignal<bool> canRun = new(true);
         CommandSignal<int> command = new(
-            async token =>
+            static async token =>
             {
                 await Task.Yield();
                 token.ThrowIfCancellationRequested();
@@ -123,7 +126,7 @@ public sealed class CommandSignalTests
 
         for (var iteration = 0; iteration < iterations; iteration++)
         {
-            CommandSignal<int> command = new(() => CommandResult);
+            CommandSignal<int> command = new(static () => CommandResult);
             using ManualResetEventSlim ready = new(false);
 
             // Race the first observation of the lazily allocated stream against the execution that
@@ -155,7 +158,7 @@ public sealed class CommandSignalTests
     [Test]
     public async Task IsRunningAllocatesLazilyAndCachesTheStream()
     {
-        CommandSignal<int> command = new(() => CommandResult);
+        CommandSignal<int> command = new(static () => CommandResult);
 
         var first = command.IsRunning;
         var second = command.IsRunning;
@@ -173,7 +176,7 @@ public sealed class CommandSignalTests
     [Test]
     public async Task IsRunningTransitionsTrueThenFalseThroughInstalledStream()
     {
-        CommandSignal<int> command = new(() => CommandResult);
+        CommandSignal<int> command = new(static () => CommandResult);
         List<bool> running = [];
         _ = command.IsRunning.Changed.Subscribe(running.Add);
 
@@ -192,7 +195,7 @@ public sealed class CommandSignalTests
     [Test]
     public async Task IsRunningReportsFalseWhenObservedOnlyAfterExecution()
     {
-        CommandSignal<int> command = new(() => CommandResult);
+        CommandSignal<int> command = new(static () => CommandResult);
 
         _ = command.ExecuteAsync();
 
@@ -244,8 +247,8 @@ public sealed class CommandSignalTests
 
         for (var iteration = 0; iteration < iterations; iteration++)
         {
-            CommandSignal<int> command = new(() => CommandResult);
-            using Barrier barrier = new(2);
+            CommandSignal<int> command = new(static () => CommandResult);
+            using Barrier barrier = new(ContendingTasks);
 
             var left = Task.Run(() =>
             {

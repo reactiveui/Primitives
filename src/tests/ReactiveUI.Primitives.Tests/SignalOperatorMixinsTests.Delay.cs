@@ -51,12 +51,12 @@ public partial class SignalOperatorMixinsTests
     [Test]
     public async Task ShiftDisposeWaitsForInflightDeliveryAndDisallowsFurtherDelivery()
     {
-        TimeSpan dueTime = TimeSpan.FromMilliseconds(One);
+        var dueTime = TimeSpan.FromMilliseconds(One);
 
         // Drain on dedicated threads so a saturated thread pool cannot stall the
         // blocking in-flight delivery this test relies on; only the brief timer
         // callback stays on the pool.
-        TaskPoolSequencer sequencer = new(new TaskFactory(
+        TaskPoolSequencer sequencer = new(new(
             CancellationToken.None,
             TaskCreationOptions.LongRunning,
             TaskContinuationOptions.None,
@@ -81,7 +81,7 @@ public partial class SignalOperatorMixinsTests
                     onNextRelease.Wait();
                     values.Enqueue(value);
                 },
-                _ => { },
+                static _ => { },
                 () => Interlocked.Increment(ref completed));
 
         source.OnNext(One);
@@ -90,12 +90,12 @@ public partial class SignalOperatorMixinsTests
 
         await Assert.That(onNextEntered.Wait(TimeSpan.FromSeconds(InflightDeliveryTimeoutSeconds))).IsTrue();
 
-        Task disposeTask = Task.Factory.StartNew(
+        var disposeTask = Task.Factory.StartNew(
             subscription.Dispose,
             CancellationToken.None,
             TaskCreationOptions.LongRunning,
             TaskScheduler.Default);
-        Task disposeObservation = Task.Delay(TimeSpan.FromMilliseconds(DisposeObservationMilliseconds));
+        var disposeObservation = Task.Delay(TimeSpan.FromMilliseconds(DisposeObservationMilliseconds));
         var disposeCompleted = await Task.WhenAny(disposeTask, disposeObservation) == disposeTask;
 
         await Assert.That(disposeCompleted).IsFalse();

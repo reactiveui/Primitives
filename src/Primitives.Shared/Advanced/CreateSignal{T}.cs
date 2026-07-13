@@ -47,7 +47,7 @@ internal sealed class CreateSignal<T> : IRequireCurrentThread<T>
             return SignalSubscription.Subscribe(observer, _currentThreadRequired, SubscribeCore);
         }
 
-        CreateSink<T> sink = new(observer, disposeOnNextThrow: false);
+        CreateSink<T> sink = new(observer, false);
         sink.SetCancel(_subscribe(sink) ?? EmptyDisposable.Instance);
         return sink;
     }
@@ -58,7 +58,7 @@ internal sealed class CreateSignal<T> : IRequireCurrentThread<T>
     /// <returns>The result.</returns>
     private IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel)
     {
-        CreateSink<T> sink = new(observer, cancel, disposeOnNextThrow: false);
+        CreateSink<T> sink = new(observer, cancel, false);
         return _subscribe(sink) ?? EmptyDisposable.Instance;
     }
 }

@@ -15,30 +15,27 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="T">The observed value type.</typeparam>
 /// <typeparam name="TResult">The terminal result type.</typeparam>
 /// <typeparam name="TAggregator">The value-type accumulator that folds values and yields the result.</typeparam>
-[SuppressMessage("Design", "CA1005:AvoidExcessiveParametersOnGenericTypes", Justification = "Struct-strategy sink needs source, result and accumulator type parameters.")]
-public sealed class AggregateWitness<T, TResult, TAggregator> : IObserver<T>, IDisposable
+/// <param name="observer">The downstream observer.</param>
+/// <param name="aggregator">The seed accumulator.</param>
+[SuppressMessage(
+    "Design",
+    "CA1005:AvoidExcessiveParametersOnGenericTypes",
+    Justification = "Struct-strategy sink needs source, result and accumulator type parameters.")]
+public sealed class AggregateWitness<T, TResult, TAggregator>(IObserver<TResult> observer, TAggregator aggregator)
+    : IObserver<T>, IDisposable
     where TAggregator : struct, IAggregator<T, TResult, TAggregator>
 {
     /// <summary>The downstream observer.</summary>
-    private readonly IObserver<TResult> _observer;
+    private readonly IObserver<TResult> _observer = observer;
 
     /// <summary>The running accumulator, reassigned with the next state on each value.</summary>
-    private TAggregator _aggregator;
+    private TAggregator _aggregator = aggregator;
 
     /// <summary>A value indicating whether the observer has terminated.</summary>
     private bool _done;
 
     /// <summary>The upstream subscription.</summary>
     private IDisposable? _subscription;
-
-    /// <summary>Initializes a new instance of the <see cref="AggregateWitness{T,TResult,TAggregator}"/> class.</summary>
-    /// <param name="observer">The downstream observer.</param>
-    /// <param name="aggregator">The seed accumulator.</param>
-    public AggregateWitness(IObserver<TResult> observer, TAggregator aggregator)
-    {
-        _observer = observer;
-        _aggregator = aggregator;
-    }
 
     /// <inheritdoc/>
     public void OnNext(T value)

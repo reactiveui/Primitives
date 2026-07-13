@@ -25,6 +25,13 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
     /// <summary>Divisor used to decide whether a remove triggers compaction (count * 4 &lt; length).</summary>
     private const int ShrinkOccupancyDivisor = 4;
 
+    /// <summary>Factor the backing array's capacity is multiplied by when it overflows.</summary>
+    private const int GrowthFactor = 2;
+
+    /// <summary>Divisor applied to the backing array's capacity when a sparse collection is compacted.
+    /// Compaction only runs when fewer than a quarter of the slots are occupied, so halving always leaves room.</summary>
+    private const int CompactionShrinkDivisor = 2;
+
     /// <summary>The synchronization gate protecting all mutable state in this collection.</summary>
     private readonly Lock _gate = new();
 
@@ -102,7 +109,8 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
             var i = 0;
             foreach (var d in collection)
             {
-                _items[i++] = d;
+                _items[i] = d;
+                i++;
             }
 
             _length = collection.Count;
@@ -118,7 +126,8 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
             }
 
             EnsureCapacityForOneMore();
-            _items![_length++] = d;
+            _items![_length] = d;
+            _length++;
             _count++;
         }
     }
@@ -155,7 +164,8 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
             if (!_isDisposed)
             {
                 EnsureCapacityForOneMore();
-                _items![_length++] = item;
+                _items![_length] = item;
+                _length++;
                 _count++;
                 return default;
             }
@@ -357,7 +367,8 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
             {
                 if (_items[src] is { } item)
                 {
-                    snapshot[dst++] = item;
+                    snapshot[dst] = item;
+                    dst++;
                 }
             }
         }
@@ -383,7 +394,8 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
         {
             if (src[i] is { } item)
             {
-                array[dst++] = item;
+                array[dst] = item;
+                dst++;
             }
         }
     }
@@ -403,7 +415,7 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
             return;
         }
 
-        var grown = new IAsyncDisposable?[_items.Length * 2];
+        var grown = new IAsyncDisposable?[_items.Length * GrowthFactor];
         Array.Copy(_items, grown, _length);
         _items = grown;
     }
@@ -412,13 +424,14 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
     private void CompactInPlace()
     {
         var src = _items!;
-        var fresh = new IAsyncDisposable?[src.Length / 2];
+        var fresh = new IAsyncDisposable?[src.Length / CompactionShrinkDivisor];
         var dst = 0;
         for (var i = 0; i < _length; i++)
         {
             if (src[i] is { } item)
             {
-                fresh[dst++] = item;
+                fresh[dst] = item;
+                dst++;
             }
         }
 

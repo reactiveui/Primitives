@@ -44,7 +44,7 @@ public sealed class FromEventPatternSignal<TEventHandler, TEventArgs> : IObserva
 
         var handler = CreateHandler(observer);
         AddHandler(handler);
-        return Scope.Create(() => RemoveHandler(handler));
+        return Scope.Create((self: this, handler), static s => s.self.RemoveHandler(s.handler));
     }
 
     /// <summary>Creates a supported event delegate for the observer.</summary>
@@ -60,13 +60,15 @@ public sealed class FromEventPatternSignal<TEventHandler, TEventArgs> : IObserva
 
         if (typeof(TEventHandler) == typeof(PropertyChangedEventHandler))
         {
-            PropertyChangedEventHandler typed = (sender, args) => observer.OnNext(new(sender, (TEventArgs)(EventArgs)args));
+            PropertyChangedEventHandler typed = (sender, args) =>
+                observer.OnNext(new(sender, (TEventArgs)(EventArgs)args));
             return (TEventHandler)(object)typed;
         }
 
         if (typeof(TEventHandler) == typeof(NotifyCollectionChangedEventHandler))
         {
-            NotifyCollectionChangedEventHandler typed = (sender, args) => observer.OnNext(new(sender, (TEventArgs)(EventArgs)args));
+            NotifyCollectionChangedEventHandler typed = (sender, args) =>
+                observer.OnNext(new(sender, (TEventArgs)(EventArgs)args));
             return (TEventHandler)(object)typed;
         }
 

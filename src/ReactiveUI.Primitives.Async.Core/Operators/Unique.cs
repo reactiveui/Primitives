@@ -95,7 +95,6 @@ public static partial class SignalAsyncExtensions
 
             return new UniqueBySignal<T, TKey>(@this, keySelector, equalityComparer);
         }
-
     }
 
     /// <summary>
@@ -105,7 +104,8 @@ public static partial class SignalAsyncExtensions
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     /// <param name="comparer">The equality comparer used to detect duplicates.</param>
-    internal sealed class UniqueSignal<T>(IObservableAsync<T> source, IEqualityComparer<T> comparer) : IObservableAsync<T>
+    internal sealed class UniqueSignal<T>(IObservableAsync<T> source, IEqualityComparer<T> comparer)
+        : IObservableAsync<T>
     {
         /// <inheritdoc/>
         async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(

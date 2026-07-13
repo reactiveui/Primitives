@@ -46,6 +46,11 @@ internal sealed class LoopSignal<T> : IRequireCurrentThread<T>
     /// <param name="observer">The observer value.</param>
     /// <param name="cancel">The cancel value.</param>
     /// <returns>The result.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Allocations",
+        "PSH1011",
+        Justification =
+            "No state-taking recursive Schedule overload exists; needs new scheduling API or a rule exclusion.")]
     private IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel) =>
         Sequencer.CurrentThread.Schedule(self =>
         {

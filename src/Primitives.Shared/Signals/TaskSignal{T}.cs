@@ -20,16 +20,15 @@ internal sealed class TaskSignal<T> : ITaskSignal<T>
     private readonly MultipleDisposable _cleanUp = [];
 
     /// <summary>Initializes a new instance of the <see cref="TaskSignal{T}" /> class.</summary>
-    /// <param name="observableFactory">The observable factory.</param>
     /// <param name="sequencer">The sequencer.</param>
     /// <param name="cancellationTokenSource">The cancellation token source.</param>
-    public TaskSignal(Func<ITaskSignal<T>, IObservable<T>> observableFactory, ISequencer? sequencer = null, CancellationTokenSource? cancellationTokenSource = null)
+    /// <remarks>
+    /// Private, so the factory can only ever see a signal that is already built. See <see cref="Create"/>.
+    /// </remarks>
+    private TaskSignal(ISequencer? sequencer, CancellationTokenSource? cancellationTokenSource)
     {
-        ArgumentExceptionHelper.ThrowIfNull(observableFactory);
-
         CancellationTokenSource = cancellationTokenSource ?? new();
         _sequencer = sequencer ?? CurrentThreadSequencer.Instance;
-        Source = observableFactory(this);
     }
 
     /// <summary>Gets or sets the source.</summary>
@@ -53,10 +52,34 @@ internal sealed class TaskSignal<T> : ITaskSignal<T>
     /// <summary>Gets a value indicating whether gets a value that indicates whether the object is disposed.</summary>
     public bool IsDisposed => _cleanUp.IsDisposed;
 
+    /// <summary>Creates a task-backed signal whose source the supplied factory builds.</summary>
+    /// <param name="observableFactory">The observable factory.</param>
+    /// <param name="sequencer">The sequencer.</param>
+    /// <param name="cancellationTokenSource">The cancellation token source.</param>
+    /// <returns>The created signal.</returns>
+    /// <remarks>
+    /// The factory is handed the signal, so the signal has to be whole before it runs. A factory is
+    /// caller-supplied code that may subscribe to, dispose, or stash the signal the moment it receives
+    /// it; from a constructor it would be doing that to an object the runtime had not finished building.
+    /// </remarks>
+    public static TaskSignal<T> Create(
+        Func<ITaskSignal<T>, IObservable<T>> observableFactory,
+        ISequencer? sequencer = null,
+        CancellationTokenSource? cancellationTokenSource = null)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(observableFactory);
+
+        TaskSignal<T> signal = new(sequencer, cancellationTokenSource);
+        signal.Source = observableFactory(signal);
+        return signal;
+    }
+
     /// <summary>Gets the operation canceled.</summary>
     /// <param name="observer">The observer.</param>
     public void GetOperationCanceled(IObserver<Exception> observer) =>
-        CancellationTokenSource?.Token.Register(() => observer.OnNext(new OperationCanceledException())).DisposeWith(_cleanUp);
+        CancellationTokenSource?.Token
+            .Register(static o => ((IObserver<Exception>)o!).OnNext(new OperationCanceledException()), observer)
+            .DisposeWith(_cleanUp);
 
     /// <summary>Subscribes the specified observer.</summary>
     /// <param name="observer">The observer.</param>

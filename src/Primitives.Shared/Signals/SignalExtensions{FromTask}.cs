@@ -105,7 +105,7 @@ public static partial class SignalExtensions
             var registration = cancellationToken.Register(
                 static state => ((TaskCompletionSource<TResult>)state!).TrySetCanceled(),
                 tcs,
-                useSynchronizationContext: false);
+                false);
             var cancellationTask = tcs.Task;
 
             try

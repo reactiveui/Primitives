@@ -9,23 +9,18 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <summary>Resource-scoped signal.</summary>
 /// <typeparam name="TResource">Resource type.</typeparam>
 /// <typeparam name="T">Value type.</typeparam>
-public sealed class UseSignal<TResource, T> : IObservable<T>
+/// <param name="resourceFactory">Resource factory.</param>
+/// <param name="signalFactory">Signal factory.</param>
+public sealed class UseSignal<TResource, T>(
+    Func<TResource> resourceFactory,
+    Func<TResource, IObservable<T>> signalFactory) : IObservable<T>
     where TResource : IDisposable
 {
     /// <summary>Resource factory.</summary>
-    private readonly Func<TResource> _resourceFactory;
+    private readonly Func<TResource> _resourceFactory = resourceFactory;
 
     /// <summary>Signal factory.</summary>
-    private readonly Func<TResource, IObservable<T>> _signalFactory;
-
-    /// <summary>Initializes a new instance of the <see cref="UseSignal{TResource,T}"/> class.</summary>
-    /// <param name="resourceFactory">Resource factory.</param>
-    /// <param name="signalFactory">Signal factory.</param>
-    public UseSignal(Func<TResource> resourceFactory, Func<TResource, IObservable<T>> signalFactory)
-    {
-        _resourceFactory = resourceFactory;
-        _signalFactory = signalFactory;
-    }
+    private readonly Func<TResource, IObservable<T>> _signalFactory = signalFactory;
 
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
@@ -37,7 +32,8 @@ public sealed class UseSignal<TResource, T> : IObservable<T>
         try
         {
             resource = _resourceFactory();
-            source = _signalFactory(resource) ?? throw new InvalidOperationException("The signal factory returned null.");
+            source = _signalFactory(resource) ??
+                     throw new InvalidOperationException("The signal factory returned null.");
         }
         catch (Exception error)
         {
@@ -60,28 +56,21 @@ public sealed class UseSignal<TResource, T> : IObservable<T>
     }
 
     /// <summary>Subscription sink that owns the resource and inner subscription.</summary>
-    private sealed class UseWitness : IObserver<T>, IDisposable
+    /// <param name="observer">Wrapped observer.</param>
+    /// <param name="resource">Owned resource.</param>
+    private sealed class UseWitness(IObserver<T> observer, TResource resource) : IObserver<T>, IDisposable
     {
         /// <summary>Owned resource.</summary>
-        private readonly IDisposable? _resource;
+        private readonly IDisposable? _resource = resource;
 
         /// <summary>Wrapped observer.</summary>
-        private IObserver<T> _observer;
+        private IObserver<T> _observer = observer;
 
         /// <summary>Inner subscription.</summary>
         private IDisposable? _subscription;
 
         /// <summary>Non-zero once stopped.</summary>
         private int _stopped;
-
-        /// <summary>Initializes a new instance of the <see cref="UseWitness"/> class.</summary>
-        /// <param name="observer">Wrapped observer.</param>
-        /// <param name="resource">Owned resource.</param>
-        public UseWitness(IObserver<T> observer, TResource resource)
-        {
-            _observer = observer;
-            _resource = resource;
-        }
 
         /// <summary>Assigns the inner subscription.</summary>
         /// <param name="subscription">Inner subscription.</param>

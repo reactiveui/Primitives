@@ -30,7 +30,7 @@ public sealed class SignalCollectTests
         List<int[]> scheduledBatches = [];
         var completed = 0;
         var subscription = source.Collect(TimeSpan.FromTicks(Second), clock)
-            .Subscribe(batch => scheduledBatches.Add([.. batch]), ex => throw ex, () => completed++);
+            .Subscribe(batch => scheduledBatches.Add([.. batch]), static ex => throw ex, () => completed++);
         source.OnNext(First);
         source.OnNext(Second);
         clock.AdvanceBy(TimeSpan.FromTicks(Second));
@@ -46,20 +46,20 @@ public sealed class SignalCollectTests
         Signal<int> errorSource = new();
         InvalidOperationException expected = new("collect");
         Exception? observed = null;
-        _ = errorSource.Collect(TimeSpan.FromTicks(First), errorClock).Subscribe(_ => { }, ex => observed = ex);
+        _ = errorSource.Collect(TimeSpan.FromTicks(First), errorClock).Subscribe(static _ => { }, ex => observed = ex);
         errorSource.OnNext(First);
         errorSource.OnError(expected);
         errorClock.AdvanceBy(TimeSpan.FromTicks(First));
         await Assert.That(observed!).IsSameReferenceAs(expected);
-        _ = Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Collect(TimeSpan.FromTicks(First)));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.Emit(First).Collect(TimeSpan.FromTicks(First), null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => ((IObservable<int>)null!).Collect(TimeSpan.FromTicks(First)));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.Emit(First).Collect(TimeSpan.FromTicks(First), null!));
         var stoppedGuardCompleted = 0;
-        _ = new ScriptedObservable<int>(observer =>
+        _ = new ScriptedObservable<int>(static observer =>
             {
                 observer.OnCompleted();
                 observer.OnNext(First);
             }).Collect(TimeSpan.FromTicks(First), new VirtualClock())
-            .Subscribe(_ => { }, ex => throw ex, () => stoppedGuardCompleted++);
+            .Subscribe(static _ => { }, static ex => throw ex, () => stoppedGuardCompleted++);
         await Assert.That(stoppedGuardCompleted).IsEqualTo(1);
     }
 }

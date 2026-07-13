@@ -12,44 +12,44 @@
 
   <!-- Alias Lock to the dedicated System.Threading.Lock on .NET 9+, and to a plain object elsewhere. -->
   <ItemGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0'))">
-    <Using Include="System.Threading.Lock" Alias="Lock" />
+    <Using Include="System.Threading.Lock" Alias="Lock"/>
   </ItemGroup>
   <ItemGroup Condition="!$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0'))">
-    <Using Include="System.Object" Alias="Lock" />
+    <Using Include="System.Object" Alias="Lock"/>
   </ItemGroup>
 
   <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
-    <PackageReference Include="Microsoft.Bcl.TimeProvider" />
-    <PackageReference Include="System.Threading.Channels" />
-    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" />
-    <PackageReference Include="System.ComponentModel.Annotations" />
-    <PackageReference Include="System.Buffers" />
-    <PackageReference Include="System.Memory" />
-    <PackageReference Include="System.Collections.Immutable" />
+    <PackageReference Include="Microsoft.Bcl.TimeProvider"/>
+    <PackageReference Include="System.Threading.Channels"/>
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe"/>
+    <PackageReference Include="System.ComponentModel.Annotations"/>
+    <PackageReference Include="System.Buffers"/>
+    <PackageReference Include="System.Memory"/>
+    <PackageReference Include="System.Collections.Immutable"/>
   </ItemGroup>
 
   <!-- The RxVoid/ISequencer-aware shared Extensions source, compiled here under the .Reactive namespace (REACTIVE_SHIM). -->
   <ItemGroup>
-    <Compile Include="..\Primitives.Extensions.Shared\**\*.cs" Link="Primitives.Extensions.Shared\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\Primitives.Extensions.Shared\**\*.cs" Link="Primitives.Extensions.Shared\%(RecursiveDir)%(Filename)%(Extension)"/>
   </ItemGroup>
 
   <!-- Under REACTIVE_SHIM the shared Extensions files shift to ReactiveUI.Primitives.Extensions.Reactive.*; these
        imports let a shifted file reach its shifted siblings across namespaces without per-file usings. -->
   <ItemGroup>
-    <Using Include="ReactiveUI.Primitives.Extensions.Reactive" />
-    <Using Include="ReactiveUI.Primitives.Extensions.Reactive.Internal" />
-    <Using Include="ReactiveUI.Primitives.Extensions.Reactive.Operators" />
+    <Using Include="ReactiveUI.Primitives.Extensions.Reactive"/>
+    <Using Include="ReactiveUI.Primitives.Extensions.Reactive.Internal"/>
+    <Using Include="ReactiveUI.Primitives.Extensions.Reactive.Operators"/>
     <!-- The IScheduler->ISequencer scheduling seam shim (Sequencer + Schedule extensions) lives here. -->
-    <Using Include="ReactiveUI.Primitives.Reactive.Concurrency" />
+    <Using Include="ReactiveUI.Primitives.Reactive.Concurrency"/>
   </ItemGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="ReactiveUI.Primitives.Extensions.Reactive.Tests" />
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Extensions.Reactive.Tests"/>
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ReactiveUI.Primitives.Reactive\ReactiveUI.Primitives.Reactive.csproj" />
-    <ProjectReference Include="..\ReactiveUI.Primitives.Extensions.Core\ReactiveUI.Primitives.Extensions.Core.csproj" />
+    <ProjectReference Include="..\ReactiveUI.Primitives.Reactive\ReactiveUI.Primitives.Reactive.csproj"/>
+    <ProjectReference Include="..\ReactiveUI.Primitives.Extensions.Core\ReactiveUI.Primitives.Extensions.Core.csproj"/>
   </ItemGroup>
 
 </Project>

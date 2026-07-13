@@ -17,6 +17,9 @@ public class StartFuncObservableTests
     /// <summary>Message attached to a thrown <c>Start</c> function.</summary>
     private const string FunctionFailedMessage = "function failed";
 
+    /// <summary>Guard timeout so a hung rendezvous fails this test rather than stalling the run.</summary>
+    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
+
     /// <summary>Verifies that the inline (null-scheduler) overload runs the function, emits the result and completes.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -43,7 +46,7 @@ public class StartFuncObservableTests
         using var sub = ReactiveExtensions.Start(static () => StartResult, Sequencer.Default)
             .Subscribe(results.Add, () => completed.TrySetResult());
 
-        await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await completed.Task.WaitAsync(GuardTimeout);
         await Assert.That(results).IsCollectionEqualTo([StartResult]);
     }
 
@@ -72,7 +75,7 @@ public class StartFuncObservableTests
         using var sub = ReactiveExtensions.Start((Func<int>)(() => throw expected), Sequencer.Default)
             .Subscribe(static _ => { }, ex => faulted.TrySetResult(ex));
 
-        var caught = await faulted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var caught = await faulted.Task.WaitAsync(GuardTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 }

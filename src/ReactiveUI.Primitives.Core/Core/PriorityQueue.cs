@@ -76,10 +76,7 @@ public sealed class PriorityQueue<T>
 
     /// <summary>Removes and returns all queued items in priority order.</summary>
     /// <returns>The queued items in dequeue order.</returns>
-    public T[] DequeueAll()
-    {
-        return DequeueSome(Count);
-    }
+    public T[] DequeueAll() => DequeueSome(Count);
 
     /// <summary>Dequeues items into a caller-provided buffer.</summary>
     /// <param name="destination">The destination buffer.</param>
@@ -108,8 +105,10 @@ public sealed class PriorityQueue<T>
             Array.Copy(temp, _items, temp.Length);
         }
 
-        var index = Count++;
-        _items[index] = new() { Value = item, Id = ++_count };
+        var index = Count;
+        Count++;
+        _count++;
+        _items[index] = new() { Value = item, Id = _count };
         _ = Percolate(index);
     }
 
@@ -193,7 +192,8 @@ public sealed class PriorityQueue<T>
             return true;
         }
 
-        var lastParentIndex = (Count - 2) / HeapBranchingFactor;
+        var lastIndex = Count - 1;
+        var lastParentIndex = (lastIndex - 1) / HeapBranchingFactor;
         for (var i = 0; i <= lastParentIndex; i++)
         {
             var left = (HeapBranchingFactor * i) + LeftChildOffset;
@@ -281,7 +281,8 @@ public sealed class PriorityQueue<T>
     /// <param name="index">Index to remove.</param>
     private void RemoveAt(int index)
     {
-        _items[index] = _items[--Count];
+        Count--;
+        _items[index] = _items[Count];
         _items[Count] = default;
 
         if (Percolate(index) == index)
@@ -333,7 +334,7 @@ public sealed class PriorityQueue<T>
         public static bool operator >=(IndexedItem left, IndexedItem right) => left.CompareTo(right) >= 0;
 
         /// <inheritdoc/>
-        public readonly int CompareTo(IndexedItem other)
+        public int CompareTo(IndexedItem other)
         {
             var c = Value.CompareTo(other.Value);
             if (c == 0)

@@ -42,7 +42,8 @@ public class ConnectableMulticastBenchmarks
     public int SystemReactiveMulticastConnect()
     {
         IntSignalWitness observer = new();
-        var connectable = RxObservable.Range(Start, Count).Multicast<int, int>(new System.Reactive.Subjects.Subject<int>());
+        var connectable = RxObservable.Range(Start, Count)
+            .Multicast<int, int>(new System.Reactive.Subjects.Subject<int>());
         using var subscription = connectable.Subscribe(observer);
         using var connection = connectable.Connect();
         return observer.Total;

@@ -17,7 +17,8 @@ public abstract class SyncLatestCoordinatorBase<TResult> : IAsyncDisposable
     /// <summary>Initializes a new instance of the <see cref="SyncLatestCoordinatorBase{TResult}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="sourceCount">The number of upstream sources (e.g. 2 for arity-2).</param>
-    protected SyncLatestCoordinatorBase(IObserverAsync<TResult> observer, int sourceCount) => Lifecycle = new(observer, sourceCount);
+    protected SyncLatestCoordinatorBase(IObserverAsync<TResult> observer, int sourceCount) =>
+        Lifecycle = new(observer, sourceCount);
 
     /// <summary>Gets the shared subscription lifecycle (gate / dispose CTS / external link / forwarders).</summary>
     internal SyncLatestLifecycle<TResult> Lifecycle { get; }

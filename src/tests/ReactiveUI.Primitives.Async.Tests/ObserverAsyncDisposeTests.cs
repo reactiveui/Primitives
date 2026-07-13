@@ -12,6 +12,9 @@ public sealed class ObserverAsyncDisposeTests
     /// <summary>The value emitted by the hopping source.</summary>
     private const int EmittedValue = 7;
 
+    /// <summary>Maximum time a reentrant dispose may take before it is treated as a deadlock.</summary>
+    private static readonly TimeSpan DeadlockTimeout = TimeSpan.FromSeconds(5);
+
     /// <summary>Verifies the reentrant dispose path lets an observer dispose itself from within its own in-flight
     /// notification without deadlocking, even after the notification continuation has hopped to a different thread.</summary>
     /// <returns>A task that completes when disposal finishes; faults on timeout if a self-join deadlock occurs.</returns>
@@ -20,7 +23,7 @@ public sealed class ObserverAsyncDisposeTests
     {
         SelfDisposingObserver observer = new();
 
-        await observer.OnNextAsync(1, CancellationToken.None).AsTask().WaitAsync(TimeSpan.FromSeconds(5));
+        await observer.OnNextAsync(1, CancellationToken.None).AsTask().WaitAsync(DeadlockTimeout);
 
         await Assert.That(observer.HasDisposed).IsTrue();
     }
@@ -31,14 +34,14 @@ public sealed class ObserverAsyncDisposeTests
     [Test]
     public async Task WhenFirstAsyncResolvesDuringHoppedNotification_ThenCompletes()
     {
-        var source = SignalAsync.Create<int>(async (observer, _) =>
+        var source = SignalAsync.Create<int>(static async (observer, _) =>
         {
             await Task.Yield();
             await observer.OnNextAsync(EmittedValue, CancellationToken.None).ConfigureAwait(false);
             return DisposableAsync.Empty;
         });
 
-        var value = await source.FirstAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5));
+        var value = await source.FirstAsync().AsTask().WaitAsync(DeadlockTimeout);
 
         await Assert.That(value).IsEqualTo(EmittedValue);
     }

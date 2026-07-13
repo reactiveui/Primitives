@@ -3,19 +3,23 @@
 // See the LICENSE file in the project root for full license information.
 
 // Polyfill implementation adapted from SimonCropp/Polyfill (https://github.com/SimonCropp/Polyfill).
+
 #if !NET5_0_OR_GREATER
 using System.Diagnostics.CodeAnalysis;
 
 namespace System.Threading.Tasks;
 
 /// <summary>Polyfill for the non-generic <see cref="TaskCompletionSource"/> introduced in .NET 5, backed by a <see cref="TaskCompletionSource{TResult}"/>.</summary>
-[SuppressMessage("Performance", "CA1812", Justification = "Broadcast polyfill; not instantiated in every consuming leaf.")]
+[SuppressMessage("Performance", "CA1812", Justification =
+    "Broadcast polyfill; not instantiated in every consuming leaf.")]
 internal sealed class TaskCompletionSource
 {
     /// <summary>The underlying generic completion source that backs this non-generic facade.</summary>
     private readonly TaskCompletionSource<bool> _inner;
 
     /// <summary>Initializes a new instance of the <see cref="TaskCompletionSource"/> class.</summary>
+    [SuppressMessage("Concurrency", "PSH1302", Justification =
+        "BCL-parity polyfill; must match the framework ctor's TaskCreationOptions.None default, not force async continuations.")]
     public TaskCompletionSource() => _inner = new();
 
     /// <summary>Transitions the underlying task to the <see cref="TaskStatus.RanToCompletion"/> state.</summary>

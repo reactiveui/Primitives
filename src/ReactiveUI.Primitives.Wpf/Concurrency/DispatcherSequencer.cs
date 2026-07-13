@@ -70,7 +70,8 @@ public sealed class DispatcherSequencer : ISequencer
     /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
     private void ScheduleDelayed(IWorkItem item, long dueTimestamp)
     {
-        DispatcherTimer timer = new(Priority, Dispatcher) { Interval = DispatchSequencerState.DelayUntil(dueTimestamp) };
+        DispatcherTimer timer =
+            new(Priority, Dispatcher) { Interval = DispatchSequencerState.DelayUntil(dueTimestamp) };
         timer.Tick += (_, _) =>
         {
             timer.Stop();

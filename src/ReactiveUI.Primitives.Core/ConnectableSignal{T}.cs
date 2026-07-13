@@ -31,7 +31,10 @@ public sealed class ConnectableSignal<T> : IObservable<T>
     /// <summary>Initializes a new instance of the <see cref="ConnectableSignal{T}"/> class.</summary>
     /// <param name="source">The cold or hot source sequence.</param>
     /// <param name="hub">The multicast hub.</param>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0001:Simplify Names", Justification = "The argument validation uses ArgumentExceptionHelper")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Style",
+        "IDE0001:Simplify Names",
+        Justification = "The argument validation uses ArgumentExceptionHelper")]
     public ConnectableSignal(IObservable<T> source, ISignal<T> hub)
     {
         _source = source ?? throw new ArgumentNullException(nameof(source));
@@ -107,35 +110,29 @@ public sealed class ConnectableSignal<T> : IObservable<T>
     }
 
     /// <summary>Disconnect handle for an active source connection.</summary>
-    private sealed class Connection : IDisposable
+    /// <param name="parent">The owning connectable signal.</param>
+    /// <param name="sourceSubscription">The source subscription feeding the hub.</param>
+    private sealed class Connection(ConnectableSignal<T> parent, IDisposable sourceSubscription) : IDisposable
     {
         /// <summary>The owning connectable signal.</summary>
-        private readonly ConnectableSignal<T> _parent;
+        private readonly ConnectableSignal<T> _parent = parent;
 
         /// <summary>The source subscription feeding the hub; nulled once on dispose.</summary>
-        private IDisposable? _sourceSubscription;
-
-        /// <summary>Initializes a new instance of the <see cref="Connection"/> class.</summary>
-        /// <param name="parent">The owning connectable signal.</param>
-        /// <param name="sourceSubscription">The source subscription feeding the hub.</param>
-        public Connection(ConnectableSignal<T> parent, IDisposable sourceSubscription)
-        {
-            _parent = parent;
-            _sourceSubscription = sourceSubscription;
-        }
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "Disposed via the Interlocked.Exchange'd local in Dispose.")]
+        private IDisposable? _sourceSubscription = sourceSubscription;
 
         /// <inheritdoc/>
         public void Dispose()
         {
-            var sourceSubscription = Interlocked.Exchange(ref _sourceSubscription, null);
-            if (sourceSubscription is null)
+            var subscription = Interlocked.Exchange(ref _sourceSubscription, null);
+            if (subscription is null)
             {
                 return;
             }
 
             lock (_parent._gate)
             {
-                sourceSubscription.Dispose();
+                subscription.Dispose();
                 if (_parent._connection is { Value: var activeConnection } && ReferenceEquals(activeConnection, this))
                 {
                     _parent._connection = null;

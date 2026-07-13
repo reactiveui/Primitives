@@ -66,7 +66,7 @@ public partial class CombiningOperatorTests
         var sub = await outer.Values
             .Merge()
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 (ex, _) =>
                 {
                     errors.Add(ex);
@@ -99,6 +99,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeSignalDisposedBeforeInnerEmission_ThenRelayNextAsyncReturns()
     {
+        const int WaitTimeoutSeconds = 5;
         var source = Signal.Create<int>();
         var inner = Signal.Create<IObservableAsync<int>>();
         List<int> items = [];
@@ -124,7 +125,7 @@ public partial class CombiningOperatorTests
 
         await AsyncTestHelpers.WaitForConditionAsync(
             () => completionResult is not null,
-            TimeSpan.FromSeconds(5));
+            TimeSpan.FromSeconds(WaitTimeoutSeconds));
 
         // After dispose, forwarding should be a no-op
         await source.OnNextAsync(Sentinel42, CancellationToken.None);
@@ -227,7 +228,7 @@ public partial class CombiningOperatorTests
         var sub = await outerSource
             .Merge()
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 (ex, _) =>
                 {
                     lock (_gate)
@@ -266,6 +267,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeSignalOfSignalsDisposedWhileGateHeld_ThenRelayNextAsyncReturnsPostGate()
     {
+        const int SecondEmissionValue = 2;
         DirectSource<int> innerSource = new();
         DirectSource<IObservableAsync<int>> outerSource = new();
         List<int> items = [];
@@ -307,7 +309,7 @@ public partial class CombiningOperatorTests
         {
             try
             {
-                await innerSource.EmitNext(2, CancellationToken.None);
+                await innerSource.EmitNext(SecondEmissionValue, CancellationToken.None);
             }
             catch (OperationCanceledException)
             {
@@ -436,7 +438,7 @@ public partial class CombiningOperatorTests
         List<Exception> errors = [];
 
         var sub = await outer.Values.Merge().SubscribeAsync(
-            (_, _) => default,
+            static (_, _) => default,
             (ex, _) =>
             {
                 errors.Add(ex);
@@ -499,6 +501,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeOfSignalsDisposedDuringEmission_ThenDropsSubsequentValues()
     {
+        const int WaitTimeoutSeconds = 5;
         DirectSource<IObservableAsync<int>> outerSource = new();
         DirectSource<int> innerSource = new();
         List<int> results = [];
@@ -518,7 +521,7 @@ public partial class CombiningOperatorTests
 
         await AsyncTestHelpers.WaitForConditionAsync(
             () => results.Count >= 1,
-            TimeSpan.FromSeconds(5));
+            TimeSpan.FromSeconds(WaitTimeoutSeconds));
 
         await sub.DisposeAsync();
 
@@ -536,6 +539,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeOfSignalsDisposedDuringErrorResume_ThenDropsSubsequentErrors()
     {
+        const int WaitTimeoutSeconds = 5;
         DirectSource<IObservableAsync<int>> outerSource = new();
         DirectSource<int> innerSource = new();
         List<Exception> errors = [];
@@ -543,7 +547,7 @@ public partial class CombiningOperatorTests
         var sub = await outerSource
             .Merge()
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 (ex, _) =>
                 {
                     errors.Add(ex);
@@ -555,7 +559,7 @@ public partial class CombiningOperatorTests
 
         await AsyncTestHelpers.WaitForConditionAsync(
             () => errors.Count >= 1,
-            TimeSpan.FromSeconds(5));
+            TimeSpan.FromSeconds(WaitTimeoutSeconds));
 
         await sub.DisposeAsync();
 

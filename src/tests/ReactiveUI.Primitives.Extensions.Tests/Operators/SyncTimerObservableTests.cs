@@ -14,6 +14,9 @@ public class SyncTimerObservableTests
     /// <summary>Number of periods to advance for the idempotent-dispose assertion.</summary>
     private const int IdempotentAdvancePeriods = 3;
 
+    /// <summary>Tick period the shared timer runs at on the virtual clock.</summary>
+    private static readonly TimeSpan TimerPeriod = TimeSpan.FromTicks(100);
+
     /// <summary>Verifies that disposing the middle subscription of three keeps the other two ticking.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -23,18 +26,17 @@ public class SyncTimerObservableTests
         var firstTicks = 0;
         var secondTicks = 0;
         var thirdTicks = 0;
-        var period = TimeSpan.FromTicks(100);
 
-        var timer = ReactiveExtensions.SyncTimer(period, scheduler);
+        var timer = ReactiveExtensions.SyncTimer(TimerPeriod, scheduler);
 
         using var subFirst = timer.Subscribe(_ => firstTicks++);
         var subSecond = timer.Subscribe(_ => secondTicks++);
         using var subThird = timer.Subscribe(_ => thirdTicks++);
 
-        scheduler.AdvanceBy(period.Ticks);
+        scheduler.AdvanceBy(TimerPeriod.Ticks);
         var secondTicksBeforeDispose = secondTicks;
         subSecond.Dispose();
-        scheduler.AdvanceBy(period.Ticks);
+        scheduler.AdvanceBy(TimerPeriod.Ticks);
 
         await Assert.That(firstTicks).IsGreaterThanOrEqualTo(1);
         await Assert.That(thirdTicks).IsGreaterThanOrEqualTo(1);
@@ -48,15 +50,14 @@ public class SyncTimerObservableTests
     {
         VirtualClock scheduler = new();
         var ticks = 0;
-        var period = TimeSpan.FromTicks(100);
 
-        var timer = ReactiveExtensions.SyncTimer(period, scheduler);
+        var timer = ReactiveExtensions.SyncTimer(TimerPeriod, scheduler);
         var sub = timer.Subscribe(_ => ticks++);
 
         sub.Dispose();
         sub.Dispose();
 
-        scheduler.AdvanceBy(period.Ticks * IdempotentAdvancePeriods);
+        scheduler.AdvanceBy(TimerPeriod.Ticks * IdempotentAdvancePeriods);
 
         await Assert.That(ticks).IsEqualTo(0);
     }

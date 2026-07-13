@@ -128,8 +128,8 @@ public class DisposableTests
     [Test]
     public async Task MultipleDisposableCountReflectsContents()
     {
-        ActionDisposable first = new(() => { });
-        ActionDisposable second = new(() => { });
+        ActionDisposable first = new(static () => { });
+        ActionDisposable second = new(static () => { });
         IDisposable[] items = [first, second];
         MultipleDisposable disposable = [.. items];
         await Assert.That(disposable.Count).IsEqualTo(items.Length);
@@ -144,8 +144,8 @@ public class DisposableTests
     [Test]
     public async Task MultipleDisposableSupportsCollectionInitializer()
     {
-        ActionDisposable first = new(() => { });
-        ActionDisposable second = new(() => { });
+        ActionDisposable first = new(static () => { });
+        ActionDisposable second = new(static () => { });
         IDisposable[] items = [first, second];
         MultipleDisposable disposable = [.. items];
         await Assert.That(disposable.Count).IsEqualTo(items.Length);
@@ -159,8 +159,8 @@ public class DisposableTests
     [Test]
     public async Task MultipleDisposableContainsReportsMembership()
     {
-        ActionDisposable tracked = new(() => { });
-        ActionDisposable untracked = new(() => { });
+        ActionDisposable tracked = new(static () => { });
+        ActionDisposable untracked = new(static () => { });
         MultipleDisposable disposable = [tracked];
         await Assert.That(disposable.Contains(tracked)).IsTrue();
         await Assert.That(disposable.Contains(untracked)).IsFalse();
@@ -195,8 +195,8 @@ public class DisposableTests
     [Test]
     public async Task MultipleDisposableEnumeratesAndCopies()
     {
-        ActionDisposable first = new(() => { });
-        ActionDisposable second = new(() => { });
+        ActionDisposable first = new(static () => { });
+        ActionDisposable second = new(static () => { });
         MultipleDisposable disposable = new(first, second);
         var enumeratedCount = 0;
         var sawFirst = false;
@@ -244,7 +244,7 @@ public class DisposableTests
         var array = new IDisposable[disposable.Count];
         disposable.CopyTo(array, 0);
         await Assert.That(array.Length).IsEqualTo(items.Length);
-        ActionDisposable missing = new(() => { });
+        ActionDisposable missing = new(static () => { });
         await Assert.That(disposable.Contains(items[0])).IsTrue();
         await Assert.That(disposable.Contains(items[^1])).IsTrue();
         await Assert.That(disposable.Contains(missing)).IsFalse();
@@ -272,8 +272,8 @@ public class DisposableTests
     [Test]
     public async Task MultipleDisposableNonGenericEnumeration()
     {
-        ActionDisposable first = new(() => { });
-        ActionDisposable second = new(() => { });
+        ActionDisposable first = new(static () => { });
+        ActionDisposable second = new(static () => { });
         MultipleDisposable disposable = [first, second];
         var count = 0;
         foreach (var _ in (System.Collections.IEnumerable)disposable)
@@ -292,7 +292,7 @@ public class DisposableTests
         MultipleDisposable disposable = [];
         disposable.Dispose();
         await Assert.That(disposable.Count).IsEqualTo(0);
-        await Assert.That(disposable.Contains(new ActionDisposable(() => { }))).IsFalse();
+        await Assert.That(disposable.Contains(new ActionDisposable(static () => { }))).IsFalse();
         var enumeratedAfterDispose = 0;
         foreach (var _ in disposable)
         {

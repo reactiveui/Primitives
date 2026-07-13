@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Collections.Concurrent;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Signals;
@@ -40,10 +41,8 @@ public sealed class ScheduledSignalTests
     /// <summary>Constructor validates the scheduler argument.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task ConstructorRejectsNullScheduler()
-    {
-        await Assert.That(() => new ScheduledSignal<int>(null!)).ThrowsExactly<ArgumentNullException>();
-    }
+    public async Task ConstructorRejectsNullScheduler() => await Assert.That(static () => new ScheduledSignal<int>(null!))
+        .ThrowsExactly<ArgumentNullException>();
 
     /// <summary>A signal without a default observer schedules values and completion for subscribers.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
@@ -155,10 +154,12 @@ public sealed class ScheduledSignalTests
         await Assert.That(signal.IsDisposed).IsTrue();
         await Assert.That(signal.HasObservers).IsFalse();
         await Assert.That(defaultObserver.Values.Length).IsEqualTo(0);
-        await Assert.That(() => signal.Subscribe(new RecordingObserver<int>())).ThrowsExactly<ObjectDisposedException>();
+        await Assert.That(() => signal.Subscribe(new RecordingObserver<int>()))
+            .ThrowsExactly<ObjectDisposedException>();
         await Assert.That(() => signal.OnNext(FirstValue)).ThrowsExactly<ObjectDisposedException>();
         await Assert.That(signal.OnCompleted).ThrowsExactly<ObjectDisposedException>();
-        await Assert.That(() => signal.OnError(new InvalidOperationException())).ThrowsExactly<ObjectDisposedException>();
+        await Assert.That(() => signal.OnError(new InvalidOperationException()))
+            .ThrowsExactly<ObjectDisposedException>();
     }
 
     /// <summary>The protected dispose path marks the signal disposed when managed cleanup is not requested.</summary>
@@ -184,7 +185,8 @@ public sealed class ScheduledSignalTests
         using var signal = new ScheduledSignal<int>(Sequencer.Immediate, defaultObserver);
         signal.OnCompleted();
 
-        var exception = await Assert.That(() => signal.Subscribe(new ThrowingTerminalObserver<int>())).ThrowsExactly<InvalidOperationException>();
+        var exception = await Assert.That(() => signal.Subscribe(new ThrowingTerminalObserver<int>()))
+            .ThrowsExactly<InvalidOperationException>();
 
         await Assert.That(exception!.Message).IsEqualTo(TerminalThrowMessage);
         await Assert.That(defaultObserver.Completed).IsEqualTo(DefaultObserverTerminalReplayCount);
@@ -375,6 +377,6 @@ public sealed class ScheduledSignalTests
         }
 
         /// <summary>Invokes the protected dispose overload without managed cleanup.</summary>
-        public void DisposeWithoutManagedCleanup() => Dispose(disposing: false);
+        public void DisposeWithoutManagedCleanup() => Dispose(false);
     }
 }

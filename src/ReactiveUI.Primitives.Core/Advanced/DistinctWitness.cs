@@ -6,25 +6,18 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Sink that forwards the first occurrence of each value.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-public sealed class DistinctWitness<T> : IObserver<T>, IDisposable
+/// <param name="observer">The downstream observer.</param>
+/// <param name="seen">The set used to track already-observed values.</param>
+public sealed class DistinctWitness<T>(IObserver<T> observer, HashSet<T> seen) : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>
-    private readonly IObserver<T> _observer;
+    private readonly IObserver<T> _observer = observer;
 
     /// <summary>The set of values already observed.</summary>
-    private readonly HashSet<T> _seen;
+    private readonly HashSet<T> _seen = seen;
 
     /// <summary>The upstream subscription.</summary>
     private IDisposable? _subscription;
-
-    /// <summary>Initializes a new instance of the <see cref="DistinctWitness{T}"/> class.</summary>
-    /// <param name="observer">The downstream observer.</param>
-    /// <param name="seen">The set used to track already-observed values.</param>
-    public DistinctWitness(IObserver<T> observer, HashSet<T> seen)
-    {
-        _observer = observer;
-        _seen = seen;
-    }
 
     /// <inheritdoc/>
     public void OnNext(T value)

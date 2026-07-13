@@ -12,22 +12,15 @@ namespace ReactiveUI.Primitives.Advanced;
 /// Dedicated signal for the interval timer factory (<c>Every</c>), replacing the self-referencing
 /// <c>CreateSafe</c> closure with a coordinator that reschedules itself through a method group.
 /// </summary>
-internal sealed class EverySignal : IRequireCurrentThread<long>
+/// <param name="period">The interval between ticks.</param>
+/// <param name="scheduler">The sequencer used to schedule ticks.</param>
+internal sealed class EverySignal(TimeSpan period, ISequencer scheduler) : IRequireCurrentThread<long>
 {
     /// <summary>The interval between ticks.</summary>
-    private readonly TimeSpan _period;
+    private readonly TimeSpan _period = period;
 
     /// <summary>The sequencer used to schedule ticks.</summary>
-    private readonly ISequencer _scheduler;
-
-    /// <summary>Initializes a new instance of the <see cref="EverySignal"/> class.</summary>
-    /// <param name="period">The interval between ticks.</param>
-    /// <param name="scheduler">The sequencer used to schedule ticks.</param>
-    internal EverySignal(TimeSpan period, ISequencer scheduler)
-    {
-        _period = period;
-        _scheduler = scheduler;
-    }
+    private readonly ISequencer _scheduler = scheduler;
 
     /// <inheritdoc/>
     public bool IsRequiredSubscribeOnCurrentThread() => _scheduler == Sequencer.CurrentThread;
@@ -44,7 +37,13 @@ internal sealed class EverySignal : IRequireCurrentThread<long>
         }
 
         SingleDisposable subscription = new();
-        _ = Sequencer.CurrentThread.Schedule(() => subscription.Create(coordinator.Run()));
+        _ = Sequencer.CurrentThread.Schedule(
+            (subscription, coordinator),
+            static (_, s) =>
+            {
+                s.subscription.Create(s.coordinator.Run());
+                return EmptyDisposable.Instance;
+            });
         return subscription;
     }
 
@@ -98,7 +97,9 @@ internal sealed class EverySignal : IRequireCurrentThread<long>
         /// <summary>Emits the current tick and reschedules unless cancelled.</summary>
         private void Tick()
         {
-            _observer.OnNext(_tick++);
+            var tick = _tick;
+            _tick++;
+            _observer.OnNext(tick);
             if (_slot.IsDisposed)
             {
                 return;

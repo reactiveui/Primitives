@@ -22,7 +22,7 @@ public partial class CombineLatestOperatorTests
 
         List<int> results = [];
         await using var sub = await s1.Values
-            .CombineLatest(s2.Values, s3.Values, s4.Values, (a, b, c, d) => a + b + c + d)
+            .CombineLatest(s2.Values, s3.Values, s4.Values, static (a, b, c, d) => a + b + c + d)
             .SubscribeAsync(
                 (x, _) =>
                 {
@@ -51,7 +51,7 @@ public partial class CombineLatestOperatorTests
     {
         const int ValueMultiplier = 10;
         const int ExpectedSum = 150;
-        var signals = Enumerable.Range(0, FiveSources).Select(_ => Signal.Create<int>()).ToList();
+        var signals = Enumerable.Range(0, FiveSources).Select(static _ => Signal.Create<int>()).ToList();
 
         List<int> results = [];
         await using var sub = await signals[0].Values
@@ -60,7 +60,7 @@ public partial class CombineLatestOperatorTests
                 signals[Source2Index].Values,
                 signals[Source3Index].Values,
                 signals[Source4Index].Values,
-                (a, b, c, d, e) => a + b + c + d + e)
+                static (a, b, c, d, e) => a + b + c + d + e)
             .SubscribeAsync(
                 (x, _) =>
                 {
@@ -88,7 +88,7 @@ public partial class CombineLatestOperatorTests
     public async Task WhenCombineLatestSixSources_ThenCombinesAll()
     {
         const int ExpectedSum = 21;
-        var signals = Enumerable.Range(0, SixSources).Select(_ => Signal.Create<int>()).ToList();
+        var signals = Enumerable.Range(0, SixSources).Select(static _ => Signal.Create<int>()).ToList();
 
         List<int> results = [];
         await using var sub = await signals[0].Values
@@ -98,7 +98,7 @@ public partial class CombineLatestOperatorTests
                 signals[Source3Index].Values,
                 signals[Source4Index].Values,
                 signals[Source5Index].Values,
-                (a, b, c, d, e, f) => a + b + c + d + e + f)
+                static (a, b, c, d, e, f) => a + b + c + d + e + f)
             .SubscribeAsync(
                 (x, _) =>
                 {
@@ -126,7 +126,7 @@ public partial class CombineLatestOperatorTests
     public async Task WhenCombineLatestSevenSources_ThenCombinesAll()
     {
         const int ExpectedSum = 7;
-        var signals = Enumerable.Range(0, SevenSources).Select(_ => Signal.Create<int>()).ToList();
+        var signals = Enumerable.Range(0, SevenSources).Select(static _ => Signal.Create<int>()).ToList();
 
         List<int> results = [];
         await using var sub = await signals[0].Values
@@ -137,7 +137,7 @@ public partial class CombineLatestOperatorTests
                 signals[Source4Index].Values,
                 signals[Source5Index].Values,
                 signals[Source6Index].Values,
-                (a, b, c, d, e, f, g) => a + b + c + d + e + f + g)
+                static (a, b, c, d, e, f, g) => a + b + c + d + e + f + g)
             .SubscribeAsync(
                 (x, _) =>
                 {
@@ -170,7 +170,7 @@ public partial class CombineLatestOperatorTests
     public async Task WhenCombineLatestEightSources_ThenCombinesAll()
     {
         const int ExpectedSum = 8;
-        var signals = Enumerable.Range(0, EightSources).Select(_ => Signal.Create<int>()).ToList();
+        var signals = Enumerable.Range(0, EightSources).Select(static _ => Signal.Create<int>()).ToList();
 
         List<int> results = [];
         await using var sub = await signals[0].Values
@@ -182,7 +182,7 @@ public partial class CombineLatestOperatorTests
                 signals[Source5Index].Values,
                 signals[Source6Index].Values,
                 signals[Source7Index].Values,
-                (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h)
+                static (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h)
             .SubscribeAsync(
                 (x, _) =>
                 {

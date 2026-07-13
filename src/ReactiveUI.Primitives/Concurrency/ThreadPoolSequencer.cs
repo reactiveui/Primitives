@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using Timer = System.Threading.Timer;
 
@@ -28,8 +29,17 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
     private readonly Timer _timer;
 
     /// <summary>Initializes a new instance of the <see cref="ThreadPoolSequencer"/> class.</summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Correctness",
+        "SST2403:Do not let 'this' escape from a constructor",
+        Justification =
+            "The timer is created disarmed, so nothing can call back into it until Schedule arms it after construction.")]
     private ThreadPoolSequencer() =>
-        _timer = new(static state => ((ThreadPoolSequencer)state!).RunDue(), this, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+        _timer = new(
+            static state => ((ThreadPoolSequencer)state!).RunDue(),
+            this,
+            Timeout.InfiniteTimeSpan,
+            Timeout.InfiniteTimeSpan);
 
     /// <summary>Gets the scheduler's notion of current time.</summary>
     public DateTimeOffset Now => Sequencer.Now;
@@ -187,33 +197,32 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
 
     /// <summary>Compatibility work item retained for coverage and direct reflection tests.</summary>
     /// <typeparam name="TState">The scheduled state type.</typeparam>
-    internal sealed class ScheduledWorkItem<TState> : IWorkItem, IsDisposed
+    /// <param name="owner">The owning sequencer.</param>
+    /// <param name="state">The scheduled state.</param>
+    /// <param name="action">The scheduled action.</param>
+    internal sealed class ScheduledWorkItem<TState>(
+        ThreadPoolSequencer owner,
+        TState state,
+        Func<ISequencer, TState, IDisposable> action) : IWorkItem, IsDisposed
     {
         /// <summary>Owning sequencer.</summary>
-        private readonly ThreadPoolSequencer _owner;
+        [SuppressMessage(
+            "Usage",
+            "CA2213:Disposable fields should be disposed",
+            Justification = "_owner is the sequencer that queued this work item, not a resource it owns; disposing it would shut the sequencer down when one item completes.")]
+        private readonly ThreadPoolSequencer _owner = owner;
 
         /// <summary>Scheduled state.</summary>
-        private readonly TState _state;
+        private readonly TState _state = state;
 
         /// <summary>Scheduled action.</summary>
-        private readonly Func<ISequencer, TState, IDisposable> _action;
+        private readonly Func<ISequencer, TState, IDisposable> _action = action;
 
         /// <summary>Disposable returned by the scheduled action after it starts.</summary>
         private IDisposable? _disposable;
 
         /// <summary>Tracks cancellation.</summary>
         private int _isDisposed;
-
-        /// <summary>Initializes a new instance of the <see cref="ScheduledWorkItem{TState}"/> class.</summary>
-        /// <param name="owner">The owning sequencer.</param>
-        /// <param name="state">The scheduled state.</param>
-        /// <param name="action">The scheduled action.</param>
-        internal ScheduledWorkItem(ThreadPoolSequencer owner, TState state, Func<ISequencer, TState, IDisposable> action)
-        {
-            _owner = owner;
-            _state = state;
-            _action = action;
-        }
 
         /// <inheritdoc/>
         public bool IsDisposed => Volatile.Read(ref _isDisposed) != 0;
@@ -237,7 +246,8 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
 
         /// <summary>Queues the work item for delayed execution.</summary>
         /// <param name="dueTime">The normalized due time.</param>
-        internal void Queue(TimeSpan dueTime) => _owner.Schedule(this, Sequencer.AddTimestamp(_owner.Timestamp, dueTime));
+        internal void Queue(TimeSpan dueTime) =>
+            _owner.Schedule(this, Sequencer.AddTimestamp(_owner.Timestamp, dueTime));
 
         /// <summary>Runs scheduled work.</summary>
         private void Run()

@@ -2,12 +2,21 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Signals;
 
 /// <summary>Copy-on-write observer broadcaster optimized for zero-allocation single-subscriber delivery.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 public struct Broadcaster<T> : IEquatable<Broadcaster<T>>
 {
+    /// <summary>The starting value the observer hashes are folded into.</summary>
+    private const int ObserverHashSeed = 17;
+
+    /// <summary>The multiplier applied between observer hashes, so order is part of the result.</summary>
+    private const int ObserverHashStep = 31;
+
     /// <summary>Stores either a single observer, an observer array, or <see langword="null"/>.</summary>
     private object? _observers;
 
@@ -160,8 +169,41 @@ public struct Broadcaster<T> : IEquatable<Broadcaster<T>>
         obj is Broadcaster<T> other && Equals(other);
 
     /// <inheritdoc/>
-    public override readonly int GetHashCode() =>
-        _observers is null ? 0 : System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(_observers);
+    /// <remarks>
+    /// The hash is taken over the observers the broadcaster is holding, not over the object it happens to
+    /// hold them in. That keeps it agreeing with <see cref="Equals(Broadcaster{T})"/> — two broadcasters
+    /// sharing a set share its observers — while saying something about the value rather than about which
+    /// array the copy-on-write path last allocated. No observers hashes to zero.
+    /// <para>
+    /// It moves as observers come and go, which is inherent: equality here is the observer set, and the
+    /// set is what changes. A broadcaster is compared, never filed in a hash table.
+    /// </para>
+    /// </remarks>
+    [SuppressMessage(
+        "Maintainability",
+        "SST1482:GetHashCode reads mutable state",
+        Justification = "Equality is the observer set, so the hash must follow it; a Broadcaster is compared, never used as a hash key.")]
+    public override readonly int GetHashCode()
+    {
+        var snapshot = _observers;
+        if (snapshot is IObserver<T> single)
+        {
+            return RuntimeHelpers.GetHashCode(single);
+        }
+
+        if (snapshot is not IObserver<T>[] many)
+        {
+            return 0;
+        }
+
+        var hash = ObserverHashSeed;
+        for (var i = 0; i < many.Length; i++)
+        {
+            hash = unchecked((hash * ObserverHashStep) + RuntimeHelpers.GetHashCode(many[i]));
+        }
+
+        return hash;
+    }
 
     /// <summary>Computes the observer-set value that results from removing an observer.</summary>
     /// <param name="current">The current observer-set snapshot.</param>

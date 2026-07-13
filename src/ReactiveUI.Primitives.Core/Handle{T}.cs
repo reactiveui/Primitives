@@ -9,11 +9,11 @@ namespace ReactiveUI.Primitives;
 public static class Handle<T>
 {
     /// <summary>Callback that ignores its value.</summary>
-    public static readonly Action<T> Ignore = _ => { };
+    public static readonly Action<T> Ignore = static _ => { };
 
     /// <summary>Function that returns its input.</summary>
-    public static readonly Func<T, T> Identity = t => t;
+    public static readonly Func<T, T> Identity = static t => t;
 
     /// <summary>Error callback that throws the supplied exception.</summary>
-    public static readonly Action<Exception, T> Throw = (ex, _) => ex.Throw();
+    public static readonly Action<Exception, T> Throw = static (ex, _) => ex.Throw();
 }

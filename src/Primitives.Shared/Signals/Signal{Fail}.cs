@@ -19,7 +19,8 @@ public static partial class Signal
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Major Code Smell",
         "S4018:Generic methods should provide type parameters",
-        Justification = "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
+        Justification =
+            "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
     public static IObservable<T> Fail<T>(Exception error, ISequencer scheduler) => scheduler == Sequencer.Immediate
         ? new ImmediateThrowSignal<T>(error)
         : new ThrowSignal<T>(error, scheduler);
@@ -31,7 +32,8 @@ public static partial class Signal
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Major Code Smell",
         "S4018:Generic methods should provide type parameters",
-        Justification = "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
+        Justification =
+            "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
     public static IObservable<T> Fail<T>(Exception error) =>
         new ImmediateThrowSignal<T>(error);
 
@@ -49,7 +51,8 @@ public static partial class Signal
     /// <param name="scheduler">The scheduler.</param>
     /// <param name="witness">The witness.</param>
     /// <returns>An Signals.</returns>
-    public static IObservable<T> Fail<T>(Exception error, ISequencer scheduler, T witness) => scheduler == Sequencer.Immediate
-        ? new ImmediateThrowSignal<T>(error)
-        : new ThrowSignal<T>(error, scheduler);
+    public static IObservable<T> Fail<T>(Exception error, ISequencer scheduler, T witness) =>
+        scheduler == Sequencer.Immediate
+            ? new ImmediateThrowSignal<T>(error)
+            : new ThrowSignal<T>(error, scheduler);
 }

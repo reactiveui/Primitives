@@ -56,7 +56,13 @@ public sealed class AfterSignal : IRequireCurrentThread<long>
         }
 
         SingleDisposable subscription = new();
-        _ = Sequencer.CurrentThread.Schedule(() => subscription.Create(Run(observer)));
+        _ = Sequencer.CurrentThread.Schedule(
+            (self: this, subscription, observer),
+            static (_, s) =>
+            {
+                s.subscription.Create(s.self.Run(s.observer));
+                return EmptyDisposable.Instance;
+            });
         return subscription;
     }
 

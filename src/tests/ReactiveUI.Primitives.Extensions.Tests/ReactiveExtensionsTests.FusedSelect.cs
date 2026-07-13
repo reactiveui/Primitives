@@ -26,7 +26,7 @@ public partial class ReactiveExtensionsTests
 
         using var subscription = new[] { 1, SampleValue2, SampleValue3, SampleValue4 }
             .ToObservable()
-            .WhereSelect(static x => x % 2 == 0, static x => $"e{x}")
+            .WhereSelect(static x => x % SampleValue2 == 0, static x => $"e{x}")
             .Subscribe(results.Add);
 
         await Assert.That(results).IsCollectionEqualTo(["e2", "e4"]);
@@ -72,7 +72,7 @@ public partial class ReactiveExtensionsTests
 
         using var subscription = new[] { 1, SampleValue2, SampleValue3, SampleValue4 }
             .ToObservable()
-            .TrySelect(static x => x % 2 == 0 ? $"e{x}" : null)
+            .TrySelect(static x => x % SampleValue2 == 0 ? $"e{x}" : null)
             .Subscribe(results.Add);
 
         await Assert.That(results).IsCollectionEqualTo(["e2", "e4"]);
@@ -117,7 +117,7 @@ public partial class ReactiveExtensionsTests
             results.Add,
             () => completed.TrySetResult());
 
-        await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await completed.Task.WaitAsync(WaitTimeout);
         await Assert.That(results).Count().IsEqualTo(1);
     }
 

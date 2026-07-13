@@ -17,7 +17,7 @@ public sealed class CurrentThreadSequencer : ISequencer
     private const int InitialQueueCapacity = 4;
 
     /// <summary>Singleton holder for the current-thread sequencer.</summary>
-    private static readonly Lazy<CurrentThreadSequencer> StaticInstance = new(() => new());
+    private static readonly Lazy<CurrentThreadSequencer> StaticInstance = new(static () => new());
 
     /// <summary>Tracks whether the current thread is running scheduled work.</summary>
     [ThreadStatic]

@@ -77,7 +77,8 @@ internal static class ReplayLatestSignalAsyncStateHelper
                 observers = state.Observers;
             }
 
-            await SignalAsyncStateHelper.BroadcastOnErrorResumeAsync(kind, observers, error, token).ConfigureAwait(false);
+            await SignalAsyncStateHelper.BroadcastOnErrorResumeAsync(kind, observers, error, token)
+                .ConfigureAwait(false);
         }
         finally
         {

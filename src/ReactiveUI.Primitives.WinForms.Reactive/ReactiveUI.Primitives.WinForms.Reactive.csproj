@@ -11,15 +11,15 @@
 
   <!-- The coalescing IScheduler base shared by every platform .Reactive package. -->
   <ItemGroup>
-    <Compile Include="..\Primitives.Platform.Reactive.Shared\**\*.cs" Link="Primitives.Platform.Reactive.Shared\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\Primitives.Platform.Reactive.Shared\**\*.cs" Link="Primitives.Platform.Reactive.Shared\%(RecursiveDir)%(Filename)%(Extension)"/>
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ReactiveUI.Primitives.Reactive\ReactiveUI.Primitives.Reactive.csproj" />
+    <ProjectReference Include="..\ReactiveUI.Primitives.Reactive\ReactiveUI.Primitives.Reactive.csproj"/>
   </ItemGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="ReactiveUI.Primitives.WinForms.Reactive.Tests" />
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.WinForms.Reactive.Tests"/>
   </ItemGroup>
 
 </Project>

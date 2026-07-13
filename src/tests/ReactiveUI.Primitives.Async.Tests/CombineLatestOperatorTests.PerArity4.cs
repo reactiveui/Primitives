@@ -21,9 +21,9 @@ public partial class CombineLatestOperatorTests
 
         TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await s1.Values
-            .CombineLatest(s2.Values, s3.Values, s4.Values, (a, b, c, d) => a + b + c + d)
+            .CombineLatest(s2.Values, s3.Values, s4.Values, static (a, b, c, d) => a + b + c + d)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null,
                 r =>
                 {
@@ -49,9 +49,9 @@ public partial class CombineLatestOperatorTests
 
         TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await s1.Values
-            .CombineLatest(s2.Values, s3.Values, s4.Values, (a, b, c, d) => a + b + c + d)
+            .CombineLatest(s2.Values, s3.Values, s4.Values, static (a, b, c, d) => a + b + c + d)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null,
                 r =>
                 {
@@ -77,9 +77,9 @@ public partial class CombineLatestOperatorTests
 
         TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await s1.Values
-            .CombineLatest(s2.Values, s3.Values, s4.Values, (a, b, c, d) => a + b + c + d)
+            .CombineLatest(s2.Values, s3.Values, s4.Values, static (a, b, c, d) => a + b + c + d)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null,
                 r =>
                 {
@@ -105,9 +105,9 @@ public partial class CombineLatestOperatorTests
 
         TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await s1.Values
-            .CombineLatest(s2.Values, s3.Values, s4.Values, (a, b, c, d) => a + b + c + d)
+            .CombineLatest(s2.Values, s3.Values, s4.Values, static (a, b, c, d) => a + b + c + d)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null,
                 r =>
                 {
@@ -133,9 +133,9 @@ public partial class CombineLatestOperatorTests
 
         TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await s1.Values
-            .CombineLatest(s2.Values, s3.Values, s4.Values, (a, b, c, d) => a + b + c + d)
+            .CombineLatest(s2.Values, s3.Values, s4.Values, static (a, b, c, d) => a + b + c + d)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null,
                 r =>
                 {
@@ -168,9 +168,9 @@ public partial class CombineLatestOperatorTests
 
         TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await s1.Values
-            .CombineLatest(s2.Values, s3.Values, s4.Values, (a, b, c, d) => a + b + c + d)
+            .CombineLatest(s2.Values, s3.Values, s4.Values, static (a, b, c, d) => a + b + c + d)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null,
                 r =>
                 {
@@ -203,9 +203,9 @@ public partial class CombineLatestOperatorTests
 
         TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await s1.Values
-            .CombineLatest(s2.Values, s3.Values, s4.Values, (a, b, c, d) => a + b + c + d)
+            .CombineLatest(s2.Values, s3.Values, s4.Values, static (a, b, c, d) => a + b + c + d)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null,
                 r =>
                 {
@@ -238,9 +238,9 @@ public partial class CombineLatestOperatorTests
 
         TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await s1.Values
-            .CombineLatest(s2.Values, s3.Values, s4.Values, (a, b, c, d) => a + b + c + d)
+            .CombineLatest(s2.Values, s3.Values, s4.Values, static (a, b, c, d) => a + b + c + d)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null,
                 r =>
                 {
@@ -273,7 +273,7 @@ public partial class CombineLatestOperatorTests
 
         List<int> results = [];
         var sub = await s1.Values
-            .CombineLatest(s2.Values, s3.Values, s4.Values, (a, b, c, d) => a + b + c + d)
+            .CombineLatest(s2.Values, s3.Values, s4.Values, static (a, b, c, d) => a + b + c + d)
             .SubscribeAsync(
                 (x, _) =>
                 {
@@ -281,7 +281,7 @@ public partial class CombineLatestOperatorTests
                     return default;
                 },
                 null,
-                _ => default);
+                static _ => default);
 
         await s1.OnNextAsync(1, CancellationToken.None);
         await s2.OnNextAsync(Source1Value, CancellationToken.None);
@@ -309,11 +309,11 @@ public partial class CombineLatestOperatorTests
         var s4 = Signal.Create<int>();
 
         var sub = await s1.Values
-            .CombineLatest(s2.Values, s3.Values, s4.Values, (a, b, c, d) => a + b + c + d)
+            .CombineLatest(s2.Values, s3.Values, s4.Values, static (a, b, c, d) => a + b + c + d)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null,
-                _ => default);
+                static _ => default);
 
         await sub.DisposeAsync();
 

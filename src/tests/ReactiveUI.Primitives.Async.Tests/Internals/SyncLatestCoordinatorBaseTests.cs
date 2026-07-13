@@ -64,8 +64,10 @@ public class SyncLatestCoordinatorBaseTests
     [Test]
     public async Task WhenDisposeAsync_ThenLifecycleDisposed()
     {
+        const int SourceCount = 2;
+
         CaptureObserverAsync<int> captured = new();
-        TestSubscription subscription = new(captured, 2);
+        TestSubscription subscription = new(captured, SourceCount);
 
         await subscription.DisposeAsync();
         await subscription.DisposeAsync(); // idempotent

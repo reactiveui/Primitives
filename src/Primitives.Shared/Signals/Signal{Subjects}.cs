@@ -18,7 +18,8 @@ public static partial class Signal
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Major Code Smell",
         "S4018:Generic methods should provide type parameters",
-        Justification = "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
+        Justification =
+            "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
     public static ScheduledSignal<T> Scheduled<T>(ISequencer scheduler) =>
         new(scheduler);
 
@@ -35,6 +36,8 @@ public static partial class Signal
     /// <param name="isDelayed">Returns whether notifications are currently delayed.</param>
     /// <param name="flushDistinct">De-duplicates a buffered batch before it is emitted on flush.</param>
     /// <returns>A delayable notification signal.</returns>
-    public static DelayableNotificationSignal<T> Delayable<T>(Func<bool> isDelayed, Func<IList<T>, IEnumerable<T>> flushDistinct) =>
+    public static DelayableNotificationSignal<T> Delayable<T>(
+        Func<bool> isDelayed,
+        Func<IList<T>, IEnumerable<T>> flushDistinct) =>
         new(isDelayed, flushDistinct);
 }

@@ -34,7 +34,9 @@ public sealed class TimerSubscription : TaskSignalSubscription<long>
     private TimeProvider TimeProvider { get; }
 
     /// <inheritdoc/>
-    protected override async ValueTask ExecuteAsyncCore(IObserverAsync<long> observer, CancellationToken cancellationToken)
+    protected override async ValueTask ExecuteAsyncCore(
+        IObserverAsync<long> observer,
+        CancellationToken cancellationToken)
     {
         await SignalAsyncExtensions.DelayAsync(DueTime, TimeProvider, cancellationToken).ConfigureAwait(false);
 
@@ -48,7 +50,9 @@ public sealed class TimerSubscription : TaskSignalSubscription<long>
         long tick = 0;
         while (!cancellationToken.IsCancellationRequested)
         {
-            await observer.OnNextAsync(tick++, cancellationToken).ConfigureAwait(false);
+            var current = tick;
+            tick++;
+            await observer.OnNextAsync(current, cancellationToken).ConfigureAwait(false);
             await SignalAsyncExtensions.DelayAsync(period, TimeProvider, cancellationToken).ConfigureAwait(false);
         }
     }

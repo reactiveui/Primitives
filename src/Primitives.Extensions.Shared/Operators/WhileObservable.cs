@@ -42,38 +42,33 @@ internal sealed class WhileObservable(
     /// Sink that orchestrates the iteration loop, scheduling the next iteration
     /// after each emission and terminating when the predicate becomes false.
     /// </summary>
-    private sealed class WhileSink : IDisposable
+    /// <param name="downstream">The downstream observer.</param>
+    /// <param name="condition">The loop predicate.</param>
+    /// <param name="action">The action invoked per iteration.</param>
+    /// <param name="scheduler">An optional scheduler used per iteration.</param>
+    private sealed class WhileSink(
+        IObserver<RxVoid> downstream,
+        Func<bool> condition,
+        Action action,
+        ISequencer? scheduler) : IDisposable
     {
         /// <summary>The downstream observer.</summary>
-        private readonly IObserver<RxVoid> _downstream;
+        private readonly IObserver<RxVoid> _downstream = downstream;
 
         /// <summary>The loop predicate.</summary>
-        private readonly Func<bool> _condition;
+        private readonly Func<bool> _condition = condition;
 
         /// <summary>The action invoked per iteration.</summary>
-        private readonly Action _action;
+        private readonly Action _action = action;
 
         /// <summary>An optional scheduler used per iteration.</summary>
-        private readonly ISequencer? _scheduler;
+        private readonly ISequencer? _scheduler = scheduler;
 
         /// <summary>The disposable tracking the currently-scheduled iteration.</summary>
         private readonly MutableDisposable _current = new();
 
         /// <summary>Whether the sink has been disposed.</summary>
         private int _disposed;
-
-        /// <summary>Initializes a new instance of the <see cref="WhileSink"/> class.</summary>
-        /// <param name="downstream">The downstream observer.</param>
-        /// <param name="condition">The loop predicate.</param>
-        /// <param name="action">The action invoked per iteration.</param>
-        /// <param name="scheduler">An optional scheduler used per iteration.</param>
-        public WhileSink(IObserver<RxVoid> downstream, Func<bool> condition, Action action, ISequencer? scheduler)
-        {
-            _downstream = downstream;
-            _condition = condition;
-            _action = action;
-            _scheduler = scheduler;
-        }
 
         /// <summary>Starts the loop.</summary>
         public void Run() => Iterate();

@@ -64,7 +64,7 @@ public sealed class CopyOnWriteList<T>
     {
         for (var i = 0; i < Items.Length; ++i)
         {
-            if (Equals(Items[i], value))
+            if (EqualityComparer<T>.Default.Equals(Items[i], value))
             {
                 return i;
             }

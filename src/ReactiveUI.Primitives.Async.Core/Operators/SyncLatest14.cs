@@ -51,6 +51,11 @@ public static partial class SignalAsyncExtensions
             "Major Code Smell",
             "S107:Methods should not have too many parameters",
             Justification = "Has more than 7 parameters - just expected for arity-N CombineLatest operator surface.")]
+        [SuppressMessage(
+            "Maintainability",
+            "SST1472:Signatures should not declare too many parameters",
+            Justification =
+                "An arity-N combinator takes N distinctly-typed sources; a parameter object would need the same N type arguments.")]
         public IObservableAsync<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult>(
             IObservableAsync<T2> src2,
             IObservableAsync<T3> src3,
@@ -107,21 +112,27 @@ public static partial class SignalAsyncExtensions
             "Major Code Smell",
             "S107:Methods should not have too many parameters",
             Justification = "Has more than 7 parameters - just expected for arity-N CombineLatest operator surface.")]
-        public IObservableAsync<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult>(
-            IObservableAsync<T2> src2,
-            IObservableAsync<T3> src3,
-            IObservableAsync<T4> src4,
-            IObservableAsync<T5> src5,
-            IObservableAsync<T6> src6,
-            IObservableAsync<T7> src7,
-            IObservableAsync<T8> src8,
-            IObservableAsync<T9> src9,
-            IObservableAsync<T10> src10,
-            IObservableAsync<T11> src11,
-            IObservableAsync<T12> src12,
-            IObservableAsync<T13> src13,
-            IObservableAsync<T14> src14,
-            Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult> selector) =>
+        [SuppressMessage(
+            "Maintainability",
+            "SST1472:Signatures should not declare too many parameters",
+            Justification =
+                "An arity-N combinator takes N distinctly-typed sources; a parameter object would need the same N type arguments.")]
+        public IObservableAsync<TResult>
+            CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult>(
+                IObservableAsync<T2> src2,
+                IObservableAsync<T3> src3,
+                IObservableAsync<T4> src4,
+                IObservableAsync<T5> src5,
+                IObservableAsync<T6> src6,
+                IObservableAsync<T7> src7,
+                IObservableAsync<T8> src8,
+                IObservableAsync<T9> src9,
+                IObservableAsync<T10> src10,
+                IObservableAsync<T11> src11,
+                IObservableAsync<T12> src12,
+                IObservableAsync<T13> src13,
+                IObservableAsync<T14> src14,
+                Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult> selector) =>
             new SyncLatest14Signal<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult>(
                 new(src1, src2, src3, src4, src5, src6, src7, src8, src9, src10, src11, src12, src13, src14),
                 selector);

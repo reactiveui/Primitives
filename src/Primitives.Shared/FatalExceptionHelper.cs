@@ -22,6 +22,6 @@ internal static class FatalExceptionHelper
             BadImageFormatException or
             CannotUnloadAppDomainException or
             InvalidProgramException or
-            System.Threading.ThreadAbortException or
-            (OutOfMemoryException and not InsufficientMemoryException);
+            ThreadAbortException or
+            OutOfMemoryException and not InsufficientMemoryException;
 }

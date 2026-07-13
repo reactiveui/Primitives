@@ -52,7 +52,7 @@ public class OperatorPassThroughBenchmarks
     public int R3TapRange()
     {
         IntR3Witness observer = new();
-        using var subscription = R3.ObservableExtensions.Do(R3.Observable.Range(1, Count), onNext: static _ => { })
+        using var subscription = R3.ObservableExtensions.Do(R3.Observable.Range(1, Count), static _ => { })
             .Subscribe(observer);
         return observer.Total;
     }
@@ -83,7 +83,8 @@ public class OperatorPassThroughBenchmarks
     public int R3IgnoreValuesRange()
     {
         IntR3Witness observer = new();
-        using var subscription = R3.ObservableExtensions.IgnoreElements(R3.Observable.Range(1, Count)).Subscribe(observer);
+        using var subscription =
+            R3.ObservableExtensions.IgnoreElements(R3.Observable.Range(1, Count)).Subscribe(observer);
         return observer.CompletionCount;
     }
 
@@ -133,7 +134,8 @@ public class OperatorPassThroughBenchmarks
     public int SystemReactiveDematerializeRange()
     {
         IntSignalWitness observer = new();
-        using var subscription = RxObservable.Dematerialize(RxObservable.Materialize(RxObservable.Range(1, Count))).Subscribe(observer);
+        using var subscription = RxObservable.Dematerialize(RxObservable.Materialize(RxObservable.Range(1, Count)))
+            .Subscribe(observer);
         return observer.Total;
     }
 
@@ -165,7 +167,8 @@ public class OperatorPassThroughBenchmarks
     public int SystemReactiveSubscribeOnImmediate()
     {
         IntSignalWitness observer = new();
-        using var subscription = RxObservable.Range(1, Count).SubscribeOn(ImmediateScheduler.Instance).Subscribe(observer);
+        using var subscription =
+            RxObservable.Range(1, Count).SubscribeOn(ImmediateScheduler.Instance).Subscribe(observer);
         return observer.Total;
     }
 

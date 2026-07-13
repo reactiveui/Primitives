@@ -51,7 +51,7 @@ public static class FirstAsValueTaskHelper<T>
         public ValueTask<T> Begin(IObservable<T> source)
         {
             _core.Reset();
-            _settled = 0;
+            Volatile.Write(ref _settled, 0);
             _subscription = source.Subscribe(this);
             return new(this, _core.Version);
         }

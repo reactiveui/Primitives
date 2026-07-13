@@ -11,6 +11,9 @@ namespace ReactiveUI.Primitives.Async.Tests;
 [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "TUnit requires instance methods")]
 public class ParityOperatorTests
 {
+    /// <summary>Seconds a test waits for a notification before giving up.</summary>
+    private const int WaitTimeoutSeconds = 5;
+
     /// <summary>Sentinel value (42) used by tests.</summary>
     private const int CanonicalAnswer = 42;
 
@@ -37,6 +40,12 @@ public class ParityOperatorTests
 
     /// <summary>Hoisted source array used by tests (was inline literal).</summary>
     private static readonly int[] Sequence42 = [42];
+
+    /// <summary>Window used by the throttle and debounce timing tests.</summary>
+    private static readonly TimeSpan ThrottleWindow = TimeSpan.FromMilliseconds(50);
+
+    /// <summary>Maximum time a test waits for an emission to arrive.</summary>
+    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(WaitTimeoutSeconds);
 
     /// <summary>Tests that WhereIsNotNull filters null values and narrows the result type.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
@@ -176,10 +185,6 @@ public class ParityOperatorTests
     /// <summary>Tests that Partition splits a source into true and false branches.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Usage",
-        "CA1849:Await task instead of getting result",
-        Justification = "Asserting on task results after completion.")]
     public async Task WhenPartition_ThenSourceIsSplitIntoBranches()
     {
         const int EvenDivisor = 2;
@@ -203,10 +208,11 @@ public class ParityOperatorTests
         await signal.OnNextAsync(Emit6, CancellationToken.None);
         await signal.OnCompletedAsync(Result.Success);
 
-        await Task.WhenAll(trueTask, falseTask);
+        var trueValues = await trueTask;
+        var falseValues = await falseTask;
 
-        await Assert.That(trueTask.Result).IsCollectionEqualTo([Emit2, Emit4, Emit6]);
-        await Assert.That(falseTask.Result).IsCollectionEqualTo([1, Emit3, Emit5]);
+        await Assert.That(trueValues).IsCollectionEqualTo([Emit2, Emit4, Emit6]);
+        await Assert.That(falseValues).IsCollectionEqualTo([1, Emit3, Emit5]);
     }
 
     /// <summary>Tests that DoOnSubscribe runs for each subscription.</summary>
@@ -245,7 +251,7 @@ public class ParityOperatorTests
     [Test]
     public async Task WhenStartFunction_ThenPublishesFunctionResult()
     {
-        var result = await AsyncObs.Start(() => CanonicalAnswer).FirstAsync();
+        var result = await AsyncObs.Start(static () => CanonicalAnswer).FirstAsync();
 
         await Assert.That(result).IsEqualTo(CanonicalAnswer);
     }
@@ -525,9 +531,11 @@ public class ParityOperatorTests
     public async Task WhenWaitUntil_ThenEmitsFirstMatchingValue()
     {
         const int FirstMatch = 4;
+        const int MatchThreshold = 3;
+
         var result = await Sequence12345
             .ToAsyncSignal()
-            .WaitUntil(static v => v > 3)
+            .WaitUntil(static v => v > MatchThreshold)
             .ToListAsync();
 
         await Assert.That(result).IsCollectionEqualTo([FirstMatch]);
@@ -663,7 +671,7 @@ public class ParityOperatorTests
         TaskCompletionSource firstReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values
-            .ThrottleDistinct(TimeSpan.FromMilliseconds(50))
+            .ThrottleDistinct(ThrottleWindow)
             .SubscribeAsync(
                 (value, _) =>
                 {
@@ -680,7 +688,7 @@ public class ParityOperatorTests
         // Wait for throttle to emit the first distinct value
         var received = await AsyncTestHelpers.WaitForConditionAsync(
             () => results.Count >= 1,
-            TimeSpan.FromSeconds(5));
+            WaitTimeout);
 
         await signal.OnCompletedAsync(Result.Success);
 
@@ -745,11 +753,13 @@ public class ParityOperatorTests
         Justification = "Asserting on task results after completion.")]
     public async Task WhenDebounceUntil_WithConditionFalse_ThenDelaysEmission()
     {
+        const int UnreachableThreshold = 100;
+
         var signal = Signal.Create<int>();
         List<int> results = [];
 
         await using var sub = await signal.Values
-            .DebounceUntil(TimeSpan.FromMilliseconds(50), static v => v > 100)
+            .DebounceUntil(ThrottleWindow, static v => v > UnreachableThreshold)
             .SubscribeAsync(
                 (value, _) =>
                 {
@@ -764,7 +774,7 @@ public class ParityOperatorTests
         // Wait for the delayed value to arrive
         var received = await AsyncTestHelpers.WaitForConditionAsync(
             () => results.Count >= 1,
-            TimeSpan.FromSeconds(5));
+            WaitTimeout);
 
         await signal.OnCompletedAsync(Result.Success);
 
@@ -924,7 +934,7 @@ public class ParityOperatorTests
     [Test]
     public async Task WhenStartFunction_WithScheduler_ThenExecutesOnScheduler()
     {
-        var result = await AsyncObs.Start(() => FallbackSentinel, TaskScheduler.Default).FirstAsync();
+        var result = await AsyncObs.Start(static () => FallbackSentinel, TaskScheduler.Default).FirstAsync();
 
         await Assert.That(result).IsEqualTo(FallbackSentinel);
     }
@@ -1046,8 +1056,10 @@ public class ParityOperatorTests
     public async Task WhenGetMax_WithMaxInFirstSource_ThenReturnsCorrectMax()
     {
         const int LargestValue = 10;
+        const int MiddleValue = 5;
+
         var result = await AsyncObs.Return(LargestValue)
-            .GetMax(AsyncObs.Return(1), AsyncObs.Return(5))
+            .GetMax(AsyncObs.Return(1), AsyncObs.Return(MiddleValue))
             .FirstAsync();
 
         await Assert.That(result).IsEqualTo(LargestValue);
@@ -1058,8 +1070,11 @@ public class ParityOperatorTests
     [Test]
     public async Task WhenGetMin_WithMinInFirstSource_ThenReturnsCorrectMin()
     {
+        const int LargestValue = 10;
+        const int MiddleValue = 5;
+
         var result = await AsyncObs.Return(1)
-            .GetMin(AsyncObs.Return(10), AsyncObs.Return(5))
+            .GetMin(AsyncObs.Return(LargestValue), AsyncObs.Return(MiddleValue))
             .FirstAsync();
 
         await Assert.That(result).IsEqualTo(1);
@@ -1118,7 +1133,7 @@ public class ParityOperatorTests
         // Wait until the action for value 1 has actually started.
         await AsyncTestHelpers.WaitForConditionAsync(
             () => Volatile.Read(ref actionStarted) >= 1,
-            TimeSpan.FromSeconds(5));
+            WaitTimeout);
 
         // Emit value 2 while value 1 is still processing - it should be dropped.
         await source.EmitNext(DroppedValue);

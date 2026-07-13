@@ -22,7 +22,7 @@ public partial class CombineLatestOperatorTests
         DirectSource<int> source2 = new();
         List<int> items = [];
 
-        var sub = await source1.CombineLatest(source2, (a, b) => a + b)
+        var sub = await source1.CombineLatest(source2, static (a, b) => a + b)
             .SubscribeAsync(
                 (x, _) =>
                 {
@@ -50,7 +50,7 @@ public partial class CombineLatestOperatorTests
         DirectSource<int> source2 = new();
         Exception? caughtError = null;
 
-        await using var sub = await source1.CombineLatest(source2, (a, b) => a + b)
+        await using var sub = await source1.CombineLatest(source2, static (a, b) => a + b)
             .SubscribeAsync(
                 static (_, _) => default,
                 (ex, _) =>
@@ -91,6 +91,7 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestSelectorThrows_ThenCompletesWithFailure()
     {
+        const int TerminalTimeoutSeconds = 5;
         var a = Signal.Create<int>();
         var b = Signal.Create<int>();
         IReadOnlyList<IObservableAsync<int>> sources = [a.Values, b.Values];
@@ -110,7 +111,7 @@ public partial class CombineLatestOperatorTests
         await a.OnNextAsync(1, CancellationToken.None);
         await b.OnNextAsync(SelectorThrowSecondValue, CancellationToken.None);
 
-        var terminal = await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var terminal = await completed.Task.WaitAsync(TimeSpan.FromSeconds(TerminalTimeoutSeconds));
         await Assert.That(terminal.IsFailure).IsTrue();
         await Assert.That(terminal.Exception).IsSameReferenceAs(expected);
     }

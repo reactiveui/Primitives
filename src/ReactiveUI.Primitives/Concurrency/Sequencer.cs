@@ -25,7 +25,10 @@ public static partial class Sequencer
     internal static DateTimeOffset Now => TimeProvider.System.GetUtcNow();
 #else
     /// <summary>Gets the shared wall-clock time used by real-time sequencers.</summary>
-    [SuppressMessage("Major Code Smell", "S6354:Use a testable date/time provider", Justification = "Not available all platforms")]
+    [SuppressMessage(
+        "Major Code Smell",
+        "S6354:Use a testable date/time provider",
+        Justification = "Not available all platforms")]
     internal static DateTimeOffset Now => DateTimeOffset.UtcNow;
 #endif
 
@@ -58,7 +61,9 @@ public static partial class Sequencer
     internal static TimeSpan TimeUntil(long dueTimestamp)
     {
         var delta = dueTimestamp - Timestamp;
-        return delta <= 0 ? TimeSpan.Zero : TimeSpan.FromSeconds(delta / (double)System.Diagnostics.Stopwatch.Frequency);
+        return delta <= 0
+            ? TimeSpan.Zero
+            : TimeSpan.FromSeconds(delta / (double)System.Diagnostics.Stopwatch.Frequency);
     }
 
     /// <summary>Converts a monotonic timestamp delta to a relative duration.</summary>
@@ -72,7 +77,9 @@ public static partial class Sequencer
         }
 
         var ticks = timestampDelta * (double)TimeSpan.TicksPerSecond / System.Diagnostics.Stopwatch.Frequency;
-        return ticks >= TimeSpan.MaxValue.Ticks ? TimeSpan.MaxValue : TimeSpan.FromTicks(Math.Max(1, (long)Math.Ceiling(ticks)));
+        return ticks >= TimeSpan.MaxValue.Ticks
+            ? TimeSpan.MaxValue
+            : TimeSpan.FromTicks(Math.Max(1, (long)Math.Ceiling(ticks)));
     }
 
     /// <summary>Converts a relative duration to monotonic timestamp ticks.</summary>

@@ -198,8 +198,9 @@ public sealed class AsyncPrimitiveContractTests
         const int KeepThreshold = 4;
         const int Seed = 0;
         List<int> tapped = [];
-        var values = await AsyncObs.Sequence(SequenceStart, SequenceCount).Map(value => value * Two)
-            .Keep(value => value > KeepThreshold).Tap(tapped.Add).Fold(Seed, (acc, value) => acc + value).ToListAsync();
+        var values = await AsyncObs.Sequence(SequenceStart, SequenceCount).Map(static value => value * Two)
+            .Keep(static value => value > KeepThreshold).Tap(tapped.Add)
+            .Fold(Seed, static (acc, value) => acc + value).ToListAsync();
         await Assert.That(tapped.SequenceEqual(TappedExpected)).IsTrue();
         await Assert.That(values.SequenceEqual(FoldedExpected)).IsTrue();
         var typed = await MixedTypeInput.ToAsyncSignal().KeepType<string>().ToListAsync();
@@ -213,73 +214,13 @@ public sealed class AsyncPrimitiveContractTests
     {
         const int FirstValue = 1;
         const int ThirdValue = 3;
-        const int State = 10;
-        const int KeepWithThreshold = 12;
         var source = AsyncObs.Sequence(FirstValue, ThirdValue);
         await Assert.That(source.ToAsyncSignal()).IsSameReferenceAs(source);
-        var mappedAsync = await source.Map(static (value, _) => new ValueTask<int>(value * Two)).ToListAsync();
-        var mappedWith = await source.MapWith(State, static (state, value) => state + value).ToListAsync();
-        var keptAsync = await source.Keep(static (value, _) => new(value % Two == 0)).ToListAsync();
-        var keptWith = await source.KeepWith(State, static (state, value) => state + value > KeepWithThreshold)
-            .ToListAsync();
-        List<int> asyncTapped = [];
-        var asyncCompleted = false;
-        var asyncTapValues = await source.Tap(
-            (value, _) =>
-            {
-                asyncTapped.Add(value);
-                return default;
-            },
-            null,
-            _ =>
-            {
-                asyncCompleted = true;
-                return default;
-            }).ToListAsync();
-        List<Exception> syncTapErrors = [];
-        var syncCompleted = false;
-        var syncTapValues = await AsyncObs.Emit(FirstValue).Tap(
-            _ => { },
-            syncTapErrors.Add,
-            () => syncCompleted = true).ToListAsync();
-        var foldedAsync =
-            await source.Fold(0, static (accumulator, value, _) => new(accumulator + value)).ToListAsync();
-        var bound = await AsyncObs.Emit(FirstValue).Bind(static value => AsyncObs.Emit(value + State)).ToListAsync();
-        var flatMapped = await AsyncObs.Emit(FirstValue).FlatMap(static value => AsyncObs.Emit(value + State))
-            .ToListAsync();
-        var flatMappedAsync = await AsyncObs.Emit(FirstValue)
-            .FlatMap(static (value, _) => new ValueTask<IObservableAsync<int>>(AsyncObs.Emit(value + State)))
-            .ToListAsync();
-        var unique = await OneOneTwo.ToAsyncSignal().Unique().ToListAsync();
-        var uniqueComparer = await CaseInsensitiveInput.ToAsyncSignal().Unique(StringComparer.OrdinalIgnoreCase)
-            .ToListAsync();
-        var uniqueBy = await LengthDuplicateInput.ToAsyncSignal().UniqueBy(static value => value.Length).ToListAsync();
-        var uniqueByComparer = await CaseInsensitiveInput.ToAsyncSignal()
-            .UniqueBy(static value => value, StringComparer.OrdinalIgnoreCase).ToListAsync();
-        var casted = await BoxedOne.ToAsyncSignal().CastTo<string>().ToListAsync();
-        var notNull = await NullableOneNullTwo.ToAsyncSignal().KeepNotNull().ToListAsync();
-        _ = Assert.Throws<ArgumentNullException>(() => source.MapWith<int, int, int>(State, null!));
-        _ = Assert.Throws<ArgumentNullException>(() => source.KeepWith(State, (Func<int, int, bool>)null!));
-        await Assert.That(mappedAsync.SequenceEqual(TwoFourSix)).IsTrue();
-        await Assert.That(mappedWith.SequenceEqual(ElevenTwelveThirteen)).IsTrue();
-        await Assert.That(keptAsync.SequenceEqual(TwoOnly)).IsTrue();
-        await Assert.That(keptWith.SequenceEqual(ThreeOnly)).IsTrue();
-        await Assert.That(asyncTapped.SequenceEqual(OneTwoThree)).IsTrue();
-        await Assert.That(asyncTapValues.SequenceEqual(OneTwoThree)).IsTrue();
-        await Assert.That(asyncCompleted).IsTrue();
-        await Assert.That(syncTapValues.SequenceEqual(OneOnly)).IsTrue();
-        await Assert.That(syncTapErrors.Count).IsEqualTo(0);
-        await Assert.That(syncCompleted).IsTrue();
-        await Assert.That(foldedAsync.SequenceEqual(OneThreeSix)).IsTrue();
-        await Assert.That(bound.SequenceEqual(ElevenOnly)).IsTrue();
-        await Assert.That(flatMapped.SequenceEqual(ElevenOnly)).IsTrue();
-        await Assert.That(flatMappedAsync.SequenceEqual(ElevenOnly)).IsTrue();
-        await Assert.That(unique.SequenceEqual(OneTwo)).IsTrue();
-        await Assert.That(uniqueComparer.SequenceEqual(AAndB)).IsTrue();
-        await Assert.That(uniqueBy.SequenceEqual(AaAndBbb)).IsTrue();
-        await Assert.That(uniqueByComparer.SequenceEqual(AAndB)).IsTrue();
-        await Assert.That(casted.SequenceEqual(OneStringOnly)).IsTrue();
-        await Assert.That(notNull.SequenceEqual(OneTwoStrings)).IsTrue();
+        await AssertMapAndKeepAliasesForwardAsync(source);
+        await AssertTapAliasesForwardAsync(source);
+        await AssertFoldAndBindAliasesForwardAsync(source);
+        await AssertUniqueAndCastAliasesForwardAsync();
+        AssertStatefulAliasesRejectNullSelectors(source);
     }
 
     /// <summary>Verifies async primitive combination aliases forward to the expected async operators.</summary>
@@ -295,10 +236,10 @@ public sealed class AsyncPrimitiveContractTests
         const int BlendLeft = 10;
         const int BlendRight = 20;
         var chained = await AsyncObs.Emit(1).Chain(AsyncObs.Sequence(ChainStart, ChainCount)).ToListAsync();
-        var paired = await AsyncObs.Emit(PairLeft).Pair(AsyncObs.Emit("a"), (left, right) => $"{left}{right}")
+        var paired = await AsyncObs.Emit(PairLeft).Pair(AsyncObs.Emit("a"), static (left, right) => $"{left}{right}")
             .ToListAsync();
         var latest = await AsyncObs.Emit(LatestLeft)
-            .SyncLatest(AsyncObs.Emit(LatestRight), (left, right) => left + right).ToListAsync();
+            .SyncLatest(AsyncObs.Emit(LatestRight), static (left, right) => left + right).ToListAsync();
         var blended = await AsyncObs.Emit(BlendLeft).Blend(AsyncObs.Emit(BlendRight)).ToListAsync();
         await Assert.That(chained.SequenceEqual(OneTwoThree)).IsTrue();
         await Assert.That(paired.SequenceEqual(TwoA)).IsTrue();
@@ -347,13 +288,18 @@ public sealed class AsyncPrimitiveContractTests
         const int SequenceStart = 1;
         const int SequenceCount = 3;
         var recovered = await AsyncObs.Fail<int>(new InvalidOperationException())
-            .Recover(_ => AsyncObs.Emit(RecoveredValue)).ToListAsync();
+            .Recover(static _ => AsyncObs.Emit(RecoveredValue)).ToListAsync();
         var resumed = await AsyncObs.Fail<int>(new InvalidOperationException()).Resume(AsyncObs.Emit(ResumedValue))
             .ToListAsync();
         var attempt = 0;
         var reattempted = await AsyncObs
             .Defer(() =>
-                ++attempt == 1 ? AsyncObs.Fail<int>(new InvalidOperationException()) : AsyncObs.Emit(ReattemptValue))
+            {
+                attempt++;
+                return attempt == 1
+                    ? AsyncObs.Fail<int>(new InvalidOperationException())
+                    : AsyncObs.Emit(ReattemptValue);
+            })
             .Reattempt(ReattemptCount).ToListAsync();
         var collected = await AsyncObs.Sequence(SequenceStart, SequenceCount).CollectArrayAsync();
         await Assert.That(recovered.SequenceEqual(FortyTwoOnly)).IsTrue();
@@ -372,8 +318,8 @@ public sealed class AsyncPrimitiveContractTests
         const int SequenceStart = 1;
         const int SequenceCount = 3;
         const int Seed = 0;
-        var rescued = await AsyncObs.Fail<int>(new InvalidOperationException()).Rescue(_ => AsyncObs.Emit(RescuedValue))
-            .ToListAsync();
+        var rescued = await AsyncObs.Fail<int>(new InvalidOperationException())
+            .Rescue(static _ => AsyncObs.Emit(RescuedValue)).ToListAsync();
         var led = await AsyncObs.Sequence(SequenceStart, SequenceCount).Lead(LeadValue).ToListAsync();
         var collected = await AsyncObs.Sequence(SequenceStart, SequenceCount).CollectListAsync();
         var reduced = await AsyncObs.Sequence(SequenceStart, SequenceCount)
@@ -393,8 +339,8 @@ public sealed class AsyncPrimitiveContractTests
         var disposed = false;
         var values = await AsyncObs
             .Use(
-            _ => new ValueTask<TestAsyncResource>(new TestAsyncResource(() => disposed = true)),
-            _ => AsyncObs.Emit(EmittedValue)).ToListAsync();
+                _ => new ValueTask<TestAsyncResource>(new TestAsyncResource(() => disposed = true)),
+                static _ => AsyncObs.Emit(EmittedValue)).ToListAsync();
         await Assert.That(values.SequenceEqual(FiveOnly)).IsTrue();
         await Assert.That(disposed).IsTrue();
     }
@@ -469,6 +415,109 @@ public sealed class AsyncPrimitiveContractTests
     }
 
     /// <summary>Test sequencer that queues scheduled work until drained explicitly.</summary>
+    /// <summary>Verifies the asynchronous and stateful map/keep aliases forward to their canonical operators.</summary>
+    /// <param name = "source">The 1..3 sequence under test.</param>
+    /// <returns>A task to monitor completion.</returns>
+    private static async Task AssertMapAndKeepAliasesForwardAsync(IObservableAsync<int> source)
+    {
+        const int State = 10;
+        const int KeepWithThreshold = 12;
+        var mappedAsync = await source.Map(static (value, _) => new ValueTask<int>(value * Two)).ToListAsync();
+        var mappedWith = await source.MapWith(State, static (state, value) => state + value).ToListAsync();
+        var keptAsync = await source.Keep(static (value, _) => new(value % Two == 0)).ToListAsync();
+        var keptWith = await source.KeepWith(State, static (state, value) => state + value > KeepWithThreshold)
+            .ToListAsync();
+        await Assert.That(mappedAsync.SequenceEqual(TwoFourSix)).IsTrue();
+        await Assert.That(mappedWith.SequenceEqual(ElevenTwelveThirteen)).IsTrue();
+        await Assert.That(keptAsync.SequenceEqual(TwoOnly)).IsTrue();
+        await Assert.That(keptWith.SequenceEqual(ThreeOnly)).IsTrue();
+    }
+
+    /// <summary>Verifies the asynchronous and synchronous tap aliases observe values, errors and completion.</summary>
+    /// <param name = "source">The 1..3 sequence under test.</param>
+    /// <returns>A task to monitor completion.</returns>
+    private static async Task AssertTapAliasesForwardAsync(IObservableAsync<int> source)
+    {
+        const int FirstValue = 1;
+        List<int> asyncTapped = [];
+        var asyncCompleted = false;
+        var asyncTapValues = await source.Tap(
+            (value, _) =>
+            {
+                asyncTapped.Add(value);
+                return default;
+            },
+            null,
+            _ =>
+            {
+                asyncCompleted = true;
+                return default;
+            }).ToListAsync();
+        List<Exception> syncTapErrors = [];
+        var syncCompleted = false;
+        var syncTapValues = await AsyncObs.Emit(FirstValue).Tap(
+            static _ => { },
+            syncTapErrors.Add,
+            () => syncCompleted = true).ToListAsync();
+        await Assert.That(asyncTapped.SequenceEqual(OneTwoThree)).IsTrue();
+        await Assert.That(asyncTapValues.SequenceEqual(OneTwoThree)).IsTrue();
+        await Assert.That(asyncCompleted).IsTrue();
+        await Assert.That(syncTapValues.SequenceEqual(OneOnly)).IsTrue();
+        await Assert.That(syncTapErrors.Count).IsEqualTo(0);
+        await Assert.That(syncCompleted).IsTrue();
+    }
+
+    /// <summary>Verifies the fold, bind and flat-map aliases forward to their canonical operators.</summary>
+    /// <param name = "source">The 1..3 sequence under test.</param>
+    /// <returns>A task to monitor completion.</returns>
+    private static async Task AssertFoldAndBindAliasesForwardAsync(IObservableAsync<int> source)
+    {
+        const int FirstValue = 1;
+        const int State = 10;
+        var foldedAsync =
+            await source.Fold(0, static (accumulator, value, _) => new(accumulator + value)).ToListAsync();
+        var bound = await AsyncObs.Emit(FirstValue).Bind(static value => AsyncObs.Emit(value + State)).ToListAsync();
+        var flatMapped = await AsyncObs.Emit(FirstValue).FlatMap(static value => AsyncObs.Emit(value + State))
+            .ToListAsync();
+        var flatMappedAsync = await AsyncObs.Emit(FirstValue)
+            .FlatMap(static (value, _) => new ValueTask<IObservableAsync<int>>(AsyncObs.Emit(value + State)))
+            .ToListAsync();
+        await Assert.That(foldedAsync.SequenceEqual(OneThreeSix)).IsTrue();
+        await Assert.That(bound.SequenceEqual(ElevenOnly)).IsTrue();
+        await Assert.That(flatMapped.SequenceEqual(ElevenOnly)).IsTrue();
+        await Assert.That(flatMappedAsync.SequenceEqual(ElevenOnly)).IsTrue();
+    }
+
+    /// <summary>Verifies the de-duplication, cast and null-filtering aliases forward to their canonical operators.</summary>
+    /// <returns>A task to monitor completion.</returns>
+    private static async Task AssertUniqueAndCastAliasesForwardAsync()
+    {
+        var unique = await OneOneTwo.ToAsyncSignal().Unique().ToListAsync();
+        var uniqueComparer = await CaseInsensitiveInput.ToAsyncSignal().Unique(StringComparer.OrdinalIgnoreCase)
+            .ToListAsync();
+        var uniqueBy = await LengthDuplicateInput.ToAsyncSignal().UniqueBy(static value => value.Length).ToListAsync();
+        var uniqueByComparer = await CaseInsensitiveInput.ToAsyncSignal()
+            .UniqueBy(static value => value, StringComparer.OrdinalIgnoreCase).ToListAsync();
+        var casted = await BoxedOne.ToAsyncSignal().CastTo<string>().ToListAsync();
+        var notNull = await NullableOneNullTwo.ToAsyncSignal().KeepNotNull().ToListAsync();
+        await Assert.That(unique.SequenceEqual(OneTwo)).IsTrue();
+        await Assert.That(uniqueComparer.SequenceEqual(AAndB)).IsTrue();
+        await Assert.That(uniqueBy.SequenceEqual(AaAndBbb)).IsTrue();
+        await Assert.That(uniqueByComparer.SequenceEqual(AAndB)).IsTrue();
+        await Assert.That(casted.SequenceEqual(OneStringOnly)).IsTrue();
+        await Assert.That(notNull.SequenceEqual(OneTwoStrings)).IsTrue();
+    }
+
+    /// <summary>Verifies the stateful map/keep aliases reject a null selector.</summary>
+    /// <param name = "source">The 1..3 sequence under test.</param>
+    private static void AssertStatefulAliasesRejectNullSelectors(IObservableAsync<int> source)
+    {
+        const int State = 10;
+        _ = Assert.Throws<ArgumentNullException>(() => source.MapWith<int, int, int>(State, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => source.KeepWith(State, (Func<int, int, bool>)null!));
+    }
+
+    /// <summary>A sequencer that queues work items so a test can drain them deterministically.</summary>
     private sealed class QueuedSequencer : ISequencer
     {
         /// <summary>A fixed deterministic clock value for the test sequencer.</summary>

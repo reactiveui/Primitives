@@ -65,7 +65,9 @@ public static partial class Signal
     /// <returns>An Signals.</returns>
     /// <exception cref="ArgumentExceptionHelper">subscribe.</exception>
     /// <exception cref="ArgumentExceptionHelper"><paramref name="subscribe" /> is <c>null</c>.</exception>
-    public static IObservable<T> Create<T>(Func<IObserver<T>, IDisposable> subscribe, bool isRequiredSubscribeOnCurrentThread)
+    public static IObservable<T> Create<T>(
+        Func<IObserver<T>, IDisposable> subscribe,
+        bool isRequiredSubscribeOnCurrentThread)
     {
         ArgumentExceptionHelper.ThrowIfNull(subscribe);
 
@@ -83,7 +85,9 @@ public static partial class Signal
     /// <returns>An Signals.</returns>
     /// <exception cref="ArgumentExceptionHelper">subscribe.</exception>
     /// <exception cref="ArgumentExceptionHelper"><paramref name="subscribe" /> is <c>null</c>.</exception>
-    public static IObservable<T> CreateWithState<T, TState>(TState state, Func<TState, IObserver<T>, IDisposable> subscribe)
+    public static IObservable<T> CreateWithState<T, TState>(
+        TState state,
+        Func<TState, IObserver<T>, IDisposable> subscribe)
     {
         ArgumentExceptionHelper.ThrowIfNull(subscribe);
 
@@ -102,7 +106,10 @@ public static partial class Signal
     /// <returns>An Signals.</returns>
     /// <exception cref="ArgumentExceptionHelper">subscribe.</exception>
     /// <exception cref="ArgumentExceptionHelper"><paramref name="subscribe" /> is <c>null</c>.</exception>
-    public static IObservable<T> CreateWithState<T, TState>(TState state, Func<TState, IObserver<T>, IDisposable> subscribe, bool isRequiredSubscribeOnCurrentThread)
+    public static IObservable<T> CreateWithState<T, TState>(
+        TState state,
+        Func<TState, IObserver<T>, IDisposable> subscribe,
+        bool isRequiredSubscribeOnCurrentThread)
     {
         ArgumentExceptionHelper.ThrowIfNull(subscribe);
 
@@ -135,7 +142,9 @@ public static partial class Signal
     /// <returns>An Observable.</returns>
     /// <exception cref="ArgumentExceptionHelper">subscribe.</exception>
     /// <exception cref="ArgumentExceptionHelper"><paramref name="subscribe" /> is <c>null</c>.</exception>
-    public static IObservable<T> CreateSafe<T>(Func<IObserver<T>, IDisposable> subscribe, bool isRequiredSubscribeOnCurrentThread)
+    public static IObservable<T> CreateSafe<T>(
+        Func<IObserver<T>, IDisposable> subscribe,
+        bool isRequiredSubscribeOnCurrentThread)
     {
         ArgumentExceptionHelper.ThrowIfNull(subscribe);
 

@@ -13,13 +13,22 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [MemoryDiagnoser]
 public class OperatorFlatMapRangeBenchmarks
 {
+    /// <summary>The number of values produced by the outer sequence that is flattened.</summary>
+    private const int OuterCount = 8;
+
+    /// <summary>The number of values produced by each inner sequence.</summary>
+    private const int InnerCount = 2;
+
+    /// <summary>The stride applied to an outer value to derive the start of its inner sequence.</summary>
+    private const int InnerStride = 10;
+
     /// <summary>Baseline flatten and map chain using primitives.</summary>
     /// <returns>The sum of emitted values.</returns>
     [Benchmark(Baseline = true)]
     public int PrimitivesFlatMapRange()
     {
         IntSignalWitness observer = new();
-        using var subscription = Signal.Sequence(1, 8).FlatMap(static x => Signal.Sequence(x * 10, 2))
+        using var subscription = Signal.Sequence(1, OuterCount).FlatMap(static x => Signal.Sequence(x * InnerStride, InnerCount))
             .Subscribe(observer);
         return observer.Total;
     }
@@ -30,7 +39,8 @@ public class OperatorFlatMapRangeBenchmarks
     public int SystemReactiveSelectManyRange()
     {
         IntSignalWitness observer = new();
-        using var subscription = RxObservable.SelectMany(RxObservable.Range(1, 8), static x => RxObservable.Range(x * 10, 2))
+        using var subscription = RxObservable
+            .SelectMany(RxObservable.Range(1, OuterCount), static x => RxObservable.Range(x * InnerStride, InnerCount))
             .Subscribe(observer);
         return observer.Total;
     }
@@ -42,8 +52,8 @@ public class OperatorFlatMapRangeBenchmarks
     {
         IntR3Witness observer = new();
         using var subscription = R3.ObservableExtensions.SelectMany(
-                R3.Observable.Range(1, 8),
-                static x => R3.Observable.Range(x * 10, 2))
+                R3.Observable.Range(1, OuterCount),
+                static x => R3.Observable.Range(x * InnerStride, InnerCount))
             .Subscribe(observer);
         return observer.Total;
     }

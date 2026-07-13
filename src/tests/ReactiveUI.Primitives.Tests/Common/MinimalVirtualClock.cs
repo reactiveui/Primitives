@@ -13,7 +13,7 @@ internal static class MinimalVirtualClock
     private static readonly Func<long, long, long> Adder = static (absolute, relative) => absolute + relative;
 
     /// <summary>Converts an absolute tick value to a <see cref="DateTimeOffset"/>.</summary>
-    private static readonly Func<long, DateTimeOffset> ToDateTimeOffset = static absolute => DateTimeOffset.UnixEpoch.AddTicks(absolute);
+    private static readonly Func<long, DateTimeOffset> ToDateTimeOffset = DateTimeOffset.UnixEpoch.AddTicks;
 
     /// <summary>Converts a <see cref="TimeSpan"/> to a tick count.</summary>
     private static readonly Func<TimeSpan, long> ToRelative = static timeSpan => timeSpan.Ticks;

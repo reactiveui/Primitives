@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive;
 #else
@@ -14,22 +16,15 @@ public static partial class LinqExtensions
     /// <summary>Chaining FlatMap signal that avoids the Map + Chain composition path.</summary>
     /// <typeparam name="TSource">The source value type.</typeparam>
     /// <typeparam name="TResult">The result value type.</typeparam>
-    private sealed class FlatMapSignal<TSource, TResult> : IObservable<TResult>
+    /// <param name="source">The source observable.</param>
+    /// <param name="selector">Projects source values to inner observables.</param>
+    private sealed class FlatMapSignal<TSource, TResult>(IObservable<TSource> source, Func<TSource, IObservable<TResult>> selector) : IObservable<TResult>
     {
         /// <summary>The source observable.</summary>
-        private readonly IObservable<TSource> _source;
+        private readonly IObservable<TSource> _source = source;
 
         /// <summary>Projects source values to inner observables.</summary>
-        private readonly Func<TSource, IObservable<TResult>> _selector;
-
-        /// <summary>Initializes a new instance of the <see cref="FlatMapSignal{TSource, TResult}"/> class.</summary>
-        /// <param name="source">The source observable.</param>
-        /// <param name="selector">Projects source values to inner observables.</param>
-        internal FlatMapSignal(IObservable<TSource> source, Func<TSource, IObservable<TResult>> selector)
-        {
-            _source = source;
-            _selector = selector;
-        }
+        private readonly Func<TSource, IObservable<TResult>> _selector = selector;
 
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TResult> observer)
@@ -44,30 +39,22 @@ public static partial class LinqExtensions
     /// <typeparam name="TSource">The source value type.</typeparam>
     /// <typeparam name="TCollection">The inner value type.</typeparam>
     /// <typeparam name="TResult">The result value type.</typeparam>
-    private sealed class FlatMapResultSignal<TSource, TCollection, TResult> : IObservable<TResult>
+    /// <param name="source">The source observable.</param>
+    /// <param name="collectionSelector">Projects source values to inner observables.</param>
+    /// <param name="resultSelector">Projects outer and inner values to result values.</param>
+    private sealed class FlatMapResultSignal<TSource, TCollection, TResult>(
+        IObservable<TSource> source,
+        Func<TSource, IObservable<TCollection>> collectionSelector,
+        Func<TSource, TCollection, TResult> resultSelector) : IObservable<TResult>
     {
         /// <summary>The source observable.</summary>
-        private readonly IObservable<TSource> _source;
+        private readonly IObservable<TSource> _source = source;
 
         /// <summary>Projects source values to inner observables.</summary>
-        private readonly Func<TSource, IObservable<TCollection>> _collectionSelector;
+        private readonly Func<TSource, IObservable<TCollection>> _collectionSelector = collectionSelector;
 
         /// <summary>Projects outer and inner values to result values.</summary>
-        private readonly Func<TSource, TCollection, TResult> _resultSelector;
-
-        /// <summary>Initializes a new instance of the <see cref="FlatMapResultSignal{TSource, TCollection, TResult}"/> class.</summary>
-        /// <param name="source">The source observable.</param>
-        /// <param name="collectionSelector">Projects source values to inner observables.</param>
-        /// <param name="resultSelector">Projects outer and inner values to result values.</param>
-        internal FlatMapResultSignal(
-            IObservable<TSource> source,
-            Func<TSource, IObservable<TCollection>> collectionSelector,
-            Func<TSource, TCollection, TResult> resultSelector)
-        {
-            _source = source;
-            _collectionSelector = collectionSelector;
-            _resultSelector = resultSelector;
-        }
+        private readonly Func<TSource, TCollection, TResult> _resultSelector = resultSelector;
 
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TResult> observer)
@@ -133,6 +120,11 @@ public static partial class LinqExtensions
         /// <param name="source">The source observable.</param>
         /// <param name="selector">Projects source values to inner observables.</param>
         /// <param name="observer">The downstream observer.</param>
+        [SuppressMessage(
+            "Correctness",
+            "SST2403:Do not let 'this' escape from a constructor",
+            Justification =
+                "The witnesses are this coordinator's own sinks, stored back into its fields, and nothing notifies them until Run subscribes.")]
         internal FlatMapCoordinator(
             IObservable<TSource> source,
             Func<TSource, IObservable<TResult>> selector,
@@ -539,30 +531,22 @@ public static partial class LinqExtensions
         }
 
         /// <summary>Maps inner source values.</summary>
-        private sealed class ResultWitness : IObserver<TCollection>
+        /// <param name="sourceValue">Captured outer value.</param>
+        /// <param name="selector">Projects outer and inner values to result values.</param>
+        /// <param name="observer">The downstream observer.</param>
+        private sealed class ResultWitness(
+            TSource sourceValue,
+            Func<TSource, TCollection, TResult> selector,
+            IObserver<TResult> observer) : IObserver<TCollection>
         {
             /// <summary>Captured outer value.</summary>
-            private readonly TSource _sourceValue;
+            private readonly TSource _sourceValue = sourceValue;
 
             /// <summary>Projects outer and inner values to result values.</summary>
-            private readonly Func<TSource, TCollection, TResult> _selector;
+            private readonly Func<TSource, TCollection, TResult> _selector = selector;
 
             /// <summary>The downstream observer.</summary>
-            private readonly IObserver<TResult> _observer;
-
-            /// <summary>Initializes a new instance of the <see cref="ResultWitness"/> class.</summary>
-            /// <param name="sourceValue">Captured outer value.</param>
-            /// <param name="selector">Projects outer and inner values to result values.</param>
-            /// <param name="observer">The downstream observer.</param>
-            internal ResultWitness(
-                TSource sourceValue,
-                Func<TSource, TCollection, TResult> selector,
-                IObserver<TResult> observer)
-            {
-                _sourceValue = sourceValue;
-                _selector = selector;
-                _observer = observer;
-            }
+            private readonly IObserver<TResult> _observer = observer;
 
             /// <inheritdoc/>
             public void OnCompleted() => _observer.OnCompleted();

@@ -31,7 +31,8 @@ public static class Spark
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Major Code Smell",
         "S4018:Generic methods should provide type parameters",
-        Justification = "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
+        Justification =
+            "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
     public static Spark<T> CreateOnError<T>(Exception error)
     {
         ArgumentExceptionHelper.ThrowIfNull(error);
@@ -48,6 +49,7 @@ public static class Spark
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Major Code Smell",
         "S4018:Generic methods should provide type parameters",
-        Justification = "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
+        Justification =
+            "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
     public static Spark<T> CreateOnCompleted<T>() => Spark<T>.OnCompleted();
 }

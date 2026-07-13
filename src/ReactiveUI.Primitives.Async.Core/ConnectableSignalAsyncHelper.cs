@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
-
 using ReactiveUI.Primitives.Async.Advanced;
 using ReactiveUI.Primitives.Async.Disposables;
 
@@ -51,21 +50,21 @@ internal static class ConnectableSignalAsyncHelper
                     token).ConfigureAwait(false);
                 await connection.SetDisposableAsync(subscription).ConfigureAwait(false);
 
-                return DisposableAsync.Create(async () =>
-                {
-                    using (await state.Gate.EnterAsync(state.DisposedCancellationToken).ConfigureAwait(false))
+                return DisposableAsync.Create(
+                    (state, connection),
+                    static async s =>
                     {
-                        if (connection is null)
+                        using (await s.state.Gate.EnterAsync(s.state.DisposedCancellationToken).ConfigureAwait(false))
                         {
-                            return;
-                        }
+                            if (!ReferenceEquals(s.state.Connection, s.connection))
+                            {
+                                return;
+                            }
 
-                        var localConnection = connection;
-                        connection = null;
-                        state.Connection = null;
-                        await localConnection.DisposeAsync().ConfigureAwait(false);
-                    }
-                });
+                            s.state.Connection = null;
+                            await s.connection.DisposeAsync().ConfigureAwait(false);
+                        }
+                    });
             }
         }
         finally
@@ -80,7 +79,8 @@ internal static class ConnectableSignalAsyncHelper
     [SuppressMessage(
         "Major Bug",
         "S4462:Calls to async methods should not be blocking",
-        Justification = "IDisposable.Dispose is intrinsically synchronous; this method must tear down async connection state on the sync dispose path.")]
+        Justification =
+            "IDisposable.Dispose is intrinsically synchronous; this method must tear down async connection state on the sync dispose path.")]
     public static void Dispose<T>(ConnectableSignalAsyncState<T> state)
     {
         if (!state.TryMarkDisposed())

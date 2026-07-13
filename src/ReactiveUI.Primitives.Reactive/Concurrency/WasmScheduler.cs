@@ -48,8 +48,17 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
     private int _drainState;
 
     /// <summary>Initializes a new instance of the <see cref="WasmScheduler"/> class.</summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Correctness",
+        "SST2403:Do not let 'this' escape from a constructor",
+        Justification =
+            "The drain timer is created disarmed, so nothing can call back into it until Schedule arms it after construction.")]
     private WasmScheduler() =>
-        _drainTimer = new(static state => ((WasmScheduler)state!).RunDrain(), this, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+        _drainTimer = new(
+            static state => ((WasmScheduler)state!).RunDrain(),
+            this,
+            Timeout.InfiniteTimeSpan,
+            Timeout.InfiniteTimeSpan);
 
     /// <summary>A queued work item awaiting an event-loop drain or a one-shot timer.</summary>
     private interface IReadyWorkItem
@@ -83,7 +92,10 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
     /// <param name="action">Action to execute.</param>
     /// <returns>The disposable used to cancel the scheduled action.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="action"/> is <see langword="null"/>.</exception>
-    public override IDisposable Schedule<TState>(TState state, TimeSpan dueTime, Func<IScheduler, TState, IDisposable> action)
+    public override IDisposable Schedule<TState>(
+        TState state,
+        TimeSpan dueTime,
+        Func<IScheduler, TState, IDisposable> action)
     {
         ArgumentExceptionHelper.ThrowIfNull(action);
 
@@ -126,7 +138,7 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
             period = OneMillisecond;
         }
 
-        return new PeriodicWorkItem<TState>(state, period, action);
+        return PeriodicWorkItem<TState>.Start(state, period, action);
     }
 
     /// <summary>Disposes the drain timer owned by this scheduler.</summary>
@@ -189,9 +201,13 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
             // Claim this pass; a concurrent PostDrain that observes DrainRunning will bump it to DrainRunningPending.
             Volatile.Write(ref _drainState, DrainRunning);
 
-            var remaining = Volatile.Read(ref _readyCount);
-            while (remaining-- > 0 && _ready.TryDequeue(out var item))
+            for (var remaining = Volatile.Read(ref _readyCount); remaining > 0; remaining--)
             {
+                if (!_ready.TryDequeue(out var item))
+                {
+                    break;
+                }
+
                 _ = Interlocked.Decrement(ref _readyCount);
                 item.Run();
             }
@@ -266,11 +282,14 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
         /// <summary>Serializes ticks and guards state transitions.</summary>
         private readonly Lock _gate = new();
 
-        /// <summary>Periodic timer; rooted through the tick callback's target while armed.</summary>
-        private readonly Timer _timer;
-
         /// <summary>Scheduled action.</summary>
         private readonly Func<TState, TState> _action;
+
+        /// <summary>
+        /// Periodic timer; rooted through the tick callback's target while armed. Attached by <see cref="Start"/>
+        /// once the item is fully constructed, so it is never <see langword="null"/> for an item a caller can see.
+        /// </summary>
+        private Timer? _timer;
 
         /// <summary>State threaded through the periodic action.</summary>
         private TState _state;
@@ -280,13 +299,34 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
 
         /// <summary>Initializes a new instance of the <see cref="PeriodicWorkItem{TState}"/> class.</summary>
         /// <param name="state">Initial state.</param>
-        /// <param name="period">Tick period.</param>
         /// <param name="action">Scheduled action.</param>
-        public PeriodicWorkItem(TState state, TimeSpan period, Func<TState, TState> action)
+        private PeriodicWorkItem(TState state, Func<TState, TState> action)
         {
             _state = state;
             _action = action;
-            _timer = new(static s => ((PeriodicWorkItem<TState>)s!).Tick(), this, period, period);
+        }
+
+        /// <summary>
+        /// Creates a periodic item and arms its timer. Arming it here rather than in the constructor is what keeps
+        /// the tick callback from ever seeing a half-built item: the timer is created disarmed, attached, and only
+        /// then started, so the first tick runs against an item whose fields are all published.
+        /// </summary>
+        /// <param name="state">Initial state.</param>
+        /// <param name="period">Tick period.</param>
+        /// <param name="action">Scheduled action.</param>
+        /// <returns>The armed periodic work item, which cancels the ticks when disposed.</returns>
+        public static PeriodicWorkItem<TState> Start(TState state, TimeSpan period, Func<TState, TState> action)
+        {
+            PeriodicWorkItem<TState> item = new(state, action);
+            Timer timer = new(
+                static s => ((PeriodicWorkItem<TState>)s!).Tick(),
+                item,
+                Timeout.InfiniteTimeSpan,
+                Timeout.InfiniteTimeSpan);
+
+            item._timer = timer;
+            _ = timer.Change(period, period);
+            return item;
         }
 
         /// <inheritdoc/>
@@ -300,7 +340,8 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
                 }
 
                 _isDisposed = true;
-                _timer.Dispose();
+                _timer?.Dispose();
+                _timer = null;
                 _state = default!;
             }
         }

@@ -11,22 +11,15 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <summary>Signal that projects each value to an enumerable sequence and emits the enumerable values.</summary>
 /// <typeparam name="TSource">The source value type.</typeparam>
 /// <typeparam name="TResult">The result value type.</typeparam>
-public sealed class SelectManyEnumerableSignal<TSource, TResult> : IObservable<TResult>
+/// <param name="source">The source observable.</param>
+/// <param name="selector">The enumerable projection.</param>
+public sealed class SelectManyEnumerableSignal<TSource, TResult>(IObservable<TSource> source, Func<TSource, IEnumerable<TResult>> selector) : IObservable<TResult>
 {
     /// <summary>The source observable.</summary>
-    private readonly IObservable<TSource> _source;
+    private readonly IObservable<TSource> _source = source;
 
     /// <summary>The enumerable projection.</summary>
-    private readonly Func<TSource, IEnumerable<TResult>> _selector;
-
-    /// <summary>Initializes a new instance of the <see cref="SelectManyEnumerableSignal{TSource, TResult}"/> class.</summary>
-    /// <param name="source">The source observable.</param>
-    /// <param name="selector">The enumerable projection.</param>
-    public SelectManyEnumerableSignal(IObservable<TSource> source, Func<TSource, IEnumerable<TResult>> selector)
-    {
-        _source = source;
-        _selector = selector;
-    }
+    private readonly Func<TSource, IEnumerable<TResult>> _selector = selector;
 
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<TResult> observer)

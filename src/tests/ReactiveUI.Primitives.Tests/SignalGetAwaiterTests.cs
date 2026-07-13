@@ -37,7 +37,7 @@ public class SignalGetAwaiterTests
         await canceledAfterSubscribe.CancelAsync().ConfigureAwait(false);
         await Assert.That(awaiter.IsCompleted).IsTrue();
         _ = Assert.Throws<OperationCanceledException>(() => awaiter.GetResult());
-        _ = Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).GetAwaiter());
-        _ = Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).GetAwaiter(CancellationToken.None));
+        _ = Assert.Throws<ArgumentNullException>(static () => ((IObservable<int>)null!).GetAwaiter());
+        _ = Assert.Throws<ArgumentNullException>(static () => ((IObservable<int>)null!).GetAwaiter(CancellationToken.None));
     }
 }

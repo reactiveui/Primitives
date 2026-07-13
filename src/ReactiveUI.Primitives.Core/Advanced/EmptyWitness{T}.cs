@@ -11,16 +11,16 @@ namespace ReactiveUI.Primitives.Advanced;
 public sealed class EmptyWitness<T> : IObserver<T>
 {
     /// <summary>Gets the shared no-op witness instance.</summary>
-    public static readonly EmptyWitness<T> Instance = new(_ => { });
+    public static readonly EmptyWitness<T> Instance = new(static _ => { });
 
     /// <summary>Rethrows observer errors with their original stack information.</summary>
-    private static readonly Action<Exception> rethrow = e => ExceptionDispatchInfo.Capture(e).Throw();
+    private static readonly Action<Exception> rethrow = static e => ExceptionDispatchInfo.Capture(e).Throw();
 
     /// <summary>Completion callback that does nothing.</summary>
-    private static readonly Action nop = () => { };
+    private static readonly Action nop = static () => { };
 
     /// <summary>Error callback that does nothing.</summary>
-    private static readonly Action<Exception> nope = _ => { };
+    private static readonly Action<Exception> nope = static _ => { };
 
     /// <summary>Callback invoked for each value.</summary>
     private readonly Action<T> _onNext;

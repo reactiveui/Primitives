@@ -115,7 +115,8 @@ internal static class SerialBroadcastHelpers
     [SuppressMessage(
         "Performance",
         "CA1849:Call async methods when in an async method",
-        Justification = "The ValueTask is already completed successfully; GetResult consumes IValueTaskSource-backed results without blocking.")]
+        Justification =
+            "The ValueTask is already completed successfully; GetResult consumes IValueTaskSource-backed results without blocking.")]
     [SuppressMessage(
         "Critical Code Smell",
         "S5034:\"ValueTask\" should be consumed correctly",

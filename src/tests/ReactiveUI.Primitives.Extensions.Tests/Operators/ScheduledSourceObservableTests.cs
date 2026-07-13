@@ -33,7 +33,7 @@ public class ScheduledSourceObservableTests
         Exception? caught = null;
         List<int> results = [];
         using var sub = ((IObservable<int>)subject).Schedule(TimeSpan.FromTicks(WindowTicks), scheduler)
-            .Subscribe(results.Add, ex => caught = ex, () => { });
+            .Subscribe(results.Add, ex => caught = ex, static () => { });
         subject.OnError(new InvalidOperationException("dropped"));
         await Assert.That(caught).IsNull();
         await Assert.That(results).IsEmpty();

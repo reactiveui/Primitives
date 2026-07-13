@@ -10,22 +10,15 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Enumerable <c>Blend</c> signal with bounded concurrency.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-public sealed class MaxConcurrentEnumerableBlendSignal<T> : IObservable<T>
+/// <param name="sources">The sources to merge.</param>
+/// <param name="maxConcurrent">The maximum number of active inner subscriptions.</param>
+public sealed class MaxConcurrentEnumerableBlendSignal<T>(IEnumerable<IObservable<T>> sources, int maxConcurrent) : IObservable<T>
 {
     /// <summary>The sources to merge.</summary>
-    private readonly IEnumerable<IObservable<T>> _sources;
+    private readonly IEnumerable<IObservable<T>> _sources = sources;
 
     /// <summary>The maximum number of active inner subscriptions.</summary>
-    private readonly int _maxConcurrent;
-
-    /// <summary>Initializes a new instance of the <see cref="MaxConcurrentEnumerableBlendSignal{T}"/> class.</summary>
-    /// <param name="sources">The sources to merge.</param>
-    /// <param name="maxConcurrent">The maximum number of active inner subscriptions.</param>
-    public MaxConcurrentEnumerableBlendSignal(IEnumerable<IObservable<T>> sources, int maxConcurrent)
-    {
-        _sources = sources;
-        _maxConcurrent = maxConcurrent;
-    }
+    private readonly int _maxConcurrent = maxConcurrent;
 
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)

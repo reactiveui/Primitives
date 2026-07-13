@@ -11,26 +11,26 @@
 
   <!-- The coalescing IScheduler base shared by every platform .Reactive package, plus the shared component. -->
   <ItemGroup>
-    <Compile Include="..\Primitives.Platform.Reactive.Shared\**\*.cs" Link="Primitives.Platform.Reactive.Shared\%(RecursiveDir)%(Filename)%(Extension)" />
-    <Compile Include="..\Primitives.Blazor.Shared\**\*.cs" Link="Primitives.Blazor.Shared\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\Primitives.Platform.Reactive.Shared\**\*.cs" Link="Primitives.Platform.Reactive.Shared\%(RecursiveDir)%(Filename)%(Extension)"/>
+    <Compile Include="..\Primitives.Blazor.Shared\**\*.cs" Link="Primitives.Blazor.Shared\%(RecursiveDir)%(Filename)%(Extension)"/>
   </ItemGroup>
 
   <!-- The shared ReactiveComponentBase shifts to ReactiveUI.Primitives.Blazor.Reactive.* under REACTIVE_SHIM; these
        imports let it resolve its renderer sequencer, disposables, and shifted operators without per-file usings. -->
   <ItemGroup>
-    <Using Include="ReactiveUI.Primitives.Reactive" />
-    <Using Include="ReactiveUI.Primitives.Blazor.Reactive.Concurrency" />
-    <Using Include="ReactiveUI.Primitives.Concurrency" />
-    <Using Include="ReactiveUI.Primitives.Disposables" />
+    <Using Include="ReactiveUI.Primitives.Reactive"/>
+    <Using Include="ReactiveUI.Primitives.Blazor.Reactive.Concurrency"/>
+    <Using Include="ReactiveUI.Primitives.Concurrency"/>
+    <Using Include="ReactiveUI.Primitives.Disposables"/>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components" />
-    <ProjectReference Include="..\ReactiveUI.Primitives.Reactive\ReactiveUI.Primitives.Reactive.csproj" />
+    <PackageReference Include="Microsoft.AspNetCore.Components"/>
+    <ProjectReference Include="..\ReactiveUI.Primitives.Reactive\ReactiveUI.Primitives.Reactive.csproj"/>
   </ItemGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="ReactiveUI.Primitives.Blazor.Reactive.Tests" />
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Blazor.Reactive.Tests"/>
   </ItemGroup>
 
 </Project>

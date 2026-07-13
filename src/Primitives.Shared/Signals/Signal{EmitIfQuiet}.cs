@@ -13,16 +13,19 @@ public static partial class Signal
 {
     /// <summary>Coordinates throttled emission for a single subscription.</summary>
     /// <typeparam name="TSource">The source value type.</typeparam>
-    internal sealed class EmitIfQuietCoordinator<TSource> : IDisposable
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="dueTime">The quiet period before emitting the latest value.</param>
+    /// <param name="sequencer">The sequencer used to schedule delayed emissions.</param>
+    internal sealed class EmitIfQuietCoordinator<TSource>(IObserver<TSource> observer, TimeSpan dueTime, ISequencer sequencer) : IDisposable
     {
         /// <summary>The downstream observer.</summary>
-        private readonly IObserver<TSource> _observer;
+        private readonly IObserver<TSource> _observer = observer;
 
         /// <summary>The quiet period before the latest value is emitted.</summary>
-        private readonly TimeSpan _dueTime;
+        private readonly TimeSpan _dueTime = dueTime;
 
         /// <summary>The sequencer used to schedule delayed emissions.</summary>
-        private readonly ISequencer _sequencer;
+        private readonly ISequencer _sequencer = sequencer;
 
         /// <summary>Serializes access to latest value and terminal state.</summary>
         private readonly Lock _gate = new();
@@ -41,17 +44,6 @@ public static partial class Signal
 
         /// <summary>Whether the source has terminated.</summary>
         private bool _stopped;
-
-        /// <summary>Initializes a new instance of the <see cref="EmitIfQuietCoordinator{TSource}"/> class.</summary>
-        /// <param name="observer">The downstream observer.</param>
-        /// <param name="dueTime">The quiet period before emitting the latest value.</param>
-        /// <param name="sequencer">The sequencer used to schedule delayed emissions.</param>
-        public EmitIfQuietCoordinator(IObserver<TSource> observer, TimeSpan dueTime, ISequencer sequencer)
-        {
-            _observer = observer;
-            _dueTime = dueTime;
-            _sequencer = sequencer;
-        }
 
         /// <inheritdoc/>
         public void Dispose() => _disposables.Dispose();
@@ -74,7 +66,14 @@ public static partial class Signal
                 return;
             }
 
-            _disposables.Add(_sequencer.Schedule(_dueTime, () => EmitIfLatest(currentVersion)));
+            _disposables.Add(_sequencer.Schedule(
+                (self: this, currentVersion),
+                _dueTime,
+                static (_, s) =>
+                {
+                    s.self.EmitIfLatest(s.currentVersion);
+                    return EmptyDisposable.Instance;
+                }));
         }
 
         /// <summary>Forwards a terminal error after marking the coordinator stopped.</summary>

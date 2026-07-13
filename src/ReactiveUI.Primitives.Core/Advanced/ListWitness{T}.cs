@@ -63,7 +63,7 @@ public sealed class ListWitness<T> : IObserver<T>
         {
             < 0 => this,
             _ when _observers.Items.Length == 1 => EmptyWitness<T>.Instance,
-            _ => new ListWitness<T>(_observers.Remove(observer)),
+            _ => new ListWitness<T>(_observers.Remove(observer))
         };
     }
 }

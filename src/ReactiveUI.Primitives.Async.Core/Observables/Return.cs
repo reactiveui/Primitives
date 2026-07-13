@@ -47,10 +47,13 @@ public static partial class SignalAsync
         /// <summary>Per-subscription task body that emits the captured value and signals completion.</summary>
         /// <param name="observer">The downstream observer.</param>
         /// <param name="value">The captured value.</param>
-        private sealed class ReturnSubscription(IObserverAsync<T> observer, T value) : TaskSignalSubscription<T>(observer)
+        private sealed class ReturnSubscription(IObserverAsync<T> observer, T value)
+            : TaskSignalSubscription<T>(observer)
         {
             /// <inheritdoc/>
-            protected override async ValueTask ExecuteAsyncCore(IObserverAsync<T> observer, CancellationToken cancellationToken)
+            protected override async ValueTask ExecuteAsyncCore(
+                IObserverAsync<T> observer,
+                CancellationToken cancellationToken)
             {
                 await observer.OnNextAsync(value, cancellationToken).ConfigureAwait(false);
                 await observer.OnCompletedAsync(Result.Success).ConfigureAwait(false);

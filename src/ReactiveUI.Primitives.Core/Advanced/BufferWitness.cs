@@ -6,16 +6,19 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Sink that batches source values into fixed-size windows.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-public sealed class BufferWitness<T> : IObserver<T>, IDisposable
+/// <param name="observer">The downstream observer.</param>
+/// <param name="count">The window size.</param>
+/// <param name="skip">The number of elements skipped between windows.</param>
+public sealed class BufferWitness<T>(IObserver<IList<T>> observer, int count, int skip) : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>
-    private readonly IObserver<IList<T>> _observer;
+    private readonly IObserver<IList<T>> _observer = observer;
 
     /// <summary>The window size.</summary>
-    private readonly int _count;
+    private readonly int _count = count;
 
     /// <summary>The number of elements skipped between windows.</summary>
-    private readonly int _skip;
+    private readonly int _skip = skip;
 
     /// <summary>The current window buffer, sized to <see cref="_count"/>; <see langword="null"/> between windows.</summary>
     private T[]? _buffer;
@@ -25,17 +28,6 @@ public sealed class BufferWitness<T> : IObserver<T>, IDisposable
 
     /// <summary>The upstream subscription.</summary>
     private IDisposable? _subscription;
-
-    /// <summary>Initializes a new instance of the <see cref="BufferWitness{T}"/> class.</summary>
-    /// <param name="observer">The downstream observer.</param>
-    /// <param name="count">The window size.</param>
-    /// <param name="skip">The number of elements skipped between windows.</param>
-    public BufferWitness(IObserver<IList<T>> observer, int count, int skip)
-    {
-        _observer = observer;
-        _count = count;
-        _skip = skip;
-    }
 
     /// <inheritdoc/>
     public void OnNext(T value)
@@ -55,7 +47,8 @@ public sealed class BufferWitness<T> : IObserver<T>, IDisposable
             buffer![idx] = value;
         }
 
-        if (++idx == _count)
+        idx++;
+        if (idx == _count)
         {
             _buffer = null;
 

@@ -35,7 +35,10 @@ internal sealed class CreateSignal<T, TState> : IRequireCurrentThread<T>
     /// <param name="state">The state value.</param>
     /// <param name="subscribe">The subscribe value.</param>
     /// <param name="isRequiredSubscribeOnCurrentThread">The isRequiredSubscribeOnCurrentThread value.</param>
-    public CreateSignal(TState state, Func<TState, IObserver<T>, IDisposable> subscribe, bool isRequiredSubscribeOnCurrentThread)
+    public CreateSignal(
+        TState state,
+        Func<TState, IObserver<T>, IDisposable> subscribe,
+        bool isRequiredSubscribeOnCurrentThread)
     {
         _state = state;
         _subscribe = subscribe;

@@ -37,27 +37,27 @@ public class SignalRecoverTests
         InvalidOperationException finalError = new("last");
         _ = Signal.Recover(
             Signal.Fail<int>(new InvalidOperationException(FirstMessage)),
-            Signal.Fail<int>(finalError)).Subscribe(_ => { }, finalErrors.Add, () => { });
+            Signal.Fail<int>(finalError)).Subscribe(static _ => { }, finalErrors.Add, static () => { });
         await Assert.That(finalErrors[0]).IsSameReferenceAs(finalError);
         var completed = 0;
-        var completedSubscription = Signal.Recover<int>().Subscribe(_ => { }, ex => throw ex, () => completed++);
+        var completedSubscription = Signal.Recover<int>().Subscribe(static _ => { }, static ex => throw ex, () => completed++);
         completedSubscription.Dispose();
         completedSubscription.Dispose();
         await Assert.That(completed).IsEqualTo(1);
-        var activeSubscription = Signal.Recover(Signal.Silent<int>()).Subscribe(_ => { }, ex => throw ex, () => { });
+        var activeSubscription = Signal.Recover(Signal.Silent<int>()).Subscribe(static _ => { }, static ex => throw ex, static () => { });
         activeSubscription.Dispose();
         List<Exception> nullSourceErrors = [];
-        _ = Signal.Recover(new IObservable<int>?[] { null! }!).Subscribe(_ => { }, nullSourceErrors.Add, () => { });
+        _ = Signal.Recover(new IObservable<int>?[] { null! }!).Subscribe(static _ => { }, nullSourceErrors.Add, static () => { });
         await Assert.That(nullSourceErrors[0] is InvalidOperationException).IsTrue();
         List<Exception> moveNextErrors = [];
         InvalidOperationException moveNextError = new("move-next");
         _ = new ThrowingMoveNextEnumerable<IObservable<int>>(moveNextError).Recover()
-            .Subscribe(_ => { }, moveNextErrors.Add, () => { });
+            .Subscribe(static _ => { }, moveNextErrors.Add, static () => { });
         await Assert.That(moveNextErrors[0]).IsSameReferenceAs(moveNextError);
         InvalidOperationException getEnumeratorError = new("enumerator");
         _ = Assert.Throws<InvalidOperationException>(() => new ThrowingEnumerable<IObservable<int>>(getEnumeratorError)
             .Recover()
-            .Subscribe(_ => { }, _ => { }, () => { }));
+            .Subscribe(static _ => { }, static _ => { }, static () => { }));
     }
 
     /// <summary>Enumerable test double whose enumerator throws from <see cref="IEnumerator.MoveNext"/>.</summary>

@@ -19,17 +19,17 @@ public sealed class ImmutableReturnInt32Signal : IRequireCurrentThread<int>, IIn
     /// <returns>The result.</returns>
     private static readonly ImmutableReturnInt32Signal[] Caches =
     [
-            new(-1),
-            new(0),
-            new(1),
-            new(2),
-            new(3),
-            new(4),
-            new(5),
-            new(6),
-            new(7),
-            new(8),
-            new(9),
+        new(-1),
+        new(0),
+        new(1),
+        new(2),
+        new(3),
+        new(4),
+        new(5),
+        new(6),
+        new(7),
+        new(8),
+        new(9)
     ];
 
     /// <summary>Stores state for the signal implementation.</summary>
@@ -42,12 +42,10 @@ public sealed class ImmutableReturnInt32Signal : IRequireCurrentThread<int>, IIn
     /// <summary>Executes the GetInt32Signals operation.</summary>
     /// <param name="x">The x value.</param>
     /// <returns>The result.</returns>
-    public static IObservable<int> GetInt32Signals(int x)
-    {
-        return x is >= MinCachedValue and <= MaxCachedValue
+    public static IObservable<int> GetInt32Signals(int x) =>
+        x is >= MinCachedValue and <= MaxCachedValue
             ? Caches[x - MinCachedValue]
             : new ImmediateReturnSignal<int>(x);
-    }
 
     /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
     /// <returns>The result.</returns>

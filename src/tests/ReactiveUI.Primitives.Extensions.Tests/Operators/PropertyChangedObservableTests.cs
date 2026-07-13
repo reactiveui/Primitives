@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
+
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
 /// <summary>Edge-case coverage for <c>ToPropertyObservable</c> backed by
@@ -15,9 +17,6 @@ public class PropertyChangedObservableTests
 
     /// <summary>Updated property value.</summary>
     private const int UpdatedValue = 42;
-
-    /// <summary>Synthetic error message attached to getter failures.</summary>
-    private const string GetterFailedMessage = "getter failed";
 
     /// <summary>Verifies that subscribing emits the current property value immediately.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
@@ -140,10 +139,14 @@ public class PropertyChangedObservableTests
             }
         }
 
-        /// <summary>Gets the observed property — never mutated. The body reads <c>this.GetHashCode</c>
-        /// to keep the getter instance-bound so the <c>ToPropertyObservable</c> expression tree compiler
-        /// resolves it against this instance.</summary>
-        public int Value => GetHashCode() & 0;
+        /// <summary>Gets the observed property. This fixture never writes it, so every read yields zero —
+        /// what is under test is the notification, not the value. It stays an instance auto-property
+        /// because that is what the <c>ToPropertyObservable</c> expression tree resolves against.</summary>
+        [SuppressMessage(
+            "Major Code Smell",
+            "S3459:Unassigned members should be removed",
+            Justification = "The property is deliberately never written; the test drives PropertyChanged, not the value.")]
+        public int Value { get; }
 
         /// <summary>Invokes the retained handler with a <c>PropertyChanged</c> event for <see cref="Value"/>.</summary>
         public void Raise() => _retained?.Invoke(this, new(nameof(Value)));
@@ -181,6 +184,9 @@ public class PropertyChangedObservableTests
     /// <summary>Test owner whose getter succeeds on the first read but throws on subsequent reads.</summary>
     private sealed class LatchingThrowingOwner : INotifyPropertyChanged
     {
+        /// <summary>Synthetic error message attached to getter failures.</summary>
+        private const string GetterFailedMessage = "getter failed";
+
         /// <summary>Failure message used by the latched getter.</summary>
         private readonly string _message = GetterFailedMessage;
 

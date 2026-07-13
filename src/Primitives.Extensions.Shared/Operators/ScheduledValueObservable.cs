@@ -97,15 +97,17 @@ internal sealed class ScheduledValueObservable<T> : IObservable<T>
             });
         }
 
-        return _useAbsolute ? _scheduler.Schedule(state, _absoluteDueTime, static (_, s) =>
+        return _useAbsolute
+            ? _scheduler.Schedule(state, _absoluteDueTime, static (_, s) =>
             {
                 s.Emit();
                 return EmptyDisposable.Instance;
-            }) : _scheduler.Schedule(state, _dueTime, static (_, s) =>
-        {
-            s.Emit();
-            return EmptyDisposable.Instance;
-        });
+            })
+            : _scheduler.Schedule(state, _dueTime, static (_, s) =>
+            {
+                s.Emit();
+                return EmptyDisposable.Instance;
+            });
     }
 
     /// <summary>Carries the per-subscription state into the scheduled callback so the scheduler lambda does not capture any fields.</summary>

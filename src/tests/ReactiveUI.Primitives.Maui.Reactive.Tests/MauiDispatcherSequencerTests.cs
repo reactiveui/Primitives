@@ -21,7 +21,7 @@ public sealed class MauiDispatcherSequencerTests
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task ConstructorRejectsNullDispatcher() =>
-        await Assert.That(() => new MauiDispatcherSequencer(null!)).ThrowsExactly<ArgumentNullException>();
+        await Assert.That(static () => new MauiDispatcherSequencer(null!)).ThrowsExactly<ArgumentNullException>();
 
     /// <summary>Verifies the dispatcher extension method validates and adapts dispatchers.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
@@ -29,7 +29,7 @@ public sealed class MauiDispatcherSequencerTests
     public async Task ToSequencerValidatesAndAdaptsDispatcher()
     {
         const IDispatcher nullDispatcher = null!;
-        await Assert.That(() => nullDispatcher!.ToSequencer()).ThrowsExactly<ArgumentNullException>();
+        await Assert.That(static () => nullDispatcher!.ToSequencer()).ThrowsExactly<ArgumentNullException>();
 
         FakeDispatcher dispatcher = new();
         var scheduler = dispatcher.ToSequencer();

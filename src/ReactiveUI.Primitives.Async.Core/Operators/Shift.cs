@@ -30,7 +30,6 @@ public static partial class SignalAsyncExtensions
                 ? @this
                 : new DelaySignal<T>(@this, delayInterval, TimeProvider.System);
         }
-
     }
 
     /// <summary>An observable that delays each element notification by a specified duration.</summary>

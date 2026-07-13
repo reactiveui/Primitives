@@ -43,8 +43,8 @@ public sealed class OnErrorResumeNextSignalTests
     public async Task OnErrorResumeNextCompletesWhenEnumeratorIsNull()
     {
         var completed = 0;
-        using var subscription = Signal.OnErrorResumeNext(new NullEnumeratorEnumerable<int>(returnsNull: true))
-            .Subscribe(static _ => { }, error => throw error, () => completed++);
+        using var subscription = Signal.OnErrorResumeNext(new NullEnumeratorEnumerable<int>(true))
+            .Subscribe(static _ => { }, static error => throw error, () => completed++);
 
         await Assert.That(completed).IsEqualTo(One);
     }
@@ -88,7 +88,7 @@ public sealed class OnErrorResumeNextSignalTests
         ManualSource<int> first = new();
         var completed = 0;
         using var subscription = Signal.OnErrorResumeNext(first)
-            .Subscribe(static _ => { }, error => throw error, () => completed++);
+            .Subscribe(static _ => { }, static error => throw error, () => completed++);
 
         first.Complete();
 
@@ -126,7 +126,7 @@ public sealed class OnErrorResumeNextSignalTests
         var completed = 0;
 
         using var subscription = Signal.OnErrorResumeNext(new DuplicateCompleteSource<int>(), Signal.Emit(One))
-            .Subscribe(values.Add, error => throw error, () => completed++);
+            .Subscribe(values.Add, static error => throw error, () => completed++);
 
         await Assert.That(values.SequenceEqual([One])).IsTrue();
         await Assert.That(completed).IsEqualTo(One);
@@ -185,7 +185,8 @@ public sealed class OnErrorResumeNextSignalTests
     private sealed class NullEnumeratorEnumerable<T>(bool returnsNull) : IEnumerable<IObservable<T>>
     {
         /// <inheritdoc/>
-        public IEnumerator<IObservable<T>> GetEnumerator() => returnsNull ? null! : throw new InvalidOperationException();
+        public IEnumerator<IObservable<T>> GetEnumerator() =>
+            returnsNull ? null! : throw new InvalidOperationException();
 
         /// <inheritdoc/>
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
@@ -195,7 +196,8 @@ public sealed class OnErrorResumeNextSignalTests
     /// <param name="first">The first source to return.</param>
     /// <param name="error">The error to throw on the second move.</param>
     /// <typeparam name="T">The source value type.</typeparam>
-    private sealed class ThrowingAfterFirstEnumerable<T>(IObservable<T> first, Exception error) : IEnumerable<IObservable<T>>
+    private sealed class ThrowingAfterFirstEnumerable<T>(IObservable<T> first, Exception error)
+        : IEnumerable<IObservable<T>>
     {
         /// <inheritdoc/>
         public IEnumerator<IObservable<T>> GetEnumerator()

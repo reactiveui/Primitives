@@ -25,7 +25,7 @@ public partial class CombineLatestArityTests
         TaskCompletionSource allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await src1
-            .CombineLatest(src2, (a, b) => a + b)
+            .CombineLatest(src2, static (a, b) => a + b)
             .SubscribeAsync(
                 (x, _) =>
                 {
@@ -68,9 +68,9 @@ public partial class CombineLatestArityTests
         TaskCompletionSource allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await src1
-            .CombineLatest(src2, (a, b) => a + b)
+            .CombineLatest(src2, static (a, b) => a + b)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 (ex, _) =>
                 {
                     receivedError = ex;
@@ -116,7 +116,7 @@ public partial class CombineLatestArityTests
         TaskCompletionSource allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await src1
-            .CombineLatest(src2, src3, (a, b, c) => a + b + c)
+            .CombineLatest(src2, src3, static (a, b, c) => a + b + c)
             .SubscribeAsync(
                 (x, _) =>
                 {
@@ -161,9 +161,9 @@ public partial class CombineLatestArityTests
         TaskCompletionSource allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await src1
-            .CombineLatest(src2, src3, (a, b, c) => a + b + c)
+            .CombineLatest(src2, src3, static (a, b, c) => a + b + c)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 (ex, _) =>
                 {
                     receivedError = ex;
@@ -207,7 +207,7 @@ public partial class CombineLatestArityTests
         TaskCompletionSource allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await src1
-            .CombineLatest(src2, src3, src4, (a, b, c, d) => a + b + c + d)
+            .CombineLatest(src2, src3, src4, static (a, b, c, d) => a + b + c + d)
             .SubscribeAsync(
                 (x, _) =>
                 {
@@ -254,9 +254,9 @@ public partial class CombineLatestArityTests
         TaskCompletionSource allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await src1
-            .CombineLatest(src2, src3, src4, (a, b, c, d) => a + b + c + d)
+            .CombineLatest(src2, src3, src4, static (a, b, c, d) => a + b + c + d)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 (ex, _) =>
                 {
                     receivedError = ex;
@@ -302,7 +302,7 @@ public partial class CombineLatestArityTests
         TaskCompletionSource allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await src1
-            .CombineLatest(src2, src3, src4, src5, (a, b, c, d, e) => a + b + c + d + e)
+            .CombineLatest(src2, src3, src4, src5, static (a, b, c, d, e) => a + b + c + d + e)
             .SubscribeAsync(
                 (x, _) =>
                 {
@@ -351,9 +351,9 @@ public partial class CombineLatestArityTests
         TaskCompletionSource allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await src1
-            .CombineLatest(src2, src3, src4, src5, (a, b, c, d, e) => a + b + c + d + e)
+            .CombineLatest(src2, src3, src4, src5, static (a, b, c, d, e) => a + b + c + d + e)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 (ex, _) =>
                 {
                     receivedError = ex;
@@ -401,7 +401,7 @@ public partial class CombineLatestArityTests
         TaskCompletionSource allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await src1
-            .CombineLatest(src2, src3, src4, src5, src6, (a, b, c, d, e, f) => a + b + c + d + e + f)
+            .CombineLatest(src2, src3, src4, src5, src6, static (a, b, c, d, e, f) => a + b + c + d + e + f)
             .SubscribeAsync(
                 (x, _) =>
                 {
@@ -452,9 +452,9 @@ public partial class CombineLatestArityTests
         TaskCompletionSource allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await src1
-            .CombineLatest(src2, src3, src4, src5, src6, (a, b, c, d, e, f) => a + b + c + d + e + f)
+            .CombineLatest(src2, src3, src4, src5, src6, static (a, b, c, d, e, f) => a + b + c + d + e + f)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 (ex, _) =>
                 {
                     receivedError = ex;
@@ -504,7 +504,7 @@ public partial class CombineLatestArityTests
         TaskCompletionSource allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await src1
-            .CombineLatest(src2, src3, src4, src5, src6, src7, (a, b, c, d, e, f, g) => a + b + c + d + e + f + g)
+            .CombineLatest(src2, src3, src4, src5, src6, src7, static (a, b, c, d, e, f, g) => a + b + c + d + e + f + g)
             .SubscribeAsync(
                 (x, _) =>
                 {
@@ -557,9 +557,9 @@ public partial class CombineLatestArityTests
         TaskCompletionSource allowCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await src1
-            .CombineLatest(src2, src3, src4, src5, src6, src7, (a, b, c, d, e, f, g) => a + b + c + d + e + f + g)
+            .CombineLatest(src2, src3, src4, src5, src6, src7, static (a, b, c, d, e, f, g) => a + b + c + d + e + f + g)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 (ex, _) =>
                 {
                     receivedError = ex;
@@ -623,7 +623,7 @@ public partial class CombineLatestArityTests
                 src6,
                 src7,
                 src8,
-                (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
+                static (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
                 (x, _) =>
                 {
                     results.Add(x);
@@ -689,8 +689,8 @@ public partial class CombineLatestArityTests
                 src6,
                 src7,
                 src8,
-                (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
-                (_, _) => default,
+                static (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
+                static (_, _) => default,
                 (ex, _) =>
                 {
                     receivedError = ex;

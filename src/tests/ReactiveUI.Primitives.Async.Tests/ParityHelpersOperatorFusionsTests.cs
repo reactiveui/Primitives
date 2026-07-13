@@ -15,11 +15,26 @@ namespace ReactiveUI.Primitives.Async.Tests;
 [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "TUnit requires instance methods")]
 public class ParityHelpersOperatorFusionsTests
 {
+    /// <summary>Seconds a test waits for a notification before giving up.</summary>
+    private const int WaitTimeoutSeconds = 5;
+
+    /// <summary>Message thrown by a downstream observer in the scan fusion tests.</summary>
+    private const string DownstreamThrowsMessage = "downstream-throws";
+
+    /// <summary>Message thrown by a downstream observer in the throttle fusion tests.</summary>
+    private const string ThrottleDownstreamThrowsMessage = "throttle-downstream-throws";
+
+    /// <summary>Message thrown by a downstream observer in the debounce fusion tests.</summary>
+    private const string DebounceDownstreamThrowsMessage = "debounce-downstream-throws";
+
     /// <summary>Initial accumulator seed for scan tests.</summary>
     private const int ScanSeed = 0;
 
     /// <summary>Throttle window in milliseconds for <c>ThrottleDistinct</c> tests.</summary>
     private const int ThrottleWindowMilliseconds = 50;
+
+    /// <summary>Emission id of the second claim attempted by the distinct-claim test.</summary>
+    private const int SecondEmissionId = 2;
 
     /// <summary>Sentinel one.</summary>
     private const int One = 1;
@@ -32,6 +47,15 @@ public class ParityHelpersOperatorFusionsTests
 
     /// <summary>Sentinel four.</summary>
     private const int Four = 4;
+
+    /// <summary>Debounce window long enough that only the condition can release a value.</summary>
+    private static readonly TimeSpan DebounceWindow = TimeSpan.FromHours(1);
+
+    /// <summary>Debounce window short enough that the test can wait for it to elapse.</summary>
+    private static readonly TimeSpan ShortDebounceWindow = TimeSpan.FromMilliseconds(80);
+
+    /// <summary>Maximum time a test waits for a notification to arrive.</summary>
+    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(WaitTimeoutSeconds);
 
     /// <summary>Array sentinels for the array fast-path test.</summary>
     private static readonly int[] ArraySlice1 = [One, Two];
@@ -121,7 +145,7 @@ public class ParityHelpersOperatorFusionsTests
     public async Task WhenDebounceUntilConditionAlwaysTrue_ThenEmitsImmediately()
     {
         var result = await DebounceInputs.ToAsyncSignal()
-            .DebounceUntil(TimeSpan.FromSeconds(5), static _ => true)
+            .DebounceUntil(DebounceWindow, static _ => true)
             .ToListAsync();
 
         await Assert.That(result).IsCollectionEqualTo(DebounceInputs);
@@ -205,7 +229,7 @@ public class ParityHelpersOperatorFusionsTests
         InvalidOperationException expected = new("partition-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
-        await Task.WhenAll(evenTcs.Task, oddTcs.Task).WaitAsync(TimeSpan.FromSeconds(5));
+        await Task.WhenAll(evenTcs.Task, oddTcs.Task).WaitAsync(WaitTimeout);
         await Assert.That(evenError).IsSameReferenceAs(expected);
         await Assert.That(oddError).IsSameReferenceAs(expected);
     }
@@ -232,14 +256,14 @@ public class ParityHelpersOperatorFusionsTests
                 lateValues.Add(v);
                 return default;
             },
-            (_, _) => default,
+            static (_, _) => default,
             result =>
             {
                 _ = lateCompleted.TrySetResult();
                 return default;
             });
 
-        await lateCompleted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await lateCompleted.Task.WaitAsync(WaitTimeout);
         await Assert.That(lateValues).IsEmpty();
     }
 
@@ -295,7 +319,7 @@ public class ParityHelpersOperatorFusionsTests
         InvalidOperationException expected = new("scan-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
-        await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await errorTcs.Task.WaitAsync(WaitTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
         await Assert.That(values).IsCollectionEqualTo([ScanSeed]);
     }
@@ -323,7 +347,7 @@ public class ParityHelpersOperatorFusionsTests
         InvalidOperationException expected = new("throttle-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
-        await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await errorTcs.Task.WaitAsync(WaitTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -337,7 +361,7 @@ public class ParityHelpersOperatorFusionsTests
         TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values
-            .DebounceUntil(TimeSpan.FromSeconds(5), static _ => false)
+            .DebounceUntil(DebounceWindow, static _ => false)
             .SubscribeAsync(
                 static (_, _) => default,
                 (ex, _) =>
@@ -350,7 +374,7 @@ public class ParityHelpersOperatorFusionsTests
         InvalidOperationException expected = new("debounce-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
-        await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await errorTcs.Task.WaitAsync(WaitTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -377,7 +401,7 @@ public class ParityHelpersOperatorFusionsTests
         InvalidOperationException expected = new("foreach-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
-        await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await errorTcs.Task.WaitAsync(WaitTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -404,7 +428,7 @@ public class ParityHelpersOperatorFusionsTests
         InvalidOperationException expected = new("dropifbusy-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
-        await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await errorTcs.Task.WaitAsync(WaitTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -429,7 +453,7 @@ public class ParityHelpersOperatorFusionsTests
             });
 
         await signal.OnNextAsync(One, CancellationToken.None);
-        await emittedTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await emittedTcs.Task.WaitAsync(WaitTimeout);
 
         // After the slow path resets _isBusy, a second emission must also flow through.
         TaskCompletionSource secondTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -442,7 +466,7 @@ public class ParityHelpersOperatorFusionsTests
             });
 
         await signal.OnNextAsync(Two, CancellationToken.None);
-        await secondTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await secondTcs.Task.WaitAsync(WaitTimeout);
 
         await Assert.That(values).Contains(One);
     }
@@ -470,7 +494,7 @@ public class ParityHelpersOperatorFusionsTests
         InvalidOperationException expected = new("scan-async-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
-        await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await errorTcs.Task.WaitAsync(WaitTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -525,17 +549,17 @@ public class ParityHelpersOperatorFusionsTests
         using UnhandledExceptionCapture unhandled = new();
 
         var signal = Signal.Create<int>();
-        ThrowingAsyncWitness<int> throwingObserver = new(new InvalidOperationException("downstream-throws"));
+        ThrowingAsyncWitness<int> throwingObserver = new(new InvalidOperationException(DownstreamThrowsMessage));
 
         await using var sub = await signal.Values
             .ThrottleDistinct(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds))
             .SubscribeAsync(throwingObserver, CancellationToken.None);
 
         await signal.OnNextAsync(One, CancellationToken.None);
-        var exception = await unhandled.WaitForAsync("downstream-throws", TimeSpan.FromSeconds(5));
+        var exception = await unhandled.WaitForAsync(DownstreamThrowsMessage, WaitTimeout);
 
         await Assert.That(exception).IsNotNull();
-        await Assert.That(exception!.Message).IsEqualTo("downstream-throws");
+        await Assert.That(exception!.Message).IsEqualTo(DownstreamThrowsMessage);
     }
 
     /// <summary>Verifies that an exception thrown by the downstream observer inside <c>Throttle</c>'s
@@ -548,17 +572,17 @@ public class ParityHelpersOperatorFusionsTests
         using UnhandledExceptionCapture unhandled = new();
 
         var signal = Signal.Create<int>();
-        ThrowingAsyncWitness<int> throwingObserver = new(new InvalidOperationException("throttle-downstream-throws"));
+        ThrowingAsyncWitness<int> throwingObserver = new(new InvalidOperationException(ThrottleDownstreamThrowsMessage));
 
         await using var sub = await signal.Values
             .Throttle(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds))
             .SubscribeAsync(throwingObserver, CancellationToken.None);
 
         await signal.OnNextAsync(One, CancellationToken.None);
-        var exception = await unhandled.WaitForAsync("throttle-downstream-throws", TimeSpan.FromSeconds(5));
+        var exception = await unhandled.WaitForAsync(ThrottleDownstreamThrowsMessage, WaitTimeout);
 
         await Assert.That(exception).IsNotNull();
-        await Assert.That(exception!.Message).IsEqualTo("throttle-downstream-throws");
+        await Assert.That(exception!.Message).IsEqualTo(ThrottleDownstreamThrowsMessage);
     }
 
     /// <summary>Exercises the <c>!IsCurrentEmission(id)</c> guard inside <c>DebounceUntil</c>'s
@@ -574,7 +598,7 @@ public class ParityHelpersOperatorFusionsTests
         TaskCompletionSource emitted = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values
-            .DebounceUntil(TimeSpan.FromMilliseconds(80), static _ => false)
+            .DebounceUntil(ShortDebounceWindow, static _ => false)
             .SubscribeAsync((v, _) =>
             {
                 values.Add(v);
@@ -585,7 +609,7 @@ public class ParityHelpersOperatorFusionsTests
         await signal.OnNextAsync(One, CancellationToken.None);
         await signal.OnNextAsync(Two, CancellationToken.None);
 
-        await emitted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await emitted.Task.WaitAsync(WaitTimeout);
         await Task.Delay(ThrottleWindowMilliseconds);
 
         await Assert.That(values).IsCollectionEqualTo([Two]);
@@ -600,17 +624,17 @@ public class ParityHelpersOperatorFusionsTests
         using UnhandledExceptionCapture unhandled = new();
 
         var signal = Signal.Create<int>();
-        ThrowingAsyncWitness<int> throwingObserver = new(new InvalidOperationException("debounce-downstream-throws"));
+        ThrowingAsyncWitness<int> throwingObserver = new(new InvalidOperationException(DebounceDownstreamThrowsMessage));
 
         await using var sub = await signal.Values
             .DebounceUntil(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds), static _ => false)
             .SubscribeAsync(throwingObserver, CancellationToken.None);
 
         await signal.OnNextAsync(One, CancellationToken.None);
-        var exception = await unhandled.WaitForAsync("debounce-downstream-throws", TimeSpan.FromSeconds(5));
+        var exception = await unhandled.WaitForAsync(DebounceDownstreamThrowsMessage, WaitTimeout);
 
         await Assert.That(exception).IsNotNull();
-        await Assert.That(exception!.Message).IsEqualTo("debounce-downstream-throws");
+        await Assert.That(exception!.Message).IsEqualTo(DebounceDownstreamThrowsMessage);
     }
 
     /// <summary>Verifies that <c>Partition</c> drops upstream values whose predicate matches a
@@ -680,7 +704,7 @@ public class ParityHelpersOperatorFusionsTests
 
         // Re-claim with the previously-emitted value at the new id — rejected by the
         // downstream-distinct check.
-        var secondClaim = observer.TryClaimEmission(One, 2);
+        var secondClaim = observer.TryClaimEmission(One, SecondEmissionId);
 
         await Assert.That(firstClaim).IsTrue();
         await Assert.That(secondClaim).IsFalse();

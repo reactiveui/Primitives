@@ -17,7 +17,10 @@ public static class SignalSubscription
     /// <param name="currentThreadRequired">Whether subscription must be dispatched through the current-thread sequencer.</param>
     /// <param name="subscribeCore">The core subscription callback.</param>
     /// <returns>The subscription.</returns>
-    public static IDisposable Subscribe<T>(IObserver<T> observer, bool currentThreadRequired, Func<IObserver<T>, IDisposable, IDisposable> subscribeCore)
+    public static IDisposable Subscribe<T>(
+        IObserver<T> observer,
+        bool currentThreadRequired,
+        Func<IObserver<T>, IDisposable, IDisposable> subscribeCore)
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
@@ -25,7 +28,13 @@ public static class SignalSubscription
 
         if (currentThreadRequired && CurrentThreadSequencer.IsScheduleRequired)
         {
-            _ = Sequencer.CurrentThread.Schedule(() => subscription.Create(subscribeCore(observer, subscription)));
+            _ = Sequencer.CurrentThread.Schedule(
+                (subscribeCore, subscription, observer),
+                static (_, s) =>
+                {
+                    s.subscription.Create(s.subscribeCore(s.observer, s.subscription));
+                    return EmptyDisposable.Instance;
+                });
         }
         else
         {

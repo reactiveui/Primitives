@@ -82,7 +82,7 @@ public partial class ScanWithInitialTests
 
         // Act
         using (observable.Subscribe(
-                   _ => { },
+                   static _ => { },
                    errors.Add))
         {
             source.OnNext(1);
@@ -104,7 +104,7 @@ public partial class ScanWithInitialTests
         // Arrange
         Subject<int> source = new();
         const int Initial = 0;
-        Func<int, int, int> accumulator = (acc, x) =>
+        Func<int, int, int> accumulator = static (acc, x) =>
         {
             Thread.Sleep(1); // Force potential race condition
             return acc + x;
@@ -112,6 +112,8 @@ public partial class ScanWithInitialTests
         ScanWithInitialObservable<int, int> observable = new(source, Initial, accumulator);
         List<int> results = [];
         var completedCount = 0;
+        const int ContendedEmissionCount = 100;
+        const int CompletionDelayMilliseconds = 50;
 
         // Act
         using (observable.Subscribe(
@@ -122,19 +124,19 @@ public partial class ScanWithInitialTests
                            results.Add(x);
                        }
                    },
-                   _ => { },
+                   static _ => { },
                    () => Interlocked.Increment(ref completedCount)))
         {
             var t1 = Task.Run(() =>
             {
-                for (var i = 0; i < 100; i++)
+                for (var i = 0; i < ContendedEmissionCount; i++)
                 {
                     source.OnNext(i);
                 }
             });
             var t2 = Task.Run(async () =>
             {
-                await Task.Delay(50);
+                await Task.Delay(CompletionDelayMilliseconds);
                 source.OnCompleted();
             });
             await Task.WhenAll(t1, t2);

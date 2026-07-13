@@ -279,7 +279,7 @@ public class MultipleDisposable : IsDisposed, ICollection<IDisposable>
     /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
     public void Dispose()
     {
-        Dispose(disposing: true);
+        Dispose(true);
         GC.SuppressFinalize(this);
     }
 
@@ -394,7 +394,8 @@ public class MultipleDisposable : IsDisposed, ICollection<IDisposable>
             _overflow = grown;
         }
 
-        _overflow[_overflowCount++] = disposable;
+        _overflow[_overflowCount] = disposable;
+        _overflowCount++;
     }
 
     /// <summary>Removes a disposable while the caller holds the gate.</summary>

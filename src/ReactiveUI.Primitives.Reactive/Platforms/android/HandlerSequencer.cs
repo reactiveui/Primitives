@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Disposables;
-
 using Android.OS;
 
 namespace ReactiveUI.Primitives.Reactive.Concurrency;
@@ -25,7 +24,8 @@ public sealed class HandlerSequencer : CoalescingDispatchScheduler
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Maintainability",
         "SST1422:Move this field into the method that uses it",
-        Justification = "Persistent lazy cache: the JNI runnable bridge is built once and reused across every Post call, so it cannot be a method local.")]
+        Justification =
+            "Persistent lazy cache: the JNI runnable bridge is built once and reused across every Post call, so it cannot be a method local.")]
     private Java.Lang.IRunnable? _drainRunnable;
 
     /// <summary>Initializes a new instance of the <see cref="HandlerSequencer"/> class.</summary>

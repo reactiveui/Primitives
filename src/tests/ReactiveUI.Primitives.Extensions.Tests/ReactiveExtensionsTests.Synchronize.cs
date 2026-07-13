@@ -26,12 +26,12 @@ public partial class ReactiveExtensionsTests
         {
             if (x)
             {
-                await Task.Delay(1000);
+                await Task.Delay(LongDelayMilliseconds);
                 _ = Interlocked.Increment(ref result);
             }
             else
             {
-                await Task.Delay(500);
+                await Task.Delay(ShortDelayMilliseconds);
                 _ = Interlocked.Decrement(ref result);
             }
 
@@ -115,12 +115,12 @@ public partial class ReactiveExtensionsTests
         {
             if (x)
             {
-                await Task.Delay(1000);
+                await Task.Delay(LongDelayMilliseconds);
                 _ = Interlocked.Increment(ref result);
             }
             else
             {
-                await Task.Delay(500);
+                await Task.Delay(ShortDelayMilliseconds);
                 _ = Interlocked.Decrement(ref result);
             }
 
@@ -146,6 +146,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WithLimitedConcurrency_LimitsConcurrentTasks()
     {
+        const int MaxConcurrency = 3;
         var maxConcurrent = 0;
         var currentConcurrent = 0;
 
@@ -173,11 +174,11 @@ public partial class ReactiveExtensionsTests
             }
         }
 
-        var results = await CreateTasks().WithLimitedConcurrency(3).ToList();
+        var results = await CreateTasks().WithLimitedConcurrency(MaxConcurrency).ToList();
         using (Assert.Multiple())
         {
             await Assert.That(results).Count().IsEqualTo(SampleValue10);
-            await Assert.That(maxConcurrent).IsLessThanOrEqualTo(SampleValue3);
+            await Assert.That(maxConcurrent).IsLessThanOrEqualTo(MaxConcurrency);
         }
     }
 
@@ -325,7 +326,7 @@ public partial class ReactiveExtensionsTests
         List<int> results = [];
         Exception? caughtException = null;
         TaskCompletionSource<bool> errorSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        var source = Observable.Create<int>(observer =>
+        var source = Observable.Create<int>(static observer =>
         {
             observer.OnNext(1);
             observer.OnError(new InvalidOperationException());
@@ -336,7 +337,7 @@ public partial class ReactiveExtensionsTests
             caughtException = ex;
             _ = errorSource.TrySetResult(true);
         });
-        await errorSource.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await errorSource.Task.WaitAsync(WaitTimeout);
         using (Assert.Multiple())
         {
             await Assert.That(results).IsCollectionEqualTo([1]);
@@ -364,7 +365,7 @@ public partial class ReactiveExtensionsTests
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
         subject.OnCompleted();
-        await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await completed.Task.WaitAsync(WaitTimeout);
         using (Assert.Multiple())
         {
             await Assert.That(results).IsCollectionEqualTo([1, SampleValue2]);
@@ -391,9 +392,9 @@ public partial class ReactiveExtensionsTests
             },
             _ => errorHandled.TrySetResult());
         subject.OnNext(1);
-        await onNextCompleted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await onNextCompleted.Task.WaitAsync(WaitTimeout);
         subject.OnError(new InvalidOperationException());
-        await errorHandled.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await errorHandled.Task.WaitAsync(WaitTimeout);
         using (Assert.Multiple())
         {
             await Assert.That(results).IsCollectionEqualTo([1]);
@@ -419,7 +420,7 @@ public partial class ReactiveExtensionsTests
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
         subject.OnCompleted();
-        await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await completed.Task.WaitAsync(WaitTimeout);
         using (Assert.Multiple())
         {
             await Assert.That(results).IsCollectionEqualTo([1, SampleValue2]);
@@ -445,7 +446,7 @@ public partial class ReactiveExtensionsTests
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
         subject.OnNext(SampleValue3);
-        await allReceived.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await allReceived.Task.WaitAsync(WaitTimeout);
         await Assert.That(results).IsCollectionEqualTo([1, SampleValue2, SampleValue3]);
     }
 
@@ -457,10 +458,10 @@ public partial class ReactiveExtensionsTests
         List<int> results = [];
         var completed = false;
         TaskCompletionSource<bool> completionSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        var source = Observable.Create<int>(observer =>
+        var source = Observable.Create<int>(static observer =>
         {
             observer.OnNext(1);
-            observer.OnNext(2);
+            observer.OnNext(SampleValue2);
             observer.OnCompleted();
             return EmptyDisposable.Instance;
         });
@@ -475,7 +476,7 @@ public partial class ReactiveExtensionsTests
                 completed = true;
                 _ = completionSource.TrySetResult(true);
             });
-        await completionSource.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await completionSource.Task.WaitAsync(WaitTimeout);
         using (Assert.Multiple())
         {
             await Assert.That(results).IsCollectionEqualTo([1, SampleValue2]);

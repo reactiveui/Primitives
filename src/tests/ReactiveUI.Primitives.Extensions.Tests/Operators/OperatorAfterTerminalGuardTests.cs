@@ -30,6 +30,9 @@ public class OperatorAfterTerminalGuardTests
     /// <summary>Second sentinel value used in after-terminal pushes.</summary>
     private const int SecondValue = 2;
 
+    /// <summary>Guard timeout so a hung rendezvous fails this test rather than stalling the run.</summary>
+    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
+
     /// <summary>Verifies <c>OnErrorRetry</c>'s sink silently drops events after a downstream
     /// completion has set the <c>_disposed</c> latch — and that a second dispose hits the
     /// <c>Interlocked.Exchange != 0</c> idempotency guard in <see cref = "IDisposable.Dispose"/>.</summary>
@@ -106,6 +109,7 @@ public class OperatorAfterTerminalGuardTests
     public async Task WhenRetryWithBackoffDisposedDuringDelay_ThenSubscribeToSourceGuardSkipsRetry()
     {
         const int LongDelayMs = 250;
+        const int RetryAttempts = 10;
         var subscribeCount = 0;
         var source = Observable.Create<int>(o =>
         {
@@ -115,7 +119,7 @@ public class OperatorAfterTerminalGuardTests
         });
         var sub = source.OnErrorRetry<int, InvalidOperationException>(
             static _ => { },
-            10,
+            RetryAttempts,
             TimeSpan.FromMilliseconds(LongDelayMs),
             TaskPoolSequencer.Default).Subscribe(static _ => { });
         sub.Dispose();
@@ -231,7 +235,7 @@ public class OperatorAfterTerminalGuardTests
         VirtualClock scheduler = new();
         var actionCalls = 0;
         SingleAssignmentDisposable sub = new();
-        sub.Disposable = ReactiveExtensions.While(() => true, () => actionCalls++, scheduler)
+        sub.Disposable = ReactiveExtensions.While(static () => true, () => actionCalls++, scheduler)
             .Subscribe(_ => sub.Dispose());
         scheduler.AdvanceBy(1);
         await Assert.That(actionCalls).IsEqualTo(1);
@@ -464,7 +468,7 @@ public class OperatorAfterTerminalGuardTests
             return default;
         });
         subject.OnNext(1);
-        await processed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await processed.Task.WaitAsync(GuardTimeout);
 
         // Subject silently terminates without invoking the optional callbacks.
         subject.OnError(new InvalidOperationException("ignored"));

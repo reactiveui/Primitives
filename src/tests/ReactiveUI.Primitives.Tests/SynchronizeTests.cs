@@ -16,9 +16,6 @@ public class SynchronizeTests
     /// <summary>The number of values sent by each producer thread.</summary>
     private const int PerThread = 500;
 
-    /// <summary>The number of wait spin iterations used by concurrent tests.</summary>
-    private const int SpinIterations = 50;
-
     /// <summary>The literal two.</summary>
     private const int Second = 2;
 
@@ -62,12 +59,12 @@ public class SynchronizeTests
     /// <summary>The operator validates its source argument.</summary>
     [Test]
     public void SynchronizeOnNullSourceThrows() =>
-        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Synchronize());
+        Assert.Throws<ArgumentNullException>(static () => ((IObservable<int>)null!).Synchronize());
 
     /// <summary>The shared-gate operator validates its gate argument.</summary>
     [Test]
     public void SynchronizeOnNullGateThrows() =>
-        Assert.Throws<ArgumentNullException>(() => new ImmediateSource<int>(1).Synchronize(null!));
+        Assert.Throws<ArgumentNullException>(static () => new ImmediateSource<int>(1).Synchronize(null!));
 
     /// <summary>Two witnesses sharing one gate are serialized relative to each other, never overlapping on the shared downstream.</summary>
     /// <returns>A task that completes when the assertions have run.</returns>
@@ -171,6 +168,9 @@ public class SynchronizeTests
     /// <summary>A downstream observer that flags any re-entrant (overlapping) notification and counts deliveries.</summary>
     private sealed class ConcurrencyProbe : IObserver<int>
     {
+        /// <summary>The number of wait spin iterations used to widen the re-entrancy detection window.</summary>
+        private const int SpinIterations = 50;
+
         /// <summary>Non-zero while a notification is in flight, used to detect re-entrancy.</summary>
         private int _inside;
 

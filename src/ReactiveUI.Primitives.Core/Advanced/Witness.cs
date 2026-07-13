@@ -92,25 +92,18 @@ public static class Witness
 
     /// <summary>Observer wrapper that prevents notifications after termination.</summary>
     /// <typeparam name="T">The observed value type.</typeparam>
-    internal sealed class SafeWitness<T> : IObserver<T>
+    /// <param name="observer">Wrapped observer.</param>
+    /// <param name="cancel">Cancellation resource disposed on terminal notifications.</param>
+    internal sealed class SafeWitness<T>(IObserver<T> observer, IDisposable cancel) : IObserver<T>
     {
         /// <summary>Wrapped observer.</summary>
-        private readonly IObserver<T> _observer;
+        private readonly IObserver<T> _observer = observer;
 
         /// <summary>Cancellation resource disposed on terminal notifications.</summary>
-        private IDisposable? _cancel;
+        private IDisposable? _cancel = cancel;
 
         /// <summary>Non-zero after the observer has stopped.</summary>
         private int _stopped;
-
-        /// <summary>Initializes a new instance of the <see cref="SafeWitness{T}"/> class.</summary>
-        /// <param name="observer">Wrapped observer.</param>
-        /// <param name="cancel">Cancellation resource disposed on terminal notifications.</param>
-        public SafeWitness(IObserver<T> observer, IDisposable cancel)
-        {
-            _observer = observer;
-            _cancel = cancel;
-        }
 
         /// <inheritdoc/>
         public void OnCompleted()
@@ -176,33 +169,26 @@ public static class Witness
 
     /// <summary>Delegate-backed observer implementation.</summary>
     /// <typeparam name="T">The observed value type.</typeparam>
-    private sealed class DelegateWitness<T> : IObserver<T>
+    /// <param name="onNext">Callback invoked for each value.</param>
+    /// <param name="onError">Callback invoked for an error.</param>
+    /// <param name="onCompleted">Callback invoked for completion.</param>
+    private sealed class DelegateWitness<T>(Action<T> onNext, Action<Exception> onError, Action onCompleted)
+        : IObserver<T>
     {
         /// <summary>Callback invoked for each value.</summary>
-        private readonly Action<T> _onNext;
+        private readonly Action<T> _onNext = onNext;
 
         /// <summary>Callback invoked for an error.</summary>
-        private readonly Action<Exception> _onError;
+        private readonly Action<Exception> _onError = onError;
 
         /// <summary>Callback invoked for completion.</summary>
-        private readonly Action _onCompleted;
+        private readonly Action _onCompleted = onCompleted;
 
         /// <summary>Non-zero when terminal safety is enabled.</summary>
         private int _safe;
 
         /// <summary>Non-zero after the observer has stopped.</summary>
         private int _stopped;
-
-        /// <summary>Initializes a new instance of the <see cref="DelegateWitness{T}"/> class.</summary>
-        /// <param name="onNext">Callback invoked for each value.</param>
-        /// <param name="onError">Callback invoked for an error.</param>
-        /// <param name="onCompleted">Callback invoked for completion.</param>
-        public DelegateWitness(Action<T> onNext, Action<Exception> onError, Action onCompleted)
-        {
-            _onNext = onNext;
-            _onError = onError;
-            _onCompleted = onCompleted;
-        }
 
         /// <inheritdoc/>
         public void OnCompleted()

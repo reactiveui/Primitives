@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Signals;
 
@@ -17,8 +18,10 @@ public sealed class DelayableNotificationSignalTests
     [Test]
     public async Task ConstructorRejectsNullDelegates()
     {
-        await Assert.That(() => new DelayableNotificationSignal<string>(null!, static items => items)).ThrowsExactly<ArgumentNullException>();
-        await Assert.That(() => new DelayableNotificationSignal<string>(static () => false, null!)).ThrowsExactly<ArgumentNullException>();
+        await Assert.That(static () => new DelayableNotificationSignal<string>(null!, static items => items))
+            .ThrowsExactly<ArgumentNullException>();
+        await Assert.That(static () => new DelayableNotificationSignal<string>(static () => false, null!))
+            .ThrowsExactly<ArgumentNullException>();
     }
 
     /// <summary>Notifications are buffered while delayed and emitted as a de-duplicated batch on flush.</summary>

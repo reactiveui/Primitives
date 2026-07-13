@@ -10,22 +10,15 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Represents the WitnessOnSignal class.</summary>
 /// <typeparam name="T">The T type.</typeparam>
-internal sealed class WitnessOnSignal<T> : IRequireCurrentThread<T>
+/// <param name="source">The source value.</param>
+/// <param name="scheduler">The scheduler value.</param>
+internal sealed class WitnessOnSignal<T>(IObservable<T> source, ISequencer scheduler) : IRequireCurrentThread<T>
 {
     /// <summary>Stores state for the signal implementation.</summary>
-    private readonly IObservable<T> _source;
+    private readonly IObservable<T> _source = source;
 
     /// <summary>Stores state for the signal implementation.</summary>
-    private readonly ISequencer _scheduler;
-
-    /// <summary>Initializes a new instance of the <see cref="WitnessOnSignal{T}"/> class.</summary>
-    /// <param name="source">The source value.</param>
-    /// <param name="scheduler">The scheduler value.</param>
-    public WitnessOnSignal(IObservable<T> source, ISequencer scheduler)
-    {
-        _source = source;
-        _scheduler = scheduler;
-    }
+    private readonly ISequencer _scheduler = scheduler;
 
     /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
     /// <returns>The result.</returns>
@@ -45,13 +38,16 @@ internal sealed class WitnessOnSignal<T> : IRequireCurrentThread<T>
         new WitnessOn(this, observer, cancel).Run();
 
     /// <summary>Represents the WitnessOn class.</summary>
-    private sealed class WitnessOn : IObserver<T>, IWorkItem, IsDisposed
+    /// <param name="parent">The parent value.</param>
+    /// <param name="observer">The observer value.</param>
+    /// <param name="cancel">The cancel value.</param>
+    private sealed class WitnessOn(WitnessOnSignal<T> parent, IObserver<T> observer, IDisposable cancel) : IObserver<T>, IWorkItem, IsDisposed
     {
         /// <summary>Stores state for the signal implementation.</summary>
-        private readonly WitnessOnSignal<T> _parent;
+        private readonly WitnessOnSignal<T> _parent = parent;
 
         /// <summary>Stores the downstream observer.</summary>
-        private readonly IObserver<T> _observer;
+        private readonly IObserver<T> _observer = observer;
 
         /// <summary>Synchronization gate guarding the queued actions and scheduling state.</summary>
         private readonly Lock _gate = new();
@@ -63,24 +59,13 @@ internal sealed class WitnessOnSignal<T> : IRequireCurrentThread<T>
         private readonly Queue<Notification> _actions = new();
 
         /// <summary>Upstream subscription disposed on teardown.</summary>
-        private IDisposable? _cancel;
+        private IDisposable? _cancel = cancel;
 
         /// <summary>Stores state for the signal implementation.</summary>
         private bool _isDisposed;
 
         /// <summary>Tracks whether a drain has been scheduled.</summary>
         private bool _isScheduled;
-
-        /// <summary>Initializes a new instance of the <see cref="WitnessOn"/> class.</summary>
-        /// <param name="parent">The parent value.</param>
-        /// <param name="observer">The observer value.</param>
-        /// <param name="cancel">The cancel value.</param>
-        public WitnessOn(WitnessOnSignal<T> parent, IObserver<T> observer, IDisposable cancel)
-        {
-            _parent = parent;
-            _observer = observer;
-            _cancel = cancel;
-        }
 
         /// <inheritdoc/>
         public bool IsDisposed

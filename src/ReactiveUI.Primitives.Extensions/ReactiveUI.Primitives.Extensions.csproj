@@ -10,39 +10,39 @@
   <!-- Alias Lock to the dedicated System.Threading.Lock on .NET 9+ (faster EnterScope fast path),
        and to a plain object elsewhere (the lock statement falls back to Monitor). -->
   <ItemGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0'))">
-    <Using Include="System.Threading.Lock" Alias="Lock" />
+    <Using Include="System.Threading.Lock" Alias="Lock"/>
   </ItemGroup>
   <ItemGroup Condition="!$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0'))">
-    <Using Include="System.Object" Alias="Lock" />
+    <Using Include="System.Object" Alias="Lock"/>
   </ItemGroup>
 
   <ItemGroup>
-    <Using Include="ReactiveUI.Primitives.Concurrency" />
-    <Using Include="ReactiveUI.Primitives.Extensions.Internal" />
+    <Using Include="ReactiveUI.Primitives.Concurrency"/>
+    <Using Include="ReactiveUI.Primitives.Extensions.Internal"/>
   </ItemGroup>
 
   <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
-    <PackageReference Include="Microsoft.Bcl.TimeProvider" />
-    <PackageReference Include="System.Threading.Channels" />
-    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" />
-    <PackageReference Include="System.ComponentModel.Annotations" />
-    <PackageReference Include="System.Buffers" />
-    <PackageReference Include="System.Memory" />
-    <PackageReference Include="System.Collections.Immutable" />
+    <PackageReference Include="Microsoft.Bcl.TimeProvider"/>
+    <PackageReference Include="System.Threading.Channels"/>
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe"/>
+    <PackageReference Include="System.ComponentModel.Annotations"/>
+    <PackageReference Include="System.Buffers"/>
+    <PackageReference Include="System.Memory"/>
+    <PackageReference Include="System.Collections.Immutable"/>
   </ItemGroup>
-  
+
   <ItemGroup>
-    <InternalsVisibleTo Include="$(AssemblyName).Tests" />
+    <InternalsVisibleTo Include="$(AssemblyName).Tests"/>
   </ItemGroup>
 
   <!-- The RxVoid/ISequencer-aware shared source, compiled here under the lean namespace (no REACTIVE_SHIM). -->
   <ItemGroup>
-    <Compile Include="..\Primitives.Extensions.Shared\**\*.cs" Link="Primitives.Extensions.Shared\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\Primitives.Extensions.Shared\**\*.cs" Link="Primitives.Extensions.Shared\%(RecursiveDir)%(Filename)%(Extension)"/>
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ReactiveUI.Primitives\ReactiveUI.Primitives.csproj" />
-    <ProjectReference Include="..\ReactiveUI.Primitives.Extensions.Core\ReactiveUI.Primitives.Extensions.Core.csproj" />
+    <ProjectReference Include="..\ReactiveUI.Primitives\ReactiveUI.Primitives.csproj"/>
+    <ProjectReference Include="..\ReactiveUI.Primitives.Extensions.Core\ReactiveUI.Primitives.Extensions.Core.csproj"/>
   </ItemGroup>
 
 </Project>

@@ -46,22 +46,15 @@ public static partial class LinqExtensions
 
     /// <summary>Prepends a single value without composing through concat and return signals.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
-    private sealed class PrependSignal<T> : IInlineSignal<T>
+    /// <param name="source">The source observable.</param>
+    /// <param name="value">The prepended value.</param>
+    private sealed class PrependSignal<T>(IObservable<T> source, T value) : IInlineSignal<T>
     {
         /// <summary>The source observable.</summary>
-        private readonly IObservable<T> _source;
+        private readonly IObservable<T> _source = source;
 
         /// <summary>The value emitted before source subscription.</summary>
-        private readonly T _value;
-
-        /// <summary>Initializes a new instance of the <see cref="PrependSignal{T}"/> class.</summary>
-        /// <param name="source">The source observable.</param>
-        /// <param name="value">The prepended value.</param>
-        internal PrependSignal(IObservable<T> source, T value)
-        {
-            _source = source;
-            _value = value;
-        }
+        private readonly T _value = value;
 
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
@@ -90,22 +83,15 @@ public static partial class LinqExtensions
 
     /// <summary>Prepends an enumerable without composing through concat and enumerable signals.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
-    private sealed class StartWithEnumerableSignal<T> : IInlineSignal<T>
+    /// <param name="source">The source observable.</param>
+    /// <param name="values">Values emitted before source subscription.</param>
+    private sealed class StartWithEnumerableSignal<T>(IObservable<T> source, IEnumerable<T> values) : IInlineSignal<T>
     {
         /// <summary>The source observable.</summary>
-        private readonly IObservable<T> _source;
+        private readonly IObservable<T> _source = source;
 
         /// <summary>Values emitted before source subscription.</summary>
-        private readonly IEnumerable<T> _values;
-
-        /// <summary>Initializes a new instance of the <see cref="StartWithEnumerableSignal{T}"/> class.</summary>
-        /// <param name="source">The source observable.</param>
-        /// <param name="values">Values emitted before source subscription.</param>
-        internal StartWithEnumerableSignal(IObservable<T> source, IEnumerable<T> values)
-        {
-            _source = source;
-            _values = values;
-        }
+        private readonly IEnumerable<T> _values = values;
 
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
@@ -134,27 +120,19 @@ public static partial class LinqExtensions
 
     /// <summary>Fuses a single prepended value and a single appended value around a source subscription.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
-    private sealed class PrependAppendSignal<T> : IInlineSignal<T>
+    /// <param name="source">The source observable.</param>
+    /// <param name="prependValue">The prepended value.</param>
+    /// <param name="appendValue">The appended value.</param>
+    private sealed class PrependAppendSignal<T>(IObservable<T> source, T prependValue, T appendValue) : IInlineSignal<T>
     {
         /// <summary>The source observable.</summary>
-        private readonly IObservable<T> _source;
+        private readonly IObservable<T> _source = source;
 
         /// <summary>The value emitted before source subscription.</summary>
-        private readonly T _prependValue;
+        private readonly T _prependValue = prependValue;
 
         /// <summary>The value emitted after source completion.</summary>
-        private readonly T _appendValue;
-
-        /// <summary>Initializes a new instance of the <see cref="PrependAppendSignal{T}"/> class.</summary>
-        /// <param name="source">The source observable.</param>
-        /// <param name="prependValue">The prepended value.</param>
-        /// <param name="appendValue">The appended value.</param>
-        internal PrependAppendSignal(IObservable<T> source, T prependValue, T appendValue)
-        {
-            _source = source;
-            _prependValue = prependValue;
-            _appendValue = appendValue;
-        }
+        private readonly T _appendValue = appendValue;
 
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
@@ -179,22 +157,15 @@ public static partial class LinqExtensions
 
     /// <summary>Appends a single value after source completion.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
-    private sealed class AppendSignal<T> : IObservable<T>
+    /// <param name="source">The source observable.</param>
+    /// <param name="value">The appended value.</param>
+    private sealed class AppendSignal<T>(IObservable<T> source, T value) : IObservable<T>
     {
         /// <summary>The source observable.</summary>
-        private readonly IObservable<T> _source;
+        private readonly IObservable<T> _source = source;
 
         /// <summary>The value emitted after source completion.</summary>
-        private readonly T _value;
-
-        /// <summary>Initializes a new instance of the <see cref="AppendSignal{T}"/> class.</summary>
-        /// <param name="source">The source observable.</param>
-        /// <param name="value">The appended value.</param>
-        internal AppendSignal(IObservable<T> source, T value)
-        {
-            _source = source;
-            _value = value;
-        }
+        private readonly T _value = value;
 
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
@@ -209,22 +180,15 @@ public static partial class LinqExtensions
 
     /// <summary>Emits a default value when the source completes without values.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
-    private sealed class DefaultIfEmptySignal<T> : IObservable<T>
+    /// <param name="source">The source observable.</param>
+    /// <param name="defaultValue">Value emitted for an empty source.</param>
+    private sealed class DefaultIfEmptySignal<T>(IObservable<T> source, T defaultValue) : IObservable<T>
     {
         /// <summary>The source observable.</summary>
-        private readonly IObservable<T> _source;
+        private readonly IObservable<T> _source = source;
 
         /// <summary>Value emitted for an empty source.</summary>
-        private readonly T _defaultValue;
-
-        /// <summary>Initializes a new instance of the <see cref="DefaultIfEmptySignal{T}"/> class.</summary>
-        /// <param name="source">The source observable.</param>
-        /// <param name="defaultValue">Value emitted for an empty source.</param>
-        internal DefaultIfEmptySignal(IObservable<T> source, T defaultValue)
-        {
-            _source = source;
-            _defaultValue = defaultValue;
-        }
+        private readonly T _defaultValue = defaultValue;
 
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
@@ -239,22 +203,15 @@ public static partial class LinqExtensions
 
     /// <summary>Range timestamp projection with no intermediate map observer.</summary>
     /// <typeparam name="T">The range value type.</typeparam>
-    private sealed class TimestampRangeSignal<T> : IInlineSignal<Moment<T>>
+    /// <param name="range">The range source.</param>
+    /// <param name="sequencer">The sequencer used to read timestamps.</param>
+    private sealed class TimestampRangeSignal<T>(RangeSignal range, ISequencer sequencer) : IInlineSignal<Moment<T>>
     {
         /// <summary>The range source.</summary>
-        private readonly RangeSignal _range;
+        private readonly RangeSignal _range = range;
 
         /// <summary>The sequencer used to read timestamps.</summary>
-        private readonly ISequencer _sequencer;
-
-        /// <summary>Initializes a new instance of the <see cref="TimestampRangeSignal{T}"/> class.</summary>
-        /// <param name="range">The range source.</param>
-        /// <param name="sequencer">The sequencer used to read timestamps.</param>
-        internal TimestampRangeSignal(RangeSignal range, ISequencer sequencer)
-        {
-            _range = range;
-            _sequencer = sequencer;
-        }
+        private readonly ISequencer _sequencer = sequencer;
 
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<Moment<T>> observer)
@@ -321,22 +278,15 @@ public static partial class LinqExtensions
 
     /// <summary>Range time-interval projection with no intermediate safe signal closure.</summary>
     /// <typeparam name="T">The range value type.</typeparam>
-    private sealed class TimeIntervalRangeSignal<T> : IInlineSignal<TimeInterval<T>>
+    /// <param name="range">The range source.</param>
+    /// <param name="sequencer">The sequencer used to read timestamps.</param>
+    private sealed class TimeIntervalRangeSignal<T>(RangeSignal range, ISequencer sequencer) : IInlineSignal<TimeInterval<T>>
     {
         /// <summary>The range source.</summary>
-        private readonly RangeSignal _range;
+        private readonly RangeSignal _range = range;
 
         /// <summary>The sequencer used to read timestamps.</summary>
-        private readonly ISequencer _sequencer;
-
-        /// <summary>Initializes a new instance of the <see cref="TimeIntervalRangeSignal{T}"/> class.</summary>
-        /// <param name="range">The range source.</param>
-        /// <param name="sequencer">The sequencer used to read timestamps.</param>
-        internal TimeIntervalRangeSignal(RangeSignal range, ISequencer sequencer)
-        {
-            _range = range;
-            _sequencer = sequencer;
-        }
+        private readonly ISequencer _sequencer = sequencer;
 
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TimeInterval<T>> observer)
@@ -409,27 +359,19 @@ public static partial class LinqExtensions
 
     /// <summary>Range delay projection with no safe-signal wrapper allocation.</summary>
     /// <typeparam name="T">The range value type.</typeparam>
-    private sealed class ShiftedRangeSignal<T> : IRequireCurrentThread<T>, IInlineSignal<T>
+    /// <param name="range">The range source.</param>
+    /// <param name="dueTime">The normalized due time.</param>
+    /// <param name="sequencer">The sequencer used to schedule the range batch.</param>
+    private sealed class ShiftedRangeSignal<T>(RangeSignal range, TimeSpan dueTime, ISequencer sequencer) : IRequireCurrentThread<T>, IInlineSignal<T>
     {
         /// <summary>The range source.</summary>
-        private readonly RangeSignal _range;
+        private readonly RangeSignal _range = range;
 
         /// <summary>The normalized due time.</summary>
-        private readonly TimeSpan _dueTime;
+        private readonly TimeSpan _dueTime = dueTime;
 
         /// <summary>The sequencer used to schedule the range batch.</summary>
-        private readonly ISequencer _sequencer;
-
-        /// <summary>Initializes a new instance of the <see cref="ShiftedRangeSignal{T}"/> class.</summary>
-        /// <param name="range">The range source.</param>
-        /// <param name="dueTime">The normalized due time.</param>
-        /// <param name="sequencer">The sequencer used to schedule the range batch.</param>
-        internal ShiftedRangeSignal(RangeSignal range, TimeSpan dueTime, ISequencer sequencer)
-        {
-            _range = range;
-            _dueTime = dueTime;
-            _sequencer = sequencer;
-        }
+        private readonly ISequencer _sequencer = sequencer;
 
         /// <inheritdoc/>
         public bool IsRequiredSubscribeOnCurrentThread() => _sequencer == Sequencer.CurrentThread;
@@ -456,228 +398,6 @@ public static partial class LinqExtensions
                 (OnNext: onNext, OnCompleted: onCompleted, Range: _range),
                 _dueTime,
                 static (_, state) => EmitShiftedRange(state.OnNext, state.OnCompleted, state.Range));
-        }
-    }
-
-    /// <summary>Sample signal with a direct subscription path.</summary>
-    /// <typeparam name="T">The source value type.</typeparam>
-    private sealed class ProbeSignal<T> : IRequireCurrentThread<T>
-    {
-        /// <summary>The source observable.</summary>
-        private readonly IObservable<T> _source;
-
-        /// <summary>The sample period.</summary>
-        private readonly TimeSpan _period;
-
-        /// <summary>The sequencer used to schedule ticks.</summary>
-        private readonly ISequencer _sequencer;
-
-        /// <summary>Initializes a new instance of the <see cref="ProbeSignal{T}"/> class.</summary>
-        /// <param name="source">The source observable.</param>
-        /// <param name="period">The sample period.</param>
-        /// <param name="sequencer">The sequencer used to schedule ticks.</param>
-        internal ProbeSignal(IObservable<T> source, TimeSpan period, ISequencer sequencer)
-        {
-            _source = source;
-            _period = period;
-            _sequencer = sequencer;
-        }
-
-        /// <inheritdoc/>
-        public bool IsRequiredSubscribeOnCurrentThread() => _sequencer == Sequencer.CurrentThread;
-
-        /// <inheritdoc/>
-        public IDisposable Subscribe(IObserver<T> observer)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(observer);
-
-            ProbeCoordinator<T> coordinator = new(_source, _period, _sequencer, observer);
-            if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
-            {
-                return coordinator.Run();
-            }
-
-            SingleDisposable subscription = new();
-            _ = Sequencer.CurrentThread.Schedule(() => subscription.Create(coordinator.Run()));
-            return subscription;
-        }
-    }
-
-    /// <summary>Coordinates a sampled observable sequence without the anonymous signal wrapper.</summary>
-    /// <typeparam name="T">The source value type.</typeparam>
-    private sealed class ProbeCoordinator<T> : IObserver<T>, IDisposable
-    {
-        /// <summary>The source observable.</summary>
-        private readonly IObservable<T> _source;
-
-        /// <summary>The sample period.</summary>
-        private readonly TimeSpan _period;
-
-        /// <summary>The sequencer used to schedule ticks.</summary>
-        private readonly ISequencer _sequencer;
-
-        /// <summary>The downstream observer.</summary>
-        private readonly IObserver<T> _observer;
-
-        /// <summary>
-        /// The synchronization gate. A reentrant monitor is used because emissions are serialized
-        /// while the gate is held, which a non-reentrant spin lock cannot do safely.
-        /// </summary>
-        private readonly Lock _gate = new();
-
-        /// <summary>The active source subscription.</summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage(
-            "Usage",
-            "CA2213:Disposable fields should be disposed",
-            Justification = "Disposed via the thread-safe Interlocked.Exchange teardown in Dispose; CA2213 does not recognize disposal of a field through Interlocked.Exchange.")]
-        private IDisposable? _subscription;
-
-        /// <summary>The active timer.</summary>
-        private IDisposable? _timer;
-
-        /// <summary>A value indicating whether a sample timer is active.</summary>
-        private bool _timerActive;
-
-        /// <summary>A value indicating whether a latest value is available.</summary>
-        private bool _hasLatest;
-
-        /// <summary>The latest value.</summary>
-        private T? _latest;
-
-        /// <summary>A value indicating whether the source has completed.</summary>
-        private bool _done;
-
-        /// <summary>A value indicating whether the coordinator has been disposed.</summary>
-        private int _disposed;
-
-        /// <summary>Initializes a new instance of the <see cref="ProbeCoordinator{T}"/> class.</summary>
-        /// <param name="source">The source observable.</param>
-        /// <param name="period">The sample period.</param>
-        /// <param name="sequencer">The sequencer used to schedule ticks.</param>
-        /// <param name="observer">The downstream observer.</param>
-        internal ProbeCoordinator(IObservable<T> source, TimeSpan period, ISequencer sequencer, IObserver<T> observer)
-        {
-            _source = source;
-            _period = period;
-            _sequencer = sequencer;
-            _observer = observer;
-        }
-
-        /// <inheritdoc/>
-        public void Dispose()
-        {
-            if (Interlocked.Exchange(ref _disposed, 1) != 0)
-            {
-                return;
-            }
-
-            Interlocked.Exchange(ref _timer, null)?.Dispose();
-
-            Interlocked.Exchange(ref _subscription, null)?.Dispose();
-        }
-
-        /// <summary>Records the latest source value.</summary>
-        /// <param name="value">The source value.</param>
-        public void OnNext(T value)
-        {
-            bool shouldSchedule;
-            lock (_gate)
-            {
-                if (_done)
-                {
-                    return;
-                }
-
-                _hasLatest = true;
-                _latest = value;
-                shouldSchedule = !_timerActive;
-                _timerActive = true;
-            }
-
-            if (!shouldSchedule)
-            {
-                return;
-            }
-
-            ScheduleNext();
-        }
-
-        /// <summary>Forwards source errors and releases active resources.</summary>
-        /// <param name="error">The source error.</param>
-        public void OnError(Exception error)
-        {
-            lock (_gate)
-            {
-                if (_done)
-                {
-                    return;
-                }
-
-                _done = true;
-                _observer.OnError(error);
-            }
-
-            Dispose();
-        }
-
-        /// <summary>Forwards completion and releases active resources.</summary>
-        public void OnCompleted()
-        {
-            lock (_gate)
-            {
-                if (_done)
-                {
-                    return;
-                }
-
-                _done = true;
-                _observer.OnCompleted();
-            }
-
-            Dispose();
-        }
-
-        /// <summary>Starts sampling the source.</summary>
-        /// <returns>The coordinator that owns the subscription cleanup.</returns>
-        internal ProbeCoordinator<T> Run()
-        {
-            _subscription = _source.Subscribe(this);
-            return this;
-        }
-
-        /// <summary>Schedules the next sample tick.</summary>
-        private void ScheduleNext()
-        {
-            var timer = _sequencer.Schedule(this, _period, static (_, coordinator) => coordinator.Tick());
-            if (Volatile.Read(ref _disposed) == 0)
-            {
-                Volatile.Write(ref _timer, timer);
-                return;
-            }
-
-            timer.Dispose();
-        }
-
-        /// <summary>Handles a sample tick.</summary>
-        /// <returns>An empty disposable.</returns>
-        private EmptyDisposable Tick()
-        {
-            // Hold the gate across the emission so the sample cannot interleave with a terminal.
-            lock (_gate)
-            {
-                if (_done || !_hasLatest)
-                {
-                    _timerActive = false;
-                    return EmptyDisposable.Instance;
-                }
-
-                var value = _latest!;
-                _hasLatest = false;
-                _timerActive = false;
-                _observer.OnNext(value);
-            }
-
-            return EmptyDisposable.Instance;
         }
     }
 
@@ -883,229 +603,6 @@ public static partial class LinqExtensions
                 _hasLatest = false;
                 return TimerAction.Emit;
             }
-        }
-    }
-
-    /// <summary>Dedicated signal for <c>ForkJoin</c>; runs the coordinator without a Create closure.</summary>
-    /// <typeparam name="TLeft">The left value type.</typeparam>
-    /// <typeparam name="TRight">The right value type.</typeparam>
-    /// <typeparam name="TResult">The result value type.</typeparam>
-    private sealed class ForkJoinSignal<TLeft, TRight, TResult> : IObservable<TResult>
-    {
-        /// <summary>The left source.</summary>
-        private readonly IObservable<TLeft> _left;
-
-        /// <summary>The right source.</summary>
-        private readonly IObservable<TRight> _right;
-
-        /// <summary>The projection of the two final values.</summary>
-        private readonly Func<TLeft, TRight, TResult> _selector;
-
-        /// <summary>Initializes a new instance of the <see cref="ForkJoinSignal{TLeft, TRight, TResult}"/> class.</summary>
-        /// <param name="left">The left source.</param>
-        /// <param name="right">The right source.</param>
-        /// <param name="selector">The projection of the two final values.</param>
-        internal ForkJoinSignal(IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector)
-        {
-            _left = left;
-            _right = right;
-            _selector = selector;
-        }
-
-        /// <inheritdoc/>
-        public IDisposable Subscribe(IObserver<TResult> observer)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(observer);
-
-            return new ForkJoinCoordinator<TLeft, TRight, TResult>(observer, _selector).Run(_left, _right);
-        }
-    }
-
-    /// <summary>Range-specialized <c>ForkJoin</c>: emits the projection of each range's final value.</summary>
-    /// <typeparam name="TResult">The result value type.</typeparam>
-    private sealed class RangeForkJoinSignal<TResult> : IObservable<TResult>
-    {
-        /// <summary>The left source range.</summary>
-        private readonly RangeSignal _left;
-
-        /// <summary>The right source range.</summary>
-        private readonly RangeSignal _right;
-
-        /// <summary>The projection of the two final values.</summary>
-        private readonly Func<int, int, TResult> _selector;
-
-        /// <summary>Initializes a new instance of the <see cref="RangeForkJoinSignal{TResult}"/> class.</summary>
-        /// <param name="left">The left source range.</param>
-        /// <param name="right">The right source range.</param>
-        /// <param name="selector">The projection of the two final values.</param>
-        internal RangeForkJoinSignal(RangeSignal left, RangeSignal right, Func<int, int, TResult> selector)
-        {
-            _left = left;
-            _right = right;
-            _selector = selector;
-        }
-
-        /// <inheritdoc/>
-        public IDisposable Subscribe(IObserver<TResult> observer)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(observer);
-
-            observer.OnNext(_selector(_left.Start + _left.Count - 1, _right.Start + _right.Count - 1));
-            observer.OnCompleted();
-            return EmptyDisposable.Instance;
-        }
-    }
-
-    /// <summary>Coordinates a two-source fork-join operation.</summary>
-    /// <typeparam name="TLeft">The left value type.</typeparam>
-    /// <typeparam name="TRight">The right value type.</typeparam>
-    /// <typeparam name="TResult">The result value type.</typeparam>
-    private sealed class ForkJoinCoordinator<TLeft, TRight, TResult>
-    {
-        /// <summary>The synchronization gate.</summary>
-        private readonly Lock _gate = new();
-
-        /// <summary>The downstream observer.</summary>
-        private readonly IObserver<TResult> _observer;
-
-        /// <summary>The projection function.</summary>
-        private readonly Func<TLeft, TRight, TResult> _selector;
-
-        /// <summary>A value indicating whether the left source produced a value.</summary>
-        private bool _hasLeft;
-
-        /// <summary>A value indicating whether the right source produced a value.</summary>
-        private bool _hasRight;
-
-        /// <summary>A value indicating whether the left source completed.</summary>
-        private bool _leftDone;
-
-        /// <summary>A value indicating whether the right source completed.</summary>
-        private bool _rightDone;
-
-        /// <summary>The latest left value.</summary>
-        private TLeft? _latestLeft;
-
-        /// <summary>The latest right value.</summary>
-        private TRight? _latestRight;
-
-        /// <summary>Initializes a new instance of the <see cref="ForkJoinCoordinator{TLeft, TRight, TResult}"/> class.</summary>
-        /// <param name="observer">The downstream observer.</param>
-        /// <param name="selector">The projection function.</param>
-        internal ForkJoinCoordinator(IObserver<TResult> observer, Func<TLeft, TRight, TResult> selector)
-        {
-            _observer = observer;
-            _selector = selector;
-        }
-
-        /// <summary>Subscribes to both fork-join sources.</summary>
-        /// <param name="left">The left source.</param>
-        /// <param name="right">The right source.</param>
-        /// <returns>The subscription cleanup.</returns>
-        internal MultipleDisposable Run(IObservable<TLeft> left, IObservable<TRight> right) =>
-            new(
-                left.Subscribe(OnLeftNext, _observer.OnError, OnLeftCompleted),
-                right.Subscribe(OnRightNext, _observer.OnError, OnRightCompleted));
-
-        /// <summary>Records a left value.</summary>
-        /// <param name="value">The left value.</param>
-        private void OnLeftNext(TLeft value)
-        {
-            lock (_gate)
-            {
-                _hasLeft = true;
-                _latestLeft = value;
-            }
-        }
-
-        /// <summary>Records a right value.</summary>
-        /// <param name="value">The right value.</param>
-        private void OnRightNext(TRight value)
-        {
-            lock (_gate)
-            {
-                _hasRight = true;
-                _latestRight = value;
-            }
-        }
-
-        /// <summary>Marks the left source as complete.</summary>
-        private void OnLeftCompleted()
-        {
-            if (!CompleteLeft(out var result, out var emit))
-            {
-                return;
-            }
-
-            Finish(result, emit);
-        }
-
-        /// <summary>Marks the right source as complete.</summary>
-        private void OnRightCompleted()
-        {
-            if (!CompleteRight(out var result, out var emit))
-            {
-                return;
-            }
-
-            Finish(result, emit);
-        }
-
-        /// <summary>Marks the left source complete and computes the result if both sources are complete.</summary>
-        /// <param name="result">The result to emit.</param>
-        /// <param name="emit">A value indicating whether a result should be emitted.</param>
-        /// <returns><c>true</c> when fork-join is ready to finish; otherwise, <c>false</c>.</returns>
-        private bool CompleteLeft(out TResult result, out bool emit)
-        {
-            lock (_gate)
-            {
-                _leftDone = true;
-                return TryFinish(out result, out emit);
-            }
-        }
-
-        /// <summary>Marks the right source complete and computes the result if both sources are complete.</summary>
-        /// <param name="result">The result to emit.</param>
-        /// <param name="emit">A value indicating whether a result should be emitted.</param>
-        /// <returns><c>true</c> when fork-join is ready to finish; otherwise, <c>false</c>.</returns>
-        private bool CompleteRight(out TResult result, out bool emit)
-        {
-            lock (_gate)
-            {
-                _rightDone = true;
-                return TryFinish(out result, out emit);
-            }
-        }
-
-        /// <summary>Computes the final result when both sources are complete.</summary>
-        /// <param name="result">The result to emit.</param>
-        /// <param name="emit">A value indicating whether a result should be emitted.</param>
-        /// <returns><c>true</c> when both sources are complete; otherwise, <c>false</c>.</returns>
-        private bool TryFinish(out TResult result, out bool emit)
-        {
-            if (!_leftDone || !_rightDone)
-            {
-                result = default!;
-                emit = false;
-                return false;
-            }
-
-            emit = _hasLeft && _hasRight;
-            result = emit ? _selector(_latestLeft!, _latestRight!) : default!;
-            return true;
-        }
-
-        /// <summary>Emits the final result and completes.</summary>
-        /// <param name="result">The result to emit.</param>
-        /// <param name="emit">A value indicating whether a result should be emitted.</param>
-        private void Finish(TResult result, bool emit)
-        {
-            if (emit)
-            {
-                _observer.OnNext(result);
-            }
-
-            _observer.OnCompleted();
         }
     }
 }

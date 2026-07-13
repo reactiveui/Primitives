@@ -11,28 +11,21 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <summary>Applies an indexed selector to source values.</summary>
 /// <typeparam name="TSource">The source value type.</typeparam>
 /// <typeparam name="TResult">The projected value type.</typeparam>
-public sealed class MapIndexedWitness<TSource, TResult> : IObserver<TSource>
+/// <param name="observer">The downstream observer.</param>
+/// <param name="selector">The indexed selector.</param>
+public sealed class MapIndexedWitness<TSource, TResult>(IObserver<TResult> observer, Func<TSource, int, TResult> selector) : IObserver<TSource>
 {
     /// <summary>The downstream observer.</summary>
-    private readonly IObserver<TResult> _observer;
+    private readonly IObserver<TResult> _observer = observer;
 
     /// <summary>The indexed selector.</summary>
-    private readonly Func<TSource, int, TResult> _selector;
+    private readonly Func<TSource, int, TResult> _selector = selector;
 
     /// <summary>The next zero-based index.</summary>
     private int _index;
 
     /// <summary>Whether a terminal notification has been forwarded.</summary>
     private bool _stopped;
-
-    /// <summary>Initializes a new instance of the <see cref="MapIndexedWitness{TSource, TResult}"/> class.</summary>
-    /// <param name="observer">The downstream observer.</param>
-    /// <param name="selector">The indexed selector.</param>
-    public MapIndexedWitness(IObserver<TResult> observer, Func<TSource, int, TResult> selector)
-    {
-        _observer = observer;
-        _selector = selector;
-    }
 
     /// <inheritdoc/>
     public void OnNext(TSource value)
@@ -42,10 +35,13 @@ public sealed class MapIndexedWitness<TSource, TResult> : IObserver<TSource>
             return;
         }
 
+        var index = _index;
+        _index++;
+
         TResult result;
         try
         {
-            result = _selector(value, _index++);
+            result = _selector(value, index);
         }
         catch (Exception error) when (!FatalExceptionHelper.IsFatal(error))
         {

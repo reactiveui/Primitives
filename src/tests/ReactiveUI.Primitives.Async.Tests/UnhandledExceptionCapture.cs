@@ -52,14 +52,27 @@ internal sealed class UnhandledExceptionCapture : IDisposable
         ArgumentOutOfRangeException.ThrowIfLessThan(timeout, TimeSpan.Zero);
 
         var deadline = TimeProvider.System.GetUtcNow().Add(timeout);
-        Exception? match;
+        var match = Find(predicate);
 
-        while ((match = Find(predicate)) is null && TimeProvider.System.GetUtcNow() < deadline)
+        if (match is not null)
         {
-            await Task.Delay(PollInterval, CancellationToken.None);
+            return match;
         }
 
-        return match ?? Find(predicate);
+        using PeriodicTimer poll = new(PollInterval);
+
+        while (TimeProvider.System.GetUtcNow() < deadline &&
+               await poll.WaitForNextTickAsync(CancellationToken.None))
+        {
+            match = Find(predicate);
+
+            if (match is not null)
+            {
+                return match;
+            }
+        }
+
+        return Find(predicate);
     }
 
     /// <summary>Stores an exception routed through the temporary handler.</summary>

@@ -13,11 +13,17 @@ namespace ReactiveUI.Primitives.Extensions.Tests.Internal;
 /// post-settle drop branches.</summary>
 public class FirstAsValueTaskHelperTests
 {
+    /// <summary>Message of an error the helper is expected to drop.</summary>
+    private const string IgnoredErrorMessage = "ignored";
+
     /// <summary>Value used by the latch-on-first-emission tests.</summary>
     private const int FirstValue = 7;
 
     /// <summary>Value used to verify subsequent values are ignored.</summary>
     private const int SecondValue = 11;
+
+    /// <summary>Guard timeout so a hung rendezvous fails this test rather than stalling the run.</summary>
+    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
 
     /// <summary>Verifies the helper completes with the first value the source emits.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -91,7 +97,7 @@ public class FirstAsValueTaskHelperTests
         Subject<int> subject = new();
         var pending = FirstAsValueTaskHelper<int>.FirstAsValueTask(subject).AsTask();
         subject.OnNext(FirstValue);
-        var result = await pending.WaitAsync(TimeSpan.FromSeconds(5));
+        var result = await pending.WaitAsync(GuardTimeout);
         await Assert.That(result).IsEqualTo(FirstValue);
     }
 
@@ -104,7 +110,7 @@ public class FirstAsValueTaskHelperTests
         var task = FirstAsValueTaskHelper<int>.FirstAsValueTask(source);
         source.Observer.OnNext(FirstValue);
         source.Observer.OnNext(SecondValue);
-        source.Observer.OnError(new InvalidOperationException("ignored"));
+        source.Observer.OnError(new InvalidOperationException(IgnoredErrorMessage));
         source.Observer.OnCompleted();
         await Assert.That(await task).IsEqualTo(FirstValue);
     }
@@ -118,7 +124,7 @@ public class FirstAsValueTaskHelperTests
         var task = FirstAsValueTaskHelper<int>.FirstAsValueTask(source);
         InvalidOperationException expected = new("first");
         source.Observer.OnError(expected);
-        source.Observer.OnError(new InvalidOperationException("ignored"));
+        source.Observer.OnError(new InvalidOperationException(IgnoredErrorMessage));
         source.Observer.OnCompleted();
         var caught = await Assert.That(async () => await task).ThrowsExactly<InvalidOperationException>();
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -133,7 +139,7 @@ public class FirstAsValueTaskHelperTests
         var task = FirstAsValueTaskHelper<int>.FirstAsValueTask(source);
         source.Observer.OnCompleted();
         source.Observer.OnCompleted();
-        source.Observer.OnError(new InvalidOperationException("ignored"));
+        source.Observer.OnError(new InvalidOperationException(IgnoredErrorMessage));
         await Assert.That(async () => await task).ThrowsExactly<InvalidOperationException>();
     }
 

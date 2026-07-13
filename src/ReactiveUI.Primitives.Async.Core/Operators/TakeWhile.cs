@@ -49,7 +49,8 @@ public static partial class SignalAsyncExtensions
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     /// <param name="predicate">The take-while predicate.</param>
-    internal sealed class TakeWhileSyncSignal<T>(IObservableAsync<T> source, Func<T, bool> predicate) : IObservableAsync<T>
+    internal sealed class TakeWhileSyncSignal<T>(IObservableAsync<T> source, Func<T, bool> predicate)
+        : IObservableAsync<T>
     {
         /// <inheritdoc/>
         async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
@@ -180,7 +181,10 @@ public static partial class SignalAsyncExtensions
             /// <param name="value">The candidate value.</param>
             /// <param name="cancellationToken">The cancellation token.</param>
             /// <returns>A task that completes after the predicate resolves and the downstream emission / completion runs.</returns>
-            private async ValueTask EvaluateAndForwardAsync(ValueTask<bool> pending, T value, CancellationToken cancellationToken)
+            private async ValueTask EvaluateAndForwardAsync(
+                ValueTask<bool> pending,
+                T value,
+                CancellationToken cancellationToken)
             {
                 if (await pending.ConfigureAwait(false))
                 {

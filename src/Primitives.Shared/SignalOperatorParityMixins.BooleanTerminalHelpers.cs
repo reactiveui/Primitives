@@ -13,22 +13,15 @@ public static partial class LinqExtensions
 {
     /// <summary>Predicate all operator implemented without delegate observer wrappers.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
-    private sealed class AllPredicateSignal<T> : IRequireCurrentThread<bool>
+    /// <param name="source">The source observable.</param>
+    /// <param name="predicate">The predicate.</param>
+    private sealed class AllPredicateSignal<T>(IObservable<T> source, Func<T, bool> predicate) : IRequireCurrentThread<bool>
     {
         /// <summary>The source observable.</summary>
-        private readonly IObservable<T> _source;
+        private readonly IObservable<T> _source = source;
 
         /// <summary>The predicate.</summary>
-        private readonly Func<T, bool> _predicate;
-
-        /// <summary>Initializes a new instance of the <see cref="AllPredicateSignal{T}"/> class.</summary>
-        /// <param name="source">The source observable.</param>
-        /// <param name="predicate">The predicate.</param>
-        internal AllPredicateSignal(IObservable<T> source, Func<T, bool> predicate)
-        {
-            _source = source;
-            _predicate = predicate;
-        }
+        private readonly Func<T, bool> _predicate = predicate;
 
         /// <inheritdoc/>
         public bool IsRequiredSubscribeOnCurrentThread() =>
@@ -83,27 +76,19 @@ public static partial class LinqExtensions
 
     /// <summary>Contains operator implemented without composing Any and comparer closures.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
-    private sealed class ContainsSignal<T> : IRequireCurrentThread<bool>
+    /// <param name="source">The source observable.</param>
+    /// <param name="value">The value to locate.</param>
+    /// <param name="comparer">The comparer used for equality checks.</param>
+    private sealed class ContainsSignal<T>(IObservable<T> source, T value, IEqualityComparer<T> comparer) : IRequireCurrentThread<bool>
     {
         /// <summary>The source observable.</summary>
-        private readonly IObservable<T> _source;
+        private readonly IObservable<T> _source = source;
 
         /// <summary>The value to locate.</summary>
-        private readonly T _value;
+        private readonly T _value = value;
 
         /// <summary>The comparer used for equality checks.</summary>
-        private readonly IEqualityComparer<T> _comparer;
-
-        /// <summary>Initializes a new instance of the <see cref="ContainsSignal{T}"/> class.</summary>
-        /// <param name="source">The source observable.</param>
-        /// <param name="value">The value to locate.</param>
-        /// <param name="comparer">The comparer used for equality checks.</param>
-        internal ContainsSignal(IObservable<T> source, T value, IEqualityComparer<T> comparer)
-        {
-            _source = source;
-            _value = value;
-            _comparer = comparer;
-        }
+        private readonly IEqualityComparer<T> _comparer = comparer;
 
         /// <inheritdoc/>
         public bool IsRequiredSubscribeOnCurrentThread() =>
@@ -130,7 +115,11 @@ public static partial class LinqExtensions
         /// <param name="value">The value to locate.</param>
         /// <param name="comparer">The comparer used for equality checks.</param>
         /// <param name="observer">The downstream observer.</param>
-        private static void EmitContainsRange(RangeSignal range, T value, IEqualityComparer<T> comparer, IObserver<bool> observer)
+        private static void EmitContainsRange(
+            RangeSignal range,
+            T value,
+            IEqualityComparer<T> comparer,
+            IObserver<bool> observer)
         {
             try
             {

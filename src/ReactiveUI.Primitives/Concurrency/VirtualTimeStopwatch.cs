@@ -5,22 +5,15 @@
 namespace ReactiveUI.Primitives.Concurrency;
 
 /// <summary>Stopwatch backed by a virtual-time clock reader.</summary>
-internal sealed class VirtualTimeStopwatch : IStopwatch
+/// <param name="readNow">Reads the owner's current virtual time.</param>
+/// <param name="start">Start time for elapsed calculations.</param>
+internal sealed class VirtualTimeStopwatch(Func<DateTimeOffset> readNow, DateTimeOffset start) : IStopwatch
 {
     /// <summary>Reads the owner's current virtual time.</summary>
-    private readonly Func<DateTimeOffset> _readNow;
+    private readonly Func<DateTimeOffset> _readNow = readNow;
 
     /// <summary>Start time captured when the stopwatch was created.</summary>
-    private readonly DateTimeOffset _start;
-
-    /// <summary>Initializes a new instance of the <see cref="VirtualTimeStopwatch"/> class.</summary>
-    /// <param name="readNow">Reads the owner's current virtual time.</param>
-    /// <param name="start">Start time for elapsed calculations.</param>
-    public VirtualTimeStopwatch(Func<DateTimeOffset> readNow, DateTimeOffset start)
-    {
-        _readNow = readNow;
-        _start = start;
-    }
+    private readonly DateTimeOffset _start = start;
 
     /// <summary>Gets the elapsed virtual time.</summary>
     public TimeSpan Elapsed => _readNow() - _start;

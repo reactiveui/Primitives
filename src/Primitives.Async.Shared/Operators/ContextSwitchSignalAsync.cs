@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Async.Reactive;
 #else
@@ -11,9 +12,14 @@ namespace ReactiveUI.Primitives.Async;
 /// <param name = "source">The source observable whose notifications will be context-switched.</param>
 /// <param name = "asyncContext">The async context to switch notifications onto.</param>
 /// <param name = "forceYielding">Whether to force yielding even if already on the target context.</param>
-public sealed class ContextSwitchSignalAsync<T>(IObservableAsync<T> source, AsyncContext asyncContext, bool forceYielding) : IObservableAsync<T>
+public sealed class ContextSwitchSignalAsync<T>(
+    IObservableAsync<T> source,
+    AsyncContext asyncContext,
+    bool forceYielding) : IObservableAsync<T>
 {
-    ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(IObserverAsync<T> observer, CancellationToken cancellationToken)
+    ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
+        IObserverAsync<T> observer,
+        CancellationToken cancellationToken)
     {
         ContextSwitchWitness contextSwitchObserver = new(observer, asyncContext, forceYielding);
         return source.SubscribeAsync(contextSwitchObserver, cancellationToken);
@@ -23,7 +29,10 @@ public sealed class ContextSwitchSignalAsync<T>(IObservableAsync<T> source, Asyn
     /// <param name = "observer">The downstream observer to forward notifications to.</param>
     /// <param name = "asyncContext">The async context to switch onto.</param>
     /// <param name = "forceYielding">Whether to force yielding even if already on the target context.</param>
-    internal sealed class ContextSwitchWitness(IObserverAsync<T> observer, AsyncContext asyncContext, bool forceYielding) : WitnessAsync<T>
+    internal sealed class ContextSwitchWitness(
+        IObserverAsync<T> observer,
+        AsyncContext asyncContext,
+        bool forceYielding) : WitnessAsync<T>
     {
         /// <summary>Slow path: switch to the target context then forward the value.
         /// Exposed as <see langword="internal"/> so tests can invoke the slow-path body
@@ -41,7 +50,9 @@ public sealed class ContextSwitchSignalAsync<T>(IObservableAsync<T> source, Asyn
         /// <param name = "error">The error to forward.</param>
         /// <param name = "cancellationToken">The cancellation token.</param>
         /// <returns>A task that completes after the context switch and downstream forward.</returns>
-        internal async ValueTask ForwardErrorAfterContextSwitchAsync(Exception error, CancellationToken cancellationToken)
+        internal async ValueTask ForwardErrorAfterContextSwitchAsync(
+            Exception error,
+            CancellationToken cancellationToken)
         {
             await asyncContext.SwitchContextAsync(forceYielding, cancellationToken);
             await observer.OnErrorResumeAsync(error, cancellationToken).ConfigureAwait(false);
@@ -57,23 +68,24 @@ public sealed class ContextSwitchSignalAsync<T>(IObservableAsync<T> source, Asyn
         }
 
         /// <inheritdoc/>
-        protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
-        {
+        protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
+
             // Fast path: already on the target context and no forced yield — skip the awaitable
             // dance entirely and forward synchronously.
-            return !forceYielding && asyncContext.IsSameAsCurrentAsyncContext() ? observer.OnNextAsync(value, cancellationToken) : ForwardAfterContextSwitchAsync(value, cancellationToken);
-        }
+            !forceYielding && asyncContext.IsSameAsCurrentAsyncContext()
+                ? observer.OnNextAsync(value, cancellationToken)
+                : ForwardAfterContextSwitchAsync(value, cancellationToken);
 
         /// <inheritdoc/>
-        protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken)
-        {
-            return !forceYielding && asyncContext.IsSameAsCurrentAsyncContext() ? observer.OnErrorResumeAsync(error, cancellationToken) : ForwardErrorAfterContextSwitchAsync(error, cancellationToken);
-        }
+        protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            !forceYielding && asyncContext.IsSameAsCurrentAsyncContext()
+                ? observer.OnErrorResumeAsync(error, cancellationToken)
+                : ForwardErrorAfterContextSwitchAsync(error, cancellationToken);
 
         /// <inheritdoc/>
-        protected override ValueTask OnCompletedAsyncCore(Result result)
-        {
-            return !forceYielding && asyncContext.IsSameAsCurrentAsyncContext() ? observer.OnCompletedAsync(result) : ForwardCompletionAfterContextSwitchAsync(result);
-        }
+        protected override ValueTask OnCompletedAsyncCore(Result result) =>
+            !forceYielding && asyncContext.IsSameAsCurrentAsyncContext()
+                ? observer.OnCompletedAsync(result)
+                : ForwardCompletionAfterContextSwitchAsync(result);
     }
 }

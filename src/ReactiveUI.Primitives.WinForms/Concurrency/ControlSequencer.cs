@@ -49,10 +49,7 @@ public sealed class ControlSequencer : ISequencer
     /// <exception cref="ObjectDisposedException">The control has been disposed.</exception>
     private bool Post(Action drain)
     {
-        if (Control.IsDisposed)
-        {
-            throw new ObjectDisposedException(Control.GetType().FullName);
-        }
+        ObjectDisposedExceptionHelper.ThrowIf(Control.IsDisposed, Control);
 
         if (!Control.IsHandleCreated)
         {

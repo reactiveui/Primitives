@@ -80,5 +80,9 @@ public readonly struct TimeInterval<T> : IEquatable<TimeInterval<T>>
     /// <summary>Returns a string representation of the current TimeInterval value.</summary>
     /// <returns>String representation of the current TimeInterval value.</returns>
     public override string ToString() =>
+#if NET8_0_OR_GREATER
+        string.Format(CultureInfo.CurrentCulture, CoreCompositeFormats.TimeInterval, Value, Interval);
+#else
         string.Format(CultureInfo.CurrentCulture, "{0}@{1}", Value, Interval);
+#endif
 }

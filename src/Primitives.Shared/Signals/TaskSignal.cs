@@ -18,7 +18,8 @@ public static class TaskSignal
     /// An AsyncObservable.
     /// </returns>
     /// <exception cref="ArgumentExceptionHelper">observableFactory.</exception>
-    public static ITaskSignal<TResult> Create<TResult>(Func<ITaskSignal<TResult>, IObservable<TResult>> observableFactory) =>
+    public static ITaskSignal<TResult> Create<TResult>(
+        Func<ITaskSignal<TResult>, IObservable<TResult>> observableFactory) =>
         Instance(observableFactory, null, null);
 
     /// <summary>Creates the specified source.</summary>
@@ -29,7 +30,9 @@ public static class TaskSignal
     /// An AsyncObservable.
     /// </returns>
     /// <exception cref="ArgumentExceptionHelper">observableFactory.</exception>
-    public static ITaskSignal<TResult> Create<TResult>(Func<ITaskSignal<TResult>, IObservable<TResult>> observableFactory, ISequencer? scheduler) =>
+    public static ITaskSignal<TResult> Create<TResult>(
+        Func<ITaskSignal<TResult>, IObservable<TResult>> observableFactory,
+        ISequencer? scheduler) =>
         Instance(observableFactory, scheduler, null);
 
     /// <summary>Creates the specified source.</summary>
@@ -53,10 +56,13 @@ public static class TaskSignal
     /// <param name="scheduler">The scheduler value.</param>
     /// <param name="cancellationTokenSource">The cancellationTokenSource value.</param>
     /// <returns>The result.</returns>
-    private static TaskSignal<TResult> Instance<TResult>(Func<ITaskSignal<TResult>, IObservable<TResult>> observableFactory, ISequencer? scheduler, CancellationTokenSource? cancellationTokenSource)
+    private static TaskSignal<TResult> Instance<TResult>(
+        Func<ITaskSignal<TResult>, IObservable<TResult>> observableFactory,
+        ISequencer? scheduler,
+        CancellationTokenSource? cancellationTokenSource)
     {
         ArgumentExceptionHelper.ThrowIfNull(observableFactory);
 
-        return new(observableFactory, scheduler, cancellationTokenSource);
+        return TaskSignal<TResult>.Create(observableFactory, scheduler, cancellationTokenSource);
     }
 }

@@ -18,11 +18,12 @@ public sealed class CancellationDisposable : IsDisposed
     /// <summary>Initializes a new instance of the <see cref="CancellationDisposable"/> class.</summary>
     /// <param name="cts">The CTS.</param>
     /// <exception cref="ArgumentExceptionHelper">cts.</exception>
-    public CancellationDisposable(CancellationTokenSource cts) => _cts = cts ?? throw new ArgumentNullException(nameof(cts));
+    public CancellationDisposable(CancellationTokenSource cts) =>
+        _cts = cts ?? throw new ArgumentNullException(nameof(cts));
 
     /// <summary>Initializes a new instance of the <see cref="CancellationDisposable"/> class.</summary>
     public CancellationDisposable()
-      : this(new())
+        : this(new())
     {
     }
 

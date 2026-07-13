@@ -19,7 +19,8 @@ public sealed class DispatcherQueueSequencer : ISequencer
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Maintainability",
         "SST1422:Move this field into the method that uses it",
-        Justification = "Persistent lazy cache: the dispatcher queue handler is built once and reused across every post, so it cannot be a method local.")]
+        Justification =
+            "Persistent lazy cache: the dispatcher queue handler is built once and reused across every post, so it cannot be a method local.")]
     private DispatcherQueueHandler? _handler;
 
     /// <summary>Initializes a new instance of the <see cref="DispatcherQueueSequencer"/> class.</summary>

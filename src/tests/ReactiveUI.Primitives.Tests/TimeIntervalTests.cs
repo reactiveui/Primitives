@@ -9,14 +9,16 @@ namespace ReactiveUI.Primitives.Tests;
 /// <summary>Verifies <see cref="TimeInterval{T}"/> equality and hashing contracts.</summary>
 public class TimeIntervalTests
 {
+    /// <summary>An arbitrary non-zero interval; only its stability matters to the hashing contract.</summary>
+    private static readonly TimeSpan SampleInterval = TimeSpan.FromMilliseconds(123);
+
     /// <summary>Verifies a time interval with a null value uses a deterministic null hash code.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task NullValueTimeIntervalUsesDeterministicNullHashCode()
     {
         const int NullHashSeed = 1963;
-        var interval = TimeSpan.FromMilliseconds(123);
-        TimeInterval<string?> timeInterval = new(null, interval);
-        await Assert.That(timeInterval.GetHashCode()).IsEqualTo(interval.GetHashCode() ^ NullHashSeed);
+        TimeInterval<string?> timeInterval = new(null, SampleInterval);
+        await Assert.That(timeInterval.GetHashCode()).IsEqualTo(SampleInterval.GetHashCode() ^ NullHashSeed);
     }
 }

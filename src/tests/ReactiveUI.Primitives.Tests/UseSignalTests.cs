@@ -18,7 +18,7 @@ public class UseSignalTests
         RecordingDisposable resource = new();
         _ = Assert.Throws<ArgumentNullException>(() => Signal.Use(
                 () => resource,
-                _ => new ScriptedObservable<int>(static observer => observer.OnError(null!)))
+                static _ => new ScriptedObservable<int>(static observer => observer.OnError(null!)))
             .Subscribe(new Recorder<int>()));
         await Assert.That(resource.DisposeCount).IsEqualTo(1);
     }
@@ -30,7 +30,7 @@ public class UseSignalTests
     {
         RecordingDisposable resource = new();
         _ = Assert.Throws<ArgumentNullException>(() => Signal
-            .Use(() => resource, _ => new NullSubscriptionObservable<int>())
+            .Use(() => resource, static _ => new NullSubscriptionObservable<int>())
             .Subscribe(new Recorder<int>()));
         await Assert.That(resource.DisposeCount).IsEqualTo(1);
     }

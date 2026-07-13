@@ -63,7 +63,9 @@ public static partial class SignalAsyncReactiveExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return taskScheduler is null ? source : new WitnessOnSignal<T>(source, AsyncContext.From(taskScheduler), false);
+            return taskScheduler is null
+                ? source
+                : new WitnessOnSignal<T>(source, AsyncContext.From(taskScheduler), false);
         }
 
         /// <summary>Uses ObserveOn only when a scheduler is provided.</summary>
@@ -74,7 +76,9 @@ public static partial class SignalAsyncReactiveExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return taskScheduler is null ? source : new WitnessOnSignal<T>(source, AsyncContext.From(taskScheduler), forceYielding);
+            return taskScheduler is null
+                ? source
+                : new WitnessOnSignal<T>(source, AsyncContext.From(taskScheduler), forceYielding);
         }
 
         /// <summary>Observes the source on the provided context only when the condition is true.</summary>

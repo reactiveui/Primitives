@@ -7,8 +7,8 @@ namespace ReactiveUI.Primitives.Async.Tests.Internals;
 /// <summary>Tests for <see cref="SyncLatestIndexedWitness{TSource, TResult}"/>, the shared per-source observer that backs every per-arity CombineLatest subscription.</summary>
 public class CombineLatestIndexedObserverTests
 {
-    /// <summary>The bitmask bit used by this test's single virtual source.</summary>
-    private const int SourceBit = 1 << 0;
+    /// <summary>The bitmask bit (bit 0) used by this test's single virtual source.</summary>
+    private const int SourceBit = 1;
 
     /// <summary>Sentinel value driven into the observer's OnNextAsync.</summary>
     private const int Sentinel = 42;

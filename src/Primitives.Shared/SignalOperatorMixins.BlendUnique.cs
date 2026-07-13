@@ -24,7 +24,7 @@ public static partial class LinqExtensions
     /// <param name="sources">The sources to merge.</param>
     /// <returns>An observable of the distinct merged values.</returns>
     public static IObservable<T> BlendUnique<T>(params IObservable<T>[] sources) =>
-        BlendUnique(sources, comparer: null);
+        BlendUnique(sources, null);
 
     /// <summary>
     /// Concurrently merges the supplied sources and forwards only values that differ from the previously
@@ -34,7 +34,10 @@ public static partial class LinqExtensions
     /// <param name="sources">The sources to merge.</param>
     /// <param name="comparer">The equality comparer used to suppress duplicates, or <see langword="null"/> for the default.</param>
     /// <returns>An observable of the distinct merged values.</returns>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0001:Simplify Names", Justification = "The argument validation uses ArgumentExceptionHelper")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Style",
+        "IDE0001:Simplify Names",
+        Justification = "The argument validation uses ArgumentExceptionHelper")]
     public static IObservable<T> BlendUnique<T>(IObservable<T>[] sources, IEqualityComparer<T>? comparer)
     {
         ArgumentExceptionHelper.ThrowIfNull(sources);
@@ -49,22 +52,15 @@ public static partial class LinqExtensions
 
     /// <summary>A fused merge + distinct-until-changed observable over a fixed set of sources.</summary>
     /// <typeparam name="T">The element type.</typeparam>
-    private sealed class BlendUniqueSignal<T> : IObservable<T>
+    /// <param name="sources">The sources to merge.</param>
+    /// <param name="comparer">The equality comparer used to suppress duplicates.</param>
+    private sealed class BlendUniqueSignal<T>(IObservable<T>[] sources, IEqualityComparer<T> comparer) : IObservable<T>
     {
         /// <summary>The sources to merge.</summary>
-        private readonly IObservable<T>[] _sources;
+        private readonly IObservable<T>[] _sources = sources;
 
         /// <summary>The equality comparer used to suppress duplicates.</summary>
-        private readonly IEqualityComparer<T> _comparer;
-
-        /// <summary>Initializes a new instance of the <see cref="BlendUniqueSignal{T}"/> class.</summary>
-        /// <param name="sources">The sources to merge.</param>
-        /// <param name="comparer">The equality comparer used to suppress duplicates.</param>
-        internal BlendUniqueSignal(IObservable<T>[] sources, IEqualityComparer<T> comparer)
-        {
-            _sources = sources;
-            _comparer = comparer;
-        }
+        private readonly IEqualityComparer<T> _comparer = comparer;
 
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)
@@ -79,7 +75,9 @@ public static partial class LinqExtensions
 
     /// <summary>Forwards distinct merged values downstream and tears down every source on dispose.</summary>
     /// <typeparam name="T">The element type.</typeparam>
-    private sealed class BlendUniqueSink<T> : IDisposable
+    /// <param name="downstream">The downstream observer.</param>
+    /// <param name="comparer">The equality comparer used to suppress duplicates.</param>
+    private sealed class BlendUniqueSink<T>(IObserver<T> downstream, IEqualityComparer<T> comparer) : IDisposable
     {
         /// <summary>Serializes value forwarding and guards the distinct/completion state.</summary>
         private readonly Lock _gate = new();
@@ -88,10 +86,10 @@ public static partial class LinqExtensions
         private readonly MultipleDisposable _pocket = [];
 
         /// <summary>The downstream observer.</summary>
-        private readonly IObserver<T> _downstream;
+        private readonly IObserver<T> _downstream = downstream;
 
         /// <summary>The equality comparer used to suppress duplicates.</summary>
-        private readonly IEqualityComparer<T> _comparer;
+        private readonly IEqualityComparer<T> _comparer = comparer;
 
         /// <summary>The most recently forwarded value (valid only once <see cref="_hasLast"/> is set).</summary>
         private T _last = default!;
@@ -104,15 +102,6 @@ public static partial class LinqExtensions
 
         /// <summary>Whether a terminal notification has been emitted.</summary>
         private bool _done;
-
-        /// <summary>Initializes a new instance of the <see cref="BlendUniqueSink{T}"/> class.</summary>
-        /// <param name="downstream">The downstream observer.</param>
-        /// <param name="comparer">The equality comparer used to suppress duplicates.</param>
-        internal BlendUniqueSink(IObserver<T> downstream, IEqualityComparer<T> comparer)
-        {
-            _downstream = downstream;
-            _comparer = comparer;
-        }
 
         /// <summary>Subscribes to every merged source.</summary>
         /// <param name="sources">The sources to merge.</param>
@@ -188,7 +177,13 @@ public static partial class LinqExtensions
         {
             lock (_gate)
             {
-                if (_done || --_active > 0)
+                if (_done)
+                {
+                    return;
+                }
+
+                _active--;
+                if (_active > 0)
                 {
                     return;
                 }

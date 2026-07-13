@@ -34,7 +34,11 @@ public sealed class SerialReplayLatestSignalAsync<T>(Optional<T> startValue)
     public ValueTask OnErrorResumeAsync(
         Exception error,
         CancellationToken cancellationToken) =>
-        ReplayLatestSignalAsyncStateHelper.OnErrorResumeAsync(_state, SignalBroadcastKind.Serial, error, cancellationToken);
+        ReplayLatestSignalAsyncStateHelper.OnErrorResumeAsync(
+            _state,
+            SignalBroadcastKind.Serial,
+            error,
+            cancellationToken);
 
     /// <inheritdoc/>
     public ValueTask OnCompletedAsync(Result result) =>

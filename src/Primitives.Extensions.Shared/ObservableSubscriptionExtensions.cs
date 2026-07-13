@@ -245,7 +245,13 @@ public static class ObservableSubscriptionExtensions
         }
 
         SwapDisposable swap = new();
-        var scheduled = scheduler.Schedule(() => swap.Disposable = source.Subscribe(observer));
+        var scheduled = scheduler.Schedule(
+            (Swap: swap, Source: source, Observer: observer),
+            static (_, state) =>
+            {
+                state.Swap.Disposable = state.Source.Subscribe(state.Observer);
+                return EmptyDisposable.Instance;
+            });
         return new DisposableBag(scheduled, swap);
     }
 

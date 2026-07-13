@@ -99,13 +99,13 @@ public partial class SignalFactoriesTests
         List<int> returned = [];
         var returnCompleted = 0;
         _ = Signal.Emit(One, Sequencer.CurrentThread)
-            .Subscribe(returned.Add, ex => throw ex, () => returnCompleted++);
+            .Subscribe(returned.Add, static ex => throw ex, () => returnCompleted++);
         var emptyCompleted = 0;
         _ = Signal.None<int>(Sequencer.CurrentThread)
-            .Subscribe(_ => { }, ex => throw ex, () => emptyCompleted++);
+            .Subscribe(static _ => { }, static ex => throw ex, () => emptyCompleted++);
         InvalidOperationException error = new("scheduled");
         List<Exception> thrown = [];
-        _ = Signal.Fail<int>(error, Sequencer.CurrentThread).Subscribe(_ => { }, thrown.Add, () => { });
+        _ = Signal.Fail<int>(error, Sequencer.CurrentThread).Subscribe(static _ => { }, thrown.Add, static () => { });
         await Assert.That(returned.SequenceEqual(SingleFirstExpected)).IsTrue();
         await Assert.That(returnCompleted).IsEqualTo(1);
         await Assert.That(emptyCompleted).IsEqualTo(1);
@@ -132,8 +132,8 @@ public partial class SignalFactoriesTests
         _ = Signal.Sequence(Three, Three, Sequencer.CurrentThread).Subscribe(rangeValues.Add);
         _ = Signal.Loop("r").Take(Three).Subscribe(repeatValues.Add);
         _ = Signal.Loop(Five, Two).Subscribe(repeatCountValues.Add);
-        _ = Signal.Start(() => Seven, Sequencer.CurrentThread).Subscribe(startValues.Add);
-        _ = Signal.Start(() => startActions++, Sequencer.CurrentThread).Subscribe(_ => { });
+        _ = Signal.Start(static () => Seven, Sequencer.CurrentThread).Subscribe(startValues.Add);
+        _ = Signal.Start(() => startActions++, Sequencer.CurrentThread).Subscribe(static _ => { });
         _ = Signal.FromTask(Task.FromResult(Four)).Subscribe(taskValues.Add, ex => taskErrors.Add(ex.GetType().Name));
         _ = Signal.FromTask(Task.FromException<int>(new InvalidOperationException("task-fault")))
             .Subscribe(taskValues.Add, ex => taskErrors.Add(ex.GetType().Name));
@@ -163,24 +163,7 @@ public partial class SignalFactoriesTests
         await Assert.That(everyValues.SequenceEqual(ExpectedZeroToTwoTicks)).IsTrue();
         await Assert.That(timerDateValues.SequenceEqual(ExpectedSingleZeroTick)).IsTrue();
         await Assert.That(timerPeriodicValues.SequenceEqual(ExpectedZeroToTwoTicks)).IsTrue();
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.Sequence(One, Two, null!));
-        _ = Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Sequence(One, -1));
-        _ = Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Loop(One, -1));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.FromEnumerable<int>(null!));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.FromEnumerable<int>(null!, CancellationToken.None));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.FromTask((Task<int>)null!));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.FromAsync((Func<Task<int>>)null!));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.FromAsync((Func<CancellationToken, Task<int>>)null!));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.Start<int>(null!));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.Start(() => One, null!));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.Start((Action)null!));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.Start(() => { }, null!));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.FromAsyncEnumerable<int>(null!));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.FromAsyncEnumerable<int>(null!, CancellationToken.None));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.After(TimeSpan.Zero, null!));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.Every(TimeSpan.FromTicks(One), null!));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.After(DateTimeOffset.UnixEpoch, null!));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.After(TimeSpan.Zero, TimeSpan.FromTicks(One), null!));
+        AssertSchedulingFactoriesRejectInvalidArguments();
     }
 
     /// <summary>Covers small value/factory/inline branches with public surface behavior.</summary>
@@ -191,43 +174,45 @@ public partial class SignalFactoriesTests
         List<int> emptyScheduled = [];
         var emptyCompleted = 0;
         VirtualClock emptyClock = new(DateTimeOffset.UnixEpoch);
-        _ = Signal.None<int>(emptyClock).Subscribe(emptyScheduled.Add, ex => throw ex, () => emptyCompleted++);
+        _ = Signal.None<int>(emptyClock).Subscribe(emptyScheduled.Add, static ex => throw ex, () => emptyCompleted++);
         await Assert.That(emptyCompleted).IsEqualTo(0);
         emptyClock.Start();
         await Assert.That(emptyCompleted).IsEqualTo(1);
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.None<int>().Subscribe((IObserver<int>)null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.None<int>().Subscribe((IObserver<int>)null!));
         List<int> repeatValues = [];
         var repeatCompleted = 0;
         var repeat = Signal.Loop(Seven, Three);
         await Assert.That(((IRequireCurrentThread<int>)repeat).IsRequiredSubscribeOnCurrentThread()).IsFalse();
         repeat.Subscribe(new RecordingWitness<int>()).Dispose();
         _ = Assert.Throws<ArgumentNullException>(() => repeat.Subscribe((IObserver<int>)null!));
-        _ = Assert.Throws<ArgumentNullException>(() => ((IInlineSignal<int>)repeat).Subscribe(null!, _ => { }, () => { }));
-        _ = ((IInlineSignal<int>)repeat).Subscribe(repeatValues.Add, ex => throw ex, () => repeatCompleted++);
+        _ = Assert.Throws<ArgumentNullException>(() =>
+            ((IInlineSignal<int>)repeat).Subscribe(null!, static _ => { }, static () => { }));
+        _ = ((IInlineSignal<int>)repeat).Subscribe(repeatValues.Add, static ex => throw ex, () => repeatCompleted++);
         await Assert.That(repeatValues.SequenceEqual(ExpectedSevenSevenSeven)).IsTrue();
         await Assert.That(repeatCompleted).IsEqualTo(1);
         List<int> zippedValues = [];
         var zippedCompleted = 0;
-        var zipped = Signal.Sequence(One, Three).Pair(Signal.Sequence(Four, Three), (left, right) => left + right);
+        var zipped = Signal.Sequence(One, Three).Pair(Signal.Sequence(Four, Three), static (left, right) => left + right);
         await Assert.That(((IRequireCurrentThread<int>)zipped).IsRequiredSubscribeOnCurrentThread()).IsFalse();
         _ = Assert.Throws<ArgumentNullException>(() => zipped.Subscribe((IObserver<int>)null!));
-        _ = Assert.Throws<ArgumentNullException>(() => ((IInlineSignal<int>)zipped).Subscribe(null!, _ => { }, () => { }));
-        _ = ((IInlineSignal<int>)zipped).Subscribe(zippedValues.Add, ex => throw ex, () => zippedCompleted++);
+        _ = Assert.Throws<ArgumentNullException>(() =>
+            ((IInlineSignal<int>)zipped).Subscribe(null!, static _ => { }, static () => { }));
+        _ = ((IInlineSignal<int>)zipped).Subscribe(zippedValues.Add, static ex => throw ex, () => zippedCompleted++);
         await Assert.That(zippedValues.SequenceEqual(ExpectedFiveSevenNine)).IsTrue();
         await Assert.That(zippedCompleted).IsEqualTo(1);
         List<string> returned = [];
         var returnCompleted = 0;
         VirtualClock returnClock = new(DateTimeOffset.UnixEpoch);
-        _ = Signal.Emit("scheduled", returnClock).Subscribe(returned.Add, ex => throw ex, () => returnCompleted++);
+        _ = Signal.Emit("scheduled", returnClock).Subscribe(returned.Add, static ex => throw ex, () => returnCompleted++);
         await Assert.That(returnCompleted).IsEqualTo(0);
         returnClock.AdvanceBy(TimeSpan.FromTicks(One));
         await Assert.That(returned.SequenceEqual(ExpectedScheduledReturn)).IsTrue();
         await Assert.That(returnCompleted).IsEqualTo(1);
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.Emit("immediate").Subscribe((IObserver<string>)null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.Emit("immediate").Subscribe((IObserver<string>)null!));
         List<string> mappedErrors = [];
         _ = Signal.FromEnumerable([One, Two])
-            .Map(value => value == One ? value : throw new InvalidOperationException("map-fault"))
-            .Subscribe(_ => { }, ex => mappedErrors.Add(ex.Message));
+            .Map(static value => value == One ? value : throw new InvalidOperationException("map-fault"))
+            .Subscribe(static _ => { }, ex => mappedErrors.Add(ex.Message));
         await Assert.That(mappedErrors.SequenceEqual(ExpectedMappedErrors)).IsTrue();
     }
 
@@ -244,7 +229,7 @@ public partial class SignalFactoriesTests
         }).Subscribe(createErrors).Dispose();
         await Assert.That(createErrors.Errors[0].Message).IsEqualTo("create-error");
         RecordingWitness<int> deferErrors = new();
-        Signal.Lazy<int>(() => throw new InvalidOperationException("defer-factory")).Subscribe(deferErrors).Dispose();
+        Signal.Lazy<int>(static () => throw new InvalidOperationException("defer-factory")).Subscribe(deferErrors).Dispose();
         await Assert.That(deferErrors.Errors[0].Message).IsEqualTo("defer-factory");
         RecordingWitness<int> immediateThrow = new();
         Signal.Fail<int>(new InvalidOperationException("immediate-throw"), Sequencer.Immediate)
@@ -401,7 +386,7 @@ public partial class SignalFactoriesTests
         await Assert.That(thrown.Completed).IsEqualTo(0);
 
         RecordingWitness<int> nullTask = new();
-        Signal.FromAsync<int>(_ => null!).Subscribe(nullTask).Dispose();
+        Signal.FromAsync<int>(static _ => null!).Subscribe(nullTask).Dispose();
         await Assert.That(nullTask.Errors[0]).IsTypeOf<ArgumentNullException>();
         await Assert.That(nullTask.Values.Count).IsEqualTo(0);
         await Assert.That(nullTask.Completed).IsEqualTo(0);
@@ -495,14 +480,16 @@ public partial class SignalFactoriesTests
     {
         VirtualClock clock = new(DateTimeOffset.UnixEpoch);
         RecordingWitness<int> timedOut = new();
-        var timeoutSubscription = Signal.Expire(Signal.Never<int>(), TimeSpan.FromTicks(One), clock).Subscribe(timedOut);
+        var timeoutSubscription =
+            Signal.Expire(Signal.Never<int>(), TimeSpan.FromTicks(One), clock).Subscribe(timedOut);
         clock.AdvanceBy(TimeSpan.FromTicks(One));
         timeoutSubscription.Dispose();
         await Assert.That(timedOut.Errors[0]).IsTypeOf<TimeoutException>();
         await Assert.That(await Signal.ToTask(Signal.Sequence(One, Three))).IsEqualTo(Three);
         await Assert.That(await Signal.RunAsync(Signal.Sequence(One, Three))).IsEqualTo(Three);
         List<int> values = [];
-        _ = Signal.Timeout(Signal.FromEnumerable(ExpectedOneTwoThree), TimeSpan.FromTicks(One), clock).Subscribe(values.Add);
+        _ = Signal.Timeout(Signal.FromEnumerable(ExpectedOneTwoThree), TimeSpan.FromTicks(One), clock)
+            .Subscribe(values.Add);
         await Assert.That(values.SequenceEqual(ExpectedOneTwoThree)).IsTrue();
     }
 
@@ -525,12 +512,12 @@ public partial class SignalFactoriesTests
 
         _ = Signal.Repeat(Seven).Take(Three).Subscribe(repeated.Add);
         _ = Signal.Repeat(Five, Two).Subscribe(repeatedCount.Add);
-        _ = Signal.Repeat(Five, 0).Subscribe(repeatedZero.Add, ex => throw ex, () => repeatedZeroCompleted++);
-        _ = Signal.Generate(One, value => value <= Three, value => value + One, value => value * Two)
+        _ = Signal.Repeat(Five, 0).Subscribe(repeatedZero.Add, static ex => throw ex, () => repeatedZeroCompleted++);
+        _ = Signal.Generate(One, static value => value <= Three, static value => value + One, static value => value * Two)
             .Subscribe(generated.Add);
         _ = Signal.OnErrorResumeNext(
-            Signal.Fail<int>(new InvalidOperationException("resume")),
-            Signal.Emit(Four))
+                Signal.Fail<int>(new InvalidOperationException("resume")),
+                Signal.Emit(Four))
             .Subscribe(resumedPair.Add);
 
         var chooseThen = true;
@@ -539,16 +526,13 @@ public partial class SignalFactoriesTests
         chooseThen = false;
         _ = conditionalSource.Subscribe(conditional.Add);
 
-        Dictionary<string, IObservable<int>> cases = new(StringComparer.Ordinal)
-        {
-            ["one"] = Signal.Emit(One)
-        };
-        _ = Signal.Case(() => "one", cases, Signal.Emit(Two)).Subscribe(selectedCase.Add);
-        _ = Signal.Case(() => "missing", cases, Signal.Emit(Two)).Subscribe(defaultCase.Add);
+        Dictionary<string, IObservable<int>> cases = new(StringComparer.Ordinal) { ["one"] = Signal.Emit(One) };
+        _ = Signal.Case(static () => "one", cases, Signal.Emit(Two)).Subscribe(selectedCase.Add);
+        _ = Signal.Case(static () => "missing", cases, Signal.Emit(Two)).Subscribe(defaultCase.Add);
         _ = Signal.Using(
-            () => new TrackedDisposable(() => disposed++),
-            _ => Signal.Emit(Three))
-            .Subscribe(static _ => { }, ex => throw ex, () => useCompleted++);
+                () => new TrackedDisposable(() => disposed++),
+                static _ => Signal.Emit(Three))
+            .Subscribe(static _ => { }, static ex => throw ex, () => useCompleted++);
 
         await Assert.That(repeated.SequenceEqual(ExpectedSevenSevenSeven)).IsTrue();
         await Assert.That(repeatedCount.SequenceEqual(ExpectedFiveFive)).IsTrue();
@@ -562,19 +546,52 @@ public partial class SignalFactoriesTests
         await Assert.That(disposed).IsEqualTo(One);
         await Assert.That(useCompleted).IsEqualTo(One);
 
-        _ = Assert.Throws<ArgumentOutOfRangeException>(() => Signal.Repeat(One, -1));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.Generate<int, int>(One, null!, value => value, value => value));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.Generate<int, int>(One, _ => true, null!, value => value));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.Generate<int, int>(One, _ => true, value => value, null!));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.If<int>(null!, Signal.Emit(One)));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.If(() => true, null!, Signal.Emit(One)));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.If(() => true, Signal.Emit(One), null!));
+        AssertRxFactoryAliasesRejectInvalidArguments(cases);
+    }
+
+    /// <summary>Asserts the Rx-named factory aliases reject a null callback, a null source, or a negative count.</summary>
+    /// <param name="cases">The case map the alias assertions built.</param>
+    private static void AssertRxFactoryAliasesRejectInvalidArguments(Dictionary<string, IObservable<int>> cases)
+    {
+        _ = Assert.Throws<ArgumentOutOfRangeException>(static () => Signal.Repeat(One, -1));
+        _ = Assert.Throws<ArgumentNullException>(static () =>
+            Signal.Generate<int, int>(One, null!, static value => value, static value => value));
+        _ = Assert.Throws<ArgumentNullException>(static () =>
+            Signal.Generate<int, int>(One, static _ => true, null!, static value => value));
+        _ = Assert.Throws<ArgumentNullException>(static () =>
+            Signal.Generate<int, int>(One, static _ => true, static value => value, null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.If<int>(null!, Signal.Emit(One)));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.If(static () => true, null!, Signal.Emit(One)));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.If(static () => true, Signal.Emit(One), null!));
         _ = Assert.Throws<ArgumentNullException>(() => Signal.Case<string, int>(null!, cases));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.Case<string, int>(() => "one", null!));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.Case(() => "one", cases, null!));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.Using<IDisposable, int>(null!, _ => Signal.Emit(One)));
-        _ = Assert.Throws<ArgumentNullException>(() =>
-            Signal.Using(() => EmptyDisposable.Instance, (Func<IDisposable, IObservable<int>>)null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.Case<string, int>(static () => "one", null!));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.Case(static () => "one", cases, null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.Using<IDisposable, int>(null!, static _ => Signal.Emit(One)));
+        _ = Assert.Throws<ArgumentNullException>(static () =>
+            Signal.Using(static () => EmptyDisposable.Instance, (Func<IDisposable, IObservable<int>>)null!));
+    }
+
+    /// <summary>Asserts the scheduling, task, and timer factories reject a null source, sequencer, or negative count.</summary>
+    private static void AssertSchedulingFactoriesRejectInvalidArguments()
+    {
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.Sequence(One, Two, null!));
+        _ = Assert.Throws<ArgumentOutOfRangeException>(static () => Signal.Sequence(One, -1));
+        _ = Assert.Throws<ArgumentOutOfRangeException>(static () => Signal.Loop(One, -1));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.FromEnumerable<int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.FromEnumerable<int>(null!, CancellationToken.None));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.FromTask((Task<int>)null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.FromAsync((Func<Task<int>>)null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.FromAsync((Func<CancellationToken, Task<int>>)null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.Start<int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.Start(static () => One, null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.Start((Action)null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.Start(static () => { }, null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.FromAsyncEnumerable<int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.FromAsyncEnumerable<int>(null!, CancellationToken.None));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.After(TimeSpan.Zero, null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.Every(TimeSpan.FromTicks(One), null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.After(DateTimeOffset.UnixEpoch, null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.After(TimeSpan.Zero, TimeSpan.FromTicks(One), null!));
     }
 
     /// <summary>Disposable used by factory alias tests.</summary>

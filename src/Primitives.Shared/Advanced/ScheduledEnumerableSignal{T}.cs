@@ -37,7 +37,13 @@ public sealed class ScheduledEnumerableSignal<T> : IObservable<T>
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
         CancellationDisposable cancel = new();
-        var scheduled = Scheduler.Schedule(() => Emit(observer, cancel));
+        var scheduled = Scheduler.Schedule(
+            (self: this, observer, cancel),
+            static (_, s) =>
+            {
+                s.self.Emit(s.observer, s.cancel);
+                return EmptyDisposable.Instance;
+            });
         return new MultipleDisposable(cancel, scheduled);
     }
 

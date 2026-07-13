@@ -9,6 +9,9 @@ namespace ReactiveUI.Primitives.Tests;
 /// <summary>Tests for <see cref="AsyncEnumerableSignal{T}"/>.</summary>
 public sealed class AsyncEnumerableSignalTests
 {
+    /// <summary>Values the source enumerable yields, and therefore the values the observer must observe.</summary>
+    private static readonly int[] SourceValues = [1, 2, 3];
+
     /// <summary>Verifies a value buffered while disposal tears down the observer is not delivered.</summary>
     /// <param name="token">The test cancellation token.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
@@ -27,7 +30,7 @@ public sealed class AsyncEnumerableSignalTests
 
         // Dispose mid-flight, then let the buffered MoveNextAsync complete with a value.
         subscription.Dispose();
-        source.ReleaseMoveNext(result: true);
+        source.ReleaseMoveNext(true);
 
         // Wait for the pump to drain so any (incorrect) emission would already have happened.
         await source.Disposed.Task.WaitAsync(token);
@@ -54,7 +57,7 @@ public sealed class AsyncEnumerableSignalTests
 
         // Dispose while parked, then end the sequence; both disposal and the pump's finally run.
         subscription.Dispose();
-        source.ReleaseMoveNext(result: false);
+        source.ReleaseMoveNext(false);
 
         await source.Disposed.Task.WaitAsync(token);
 
@@ -101,15 +104,14 @@ public sealed class AsyncEnumerableSignalTests
     [Timeout(30_000)]
     public async Task CompletesNormallyAndDeliversAllValues(CancellationToken token)
     {
-        int[] values = [1, 2, 3];
-        AsyncEnumerableSignal<int> signal = new(new CountingAsyncEnumerable(values), CancellationToken.None);
+        AsyncEnumerableSignal<int> signal = new(new CountingAsyncEnumerable(SourceValues), CancellationToken.None);
         RecordingWitness<int> observer = new();
 
         _ = signal.Subscribe(observer);
 
         await observer.CompletedSignal.Task.WaitAsync(token);
 
-        await Assert.That(observer.Values.SequenceEqual(values)).IsTrue();
+        await Assert.That(observer.Values.SequenceEqual(SourceValues)).IsTrue();
         await Assert.That(observer.Completed).IsEqualTo(1);
         await Assert.That(observer.Errors).IsEmpty();
     }
@@ -223,7 +225,11 @@ public sealed class AsyncEnumerableSignalTests
         public IAsyncEnumerator<int> GetAsyncEnumerator(CancellationToken cancellationToken = default) => this;
 
         /// <inheritdoc/>
-        public ValueTask<bool> MoveNextAsync() => new(++_index < _values.Length);
+        public ValueTask<bool> MoveNextAsync()
+        {
+            _index++;
+            return new(_index < _values.Length);
+        }
 
         /// <inheritdoc/>
         public ValueTask DisposeAsync() => default;

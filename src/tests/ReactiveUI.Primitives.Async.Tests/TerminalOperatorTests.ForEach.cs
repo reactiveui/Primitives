@@ -15,14 +15,15 @@ public partial class TerminalOperatorTests
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task WhenForEachAsyncWithNullSyncAction_ThenThrowsArgumentNullException() => await Assert
-        .That(async () => await SignalAsync.Return(1).ForEachAsync((Action<int>)null!))
+        .That(static async () => await SignalAsync.Return(1).ForEachAsync((Action<int>)null!))
         .ThrowsExactly<ArgumentNullException>();
 
     /// <summary>Tests ForEachAsync with null async action throws ArgumentNullException.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task WhenForEachAsyncWithNullAsyncAction_ThenThrowsArgumentNullException() => await Assert
-        .That(async () => await SignalAsync.Return(1).ForEachAsync(null!)).ThrowsExactly<ArgumentNullException>();
+        .That(static async () => await SignalAsync.Return(1).ForEachAsync(null!))
+        .ThrowsExactly<ArgumentNullException>();
 
     /// <summary>Tests async ForEachAsync propagates source failure.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -30,7 +31,7 @@ public partial class TerminalOperatorTests
     public async Task WhenForEachAsyncSourceFails_ThenThrows()
     {
         InvalidOperationException error = new("test");
-        await Assert.That(async () => await SignalAsync.Throw<int>(error).ForEachAsync((_, _) => default))
+        await Assert.That(async () => await SignalAsync.Throw<int>(error).ForEachAsync(static (_, _) => default))
             .ThrowsExactly<InvalidOperationException>();
     }
 
@@ -40,7 +41,7 @@ public partial class TerminalOperatorTests
     public async Task WhenForEachAsyncSyncOverloadSourceFails_ThenThrows()
     {
         InvalidOperationException error = new("test");
-        await Assert.That(async () => await SignalAsync.Throw<int>(error).ForEachAsync(_ => { }))
+        await Assert.That(async () => await SignalAsync.Throw<int>(error).ForEachAsync(static _ => { }))
             .ThrowsExactly<InvalidOperationException>();
     }
 
@@ -53,7 +54,7 @@ public partial class TerminalOperatorTests
         await Assert.That(async () =>
         {
             await foreach (var item in SignalAsync.Throw<int>(error)
-                               .ToAsyncEnumerable(() => Channel.CreateUnbounded<int>()))
+                               .ToAsyncEnumerable(static () => Channel.CreateUnbounded<int>()))
             {
                 _ = item;
             }
@@ -63,12 +64,12 @@ public partial class TerminalOperatorTests
     /// <summary>Tests Wrap with a null observer throws ArgumentNullException.</summary>
     [Test]
     public void WhenWrapWithNullObserver_ThenThrowsArgumentNullException() =>
-        Assert.Throws<ArgumentNullException>(() => SignalAsyncExtensions.Wrap<int>(null!));
+        Assert.Throws<ArgumentNullException>(static () => SignalAsyncExtensions.Wrap<int>(null!));
 
     /// <summary>Verifies the async-callback <c>ForEachAsync</c> overload throws when the callback delegate is null.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenForEachAsyncCallbackNull_ThenThrowsArgumentNullException() => await Assert
-        .That(async () => await SignalAsync.Return(1).ForEachAsync(null!, CancellationToken.None))
+        .That(static async () => await SignalAsync.Return(1).ForEachAsync(null!, CancellationToken.None))
         .ThrowsExactly<ArgumentNullException>();
 }

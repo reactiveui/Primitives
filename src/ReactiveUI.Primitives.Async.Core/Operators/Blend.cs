@@ -238,10 +238,9 @@ public static partial class SignalAsyncExtensions
         /// </summary>
         /// <param name="value">The value to forward.</param>
         /// <returns>A task representing the asynchronous forward operation.</returns>
-        internal ValueTask RelayNextIfActiveAsync(T value)
-        {
-            return DisposalHelper.HasDisposed(_disposed) ? default : _observer.OnNextAsync(value, DisposedCancellationToken);
-        }
+        internal ValueTask RelayNextIfActiveAsync(T value) => DisposalHelper.HasDisposed(_disposed)
+            ? default
+            : _observer.OnNextAsync(value, DisposedCancellationToken);
 
         /// <summary>
         /// Re-checks the disposed flag inside the serialization gate and forwards the error to
@@ -250,10 +249,9 @@ public static partial class SignalAsyncExtensions
         /// </summary>
         /// <param name="exception">The error to forward.</param>
         /// <returns>A task representing the asynchronous forward operation.</returns>
-        internal ValueTask RelayErrorIfActiveAsync(Exception exception)
-        {
-            return DisposalHelper.HasDisposed(_disposed) ? default : _observer.OnErrorResumeAsync(exception, DisposedCancellationToken);
-        }
+        internal ValueTask RelayErrorIfActiveAsync(Exception exception) => DisposalHelper.HasDisposed(_disposed)
+            ? default
+            : _observer.OnErrorResumeAsync(exception, DisposedCancellationToken);
 
         /// <summary>Forwards a value to the downstream observer under the serialization gate.</summary>
         /// <param name="value">The value to forward.</param>
@@ -650,10 +648,9 @@ public static partial class SignalAsyncExtensions
             /// </summary>
             /// <param name="value">The value to forward.</param>
             /// <returns>A task representing the asynchronous forward operation.</returns>
-            internal ValueTask RelayNextIfActiveAsync(T value)
-            {
-                return DisposalHelper.HasDisposed(_disposed) ? default : _observer.OnNextAsync(value, _disposedCancellationToken);
-            }
+            internal ValueTask RelayNextIfActiveAsync(T value) => DisposalHelper.HasDisposed(_disposed)
+                ? default
+                : _observer.OnNextAsync(value, _disposedCancellationToken);
 
             /// <summary>Forwards a non-terminal error to the downstream observer under the serialization gate.</summary>
             /// <param name="ex">The error to forward.</param>
@@ -680,10 +677,9 @@ public static partial class SignalAsyncExtensions
             /// </summary>
             /// <param name="ex">The error to forward.</param>
             /// <returns>A task representing the asynchronous forward operation.</returns>
-            internal ValueTask RelayErrorIfActiveAsync(Exception ex)
-            {
-                return DisposalHelper.HasDisposed(_disposed) ? default : _observer.OnErrorResumeAsync(ex, _disposedCancellationToken);
-            }
+            internal ValueTask RelayErrorIfActiveAsync(Exception ex) => DisposalHelper.HasDisposed(_disposed)
+                ? default
+                : _observer.OnErrorResumeAsync(ex, _disposedCancellationToken);
 
             /// <summary>Handles completion from an inner source, triggering final completion when all sources are done.</summary>
             /// <param name="result">The completion result from the inner source.</param>

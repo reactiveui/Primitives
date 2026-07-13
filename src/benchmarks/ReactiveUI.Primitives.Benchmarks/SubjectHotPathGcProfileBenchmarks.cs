@@ -28,6 +28,9 @@ public class SubjectHotPathGcProfileBenchmarks
     /// <summary>The number of concurrent subscribers used in the fan-out churn benchmark.</summary>
     private const int FanOut = 8;
 
+    /// <summary>The bounded replay buffer size used by the replay emission benchmark.</summary>
+    private const int ReplayBufferSize = 16;
+
     /// <summary>Steady-state emission through <see cref="Signal{T}"/> (single subscriber fast path).</summary>
     /// <returns>The observed total.</returns>
     [Benchmark]
@@ -82,7 +85,7 @@ public class SubjectHotPathGcProfileBenchmarks
     public int ReplayEmit()
     {
         IntSignalWitness observer = new();
-        using ReplaySignal<int> subject = new(16);
+        using ReplaySignal<int> subject = new(ReplayBufferSize);
         using var subscription = subject.Subscribe(observer);
         for (var i = 0; i < EmitCount; i++)
         {

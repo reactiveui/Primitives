@@ -51,6 +51,5 @@ public static partial class SignalAsyncExtensions
 
             return new SyncLatestEnumerableSignal<TSource, TResult>(sources, resultSelector);
         }
-
     }
 }

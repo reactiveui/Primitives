@@ -19,7 +19,8 @@ namespace ReactiveUI.Primitives.Async;
 [System.Diagnostics.CodeAnalysis.SuppressMessage(
     "Major Code Smell",
     "S3925:ISerializable should be implemented correctly",
-    Justification = "The serialization constructor is present for .NET Framework targets where binary serialization is supported.")]
+    Justification =
+        "The serialization constructor is present for .NET Framework targets where binary serialization is supported.")]
 public class ConcurrentWitnessCallsException : Exception
 {
     /// <summary>The default error message describing the concurrent observer call violation.</summary>

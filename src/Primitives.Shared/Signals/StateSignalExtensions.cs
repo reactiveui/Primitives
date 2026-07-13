@@ -30,11 +30,10 @@ public static class StateSignalExtensions
             ArgumentExceptionHelper.ThrowIfNull(selector);
 
             return new(
-                Signal.CreateSafe<TResult>(
-                    observer => source.Subscribe(
-                        value => observer.OnNext(selector(value)),
-                        observer.OnError,
-                        observer.OnCompleted)),
+                Signal.CreateSafe<TResult>(observer => source.Subscribe(
+                    value => observer.OnNext(selector(value)),
+                    observer.OnError,
+                    observer.OnCompleted)),
                 initialValue);
         }
     }

@@ -21,8 +21,20 @@ public partial class ReactiveExtensionsTests
     /// <summary>Stabilization window for scheduler-driven assertions.</summary>
     private const int SchedulerStabilizeMilliseconds = 100;
 
+    /// <summary>Value at which the <c>TakeUntil</c>/<c>WaitUntil</c> predicates trip.</summary>
+    private const int PredicateThreshold = 5;
+
     /// <summary>Hoisted source array used by tests (was inline literal).</summary>
     private static readonly string[] SequenceTest123HelloTest456World = ["test123", "hello", "test456", "world"];
+
+    /// <summary>Expected sequence [1, 2, 3, 4, 5] for collection equality assertions.</summary>
+    private static readonly int[] ExpectedSequence12345 = [1, 2, 3, 4, 5];
+
+    /// <summary>Longest a test waits for an asynchronous signal before failing.</summary>
+    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(5);
+
+    /// <summary>Inactivity window long enough that a buffer can only be flushed by completion, never by a timeout.</summary>
+    private static readonly TimeSpan InactivityWindow = TimeSpan.FromSeconds(5);
 
     /// <summary>Syncronizes the asynchronous runs with asynchronous tasks in subscriptions.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -91,7 +103,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task FromArray_WithScheduler_EmitsElements()
     {
-        int[] source = [1, 2, 3, 4, 5];
+        var source = ExpectedSequence12345;
         List<int> results = [];
         using var sub = source.FromArray(Sequencer.Immediate).Subscribe(results.Add);
         await Assert.That(results).IsCollectionEqualTo(source);
@@ -113,14 +125,15 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task Shuffle_RandomizesArray()
     {
-        var original = Enumerable.Range(1, 100).ToArray();
+        const int SampleSize = 100;
+        var original = Enumerable.Range(1, SampleSize).ToArray();
         var source = Observable.Return(original.ToArray());
         int[]? result = null;
         using var sub = source.Shuffle().Subscribe(x => result = x);
         using (Assert.Multiple())
         {
             await Assert.That(result).IsNotNull();
-            await Assert.That(result).Count().IsEqualTo(SchedulerWindowTicks);
+            await Assert.That(result).Count().IsEqualTo(SampleSize);
             var sorted = result!.ToArray();
             Array.Sort(sorted);
             await Assert.That(sorted).IsCollectionEqualTo(original);
@@ -134,7 +147,7 @@ public partial class ReactiveExtensionsTests
     {
         Subject<int> subject = new();
         List<int> results = [];
-        using var sub = subject.TakeUntil(x => x >= 5).Subscribe(results.Add);
+        using var sub = subject.TakeUntil(static x => x >= PredicateThreshold).Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
         subject.OnNext(SampleValue5);
@@ -150,7 +163,7 @@ public partial class ReactiveExtensionsTests
         Subject<int> subject = new();
         List<int> trueResults = [];
         List<int> falseResults = [];
-        var (trueObs, falseObs) = subject.Partition(x => x % SampleValue2 == 0);
+        var (trueObs, falseObs) = subject.Partition(static x => x % SampleValue2 == 0);
         using var trueSub = trueObs.Subscribe(trueResults.Add);
         using var falseSub = falseObs.Subscribe(falseResults.Add);
         for (var i = 1; i <= SampleValue10; i++)
@@ -175,7 +188,7 @@ public partial class ReactiveExtensionsTests
     {
         Subject<int> subject = new();
         List<int> results = [];
-        using var sub = subject.WaitUntil(x => x > 5).Subscribe(results.Add);
+        using var sub = subject.WaitUntil(static x => x > PredicateThreshold).Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnNext(SampleValue3);
         subject.OnNext(SampleValue7);
@@ -211,7 +224,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task Stale_WithUpdate_IsNotStale()
     {
-        Stale<int> stale = new(42);
+        Stale<int> stale = new(SampleValue42);
         using (Assert.Multiple())
         {
             await Assert.That(stale.IsStale).IsFalse();
@@ -282,7 +295,7 @@ public partial class ReactiveExtensionsTests
     {
         Subject<int> subject = new();
         List<int> results = [];
-        _ = subject.ScanWithInitial(SampleValue10, (acc, x) => acc + x).Subscribe(results.Add);
+        _ = subject.ScanWithInitial(SampleValue10, static (acc, x) => acc + x).Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
         await Assert.That(results).IsCollectionEqualTo([SampleValue10, SampleValue11, SampleValue13]);
@@ -372,7 +385,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task SkipWhileNull_WhenFirstValueArrives_EmitsRemainingValues()
     {
-        var source = Observable.Create<string>(observer =>
+        var source = Observable.Create<string>(static observer =>
         {
             observer.OnNext(null!);
             observer.OnNext(null!);
@@ -436,7 +449,7 @@ public partial class ReactiveExtensionsTests
     public async Task WhenOnNextWithNullObserver_ThenThrowsArgumentNullException()
     {
         IObserver<int>? observer = null;
-        var ex = Assert.Throws<ArgumentNullException>(() => observer!.OnNext(1, 2, 3));
+        var ex = Assert.Throws<ArgumentNullException>(() => observer!.OnNext(1, SampleValue2, SampleValue3));
         await Assert.That(ex).IsNotNull();
     }
 
@@ -477,9 +490,9 @@ public partial class ReactiveExtensionsTests
             });
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
-        await allReceived.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await allReceived.Task.WaitAsync(WaitTimeout);
         subject.OnCompleted();
-        await completionSource.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await completionSource.Task.WaitAsync(WaitTimeout);
         using (Assert.Multiple())
         {
             await Assert.That(results).IsCollectionEqualTo([1, SampleValue2]);
@@ -610,9 +623,10 @@ public partial class ReactiveExtensionsTests
 
             return EmptyDisposable.Instance;
         });
-        using var sub = source.RetryWithBackoff(3, TimeSpan.FromMilliseconds(1))
+        const int MaxRetries = 3;
+        using var sub = source.RetryWithBackoff(MaxRetries, TimeSpan.FromMilliseconds(1))
             .Subscribe(values.Add, () => done.TrySetResult(values));
-        var captured = await done.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var captured = await done.Task.WaitAsync(WaitTimeout);
         await Assert.That(captured).IsCollectionEqualTo([SuccessAttempt]);
     }
 
@@ -629,12 +643,12 @@ public partial class ReactiveExtensionsTests
         Subject<int> subject = new();
         List<IList<int>> results = [];
         TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var sub = subject.BufferUntilInactive(TimeSpan.FromSeconds(5))
+        using var sub = subject.BufferUntilInactive(InactivityWindow)
             .Subscribe(results.Add, () => completed.TrySetResult());
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
         subject.OnCompleted();
-        await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await completed.Task.WaitAsync(WaitTimeout);
         await Assert.That(results.Count).IsGreaterThanOrEqualTo(1);
         await Assert.That(results[^1]).IsCollectionEqualTo([1, SampleValue2]);
     }

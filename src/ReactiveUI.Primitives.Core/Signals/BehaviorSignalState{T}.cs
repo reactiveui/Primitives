@@ -25,7 +25,8 @@ internal record struct BehaviorSignalState<T>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Performance",
         "SST1424:Make field readonly",
-        Justification = "Broadcaster<T> is a mutable struct; readonly fields would mutate defensive copies and lose observer updates.")]
+        Justification =
+            "Broadcaster<T> is a mutable struct; readonly fields would mutate defensive copies and lose observer updates.")]
     private Broadcaster<T> _broadcaster;
 
     /// <summary>The last error, when terminated exceptionally.</summary>

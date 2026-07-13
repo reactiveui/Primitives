@@ -22,9 +22,11 @@ public sealed class ToAsyncSignalSubscription : TaskSignalSubscription<RxVoid>
     private Task SourceTask { get; }
 
     /// <inheritdoc/>
-    protected override async ValueTask ExecuteAsyncCore(IObserverAsync<RxVoid> observer, CancellationToken cancellationToken)
+    protected override async ValueTask ExecuteAsyncCore(
+        IObserverAsync<RxVoid> observer,
+        CancellationToken cancellationToken)
     {
-        await SourceTask.WaitAsync(System.Threading.Timeout.InfiniteTimeSpan, cancellationToken).ConfigureAwait(false);
+        await SourceTask.WaitAsync(Timeout.InfiniteTimeSpan, cancellationToken).ConfigureAwait(false);
         await observer.OnNextAsync(RxVoid.Default, cancellationToken).ConfigureAwait(false);
         await observer.OnCompletedAsync(Result.Success).ConfigureAwait(false);
     }

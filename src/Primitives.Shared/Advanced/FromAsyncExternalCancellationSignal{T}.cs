@@ -15,7 +15,9 @@ public sealed class FromAsyncExternalCancellationSignal<T> : IObservable<T>
     /// <summary>Initializes a new instance of the <see cref="FromAsyncExternalCancellationSignal{T}"/> class.</summary>
     /// <param name="taskFactory">The factory invoked once for each subscription.</param>
     /// <param name="cancellationToken">The external cancellation token linked into each subscription.</param>
-    public FromAsyncExternalCancellationSignal(Func<CancellationToken, Task<T>> taskFactory, CancellationToken cancellationToken)
+    public FromAsyncExternalCancellationSignal(
+        Func<CancellationToken, Task<T>> taskFactory,
+        CancellationToken cancellationToken)
     {
         ArgumentExceptionHelper.ThrowIfNull(taskFactory);
 

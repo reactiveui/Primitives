@@ -31,7 +31,8 @@ public readonly record struct Optional<T>
     /// <summary>Initializes a new instance of the <see cref="Optional{T}"/> struct.</summary>
     /// <param name="value">The value.</param>
     /// <param name="hasValue">A value indicating whether a value is present.</param>
-    private Optional([AllowNull] T value, bool hasValue) => (_value, HasValue) = hasValue && value is not null ? (value, true) : (default, false);
+    private Optional([AllowNull] T value, bool hasValue) =>
+        (_value, HasValue) = hasValue && value is not null ? (value, true) : (default, false);
 
     /// <summary>Gets an empty instance of the <see cref="Optional{T}"/> type that contains no value.</summary>
     /// <remarks>Use this property to represent the absence of a value in a type-safe manner. The returned
@@ -56,7 +57,7 @@ public readonly record struct Optional<T>
     /// <summary>Creates an optional value containing a value.</summary>
     /// <param name="value">The contained value.</param>
     /// <returns>The optional value.</returns>
-    public static Optional<T> Some([AllowNull] T value) => new(value, hasValue: true);
+    public static Optional<T> Some([AllowNull] T value) => new(value, true);
 
     /// <summary>Implicit cast from the value to the optional.</summary>
     /// <param name="value">The value.</param>
@@ -84,8 +85,5 @@ public readonly record struct Optional<T>
     public static Optional<T> ToOptional([AllowNull] T value) => new(value);
 
     /// <inheritdoc />
-    public override string? ToString()
-    {
-        return _value is null || !HasValue ? "<None>" : _value.ToString();
-    }
+    public override string? ToString() => _value is null || !HasValue ? "<None>" : _value.ToString();
 }

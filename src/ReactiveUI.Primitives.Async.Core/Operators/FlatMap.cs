@@ -49,6 +49,5 @@ public static partial class SignalAsyncExtensions
 
             return new FlatMapSignal<T, TResult>(@this, selector);
         }
-
     }
 }

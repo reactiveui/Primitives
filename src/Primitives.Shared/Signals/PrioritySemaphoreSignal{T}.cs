@@ -66,7 +66,7 @@ public sealed class PrioritySemaphoreSignal<T> : ISignal<T>
         Completed,
 
         /// <summary>Error notification.</summary>
-        Error,
+        Error
     }
 
     /// <inheritdoc />
@@ -108,8 +108,7 @@ public sealed class PrioritySemaphoreSignal<T> : ISignal<T>
             {
                 return;
             }
-        }
-        while (Interlocked.CompareExchange(ref _count, previousCount - 1, previousCount) != previousCount);
+        } while (Interlocked.CompareExchange(ref _count, previousCount - 1, previousCount) != previousCount);
 
         YieldUntilEmptyOrBlocked();
     }
@@ -329,27 +328,27 @@ public sealed class PrioritySemaphoreSignal<T> : ISignal<T>
         switch (item.Kind)
         {
             case TerminalNotification.Completed:
-            {
-                while (item.Queue is { Count: > 0 })
                 {
-                    _inner.OnNext(item.Queue.Dequeue());
+                    while (item.Queue is { Count: > 0 })
+                    {
+                        _inner.OnNext(item.Queue.Dequeue());
+                    }
+
+                    _inner.OnCompleted();
+                    break;
                 }
 
-                _inner.OnCompleted();
-                break;
-            }
-
             case TerminalNotification.Error:
-            {
-                _inner.OnError(item.Exception!);
-                break;
-            }
+                {
+                    _inner.OnError(item.Exception!);
+                    break;
+                }
 
             default:
-            {
-                _inner.OnNext(item.Value);
-                break;
-            }
+                {
+                    _inner.OnNext(item.Value);
+                    break;
+                }
         }
     }
 
@@ -395,11 +394,13 @@ public sealed class PrioritySemaphoreSignal<T> : ISignal<T>
         /// <summary>Creates a completion drain item.</summary>
         /// <param name="queue">The queued values to flush before completion.</param>
         /// <returns>The captured drain item.</returns>
-        public static DrainItem Completed(PriorityQueue<T>? queue) => new(TerminalNotification.Completed, default!, queue, null);
+        public static DrainItem Completed(PriorityQueue<T>? queue) =>
+            new(TerminalNotification.Completed, default!, queue, null);
 
         /// <summary>Creates an error drain item.</summary>
         /// <param name="exception">The error to deliver.</param>
         /// <returns>The captured drain item.</returns>
-        public static DrainItem Error(Exception exception) => new(TerminalNotification.Error, default!, null, exception);
+        public static DrainItem Error(Exception exception) =>
+            new(TerminalNotification.Error, default!, null, exception);
     }
 }

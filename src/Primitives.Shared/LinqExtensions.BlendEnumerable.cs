@@ -38,7 +38,9 @@ public static partial class LinqExtensions
 
             ArgumentOutOfRangeExceptionHelper.ThrowIfNegativeOrZero(maxConcurrent);
 
-            return maxConcurrent == int.MaxValue ? new EnumerableBlendSignal<T>(sources) : new MaxConcurrentEnumerableBlendSignal<T>(sources, maxConcurrent);
+            return maxConcurrent == int.MaxValue
+                ? new EnumerableBlendSignal<T>(sources)
+                : new MaxConcurrentEnumerableBlendSignal<T>(sources, maxConcurrent);
         }
     }
 }

@@ -62,12 +62,12 @@ public class EventPatternTests
         propertySubscription.Dispose();
         propertySource.Raise("ignored");
         await Assert.That(propertyNames.SequenceEqual([nameof(PropertyChangedEventSource.Value)])).IsTrue();
-        _ = Assert.Throws<ArgumentNullException>(() =>
-            Signal.FromEventPattern<EventHandler<TestEventArgs>, TestEventArgs>(null!, _ => { }));
-        _ = Assert.Throws<ArgumentNullException>(() =>
-            Signal.FromEventPattern<EventHandler<TestEventArgs>, TestEventArgs>(_ => { }, null!));
-        _ = Assert.Throws<NotSupportedException>(() =>
-            Signal.FromEventPattern<Action, EventArgs>(_ => { }, _ => { }).Subscribe(_ => { }));
+        _ = Assert.Throws<ArgumentNullException>(static () =>
+            Signal.FromEventPattern<EventHandler<TestEventArgs>, TestEventArgs>(null!, static _ => { }));
+        _ = Assert.Throws<ArgumentNullException>(static () =>
+            Signal.FromEventPattern<EventHandler<TestEventArgs>, TestEventArgs>(static _ => { }, null!));
+        _ = Assert.Throws<NotSupportedException>(static () =>
+            Signal.FromEventPattern<Action, EventArgs>(static _ => { }, static _ => { }).Subscribe(static _ => { }));
     }
 
     /// <summary>Verifies generic event factories support WPF-style non-generic event handler shapes.</summary>

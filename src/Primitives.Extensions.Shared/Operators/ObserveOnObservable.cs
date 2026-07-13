@@ -59,6 +59,11 @@ internal sealed class ObserveOnObservable<T>(IObservable<T> source, ISequencer s
         /// <summary>Initializes a new instance of the <see cref="ObserveOnSink"/> class.</summary>
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="scheduler">The scheduler notifications are delivered on.</param>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Correctness",
+            "SST2403:Do not let 'this' escape from a constructor",
+            Justification =
+                "_state is owned solely by this sink and only stores the back-reference, so 'this' never escapes construction.")]
         public ObserveOnSink(IObserver<T> downstream, ISequencer scheduler)
         {
             _downstream = downstream;

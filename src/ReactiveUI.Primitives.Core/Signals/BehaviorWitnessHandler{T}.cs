@@ -6,33 +6,26 @@ namespace ReactiveUI.Primitives.Signals;
 
 /// <summary>Subscription handle that removes its observer from the owning signal exactly once when disposed.</summary>
 /// <typeparam name="T">The observed value type.</typeparam>
-internal sealed class BehaviorWitnessHandler<T> : IDisposable
+/// <param name="owner">The owning signal.</param>
+/// <param name="observer">The subscribed observer.</param>
+internal sealed class BehaviorWitnessHandler<T>(IWitnessRemovable<T> owner, IObserver<T> observer) : IDisposable
 {
     /// <summary>The owning signal, cleared after the first disposal.</summary>
-    private IWitnessRemovable<T>? _owner;
+    private IWitnessRemovable<T>? _owner = owner;
 
     /// <summary>The subscribed observer, cleared after the first disposal.</summary>
-    private IObserver<T>? _observer;
-
-    /// <summary>Initializes a new instance of the <see cref="BehaviorWitnessHandler{T}"/> class.</summary>
-    /// <param name="owner">The owning signal.</param>
-    /// <param name="observer">The subscribed observer.</param>
-    public BehaviorWitnessHandler(IWitnessRemovable<T> owner, IObserver<T> observer)
-    {
-        _owner = owner;
-        _observer = observer;
-    }
+    private IObserver<T>? _observer = observer;
 
     /// <inheritdoc/>
     public void Dispose()
     {
-        var owner = Interlocked.Exchange(ref _owner, null);
-        var observer = Interlocked.Exchange(ref _observer, null);
-        if (owner is null || observer is null)
+        var ownerState = Interlocked.Exchange(ref _owner, null);
+        var observerState = Interlocked.Exchange(ref _observer, null);
+        if (ownerState is null || observerState is null)
         {
             return;
         }
 
-        owner.RemoveObserver(observer);
+        ownerState.RemoveObserver(observerState);
     }
 }

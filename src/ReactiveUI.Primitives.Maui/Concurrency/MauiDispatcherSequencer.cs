@@ -52,7 +52,9 @@ public sealed class MauiDispatcherSequencer : ISequencer
     /// <param name="item">Work item to execute at the due time.</param>
     /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
     private void ScheduleDelayed(IWorkItem item, long dueTimestamp) =>
-        _ = Dispatcher.DispatchDelayed(DispatchSequencerState.DelayUntil(dueTimestamp), () => DispatchSequencerState.RunIfActive(item));
+        _ = Dispatcher.DispatchDelayed(
+            DispatchSequencerState.DelayUntil(dueTimestamp),
+            () => DispatchSequencerState.RunIfActive(item));
 
     /// <summary>Forwards the cached drain callback to the engine.</summary>
     private void RunDrain() => _state.RunDrain();

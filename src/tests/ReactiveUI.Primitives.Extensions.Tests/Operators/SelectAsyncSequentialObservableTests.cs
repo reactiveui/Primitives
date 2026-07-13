@@ -20,6 +20,9 @@ public class SelectAsyncSequentialObservableTests
     /// <summary>Settle delay in milliseconds used to let an awaited continuation attempt delivery.</summary>
     private const int SettleDelayMilliseconds = 50;
 
+    /// <summary>Guard timeout so a hung rendezvous fails this test rather than stalling the run.</summary>
+    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
+
     /// <summary>Verifies that <c>SelectAsyncSequential</c> forwards selector exceptions and stops draining the queue afterwards.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -36,7 +39,7 @@ public class SelectAsyncSequentialObservableTests
             .Subscribe(results.Add, ex => faulted.TrySetResult(ex));
         subject.OnNext(First);
         subject.OnNext(Second);
-        var caught = await faulted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var caught = await faulted.Task.WaitAsync(GuardTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
         await Assert.That(results).IsEmpty();
     }
@@ -49,7 +52,7 @@ public class SelectAsyncSequentialObservableTests
         Subject<int> subject = new();
         Exception? caught = null;
         InvalidOperationException expected = new(SourceErrorMessage);
-        using var sub = subject.SelectAsyncSequential(static x => Task.FromResult(x)).Subscribe(
+        using var sub = subject.SelectAsyncSequential(Task.FromResult).Subscribe(
             static _ => { },
             ex => caught = ex);
         subject.OnError(expected);
@@ -102,7 +105,7 @@ public class SelectAsyncSequentialObservableTests
         await Task.Delay(SettleDelayMilliseconds).ConfigureAwait(false);
         await Assert.That(completed.Task.IsCompleted).IsFalse();
         _ = gate.TrySetResult(true);
-        var done = await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var done = await completed.Task.WaitAsync(GuardTimeout);
         await Assert.That(done).IsTrue();
         await Assert.That(results).IsCollectionEqualTo([Value]);
     }
@@ -118,7 +121,7 @@ public class SelectAsyncSequentialObservableTests
         List<int> values = [];
         Exception? caught = null;
         var completedCount = 0;
-        using var sub = source.SelectAsyncSequential(static x => Task.FromResult(x))
+        using var sub = source.SelectAsyncSequential(Task.FromResult)
             .Subscribe(values.Add, ex => caught = ex, () => completedCount++);
         source.Observer.OnCompleted();
         source.Observer.OnError(new InvalidOperationException("late"));

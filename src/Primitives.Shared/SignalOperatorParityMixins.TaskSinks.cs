@@ -42,7 +42,10 @@ public static partial class LinqExtensions
     /// <param name="predicate">The predicate.</param>
     /// <param name="cancellationToken">The token used to cancel the task and dispose the subscription.</param>
     /// <returns>A task that completes with whether any value matched the predicate.</returns>
-    internal static Task<bool> AnyTaskAsync<T>(IObservable<T> source, Func<T, bool> predicate, CancellationToken cancellationToken)
+    internal static Task<bool> AnyTaskAsync<T>(
+        IObservable<T> source,
+        Func<T, bool> predicate,
+        CancellationToken cancellationToken)
     {
         ArgumentExceptionHelper.ThrowIfNull(source);
 
@@ -95,7 +98,10 @@ public static partial class LinqExtensions
     /// <param name="predicate">The predicate.</param>
     /// <param name="cancellationToken">The token used to cancel the task and dispose the subscription.</param>
     /// <returns>A task that completes with the matching value count.</returns>
-    internal static Task<int> CountTaskAsync<T>(IObservable<T> source, Func<T, bool> predicate, CancellationToken cancellationToken)
+    internal static Task<int> CountTaskAsync<T>(
+        IObservable<T> source,
+        Func<T, bool> predicate,
+        CancellationToken cancellationToken)
     {
         ArgumentExceptionHelper.ThrowIfNull(source);
 

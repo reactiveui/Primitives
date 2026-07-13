@@ -34,7 +34,7 @@ public class CatchAndReturnWithFactoryObservableTests
         var completed = false;
         InvalidOperationException expected = new(SourceErrorMessage);
         using var sub = subject
-            .CatchAndReturn<int, InvalidOperationException>(ex => FallbackBaseValue + ex.Message.Length)
+            .CatchAndReturn<int, InvalidOperationException>(static ex => FallbackBaseValue + ex.Message.Length)
             .Subscribe(results.Add, () => completed = true);
         subject.OnError(expected);
         await Assert.That(results).IsCollectionEqualTo([FallbackBaseValue + SourceErrorMessage.Length]);

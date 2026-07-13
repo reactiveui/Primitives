@@ -19,7 +19,7 @@ public partial class ReactiveExtensionsTests
         var completed = false;
         using var sub = subject.CatchIgnore().Subscribe(
             results.Add,
-            _ => { },
+            static _ => { },
             () => completed = true);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
@@ -42,7 +42,7 @@ public partial class ReactiveExtensionsTests
         var completed = false;
         using var sub = subject.CatchIgnore<int, InvalidOperationException>(ex => errorCaught = true).Subscribe(
             results.Add,
-            _ => { },
+            static _ => { },
             () => completed = true);
         subject.OnNext(1);
         subject.OnError(new InvalidOperationException());
@@ -61,7 +61,7 @@ public partial class ReactiveExtensionsTests
     {
         Subject<int> subject = new();
         List<int> results = [];
-        using var sub = subject.CatchAndReturn(99).Subscribe(results.Add);
+        using var sub = subject.CatchAndReturn(SampleValue99).Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
         subject.OnError(new InvalidOperationException());
@@ -77,7 +77,7 @@ public partial class ReactiveExtensionsTests
         Exception? observed = null;
         using Subject<int> subject = new();
         using var sub = subject.LogErrors(ex => logged = ex).Subscribe(
-            _ => { },
+            static _ => { },
             ex => observed = ex);
         InvalidOperationException exception = new("boom");
         subject.OnError(exception);
@@ -95,7 +95,7 @@ public partial class ReactiveExtensionsTests
     {
         Subject<int> subject = new();
         List<int> results = [];
-        _ = subject.CatchAndReturn<int, InvalidOperationException>(ex => -1).Subscribe(results.Add);
+        _ = subject.CatchAndReturn<int, InvalidOperationException>(static ex => -1).Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnError(new InvalidOperationException("boom"));
         await Assert.That(results).IsCollectionEqualTo([1, -1]);

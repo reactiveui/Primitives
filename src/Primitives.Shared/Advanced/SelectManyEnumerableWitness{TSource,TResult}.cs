@@ -11,28 +11,21 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <summary>Observer for enumerable <c>SelectMany</c>.</summary>
 /// <typeparam name="TSource">The source value type.</typeparam>
 /// <typeparam name="TResult">The result value type.</typeparam>
-public sealed class SelectManyEnumerableWitness<TSource, TResult> : IObserver<TSource>, IDisposable
+/// <param name="observer">The downstream observer.</param>
+/// <param name="selector">The enumerable projection.</param>
+public sealed class SelectManyEnumerableWitness<TSource, TResult>(IObserver<TResult> observer, Func<TSource, IEnumerable<TResult>> selector) : IObserver<TSource>, IDisposable
 {
     /// <summary>The downstream observer.</summary>
-    private readonly IObserver<TResult> _observer;
+    private readonly IObserver<TResult> _observer = observer;
 
     /// <summary>The enumerable projection.</summary>
-    private readonly Func<TSource, IEnumerable<TResult>> _selector;
+    private readonly Func<TSource, IEnumerable<TResult>> _selector = selector;
 
     /// <summary>The upstream subscription.</summary>
     private readonly SingleReplaceableDisposable _subscription = new();
 
     /// <summary>Non-zero after terminal notification or disposal.</summary>
     private int _stopped;
-
-    /// <summary>Initializes a new instance of the <see cref="SelectManyEnumerableWitness{TSource, TResult}"/> class.</summary>
-    /// <param name="observer">The downstream observer.</param>
-    /// <param name="selector">The enumerable projection.</param>
-    public SelectManyEnumerableWitness(IObserver<TResult> observer, Func<TSource, IEnumerable<TResult>> selector)
-    {
-        _observer = observer;
-        _selector = selector;
-    }
 
     /// <inheritdoc/>
     public void Dispose() => WitnessLifetime.Dispose(ref _stopped, _subscription);

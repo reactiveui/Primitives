@@ -32,6 +32,9 @@ public sealed class ExpireCoordinatorTests
     /// <summary>Timeout used while waiting for background work in this test.</summary>
     private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(5);
 
+    /// <summary>How long the superseded timeout is given to reach the observer before the invariant is checked.</summary>
+    private static readonly TimeSpan RaceSettleDelay = TimeSpan.FromMilliseconds(50);
+
     /// <summary>Verifies the timeout re-arms on each value so an active source never expires.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
@@ -132,7 +135,7 @@ public sealed class ExpireCoordinatorTests
         await observer.OnNextEntered.Task.WaitAsync(WaitTimeout).ConfigureAwait(false);
 
         var timeoutTask = Task.Run(() => clock.AdvanceBy(TimeSpan.FromTicks(One)));
-        await Task.Delay(TimeSpan.FromMilliseconds(50)).ConfigureAwait(false);
+        await Task.Delay(RaceSettleDelay).ConfigureAwait(false);
 
         await Assert.That(observer.ErrorEnteredDuringOnNext).IsFalse();
 

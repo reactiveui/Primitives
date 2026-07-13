@@ -28,27 +28,19 @@ public static partial class LinqExtensions
     /// <summary>Distinct-by operator implemented without delegate observer wrappers.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     /// <typeparam name="TKey">The key type.</typeparam>
-    private sealed class DistinctBySignal<T, TKey> : IRequireCurrentThread<T>, ICountSource
+    /// <param name="source">The source observable.</param>
+    /// <param name="keySelector">The key selector.</param>
+    /// <param name="comparer">The key comparer.</param>
+    private sealed class DistinctBySignal<T, TKey>(IObservable<T> source, Func<T, TKey> keySelector, IEqualityComparer<TKey>? comparer) : IRequireCurrentThread<T>, ICountSource
     {
         /// <summary>The source observable.</summary>
-        private readonly IObservable<T> _source;
+        private readonly IObservable<T> _source = source;
 
         /// <summary>The key selector.</summary>
-        private readonly Func<T, TKey> _keySelector;
+        private readonly Func<T, TKey> _keySelector = keySelector;
 
         /// <summary>The key comparer.</summary>
-        private readonly IEqualityComparer<TKey>? _comparer;
-
-        /// <summary>Initializes a new instance of the <see cref="DistinctBySignal{T,TKey}"/> class.</summary>
-        /// <param name="source">The source observable.</param>
-        /// <param name="keySelector">The key selector.</param>
-        /// <param name="comparer">The key comparer.</param>
-        internal DistinctBySignal(IObservable<T> source, Func<T, TKey> keySelector, IEqualityComparer<TKey>? comparer)
-        {
-            _source = source;
-            _keySelector = keySelector;
-            _comparer = comparer;
-        }
+        private readonly IEqualityComparer<TKey>? _comparer = comparer;
 
         /// <inheritdoc/>
         public bool IsRequiredSubscribeOnCurrentThread() =>
@@ -76,7 +68,9 @@ public static partial class LinqExtensions
                 return EmptyDisposable.Instance;
             }
 
-            AggregateWitness<T, int, DistinctByCountAggregator<T, TKey>> sink = new(observer, new(_keySelector, _comparer));
+            AggregateWitness<T, int, DistinctByCountAggregator<T, TKey>> sink = new(
+                observer,
+                new(_keySelector, _comparer));
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -93,7 +87,9 @@ public static partial class LinqExtensions
                 return EmptyDisposable.Instance;
             }
 
-            AggregateWitness<T, long, DistinctByLongCountAggregator<T, TKey>> sink = new(observer, new(_keySelector, _comparer));
+            AggregateWitness<T, long, DistinctByLongCountAggregator<T, TKey>> sink = new(
+                observer,
+                new(_keySelector, _comparer));
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -103,7 +99,10 @@ public static partial class LinqExtensions
         /// <param name="keySelector">The key selector.</param>
         /// <param name="comparer">The key comparer.</param>
         /// <returns>The number of distinct keys.</returns>
-        private static int CountDistinctRange(RangeSignal range, Func<T, TKey> keySelector, IEqualityComparer<TKey>? comparer)
+        private static int CountDistinctRange(
+            RangeSignal range,
+            Func<T, TKey> keySelector,
+            IEqualityComparer<TKey>? comparer)
         {
             HashSet<TKey> seen = comparer is null ? [] : new(comparer);
             var typedSelector = (Func<int, TKey>)(object)keySelector;
@@ -156,22 +155,15 @@ public static partial class LinqExtensions
 
     /// <summary>Predicate count operator implemented without fold composition.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
-    private sealed class CountPredicateSignal<T> : IRequireCurrentThread<int>
+    /// <param name="source">The source observable.</param>
+    /// <param name="predicate">The predicate.</param>
+    private sealed class CountPredicateSignal<T>(IObservable<T> source, Func<T, bool> predicate) : IRequireCurrentThread<int>
     {
         /// <summary>The source observable.</summary>
-        private readonly IObservable<T> _source;
+        private readonly IObservable<T> _source = source;
 
         /// <summary>The predicate.</summary>
-        private readonly Func<T, bool> _predicate;
-
-        /// <summary>Initializes a new instance of the <see cref="CountPredicateSignal{T}"/> class.</summary>
-        /// <param name="source">The source observable.</param>
-        /// <param name="predicate">The predicate.</param>
-        internal CountPredicateSignal(IObservable<T> source, Func<T, bool> predicate)
-        {
-            _source = source;
-            _predicate = predicate;
-        }
+        private readonly Func<T, bool> _predicate = predicate;
 
         /// <inheritdoc/>
         public bool IsRequiredSubscribeOnCurrentThread() =>
@@ -261,22 +253,15 @@ public static partial class LinqExtensions
 
     /// <summary>Predicate long-count operator implemented without fold composition.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
-    private sealed class LongCountPredicateSignal<T> : IRequireCurrentThread<long>
+    /// <param name="source">The source observable.</param>
+    /// <param name="predicate">The predicate.</param>
+    private sealed class LongCountPredicateSignal<T>(IObservable<T> source, Func<T, bool> predicate) : IRequireCurrentThread<long>
     {
         /// <summary>The source observable.</summary>
-        private readonly IObservable<T> _source;
+        private readonly IObservable<T> _source = source;
 
         /// <summary>The predicate.</summary>
-        private readonly Func<T, bool> _predicate;
-
-        /// <summary>Initializes a new instance of the <see cref="LongCountPredicateSignal{T}"/> class.</summary>
-        /// <param name="source">The source observable.</param>
-        /// <param name="predicate">The predicate.</param>
-        internal LongCountPredicateSignal(IObservable<T> source, Func<T, bool> predicate)
-        {
-            _source = source;
-            _predicate = predicate;
-        }
+        private readonly Func<T, bool> _predicate = predicate;
 
         /// <inheritdoc/>
         public bool IsRequiredSubscribeOnCurrentThread() =>
@@ -361,22 +346,15 @@ public static partial class LinqExtensions
 
     /// <summary>Predicate any operator implemented without delegate observer wrappers.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
-    private sealed class AnyPredicateSignal<T> : IRequireCurrentThread<bool>
+    /// <param name="source">The source observable.</param>
+    /// <param name="predicate">The predicate.</param>
+    private sealed class AnyPredicateSignal<T>(IObservable<T> source, Func<T, bool> predicate) : IRequireCurrentThread<bool>
     {
         /// <summary>The source observable.</summary>
-        private readonly IObservable<T> _source;
+        private readonly IObservable<T> _source = source;
 
         /// <summary>The predicate.</summary>
-        private readonly Func<T, bool> _predicate;
-
-        /// <summary>Initializes a new instance of the <see cref="AnyPredicateSignal{T}"/> class.</summary>
-        /// <param name="source">The source observable.</param>
-        /// <param name="predicate">The predicate.</param>
-        internal AnyPredicateSignal(IObservable<T> source, Func<T, bool> predicate)
-        {
-            _source = source;
-            _predicate = predicate;
-        }
+        private readonly Func<T, bool> _predicate = predicate;
 
         /// <inheritdoc/>
         public bool IsRequiredSubscribeOnCurrentThread() =>

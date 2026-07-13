@@ -23,7 +23,7 @@ public partial class CombineLatestOperatorTests
         IObservableAsync<int>[] sources = [signal.Values, AsyncObs.Never<int>()];
 
         var sub = await sources.CombineLatest().SubscribeAsync(
-            (_, _) => default,
+            static (_, _) => default,
             null);
 
         // Dispose immediately, before any values
@@ -79,7 +79,7 @@ public partial class CombineLatestOperatorTests
         IObservableAsync<int>[] sources = [signal.Values];
 
         var sub = await sources.CombineLatest().SubscribeAsync(
-            (_, _) => default,
+            static (_, _) => default,
             (ex, _) =>
             {
                 errors.Add(ex);
@@ -109,7 +109,7 @@ public partial class CombineLatestOperatorTests
         Result? completion = null;
 
         var sub = await sources.CombineLatest().SubscribeAsync(
-            (_, _) => default,
+            static (_, _) => default,
             null,
             r =>
             {
@@ -142,7 +142,7 @@ public partial class CombineLatestOperatorTests
         Result? completion = null;
 
         await using var sub = await sources.CombineLatest().SubscribeAsync(
-            (_, _) => default,
+            static (_, _) => default,
             null,
             r =>
             {
@@ -218,7 +218,7 @@ public partial class CombineLatestOperatorTests
 
         await using var sub = await sources.CombineLatest()
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 (ex, _) =>
                 {
                     errors.Add(ex);
@@ -257,7 +257,7 @@ public partial class CombineLatestOperatorTests
 
         await using var sub = await sources.CombineLatest()
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null,
                 _ =>
                 {
@@ -292,7 +292,7 @@ public partial class CombineLatestOperatorTests
 
         await using var sub = await sources.CombineLatest()
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null,
                 result =>
                 {
@@ -333,7 +333,7 @@ public partial class CombineLatestOperatorTests
         try
         {
             var sub = await sources.CombineLatest()
-                .SubscribeAsync((_, _) => default, null, null, cts.Token);
+                .SubscribeAsync(static (_, _) => default, null, null, cts.Token);
             disposeTrigger.SetResult(sub);
             await sub.DisposeAsync();
         }
@@ -367,7 +367,7 @@ public partial class CombineLatestOperatorTests
         IObservableAsync<int>[] sources = [AsyncObs.Empty<int>(), trackingSource];
 
         await using var sub = await sources.CombineLatest()
-            .SubscribeAsync((_, _) => default, null);
+            .SubscribeAsync(static (_, _) => default, null);
 
         await Assert.That(secondSourceSubscribed).IsFalse();
     }
@@ -389,7 +389,7 @@ public partial class CombineLatestOperatorTests
 
         await using var sub = await sources.CombineLatest()
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null,
                 _ =>
                 {

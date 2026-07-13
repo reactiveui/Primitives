@@ -45,7 +45,15 @@ public sealed class SequenceSignal : IRequireCurrentThread<int>
         }
 
         SingleDisposable subscription = new();
-        _ = Sequencer.CurrentThread.Schedule(() => subscription.Create(Scheduler.Schedule((this, observer), static (_, state) => state.Item1.Emit(state.observer))));
+        _ = Sequencer.CurrentThread.Schedule(
+            (self: this, subscription, observer),
+            static (_, s) =>
+            {
+                s.subscription.Create(s.self.Scheduler.Schedule(
+                    (s.self, s.observer),
+                    static (_, state) => state.self.Emit(state.observer)));
+                return EmptyDisposable.Instance;
+            });
         return subscription;
     }
 
