@@ -2,8 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Diagnostics.CodeAnalysis;
-
 namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>
@@ -17,10 +15,6 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="TAggregator">The value-type accumulator that folds values and yields the result.</typeparam>
 /// <param name="observer">The downstream observer.</param>
 /// <param name="aggregator">The seed accumulator.</param>
-[SuppressMessage(
-    "Design",
-    "CA1005:AvoidExcessiveParametersOnGenericTypes",
-    Justification = "Struct-strategy sink needs source, result and accumulator type parameters.")]
 public sealed class AggregateWitness<T, TResult, TAggregator>(IObserver<TResult> observer, TAggregator aggregator)
     : IObserver<T>, IDisposable
     where TAggregator : struct, IAggregator<T, TResult, TAggregator>

@@ -154,10 +154,6 @@ public sealed class
     }
 
     /// <inheritdoc/>
-    [SuppressMessage(
-        "Major Code Smell",
-        "S1541:Methods and properties should not be too complex",
-        Justification = "Switch arm per source; the high arm count is the dispatch surface.")]
     protected override ValueTask<IAsyncDisposable> SubscribeAtAsync(int index, CancellationToken cancellationToken) =>
         index switch
         {

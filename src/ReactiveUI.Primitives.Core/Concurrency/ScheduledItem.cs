@@ -40,10 +40,6 @@ public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICompa
     /// returns a disposable that cancels any work that outlives the invocation.
     /// </param>
     /// <exception cref="ArgumentNullException"><paramref name="comparer"/> or <paramref name="invokeCore"/> is <see langword="null"/>.</exception>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Style",
-        "IDE0001:Simplify Names",
-        Justification = "The argument validation uses ArgumentExceptionHelper")]
     public ScheduledItem(
         TAbsolute dueTime,
         IComparer<TAbsolute> comparer,

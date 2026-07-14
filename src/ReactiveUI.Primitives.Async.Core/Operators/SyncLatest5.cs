@@ -2,8 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Diagnostics.CodeAnalysis;
-
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides the arity-5 (<c>five</c>-source) <c>CombineLatest</c> extension methods.</summary>
@@ -29,10 +27,6 @@ public static partial class SignalAsyncExtensions
         /// <param name="src5">Source observable 5 whose latest value is combined.</param>
         /// <param name="selector">Projects the latest value of every source into a result.</param>
         /// <returns>An observable sequence of projected results.</returns>
-        [SuppressMessage(
-            "Major Code Smell",
-            "S107:Methods should not have too many parameters",
-            Justification = "Has more than 7 parameters - just expected for arity-N CombineLatest operator surface.")]
         public IObservableAsync<TResult> SyncLatest<T2, T3, T4, T5, TResult>(
             IObservableAsync<T2> src2,
             IObservableAsync<T3> src3,
@@ -58,10 +52,6 @@ public static partial class SignalAsyncExtensions
         /// <param name="src5">Source observable 5 whose latest value is combined.</param>
         /// <param name="selector">Projects the latest value of every source into a result.</param>
         /// <returns>An observable sequence of projected results.</returns>
-        [SuppressMessage(
-            "Major Code Smell",
-            "S107:Methods should not have too many parameters",
-            Justification = "Has more than 7 parameters - just expected for arity-N CombineLatest operator surface.")]
         public IObservableAsync<TResult> CombineLatest<T2, T3, T4, T5, TResult>(
             IObservableAsync<T2> src2,
             IObservableAsync<T3> src3,

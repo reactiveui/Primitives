@@ -12,10 +12,6 @@ public sealed class SynchronizationContextSequencer : ISequencer
     /// <summary>Initializes a new instance of the <see cref="SynchronizationContextSequencer"/> class.</summary>
     /// <param name="context">The synchronization context used to schedule work.</param>
     /// <exception cref="ArgumentNullException"><paramref name="context"/> is <see langword="null"/>.</exception>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Style",
-        "IDE0001:Simplify Names",
-        Justification = "The argument validation uses ArgumentExceptionHelper.")]
     public SynchronizationContextSequencer(SynchronizationContext context) =>
         Context = context ?? throw new ArgumentNullException(nameof(context));
 

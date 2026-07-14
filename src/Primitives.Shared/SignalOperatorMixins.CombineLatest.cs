@@ -101,10 +101,6 @@ public static partial class LinqExtensions
         /// <param name="source3">The third source observable.</param>
         /// <param name="selector">The selector that combines latest values from all sources.</param>
         /// <returns>The combine-latest signal.</returns>
-        [SuppressMessage(
-            "Major Code Smell",
-            "S107:Methods should not have too many parameters",
-            Justification = "Has more than 7 parameters - expected for arity-N CombineLatest factory surface.")]
         internal static CombineLatestSignal<TResult> Create<T1, T2, T3>(
             IObservable<T1> source,
             IObservable<T2> source2,
@@ -130,10 +126,6 @@ public static partial class LinqExtensions
         /// <param name="source4">The fourth source observable.</param>
         /// <param name="selector">The selector that combines latest values from all sources.</param>
         /// <returns>The combine-latest signal.</returns>
-        [SuppressMessage(
-            "Major Code Smell",
-            "S107:Methods should not have too many parameters",
-            Justification = "Has more than 7 parameters - expected for arity-N CombineLatest factory surface.")]
         internal static CombineLatestSignal<TResult> Create<T1, T2, T3, T4>(
             IObservable<T1> source,
             IObservable<T2> source2,
@@ -164,10 +156,6 @@ public static partial class LinqExtensions
         /// <param name="source5">The fifth source observable.</param>
         /// <param name="selector">The selector that combines latest values from all sources.</param>
         /// <returns>The combine-latest signal.</returns>
-        [SuppressMessage(
-            "Major Code Smell",
-            "S107:Methods should not have too many parameters",
-            Justification = "Has more than 7 parameters - expected for arity-N CombineLatest factory surface.")]
         internal static CombineLatestSignal<TResult> Create<T1, T2, T3, T4, T5>(
             IObservable<T1> source,
             IObservable<T2> source2,
@@ -203,10 +191,6 @@ public static partial class LinqExtensions
         /// <param name="source6">The sixth source observable.</param>
         /// <param name="selector">The selector that combines latest values from all sources.</param>
         /// <returns>The combine-latest signal.</returns>
-        [SuppressMessage(
-            "Major Code Smell",
-            "S107:Methods should not have too many parameters",
-            Justification = "Has more than 7 parameters - expected for arity-N CombineLatest factory surface.")]
         internal static CombineLatestSignal<TResult> Create<T1, T2, T3, T4, T5, T6>(
             IObservable<T1> source,
             IObservable<T2> source2,

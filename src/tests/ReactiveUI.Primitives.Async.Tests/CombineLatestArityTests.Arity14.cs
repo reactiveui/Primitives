@@ -14,15 +14,6 @@ public partial class CombineLatestArityTests
     /// <summary>Verifies that CombineLatest14 disposes on subscription failure (catch block).</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "Test Reasons")]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S138:Methods should not have too many lines",
-        Justification =
-            "Smoke test inherently lists N Signals + per-source calls; splitting would obscure the under-test sequence.")]
     public async Task WhenCombineLatest14SubscriptionThrows_ThenDisposesAndRethrows()
     {
         var s1 = Signal.Create<int>();
@@ -61,15 +52,6 @@ public partial class CombineLatestArityTests
     /// <summary>Verifies that CombineLatest14 OnNextCombined guard returns when disposed.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "Test Reasons")]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S138:Methods should not have too many lines",
-        Justification =
-            "Smoke test inherently lists N Signals + per-source calls; splitting would obscure the under-test sequence.")]
     public async Task WhenCombineLatest14DisposedBeforeCombine_ThenOnNextCombinedIsGuarded()
     {
         var s1 = Signal.Create<int>();
@@ -112,15 +94,6 @@ public partial class CombineLatestArityTests
     /// <summary>Verifies that CombineLatest14 forwards a source error to the downstream observer.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "Test Reasons")]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S138:Methods should not have too many lines",
-        Justification =
-            "Smoke test inherently lists N Signals + per-source calls; splitting would obscure the under-test sequence.")]
     public async Task WhenCombineLatest14OneSourceErrors_ThenCombinedErrorForwarded()
     {
         var s1 = Signal.Create<int>();
@@ -171,15 +144,6 @@ public partial class CombineLatestArityTests
     /// <summary>Verifies that CombineLatest14 produces the selector's result once every source has emitted at least once.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "Test Reasons")]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S138:Methods should not have too many lines",
-        Justification =
-            "Smoke test inherently lists N Signals + per-source calls; splitting would obscure the under-test sequence.")]
     public async Task WhenCombineLatest14AllSourcesEmit_ThenSelectorResultEmitted()
     {
         var s1 = Signal.Create<int>();
@@ -225,15 +189,6 @@ public partial class CombineLatestArityTests
     /// <summary>Verifies that CombineLatest14 completes once every source has completed.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "Test Reasons")]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S138:Methods should not have too many lines",
-        Justification =
-            "Smoke test inherently lists N Signals + per-source calls; splitting would obscure the under-test sequence.")]
     public async Task WhenCombineLatest14AllSourcesComplete_ThenCombinedCompletes()
     {
         var s1 = Signal.Create<int>();

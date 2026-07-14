@@ -16,10 +16,6 @@ public sealed class TaskPoolSequencer : ISequencer
 
     /// <summary>Initializes a new instance of the <see cref="TaskPoolSequencer"/> class.</summary>
     /// <param name="taskFactory">The task factory.</param>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Style",
-        "IDE0001:Simplify Names",
-        Justification = "The argument validation uses ArgumentExceptionHelper.")]
     public TaskPoolSequencer(TaskFactory taskFactory) =>
         _taskFactory = taskFactory ?? throw new ArgumentNullException(nameof(taskFactory));
 

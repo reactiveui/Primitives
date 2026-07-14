@@ -65,10 +65,6 @@ public sealed class ReplaySignal<T> : ISignal<T>
     /// window.
     /// </exception>
     /// <exception cref="ArgumentNullException">scheduler.</exception>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Style",
-        "IDE0001:Simplify Names",
-        Justification = "The argument validation uses ArgumentExceptionHelper")]
     public ReplaySignal(int bufferSize, TimeSpan window, ISequencer scheduler)
     {
         ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(bufferSize);

@@ -338,6 +338,30 @@ public static partial class LinqExtensions
                 return EmptyDisposable.Instance;
             }
 
+            // The first value settles this operator, so it must be able to dispose the source the moment one arrives.
+            // A current-thread source drains its trampoline inside its own Subscribe, which would not return until the
+            // source ended — never, for an endless one — leaving the sink without the subscription it needs to stop it.
+            if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
+            {
+                return SubscribeCore(observer);
+            }
+
+            SingleDisposable subscription = new();
+            _ = Sequencer.CurrentThread.Schedule(
+                (self: this, subscription, observer),
+                static (_, s) =>
+                {
+                    s.subscription.Create(s.self.SubscribeCore(s.observer));
+                    return EmptyDisposable.Instance;
+                });
+            return subscription;
+        }
+
+        /// <summary>Subscribes the any sink to the source.</summary>
+        /// <param name="observer">The downstream observer.</param>
+        /// <returns>The sink that owns the upstream subscription.</returns>
+        private AnyWitness<T> SubscribeCore(IObserver<bool> observer)
+        {
             AnyWitness<T> sink = new(observer);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
@@ -371,9 +395,22 @@ public static partial class LinqExtensions
                 return EmptyDisposable.Instance;
             }
 
-            AnyPredicateWitness<T> sink = new(observer, _predicate);
-            sink.SetSubscription(_source.Subscribe(sink));
-            return sink;
+            // The first matching value settles this operator, so it must own the source subscription before the source
+            // starts producing. See AnySignal for why a current-thread source livelocks without this bootstrap.
+            if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
+            {
+                return SubscribeCore(observer);
+            }
+
+            SingleDisposable subscription = new();
+            _ = Sequencer.CurrentThread.Schedule(
+                (self: this, subscription, observer),
+                static (_, s) =>
+                {
+                    s.subscription.Create(s.self.SubscribeCore(s.observer));
+                    return EmptyDisposable.Instance;
+                });
+            return subscription;
         }
 
         /// <summary>Evaluates a predicate directly over a range source and emits the any result.</summary>
@@ -404,6 +441,16 @@ public static partial class LinqExtensions
             {
                 observer.OnError(error);
             }
+        }
+
+        /// <summary>Subscribes the predicated any sink to the source.</summary>
+        /// <param name="observer">The downstream observer.</param>
+        /// <returns>The sink that owns the upstream subscription.</returns>
+        private AnyPredicateWitness<T> SubscribeCore(IObserver<bool> observer)
+        {
+            AnyPredicateWitness<T> sink = new(observer, _predicate);
+            sink.SetSubscription(_source.Subscribe(sink));
+            return sink;
         }
     }
 }

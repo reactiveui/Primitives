@@ -34,10 +34,6 @@ public static partial class LinqExtensions
     /// <param name="sources">The sources to merge.</param>
     /// <param name="comparer">The equality comparer used to suppress duplicates, or <see langword="null"/> for the default.</param>
     /// <returns>An observable of the distinct merged values.</returns>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Style",
-        "IDE0001:Simplify Names",
-        Justification = "The argument validation uses ArgumentExceptionHelper")]
     public static IObservable<T> BlendUnique<T>(IObservable<T>[] sources, IEqualityComparer<T>? comparer)
     {
         ArgumentExceptionHelper.ThrowIfNull(sources);

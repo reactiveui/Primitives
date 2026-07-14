@@ -2,8 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Diagnostics.CodeAnalysis;
-
 namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>
@@ -15,10 +13,6 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="T">The observed value type.</typeparam>
 /// <typeparam name="TResult">The terminal result type.</typeparam>
 /// <typeparam name="TSelf">The implementing accumulator type, returned by <see cref="Add"/> so folding stays allocation-free.</typeparam>
-[SuppressMessage(
-    "Design",
-    "CA1005:AvoidExcessiveParametersOnGenericTypes",
-    Justification = "Self type parameter keeps the functional Add allocation-free (no boxing).")]
 public interface IAggregator<in T, out TResult, TSelf>
     where TSelf : IAggregator<T, TResult, TSelf>
 {

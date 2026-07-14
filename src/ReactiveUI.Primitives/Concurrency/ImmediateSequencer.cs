@@ -42,11 +42,6 @@ public sealed class ImmediateSequencer : ISequencer
         "CA1822:Mark members as static",
         Justification =
             "Must remain an instance method so overload resolution selects it over the allocating ISequencer.Schedule(Action) extension, giving an allocation-free immediate path.")]
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S2325:Methods and properties that don't access instance data should be static",
-        Justification =
-            "Must remain an instance method so overload resolution selects it over the allocating ISequencer.Schedule(Action) extension.")]
     public IDisposable Schedule(Action action)
     {
         ArgumentExceptionHelper.ThrowIfNull(action);

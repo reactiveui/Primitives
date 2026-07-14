@@ -2,7 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Diagnostics.CodeAnalysis;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Disposables;
@@ -339,10 +338,6 @@ internal static class AllocationProbe
     /// <summary>Warms up, measures, and prints the per-operation allocation for a single probe row.</summary>
     /// <param name="label">The operator label to print.</param>
     /// <param name="op">The operation to measure.</param>
-    [SuppressMessage(
-        "Major Code Smell",
-        "S1215:GC.Collect should not be called",
-        Justification = "The allocation probe forces a collection before measuring current-thread allocations.")]
     private static void Row(string label, Action op)
     {
         for (var i = 0; i < Warmup; i++)

@@ -50,10 +50,6 @@ public static partial class SignalAsyncExtensions
         /// <param name="selector">Projects the latest value of every source into a result.</param>
         /// <returns>An observable sequence of projected results.</returns>
         [SuppressMessage(
-            "Major Code Smell",
-            "S107:Methods should not have too many parameters",
-            Justification = "Has more than 7 parameters - just expected for arity-N CombineLatest operator surface.")]
-        [SuppressMessage(
             "Maintainability",
             "SST1472:Signatures should not declare too many parameters",
             Justification =
@@ -128,10 +124,6 @@ public static partial class SignalAsyncExtensions
         /// <param name="src15">Source observable 15 whose latest value is combined.</param>
         /// <param name="selector">Projects the latest value of every source into a result.</param>
         /// <returns>An observable sequence of projected results.</returns>
-        [SuppressMessage(
-            "Major Code Smell",
-            "S107:Methods should not have too many parameters",
-            Justification = "Has more than 7 parameters - just expected for arity-N CombineLatest operator surface.")]
         [SuppressMessage(
             "Maintainability",
             "SST1472:Signatures should not declare too many parameters",

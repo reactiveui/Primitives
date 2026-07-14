@@ -102,10 +102,6 @@ public partial class CombineLatestArityTests
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "Test Reasons")]
     public async Task WhenCombineLatest3DisposedViaError_ThenOnNextCombinedGuardHits()
     {
         DirectSource<int> src1 = new();
@@ -596,10 +592,6 @@ public partial class CombineLatestArityTests
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "Test Reasons")]
     public async Task WhenCombineLatest8DisposedViaError_ThenOnNextCombinedGuardHits()
     {
         DirectSource<int> src1 = new();
@@ -662,10 +654,6 @@ public partial class CombineLatestArityTests
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "Test Reasons")]
     public async Task WhenCombineLatest8DisposedViaError_ThenOnErrorResumeGuardHits()
     {
         DirectSource<int> src1 = new();

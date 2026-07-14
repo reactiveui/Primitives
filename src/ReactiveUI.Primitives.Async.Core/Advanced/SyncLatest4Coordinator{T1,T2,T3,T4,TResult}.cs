@@ -2,8 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Diagnostics.CodeAnalysis;
-
 namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>Coordinates subscriptions and latest-value emission for the arity-4 <c>SyncLatest</c> operator.</summary>
@@ -87,10 +85,6 @@ public sealed class SyncLatest4Coordinator<T1, T2, T3, T4, TResult> : SyncLatest
     }
 
     /// <inheritdoc/>
-    [SuppressMessage(
-        "Major Code Smell",
-        "S1541:Methods and properties should not be too complex",
-        Justification = "Switch arm per source; the high arm count is the dispatch surface.")]
     protected override ValueTask<IAsyncDisposable> SubscribeAtAsync(int index, CancellationToken cancellationToken) =>
         index switch
         {
@@ -106,10 +100,6 @@ public sealed class SyncLatest4Coordinator<T1, T2, T3, T4, TResult> : SyncLatest
     /// </summary>
     /// <param name="values">When the method returns <see langword="true"/>, the snapshot.</param>
     /// <returns><see langword="true"/> when every source has produced a value; otherwise <see langword="false"/>.</returns>
-    [SuppressMessage(
-        "Major Code Smell",
-        "S1541:Methods and properties should not be too complex",
-        Justification = "Short-circuited checks over every source's Optional are the snapshot semantic.")]
     private bool TryReadValues(out (T1 V1, T2 V2, T3 V3, T4 V4) values)
     {
         if (Value1.TryGetValue(out var value1)

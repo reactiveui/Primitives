@@ -2,15 +2,9 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Diagnostics.CodeAnalysis;
-
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Fused filter / projection observables that back the parity-helper extension methods in <see cref="SignalAsyncExtensions"/>.</summary>
-[SuppressMessage(
-    "Major Code Smell",
-    "S3604:Member initializer values should not be redundant",
-    Justification = "Primary-constructor parameters are captured into observer state.")]
 public static partial class SignalAsyncExtensions
 {
     /// <summary>

@@ -19,6 +19,9 @@ public sealed class WasmSequencerTests
     /// <summary>How far in the future delayed work is scheduled.</summary>
     private static readonly TimeSpan ScheduleDelay = TimeSpan.FromMilliseconds(50);
 
+    /// <summary>How long a disposed sequencer is watched to prove it never ran the work it rejected or released.</summary>
+    private static readonly TimeSpan PostDisposeObservationWindow = TimeSpan.FromMilliseconds(200);
+
     /// <summary>Verifies the shared instance is a singleton.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
@@ -140,6 +143,78 @@ public sealed class WasmSequencerTests
         sequencer.Dispose();
 
         await Assert.That(sequencer.Dispose).ThrowsNothing();
+    }
+
+    /// <summary>
+    /// Verifies a disposed sequencer rejects new work rather than queueing work it can never drain. Disposal releases
+    /// the drain timer, so an accepted item would sit in the ready queue forever behind a timer that can no longer be
+    /// armed. Both scheduling overloads fail fast instead, and neither item runs.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ScheduleAfterDisposeThrowsObjectDisposedException()
+    {
+        WasmSequencer sequencer = new();
+        var ran = 0;
+        DelegateWorkItem immediate = new(() => Interlocked.Increment(ref ran));
+        DelegateWorkItem delayed = new(() => Interlocked.Increment(ref ran));
+
+        sequencer.Dispose();
+
+        await Assert.That(() => sequencer.Schedule(immediate)).ThrowsExactly<ObjectDisposedException>();
+        await Assert
+            .That(() => sequencer.Schedule(delayed, Sequencer.AddTimestamp(sequencer.Timestamp, ScheduleDelay)))
+            .ThrowsExactly<ObjectDisposedException>();
+
+        await Task.Delay(PostDisposeObservationWindow);
+        await Assert.That(Volatile.Read(ref ran)).IsEqualTo(0);
+    }
+
+    /// <summary>
+    /// Verifies an enqueue that loses the race to disposal releases the item it just queued. The disposed check runs
+    /// before the item joins the ready queue, so a disposal landing in between would otherwise strand the item behind
+    /// a drain timer that can never fire again — the caller would hold a handle to work that neither runs nor cancels.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ScheduleReadyThatLosesTheRaceToDisposeReleasesTheItemItQueued()
+    {
+        WasmSequencer sequencer = new();
+        var ran = 0;
+        CancellableWorkItem item = new(() => Interlocked.Increment(ref ran));
+
+        sequencer.Dispose();
+
+        // The enqueue that was already past the disposed check when the disposal drained the ready queue.
+        sequencer.ScheduleReady(item);
+
+        await Assert.That(item.IsDisposed).IsTrue();
+
+        await Task.Delay(PostDisposeObservationWindow);
+        await Assert.That(Volatile.Read(ref ran)).IsEqualTo(0);
+    }
+
+    /// <summary>
+    /// Verifies delayed work still parked on the shared timer when the sequencer is disposed is released rather than
+    /// marshalled back into a sequencer that is gone. The marshal step must neither run the item nor throw
+    /// <see cref="ObjectDisposedException"/> on the timer's thread, where nothing could catch it.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task DisposeReleasesDelayedWorkThatComesDueAfterwards()
+    {
+        WasmSequencer sequencer = new();
+        var ran = 0;
+        CancellableWorkItem delayed = new(() => Interlocked.Increment(ref ran));
+
+        sequencer.Schedule(delayed, Sequencer.AddTimestamp(sequencer.Timestamp, ScheduleDelay));
+        sequencer.Dispose();
+
+        // Outlast the due time: the marshal step must observe the disposal and hand the item back to its owner.
+        await Task.Delay(ScheduleDelay + PostDisposeObservationWindow);
+
+        await Assert.That(delayed.IsDisposed).IsTrue();
+        await Assert.That(Volatile.Read(ref ran)).IsEqualTo(0);
     }
 
     /// <summary>Work item that invokes a delegate when executed.</summary>

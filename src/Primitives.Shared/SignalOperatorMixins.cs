@@ -586,10 +586,6 @@ public static partial class LinqExtensions
 
         /// <summary>Returns an observable sequence as a signal-compatible observable.</summary>
         /// <returns>The supplied source sequence.</returns>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage(
-            "Style",
-            "IDE0001:Simplify Names",
-            Justification = "The argument validation uses ArgumentExceptionHelper")]
         public IObservable<T> ToSignal() => source ?? throw new ArgumentNullException(nameof(source));
     }
 

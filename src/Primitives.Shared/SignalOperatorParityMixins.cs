@@ -131,10 +131,6 @@ public static partial class LinqExtensions
         /// <summary>Returns the source as an observable. This is an identity adapter for BCL observable sources.</summary>
         /// <returns>The supplied source sequence.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage(
-            "Style",
-            "IDE0001:Simplify Names",
-            Justification = "The argument validation uses ArgumentExceptionHelper")]
         public IObservable<T> AsObservable() => source ?? throw new ArgumentNullException(nameof(source));
 
         /// <summary>Schedules observer notifications on the supplied scheduler using the System.Reactive operator name.</summary>
@@ -799,10 +795,6 @@ public static partial class LinqExtensions
         /// <summary>Identity helper that keeps source-compatible <c>FirstAsync().ToTask()</c> migrations compiling.</summary>
         /// <returns>The supplied task.</returns>
         /// <exception cref="ArgumentNullException">The receiver task is <see langword="null"/>.</exception>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage(
-            "Style",
-            "IDE0001:Simplify Names",
-            Justification = "The argument validation uses ArgumentExceptionHelper")]
         public Task<T> ToTask() => task ?? throw new ArgumentNullException(nameof(task));
 
         /// <summary>Returns a task that mirrors the supplied task but transitions to the canceled state when

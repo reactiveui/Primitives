@@ -409,10 +409,6 @@ public partial class CombineLatestOperatorTests
     /// <summary>Error propagation in 8-source variant.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "Test Purposes")]
     public async Task WhenCombineLatestEightSources_Error_ThenCompletes()
     {
         var signals = Enumerable.Range(0, EightSources).Select(static _ => Signal.Create<int>()).ToList();
@@ -446,10 +442,6 @@ public partial class CombineLatestOperatorTests
     /// <summary>All eight sources complete successfully.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "Test Purposes")]
     public async Task WhenCombineLatestEightSources_AllComplete_ThenCombinedCompletes()
     {
         const int SourcesToCompleteFirst = 7;
@@ -490,11 +482,6 @@ public partial class CombineLatestOperatorTests
     /// <summary>Error resume forwarded in 8-source variant.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107",
-        Justification =
-            "Arity-8 CombineLatest selector lambda parameter count mirrors the operator signature under test.")]
     public async Task WhenCombineLatestEightSources_ErrorResume_ThenForwarded()
     {
         var signals = Enumerable.Range(0, EightSources).Select(static _ => Signal.Create<int>()).ToList();

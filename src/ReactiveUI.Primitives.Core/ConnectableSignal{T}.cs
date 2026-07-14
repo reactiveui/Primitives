@@ -31,10 +31,6 @@ public sealed class ConnectableSignal<T> : IObservable<T>
     /// <summary>Initializes a new instance of the <see cref="ConnectableSignal{T}"/> class.</summary>
     /// <param name="source">The cold or hot source sequence.</param>
     /// <param name="hub">The multicast hub.</param>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Style",
-        "IDE0001:Simplify Names",
-        Justification = "The argument validation uses ArgumentExceptionHelper")]
     public ConnectableSignal(IObservable<T> source, ISignal<T> hub)
     {
         _source = source ?? throw new ArgumentNullException(nameof(source));

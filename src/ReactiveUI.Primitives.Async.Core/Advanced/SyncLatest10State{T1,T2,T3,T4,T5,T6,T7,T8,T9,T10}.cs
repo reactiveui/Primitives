@@ -2,8 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Diagnostics.CodeAnalysis;
-
 namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>Bundles the source observables for the arity-10 <c>SyncLatest</c> operator.</summary>
@@ -27,10 +25,6 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// <param name="Source8">Source observable 8.</param>
 /// <param name="Source9">Source observable 9.</param>
 /// <param name="Source10">Source observable 10.</param>
-[SuppressMessage(
-    "Major Code Smell",
-    "S107:Methods should not have too many parameters",
-    Justification = "Arity-specific SyncLatest source state intentionally stores one source per operator input.")]
 public readonly record struct SyncLatest10State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(
     IObservableAsync<T1> Source1,
     IObservableAsync<T2> Source2,

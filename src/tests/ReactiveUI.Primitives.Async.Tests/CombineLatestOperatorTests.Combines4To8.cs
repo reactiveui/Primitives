@@ -162,11 +162,6 @@ public partial class CombineLatestOperatorTests
     /// <summary>Tests CombineLatest with 8 sources.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107",
-        Justification =
-            "Arity-N CombineLatest selector lambda parameter count mirrors the operator signature under test.")]
     public async Task WhenCombineLatestEightSources_ThenCombinesAll()
     {
         const int ExpectedSum = 8;

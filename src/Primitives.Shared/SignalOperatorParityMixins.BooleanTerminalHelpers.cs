@@ -38,9 +38,23 @@ public static partial class LinqExtensions
                 return EmptyDisposable.Instance;
             }
 
-            AllPredicateWitness<T> sink = new(observer, _predicate);
-            sink.SetSubscription(_source.Subscribe(sink));
-            return sink;
+            // The first value the predicate rejects settles this operator, so it must own the source subscription
+            // before the source starts producing. A current-thread source drains its trampoline inside its own
+            // Subscribe, so on an endless source the sink would never be handed the subscription it needs to stop it.
+            if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
+            {
+                return SubscribeCore(observer);
+            }
+
+            SingleDisposable subscription = new();
+            _ = Sequencer.CurrentThread.Schedule(
+                (self: this, subscription, observer),
+                static (_, s) =>
+                {
+                    s.subscription.Create(s.self.SubscribeCore(s.observer));
+                    return EmptyDisposable.Instance;
+                });
+            return subscription;
         }
 
         /// <summary>Evaluates a predicate directly over a range source and emits the all result.</summary>
@@ -71,6 +85,16 @@ public static partial class LinqExtensions
             {
                 observer.OnError(error);
             }
+        }
+
+        /// <summary>Subscribes the predicated all sink to the source.</summary>
+        /// <param name="observer">The downstream observer.</param>
+        /// <returns>The sink that owns the upstream subscription.</returns>
+        private AllPredicateWitness<T> SubscribeCore(IObserver<bool> observer)
+        {
+            AllPredicateWitness<T> sink = new(observer, _predicate);
+            sink.SetSubscription(_source.Subscribe(sink));
+            return sink;
         }
     }
 
@@ -105,9 +129,22 @@ public static partial class LinqExtensions
                 return EmptyDisposable.Instance;
             }
 
-            ContainsWitness<T> sink = new(observer, _value, _comparer);
-            sink.SetSubscription(_source.Subscribe(sink));
-            return sink;
+            // The value being sought settles this operator the moment it arrives, so it must own the source
+            // subscription before the source starts producing. See AllPredicateSignal for the livelock without this.
+            if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
+            {
+                return SubscribeCore(observer);
+            }
+
+            SingleDisposable subscription = new();
+            _ = Sequencer.CurrentThread.Schedule(
+                (self: this, subscription, observer),
+                static (_, s) =>
+                {
+                    s.subscription.Create(s.self.SubscribeCore(s.observer));
+                    return EmptyDisposable.Instance;
+                });
+            return subscription;
         }
 
         /// <summary>Evaluates contains directly over a range source and emits the result.</summary>
@@ -151,6 +188,16 @@ public static partial class LinqExtensions
             {
                 observer.OnError(error);
             }
+        }
+
+        /// <summary>Subscribes the contains sink to the source.</summary>
+        /// <param name="observer">The downstream observer.</param>
+        /// <returns>The sink that owns the upstream subscription.</returns>
+        private ContainsWitness<T> SubscribeCore(IObserver<bool> observer)
+        {
+            ContainsWitness<T> sink = new(observer, _value, _comparer);
+            sink.SetSubscription(_source.Subscribe(sink));
+            return sink;
         }
     }
 }

@@ -444,10 +444,6 @@ public partial class RxNamesTests
     /// <param name="value16">Value 16.</param>
     /// <returns>The sum of all values.</returns>
     [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "Has more than 7 parameters - required to exercise the arity-16 CombineLatest selector.")]
-    [SuppressMessage(
         "Maintainability",
         "SST1472:Signatures should not declare too many parameters",
         Justification = "The arity-16 CombineLatest selector delegate fixes this signature.")]
@@ -666,10 +662,6 @@ public partial class RxNamesTests
     /// <param name = "Rx">The Rx/LINQ-named builder.</param>
     /// <param name = "Inners">The inner source values.</param>
     /// <param name = "Expected">The expected forwarded values.</param>
-    [SuppressMessage(
-        "Major Code Smell",
-        "S2368:Public methods should not have multidimensional array parameters",
-        Justification = "The jagged array is the public TUnit method-data shape for higher-order parity cases.")]
     public sealed record HigherOrderCase(
         string Name,
         Func<IObservable<IObservable<int>>, IObservable<int>> Deviant,

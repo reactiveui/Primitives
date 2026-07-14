@@ -30,10 +30,6 @@ public static partial class LinqExtensions
         /// <param name="selector">Projects the latest value of every source into a result.</param>
         /// <returns>An observable sequence of projected results.</returns>
         /// <exception cref="ArgumentNullException">A source or selector is <see langword="null"/>.</exception>
-        [SuppressMessage(
-            "Major Code Smell",
-            "S107:Methods should not have too many parameters",
-            Justification = "Has more than 7 parameters - expected for arity-N CombineLatest operator surface.")]
         public IObservable<TResult> CombineLatest<T2, T3, TResult>(
             IObservable<T2> source2,
             IObservable<T3> source3,
@@ -65,10 +61,6 @@ public static partial class LinqExtensions
         /// <param name="selector">Projects the latest value of every source into a result.</param>
         /// <returns>An observable sequence of projected results.</returns>
         /// <exception cref="ArgumentNullException">A source or selector is <see langword="null"/>.</exception>
-        [SuppressMessage(
-            "Major Code Smell",
-            "S107:Methods should not have too many parameters",
-            Justification = "Has more than 7 parameters - expected for arity-N CombineLatest operator surface.")]
         public IObservable<TResult> CombineLatest<T2, T3, T4, TResult>(
             IObservable<T2> source2,
             IObservable<T3> source3,
@@ -105,10 +97,6 @@ public static partial class LinqExtensions
         /// <param name="selector">Projects the latest value of every source into a result.</param>
         /// <returns>An observable sequence of projected results.</returns>
         /// <exception cref="ArgumentNullException">A source or selector is <see langword="null"/>.</exception>
-        [SuppressMessage(
-            "Major Code Smell",
-            "S107:Methods should not have too many parameters",
-            Justification = "Has more than 7 parameters - expected for arity-N CombineLatest operator surface.")]
         public IObservable<TResult> CombineLatest<T2, T3, T4, T5, TResult>(
             IObservable<T2> source2,
             IObservable<T3> source3,
@@ -150,10 +138,6 @@ public static partial class LinqExtensions
         /// <param name="selector">Projects the latest value of every source into a result.</param>
         /// <returns>An observable sequence of projected results.</returns>
         /// <exception cref="ArgumentNullException">A source or selector is <see langword="null"/>.</exception>
-        [SuppressMessage(
-            "Major Code Smell",
-            "S107:Methods should not have too many parameters",
-            Justification = "Has more than 7 parameters - expected for arity-N CombineLatest operator surface.")]
         public IObservable<TResult> CombineLatest<T2, T3, T4, T5, T6, TResult>(
             IObservable<T2> source2,
             IObservable<T3> source3,
@@ -200,10 +184,6 @@ public static partial class LinqExtensions
         /// <param name="selector">Projects the latest value of every source into a result.</param>
         /// <returns>An observable sequence of projected results.</returns>
         /// <exception cref="ArgumentNullException">A source or selector is <see langword="null"/>.</exception>
-        [SuppressMessage(
-            "Major Code Smell",
-            "S107:Methods should not have too many parameters",
-            Justification = "Has more than 7 parameters - expected for arity-N CombineLatest operator surface.")]
         public IObservable<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, TResult>(
             IObservable<T2> source2,
             IObservable<T3> source3,

@@ -91,7 +91,34 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            var coordinator = new TakeUntilCoordinator(observer);
+            // Either arm can be a current-thread source, and whichever this operator subscribes first would run its
+            // work on the trampoline of that very call — draining it before the coordinator has been handed the
+            // subscription it needs in order to stop. An endless source therefore never learns the stop arm fired.
+            // Entering the trampoline here instead means both arms only queue their work and return, the coordinator
+            // owns both subscriptions before the first notification is delivered, and stopping disposes them.
+            if ((!CurrentThreadRequirement.IsRequired(_source) && !CurrentThreadRequirement.IsRequired(_other))
+                || !CurrentThreadSequencer.IsScheduleRequired)
+            {
+                return SubscribeCore(observer);
+            }
+
+            SingleDisposable subscription = new();
+            _ = Sequencer.CurrentThread.Schedule(
+                (self: this, subscription, observer),
+                static (_, s) =>
+                {
+                    s.subscription.Create(s.self.SubscribeCore(s.observer));
+                    return EmptyDisposable.Instance;
+                });
+            return subscription;
+        }
+
+        /// <summary>Subscribes the stop arm and, unless it has already fired, the source.</summary>
+        /// <param name="observer">The downstream observer.</param>
+        /// <returns>The coordinator that owns both subscriptions.</returns>
+        private TakeUntilCoordinator SubscribeCore(IObserver<T> observer)
+        {
+            TakeUntilCoordinator coordinator = new(observer);
             coordinator.Add(_other.Subscribe(new TakeUntilOtherWitness(coordinator)));
             if (coordinator.IsStopped)
             {
@@ -436,6 +463,31 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
+            // A current-thread source drains its trampoline inside its own Subscribe, so the sink would not own the
+            // upstream subscription until that drain ended — and on an endless source it never does, because the sink
+            // cannot dispose a subscription it has not been handed. Entering the trampoline here first means the
+            // source only queues its work, and the failing predicate can stop it.
+            if (!CurrentThreadRequirement.IsRequired(_source) || !CurrentThreadSequencer.IsScheduleRequired)
+            {
+                return SubscribeCore(observer);
+            }
+
+            SingleDisposable subscription = new();
+            _ = Sequencer.CurrentThread.Schedule(
+                (self: this, subscription, observer),
+                static (_, s) =>
+                {
+                    s.subscription.Create(s.self.SubscribeCore(s.observer));
+                    return EmptyDisposable.Instance;
+                });
+            return subscription;
+        }
+
+        /// <summary>Subscribes the predicate sink to the source.</summary>
+        /// <param name="observer">The downstream observer.</param>
+        /// <returns>The sink that owns the upstream subscription.</returns>
+        private TakeWhileWitness<T> SubscribeCore(IObserver<T> observer)
+        {
             TakeWhileWitness<T> sink = new(observer, _predicate);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;

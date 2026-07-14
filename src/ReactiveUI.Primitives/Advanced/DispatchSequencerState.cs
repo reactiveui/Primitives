@@ -185,6 +185,28 @@ public record struct DispatchSequencerState
         }
     }
 
+    /// <summary>
+    /// Cancels and drops every ready work item. The items are the handles their callers hold, so disposing them
+    /// releases the caller's work instead of stranding it in a queue nothing will ever drain again.
+    /// </summary>
+    /// <remarks>
+    /// Internal rather than public because only a sequencer that can retire its own dispatcher needs it: the platform
+    /// dispatchers (WPF, WinForms, WinUI, MAUI, Blazor) outlive the sequencer that posts to them and keep draining, so
+    /// they never release a queue. <see cref="WasmSequencer"/> owns the timer that is its dispatcher, and once that is
+    /// disposed nothing can drain the queue again — so it, alone, hands the queued work back.
+    /// </remarks>
+    internal void ReleaseQueued()
+    {
+        while (_ready.TryDequeue(out var item))
+        {
+            _ = Interlocked.Decrement(ref _readyCount);
+            if (item is IDisposable cancellable)
+            {
+                cancellable.Dispose();
+            }
+        }
+    }
+
     /// <summary>Work item used by the shared timer path to marshal delayed work back to the dispatcher.</summary>
     /// <param name="owner">Owning dispatch sequencer.</param>
     /// <param name="item">Work item to marshal.</param>

@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for full license information.
 
 #if !NET8_0_OR_GREATER
-using System.Diagnostics.CodeAnalysis;
 #endif
 
 namespace ReactiveUI.Primitives.Concurrency;
@@ -25,10 +24,6 @@ public static partial class Sequencer
     internal static DateTimeOffset Now => TimeProvider.System.GetUtcNow();
 #else
     /// <summary>Gets the shared wall-clock time used by real-time sequencers.</summary>
-    [SuppressMessage(
-        "Major Code Smell",
-        "S6354:Use a testable date/time provider",
-        Justification = "Not available all platforms")]
     internal static DateTimeOffset Now => DateTimeOffset.UtcNow;
 #endif
 

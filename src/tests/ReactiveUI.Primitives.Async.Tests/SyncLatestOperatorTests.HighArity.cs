@@ -12,10 +12,6 @@ public partial class SyncLatestOperatorTests
     /// <summary>Verifies the arity-12 <c>SyncLatest</c> projects the latest value of all twelve sources.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "An arity-N combinator's selector takes N values; the lambda mirrors the operator signature.")]
     public async Task WhenSyncLatestTwelveSources_ThenCombinesAll()
     {
         var signals = Enumerable.Range(0, ArityTwelve).Select(static _ => Signal.Create<int>()).ToList();
@@ -57,10 +53,6 @@ public partial class SyncLatestOperatorTests
     /// <summary>Verifies the arity-13 <c>SyncLatest</c> projects the latest value of all thirteen sources.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "An arity-N combinator's selector takes N values; the lambda mirrors the operator signature.")]
     public async Task WhenSyncLatestThirteenSources_ThenCombinesAll()
     {
         var signals = Enumerable.Range(0, ArityThirteen).Select(static _ => Signal.Create<int>()).ToList();
@@ -103,10 +95,6 @@ public partial class SyncLatestOperatorTests
     /// <summary>Verifies the arity-14 <c>SyncLatest</c> projects the latest value of all fourteen sources.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "An arity-N combinator's selector takes N values; the lambda mirrors the operator signature.")]
     public async Task WhenSyncLatestFourteenSources_ThenCombinesAll()
     {
         var signals = Enumerable.Range(0, ArityFourteen).Select(static _ => Signal.Create<int>()).ToList();
@@ -151,10 +139,6 @@ public partial class SyncLatestOperatorTests
     /// <summary>Verifies the arity-15 <c>SyncLatest</c> projects the latest value of all fifteen sources.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "An arity-N combinator's selector takes N values; the lambda mirrors the operator signature.")]
     public async Task WhenSyncLatestFifteenSources_ThenCombinesAll()
     {
         var signals = Enumerable.Range(0, ArityFifteen).Select(static _ => Signal.Create<int>()).ToList();
@@ -200,10 +184,6 @@ public partial class SyncLatestOperatorTests
     /// <summary>Verifies the arity-16 <c>SyncLatest</c> projects the latest value of all sixteen sources.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "An arity-N combinator's selector takes N values; the lambda mirrors the operator signature.")]
     public async Task WhenSyncLatestSixteenSources_ThenCombinesAll()
     {
         var signals = Enumerable.Range(0, AritySixteen).Select(static _ => Signal.Create<int>()).ToList();

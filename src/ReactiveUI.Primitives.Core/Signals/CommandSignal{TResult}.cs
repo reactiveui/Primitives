@@ -52,10 +52,6 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
     /// <summary>Initializes a new instance of the <see cref="CommandSignal{TResult}"/> class.</summary>
     /// <param name="execute">The async operation to execute.</param>
     /// <param name="canRun">Gating signal. When null, execution is always allowed.</param>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Style",
-        "IDE0001:Simplify Names",
-        Justification = "The argument validation uses ArgumentExceptionHelper")]
     public CommandSignal(Func<CancellationToken, Task<TResult>> execute, IObservable<bool>? canRun)
     {
         _executeAsync = execute ?? throw new ArgumentNullException(nameof(execute));
@@ -72,10 +68,6 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
     /// <summary>Initializes a new instance of the <see cref="CommandSignal{TResult}"/> class.</summary>
     /// <param name="execute">The synchronous operation to execute.</param>
     /// <param name="canRun">Gating signal. When null, execution is always allowed.</param>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Style",
-        "IDE0001:Simplify Names",
-        Justification = "The argument validation uses ArgumentExceptionHelper")]
     public CommandSignal(Func<TResult> execute, IObservable<bool>? canRun)
     {
         _executeSync = execute ?? throw new ArgumentNullException(nameof(execute));
