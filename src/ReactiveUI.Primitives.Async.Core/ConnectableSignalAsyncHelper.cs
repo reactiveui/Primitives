@@ -83,8 +83,8 @@ internal static class ConnectableSignalAsyncHelper
     /// <typeparam name="T">The type of elements produced by the source sequence.</typeparam>
     /// <param name="state">The connectable signal state to dispose.</param>
     [SuppressMessage(
-        "Major Bug",
-        "S4462:Calls to async methods should not be blocking",
+        "Concurrency",
+        "PSH1315:A blocking wait on an awaitable that may not be done",
         Justification =
             "IDisposable.Dispose is intrinsically synchronous; this method must tear down async connection state on the sync dispose path.")]
     public static void Dispose<T>(ConnectableSignalAsyncState<T> state)

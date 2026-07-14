@@ -85,8 +85,8 @@ public sealed class ConcurrencyLimiter<T>(IEnumerable<Task<T>> taskFunctions, in
     /// <param name="subscription">The owning subscription.</param>
     /// <param name="completed">The completed task.</param>
     [SuppressMessage(
-        "Major Bug",
-        "S4462:Calls to async methods should not be blocking",
+        "Concurrency",
+        "PSH1315:A blocking wait on an awaitable that may not be done",
         Justification =
             "Task is guaranteed complete at this call site (IsFaulted/IsCanceled were both false above); reading .Result drives the synchronous IObserver<T> contract without blocking.")]
     private void ProcessTaskCompletion(Subscription subscription, Task<T> completed)

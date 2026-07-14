@@ -156,8 +156,8 @@ public static partial class Signal
     /// Runs before any disposer is handed out, so no dispose race is possible and the emission is ungated.
     /// </remarks>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4462:Calls to \"async\" methods should not be blocking",
+        "Concurrency",
+        "PSH1315:A blocking wait on an awaitable that may not be done",
         Justification =
             "Synchronous read of an already-completed (RanToCompletion) task for an allocation-free fast path; await is invalid in this synchronous factory.")]
     private static bool TryEmitSynchronously<TResult>(

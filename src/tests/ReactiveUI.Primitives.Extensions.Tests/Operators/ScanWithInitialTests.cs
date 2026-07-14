@@ -96,8 +96,8 @@ public partial class ScanWithInitialTests
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage(
-        "Blocker Code Smell",
-        "S4462:Calls to \"async\" methods should not be blocking",
+        "Concurrency",
+        "PSH1315:A blocking wait on an awaitable that may not be done",
         Justification = "Test is synchronous.")]
     public async Task Observable_IsThreadSafe()
     {

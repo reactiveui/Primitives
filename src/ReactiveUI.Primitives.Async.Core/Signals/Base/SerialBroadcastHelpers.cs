@@ -116,6 +116,11 @@ internal static class SerialBroadcastHelpers
         "Critical Code Smell",
         "S5034:\"ValueTask\" should be consumed correctly",
         Justification = "Callers guard with IsCompletedSuccessfully before consuming the ValueTask.")]
+    [SuppressMessage(
+        "Concurrency",
+        "PSH1315:A blocking wait on an awaitable that may not be done",
+        Justification =
+            "Every caller returns early unless IsCompletedSuccessfully, so this only ever consumes a task that is already done. The guard is one frame up, which the rule does not follow.")]
     private static void ConsumeCompleted(ValueTask pending) =>
         pending.GetAwaiter().GetResult();
 

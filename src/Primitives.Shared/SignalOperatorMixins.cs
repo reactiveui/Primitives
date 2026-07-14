@@ -668,8 +668,8 @@ public static partial class LinqExtensions
         /// <returns>A signal that emits the completed task result or faults with the task error.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="task"/> is <see langword="null"/>.</exception>
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
-            "Major Code Smell",
-            "S4462:Calls to \"async\" methods should not be blocking",
+            "Concurrency",
+            "PSH1315:A blocking wait on an awaitable that may not be done",
             Justification =
                 "Synchronous read of an already-completed (RanToCompletion) task preserves the existing allocation-free fast path; await is invalid in this synchronous factory.")]
         public IObservable<T> ToSignal()

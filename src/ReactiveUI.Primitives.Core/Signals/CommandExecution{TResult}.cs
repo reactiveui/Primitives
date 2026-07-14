@@ -110,8 +110,8 @@ public readonly record struct CommandExecution<TResult>
         /// <summary>Gets the command result or rethrows the command exception.</summary>
         /// <returns>The command result.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
-            "Major Code Smell",
-            "S4462:Calls to \"async\" methods should not be blocking",
+            "Concurrency",
+            "PSH1315:A blocking wait on an awaitable that may not be done",
             Justification =
                 "Awaiter GetResult must be synchronous; it runs only after completion and unwraps exceptions without AggregateException wrapping.")]
         public TResult GetResult()

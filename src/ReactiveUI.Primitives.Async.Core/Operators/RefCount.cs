@@ -57,8 +57,8 @@ public static partial class SignalAsyncExtensions
         /// <summary>Releases managed resources if <paramref name="disposing"/> is true.</summary>
         /// <param name="disposing">True to release managed resources; false when called from a finalizer.</param>
         [SuppressMessage(
-            "Major Bug",
-            "S4462:Calls to async methods should not be blocking",
+            "Concurrency",
+            "PSH1315:A blocking wait on an awaitable that may not be done",
             Justification =
                 "IDisposable.Dispose is intrinsically synchronous; this method must tear down the async connection on the sync dispose path.")]
         internal void Dispose(bool disposing)

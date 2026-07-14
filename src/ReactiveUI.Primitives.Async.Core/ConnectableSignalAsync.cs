@@ -43,8 +43,8 @@ public sealed class ConnectableSignalAsync<T> : IObservableAsync<T>, IDisposable
     /// <summary>Releases all resources used by the current instance of the class.</summary>
     /// <remarks>Call this method when you are finished using the object to release managed resources.</remarks>
     [SuppressMessage(
-        "Major Bug",
-        "S4462:Calls to async methods should not be blocking",
+        "Concurrency",
+        "PSH1315:A blocking wait on an awaitable that may not be done",
         Justification =
             "IDisposable.Dispose is intrinsically synchronous; this method must tear down async connection state on the sync dispose path.")]
     public void Dispose() => ConnectableSignalAsyncHelper.Dispose(State);
