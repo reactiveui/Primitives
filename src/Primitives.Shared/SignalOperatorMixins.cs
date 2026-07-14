@@ -515,7 +515,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return source is RangeSignal range && CanReadRangeAs(typeof(T))
+            return source is RangeSignal range && typeof(T) == typeof(int)
                 ? new ShiftedRangeSignal<T>(
                     range,
                     Sequencer.Normalize(dueTime),
@@ -532,7 +532,7 @@ public static partial class LinqExtensions
             ArgumentExceptionHelper.ThrowIfNull(source);
 
             scheduler ??= ThreadPoolSequencer.Instance;
-            return source is RangeSignal range && CanReadRangeAs(typeof(T))
+            return source is RangeSignal range && typeof(T) == typeof(int)
                 ? new ShiftedRangeSignal<T>(
                     range,
                     Sequencer.Normalize(dueTime),
@@ -568,7 +568,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return source is RangeSignal range && CanReadRangeAs(typeof(T))
+            return source is RangeSignal range && typeof(T) == typeof(int)
                 ? new RangeListSignal<T>(range)
                 : new CollectListSignal<T>(source);
         }
@@ -579,7 +579,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return source is RangeSignal range && CanReadRangeAs(typeof(T))
+            return source is RangeSignal range && typeof(T) == typeof(int)
                 ? new RangeArraySignal<T>(range)
                 : new CollectArraySignal<T>(source);
         }
@@ -635,8 +635,8 @@ public static partial class LinqExtensions
         /// <returns>A sequence containing only values assignable to <typeparamref name="TResult"/>.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
-            "Major Code Smell",
-            "S4018:Generic methods should provide type parameters",
+            "Design",
+            "SST2307:Generic method type parameters should be inferable from the parameters",
             Justification =
                 "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
         public IObservable<TResult> KeepType<TResult>()
@@ -651,8 +651,8 @@ public static partial class LinqExtensions
         /// <returns>A sequence containing each value cast to <typeparamref name="TResult"/>.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
-            "Major Code Smell",
-            "S4018:Generic methods should provide type parameters",
+            "Design",
+            "SST2307:Generic method type parameters should be inferable from the parameters",
             Justification =
                 "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
         public IObservable<TResult> CastTo<TResult>()
@@ -695,11 +695,6 @@ public static partial class LinqExtensions
                 : new TaskInstanceSignal<T>(task);
         }
     }
-
-    /// <summary>Determines whether a generic observer type can receive boxed range integers.</summary>
-    /// <param name="elementType">The observer value type.</param>
-    /// <returns><see langword="true"/> when the cast is valid.</returns>
-    private static bool CanReadRangeAs(Type elementType) => elementType.IsAssignableFrom(typeof(int));
 
     /// <summary>Creates a range-concat signal for synchronous Switch over known range inners.</summary>
     /// <typeparam name="T">The value type.</typeparam>

@@ -700,7 +700,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(left);
 
-            return left is RangeSignal range && CanReadRangeAs(typeof(TLeft))
+            return left is RangeSignal range && typeof(TLeft) == typeof(int)
                 ? new ShiftedRangeSignal<TLeft>(range, Sequencer.Normalize(dueTime), ThreadPoolSequencer.Instance)
                 : new ShiftSignal<TLeft>(left, dueTime, ThreadPoolSequencer.Instance);
         }
@@ -714,7 +714,7 @@ public static partial class LinqExtensions
             ArgumentExceptionHelper.ThrowIfNull(left);
 
             scheduler ??= ThreadPoolSequencer.Instance;
-            return left is RangeSignal range && CanReadRangeAs(typeof(TLeft))
+            return left is RangeSignal range && typeof(TLeft) == typeof(int)
                 ? new ShiftedRangeSignal<TLeft>(range, Sequencer.Normalize(dueTime), scheduler)
                 : new ShiftSignal<TLeft>(left, dueTime, scheduler);
         }
@@ -941,8 +941,8 @@ public static partial class LinqExtensions
         /// <returns>A sequence containing only values assignable to <typeparamref name="TResult"/>.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
-            "Major Code Smell",
-            "S4018:Generic methods should provide type parameters",
+            "Design",
+            "SST2307:Generic method type parameters should be inferable from the parameters",
             Justification =
                 "The type parameter defines the element type for this Rx-style operator and cannot be inferred from the arguments.")]
         public IObservable<TResult> OfType<TResult>()
@@ -957,8 +957,8 @@ public static partial class LinqExtensions
         /// <returns>A sequence containing each value cast to <typeparamref name="TResult"/>.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
-            "Major Code Smell",
-            "S4018:Generic methods should provide type parameters",
+            "Design",
+            "SST2307:Generic method type parameters should be inferable from the parameters",
             Justification =
                 "The type parameter defines the element type for this Rx-style operator and cannot be inferred from the arguments.")]
         public IObservable<TResult> Cast<TResult>()

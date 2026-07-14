@@ -105,6 +105,42 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(witness.Errors.Count).IsEqualTo(0);
     }
 
+    /// <summary>Verifies <c>Probe</c> drops a completion a disposed source keeps pushing.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ProbeDropsACompletionDeliveredAfterTheSubscriptionIsDisposed()
+    {
+        ManualSequencer sequencer = new();
+        IObserver<int>? source = null;
+        RecordingWitness<int> witness = new();
+        var subscription = new ScriptedObservable<int>(observer => source = observer)
+            .Probe(GuardPeriod, sequencer)
+            .Subscribe(witness);
+        source!.OnNext(One);
+        subscription.Dispose();
+        source.OnCompleted();
+        await Assert.That(witness.Completed).IsEqualTo(0);
+        await Assert.That(witness.Values.Count).IsEqualTo(0);
+    }
+
+    /// <summary>Verifies <c>Probe</c> drops an error a disposed source keeps pushing.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ProbeDropsAnErrorDeliveredAfterTheSubscriptionIsDisposed()
+    {
+        ManualSequencer sequencer = new();
+        IObserver<int>? source = null;
+        RecordingWitness<int> witness = new();
+        var subscription = new ScriptedObservable<int>(observer => source = observer)
+            .Probe(GuardPeriod, sequencer)
+            .Subscribe(witness);
+        source!.OnNext(One);
+        subscription.Dispose();
+        source.OnError(new InvalidOperationException("late"));
+        await Assert.That(witness.Errors.Count).IsEqualTo(0);
+        await Assert.That(witness.Values.Count).IsEqualTo(0);
+    }
+
     /// <summary>Verifies disposing a <c>Reattempt</c> subscription stops the retried source.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]

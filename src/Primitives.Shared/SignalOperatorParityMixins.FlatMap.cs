@@ -61,10 +61,15 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            return new FlatMapResultCoordinator<TSource, TCollection, TResult>(
+            var collectionSelector = _collectionSelector;
+            var resultSelector = _resultSelector;
+
+            return new FlatMapCoordinator<TSource, TResult>(
                 _source,
-                _collectionSelector,
-                _resultSelector,
+                value => new FlatMapResultInnerSignal<TSource, TCollection, TResult>(
+                    value,
+                    collectionSelector(value),
+                    resultSelector),
                 observer).Run();
         }
     }
@@ -456,41 +461,6 @@ public static partial class LinqExtensions
             /// <inheritdoc/>
             public void OnNext(TResult value) => _parent.OnInnerNext(value);
         }
-    }
-
-    /// <summary>Coordinates chain-style FlatMap subscriptions with a result selector.</summary>
-    /// <typeparam name="TSource">The source value type.</typeparam>
-    /// <typeparam name="TCollection">The inner value type.</typeparam>
-    /// <typeparam name="TResult">The result value type.</typeparam>
-    private sealed class FlatMapResultCoordinator<TSource, TCollection, TResult> : IDisposable
-    {
-        /// <summary>The inner FlatMap coordinator.</summary>
-        private readonly FlatMapCoordinator<TSource, TResult> _inner;
-
-        /// <summary>Initializes a new instance of the <see cref="FlatMapResultCoordinator{TSource, TCollection, TResult}"/> class.</summary>
-        /// <param name="source">The source observable.</param>
-        /// <param name="collectionSelector">Projects source values to inner observables.</param>
-        /// <param name="resultSelector">Projects outer and inner values to result values.</param>
-        /// <param name="observer">The downstream observer.</param>
-        internal FlatMapResultCoordinator(
-            IObservable<TSource> source,
-            Func<TSource, IObservable<TCollection>> collectionSelector,
-            Func<TSource, TCollection, TResult> resultSelector,
-            IObserver<TResult> observer) =>
-            _inner = new(
-                source,
-                value => new FlatMapResultInnerSignal<TSource, TCollection, TResult>(
-                    value,
-                    collectionSelector(value),
-                    resultSelector),
-                observer);
-
-        /// <inheritdoc/>
-        public void Dispose() => _inner.Dispose();
-
-        /// <summary>Subscribes to the outer source.</summary>
-        /// <returns>The subscription cleanup.</returns>
-        internal IDisposable Run() => _inner.Run();
     }
 
     /// <summary>Maps inner values with a captured outer value.</summary>

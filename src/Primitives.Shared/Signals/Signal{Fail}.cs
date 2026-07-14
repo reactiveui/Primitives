@@ -17,8 +17,8 @@ public static partial class Signal
     /// <param name="scheduler">The scheduler.</param>
     /// <returns>An Signals.</returns>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
+        "Design",
+        "SST2307:Generic method type parameters should be inferable from the parameters",
         Justification =
             "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
     public static IObservable<T> Fail<T>(Exception error, ISequencer scheduler) => scheduler == Sequencer.Immediate
@@ -30,8 +30,8 @@ public static partial class Signal
     /// <param name="error">The error.</param>
     /// <returns>An Signals.</returns>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
+        "Design",
+        "SST2307:Generic method type parameters should be inferable from the parameters",
         Justification =
             "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
     public static IObservable<T> Fail<T>(Exception error) =>

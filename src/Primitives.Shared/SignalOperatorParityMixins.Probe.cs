@@ -113,6 +113,14 @@ public static partial class LinqExtensions
                 return;
             }
 
+            // Latch the terminal state as well as the resources: a source that ignores the disposal of its
+            // subscription can keep pushing, and its completion or error must not reach an observer that has
+            // already unsubscribed. The gate is reentrant, so the terminal paths may reach this while holding it.
+            lock (_gate)
+            {
+                _done = true;
+            }
+
             Interlocked.Exchange(ref _timer, null)?.Dispose();
 
             Interlocked.Exchange(ref _subscription, null)?.Dispose();

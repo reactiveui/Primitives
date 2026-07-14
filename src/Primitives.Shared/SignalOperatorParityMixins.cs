@@ -171,7 +171,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return source is RangeSignal range && CanReadRangeAs(typeof(T))
+            return source is RangeSignal range && typeof(T) == typeof(int)
                 ? new ShiftedRangeSignal<T>(range, Sequencer.Normalize(dueTime), ThreadPoolSequencer.Instance)
                 : new DelayStartSignal<T>(source, dueTime, ThreadPoolSequencer.Instance);
         }
@@ -197,7 +197,7 @@ public static partial class LinqExtensions
             ArgumentExceptionHelper.ThrowIfNull(source);
 
             scheduler ??= ThreadPoolSequencer.Instance;
-            return source is RangeSignal range && CanReadRangeAs(typeof(T))
+            return source is RangeSignal range && typeof(T) == typeof(int)
                 ? new ShiftedRangeSignal<T>(range, Sequencer.Normalize(dueTime), scheduler)
                 : new DelayStartSignal<T>(source, dueTime, scheduler);
         }
@@ -545,7 +545,7 @@ public static partial class LinqExtensions
 
             var scheduler = ThreadPoolSequencer.Instance;
             var normalizedDueTime = Sequencer.Normalize(dueTime);
-            return source is RangeSignal range && CanReadRangeAs(typeof(T))
+            return source is RangeSignal range && typeof(T) == typeof(int)
                 ? new ShiftedRangeSignal<T>(range, normalizedDueTime, scheduler)
                 : new DelayStartSignal<T>(source, dueTime, scheduler);
         }
@@ -561,7 +561,7 @@ public static partial class LinqExtensions
 
             var sequencer = scheduler ?? ThreadPoolSequencer.Instance;
             var normalizedDueTime = Sequencer.Normalize(dueTime);
-            return source is RangeSignal range && CanReadRangeAs(typeof(T))
+            return source is RangeSignal range && typeof(T) == typeof(int)
                 ? new ShiftedRangeSignal<T>(range, normalizedDueTime, sequencer)
                 : new DelayStartSignal<T>(source, dueTime, sequencer);
         }
@@ -650,7 +650,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return source is RangeSignal range && CanReadRangeAs(typeof(T))
+            return source is RangeSignal range && typeof(T) == typeof(int)
                 ? new TimestampRangeSignal<T>(range, Sequencer.Immediate)
                 : new MapWithSignal<T, ISequencer, Moment<T>>(source, Sequencer.Immediate, CreateMoment);
         }
@@ -664,7 +664,7 @@ public static partial class LinqExtensions
             ArgumentExceptionHelper.ThrowIfNull(source);
 
             scheduler ??= Sequencer.Immediate;
-            return source is RangeSignal range && CanReadRangeAs(typeof(T))
+            return source is RangeSignal range && typeof(T) == typeof(int)
                 ? new TimestampRangeSignal<T>(range, scheduler)
                 : new MapWithSignal<T, ISequencer, Moment<T>>(source, scheduler, CreateMoment);
         }
@@ -676,7 +676,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return source is RangeSignal range && CanReadRangeAs(typeof(T))
+            return source is RangeSignal range && typeof(T) == typeof(int)
                 ? new TimeIntervalRangeSignal<T>(range, Sequencer.Immediate)
                 : new TimeIntervalSignal<T>(source, Sequencer.Immediate);
         }
@@ -690,7 +690,7 @@ public static partial class LinqExtensions
             ArgumentExceptionHelper.ThrowIfNull(source);
 
             scheduler ??= Sequencer.Immediate;
-            return source is RangeSignal range && CanReadRangeAs(typeof(T))
+            return source is RangeSignal range && typeof(T) == typeof(int)
                 ? new TimeIntervalRangeSignal<T>(range, scheduler)
                 : new TimeIntervalSignal<T>(source, scheduler);
         }

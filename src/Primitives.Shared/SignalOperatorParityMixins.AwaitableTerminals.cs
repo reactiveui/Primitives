@@ -211,26 +211,15 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
+            if (source is RangeSignal range && typeof(T) == typeof(int))
             {
-                if (typeof(T) == typeof(int))
+                var integers = new int[range.Count];
+                for (var i = 0; i < integers.Length; i++)
                 {
-                    var integers = new int[range.Count];
-                    for (var i = 0; i < integers.Length; i++)
-                    {
-                        integers[i] = range.Start + i;
-                    }
-
-                    return Task.FromResult((T[])(object)integers);
+                    integers[i] = range.Start + i;
                 }
 
-                var boxed = new T[range.Count];
-                for (var i = 0; i < boxed.Length; i++)
-                {
-                    boxed[i] = (T)(object)(range.Start + i);
-                }
-
-                return Task.FromResult(boxed);
+                return Task.FromResult((T[])(object)integers);
             }
 
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER || NET5_0_OR_GREATER
@@ -255,7 +244,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return source is RangeSignal range && CanReadRangeAs(typeof(T))
+            return source is RangeSignal range && typeof(T) == typeof(int)
                 ? new RangeArraySignal<T>(range)
                 : new CollectArraySignal<T>(source);
         }
@@ -271,26 +260,15 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
+            if (source is RangeSignal range && typeof(T) == typeof(int))
             {
-                if (typeof(T) == typeof(int))
-                {
-                    List<int> integers = new(range.Count);
-                    for (var i = 0; i < range.Count; i++)
-                    {
-                        integers.Add(range.Start + i);
-                    }
-
-                    return Task.FromResult((IList<T>)(object)integers);
-                }
-
-                List<T> rangeValues = new(range.Count);
+                List<int> integers = new(range.Count);
                 for (var i = 0; i < range.Count; i++)
                 {
-                    rangeValues.Add((T)(object)(range.Start + i));
+                    integers.Add(range.Start + i);
                 }
 
-                return Task.FromResult<IList<T>>(rangeValues);
+                return Task.FromResult((IList<T>)(object)integers);
             }
 
             TaskCompletionSource<IList<T>> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -308,7 +286,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return source is RangeSignal range && CanReadRangeAs(typeof(T))
+            return source is RangeSignal range && typeof(T) == typeof(int)
                 ? new RangeListSignal<T>(range)
                 : new CollectListSignal<T>(source);
         }
@@ -329,7 +307,7 @@ public static partial class LinqExtensions
                 return Task.FromCanceled<T>(cancellationToken);
             }
 
-            if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
+            if (source is RangeSignal range && typeof(T) == typeof(int))
             {
                 return Task.FromResult((T)(object)range.Start);
             }

@@ -22,8 +22,8 @@ public static class Signal
     /// <typeparam name="T">The type of elements processed by the Signal.</typeparam>
     /// <returns>An <see cref="ISignalAsync{T}"/> that represents the newly created asynchronous Signal.</returns>
     [SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
+        "Design",
+        "SST2307:Generic method type parameters should be inferable from the parameters",
         Justification = "Public factory API — caller specifies T explicitly: Signal.Create<int>().")]
     public static ISignalAsync<T> Create<T>() => new SerialSignalAsync<T>();
 
@@ -37,8 +37,8 @@ public static class Signal
     /// <returns>An asynchronous Signal instance configured according to the specified options.</returns>
     /// <exception cref="ArgumentOutOfRangeException">Thrown if the specified combination of publishing and statelessness options is not supported.</exception>
     [SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
+        "Design",
+        "SST2307:Generic method type parameters should be inferable from the parameters",
         Justification = "Public factory API — caller specifies T explicitly: Signal.Create<int>(options).")]
     public static ISignalAsync<T> Create<T>(SignalCreationOptions? options) =>
         (options?.PublishingOption, options?.IsStateless) switch
@@ -87,8 +87,8 @@ public static class Signal
     /// <typeparam name="T">The type of the elements processed by the Signal.</typeparam>
     /// <returns>An asynchronous Signal that stores and replays the latest value to each new subscriber.</returns>
     [SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
+        "Design",
+        "SST2307:Generic method type parameters should be inferable from the parameters",
         Justification = "Public factory API — caller specifies T explicitly: Signal.CreateReplayLatest<int>().")]
     public static ISignalAsync<T> CreateReplayLatest<T>() =>
         new SerialReplayLatestSignalAsync<T>(Optional<T>.Empty);
@@ -103,8 +103,8 @@ public static class Signal
     /// options.</returns>
     /// <exception cref="ArgumentOutOfRangeException">Thrown if the combination of options specified in the <paramref name="options"/> parameter is not supported.</exception>
     [SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
+        "Design",
+        "SST2307:Generic method type parameters should be inferable from the parameters",
         Justification = "Public factory API — caller specifies T explicitly: Signal.CreateReplayLatest<int>(options).")]
     public static ISignalAsync<T> CreateReplayLatest<T>(ReplayLatestSignalCreationOptions? options) =>
         (options?.PublishingOption, options?.IsStateless) switch

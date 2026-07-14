@@ -39,6 +39,34 @@ public static partial class LinqExtensions
                 return EmptyDisposable.Instance;
             }
 
+            // A current-thread source runs its work on the trampoline of whichever call enters it first.
+            // If that call is the source's own Subscribe, the source drains the trampoline before this
+            // operator can hand the upstream subscription to its sink, so an endless source (an interval
+            // timer, a repeating loop) never learns that the count was reached and the drain never ends.
+            // Entering the trampoline here instead means the source's Subscribe only queues its work and
+            // returns, the sink owns the upstream subscription before the first value is delivered, and
+            // reaching the count disposes the source and empties the queue.
+            if (!CurrentThreadRequirement.IsRequired(_source) || !CurrentThreadSequencer.IsScheduleRequired)
+            {
+                return SubscribeCore(observer);
+            }
+
+            SingleDisposable subscription = new();
+            _ = Sequencer.CurrentThread.Schedule(
+                (self: this, subscription, observer),
+                static (_, s) =>
+                {
+                    s.subscription.Create(s.self.SubscribeCore(s.observer));
+                    return EmptyDisposable.Instance;
+                });
+            return subscription;
+        }
+
+        /// <summary>Subscribes the counting sink to the source.</summary>
+        /// <param name="observer">The downstream observer.</param>
+        /// <returns>The sink that owns the upstream subscription.</returns>
+        private TakeWitness<T> SubscribeCore(IObserver<T> observer)
+        {
             TakeWitness<T> sink = new(observer, _count);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;

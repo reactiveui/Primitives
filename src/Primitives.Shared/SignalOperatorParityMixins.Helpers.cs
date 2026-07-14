@@ -527,7 +527,7 @@ public static partial class LinqExtensions
             Dispose();
         }
 
-        /// <summary>Forwards completion and releases active resources.</summary>
+        /// <summary>Emits the value still waiting inside the quiet window, then forwards completion.</summary>
         private void OnCompleted()
         {
             lock (_gate)
@@ -538,6 +538,16 @@ public static partial class LinqExtensions
                 }
 
                 _done = true;
+
+                // The quiet window is cut short by completion rather than cancelled by it: the value it was
+                // holding is delivered first, matching the sibling EmitIfQuiet operator. A value the timer has
+                // already delivered cleared _hasLatest under this same gate, so it cannot be emitted twice.
+                if (_hasLatest)
+                {
+                    _hasLatest = false;
+                    _observer!.OnNext(_latest!);
+                }
+
                 _observer!.OnCompleted();
             }
 

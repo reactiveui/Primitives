@@ -411,7 +411,7 @@ public static partial class LinqExtensions
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
             var dueTime = Sequencer.Normalize(_dueTime - _scheduler.Now);
-            return _source is RangeSignal range && CanReadRangeAs(typeof(T))
+            return _source is RangeSignal range && typeof(T) == typeof(int)
                 ? new ShiftedRangeSignal<T>(range, dueTime, _scheduler).Subscribe(observer)
                 : new ShiftSignal<T>(_source, dueTime, _scheduler).Subscribe(observer);
         }
@@ -502,7 +502,7 @@ public static partial class LinqExtensions
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
             var dueTime = Sequencer.Normalize(_dueTime - _scheduler.Now);
-            return _source is RangeSignal range && CanReadRangeAs(typeof(T))
+            return _source is RangeSignal range && typeof(T) == typeof(int)
                 ? new ShiftedRangeSignal<T>(range, dueTime, _scheduler).Subscribe(observer)
                 : new DelayStartSignal<T>(_source, dueTime, _scheduler).Subscribe(observer);
         }

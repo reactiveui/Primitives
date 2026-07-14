@@ -169,8 +169,8 @@ public static partial class Signal
     /// <exception cref="ArgumentNullException"><paramref name="addHandler"/> or <paramref name="removeHandler"/> is <see langword="null"/>.</exception>
     /// <exception cref="NotSupportedException"><typeparamref name="TEventHandler"/> is not a supported event delegate type.</exception>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
+        "Design",
+        "SST2307:Generic method type parameters should be inferable from the parameters",
         Justification =
             "The event argument type is part of the returned EventPattern and must be specified for non-generic event handlers.")]
     public static IObservable<EventPattern<TEventArgs>> FromEventPattern<TEventHandler, TEventArgs>(

@@ -549,6 +549,27 @@ public partial class SignalFactoriesTests
         AssertRxFactoryAliasesRejectInvalidArguments(cases);
     }
 
+    /// <summary>
+    /// Verifies an empty range completes immediately without touching the sequencer. There is nothing to emit, so the
+    /// factory hands back the shared empty signal rather than scheduling a walk over zero values.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task SequenceOfNoValuesCompletesWithoutSchedulingAnything()
+    {
+        RecordingSequencer sequencer = new();
+        List<int> values = [];
+        var completed = 0;
+
+        using var subscription = Signal
+            .Sequence(One, 0, sequencer)
+            .Subscribe(values.Add, () => completed++);
+
+        await Assert.That(values).IsEmpty();
+        await Assert.That(completed).IsEqualTo(One);
+        await Assert.That(sequencer.ScheduleCount).IsEqualTo(0);
+    }
+
     /// <summary>Asserts the Rx-named factory aliases reject a null callback, a null source, or a negative count.</summary>
     /// <param name="cases">The case map the alias assertions built.</param>
     private static void AssertRxFactoryAliasesRejectInvalidArguments(Dictionary<string, IObservable<int>> cases)
@@ -600,5 +621,32 @@ public partial class SignalFactoriesTests
     {
         /// <inheritdoc/>
         public void Dispose() => onDispose();
+    }
+
+    /// <summary>Sequencer that runs work inline and counts how often it was asked to schedule anything.</summary>
+    private sealed class RecordingSequencer : ISequencer
+    {
+        /// <summary>Gets the number of work items the sequencer was handed.</summary>
+        public int ScheduleCount { get; private set; }
+
+        /// <inheritdoc/>
+        public DateTimeOffset Now => Sequencer.Now;
+
+        /// <inheritdoc/>
+        public long Timestamp => Sequencer.Timestamp;
+
+        /// <inheritdoc/>
+        public void Schedule(IWorkItem item)
+        {
+            ScheduleCount++;
+            Sequencer.Immediate.Schedule(item);
+        }
+
+        /// <inheritdoc/>
+        public void Schedule(IWorkItem item, long dueTimestamp)
+        {
+            ScheduleCount++;
+            Sequencer.Immediate.Schedule(item, dueTimestamp);
+        }
     }
 }

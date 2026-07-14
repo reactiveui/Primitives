@@ -408,8 +408,8 @@ public static partial class LinqExtensions
         /// <param name="index">The source index.</param>
         /// <returns>The typed value.</returns>
         [SuppressMessage(
-            "Major Code Smell",
-            "S4018:Generic methods should provide type parameters",
+            "Design",
+            "SST2307:Generic method type parameters should be inferable from the parameters",
             Justification =
                 "The caller supplies the source slot type when casting from the shared latest-value array.")]
         private static T Value<T>(object?[] values, int index) => (T)values[index]!;

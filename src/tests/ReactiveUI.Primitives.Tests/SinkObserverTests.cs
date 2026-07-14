@@ -5,17 +5,27 @@
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
+using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Tests;
 
 /// <summary>Behavioural tests for the public observer "sink" types that back the operator implementations.</summary>
 public class SinkObserverTests
 {
+    /// <summary>The message thrown by an observer that rejects the value handed to it.</summary>
+    private const string ObserverNextMessage = "observer-next";
+
+    /// <summary>The literal one.</summary>
+    private const int One = 1;
+
     /// <summary>The literal two, used for counts, thresholds, and skip windows.</summary>
     private const int Two = 2;
 
     /// <summary>The literal three.</summary>
     private const int Three = 3;
+
+    /// <summary>The literal four.</summary>
+    private const int Four = 4;
 
     /// <summary>The literal five.</summary>
     private const int Five = 5;
@@ -513,8 +523,38 @@ public class SinkObserverTests
 
         var thrown = Assert.Throws<InvalidOperationException>(() => sink.OnNext(Two));
 
-        await Assert.That(thrown!.Message).IsEqualTo("observer-next");
+        await Assert.That(thrown!.Message).IsEqualTo(ObserverNextMessage);
         await Assert.That(subscription.DisposeCount).IsEqualTo(1);
+    }
+
+    /// <summary>
+    /// A <see cref = "BufferWitness{T}"/> releases its window buffer before handing the window to the observer,
+    /// so an observer that throws leaves the sink with no buffer to fill. The sink must therefore latch itself
+    /// terminal on that throw: a source that ignores the sink's disposal and keeps pushing has to be dropped
+    /// quietly, not indexed into the released buffer.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task BufferSinkDropsValuesFromASourceThatKeepsPushingAfterTheObserverThrows()
+    {
+        CountingThrowingWitness<IList<int>> observer = new();
+        UnstoppableSource<int> source = new();
+        using var subscription = source.Buffer(Two).Subscribe(observer);
+
+        // The window closes on the second value, so that is the first — and only — hand-off to the observer.
+        source.Next(One);
+        var thrown = Assert.Throws<InvalidOperationException>(() => source.Next(Two));
+
+        await Assert.That(thrown!.Message).IsEqualTo(ObserverNextMessage);
+        await Assert.That(observer.NextCount).IsEqualTo(One);
+
+        // The sink disposed its upstream; this source ignores disposal and pushes on regardless.
+        source.Next(Three);
+        source.Next(Four);
+        source.Complete();
+
+        await Assert.That(observer.NextCount).IsEqualTo(One);
+        await Assert.That(observer.CompletedCount).IsEqualTo(0);
     }
 
     /// <summary>
@@ -689,6 +729,58 @@ public class SinkObserverTests
 
         /// <inheritdoc/>
         public SumAggregator Add(int value) => new(Result + value);
+    }
+
+    /// <summary>
+    /// An observable whose subscription retains its observer and ignores disposal, letting a test keep pushing
+    /// notifications into a sink that has already torn itself down. A well-behaved source would stop; this one is
+    /// what a sink's terminal latch exists to defend against.
+    /// </summary>
+    /// <typeparam name = "T">The value type.</typeparam>
+    private sealed class UnstoppableSource<T> : IObservable<T>
+    {
+        /// <summary>The observer retained from the most recent subscription.</summary>
+        private IObserver<T>? _observer;
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<T> observer)
+        {
+            _observer = observer;
+            return EmptyDisposable.Instance;
+        }
+
+        /// <summary>Pushes a value to the retained observer.</summary>
+        /// <param name = "value">The value to push.</param>
+        public void Next(T value) => _observer?.OnNext(value);
+
+        /// <summary>Pushes completion to the retained observer.</summary>
+        public void Complete() => _observer?.OnCompleted();
+    }
+
+    /// <summary>Observer that rejects every value it is handed, counting the notifications it receives.</summary>
+    /// <typeparam name = "T">The value type.</typeparam>
+    private sealed class CountingThrowingWitness<T> : IObserver<T>
+    {
+        /// <summary>Gets the number of values the observer was handed.</summary>
+        public int NextCount { get; private set; }
+
+        /// <summary>Gets the number of completion callbacks the observer was handed.</summary>
+        public int CompletedCount { get; private set; }
+
+        /// <inheritdoc/>
+        public void OnNext(T value)
+        {
+            NextCount++;
+            throw new InvalidOperationException(ObserverNextMessage);
+        }
+
+        /// <inheritdoc/>
+        public void OnError(Exception error)
+        {
+        }
+
+        /// <inheritdoc/>
+        public void OnCompleted() => CompletedCount++;
     }
 
     /// <summary>Observer that records the notifications it receives.</summary>

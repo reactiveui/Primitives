@@ -24,6 +24,9 @@ public class SignalFromTaskTest
     /// <summary>Maximum wait for cancellation callbacks that are intentionally driven by timers.</summary>
     private const int CancellationCallbackTimeoutMilliseconds = 15_000;
 
+    /// <summary>Message carried by a failure an observer raises from inside a notification.</summary>
+    private const string ObserverFailureMessage = "observer failed";
+
     /// <summary>Delay used before checking that a task has started.</summary>
     private const int InitialDelayMilliseconds = 500;
 
@@ -919,6 +922,97 @@ public class SignalFromTaskTest
         }
     }
 
+    /// <summary>
+    /// Verifies a task that faults after its subscription was disposed notifies nobody. The task continuation still
+    /// runs, and it must find the subscription already stopped rather than push a terminal at an observer that has
+    /// unsubscribed.
+    /// </summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task FromTaskDropsAFaultRaisedAfterTheSubscriptionWasDisposed()
+    {
+        TaskCompletionSource<int> pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        RecordingObserver observer = new();
+
+        var subscription = Signal.FromTask(pending.Task).Subscribe(observer);
+        subscription.Dispose();
+
+        pending.SetException(new InvalidOperationException(ObserverFailureMessage));
+
+        // The continuation runs on the thread pool; give it room to reach the stopped subscription.
+        await Task.Delay(PollTimeout);
+
+        await Assert.That(observer.ErrorCount).IsEqualTo(0);
+        await Assert.That(observer.NextCount).IsEqualTo(0);
+        await Assert.That(observer.CompletedCount).IsEqualTo(0);
+    }
+
+    /// <summary>
+    /// Verifies an observer that throws out of its own <see cref = "IObserver{T}.OnNext"/> does not get a second
+    /// terminal. The task's terminal was already claimed before the value was pushed, so the observer's failure is
+    /// swallowed rather than turned into an <see cref = "IObserver{T}.OnError"/> the observer never expected.
+    /// </summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task FromAsyncSwallowsAFailureTheObserverRaisedFromOnNext()
+    {
+        TaskCompletionSource<int> pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        ThrowingObserver observer = new(new InvalidOperationException(ObserverFailureMessage));
+
+        using var subscription = Signal.FromAsync(_ => pending.Task).Subscribe(observer);
+        pending.SetResult(SuccessValue);
+
+        await Assert.That(observer.Observed.Task.WaitAsync(PollTimeout)).ThrowsNothing();
+        await Task.Delay(PollTimeout);
+
+        await Assert.That(observer.NextCount).IsEqualTo(1);
+        await Assert.That(observer.ErrorCount).IsEqualTo(0);
+        await Assert.That(observer.CompletedCount).IsEqualTo(0);
+    }
+
+    /// <summary>
+    /// Verifies an observer that disposes its own subscription and then throws is met with silence. Disposal owns that
+    /// cancellation path, so the failure must not be reported back down a subscription the observer has just torn down.
+    /// </summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task FromAsyncStaysSilentWhenTheObserverDisposesItselfAndThenThrows()
+    {
+        TaskCompletionSource<int> pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        SelfDisposingThrowingObserver observer = new(new InvalidOperationException(ObserverFailureMessage));
+
+        observer.Subscription = Signal.FromAsync(_ => pending.Task).Subscribe(observer);
+        pending.SetResult(SuccessValue);
+
+        await Assert.That(observer.Observed.Task.WaitAsync(PollTimeout)).ThrowsNothing();
+        await Task.Delay(PollTimeout);
+
+        await Assert.That(observer.NextCount).IsEqualTo(1);
+        await Assert.That(observer.ErrorCount).IsEqualTo(0);
+        await Assert.That(observer.CompletedCount).IsEqualTo(0);
+    }
+
+    /// <summary>
+    /// Verifies the external-cancellation overload still runs the factory when the caller passes a token that can never
+    /// be cancelled. There is nothing to register against, so the subscription must start rather than register a
+    /// callback on a token that will never fire.
+    /// </summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task FromAsyncWithAnUncancellableTokenStillRunsTheFactory()
+    {
+        RecordingObserver observer = new();
+
+        using var subscription = Signal
+            .FromAsync(static _ => Task.FromResult(SuccessValue), CancellationToken.None)
+            .Subscribe(observer);
+
+        await Assert.That(observer.NextCount).IsEqualTo(1);
+        await Assert.That(observer.LastValue).IsEqualTo(SuccessValue);
+        await Assert.That(observer.CompletedCount).IsEqualTo(1);
+        await Assert.That(observer.ErrorCount).IsEqualTo(0);
+    }
+
     /// <summary>Gets the recorded status messages.</summary>
     /// <param name = "statusTrail">The status trail.</param>
     /// <returns>The recorded messages.</returns>
@@ -964,6 +1058,69 @@ public class SignalFromTaskTest
     {
         await Task.Delay(TokenCancellationDelayMilliseconds).ConfigureAwait(false);
         await cts.CancelAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>Observer that counts the notifications it received.</summary>
+    private class RecordingObserver : IObserver<int>
+    {
+        /// <summary>Gets the number of values received.</summary>
+        public int NextCount { get; private set; }
+
+        /// <summary>Gets the number of failures received.</summary>
+        public int ErrorCount { get; private set; }
+
+        /// <summary>Gets the number of completions received.</summary>
+        public int CompletedCount { get; private set; }
+
+        /// <summary>Gets the most recently received value.</summary>
+        public int LastValue { get; private set; }
+
+        /// <inheritdoc/>
+        public virtual void OnNext(int value)
+        {
+            NextCount++;
+            LastValue = value;
+        }
+
+        /// <inheritdoc/>
+        public void OnError(Exception error) => ErrorCount++;
+
+        /// <inheritdoc/>
+        public void OnCompleted() => CompletedCount++;
+    }
+
+    /// <summary>Observer that throws out of <see cref = "IObserver{T}.OnNext"/> after recording the value.</summary>
+    /// <param name = "failure">The failure the observer raises.</param>
+    private class ThrowingObserver(Exception failure) : RecordingObserver
+    {
+        /// <summary>The failure raised from the value notification.</summary>
+        private readonly Exception _failure = failure;
+
+        /// <summary>Gets a task that completes once the observer has seen its value.</summary>
+        public TaskCompletionSource Observed { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        /// <inheritdoc/>
+        public override void OnNext(int value)
+        {
+            base.OnNext(value);
+            _ = Observed.TrySetResult();
+            throw _failure;
+        }
+    }
+
+    /// <summary>Observer that tears its own subscription down before it throws.</summary>
+    /// <param name = "failure">The failure the observer raises.</param>
+    private sealed class SelfDisposingThrowingObserver(Exception failure) : ThrowingObserver(failure)
+    {
+        /// <summary>Gets or sets the subscription the observer disposes from inside its value notification.</summary>
+        public IDisposable? Subscription { get; set; }
+
+        /// <inheritdoc/>
+        public override void OnNext(int value)
+        {
+            Subscription?.Dispose();
+            base.OnNext(value);
+        }
     }
 
     /// <summary>Thread-safe status trail used by async cancellation tests.</summary>

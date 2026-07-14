@@ -27,8 +27,8 @@ public static partial class SignalAsyncExtensions
         /// <typeparam name="TResult">The reference type to filter and project elements to. Must be a class.</typeparam>
         /// <returns>An observable sequence containing only the elements of type TResult from the original sequence.</returns>
         [SuppressMessage(
-            "Major Code Smell",
-            "S4018:Generic methods should provide type parameters",
+            "Design",
+            "SST2307:Generic method type parameters should be inferable from the parameters",
             Justification = "Public extension API — caller specifies TResult explicitly: source.OfType<Derived>().")]
         public IObservableAsync<TResult> OfType<TResult>()
             where TResult : class
@@ -47,8 +47,8 @@ public static partial class SignalAsyncExtensions
         /// <typeparam name="TResult">The result element type to keep.</typeparam>
         /// <returns>An observable sequence of values assignable to <typeparamref name="TResult"/>.</returns>
         [SuppressMessage(
-            "Minor Code Smell",
-            "S4018:All type parameters should be used in the parameter list to enable type inference",
+            "Design",
+            "SST2307:Generic method type parameters should be inferable from the parameters",
             Justification = "Deliberate lack of type inference.")]
         public IObservableAsync<TResult> KeepType<TResult>()
             where TResult : class

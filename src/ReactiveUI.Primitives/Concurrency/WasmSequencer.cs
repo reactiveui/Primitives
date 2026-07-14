@@ -23,13 +23,17 @@ public sealed class WasmSequencer : ISequencer, IDisposable
     /// <summary>Coalescing dispatch engine.</summary>
     private DispatchSequencerState _state;
 
-    /// <summary>Initializes a new instance of the <see cref="WasmSequencer"/> class.</summary>
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WasmSequencer"/> class. Callers use <see cref="Default"/>; this is
+    /// internal so a test can own an isolated sequencer it may dispose without shutting the shared singleton down for
+    /// every other test.
+    /// </summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Correctness",
         "SST2403:Do not let 'this' escape from a constructor",
         Justification =
             "The timer is created disarmed, and _state is a struct held inline in this object, so neither reference escapes.")]
-    private WasmSequencer()
+    internal WasmSequencer()
     {
         _timer = new(
             static state => ((WasmSequencer)state!).RunDrain(),

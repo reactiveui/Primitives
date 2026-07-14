@@ -135,7 +135,7 @@ public sealed class WasmSequencerTests
     [Test]
     public async Task DisposeReleasesDrainTimerAndIsIdempotent()
     {
-        var sequencer = (WasmSequencer)Activator.CreateInstance(typeof(WasmSequencer), true)!;
+        WasmSequencer sequencer = new();
 
         sequencer.Dispose();
 

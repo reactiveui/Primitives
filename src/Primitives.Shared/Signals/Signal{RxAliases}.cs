@@ -128,8 +128,8 @@ public static partial class Signal
     /// <typeparam name="T">The value type.</typeparam>
     /// <returns>An observable sequence that completes without values.</returns>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
+        "Design",
+        "SST2307:Generic method type parameters should be inferable from the parameters",
         Justification =
             "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
     public static IObservable<T> Empty<T>() => ImmutableEmptySignal<T>.Instance;
@@ -139,8 +139,8 @@ public static partial class Signal
     /// <param name="scheduler">The scheduler used to complete the sequence.</param>
     /// <returns>An observable sequence that completes without values.</returns>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
+        "Design",
+        "SST2307:Generic method type parameters should be inferable from the parameters",
         Justification =
             "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
     public static IObservable<T> Empty<T>(ISequencer scheduler)
@@ -154,8 +154,8 @@ public static partial class Signal
     /// <typeparam name="T">The value type.</typeparam>
     /// <returns>An observable sequence that never emits and never terminates.</returns>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
+        "Design",
+        "SST2307:Generic method type parameters should be inferable from the parameters",
         Justification =
             "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
     public static IObservable<T> Never<T>() => ImmutableNeverSignal<T>.Instance;
@@ -165,8 +165,8 @@ public static partial class Signal
     /// <param name="error">The error used to terminate the sequence.</param>
     /// <returns>An observable sequence that terminates with <paramref name="error"/>.</returns>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
+        "Design",
+        "SST2307:Generic method type parameters should be inferable from the parameters",
         Justification =
             "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
     public static IObservable<T> Throw<T>(Exception error) => new ImmediateThrowSignal<T>(error);
@@ -177,8 +177,8 @@ public static partial class Signal
     /// <param name="scheduler">The scheduler used to emit the error.</param>
     /// <returns>An observable sequence that terminates with <paramref name="error"/>.</returns>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
+        "Design",
+        "SST2307:Generic method type parameters should be inferable from the parameters",
         Justification =
             "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
     public static IObservable<T> Throw<T>(Exception error, ISequencer scheduler)
