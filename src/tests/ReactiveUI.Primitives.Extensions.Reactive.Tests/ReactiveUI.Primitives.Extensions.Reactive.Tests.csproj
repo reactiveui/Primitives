@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFrameworks>$(TestTargetFrameworks)</TargetFrameworks>
@@ -7,20 +7,20 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.Reactive"/>
-    <PackageReference Include="Microsoft.Reactive.Testing"/>
+    <PackageReference Include="System.Reactive" />
+    <PackageReference Include="Microsoft.Reactive.Testing" />
   </ItemGroup>
 
   <ItemGroup>
-    <Using Include="System"/>
-    <Using Include="System.Collections.Generic"/>
-    <Using Include="System.Threading"/>
-    <Using Include="System.Threading.Tasks"/>
-    <Using Include="TUnit.Assertions.Extensions"/>
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.Reactive\ReactiveUI.Primitives.Reactive.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\ReactiveUI.Primitives.Extensions.Reactive\ReactiveUI.Primitives.Extensions.Reactive.csproj"/>
+    <Using Include="System" />
+    <Using Include="System.Collections.Generic" />
+    <Using Include="System.Threading" />
+    <Using Include="System.Threading.Tasks" />
+    <Using Include="TUnit.Assertions.Extensions" />
   </ItemGroup>
 
 </Project>

@@ -10,18 +10,17 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="BenchmarkDotNet"/>
-    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing"/>
-    <PackageReference Include="System.Reactive"/>
-    <PackageReference Include="System.Reactive.Async"/>
-    <PackageReference Include="R3"/>
-    <PackageReference Include="ReactiveUI.Extensions"/>
+    <PackageReference Include="BenchmarkDotNet" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+    <PackageReference Include="System.Reactive" />
+    <PackageReference Include="System.Reactive.Async" />
+    <PackageReference Include="R3" />
+    <PackageReference Include="ReactiveUI.Extensions" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\ReactiveUI.Primitives\ReactiveUI.Primitives.csproj"/>
-    <ProjectReference Include="..\..\ReactiveUI.Primitives.Async\ReactiveUI.Primitives.Async.csproj"/>
-    <ProjectReference Include="..\..\ReactiveUI.Primitives.Extensions\ReactiveUI.Primitives.Extensions.csproj"/>
+    <ProjectReference Include="..\..\ReactiveUI.Primitives\ReactiveUI.Primitives.csproj" />
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.Async\ReactiveUI.Primitives.Async.csproj" />
   </ItemGroup>
 
 </Project>
