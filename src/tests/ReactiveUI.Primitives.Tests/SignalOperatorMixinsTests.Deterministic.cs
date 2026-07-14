@@ -106,8 +106,8 @@ public partial class SignalOperatorMixinsTests
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]
     [SuppressMessage(
-        "Major Code Smell",
-        "S6966:Awaitable method should be used",
+        "Concurrency",
+        "PSH1313:Call the async overload from an async method",
         Justification = "Synchronous CollectArray/CollectList operators are deliberately covered.")]
     public async Task RangeAsyncFastPathsAndNullGuardsCoverRemainingLines()
     {
@@ -318,8 +318,8 @@ public partial class SignalOperatorMixinsTests
     /// <summary>Verifies alias operators, buffer guard clauses, null-argument guards, and cancellation.</summary>
     /// <returns>A task representing the asynchronous verification.</returns>
     [SuppressMessage(
-        "Major Code Smell",
-        "S6966:Awaitable method should be used",
+        "Concurrency",
+        "PSH1313:Call the async overload from an async method",
         Justification =
             "This test deliberately verifies eager argument validation thrown synchronously, before the awaitable method returns its task.")]
     private static async Task VerifyAliasGuardsAndNullArgumentChecksAsync()

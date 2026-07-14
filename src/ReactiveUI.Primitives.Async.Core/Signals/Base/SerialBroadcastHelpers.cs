@@ -113,11 +113,6 @@ internal static class SerialBroadcastHelpers
     /// <param name="pending">The synchronously completed task.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [SuppressMessage(
-        "Performance",
-        "CA1849:Call async methods when in an async method",
-        Justification =
-            "The ValueTask is already completed successfully; GetResult consumes IValueTaskSource-backed results without blocking.")]
-    [SuppressMessage(
         "Critical Code Smell",
         "S5034:\"ValueTask\" should be consumed correctly",
         Justification = "Callers guard with IsCompletedSuccessfully before consuming the ValueTask.")]

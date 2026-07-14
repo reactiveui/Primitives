@@ -17,8 +17,8 @@ public partial class SignalOperatorParityMixinsTests
     /// <summary>Verifies the aggregate operators answer a range source directly from its bounds.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [SuppressMessage(
-        "Major Code Smell",
-        "S6966:Awaitable method should be used",
+        "Concurrency",
+        "PSH1313:Call the async overload from an async method",
         Justification =
             "This test deliberately exercises the synchronous IObservable operator overloads, not their awaitable terminal counterparts.")]
     [Test]
@@ -44,8 +44,8 @@ public partial class SignalOperatorParityMixinsTests
     /// <summary>Verifies a predicate failure on a range source is reported as an error rather than thrown.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [SuppressMessage(
-        "Major Code Smell",
-        "S6966:Awaitable method should be used",
+        "Concurrency",
+        "PSH1313:Call the async overload from an async method",
         Justification =
             "This test deliberately exercises the synchronous IObservable operator overloads, not their awaitable terminal counterparts.")]
     [Test]

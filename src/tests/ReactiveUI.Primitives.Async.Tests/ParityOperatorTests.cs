@@ -218,10 +218,6 @@ public class ParityOperatorTests
     /// <summary>Tests that DoOnSubscribe runs for each subscription.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Usage",
-        "CA1849:Await task instead of getting result",
-        Justification = "Asserting on task results after completion.")]
     public async Task WhenDoOnSubscribe_ThenRunsPerSubscription()
     {
         const int ExpectedSubscriptions = 2;
@@ -277,10 +273,6 @@ public class ParityOperatorTests
     /// <summary>Tests that CatchIgnore with a typed exception suppresses matching exceptions and invokes the action.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Usage",
-        "CA1849:Await task instead of getting result",
-        Justification = "Asserting on task results after completion.")]
     public async Task WhenCatchIgnoreTyped_WithMatchingException_ThenSuppressesAndInvokesAction()
     {
         Exception? captured = null;
@@ -349,10 +341,6 @@ public class ParityOperatorTests
     /// <summary>Tests that the async DoOnSubscribe overload executes the asynchronous action before subscription.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Usage",
-        "CA1849:Await task instead of getting result",
-        Justification = "Asserting on task results after completion.")]
     public async Task WhenDoOnSubscribeAsync_ThenAsyncActionRunsBeforeSubscription()
     {
         const int SourceValue = 10;
@@ -373,10 +361,6 @@ public class ParityOperatorTests
     /// <summary>Tests that DropIfBusy drops values emitted while the async action is still running.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Usage",
-        "CA1849:Await task instead of getting result",
-        Justification = "Asserting on task results after completion.")]
     public async Task WhenDropIfBusy_WithBusyAction_ThenDropsValues()
     {
         const int DroppedValueA = 2;
@@ -483,10 +467,6 @@ public class ParityOperatorTests
     /// <summary>Tests that LogErrors invokes the logger callback when an error-resume is observed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Usage",
-        "CA1849:Await task instead of getting result",
-        Justification = "Asserting on task results after completion.")]
     public async Task WhenLogErrors_ThenLoggerIsInvokedOnError()
     {
         List<Exception> logged = [];
@@ -660,10 +640,6 @@ public class ParityOperatorTests
     /// <summary>Tests that ThrottleDistinct emits only distinct values after throttling.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Usage",
-        "CA1849:Await task instead of getting result",
-        Justification = "Asserting on task results after completion.")]
     public async Task WhenThrottleDistinct_ThenEmitsDistinctThrottledValues()
     {
         var signal = Signal.Create<int>();
@@ -719,10 +695,6 @@ public class ParityOperatorTests
     /// <summary>Tests that DebounceUntil immediately emits values that satisfy the condition.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Usage",
-        "CA1849:Await task instead of getting result",
-        Justification = "Asserting on task results after completion.")]
     public async Task WhenDebounceUntil_WithConditionTrue_ThenEmitsImmediately()
     {
         const int DebounceSeconds = 10;
@@ -747,10 +719,6 @@ public class ParityOperatorTests
     /// <summary>Tests that DebounceUntil delays values that do not satisfy the condition.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Usage",
-        "CA1849:Await task instead of getting result",
-        Justification = "Asserting on task results after completion.")]
     public async Task WhenDebounceUntil_WithConditionFalse_ThenDelaysEmission()
     {
         const int UnreachableThreshold = 100;
@@ -894,10 +862,6 @@ public class ParityOperatorTests
     /// <summary>Tests that Start with an Action emits RxVoid.Default.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Usage",
-        "CA1849:Await task instead of getting result",
-        Justification = "Asserting on task results after completion.")]
     public async Task WhenStartAction_ThenEmitsUnit()
     {
         var executed = false;
@@ -913,10 +877,6 @@ public class ParityOperatorTests
     /// <summary>Tests that Start with an Action and a TaskScheduler executes on the scheduler.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Usage",
-        "CA1849:Await task instead of getting result",
-        Justification = "Asserting on task results after completion.")]
     public async Task WhenStartAction_WithScheduler_ThenExecutesOnScheduler()
     {
         var executed = false;
@@ -1030,10 +990,6 @@ public class ParityOperatorTests
     /// <summary>Tests that the async DoOnSubscribe overload runs on each subscription.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Usage",
-        "CA1849:Await task instead of getting result",
-        Justification = "Asserting on task results after completion.")]
     public async Task WhenDoOnSubscribeAsync_ThenRunsPerSubscription()
     {
         const int ExpectedSubscriptions = 2;
@@ -1086,10 +1042,6 @@ public class ParityOperatorTests
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Usage",
-        "CA1849:Await task instead of getting result",
-        Justification = "Asserting on task results after completion.")]
     public async Task WhenDropIfBusy_WithConcurrentEmission_ThenDroppedValueIsDiscarded()
     {
         const int DroppedValue = 2;

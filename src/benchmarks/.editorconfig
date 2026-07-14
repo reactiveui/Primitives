@@ -8,6 +8,7 @@
 ###################
 dotnet_diagnostic.SST1432.severity = none # Benchmark fixtures need not be static
 dotnet_diagnostic.SST1449.severity = none # Writing results to the console is what a benchmark harness does; there is no application logger to route them to
+dotnet_diagnostic.SST2410.severity = none # A benchmark measures the cost of creating the disposable; disposing it would measure something else
 
 ###################
 # PerformanceSharp (PSH)

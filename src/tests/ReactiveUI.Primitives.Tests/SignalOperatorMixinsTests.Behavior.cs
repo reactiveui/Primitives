@@ -118,8 +118,8 @@ public partial class SignalOperatorMixinsTests
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     [SuppressMessage(
-        "Major Code Smell",
-        "S6966:Awaitable method should be used",
+        "Concurrency",
+        "PSH1313:Call the async overload from an async method",
         Justification =
             "This test deliberately exercises the synchronous IObservable operator overloads, not their awaitable terminal counterparts.")]
     public async Task OperatorSurfaceCoversSuccessErrorAndEarlyTerminationBranches()

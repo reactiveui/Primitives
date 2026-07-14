@@ -42,8 +42,8 @@ public partial class SignalOperatorParityMixinsTests
     /// <summary>Covers operator Subscribe(null) and current-thread propagation for internal optimized signal classes.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [SuppressMessage(
-        "Major Code Smell",
-        "S6966:Awaitable method should be used",
+        "Concurrency",
+        "PSH1313:Call the async overload from an async method",
         Justification =
             "This test deliberately exercises the synchronous IObservable operator overloads, not their awaitable terminal counterparts.")]
     [Test]
@@ -101,8 +101,8 @@ public partial class SignalOperatorParityMixinsTests
     /// <summary>Covers optimized aggregate helper paths with custom comparers, selector exceptions, and range-backed count aliases.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [SuppressMessage(
-        "Major Code Smell",
-        "S6966:Awaitable method should be used",
+        "Concurrency",
+        "PSH1313:Call the async overload from an async method",
         Justification =
             "This test deliberately exercises the synchronous IObservable operator overloads, not their awaitable terminal counterparts.")]
     [Test]
@@ -148,8 +148,8 @@ public partial class SignalOperatorParityMixinsTests
     /// <summary>Covers terminal observers that must ignore protocol violations after their first terminal signal.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [SuppressMessage(
-        "Major Code Smell",
-        "S6966:Awaitable method should be used",
+        "Concurrency",
+        "PSH1313:Call the async overload from an async method",
         Justification =
             "This test deliberately exercises the synchronous IObservable operator overloads, not their awaitable terminal counterparts.")]
     [Test]

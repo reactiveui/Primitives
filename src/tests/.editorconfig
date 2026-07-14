@@ -6,6 +6,7 @@
 # StyleSharp (SST)
 ###################
 dotnet_diagnostic.SST1432.severity = none # Test fixtures need not be static
+dotnet_diagnostic.SST2410.severity = none # A test creates the disposable it is asserting about; the test process owns it and exits
 
 ###################
 # PerformanceSharp (PSH)
