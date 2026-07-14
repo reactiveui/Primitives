@@ -4,7 +4,6 @@
 
 using System.Collections.Specialized;
 using System.ComponentModel;
-using System.Diagnostics.CodeAnalysis;
 using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Signals;
 
@@ -55,8 +54,8 @@ public class EventPatternTests
         PropertyChangedEventSource propertySource = new();
         List<string?> propertyNames = [];
         var propertySubscription = Signal.FromEventPattern<PropertyChangedEventHandler, PropertyChangedEventArgs>(
-                handler => propertySource.PropertyChanged += handler,
-                handler => propertySource.PropertyChanged -= handler)
+                propertySource.AddHandler,
+                propertySource.RemoveHandler)
             .Subscribe(pattern => propertyNames.Add(pattern.EventArgs.PropertyName));
         propertySource.Raise(nameof(PropertyChangedEventSource.Value));
         propertySubscription.Dispose();
@@ -79,8 +78,8 @@ public class EventPatternTests
         var assembly = typeof(EventPatternTests).Assembly;
         List<EventPattern<AssemblyLoadEventArgs>> events = [];
         using (Signal.FromEventPattern<AssemblyLoadEventHandler, AssemblyLoadEventArgs>(
-                   handler => source.AssemblyLoaded += handler,
-                   handler => source.AssemblyLoaded -= handler).Subscribe(events.Add))
+                   source.AddHandler,
+                   source.RemoveHandler).Subscribe(events.Add))
         {
             source.Raise(assembly);
         }
@@ -102,8 +101,8 @@ public class EventPatternTests
         List<NotifyCollectionChangedAction> collectionActions = [];
         var collectionSubscription =
             Signal.FromEventPattern<NotifyCollectionChangedEventHandler, NotifyCollectionChangedEventArgs>(
-                    handler => collectionSource.CollectionChanged += handler,
-                    handler => collectionSource.CollectionChanged -= handler)
+                    collectionSource.AddHandler,
+                    collectionSource.RemoveHandler)
                 .Subscribe(pattern => collectionActions.Add(pattern.EventArgs.Action));
 
         collectionSource.RaiseAdd();
@@ -115,8 +114,8 @@ public class EventPatternTests
         ListChangedEventSource listSource = new();
         List<ListChangedType> listChangeTypes = [];
         var listSubscription = Signal.FromEventPattern<ListChangedEventHandler, ListChangedEventArgs>(
-                handler => listSource.ListChanged += handler,
-                handler => listSource.ListChanged -= handler)
+                listSource.AddHandler,
+                listSource.RemoveHandler)
             .Subscribe(pattern => listChangeTypes.Add(pattern.EventArgs.ListChangedType));
 
         listSource.RaiseAdd();
@@ -174,92 +173,82 @@ public class EventPatternTests
     /// <summary>Source used to exercise a WPF-style non-generic event handler shape.</summary>
     private sealed class AssemblyLoadEventSource
     {
-        /// <summary>Raised by the test source.</summary>
-        [SuppressMessage(
-            "Roslynator",
-            "RCS1159:Use EventHandler<T>",
-            Justification = "This test deliberately covers WPF-style non-generic event handler delegates.")]
-        [SuppressMessage(
-            "Major Code Smell",
-            "S3908:Refactor this delegate to use 'System.EventHandler<TEventArgs>'.",
-            Justification = "This test deliberately covers WPF-style non-generic event handler delegates.")]
-        [SuppressMessage(
-            "Major Code Smell",
-            "S3906:Event Handlers should have the correct signature",
-            Justification = "This test deliberately covers WPF-style non-generic event handler delegates.")]
-        public event AssemblyLoadEventHandler? AssemblyLoaded;
+        /// <summary>The handlers attached to the test source.</summary>
+        private AssemblyLoadEventHandler? _assemblyLoaded;
 
         /// <summary>Gets the current subscriber count.</summary>
-        public int SubscriberCount => AssemblyLoaded?.GetInvocationList().Length ?? 0;
+        public int SubscriberCount => _assemblyLoaded?.GetInvocationList().Length ?? 0;
 
-        /// <summary>Raises <see cref="AssemblyLoaded"/> with the supplied assembly.</summary>
+        /// <summary>Adds a handler to the test source.</summary>
+        /// <param name="handler">The handler to add.</param>
+        public void AddHandler(AssemblyLoadEventHandler handler) => _assemblyLoaded += handler;
+
+        /// <summary>Removes a handler from the test source.</summary>
+        /// <param name="handler">The handler to remove.</param>
+        public void RemoveHandler(AssemblyLoadEventHandler handler) => _assemblyLoaded -= handler;
+
+        /// <summary>Raises the stored handlers with the supplied assembly.</summary>
         /// <param name="assembly">The assembly supplied to the event arguments.</param>
-        public void Raise(System.Reflection.Assembly assembly) => AssemblyLoaded?.Invoke(this, new(assembly));
+        public void Raise(System.Reflection.Assembly assembly) => _assemblyLoaded?.Invoke(this, new(assembly));
     }
 
     /// <summary>Source used to exercise <see cref="PropertyChangedEventHandler"/> event conversion.</summary>
     private sealed class PropertyChangedEventSource
     {
-        /// <summary>Raised by the test source.</summary>
-        [SuppressMessage(
-            "Roslynator",
-            "RCS1159:Use EventHandler<T>",
-            Justification =
-                "This test deliberately covers the PropertyChangedEventHandler branch of the factory overload.")]
-        [SuppressMessage(
-            "Major Code Smell",
-            "S3908:Refactor this delegate to use 'System.EventHandler<TEventArgs>'.",
-            Justification =
-                "This test deliberately covers the PropertyChangedEventHandler branch of the factory overload.")]
-        public event PropertyChangedEventHandler? PropertyChanged;
+        /// <summary>The handlers attached to the test source.</summary>
+        private PropertyChangedEventHandler? _propertyChanged;
 
         /// <summary>Gets a placeholder property name used by the event test.</summary>
         public static int Value => 0;
 
-        /// <summary>Raises <see cref="PropertyChanged"/> with the supplied property name.</summary>
+        /// <summary>Adds a handler to the test source.</summary>
+        /// <param name="handler">The handler to add.</param>
+        public void AddHandler(PropertyChangedEventHandler handler) => _propertyChanged += handler;
+
+        /// <summary>Removes a handler from the test source.</summary>
+        /// <param name="handler">The handler to remove.</param>
+        public void RemoveHandler(PropertyChangedEventHandler handler) => _propertyChanged -= handler;
+
+        /// <summary>Raises the stored handlers with the supplied property name.</summary>
         /// <param name="propertyName">The property name supplied to the event arguments.</param>
-        public void Raise(string propertyName) => PropertyChanged?.Invoke(this, new(propertyName));
+        public void Raise(string propertyName) => _propertyChanged?.Invoke(this, new(propertyName));
     }
 
     /// <summary>Source used to exercise <see cref="NotifyCollectionChangedEventHandler"/> event conversion.</summary>
     private sealed class CollectionChangedEventSource
     {
-        /// <summary>Raised by the test source.</summary>
-        [SuppressMessage(
-            "Roslynator",
-            "RCS1159:Use EventHandler<T>",
-            Justification =
-                "This test deliberately covers the NotifyCollectionChangedEventHandler branch of the factory overload.")]
-        [SuppressMessage(
-            "Major Code Smell",
-            "S3908:Refactor this delegate to use 'System.EventHandler<TEventArgs>'.",
-            Justification =
-                "This test deliberately covers the NotifyCollectionChangedEventHandler branch of the factory overload.")]
-        public event NotifyCollectionChangedEventHandler? CollectionChanged;
+        /// <summary>The handlers attached to the test source.</summary>
+        private NotifyCollectionChangedEventHandler? _collectionChanged;
 
-        /// <summary>Raises <see cref="CollectionChanged"/> with an add action.</summary>
+        /// <summary>Adds a handler to the test source.</summary>
+        /// <param name="handler">The handler to add.</param>
+        public void AddHandler(NotifyCollectionChangedEventHandler handler) => _collectionChanged += handler;
+
+        /// <summary>Removes a handler from the test source.</summary>
+        /// <param name="handler">The handler to remove.</param>
+        public void RemoveHandler(NotifyCollectionChangedEventHandler handler) => _collectionChanged -= handler;
+
+        /// <summary>Raises the stored handlers with an add action.</summary>
         public void RaiseAdd() =>
-            CollectionChanged?.Invoke(this, new(NotifyCollectionChangedAction.Add, "value"));
+            _collectionChanged?.Invoke(this, new(NotifyCollectionChangedAction.Add, "value"));
     }
 
     /// <summary>Source used to exercise <see cref="ListChangedEventHandler"/> event conversion.</summary>
     private sealed class ListChangedEventSource
     {
-        /// <summary>Raised by the test source.</summary>
-        [SuppressMessage(
-            "Roslynator",
-            "RCS1159:Use EventHandler<T>",
-            Justification =
-                "This test deliberately covers the ListChangedEventHandler branch of the factory overload.")]
-        [SuppressMessage(
-            "Major Code Smell",
-            "S3908:Refactor this delegate to use 'System.EventHandler<TEventArgs>'.",
-            Justification =
-                "This test deliberately covers the ListChangedEventHandler branch of the factory overload.")]
-        public event ListChangedEventHandler? ListChanged;
+        /// <summary>The handlers attached to the test source.</summary>
+        private ListChangedEventHandler? _listChanged;
 
-        /// <summary>Raises <see cref="ListChanged"/> with an item-added action.</summary>
-        public void RaiseAdd() => ListChanged?.Invoke(this, new(ListChangedType.ItemAdded, 0));
+        /// <summary>Adds a handler to the test source.</summary>
+        /// <param name="handler">The handler to add.</param>
+        public void AddHandler(ListChangedEventHandler handler) => _listChanged += handler;
+
+        /// <summary>Removes a handler from the test source.</summary>
+        /// <param name="handler">The handler to remove.</param>
+        public void RemoveHandler(ListChangedEventHandler handler) => _listChanged -= handler;
+
+        /// <summary>Raises the stored handlers with an item-added action.</summary>
+        public void RaiseAdd() => _listChanged?.Invoke(this, new(ListChangedType.ItemAdded, 0));
     }
 
     /// <summary>Event arguments for fake click events.</summary>
