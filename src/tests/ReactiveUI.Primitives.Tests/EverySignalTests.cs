@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.ExceptionServices;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Signals;
 
@@ -40,8 +41,12 @@ public sealed class EverySignalTests
     /// <summary>The inactivity window <c>Expire</c> allows before it times the sequence out.</summary>
     private static readonly TimeSpan ExpiryPeriod = TimeSpan.FromMilliseconds(50);
 
-    /// <summary>The time a subscribing thread is given to finish before it is declared livelocked.</summary>
-    private static readonly TimeSpan LivelockTimeout = TimeSpan.FromSeconds(5);
+    /// <summary>
+    /// The time a subscribing thread is given to return before it is declared livelocked. A livelocked trampoline
+    /// never returns, so the window costs nothing to widen and is deliberately far longer than any of these
+    /// subscriptions needs: it only has to outlast a runner busy enough to stall a thread that is merely slow.
+    /// </summary>
+    private static readonly TimeSpan LivelockTimeout = TimeSpan.FromSeconds(30);
 
     /// <summary>Verifies a bounded <c>Every</c> on the current-thread sequencer terminates instead of livelocking.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
@@ -58,7 +63,7 @@ public sealed class EverySignalTests
                 .Subscribe(ticks.Add, static _ => { }, () => completions++);
         });
 
-        await Assert.That(await CompletedWithinTimeout(subscriber)).IsTrue();
+        await Assert.That(CompletedWithinTimeout(subscriber)).IsTrue();
         await Assert.That(ticks.SequenceEqual(ExpectedTicks)).IsTrue();
         await Assert.That(completions).IsEqualTo(1);
     }
@@ -79,7 +84,7 @@ public sealed class EverySignalTests
                 .Subscribe(_ => tickThreadIds.Add(Environment.CurrentManagedThreadId));
         });
 
-        await Assert.That(await CompletedWithinTimeout(subscriber)).IsTrue();
+        await Assert.That(CompletedWithinTimeout(subscriber)).IsTrue();
         await Assert.That(tickThreadIds.Count).IsEqualTo(RequestedTicks);
         await Assert.That(tickThreadIds.TrueForAll(id => id == subscriberThreadId)).IsTrue();
     }
@@ -109,7 +114,7 @@ public sealed class EverySignalTests
                     () => completions++);
         });
 
-        await Assert.That(await CompletedWithinTimeout(subscriber)).IsTrue();
+        await Assert.That(CompletedWithinTimeout(subscriber)).IsTrue();
         await Assert.That(ticks.SequenceEqual(ExpectedTicks)).IsTrue();
         await Assert.That(completions).IsEqualTo(1);
         await Assert.That(tickThreadIds.TrueForAll(id => id == subscriberThreadId)).IsTrue();
@@ -147,7 +152,7 @@ public sealed class EverySignalTests
                     () => completions++);
         });
 
-        await Assert.That(await CompletedWithinTimeout(subscriber)).IsTrue();
+        await Assert.That(CompletedWithinTimeout(subscriber)).IsTrue();
         await Assert.That(ticks.SequenceEqual(ExpectedTicks)).IsTrue();
         await Assert.That(completions).IsEqualTo(1);
         await Assert.That(tickThreadIds.TrueForAll(id => id == subscriberThreadId)).IsTrue();
@@ -214,7 +219,7 @@ public sealed class EverySignalTests
                     static () => { });
         });
 
-        await Assert.That(await CompletedWithinTimeout(subscriber)).IsTrue();
+        await Assert.That(CompletedWithinTimeout(subscriber)).IsTrue();
         await Assert.That(ticks).IsEqualTo(0);
         await Assert.That(failure).IsTypeOf<TimeoutException>();
     }
@@ -249,7 +254,7 @@ public sealed class EverySignalTests
                     () => completions++);
         });
 
-        await Assert.That(await CompletedWithinTimeout(subscriber)).IsTrue();
+        await Assert.That(CompletedWithinTimeout(subscriber)).IsTrue();
         await Assert.That(results).IsEquivalentTo([expectedResult], EqualityComparer<bool>.Default);
         await Assert.That(completions).IsEqualTo(1);
         await Assert.That(resultThreadIds.TrueForAll(id => id == subscriberThreadId)).IsTrue();
@@ -257,41 +262,82 @@ public sealed class EverySignalTests
 
     /// <summary>Runs the subscription body on its own background thread so a livelock cannot hang the test host.</summary>
     /// <param name="body">The subscription body to run.</param>
-    /// <returns>A task that completes when the body returns.</returns>
-    private static Task<bool> RunOnDedicatedThread(Action body)
+    /// <returns>The subscribing thread, already running the body.</returns>
+    private static SubscribingThread RunOnDedicatedThread(Action body) => SubscribingThread.Start(body);
+
+    /// <summary>Waits for the subscribing thread to finish within the livelock timeout.</summary>
+    /// <param name="subscriber">The subscribing thread to wait on.</param>
+    /// <returns><see langword="true"/> when the subscribing thread finished in time.</returns>
+    private static bool CompletedWithinTimeout(SubscribingThread subscriber) =>
+        subscriber.ReturnedWithin(LivelockTimeout);
+
+    /// <summary>The thread a subscription body runs on, and whatever that body threw.</summary>
+    /// <remarks>
+    /// The livelock guard waits on the thread itself rather than on a task the thread completes. Completing a task
+    /// only queues its continuation to the thread pool, so the guard would be racing two pool-scheduled
+    /// continuations: on a runner whose pool is saturated the subscribing thread's continuation can be dequeued
+    /// after the guard's window has already closed, reporting a livelock in a trampoline that in truth returned in
+    /// milliseconds. <see cref="Thread.Join(TimeSpan)"/> is an OS-level wait no amount of pool pressure can starve,
+    /// so it observes the subscribing thread returning rather than the pool getting round to saying that it did.
+    /// A thread that is genuinely livelocked never returns, so the guard still trips on it.
+    /// </remarks>
+    private sealed class SubscribingThread
     {
-        TaskCompletionSource<bool> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        Thread thread = new(() =>
+        /// <summary>The subscription body to run.</summary>
+        private readonly Action _body;
+
+        /// <summary>The background thread the body runs on.</summary>
+        private readonly Thread _thread;
+
+        /// <summary>The exception the body threw, if any.</summary>
+        private ExceptionDispatchInfo? _failure;
+
+        /// <summary>Initializes a new instance of the <see cref="SubscribingThread"/> class.</summary>
+        /// <param name="body">The subscription body to run.</param>
+        private SubscribingThread(Action body)
+        {
+            _body = body;
+            _thread = new(Run)
+            {
+                IsBackground = true,
+            };
+        }
+
+        /// <summary>Starts a subscription body on a background thread of its own.</summary>
+        /// <param name="body">The subscription body to run.</param>
+        /// <returns>The running subscribing thread.</returns>
+        internal static SubscribingThread Start(Action body)
+        {
+            SubscribingThread subscriber = new(body);
+            subscriber._thread.Start();
+            return subscriber;
+        }
+
+        /// <summary>Waits for the thread to return, rethrowing whatever the subscription body threw.</summary>
+        /// <param name="timeout">How long the thread is given to return before it is declared livelocked.</param>
+        /// <returns><see langword="true"/> when the thread returned within <paramref name="timeout"/>.</returns>
+        internal bool ReturnedWithin(TimeSpan timeout)
+        {
+            if (!_thread.Join(timeout))
+            {
+                return false;
+            }
+
+            _failure?.Throw();
+            return true;
+        }
+
+        /// <summary>Runs the subscription body, capturing a failure so it can be rethrown with its original stack.</summary>
+        private void Run()
         {
             try
             {
-                body();
-                completion.SetResult(true);
+                _body();
             }
             catch (Exception error)
             {
-                completion.SetException(error);
+                _failure = ExceptionDispatchInfo.Capture(error);
             }
-        })
-        {
-            IsBackground = true,
-        };
-        thread.Start();
-        return completion.Task;
-    }
-
-    /// <summary>Waits for the subscribing thread to finish within the livelock timeout.</summary>
-    /// <param name="subscriber">The task that completes when the subscribing thread returns.</param>
-    /// <returns><see langword="true"/> when the subscribing thread finished in time.</returns>
-    private static async Task<bool> CompletedWithinTimeout(Task<bool> subscriber)
-    {
-        var finished = await Task.WhenAny(subscriber, Task.Delay(LivelockTimeout)).ConfigureAwait(false);
-        if (!ReferenceEquals(finished, subscriber))
-        {
-            return false;
         }
-
-        await subscriber.ConfigureAwait(false);
-        return true;
     }
 }
