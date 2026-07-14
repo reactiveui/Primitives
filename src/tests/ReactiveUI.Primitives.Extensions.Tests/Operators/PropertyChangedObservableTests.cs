@@ -2,8 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Diagnostics.CodeAnalysis;
-
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
 /// <summary>Edge-case coverage for <c>ToPropertyObservable</c> backed by
@@ -142,10 +140,6 @@ public class PropertyChangedObservableTests
         /// <summary>Gets the observed property. This fixture never writes it, so every read yields zero —
         /// what is under test is the notification, not the value. It stays an instance auto-property
         /// because that is what the <c>ToPropertyObservable</c> expression tree resolves against.</summary>
-        [SuppressMessage(
-            "Major Code Smell",
-            "S3459:Unassigned members should be removed",
-            Justification = "The property is deliberately never written; the test drives PropertyChanged, not the value.")]
         public int Value { get; }
 
         /// <summary>Invokes the retained handler with a <c>PropertyChanged</c> event for <see cref="Value"/>.</summary>
