@@ -95,8 +95,19 @@ internal sealed class EverySignal(TimeSpan period, ISequencer scheduler) : IRequ
         private void ScheduleNext() => _slot.Create(_scheduler.Schedule(_period, _tickAction));
 
         /// <summary>Emits the current tick and reschedules unless cancelled.</summary>
+        /// <remarks>
+        /// Disposal is tested before the emit as well as after it. A cancelled subscription must not deliver another
+        /// value, and the sequencer's own cancellation check happens before the item is invoked, not before the
+        /// observer is called. The second test covers an observer that disposes the subscription from inside
+        /// <see cref="IObserver{T}.OnNext"/>, which must stop the recurring schedule rather than re-arm it.
+        /// </remarks>
         private void Tick()
         {
+            if (_slot.IsDisposed)
+            {
+                return;
+            }
+
             var tick = _tick;
             _tick++;
             _observer.OnNext(tick);
