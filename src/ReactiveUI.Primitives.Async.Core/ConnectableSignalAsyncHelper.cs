@@ -16,10 +16,16 @@ internal static class ConnectableSignalAsyncHelper
     /// <param name="state">The connectable signal state to operate on.</param>
     /// <param name="cancellationToken">A token that can cancel connection establishment.</param>
     /// <returns>The active connection handle.</returns>
+    /// <exception cref="OperationCanceledException">The connectable signal has been disposed, or
+    /// <paramref name="cancellationToken"/> was cancelled.</exception>
     public static async ValueTask<IAsyncDisposable> ConnectAsync<T>(
         ConnectableSignalAsyncState<T> state,
         CancellationToken cancellationToken)
     {
+        // A disposed signal cancels this token, and the gate's uncontended fast path does not observe
+        // cancellation, so without this check a post-disposal connect would resubscribe the cold source.
+        state.DisposedCancellationToken.ThrowIfCancellationRequested();
+
         CancellationTokenSource? linkedCts = null;
         CancellationToken token;
         if (cancellationToken == state.DisposedCancellationToken || !cancellationToken.CanBeCanceled)

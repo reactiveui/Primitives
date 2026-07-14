@@ -37,6 +37,9 @@ public sealed class WasmSchedulerTests
     /// <summary>How long a test waits after disposing a periodic item to prove no further ticks arrive.</summary>
     private static readonly TimeSpan PostDisposeObservationWindow = TimeSpan.FromMilliseconds(100);
 
+    /// <summary>How long a test watches work queued on a disposed scheduler to prove the drain never runs it.</summary>
+    private static readonly TimeSpan StrandedWorkObservationWindow = TimeSpan.FromMilliseconds(250);
+
     /// <summary>A positive due time or period, so a null action is the only invalid argument under test.</summary>
     private static readonly TimeSpan ValidInterval = TimeSpan.FromMilliseconds(100);
 
@@ -323,6 +326,38 @@ public sealed class WasmSchedulerTests
     public async Task SchedulePeriodicWithNullActionThrows() => await Assert
         .That(static () => WasmScheduler.Default.SchedulePeriodic(0, ValidInterval, null!))
         .Throws<ArgumentNullException>();
+
+    /// <summary>
+    /// Verifies work scheduled on a disposed scheduler is accepted but never drains. Disposal releases the drain
+    /// timer, and re-arming a released timer is a silent no-op, so the queued item is stranded: no exception is
+    /// raised, the action never runs, and a later schedule — which folds into the drain latch the failed post left
+    /// set — is stranded the same way. The handle each schedule returns still cancels cleanly.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ScheduleAfterDisposeIsAcceptedButNeverRuns()
+    {
+        var scheduler = (WasmScheduler)Activator.CreateInstance(typeof(WasmScheduler), true)!;
+        scheduler.Dispose();
+        var ran = 0;
+
+        var first = scheduler.Schedule(0, (_, _) =>
+        {
+            _ = Interlocked.Increment(ref ran);
+            return Disposable.Empty;
+        });
+        var second = scheduler.Schedule(0, (_, _) =>
+        {
+            _ = Interlocked.Increment(ref ran);
+            return Disposable.Empty;
+        });
+
+        await Task.Delay(StrandedWorkObservationWindow);
+
+        await Assert.That(Volatile.Read(ref ran)).IsEqualTo(0);
+        await Assert.That(first.Dispose).ThrowsNothing();
+        await Assert.That(second.Dispose).ThrowsNothing();
+    }
 
     /// <summary>Simple holder to work around race condition in closure.</summary>
     private sealed class Holder

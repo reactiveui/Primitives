@@ -40,6 +40,7 @@ public sealed class CancellationDisposable : IsDisposed
     public bool IsDisposed => Volatile.Read(ref _isDisposed) != 0;
 
     /// <summary>Gets the debugger display text.</summary>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 

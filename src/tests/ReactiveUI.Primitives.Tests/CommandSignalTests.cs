@@ -22,6 +22,12 @@ public sealed class CommandSignalTests
     /// <summary>Number of tasks that race for the lazily allocated stream in the contention test.</summary>
     private const int ContendingTasks = 2;
 
+    /// <summary>Number of results the longest-lived result subscriber receives in the fan-out test.</summary>
+    private const int ThreeResults = 3;
+
+    /// <summary>Number of results the second-longest-lived result subscriber receives in the fan-out test.</summary>
+    private const int TwoResults = 2;
+
     /// <summary>Expected command results.</summary>
     private static readonly int[] ExpectedCommandResults = [CommandResult];
 
@@ -232,6 +238,162 @@ public sealed class CommandSignalTests
         _ = await execution;
 
         await Assert.That(stream.Value).IsFalse();
+    }
+
+    /// <summary>
+    /// Results fan out to every active subscriber, and unsubscribing removes that subscriber and nobody else.
+    /// This walks the observer set through all three of its shapes — one observer, a pair, a longer array — and
+    /// back down again, because each shape has its own add and remove path.
+    /// </summary>
+    /// <returns>A task that completes when the fan-out assertions finish.</returns>
+    [Test]
+    public async Task ResultsFanOutToEverySubscriberAndStopAtUnsubscribe()
+    {
+        CommandSignal<int> command = new(static () => CommandResult);
+        List<int> first = [];
+        List<int> second = [];
+        List<int> third = [];
+
+        var firstSubscription = command.Results.Subscribe(first.Add);
+        var secondSubscription = command.Results.Subscribe(second.Add);
+        var thirdSubscription = command.Results.Subscribe(third.Add);
+
+        _ = command.ExecuteAsync();
+
+        // Remove from the middle of a three-observer array: the survivors must both keep receiving.
+        secondSubscription.Dispose();
+        _ = command.ExecuteAsync();
+
+        // Remove from a two-observer array, collapsing it back to a single observer.
+        thirdSubscription.Dispose();
+        _ = command.ExecuteAsync();
+
+        // Removing the last observer, then disposing the same handle again, must both be safe.
+        firstSubscription.Dispose();
+        firstSubscription.Dispose();
+        _ = command.ExecuteAsync();
+
+        await Assert.That(first.Count).IsEqualTo(ThreeResults);
+        await Assert.That(second.Count).IsEqualTo(1);
+        await Assert.That(third.Count).IsEqualTo(TwoResults);
+        await Assert.That(first.TrueForAll(static value => value == CommandResult)).IsTrue();
+    }
+
+    /// <summary>
+    /// Disposing the command drops its observer set, so a subscription handle disposed afterwards has nothing
+    /// to detach from. That must be a quiet no-op rather than a failure.
+    /// </summary>
+    /// <returns>A task that completes when the post-disposal assertions finish.</returns>
+    [Test]
+    public async Task ResultSubscriptionDisposedAfterTheCommandIsSafe()
+    {
+        CommandSignal<int> command = new(static () => CommandResult);
+        List<int> results = [];
+        var subscription = command.Results.Subscribe(results.Add);
+
+        command.Dispose();
+        subscription.Dispose();
+
+        await Assert.That(results.Count).IsEqualTo(0);
+        _ = Assert.Throws<ObjectDisposedException>(() => command.Results.Subscribe(results.Add));
+    }
+
+    /// <summary>
+    /// An async command that faults publishes the fault to the fault stream before the awaited task rethrows it,
+    /// and still lowers the running flag on the way out.
+    /// </summary>
+    /// <returns>A task that completes when the async-fault assertions finish.</returns>
+    [Test]
+    public async Task AsyncExecutionPublishesTheFaultAndStillLowersTheRunningFlag()
+    {
+        InvalidOperationException fault = new("async failed");
+
+        // The delegate type is spelled out because a body that only throws gives the compiler no return
+        // expression to infer Task<int> from.
+        Func<CancellationToken, Task<int>> execute = async token =>
+        {
+            await Task.Yield();
+            token.ThrowIfCancellationRequested();
+            throw fault;
+        };
+
+        CommandSignal<int> command = new(execute);
+        List<Exception> faults = [];
+        List<int> results = [];
+        _ = command.Faults.Subscribe(faults.Add);
+        _ = command.Results.Subscribe(results.Add);
+
+        InvalidOperationException? observed = null;
+        try
+        {
+            _ = await command.ExecuteAsync();
+        }
+        catch (InvalidOperationException error)
+        {
+            observed = error;
+        }
+
+        await Assert.That(observed!).IsSameReferenceAs(fault);
+        await Assert.That(faults.Count).IsEqualTo(1);
+        await Assert.That(faults[0]).IsSameReferenceAs(fault);
+        await Assert.That(results.Count).IsEqualTo(0);
+        await Assert.That(command.IsRunning.Value).IsFalse();
+    }
+
+    /// <summary>
+    /// The fault stream is allocated on first use and cached thereafter, and disposing the command tears down
+    /// the gate subscription along with the streams it created.
+    /// </summary>
+    /// <returns>A task that completes when the lazy-fault-stream assertions finish.</returns>
+    [Test]
+    public async Task FaultsAllocateLazilyAndDisposalReleasesTheGateSubscription()
+    {
+        StateSignal<bool> canRun = new(true);
+        CommandSignal<int> command = new(static () => CommandResult, canRun);
+
+        var faults = command.Faults;
+        var running = command.IsRunning;
+
+        await Assert.That(command.Faults).IsSameReferenceAs(faults);
+        await Assert.That(command.CanRun).IsTrue();
+        await Assert.That(canRun.HasObservers).IsTrue();
+
+        command.Dispose();
+
+        // The command released the gate, so the gate signal no longer feeds anything.
+        await Assert.That(canRun.HasObservers).IsFalse();
+        await Assert.That(running.IsDisposed).IsTrue();
+    }
+
+    /// <summary>
+    /// Forces concurrent first observations of the lazily allocated fault stream so the install CAS has a loser,
+    /// exercising the dispose-and-return-installed branch. All racers must observe the same instance.
+    /// </summary>
+    /// <returns>A task that completes when the concurrent fault-stream assertions finish.</returns>
+    [Test]
+    public async Task ConcurrentFirstObservationsShareASingleFaultStream()
+    {
+        const int iterations = 5_000;
+
+        for (var iteration = 0; iteration < iterations; iteration++)
+        {
+            CommandSignal<int> command = new(static () => CommandResult);
+            using Barrier barrier = new(ContendingTasks);
+
+            var left = Task.Run(() =>
+            {
+                barrier.SignalAndWait();
+                return command.Faults;
+            });
+            var right = Task.Run(() =>
+            {
+                barrier.SignalAndWait();
+                return command.Faults;
+            });
+
+            var streams = await Task.WhenAll(left, right);
+            await Assert.That(streams[0]).IsSameReferenceAs(streams[1]);
+        }
     }
 
     /// <summary>

@@ -52,6 +52,7 @@ public readonly record struct Spark<T>
     public SparkKind Kind { get; }
 
     /// <summary>Gets the debugger display text.</summary>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 

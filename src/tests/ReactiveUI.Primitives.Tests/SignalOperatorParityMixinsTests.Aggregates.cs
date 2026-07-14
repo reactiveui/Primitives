@@ -25,6 +25,9 @@ public partial class SignalOperatorParityMixinsTests
     /// <summary>A value outside the tested ranges.</summary>
     private const int MissingRangeValue = 99;
 
+    /// <summary>The message raised by the faulting equality comparer test double.</summary>
+    private const string ComparerFaultMessage = "comparer-fault";
+
     /// <summary>Observed error index for the any error.</summary>
     private const int AnyErrorIndex = 2;
 
@@ -270,6 +273,64 @@ public partial class SignalOperatorParityMixinsTests
         await Assert.That(last).IsEqualTo(new("Katherine", "Johnson"));
         await Assert.That(anyNullLastName).IsTrue();
         await Assert.That(countWithLastName).IsEqualTo(ExpectedLastNameCount);
+    }
+
+    /// <summary>The range-optimized Contains surfaces a faulting comparer as an error instead of throwing.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ContainsOverARangeSurfacesAFaultingComparerAsAnError()
+    {
+        List<Exception> observed = [];
+        var completions = 0;
+
+        Signal.Sequence(First, Fourth)
+            .Contains(Third, new ThrowingComparer())
+            .Subscribe(static _ => { }, observed.Add, () => completions++)
+            .Dispose();
+
+        await Assert.That(observed.Count).IsEqualTo(1);
+        await Assert.That(observed[0].Message).IsEqualTo(ComparerFaultMessage);
+        await Assert.That(completions).IsEqualTo(0);
+    }
+
+    /// <summary>The range-optimized any terminal reports false when no value in the range matches.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task RangeAnyAsyncReportsFalseWhenNoValueMatches()
+    {
+        await Assert.That(await Signal.Sequence(First, Fourth).AnyAsync(static value => value == MissingRangeValue))
+            .IsFalse();
+        await Assert.That(await Signal.Sequence(First, Fourth).AnyAsync(static value => value == Third)).IsTrue();
+    }
+
+    /// <summary>A predicate that throws faults the range-optimized any and count terminals.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task RangeTerminalTasksFaultWhenThePredicateThrows()
+    {
+        InvalidOperationException expected = new("range-predicate");
+
+        var anyError = await Assert.That(() => Signal.Sequence(First, Fourth).AnyAsync(_ => throw expected))
+            .Throws<InvalidOperationException>();
+        var countError = await Assert.That(() => Signal.Sequence(First, Fourth).CountAsync(_ => throw expected))
+            .Throws<InvalidOperationException>();
+
+        await Assert.That(anyError!).IsSameReferenceAs(expected);
+        await Assert.That(countError!).IsSameReferenceAs(expected);
+    }
+
+    /// <summary>The predicate terminals cancel up front when handed an already-cancelled token.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task PredicateTerminalTasksCancelUpFrontOnAnAlreadyCancelledToken()
+    {
+        using CancellationTokenSource cts = new();
+        await cts.CancelAsync();
+
+        await Assert.That(() => Signal.Sequence(First, Fourth).AnyAsync(static value => value == Third, cts.Token))
+            .Throws<TaskCanceledException>();
+        await Assert.That(() => Signal.Sequence(First, Fourth).CountAsync(static value => value == Third, cts.Token))
+            .Throws<TaskCanceledException>();
     }
 
     /// <summary>Returns a scalar signal for the supplied value.</summary>

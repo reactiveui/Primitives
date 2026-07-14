@@ -68,6 +68,51 @@ public class ReplaySignalTests
         CreateAndDispose(static () => new(0, TimeSpan.Zero, EmptySequencer.Instance));
     }
 
+    /// <summary>Verifies a zero-length buffer keeps nothing, so a late subscriber replays no values.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task AZeroSizedBufferReplaysNothingToALateSubscriber()
+    {
+        ReplaySignal<int> signal = new(0);
+        signal.OnNext(One);
+        signal.OnNext(Two);
+        List<int> replayed = [];
+        using var subscription = signal.Subscribe(replayed.Add);
+        await Assert.That(replayed.Count).IsEqualTo(0);
+        signal.OnNext(Three);
+        await Assert.That(replayed.SequenceEqual([Three])).IsTrue();
+    }
+
+    /// <summary>Verifies a windowed buffer still drops the values that overflow its buffer size.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task AWindowedBufferDropsValuesBeyondItsBufferSize()
+    {
+        VirtualClock clock = new();
+        ReplaySignal<int> signal = new(One, TimeSpan.FromMinutes(One), clock);
+        signal.OnNext(One);
+        signal.OnNext(Two);
+        signal.OnNext(Three);
+        List<int> replayed = [];
+        using var subscription = signal.Subscribe(replayed.Add);
+        await Assert.That(replayed.SequenceEqual([Three])).IsTrue();
+    }
+
+    /// <summary>Verifies disposing a replay subscription twice unhooks the observer exactly once.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task DisposingAReplaySubscriptionTwiceIsIdempotent()
+    {
+        ReplaySignal<int> signal = new();
+        List<int> replayed = [];
+        var subscription = signal.Subscribe(replayed.Add);
+        subscription.Dispose();
+        subscription.Dispose();
+        await Assert.That(signal.HasObservers).IsFalse();
+        signal.OnNext(One);
+        await Assert.That(replayed.Count).IsEqualTo(0);
+    }
+
     /// <summary>Determines whether this instance has observers.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]

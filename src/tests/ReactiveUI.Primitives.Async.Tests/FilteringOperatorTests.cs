@@ -308,6 +308,17 @@ public class FilteringOperatorTests
         await Assert.That(result).IsCollectionEqualTo(["abc", "ab", "a"]);
     }
 
+    /// <summary>Tests DistinctBy with an explicit key comparer compares keys through that comparer,
+    /// so keys the default comparer would treat as distinct collapse into one.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenDistinctByWithKeyComparer_ThenKeysComparedThroughComparer()
+    {
+        var source = SequenceAABBB.ToAsyncSignal();
+        var result = await source.DistinctBy(static s => s, StringComparer.OrdinalIgnoreCase).ToListAsync();
+        await Assert.That(result).IsCollectionEqualTo(["a", "b"]);
+    }
+
     /// <summary>Tests DistinctUntilChanged suppresses consecutive duplicates.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]

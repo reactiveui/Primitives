@@ -28,6 +28,7 @@ public readonly struct Moment<T> : IEquatable<Moment<T>>
     public DateTimeOffset Timestamp { get; }
 
     /// <summary>Gets the debugger display text.</summary>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 

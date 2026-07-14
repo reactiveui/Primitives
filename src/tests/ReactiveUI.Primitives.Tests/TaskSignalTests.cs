@@ -32,4 +32,20 @@ public class TaskSignalTests
             GC.KeepAlive(invalid);
         });
     }
+
+    /// <summary>The scheduler overload of the task-signal factory builds a live signal that cancels when disposed.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task TaskSignalCreateWithASchedulerBuildsASignalThatCancelsOnDisposal()
+    {
+        using var taskSignal = TaskSignal.Create<int>(static _ => Signal.Silent<int>(), Sequencer.CurrentThread);
+
+        await Assert.That(taskSignal.IsCancellationRequested).IsFalse();
+        await Assert.That(taskSignal.IsDisposed).IsFalse();
+
+        taskSignal.Dispose();
+
+        await Assert.That(taskSignal.IsDisposed).IsTrue();
+        await Assert.That(taskSignal.IsCancellationRequested).IsTrue();
+    }
 }

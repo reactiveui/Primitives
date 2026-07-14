@@ -42,6 +42,7 @@ public sealed class TaskPoolSequencer : ISequencer
     public long Timestamp => Sequencer.Timestamp;
 
     /// <summary>Gets the debugger display text.</summary>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 

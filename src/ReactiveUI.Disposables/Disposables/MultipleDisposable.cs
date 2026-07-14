@@ -117,6 +117,7 @@ public class MultipleDisposable : IsDisposed, ICollection<IDisposable>
     public bool IsReadOnly => false;
 
     /// <summary>Gets the debugger display text.</summary>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 

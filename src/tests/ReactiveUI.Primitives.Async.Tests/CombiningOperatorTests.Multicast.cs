@@ -9,6 +9,15 @@ namespace ReactiveUI.Primitives.Async.Tests;
 /// <summary>Tests for the Multicast operator.</summary>
 public partial class CombiningOperatorTests
 {
+    /// <summary>Number of items the option-driven publish sources emit.</summary>
+    private const int PublishedItemCount = 3;
+
+    /// <summary>Initial value replayed by the behavior-flavoured publish overloads.</summary>
+    private const int PublishedInitialValue = 0;
+
+    /// <summary>A publishing option outside the defined enum range, used to reach the unsupported-options guard.</summary>
+    private const PublishingOption UnsupportedPublishingOption = (PublishingOption)(-1);
+
     /// <summary>Tests Multicast with ConnectAsync connects and emits.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -432,5 +441,219 @@ public partial class CombiningOperatorTests
         await connection.DisposeAsync();
 
         await Assert.That(connection).IsNotNull();
+    }
+
+    /// <summary>Verifies <c>Publish(options)</c> with concurrent, stateful options multicasts every source item.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenPublishWithConcurrentStatefulOptions_ThenEmitsToSubscribers()
+    {
+        SignalCreationOptions options = new()
+        {
+            PublishingOption = PublishingOption.Concurrent,
+            IsStateless = false
+        };
+
+        var items = await ConnectAndCollectAsync(SignalAsync.Range(1, PublishedItemCount).Publish(options));
+
+        await Assert.That(items).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3]);
+    }
+
+    /// <summary>Verifies <c>Publish(options)</c> with serial, stateless options multicasts every source item.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenPublishWithSerialStatelessOptions_ThenEmitsToSubscribers()
+    {
+        SignalCreationOptions options = new()
+        {
+            PublishingOption = PublishingOption.Serial,
+            IsStateless = true
+        };
+
+        var items = await ConnectAndCollectAsync(SignalAsync.Range(1, PublishedItemCount).Publish(options));
+
+        await Assert.That(items).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3]);
+    }
+
+    /// <summary>Verifies <c>Publish(options)</c> with concurrent, stateless options multicasts every source item.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenPublishWithConcurrentStatelessOptions_ThenEmitsToSubscribers()
+    {
+        SignalCreationOptions options = new()
+        {
+            PublishingOption = PublishingOption.Concurrent,
+            IsStateless = true
+        };
+
+        var items = await ConnectAndCollectAsync(SignalAsync.Range(1, PublishedItemCount).Publish(options));
+
+        await Assert.That(items).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3]);
+    }
+
+    /// <summary>Verifies <c>Publish(options)</c> rejects a publishing option it has no signal for.</summary>
+    [Test]
+    public void WhenPublishWithUnsupportedOptions_ThenThrowsArgumentOutOfRange()
+    {
+        SignalCreationOptions options = new()
+        {
+            PublishingOption = UnsupportedPublishingOption,
+            IsStateless = false
+        };
+
+        _ = Assert.Throws<ArgumentOutOfRangeException>(
+            () => SignalAsync.Range(1, PublishedItemCount).Publish(options));
+    }
+
+    /// <summary>Verifies <c>Publish(initialValue, options)</c> with concurrent, stateful options replays the initial value.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenPublishWithInitialValueAndConcurrentStatefulOptions_ThenReplaysInitialValue()
+    {
+        BehaviorSignalCreationOptions options = new()
+        {
+            PublishingOption = PublishingOption.Concurrent,
+            IsStateless = false
+        };
+
+        var items = await ConnectAndCollectAsync(
+            SignalAsync.Range(1, PublishedItemCount).Publish(PublishedInitialValue, options));
+
+        await Assert.That(items).Contains(PublishedInitialValue);
+        await Assert.That(items).Contains(SampleValue3);
+    }
+
+    /// <summary>Verifies <c>Publish(initialValue, options)</c> with serial, stateless options replays the initial value.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenPublishWithInitialValueAndSerialStatelessOptions_ThenReplaysInitialValue()
+    {
+        BehaviorSignalCreationOptions options = new()
+        {
+            PublishingOption = PublishingOption.Serial,
+            IsStateless = true
+        };
+
+        var items = await ConnectAndCollectAsync(
+            SignalAsync.Range(1, PublishedItemCount).Publish(PublishedInitialValue, options));
+
+        await Assert.That(items).Contains(PublishedInitialValue);
+        await Assert.That(items).Contains(SampleValue3);
+    }
+
+    /// <summary>Verifies <c>Publish(initialValue, options)</c> with concurrent, stateless options replays the initial value.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenPublishWithInitialValueAndConcurrentStatelessOptions_ThenReplaysInitialValue()
+    {
+        BehaviorSignalCreationOptions options = new()
+        {
+            PublishingOption = PublishingOption.Concurrent,
+            IsStateless = true
+        };
+
+        var items = await ConnectAndCollectAsync(
+            SignalAsync.Range(1, PublishedItemCount).Publish(PublishedInitialValue, options));
+
+        await Assert.That(items).Contains(PublishedInitialValue);
+        await Assert.That(items).Contains(SampleValue3);
+    }
+
+    /// <summary>Verifies <c>Publish(initialValue, options)</c> rejects a publishing option it has no signal for.</summary>
+    [Test]
+    public void WhenPublishWithInitialValueAndUnsupportedOptions_ThenThrowsArgumentOutOfRange()
+    {
+        BehaviorSignalCreationOptions options = new()
+        {
+            PublishingOption = UnsupportedPublishingOption,
+            IsStateless = false
+        };
+
+        _ = Assert.Throws<ArgumentOutOfRangeException>(
+            () => SignalAsync.Range(1, PublishedItemCount).Publish(PublishedInitialValue, options));
+    }
+
+    /// <summary>Verifies <c>ReplayLatestPublish(options)</c> with concurrent, stateful options multicasts every source item.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenReplayLatestPublishWithConcurrentStatefulOptions_ThenEmitsToSubscribers()
+    {
+        ReplayLatestSignalCreationOptions options = new()
+        {
+            PublishingOption = PublishingOption.Concurrent,
+            IsStateless = false
+        };
+
+        var items = await ConnectAndCollectAsync(
+            SignalAsync.Range(1, PublishedItemCount).ReplayLatestPublish(options));
+
+        await Assert.That(items).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3]);
+    }
+
+    /// <summary>Verifies <c>ReplayLatestPublish(options)</c> with serial, stateless options multicasts every source item.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenReplayLatestPublishWithSerialStatelessOptions_ThenEmitsToSubscribers()
+    {
+        ReplayLatestSignalCreationOptions options = new()
+        {
+            PublishingOption = PublishingOption.Serial,
+            IsStateless = true
+        };
+
+        var items = await ConnectAndCollectAsync(
+            SignalAsync.Range(1, PublishedItemCount).ReplayLatestPublish(options));
+
+        await Assert.That(items).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3]);
+    }
+
+    /// <summary>Verifies <c>ReplayLatestPublish(options)</c> with concurrent, stateless options multicasts every source item.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenReplayLatestPublishWithConcurrentStatelessOptions_ThenEmitsToSubscribers()
+    {
+        ReplayLatestSignalCreationOptions options = new()
+        {
+            PublishingOption = PublishingOption.Concurrent,
+            IsStateless = true
+        };
+
+        var items = await ConnectAndCollectAsync(
+            SignalAsync.Range(1, PublishedItemCount).ReplayLatestPublish(options));
+
+        await Assert.That(items).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3]);
+    }
+
+    /// <summary>Verifies <c>ReplayLatestPublish(options)</c> rejects a publishing option it has no signal for.</summary>
+    [Test]
+    public void WhenReplayLatestPublishWithUnsupportedOptions_ThenThrowsArgumentOutOfRange()
+    {
+        ReplayLatestSignalCreationOptions options = new()
+        {
+            PublishingOption = UnsupportedPublishingOption,
+            IsStateless = true
+        };
+
+        _ = Assert.Throws<ArgumentOutOfRangeException>(
+            () => SignalAsync.Range(1, PublishedItemCount).ReplayLatestPublish(options));
+    }
+
+    /// <summary>Subscribes to a connectable sequence, connects it, and returns everything the subscriber saw.</summary>
+    /// <param name="connectable">The connectable sequence under test.</param>
+    /// <returns>The items the subscriber received once the connection was established.</returns>
+    private static async Task<List<int>> ConnectAndCollectAsync(ConnectableSignalAsync<int> connectable)
+    {
+        List<int> items = [];
+        await using var sub = await connectable.SubscribeAsync(
+            (x, _) =>
+            {
+                items.Add(x);
+                return default;
+            },
+            null);
+
+        await using var conn = await connectable.ConnectAsync(CancellationToken.None);
+
+        return items;
     }
 }

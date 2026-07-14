@@ -161,6 +161,16 @@ public class SparkTests
         await Assert.That(observer.Events).Contains(CompletedText);
     }
 
+    /// <summary>Verifies a completed spark hashes without a value or an exception to reach for.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task CompletedSparksWithNoValueOrExceptionHashEqual()
+    {
+        var completed = Spark.CreateOnCompleted<int>();
+        var sameCompleted = Spark.CreateOnCompleted<int>();
+        await Assert.That(completed.GetHashCode()).IsEqualTo(sameCompleted.GetHashCode());
+    }
+
     /// <summary>Records observer events and result values.</summary>
     /// <typeparam name="T">The observed value type.</typeparam>
     private sealed class RecordingResultWitness<T> : IObserver<T>, IObserver<T, string>

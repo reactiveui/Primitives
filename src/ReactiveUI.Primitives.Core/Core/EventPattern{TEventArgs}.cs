@@ -30,6 +30,7 @@ public readonly struct EventPattern<TEventArgs> : IEquatable<EventPattern<TEvent
     public TEventArgs EventArgs { get; }
 
     /// <summary>Gets the debugger display text.</summary>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString();
 

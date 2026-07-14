@@ -383,6 +383,91 @@ public class SignalCreateTests
         await Assert.That(intervalValues.SequenceEqual(expectedIntervalValues)).IsTrue();
     }
 
+    /// <summary>The guarded create factory honours a current-thread requirement and releases its subscription once.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task CreateSafeWithCurrentThreadRequirementEmitsAndReleasesItsSubscription()
+    {
+        RecordingDisposable inner = new();
+        var created = Signal.CreateSafe<int>(
+            observer =>
+            {
+                observer.OnNext(CreatedValue);
+                observer.OnCompleted();
+                return inner;
+            },
+            true);
+
+        await Assert.That(((IRequireCurrentThread<int>)created).IsRequiredSubscribeOnCurrentThread()).IsTrue();
+
+        RecordingWitness<int> witness = new();
+        var subscription = created.Subscribe(witness);
+
+        await Assert.That(witness.Values.SequenceEqual([CreatedValue])).IsTrue();
+        await Assert.That(witness.Completed).IsEqualTo(1);
+
+        subscription.Dispose();
+        subscription.Dispose();
+
+        await Assert.That(inner.DisposeCount).IsEqualTo(1);
+    }
+
+    /// <summary>The guarded create factory tolerates a subscribe callback that returns no disposable.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task CreateSafeToleratesASubscribeCallbackThatReturnsNoDisposable()
+    {
+        var created = Signal.CreateSafe<int>(
+            static observer =>
+            {
+                observer.OnNext(CreatedValue);
+                observer.OnCompleted();
+                return null!;
+            },
+            true);
+
+        RecordingWitness<int> witness = new();
+        using var subscription = created.Subscribe(witness);
+
+        await Assert.That(witness.Values.SequenceEqual([CreatedValue])).IsTrue();
+        await Assert.That(witness.Completed).IsEqualTo(1);
+    }
+
+    /// <summary>The stateful create factory reports the current-thread requirement it was built with.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task CreateWithStateReportsItsCurrentThreadRequirement()
+    {
+        var required = Signal.CreateWithState<int, int>(
+            CreatedValue,
+            static (state, observer) =>
+            {
+                observer.OnNext(state);
+                observer.OnCompleted();
+                return EmptyDisposable.Instance;
+            },
+            true);
+
+        var optional = Signal.CreateWithState<int, int>(
+            CreatedValue,
+            static (state, observer) =>
+            {
+                observer.OnNext(state);
+                observer.OnCompleted();
+                return EmptyDisposable.Instance;
+            },
+            false);
+
+        await Assert.That(((IRequireCurrentThread<int>)required).IsRequiredSubscribeOnCurrentThread()).IsTrue();
+        await Assert.That(((IRequireCurrentThread<int>)optional).IsRequiredSubscribeOnCurrentThread()).IsFalse();
+
+        RecordingWitness<int> witness = new();
+        using var subscription = required.Subscribe(witness);
+
+        await Assert.That(witness.Values.SequenceEqual([CreatedValue])).IsTrue();
+        await Assert.That(witness.Completed).IsEqualTo(1);
+    }
+
     /// <summary>Records observer notifications.</summary>
     /// <typeparam name="T">The observed value type.</typeparam>
     private sealed class Recorder<T> : IObserver<T>

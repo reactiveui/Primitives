@@ -888,6 +888,37 @@ public class SignalFromTaskTest
         await Assert.That(result).IsTrue();
     }
 
+    /// <summary>
+    /// Verifies the immediate task signal exposes itself as its own source and owns a cancellation source, and
+    /// that a task whose token was cancelled before it produced its result errors instead of emitting it.
+    /// </summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous unit test.</returns>
+    [Test]
+    public async Task ImmediateTaskSignalErrorsWhenTheTokenIsCancelledBeforeTheResultArrives()
+    {
+        TaskCompletionSource<int> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var taskSignal = Signal.FromTask(_ => completion.Task, Sequencer.Immediate);
+        try
+        {
+            await Assert.That(taskSignal.CancellationTokenSource).IsNotNull();
+            await Assert.That(ReferenceEquals(taskSignal.Source, taskSignal)).IsTrue();
+            ConcurrentQueue<int> values = new();
+            ConcurrentQueue<Exception> errors = new();
+            _ = taskSignal.Subscribe(values.Enqueue, errors.Enqueue, static () => { });
+            await taskSignal.CancellationTokenSource!.CancelAsync();
+            completion.SetResult(SuccessValue);
+            await TestPolling.SpinUntil(() => !errors.IsEmpty, PollTimeout).ConfigureAwait(false);
+            await Assert.That(errors.Count).IsEqualTo(1);
+            _ = errors.TryPeek(out var error);
+            await Assert.That(error!).IsTypeOf<OperationCanceledException>();
+            await Assert.That(values).IsEmpty();
+        }
+        finally
+        {
+            (taskSignal as IDisposable)?.Dispose();
+        }
+    }
+
     /// <summary>Gets the recorded status messages.</summary>
     /// <param name = "statusTrail">The status trail.</param>
     /// <returns>The recorded messages.</returns>

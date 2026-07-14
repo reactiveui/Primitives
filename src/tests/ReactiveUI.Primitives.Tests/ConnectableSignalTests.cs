@@ -29,6 +29,9 @@ public sealed class ConnectableSignalTests
     /// <summary>Second value observed through replay.</summary>
     private const int SecondReplayValue = 5;
 
+    /// <summary>A replay window wide enough that no value expires while a test runs.</summary>
+    private const int ReplayWindowSeconds = 30;
+
     /// <summary>Expected values for the first shared subscription.</summary>
     private static readonly int[] ExpectedFirstSharedValues = [FirstSharedValue];
 
@@ -109,6 +112,92 @@ public sealed class ConnectableSignalTests
         List<int> replayValues = [];
         _ = replayed.Subscribe(replayValues.Add);
         await Assert.That(replayValues.SequenceEqual(ExpectedReplayValues[..1])).IsTrue();
+    }
+
+    /// <summary>Multicast routes source values through the supplied hub only once the signal is connected.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task MulticastRoutesSourceValuesThroughTheSuppliedHub()
+    {
+        Signal<int> source = new();
+        Signal<int> hub = new();
+        var multicast = source.Multicast(hub);
+
+        List<int> observed = [];
+        using var subscription = multicast.Subscribe(observed.Add);
+
+        // No connection yet, so the hub must not see the source at all.
+        source.OnNext(UnobservedSharedValue);
+        await Assert.That(observed.Count).IsEqualTo(0);
+
+        using var connection = multicast.Connect();
+        source.OnNext(FirstSharedValue);
+        source.OnNext(SecondSharedValue);
+
+        await Assert.That(observed.SequenceEqual(ExpectedSecondSharedValues)).IsTrue();
+    }
+
+    /// <summary>An unbounded replay hub replays every connected value to a late subscriber.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task UnboundedReplayLiveReplaysEveryValueToALateSubscriber()
+    {
+        Signal<int> source = new();
+        var replayed = source.ReplayLive();
+
+        using var connection = replayed.Connect();
+        source.OnNext(FirstReplayValue);
+        source.OnNext(SecondReplayValue);
+
+        List<int> late = [];
+        using var subscription = replayed.Subscribe(late.Add);
+
+        await Assert.That(late.SequenceEqual(ExpectedReplayValues)).IsTrue();
+    }
+
+    /// <summary>A windowed replay hub still honours its buffer-size bound.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task WindowedReplayLiveHonoursItsBufferSizeBound()
+    {
+        Signal<int> source = new();
+        var replayed = source.ReplayLive(1, TimeSpan.FromSeconds(ReplayWindowSeconds));
+
+        using var connection = replayed.Connect();
+        source.OnNext(FirstReplayValue);
+        source.OnNext(SecondReplayValue);
+
+        List<int> late = [];
+        using var subscription = replayed.Subscribe(late.Add);
+
+        // The window is wide enough to keep both values, so only the buffer size may trim the replay.
+        await Assert.That(late.SequenceEqual(ExpectedReplayValues[1..])).IsTrue();
+    }
+
+    /// <summary>AutoConnect without a count connects to the source on the very first subscription.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task AutoConnectWithoutACountConnectsOnTheFirstSubscription()
+    {
+        Signal<int> source = new();
+        var sourceSubscriptions = 0;
+        var cold = Signal.Create<int>(observer =>
+        {
+            sourceSubscriptions++;
+            return source.Subscribe(observer);
+        });
+
+        var auto = cold.ShareLive().AutoConnect();
+        await Assert.That(sourceSubscriptions).IsEqualTo(0);
+
+        List<int> observed = [];
+        using var subscription = auto.Subscribe(observed.Add);
+
+        await Assert.That(sourceSubscriptions).IsEqualTo(1);
+
+        source.OnNext(FirstSharedValue);
+
+        await Assert.That(observed.SequenceEqual(ExpectedFirstSharedValues)).IsTrue();
     }
 
     /// <summary>Verifies AutoConnect reports the connection disposable once the subscriber threshold is reached.</summary>

@@ -405,7 +405,15 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
             && Volatile.Read(ref _disposeFromNotification) == 0)
         {
             TaskCompletionSource<object?> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
-            Volatile.Write(ref _allCallsCompletedTcs, tcs);
+
+            // Publish with an interlocked exchange rather than a release store: the re-read below must not
+            // be reordered ahead of the publish. ExitOnSomethingCall decrements the count under a full-fence
+            // CAS and only then reads this field, so once the publish is fenced, an Exit that still reads a
+            // null TCS must already have made its decrement visible to the re-read — one of the two sides
+            // always signals. A plain Volatile.Write leaves that store/load pair unordered and both sides
+            // can miss: Exit sees no TCS while this thread still sees a non-zero count, and the await below
+            // then never completes.
+            _ = Interlocked.Exchange(ref _allCallsCompletedTcs, tcs);
 
             // Re-read after publishing the TCS — Exit may have raced past us and decremented
             // the count to zero before our publish became visible. Self-signal so the awaiter

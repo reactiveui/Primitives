@@ -35,6 +35,22 @@ public partial class CombiningOperatorTests
         await Assert.That(result).Count().IsEqualTo(SampleValue3);
     }
 
+    /// <summary>Verifies the <c>Blend</c> spelling of the enumerable merge emits every source's items.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenBlendEnumerable_ThenEmitsFromAll()
+    {
+        IObservableAsync<int>[] sources =
+        [
+            SignalAsync.Return(SampleValue10), SignalAsync.Return(SampleValue20), SignalAsync.Return(SampleValue30)
+        ];
+        var result = await sources.Blend().ToListAsync();
+        await Assert.That(result).Count().IsEqualTo(SampleValue3);
+        await Assert.That(result).Contains(SampleValue10);
+        await Assert.That(result).Contains(SampleValue20);
+        await Assert.That(result).Contains(SampleValue30);
+    }
+
     /// <summary>Tests Merge observable of observables flattens.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]

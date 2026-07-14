@@ -9,7 +9,7 @@ using ReactiveUI.Primitives.Reactive.Signals;
 namespace ReactiveUI.Primitives.Reactive.Tests;
 
 /// <summary>Verifies the seam that gives <see cref="IScheduler"/> the shared-source sequencer scheduling shape.</summary>
-public class SequencerSchedulingExtensionsTests
+public partial class SequencerSchedulingExtensionsTests
 {
     /// <summary>The relative delay, in ticks, applied by the shift.</summary>
     private const long ShiftTicks = 10;

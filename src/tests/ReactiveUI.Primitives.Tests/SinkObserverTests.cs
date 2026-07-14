@@ -432,6 +432,239 @@ public class SinkObserverTests
         await Assert.That(r.Completed).IsTrue();
     }
 
+    /// <summary>
+    /// A filtering sink that hands a value to a throwing observer must unsubscribe upstream before it rethrows.
+    /// Without that teardown the source keeps producing into an observer that has already failed.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task FilteringSinksReleaseTheUpstreamWhenTheObserverThrows()
+    {
+        RecordingDisposable skip = new();
+        SkipWitness<int> skipSink = new(new ThrowingWitness<int>(throwOnNext: true), 0);
+        skipSink.SetSubscription(skip);
+        await AssertObserverFailureReleasesUpstream(skipSink, skip);
+
+        RecordingDisposable skipWhile = new();
+        SkipWhileWitness<int> skipWhileSink = new(new ThrowingWitness<int>(throwOnNext: true), static _ => false);
+        skipWhileSink.SetSubscription(skipWhile);
+        await AssertObserverFailureReleasesUpstream(skipWhileSink, skipWhile);
+
+        RecordingDisposable distinct = new();
+        DistinctWitness<int> distinctSink = new(new ThrowingWitness<int>(throwOnNext: true), []);
+        distinctSink.SetSubscription(distinct);
+        await AssertObserverFailureReleasesUpstream(distinctSink, distinct);
+
+        RecordingDisposable unique = new();
+        UniqueWitness<int> uniqueSink =
+            new(new ThrowingWitness<int>(throwOnNext: true), EqualityComparer<int>.Default);
+        uniqueSink.SetSubscription(unique);
+        await AssertObserverFailureReleasesUpstream(uniqueSink, unique);
+
+        RecordingDisposable uniqueBy = new();
+        UniqueByWitness<int, int> uniqueBySink = new(
+            new ThrowingWitness<int>(throwOnNext: true),
+            static value => value,
+            EqualityComparer<int>.Default);
+        uniqueBySink.SetSubscription(uniqueBy);
+        await AssertObserverFailureReleasesUpstream(uniqueBySink, uniqueBy);
+    }
+
+    /// <summary>
+    /// The accumulating and counting sinks make the same promise: a throwing observer tears the sink down and
+    /// unsubscribes upstream rather than leaving a half-live pipeline behind.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task AccumulatingAndCountingSinksReleaseTheUpstreamWhenTheObserverThrows()
+    {
+        RecordingDisposable fold = new();
+        FoldWitness<int, int> foldSink =
+            new(new ThrowingWitness<int>(throwOnNext: true), 0, static (a, b) => a + b);
+        foldSink.SetSubscription(fold);
+        await AssertObserverFailureReleasesUpstream(foldSink, fold);
+
+        RecordingDisposable take = new();
+        TakeWitness<int> takeSink = new(new ThrowingWitness<int>(throwOnNext: true), Two);
+        takeSink.SetSubscription(take);
+        await AssertObserverFailureReleasesUpstream(takeSink, take);
+
+        RecordingDisposable takeWhile = new();
+        TakeWhileWitness<int> takeWhileSink = new(new ThrowingWitness<int>(throwOnNext: true), static _ => true);
+        takeWhileSink.SetSubscription(takeWhile);
+        await AssertObserverFailureReleasesUpstream(takeWhileSink, takeWhile);
+    }
+
+    /// <summary>
+    /// A <see cref = "BufferWitness{T}"/> hands a window to the observer only when the window fills, so its
+    /// teardown-on-throw path is reached on the value that closes the window, not on the ones that fill it.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task BufferSinkReleasesTheUpstreamWhenTheObserverThrowsOnACompletedWindow()
+    {
+        RecordingDisposable subscription = new();
+        BufferWitness<int> sink = new(new ThrowingWitness<IList<int>>(throwOnNext: true), Two, 0);
+        sink.SetSubscription(subscription);
+
+        // The first value only fills the window; nothing is emitted, so nothing can throw yet.
+        sink.OnNext(1);
+        await Assert.That(subscription.DisposeCount).IsEqualTo(0);
+
+        var thrown = Assert.Throws<InvalidOperationException>(() => sink.OnNext(Two));
+
+        await Assert.That(thrown!.Message).IsEqualTo("observer-next");
+        await Assert.That(subscription.DisposeCount).IsEqualTo(1);
+    }
+
+    /// <summary>
+    /// Every single-source sink forwards a fault to its observer exactly once and releases the upstream
+    /// subscription as it goes; none of them completes the observer as well.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task FilteringSinksForwardFaultsAndReleaseTheUpstream()
+    {
+        await AssertFaultIsForwardedAndUpstreamReleased(
+            static (observer, subscription) =>
+            {
+                SkipWitness<int> sink = new(observer, Two);
+                sink.SetSubscription(subscription);
+                return sink;
+            });
+
+        await AssertFaultIsForwardedAndUpstreamReleased(
+            static (observer, subscription) =>
+            {
+                SkipWhileWitness<int> sink = new(observer, static _ => true);
+                sink.SetSubscription(subscription);
+                return sink;
+            });
+
+        await AssertFaultIsForwardedAndUpstreamReleased(
+            static (observer, subscription) =>
+            {
+                DistinctWitness<int> sink = new(observer, []);
+                sink.SetSubscription(subscription);
+                return sink;
+            });
+
+        await AssertFaultIsForwardedAndUpstreamReleased(
+            static (observer, subscription) =>
+            {
+                UniqueWitness<int> sink = new(observer, EqualityComparer<int>.Default);
+                sink.SetSubscription(subscription);
+                return sink;
+            });
+
+        await AssertFaultIsForwardedAndUpstreamReleased(
+            static (observer, subscription) =>
+            {
+                UniqueByWitness<int, int> sink =
+                    new(observer, static value => value, EqualityComparer<int>.Default);
+                sink.SetSubscription(subscription);
+                return sink;
+            });
+    }
+
+    /// <summary>The accumulating and counting sinks forward a fault and release the upstream subscription too.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task AccumulatingAndCountingSinksForwardFaultsAndReleaseTheUpstream()
+    {
+        await AssertFaultIsForwardedAndUpstreamReleased(
+            static (observer, subscription) =>
+            {
+                FoldWitness<int, int> sink = new(observer, 0, static (a, b) => a + b);
+                sink.SetSubscription(subscription);
+                return sink;
+            });
+
+        await AssertFaultIsForwardedAndUpstreamReleased(
+            static (observer, subscription) =>
+            {
+                ReduceWitness<int, int> sink = new(observer, 0, static (a, b) => a + b);
+                sink.SetSubscription(subscription);
+                return sink;
+            });
+
+        await AssertFaultIsForwardedAndUpstreamReleased(
+            static (observer, subscription) =>
+            {
+                TakeWhileWitness<int> sink = new(observer, static _ => true);
+                sink.SetSubscription(subscription);
+                return sink;
+            });
+
+        await AssertFaultIsForwardedAndUpstreamReleased(
+            static (observer, subscription) =>
+            {
+                TakeWitness<int> sink = new(observer, Two);
+                sink.SetSubscription(subscription);
+                return sink;
+            });
+    }
+
+    /// <summary>
+    /// The take sinks complete early, so a source that has not noticed yet can still push a fault at them. That
+    /// fault must be dropped: the observer has already been completed and must not then be told it failed.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task TakeSinksDropFaultsThatArriveAfterTheirTerminal()
+    {
+        Recorder<int> takeObserver = new();
+        TakeWitness<int> take = new(takeObserver, 1);
+        take.OnNext(1);
+        take.OnError(new InvalidOperationException("late"));
+
+        await Assert.That(takeObserver.Values.SequenceEqual([1])).IsTrue();
+        await Assert.That(takeObserver.Completed).IsTrue();
+        await Assert.That(takeObserver.Error).IsNull();
+
+        Recorder<int> takeWhileObserver = new();
+        TakeWhileWitness<int> takeWhile = new(takeWhileObserver, static value => value < Two);
+        takeWhile.OnNext(1);
+        takeWhile.OnNext(Two);
+        takeWhile.OnError(new InvalidOperationException("late"));
+
+        await Assert.That(takeWhileObserver.Values.SequenceEqual([1])).IsTrue();
+        await Assert.That(takeWhileObserver.Completed).IsTrue();
+        await Assert.That(takeWhileObserver.Error).IsNull();
+    }
+
+    /// <summary>Asserts a sink rethrows the observer's failure and releases its upstream subscription.</summary>
+    /// <param name = "sink">The sink under test, already holding <paramref name = "subscription"/>.</param>
+    /// <param name = "subscription">The upstream subscription the sink must release.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private static async Task AssertObserverFailureReleasesUpstream(
+        IObserver<int> sink,
+        RecordingDisposable subscription)
+    {
+        var thrown = Assert.Throws<InvalidOperationException>(() => sink.OnNext(1));
+
+        await Assert.That(thrown!.Message).IsEqualTo("observer-next");
+        await Assert.That(subscription.DisposeCount).IsEqualTo(1);
+    }
+
+    /// <summary>Asserts a sink forwards a fault to its observer once and releases its upstream subscription.</summary>
+    /// <param name = "create">Builds the sink over the supplied observer and upstream subscription.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private static async Task AssertFaultIsForwardedAndUpstreamReleased(
+        Func<IObserver<int>, RecordingDisposable, IObserver<int>> create)
+    {
+        Recorder<int> observer = new();
+        RecordingDisposable subscription = new();
+        var sink = create(observer, subscription);
+        InvalidOperationException error = new("sink-fault");
+
+        sink.OnError(error);
+
+        await Assert.That(observer.Error).IsSameReferenceAs(error);
+        await Assert.That(observer.Completed).IsFalse();
+        await Assert.That(subscription.DisposeCount).IsEqualTo(1);
+    }
+
     /// <summary>Pushes each value through the sink via <see cref = "IObserver{T}.OnNext"/>.</summary>
     /// <typeparam name = "T">The value type.</typeparam>
     /// <param name = "sink">The sink under test.</param>

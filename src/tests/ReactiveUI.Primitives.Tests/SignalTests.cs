@@ -520,6 +520,130 @@ public class SignalTests
         _ = Assert.Throws<ObjectDisposedException>(() => disposedSubject.OnNext(1));
     }
 
+    /// <summary>
+    /// A signal disposed from inside a subscriber's value callback has torn its state down under the dispatch
+    /// that is still running. The remaining subscribers in that dispatch snapshot still see the value — they
+    /// were already promised it — but the caller is told the signal is gone, rather than the disposal being
+    /// swallowed.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task OnNextReportsDisposalWhenASubscriberDisposesTheSignalMidDispatch()
+    {
+        Signal<int> signal = new();
+        RecordingWitness<int> survivor = new();
+
+        // Two subscribers put the signal on the multi-subscriber dispatch path rather than the single-observer
+        // fast path, which returns before the disposal is ever noticed.
+        _ = signal.Subscribe(Witness.Create<int>(_ => signal.Dispose()));
+        _ = signal.Subscribe(survivor);
+
+        _ = Assert.Throws<ObjectDisposedException>(() => signal.OnNext(One));
+
+        await Assert.That(signal.IsDisposed).IsTrue();
+        await Assert.That(survivor.Values.SequenceEqual([One])).IsTrue();
+    }
+
+    /// <summary>
+    /// The finalizer path releases unmanaged resources only. It must leave the signal usable: a signal that
+    /// tore down its observers here would silently drop subscribers whenever a finalizer ran.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task UnmanagedOnlyDisposalLeavesTheSignalUsable()
+    {
+        FinalizerPathSignal signal = new();
+        RecordingWitness<int> observer = new();
+        _ = signal.Subscribe(observer);
+
+        signal.ReleaseUnmanagedOnly();
+        signal.OnNext(One);
+
+        await Assert.That(signal.IsDisposed).IsFalse();
+        await Assert.That(observer.Values.SequenceEqual([One])).IsTrue();
+    }
+
+    /// <summary>
+    /// Faults rethrow at the call site only to reach action subscribers, which have nowhere else to surface an
+    /// error. With observer subscribers alone — and enough of them to leave the single-subscriber fast path —
+    /// the error is delivered and <c>OnError</c> returns quietly.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task OnErrorDoesNotRethrowWhenOnlyObserversAreSubscribed()
+    {
+        Signal<int> signal = new();
+        RecordingWitness<int> first = new();
+        RecordingWitness<int> second = new();
+        _ = signal.Subscribe(first);
+        _ = signal.Subscribe(second);
+        InvalidOperationException error = new("observers-only");
+
+        signal.OnError(error);
+
+        await Assert.That(first.Errors.Count).IsEqualTo(One);
+        await Assert.That(first.Errors[0]).IsSameReferenceAs(error);
+        await Assert.That(second.Errors[0]).IsSameReferenceAs(error);
+    }
+
+    /// <summary>
+    /// The subscription array reuses the slot a departed subscriber vacated instead of growing. The newcomer
+    /// must be wired up properly in that recycled slot, and the departed subscriber must stay silent.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ASubscriberAddedAfterAnotherLeavesReusesTheVacatedSlot()
+    {
+        Signal<int> signal = new();
+        RecordingWitness<int> departed = new();
+        RecordingWitness<int> stayed = new();
+        RecordingWitness<int> arrived = new();
+
+        var departing = signal.Subscribe(departed);
+        _ = signal.Subscribe(stayed);
+        departing.Dispose();
+        _ = signal.Subscribe(arrived);
+
+        signal.OnNext(One);
+
+        await Assert.That(departed.Values.Count).IsEqualTo(0);
+        await Assert.That(stayed.Values.SequenceEqual([One])).IsTrue();
+        await Assert.That(arrived.Values.SequenceEqual([One])).IsTrue();
+    }
+
+    /// <summary>
+    /// Small integers come from a shared cache rather than a fresh allocation. Both subscription surfaces of a
+    /// cached signal must still replay the value they were built for, and values outside the cache must still
+    /// work.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task CachedInt32SignalsReplayTheirValueToObserversAndCallbacks()
+    {
+        const int UncachedValue = 100;
+
+        var cached = ImmutableReturnInt32Signal.GetInt32Signals(Five);
+        await Assert.That(cached).IsSameReferenceAs(ImmutableReturnInt32Signal.GetInt32Signals(Five));
+
+        RecordingWitness<int> observed = new();
+        cached.Subscribe(observed).Dispose();
+        await Assert.That(observed.Values.SequenceEqual([Five])).IsTrue();
+        await Assert.That(observed.Completed).IsEqualTo(One);
+
+        List<int> callbackValues = [];
+        var callbackCompletions = 0;
+        new ImmutableReturnInt32Signal(Five)
+            .Subscribe(callbackValues.Add, static error => throw error, () => callbackCompletions++)
+            .Dispose();
+        await Assert.That(callbackValues.SequenceEqual([Five])).IsTrue();
+        await Assert.That(callbackCompletions).IsEqualTo(One);
+
+        RecordingWitness<int> uncached = new();
+        ImmutableReturnInt32Signal.GetInt32Signals(UncachedValue).Subscribe(uncached).Dispose();
+        await Assert.That(uncached.Values.SequenceEqual([UncachedValue])).IsTrue();
+        await Assert.That(uncached.Completed).IsEqualTo(One);
+    }
+
     /// <summary>Asserts the repeat, range, and range-zip signals forward their sequences and validate their observers.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     private static async Task AssertRepeatRangeAndZipSignalsForwardTheirSequences()
@@ -619,6 +743,13 @@ public class SignalTests
         [SuppressMessage("Maintainability", "SST1461:Remove unread private parameters", Justification = "The signature is fixed by the delegate SignalSubscription.Subscribe expects.")]
         private static IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel) =>
             EmptyDisposable.Instance;
+    }
+
+    /// <summary>Exposes the unmanaged-only disposal path a finalizer would take.</summary>
+    private sealed class FinalizerPathSignal : Signal<int>
+    {
+        /// <summary>Runs the disposal path with managed cleanup suppressed, as a finalizer would.</summary>
+        public void ReleaseUnmanagedOnly() => Dispose(false);
     }
 
     /// <summary>Records integer observer lifecycle calls.</summary>

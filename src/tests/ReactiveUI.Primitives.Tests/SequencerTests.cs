@@ -10,7 +10,7 @@ using ReactiveUI.Primitives.Disposables;
 namespace ReactiveUI.Primitives.Tests;
 
 /// <summary>Verifies sequencer, virtual-clock, and scheduled-item contracts.</summary>
-public class SequencerTests
+public partial class SequencerTests
 {
     /// <summary>A reusable value for one.</summary>
     private const int One = 1;
@@ -411,6 +411,76 @@ public class SequencerTests
         scheduled.Invoke();
         scheduled.Cancel();
         await Assert.That(scheduledDisposed).IsTrue();
+    }
+
+    /// <summary>
+    /// The non-generic comparison is what a non-generic sorted collection reaches for. It must order by due time
+    /// just like the typed one, treat <see langword="null"/> as ordering first, and refuse anything that is not
+    /// a scheduled item rather than silently claiming equality.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ScheduledItemNonGenericComparisonOrdersByDueTime()
+    {
+        var early = ScheduledProbe.Create(One, static () => EmptyDisposable.Instance);
+        var late = ScheduledProbe.Create(Two, static () => EmptyDisposable.Instance);
+        var sameDueTime = ScheduledProbe.Create(One, static () => EmptyDisposable.Instance);
+
+        // The casts are what force the non-generic IComparable.CompareTo(object) overload: an
+        // unqualified call would bind to the strongly typed CompareTo(ScheduledItem<int>) instead.
+        await Assert.That(((IComparable)early).CompareTo(null)).IsEqualTo(One);
+        await Assert.That(((IComparable)early).CompareTo(late) < 0).IsTrue();
+        await Assert.That(((IComparable)late).CompareTo(early) > 0).IsTrue();
+        await Assert.That(((IComparable)early).CompareTo(sameDueTime)).IsEqualTo(0);
+        _ = Assert.Throws<ArgumentException>(() => ((IComparable)early).CompareTo("not-scheduled"));
+    }
+
+    /// <summary>
+    /// Cancelling a scheduled item that is already running must not leak the resource the invocation produced.
+    /// The two operations race by nature, so this drives every interleaving and asserts the invariant that
+    /// holds across all of them: once both have finished, the invocation's resource is disposed.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ScheduledItemCancelledDuringInvocationNeverLeaksTheInvocationResource()
+    {
+        const int Iterations = 20_000;
+
+        for (var iteration = 0; iteration < Iterations; iteration++)
+        {
+            RecordingDisposable resource = new();
+            var invoked = false;
+            var item = ScheduledProbe.Create(
+                One,
+                () =>
+                {
+                    invoked = true;
+                    return resource;
+                });
+
+            using Barrier barrier = new(Two);
+            var invoking = Task.Run(() =>
+            {
+                barrier.SignalAndWait();
+                item.Invoke();
+            });
+            var cancelling = Task.Run(() =>
+            {
+                barrier.SignalAndWait();
+                item.Cancel();
+            });
+
+            await Task.WhenAll(invoking, cancelling);
+
+            await Assert.That(item.IsDisposed).IsTrue();
+
+            // Either the cancellation beat the invocation entirely (no resource was ever created), or the
+            // invocation produced one — and in that case it must not have outlived the cancellation. The
+            // count is not pinned to exactly one: on the interleaving where the invocation installs the
+            // resource between the cancellation's two writes, both paths dispose it, and IDisposable.Dispose
+            // is required to tolerate that.
+            await Assert.That(!invoked || resource.DisposeCount >= 1).IsTrue();
+        }
     }
 
     /// <summary>Asserts the immediate sequencer validates its callbacks and runs each scheduling overload in order.</summary>

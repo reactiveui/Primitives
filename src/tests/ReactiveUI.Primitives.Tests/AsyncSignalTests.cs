@@ -214,6 +214,27 @@ public class AsyncSignalTests
         d.Dispose();
     }
 
+    /// <summary>
+    /// An async signal that completes without ever producing a value has no terminal value to replay. A late
+    /// subscriber must simply be completed — not handed a fabricated default, and not left hanging.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task CompletingWithoutAValueOnlyCompletesLateSubscribers()
+    {
+        AsyncSignal<int> signal = new();
+        signal.OnCompleted();
+
+        RecordingWitness<int> late = new();
+        signal.Subscribe(late).Dispose();
+
+        await Assert.That(late.Values.Count).IsEqualTo(0);
+        await Assert.That(late.Completed).IsEqualTo(1);
+        await Assert.That(late.Errors.Count).IsEqualTo(0);
+        await Assert.That(signal.IsCompleted).IsTrue();
+        await Assert.That(signal.HasObservers).IsFalse();
+    }
+
     /// <summary>Covers async-signal subscriber churn, late subscriptions, disposal, and terminal no-op branches.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]

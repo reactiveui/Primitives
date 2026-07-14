@@ -18,6 +18,64 @@ public partial class SignalOperatorMixinsTests
     /// <summary>The late terminal error message.</summary>
     private const string LateErrorMessage = "late";
 
+    /// <summary>
+    /// Map and Keep are pass-through wrappers: neither adds a thread affinity of its own, so each must report
+    /// exactly the current-thread requirement of the source it wraps. Reporting <see langword="true"/> for a
+    /// free-threaded source would needlessly pin subscription; reporting <see langword="false"/> for a pinned
+    /// one would subscribe on the wrong thread.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task MapAndKeepSignalsInheritTheCurrentThreadRequirementOfTheirSource()
+    {
+        MapSignal<int, int> mappedFree = new(new OptionalCurrentThreadObservable<int>(false), static value => value);
+        MapSignal<int, int> mappedPinned = new(new CurrentThreadObservable<int>(), static value => value);
+        MapSignal<int, int> mappedPlain = new(new Signal<int>(), static value => value);
+
+        KeepSignal<int> keptFree = new(new OptionalCurrentThreadObservable<int>(false), static _ => true);
+        KeepSignal<int> keptPinned = new(new CurrentThreadObservable<int>(), static _ => true);
+        KeepSignal<int> keptPlain = new(new Signal<int>(), static _ => true);
+
+        await Assert.That(mappedFree.IsRequiredSubscribeOnCurrentThread()).IsFalse();
+        await Assert.That(mappedPinned.IsRequiredSubscribeOnCurrentThread()).IsTrue();
+        await Assert.That(mappedPlain.IsRequiredSubscribeOnCurrentThread()).IsFalse();
+        await Assert.That(keptFree.IsRequiredSubscribeOnCurrentThread()).IsFalse();
+        await Assert.That(keptPinned.IsRequiredSubscribeOnCurrentThread()).IsTrue();
+        await Assert.That(keptPlain.IsRequiredSubscribeOnCurrentThread()).IsFalse();
+    }
+
+    /// <summary>
+    /// A source that keeps notifying after it has completed must not get a second bite at a Keep subscriber. The
+    /// filter must drop the late value before it even consults the predicate, and drop the late fault entirely.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task KeepSignalDropsSourceNotificationsThatArriveAfterItsTerminal()
+    {
+        var predicateCalls = 0;
+        InvalidOperationException lateError = new(LateErrorMessage);
+        KeepSignal<int> kept = new(
+            new ScriptedObservable<int>(observer =>
+            {
+                observer.OnCompleted();
+                observer.OnNext(One);
+                observer.OnError(lateError);
+            }),
+            _ =>
+            {
+                predicateCalls++;
+                return true;
+            });
+
+        RecordingWitness<int> observer = new();
+        _ = kept.Subscribe(observer);
+
+        await Assert.That(observer.Completed).IsEqualTo(1);
+        await Assert.That(observer.Values.Count).IsEqualTo(0);
+        await Assert.That(observer.Errors.Count).IsEqualTo(0);
+        await Assert.That(predicateCalls).IsEqualTo(0);
+    }
+
     /// <summary>Verifies advanced map-indexed and enumerable blend direct paths.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
@@ -45,6 +103,35 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(mappedValues.Values.SequenceEqual([One])).IsTrue();
         await Assert.That(mappedValues.Completed).IsEqualTo(1);
         await Assert.That(blended.SequenceEqual(ExpectedOneTwo)).IsTrue();
+    }
+
+    /// <summary>A bounded enumerable blend keeps only the allowed number of sources active and admits the rest in turn.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task EnumerableBlendWithAConcurrencyBoundAdmitsSourcesInTurn()
+    {
+        const int UnobservedValue = 7;
+        Signal<int> first = new();
+        Signal<int> second = new();
+        IEnumerable<IObservable<int>> sources = [first, second];
+        List<int> blended = [];
+        var completions = 0;
+
+        var bounded = sources.Blend(1);
+        using var subscription = bounded.Subscribe(blended.Add, static ex => throw ex, () => completions++);
+
+        // The bound is one, so the second source must not be subscribed while the first is still running.
+        second.OnNext(UnobservedValue);
+        first.OnNext(One);
+        first.OnCompleted();
+
+        // The first source completed, which frees the slot the second source was waiting for.
+        second.OnNext(Two);
+        second.OnCompleted();
+
+        await Assert.That(blended.SequenceEqual(ExpectedOneTwo)).IsTrue();
+        await Assert.That(completions).IsEqualTo(1);
+        _ = Assert.Throws<ArgumentNullException>(() => bounded.Subscribe((IObserver<int>)null!));
     }
 
     /// <summary>Verifies bounded blend drains enumerable sources and suppresses late terminals.</summary>

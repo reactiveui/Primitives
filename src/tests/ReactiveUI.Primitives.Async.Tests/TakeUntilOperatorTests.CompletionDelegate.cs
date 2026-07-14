@@ -13,6 +13,9 @@ public partial class TakeUntilOperatorTests
     /// <summary>String literal "subscribe failed" used by multiple tests.</summary>
     private const string SubscribeFailedMessage = "subscribe failed";
 
+    /// <summary>How long a test waits to prove that an ignored second stop notification never surfaces.</summary>
+    private static readonly TimeSpan SecondNotificationSettleWindow = TimeSpan.FromMilliseconds(250);
+
     /// <summary>Tests that CompletionSignalDelegate failure signal with SourceFailsWhenOtherFails=true completes with failure.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -530,5 +533,223 @@ public partial class TakeUntilOperatorTests
         await AsyncTestHelpers.WaitForConditionAsync(() => completionResult.HasValue, WaitTimeout);
         await Assert.That(values).IsCollectionEqualTo([Sentinel]);
         await Assert.That(completionResult).IsNotNull();
+    }
+
+    /// <summary>Verifies the <c>TakeUntil(other, options, cancellationToken)</c> overload wraps the
+    /// take-until sequence in the cancellation-linked stop signal when the token can be cancelled.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenTakeUntilOtherWithOptionsAndCancellableToken_ThenCancellationCompletesSequence()
+    {
+        using CancellationTokenSource cts = new();
+        var source = Signal.Create<int>();
+        var other = Signal.Create<string>();
+        List<int> values = [];
+        TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var sub = await source.Values
+            .TakeUntil(other.Values, new TakeUntilOptions { SourceFailsWhenOtherFails = true }, cts.Token)
+            .SubscribeAsync(
+                (x, _) =>
+                {
+                    values.Add(x);
+                    return default;
+                },
+                null,
+                result =>
+                {
+                    _ = completed.TrySetResult(result);
+                    return default;
+                });
+        await source.OnNextAsync(1, CancellationToken.None);
+        await cts.CancelAsync();
+        var completionResult = await completed.Task.WaitAsync(WaitTimeout);
+        await Assert.That(values).IsCollectionEqualTo([1]);
+        await Assert.That(completionResult.IsSuccess).IsTrue();
+    }
+
+    /// <summary>Verifies the <c>TakeUntil(other, options, cancellationToken)</c> overload returns the bare
+    /// take-until sequence when the token can never be cancelled, and that the options still apply.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenTakeUntilOtherWithOptionsAndUncancellableToken_ThenOtherFailureFailsSequence()
+    {
+        var source = Signal.Create<int>();
+        var other = Signal.Create<string>();
+        TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var sub = await source.Values
+            .TakeUntil(
+                other.Values,
+                new TakeUntilOptions { SourceFailsWhenOtherFails = true },
+                CancellationToken.None)
+            .SubscribeAsync(
+                static (_, _) => default,
+                null,
+                result =>
+                {
+                    _ = completed.TrySetResult(result);
+                    return default;
+                });
+        await source.OnNextAsync(1, CancellationToken.None);
+        await other.OnCompletedAsync(Result.Failure(new InvalidOperationException("other failed")));
+        var completionResult = await completed.Task.WaitAsync(WaitTimeout);
+        await Assert.That(completionResult.IsFailure).IsTrue();
+    }
+
+    /// <summary>Verifies the <c>TakeUntil(task, options, cancellationToken)</c> overload wraps the
+    /// take-until sequence in the cancellation-linked stop signal when the token can be cancelled.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenTaskStopSignalWithOptionsAndCancellableToken_ThenCancellationCompletesSequence()
+    {
+        using CancellationTokenSource cts = new();
+        TaskCompletionSource stopTask = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var source = Signal.Create<int>();
+        List<int> values = [];
+        TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var sub = await source.Values
+            .TakeUntil(stopTask.Task, new TakeUntilOptions { SourceFailsWhenOtherFails = true }, cts.Token)
+            .SubscribeAsync(
+                (x, _) =>
+                {
+                    values.Add(x);
+                    return default;
+                },
+                null,
+                result =>
+                {
+                    _ = completed.TrySetResult(result);
+                    return default;
+                });
+        await source.OnNextAsync(1, CancellationToken.None);
+        await cts.CancelAsync();
+        var completionResult = await completed.Task.WaitAsync(WaitTimeout);
+        await Assert.That(values).IsCollectionEqualTo([1]);
+        await Assert.That(completionResult.IsSuccess).IsTrue();
+    }
+
+    /// <summary>Verifies the <c>TakeUntil(task, options, cancellationToken)</c> overload returns the bare
+    /// take-until sequence when the token can never be cancelled, and that the options still apply.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenTaskStopSignalWithOptionsAndUncancellableToken_ThenTaskFailureFailsSequence()
+    {
+        TaskCompletionSource stopTask = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var source = Signal.Create<int>();
+        TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var sub = await source.Values
+            .TakeUntil(
+                stopTask.Task,
+                new TakeUntilOptions { SourceFailsWhenOtherFails = true },
+                CancellationToken.None)
+            .SubscribeAsync(
+                static (_, _) => default,
+                null,
+                result =>
+                {
+                    _ = completed.TrySetResult(result);
+                    return default;
+                });
+        await source.OnNextAsync(1, CancellationToken.None);
+        stopTask.SetException(new InvalidOperationException("task failed"));
+        var completionResult = await completed.Task.WaitAsync(WaitTimeout);
+        await Assert.That(completionResult.IsFailure).IsTrue();
+    }
+
+    /// <summary>
+    /// Verifies that a stop delegate which notifies before it returns still has its registration released.
+    /// The notification runs before <c>AwaitStopThenComplete</c> has stored the handle, so the completion path
+    /// finds nothing to dispose; the post-store release is what keeps the stop source from staying attached.
+    /// </summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenTakeUntilCompletionDelegateNotifiesBeforeReturning_ThenStopRegistrationIsReleased()
+    {
+        DisposeCountingAsyncDisposable registration = new();
+        var source = Signal.Create<int>();
+        TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var sub = await source.Values.TakeUntil((CompletionSignalDelegate)StopSignal).SubscribeAsync(
+            static (_, _) => default,
+            null,
+            result =>
+            {
+                _ = completed.TrySetResult(result);
+                return default;
+            });
+
+        var completionResult = await completed.Task.WaitAsync(WaitTimeout);
+        var released = await AsyncTestHelpers.WaitForConditionAsync(
+            () => registration.DisposeCount == 1,
+            WaitTimeout);
+
+        await Assert.That(completionResult.IsSuccess).IsTrue();
+        await Assert.That(released).IsTrue();
+        await Assert.That(registration.DisposeCount).IsEqualTo(1);
+
+        IAsyncDisposable StopSignal(Action<Result> notify)
+        {
+            notify(Result.Success);
+            return registration;
+        }
+    }
+
+    /// <summary>Verifies that a stop delegate notifying a second time is ignored: the sequence keeps the
+    /// first outcome and the later failure is never relayed downstream.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenTakeUntilCompletionDelegateNotifiesTwice_ThenSecondNotificationIgnored()
+    {
+        var source = Signal.Create<int>();
+        Action<Result>? notifyStop = null;
+        List<Exception> errors = [];
+        List<Result> completions = [];
+        TaskCompletionSource firstCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        CompletionSignalDelegate stopSignal = notify =>
+        {
+            notifyStop = notify;
+            return DisposableAsync.Empty;
+        };
+        await using var sub = await source.Values.TakeUntil(stopSignal).SubscribeAsync(
+            static (_, _) => default,
+            (ex, _) =>
+            {
+                errors.Add(ex);
+                return default;
+            },
+            result =>
+            {
+                completions.Add(result);
+                IgnoredResult.Of(firstCompletion.TrySetResult());
+                return default;
+            });
+
+        notifyStop!(Result.Success);
+        await firstCompletion.Task.WaitAsync(WaitTimeout);
+
+        notifyStop!(Result.Failure(new InvalidOperationException("second stop")));
+        var leaked = await AsyncTestHelpers.WaitForConditionAsync(
+            () => errors.Count > 0 || completions.Count > 1,
+            SecondNotificationSettleWindow);
+
+        await Assert.That(leaked).IsFalse();
+        await Assert.That(completions).Count().IsEqualTo(1);
+        await Assert.That(completions[0].IsSuccess).IsTrue();
+        await Assert.That(errors).IsEmpty();
+    }
+
+    /// <summary>An <see cref = "IAsyncDisposable"/> that records how many times it has been disposed.</summary>
+    private sealed class DisposeCountingAsyncDisposable : IAsyncDisposable
+    {
+        /// <summary>The number of times <see cref = "DisposeAsync"/> has been called.</summary>
+        private int _disposeCount;
+
+        /// <summary>Gets the number of times <see cref = "DisposeAsync"/> has been called.</summary>
+        internal int DisposeCount => Volatile.Read(ref _disposeCount);
+
+        /// <inheritdoc/>
+        public ValueTask DisposeAsync()
+        {
+            _ = Interlocked.Increment(ref _disposeCount);
+            return default;
+        }
     }
 }

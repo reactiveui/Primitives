@@ -139,6 +139,36 @@ public class ParityHelpersOperatorFusionsTests
         }
     }
 
+    /// <summary>Verifies that the time-provider overload of <c>ThrottleDistinct</c> keeps the
+    /// upstream duplicate suppression when an explicit provider is supplied.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenThrottleDistinctWithTimeProviderAndConsecutiveDuplicates_ThenSuppressesUpstream()
+    {
+        var result = await ThrottleDuplicateInputs.ToAsyncSignal()
+            .ThrottleDistinct(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds), TimeProvider.System)
+            .ToListAsync();
+
+        await Assert.That(result.Count).IsLessThanOrEqualTo(1);
+    }
+
+    /// <summary>Verifies that the time-provider overload of <c>ThrottleDistinct</c> falls back to the
+    /// system provider when the caller passes <see langword="null"/>, and still throttles.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenThrottleDistinctWithNullTimeProvider_ThenStillThrottles()
+    {
+        var result = await ThrottleRapidInputs.ToAsyncSignal()
+            .ThrottleDistinct(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds), null)
+            .ToListAsync();
+
+        await Assert.That(result.Count).IsLessThanOrEqualTo(ThrottleRapidInputs.Length);
+        for (var i = 1; i < result.Count; i++)
+        {
+            await Assert.That(result[i]).IsNotEqualTo(result[i - 1]);
+        }
+    }
+
     /// <summary>Verifies that <c>DebounceUntil</c> with an always-true condition bypasses the debounce window and emits inline.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -146,6 +176,32 @@ public class ParityHelpersOperatorFusionsTests
     {
         var result = await DebounceInputs.ToAsyncSignal()
             .DebounceUntil(DebounceWindow, static _ => true)
+            .ToListAsync();
+
+        await Assert.That(result).IsCollectionEqualTo(DebounceInputs);
+    }
+
+    /// <summary>Verifies that the time-provider overload of <c>DebounceUntil</c> keeps the
+    /// condition bypass when an explicit provider is supplied.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenDebounceUntilWithTimeProviderAndConditionAlwaysTrue_ThenEmitsImmediately()
+    {
+        var result = await DebounceInputs.ToAsyncSignal()
+            .DebounceUntil(DebounceWindow, static _ => true, TimeProvider.System)
+            .ToListAsync();
+
+        await Assert.That(result).IsCollectionEqualTo(DebounceInputs);
+    }
+
+    /// <summary>Verifies that the time-provider overload of <c>DebounceUntil</c> falls back to the
+    /// system provider when the caller passes <see langword="null"/>.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenDebounceUntilWithNullTimeProvider_ThenEmitsImmediatelyOnCondition()
+    {
+        var result = await DebounceInputs.ToAsyncSignal()
+            .DebounceUntil(DebounceWindow, static _ => true, null)
             .ToListAsync();
 
         await Assert.That(result).IsCollectionEqualTo(DebounceInputs);
