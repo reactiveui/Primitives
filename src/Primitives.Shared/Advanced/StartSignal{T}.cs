@@ -35,39 +35,10 @@ public sealed class StartSignal<T> : IRequireCurrentThread<T>
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        if (Scheduler == Sequencer.Immediate)
-        {
-            Run(observer);
-            return EmptyDisposable.Instance;
-        }
-
-        if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
-        {
-            return Scheduler.Schedule(
-                (self: this, observer),
-                static (_, s) =>
-                {
-                    s.self.Run(s.observer);
-                    return EmptyDisposable.Instance;
-                });
-        }
-
-        SingleDisposable subscription = new();
-        _ = Sequencer.CurrentThread.Schedule(
-            (self: this, subscription, observer),
-            static (_, s) =>
-            {
-                s.subscription.Create(
-                    s.self.Scheduler.Schedule(
-                        (s.self, s.observer),
-                        static (_, inner) =>
-                        {
-                            inner.self.Run(inner.observer);
-                            return EmptyDisposable.Instance;
-                        }));
-                return EmptyDisposable.Instance;
-            });
-        return subscription;
+        return SubscriptionScheduling.RunOn(
+            Scheduler,
+            (self: this, observer),
+            static s => s.self.Run(s.observer));
     }
 
     /// <summary>Runs the function and forwards its terminal notification.</summary>

@@ -34,20 +34,9 @@ internal sealed class RecoverSignal<T, TException>(IObservable<T> source, Func<T
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        if (!CurrentThreadSequencer.IsScheduleRequired)
-        {
-            return Run(observer);
-        }
-
-        SingleDisposable subscription = new();
-        _ = Sequencer.CurrentThread.Schedule(
-            (self: this, subscription, observer),
-            static (_, s) =>
-            {
-                s.subscription.Create(s.self.Run(s.observer));
-                return EmptyDisposable.Instance;
-            });
-        return subscription;
+        return SubscriptionScheduling.OnCurrentThread(
+            (self: this, observer),
+            static s => s.self.Run(s.observer));
     }
 
     /// <summary>Builds the sink and subscribes it to the source.</summary>
