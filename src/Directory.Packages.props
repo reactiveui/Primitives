@@ -43,12 +43,12 @@
   <!-- .NET Framework legs -->
   <ItemGroup>
     <PackageVersion Include="System.ValueTuple" Version="4.6.2" />
-    <PackageVersion Include="System.Threading.Channels" Version="10.0.9" />
+    <PackageVersion Include="System.Threading.Channels" Version="10.0.10" />
     <PackageVersion Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
     <PackageVersion Include="System.ComponentModel.Annotations" Version="5.0.0" />
     <PackageVersion Include="System.Buffers" Version="4.6.1" />
     <PackageVersion Include="System.Memory" Version="4.6.3" />
-    <PackageVersion Include="System.Collections.Immutable" Version="10.0.9" />
+    <PackageVersion Include="System.Collections.Immutable" Version="10.0.10" />
   </ItemGroup>
   <!-- Test infrastructure -->
   <ItemGroup>
