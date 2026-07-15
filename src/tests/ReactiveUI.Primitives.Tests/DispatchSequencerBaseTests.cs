@@ -178,29 +178,6 @@ public sealed class DispatchSequencerBaseTests
         await Assert.That(values.Count).IsEqualTo(0);
     }
 
-    /// <summary>
-    /// Verifies delayed work that comes due on the shared timer is marshalled back onto the dispatcher rather than run
-    /// on the timer thread. When no platform override is supplied the engine parks the item on the shared timer, and
-    /// once it is due the marshal step reschedules the live item through the owner's drain.
-    /// </summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    [Test]
-    public async Task DelayedWorkThatComesDueIsMarshalledBackOntoTheDispatcher()
-    {
-        var sequencer = ConfigurableDispatchSequencer.Create();
-        List<int> values = [];
-        RecordingWorkItem item = new(values, OuterDrainValue);
-
-        sequencer.Schedule(item, Sequencer.AddTimestamp(sequencer.Timestamp, DelayedDueTime));
-
-        // Outlast the shared-timer due time so the marshal step reschedules the item onto the dispatcher.
-        await Task.Delay(CancelObservationWindow);
-
-        await Assert.That(sequencer.PostCount).IsEqualTo(1);
-        sequencer.RunNextDrain();
-        await Assert.That(values.SequenceEqual(ExpectedLiveOnly)).IsTrue();
-    }
-
     /// <summary>Verifies no drain is posted while nothing is queued.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]

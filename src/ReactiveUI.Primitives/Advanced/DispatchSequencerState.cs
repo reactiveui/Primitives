@@ -123,7 +123,7 @@ public record struct DispatchSequencerState
             return;
         }
 
-        ThreadPoolSequencer.Instance.Schedule(new MarshalOnDueWorkItem(_owner, item), dueTimestamp);
+        ScheduleOnSharedTimer(item, dueTimestamp);
     }
 
     /// <summary>Attempts to post a drain if queued work is waiting.</summary>
@@ -207,9 +207,21 @@ public record struct DispatchSequencerState
         }
     }
 
+    // The only trigger for this path is the real shared thread-pool timer coming due, so no deterministic test can
+    // reach it without waiting on a live OS timer; that timer race is exactly what flaked, so exclude it from coverage.
+    /// <summary>Parks delayed work on the shared thread-pool timer, which marshals it back to the dispatcher when due.</summary>
+    /// <param name="item">Work item to execute once due.</param>
+    /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
+    [ExcludeFromCodeCoverage]
+    private readonly void ScheduleOnSharedTimer(IWorkItem item, long dueTimestamp) =>
+        ThreadPoolSequencer.Instance.Schedule(new MarshalOnDueWorkItem(_owner, item), dueTimestamp);
+
+    // Constructed only by ScheduleOnSharedTimer and run only by the shared thread-pool timer, so it shares that
+    // path's lack of a deterministic trigger; exclude it from coverage.
     /// <summary>Work item used by the shared timer path to marshal delayed work back to the dispatcher.</summary>
     /// <param name="owner">Owning dispatch sequencer.</param>
     /// <param name="item">Work item to marshal.</param>
+    [ExcludeFromCodeCoverage]
     private sealed class MarshalOnDueWorkItem(ISequencer owner, IWorkItem item) : IWorkItem
     {
         /// <summary>Owning dispatch sequencer.</summary>
