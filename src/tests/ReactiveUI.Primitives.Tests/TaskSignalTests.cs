@@ -48,4 +48,21 @@ public class TaskSignalTests
         await Assert.That(taskSignal.IsDisposed).IsTrue();
         await Assert.That(taskSignal.IsCancellationRequested).IsTrue();
     }
+
+    /// <summary>Disposal tolerates a token source that the completion path has already disposed.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task TaskSignalDisposeToleratesAnAlreadyDisposedTokenSource()
+    {
+        CancellationTokenSource cts = new();
+        var taskSignal = TaskSignal<int>.Create(static _ => Signal.Silent<int>(), Sequencer.CurrentThread, cts);
+
+        // The task-completion path can release the token source before the outer subscription is disposed, so
+        // cancelling it during disposal throws ObjectDisposedException, which disposal has to swallow.
+        cts.Dispose();
+
+        taskSignal.Dispose();
+
+        await Assert.That(taskSignal.IsDisposed).IsTrue();
+    }
 }

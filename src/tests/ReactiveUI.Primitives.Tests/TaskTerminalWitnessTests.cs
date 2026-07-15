@@ -144,4 +144,41 @@ public sealed class TaskTerminalWitnessTests
         await Assert.That(witness.Task.IsCompleted).IsFalse();
         await Assert.That(upstream.DisposeCount).IsEqualTo(1);
     }
+
+    /// <summary>The any-witness keeps its result when a cancellation is signalled after it has already stopped.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task AnyWitnessIgnoresCancellationSignalledAfterItsResult()
+    {
+        using CancellationTokenSource cts = new();
+        await cts.CancelAsync();
+        RecordingDisposable upstream = new();
+        TaskAnyWitness<int> witness = new(cts.Token);
+        witness.SetSubscription(upstream);
+
+        witness.OnNext(First);
+        witness.RegisterCancellation();
+
+        await Assert.That(await witness.Task).IsTrue();
+        await Assert.That(upstream.DisposeCount).IsEqualTo(1);
+    }
+
+    /// <summary>The count witness keeps its result when a cancellation is signalled after it has already stopped.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task CountWitnessIgnoresCancellationSignalledAfterItStopped()
+    {
+        using CancellationTokenSource cts = new();
+        await cts.CancelAsync();
+        RecordingDisposable upstream = new();
+        TaskCountWitness<int> witness = new(cts.Token);
+        witness.SetSubscription(upstream);
+
+        witness.OnNext(First);
+        witness.OnCompleted();
+        witness.RegisterCancellation();
+
+        await Assert.That(await witness.Task).IsEqualTo(1);
+        await Assert.That(upstream.DisposeCount).IsEqualTo(1);
+    }
 }
