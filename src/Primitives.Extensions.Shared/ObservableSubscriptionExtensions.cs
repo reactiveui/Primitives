@@ -345,6 +345,13 @@ public static class ObservableSubscriptionExtensions
         public void OnError(Exception error) => done.Set();
 
         /// <inheritdoc/>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Design",
+            "SST2318:Members should not have identical bodies",
+            Justification =
+                "This blocking witness treats completion and error identically: either terminal signal releases the "
+                + "gate. OnError and OnCompleted are distinct IObserver<T> channels that share this by design, not a "
+                + "copy that was meant to differ.")]
         public void OnCompleted() => done.Set();
     }
 

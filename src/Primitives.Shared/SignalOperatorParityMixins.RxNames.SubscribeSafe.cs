@@ -157,6 +157,13 @@ public static partial class LinqExtensions
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
     [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "SST2318:Members should not have identical bodies",
+        Justification =
+            "Reference-type and value-type constraint overloads (where T : class / where T : struct) of the same "
+            + "operator. The bodies are necessarily identical, and the two cannot forward to one another because their "
+            + "generic constraints differ; both must exist so nullable T? resolves for either kind of T.")]
     public static IDisposable SubscribeSafe<T>(
         IObservable<T?> source,
         Action<Exception> onError,
@@ -196,6 +203,13 @@ public static partial class LinqExtensions
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
     [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "SST2318:Members should not have identical bodies",
+        Justification =
+            "Reference-type and value-type constraint overloads (where T : class / where T : struct) of the same "
+            + "operator. The bodies are necessarily identical, and the two cannot forward to one another because their "
+            + "generic constraints differ; both must exist so nullable T? resolves for either kind of T.")]
     public static IDisposable SubscribeSafe<T>(
         IObservable<T?> source,
         Action<Exception> onError,

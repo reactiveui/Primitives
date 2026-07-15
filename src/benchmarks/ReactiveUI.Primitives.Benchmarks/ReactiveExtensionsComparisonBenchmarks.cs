@@ -160,6 +160,13 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The benchmark checksum.</returns>
     [Benchmark]
     [ArgumentsSource(nameof(ReactiveUIExtensionsScenarios))]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "SST2318:Members should not have identical bodies",
+        Justification =
+            "Distinct BenchmarkDotNet benchmarks that measure the same operation across libraries. The method body is "
+            + "identical by design; the library being compared is supplied by each method's own [ArgumentsSource]. They "
+            + "must stay separate so BenchmarkDotNet reports one row per library.")]
     public int ReactiveUIExtensions(ExtensionScenario scenario) => scenario.Run();
 
     /// <summary>Runs a System.Reactive comparison scenario.</summary>
@@ -167,6 +174,13 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The benchmark checksum.</returns>
     [Benchmark]
     [ArgumentsSource(nameof(SystemReactiveScenarios))]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "SST2318:Members should not have identical bodies",
+        Justification =
+            "Distinct BenchmarkDotNet benchmarks that measure the same operation across libraries. The method body is "
+            + "identical by design; the library being compared is supplied by each method's own [ArgumentsSource]. They "
+            + "must stay separate so BenchmarkDotNet reports one row per library.")]
     public int SystemReactive(ExtensionScenario scenario) => scenario.Run();
 
     /// <summary>Runs an R3 comparison scenario.</summary>
@@ -174,6 +188,13 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The benchmark checksum.</returns>
     [Benchmark]
     [ArgumentsSource(nameof(R3Scenarios))]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "SST2318:Members should not have identical bodies",
+        Justification =
+            "Distinct BenchmarkDotNet benchmarks that measure the same operation across libraries. The method body is "
+            + "identical by design; the library being compared is supplied by each method's own [ArgumentsSource]. They "
+            + "must stay separate so BenchmarkDotNet reports one row per library.")]
     public int R3Library(ExtensionScenario scenario) => scenario.Run();
 
     /// <summary>Creates the full paired library scenario list.</summary>

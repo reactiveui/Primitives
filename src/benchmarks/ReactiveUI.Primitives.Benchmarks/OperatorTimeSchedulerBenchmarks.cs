@@ -358,6 +358,13 @@ public class OperatorTimeSchedulerBenchmarks
         /// <summary>Invokes the callback synchronously.</summary>
         /// <param name="d">The callback to invoke.</param>
         /// <param name="state">The state passed to the callback.</param>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Design",
+            "SST2318:Members should not have identical bodies",
+            Justification =
+                "Post and Send are distinct SynchronizationContext overrides that this immediate context deliberately "
+                + "implements the same way: run the callback inline. They are separate base-class overrides and cannot "
+                + "be collapsed.")]
         public override void Send(SendOrPostCallback d, object? state) => d(state);
 
         /// <summary>Releases the resources used by the synchronization context.</summary>

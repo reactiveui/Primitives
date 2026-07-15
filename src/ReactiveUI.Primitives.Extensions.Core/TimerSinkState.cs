@@ -15,6 +15,13 @@ namespace ReactiveUI.Primitives.Extensions;
 /// </summary>
 /// <typeparam name="T">The element type the downstream observer receives.</typeparam>
 /// <param name="downstream">The downstream observer terminal callbacks fan out to.</param>
+[System.Diagnostics.CodeAnalysis.SuppressMessage(
+    "Design",
+    "SST2315:A type that owns a disposable should be disposable",
+    Justification =
+        "The timer's lifetime is owned by the parent operator sink, which releases it under its own gate through "
+        + "HandleErrorLocked/HandleCompletedLocked/HandleDisposeLocked. This state object is deliberately not independently "
+        + "IDisposable: adding IDisposable would expose an ungated disposal path that races the sink's gate.")]
 public sealed class TimerSinkState<T>(IObserver<T> downstream)
 {
     /// <summary>Gets the timer slot used by the operator's OnNext logic to schedule deferred emissions.</summary>

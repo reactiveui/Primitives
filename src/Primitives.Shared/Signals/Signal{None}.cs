@@ -29,6 +29,13 @@ public static partial class Signal
     /// <param name="scheduler">The scheduler.</param>
     /// <param name="witness">The witness.</param>
     /// <returns>An Signals.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "SST2318:Members should not have identical bodies",
+        Justification =
+            "The witness parameter exists only so callers can let T be inferred; it is unused, so the body "
+            + "intentionally mirrors the scheduler None overload. They are distinct Rx-parity overloads that build "
+            + "the signal directly rather than forwarding.")]
     public static IObservable<T> None<T>(ISequencer scheduler, T witness) => scheduler == Sequencer.Immediate
         ? ImmutableEmptySignal<T>.Instance
         : new EmptySignal<T>(scheduler);

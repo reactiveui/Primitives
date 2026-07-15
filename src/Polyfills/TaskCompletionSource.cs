@@ -43,6 +43,13 @@ internal sealed class TaskCompletionSource
 
     /// <summary>Attempts to transition the underlying task to the <see cref="TaskStatus.Canceled"/> state.</summary>
     /// <returns><see langword="true"/> if the operation was successful; otherwise <see langword="false"/>.</returns>
+    [SuppressMessage(
+        "Design",
+        "SST2318:Members should not have identical bodies",
+        Justification =
+            "Distinct BCL-parity surface members with different contracts and return types: SetCanceled is void and "
+            + "TrySetCanceled returns bool. They share the same backing call here but must track the framework surface "
+            + "independently, so they are deliberately kept as separate members rather than one forwarding to the other.")]
     public bool TrySetCanceled() => _inner.TrySetCanceled();
 
     /// <summary>Attempts to transition the underlying task to the <see cref="TaskStatus.Canceled"/> state for the specified token.</summary>

@@ -523,6 +523,12 @@ public partial class RxNamesTests
     /// The sources of the widest generated CombineLatest overload, named by argument position so every arity can
     /// be built without indexing into an array.
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "SST2315:A type that owns a disposable should be disposable",
+        Justification =
+            "Test helper that holds the source subjects for a CombineLatest arity test. The subjects live for the "
+            + "duration of the test and the test process owns them; this helper is deliberately not IDisposable.")]
     private sealed class CombineLatestSources
     {
         /// <summary>Initializes a new instance of the <see cref="CombineLatestSources"/> class.</summary>

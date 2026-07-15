@@ -82,7 +82,7 @@ public readonly record struct Optional<T>
     /// <summary>Gets the optional from a value.</summary>
     /// <param name="value">The value to get the optional for.</param>
     /// <returns>The optional.</returns>
-    public static Optional<T> ToOptional([AllowNull] T value) => new(value);
+    public static Optional<T> ToOptional([AllowNull] T value) => Create(value);
 
     /// <inheritdoc />
     public override string? ToString() => _value is null || !HasValue ? "<None>" : _value.ToString();

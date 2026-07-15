@@ -569,8 +569,8 @@ public class TransformationOperatorTests
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage(
-        "Major Code Smell",
-        "S112",
+        "Correctness",
+        "SST2409:Do not throw a general exception type",
         Justification = "Deliberately throws a generic exception type to verify operator error-handling pathways.")]
     [SuppressMessage(
         "Microsoft.Design",
@@ -797,8 +797,8 @@ public class TransformationOperatorTests
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage(
-        "Major Code Smell",
-        "S112",
+        "Correctness",
+        "SST2409:Do not throw a general exception type",
         Justification = "Deliberately throws a generic exception type to verify operator error-handling pathways.")]
     [SuppressMessage(
         "Microsoft.Design",
@@ -987,8 +987,8 @@ public class TransformationOperatorTests
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     [SuppressMessage(
-        "Major Code Smell",
-        "S112",
+        "Correctness",
+        "SST2409:Do not throw a general exception type",
         Justification = "Deliberately throws a generic exception type to verify operator error-handling pathways.")]
     [SuppressMessage(
         "Microsoft.Design",

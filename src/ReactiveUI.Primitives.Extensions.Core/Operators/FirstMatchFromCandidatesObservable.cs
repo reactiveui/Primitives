@@ -262,6 +262,14 @@ public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
         }
 
         /// <inheritdoc/>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Design",
+            "SST2318:Members should not have identical bodies",
+            Justification =
+                "A candidate that completes and a candidate that errors both mean the same thing to this operator: that "
+                + "candidate produced no match, so advance to the next one. OnError and OnCompleted are distinct "
+                + "IObserver<T> channels that deliberately share this advance logic; collapsing them would lose the "
+                + "ability to give candidate errors their own policy later.")]
         public void OnCompleted()
         {
             if (_done)

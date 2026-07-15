@@ -62,6 +62,13 @@ internal static class ArgumentOutOfRangeExceptionHelper
     /// <param name="value">The value to validate.</param>
     /// <param name="other">The lower bound.</param>
     /// <param name="paramName">The parameter name.</param>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "SST2318:Members should not have identical bodies",
+        Justification =
+            "A type-specialized polyfill overload. The bounds-check body is identical to the int overload only "
+            + "because the guard shape is the same; the two operate on different value types (int vs TimeSpan) and "
+            + "cannot forward to one another. This mirrors the BCL's per-type ThrowIfLessThan overloads.")]
     public static void ThrowIfLessThan(
         TimeSpan value,
         TimeSpan other,

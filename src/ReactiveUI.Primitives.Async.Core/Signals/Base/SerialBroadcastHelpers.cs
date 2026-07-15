@@ -113,10 +113,6 @@ internal static class SerialBroadcastHelpers
     /// <param name="pending">The synchronously completed task.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [SuppressMessage(
-        "Critical Code Smell",
-        "S5034:\"ValueTask\" should be consumed correctly",
-        Justification = "Callers guard with IsCompletedSuccessfully before consuming the ValueTask.")]
-    [SuppressMessage(
         "Concurrency",
         "PSH1315:A blocking wait on an awaitable that may not be done",
         Justification =

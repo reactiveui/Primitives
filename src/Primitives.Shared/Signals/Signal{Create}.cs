@@ -48,6 +48,13 @@ public static partial class Signal
     /// <param name="subscribe">The asynchronous subscription function.</param>
     /// <returns>An observable sequence backed by the asynchronous subscription.</returns>
     /// <exception cref="ArgumentExceptionHelper"><paramref name="subscribe"/> is <see langword="null"/>.</exception>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "SST2318:Members should not have identical bodies",
+        Justification =
+            "A deliberate overload accepting a cancellable subscribe delegate. The body matches the non-cancellable "
+            + "overload because AsyncCreateSignal<T> exposes a constructor for each delegate shape; the two take "
+            + "different delegate types and cannot forward to one another.")]
     public static IObservable<T> Create<T>(Func<IObserver<T>, CancellationToken, Task<IDisposable>> subscribe)
     {
         ArgumentExceptionHelper.ThrowIfNull(subscribe);
@@ -179,6 +186,13 @@ public static partial class Signal
     /// <param name="observableFactory">The asynchronous factory that creates the source signal for a subscription.</param>
     /// <returns>A signal that subscribes to the factory-produced source for each observer.</returns>
     /// <exception cref="ArgumentExceptionHelper"><paramref name="observableFactory"/> is <see langword="null"/>.</exception>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "SST2318:Members should not have identical bodies",
+        Justification =
+            "A deliberate overload accepting a cancellable factory delegate. The body matches the non-cancellable "
+            + "overload because AsyncDeferSignal<T> exposes a constructor for each delegate shape; the two take "
+            + "different delegate types and cannot forward to one another.")]
     public static IObservable<T> Defer<T>(Func<CancellationToken, Task<IObservable<T>>> observableFactory)
     {
         ArgumentExceptionHelper.ThrowIfNull(observableFactory);

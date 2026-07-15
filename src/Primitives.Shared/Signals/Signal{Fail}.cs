@@ -42,6 +42,13 @@ public static partial class Signal
     /// <param name="error">The error.</param>
     /// <param name="witness">The witness.</param>
     /// <returns>An Signals.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "SST2318:Members should not have identical bodies",
+        Justification =
+            "The witness parameter exists only so callers can let T be inferred; it is unused, so the body "
+            + "intentionally mirrors the witness-less Fail overload. They are distinct Rx-parity overloads that build "
+            + "the signal directly rather than forwarding.")]
     public static IObservable<T> Fail<T>(Exception error, T witness) =>
         new ImmediateThrowSignal<T>(error);
 
@@ -51,6 +58,13 @@ public static partial class Signal
     /// <param name="scheduler">The scheduler.</param>
     /// <param name="witness">The witness.</param>
     /// <returns>An Signals.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "SST2318:Members should not have identical bodies",
+        Justification =
+            "The witness parameter exists only so callers can let T be inferred; it is unused, so the body "
+            + "intentionally mirrors the scheduler Fail overload. They are distinct Rx-parity overloads that build "
+            + "the signal directly rather than forwarding.")]
     public static IObservable<T> Fail<T>(Exception error, ISequencer scheduler, T witness) =>
         scheduler == Sequencer.Immediate
             ? new ImmediateThrowSignal<T>(error)

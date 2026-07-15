@@ -32,6 +32,13 @@ internal sealed class ManualSequencer : ISequencer
     /// <summary>Queues a work item, ignoring its due time; the test decides when it runs.</summary>
     /// <param name="item">The work item to queue.</param>
     /// <param name="dueTimestamp">The due time, which this sequencer does not honor.</param>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "SST2318:Members should not have identical bodies",
+        Justification =
+            "The relative and absolute Schedule overloads of this test-double sequencer intentionally behave the same "
+            + "way; both are required by the ISequencer contract and, as distinct interface overloads, cannot forward "
+            + "to one another.")]
     public void Schedule(IWorkItem item, long dueTimestamp) => _pending.Add(item);
 
     /// <summary>Moves the sequencer's clock forward without running any work.</summary>

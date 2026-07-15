@@ -225,10 +225,24 @@ public sealed class ExpireCoordinatorTests
         public void Schedule(IWorkItem item) => Pending++;
 
         /// <inheritdoc/>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Design",
+            "SST2318:Members should not have identical bodies",
+            Justification =
+                "The relative and absolute Schedule overloads of this test-double sequencer intentionally behave the "
+                + "same way; both are required by the ISequencer contract and, as distinct interface overloads, cannot "
+                + "forward to one another.")]
         public void Schedule(IWorkItem item, long dueTimestamp) => Pending++;
     }
 
     /// <summary>Observer that blocks source value handling so timeout serialization can be observed.</summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "SST2315:A type that owns a disposable should be disposable",
+        Justification =
+            "Test double that owns a ManualResetEventSlim used to gate OnNext so the test can observe timeout "
+            + "serialization. Its lifetime is the test's; the test process owns and releases it, so it is deliberately "
+            + "not IDisposable.")]
     private sealed class BlockingObserver : IObserver<int>
     {
         /// <summary>Gets the task completed when <see cref="OnNext"/> is entered.</summary>

@@ -120,6 +120,13 @@ public class SignalCreateTests
 
     /// <summary>Creates the with disposable exception.</summary>
     [Test]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "SST2318:Members should not have identical bodies",
+        Justification =
+            "A separate named regression test covering the disposable-returning Create overload's subscribe-time throw. "
+            + "It shares its assertion shape with Create_Exception but is kept as its own [Test] so the two entry points "
+            + "have independent, named coverage.")]
     public void CreateWithDisposable_Exception() => Assert.Throws<InvalidOperationException>(static () => Signal.Create(
             new Func<IObserver<int>, IDisposable>(static _ => throw new InvalidOperationException()))
         .Subscribe());

@@ -45,6 +45,12 @@ public static partial class SignalAsync
     /// the resource is disposed before the exception is propagated. This method is useful for managing resources that
     /// must be disposed when no longer needed, such as streams or database connections, in conjunction with
     /// asynchronous observable sequences.</remarks>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "SST2318:Members should not have identical bodies",
+        Justification =
+            "Using is the System.Reactive name for Use. Both operators intentionally build the same signal directly "
+            + "rather than one forwarding to the other, so the Rx-named alias costs nothing at the call site.")]
     public static IObservableAsync<T> Using<T, TResource>(
         Func<CancellationToken, ValueTask<TResource>> resourceFactory,
         Func<TResource, IObservableAsync<T>> signalFactory)

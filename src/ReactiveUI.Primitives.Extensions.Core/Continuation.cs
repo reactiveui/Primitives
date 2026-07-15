@@ -84,6 +84,12 @@ public class Continuation : IDisposable
 
     /// <summary>Releases unmanaged and - optionally - managed resources.</summary>
     /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Concurrency",
+        "SST1905:Do not use async void",
+        Justification =
+            "This is the Dispose(bool) disposal-pattern overload, whose signature is fixed to return void; it cannot return "
+            + "Task. The await is best-effort teardown of the phase barrier during disposal, with no caller positioned to observe it.")]
     protected virtual async void Dispose(bool disposing)
     {
         if (_disposedValue)

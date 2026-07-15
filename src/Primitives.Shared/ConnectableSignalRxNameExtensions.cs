@@ -49,8 +49,8 @@ public static class ConnectableSignalRxNameExtensions
         /// <summary>Shares source values through a live signal hub.</summary>
         /// <returns>A connectable live signal.</returns>
         [SuppressMessage(
-            "Major Code Smell",
-            "S4144:Methods should not have identical implementations",
+            "Design",
+            "SST2318:Members should not have identical bodies",
             Justification = "Share and Publish are the same operator under two names callers expect; forwarding one to the other would only add a hop.")]
         public ConnectableSignal<T> Share()
         {
