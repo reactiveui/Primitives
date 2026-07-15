@@ -22,6 +22,14 @@ public sealed class WasmSequencerTests
     /// <summary>How long a disposed sequencer is watched to prove it never ran the work it rejected or released.</summary>
     private static readonly TimeSpan PostDisposeObservationWindow = TimeSpan.FromMilliseconds(200);
 
+    /// <summary>
+    /// How long to wait for the marshal step to release a delayed item once it comes due. The release runs on the
+    /// shared timer's pool thread, so on a saturated runner it can fire long after the item is due; a real failure
+    /// to release the item never signals, so this window only has to outlast a slow runner and costs nothing when
+    /// the item is released promptly.
+    /// </summary>
+    private static readonly TimeSpan ReleaseTimeout = TimeSpan.FromSeconds(30);
+
     /// <summary>Verifies the shared instance is a singleton.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
@@ -205,14 +213,18 @@ public sealed class WasmSequencerTests
     {
         WasmSequencer sequencer = new();
         var ran = 0;
-        CancellableWorkItem delayed = new(() => Interlocked.Increment(ref ran));
+        using ManualResetEventSlim released = new();
+        CancellableWorkItem delayed = new(() => Interlocked.Increment(ref ran), released.Set);
 
         sequencer.Schedule(delayed, Sequencer.AddTimestamp(sequencer.Timestamp, ScheduleDelay));
         sequencer.Dispose();
 
-        // Outlast the due time: the marshal step must observe the disposal and hand the item back to its owner.
-        await Task.Delay(ScheduleDelay + PostDisposeObservationWindow);
-
+        // The marshal step disposes the item on the shared timer's pool thread once it comes due. Wait on the
+        // actual release signal rather than sleeping a fixed window: on a saturated runner the pool-driven marshal
+        // step can fire well after any fixed delay, so a fixed sleep would report the item as never released even
+        // though it was. An event wait is an OS-level wait no pool pressure can starve, and a genuine failure to
+        // release the item never signals, so the generous window still fails.
+        await Assert.That(released.Wait(ReleaseTimeout)).IsTrue();
         await Assert.That(delayed.IsDisposed).IsTrue();
         await Assert.That(Volatile.Read(ref ran)).IsEqualTo(0);
     }
@@ -277,20 +289,25 @@ public sealed class WasmSequencerTests
     }
 
     /// <summary>Cancellable work item that reports disposal to the sequencer.</summary>
-    private sealed class CancellableWorkItem : IWorkItem, IsDisposed
+    /// <param name="action">The action to run on execution.</param>
+    /// <param name="onDisposed">An optional callback invoked the instant the item is disposed.</param>
+    private sealed class CancellableWorkItem(Action action, Action? onDisposed = null) : IWorkItem, IsDisposed
     {
         /// <summary>The action to run on execution.</summary>
-        private readonly Action _action;
+        private readonly Action _action = action;
 
-        /// <summary>Initializes a new instance of the <see cref="CancellableWorkItem"/> class.</summary>
-        /// <param name="action">The action to run on execution.</param>
-        public CancellableWorkItem(Action action) => _action = action;
+        /// <summary>Invoked the instant the item is disposed, so a test can wait on the real release.</summary>
+        private readonly Action? _onDisposed = onDisposed;
 
         /// <inheritdoc/>
         public bool IsDisposed { get; private set; }
 
         /// <inheritdoc/>
-        public void Dispose() => IsDisposed = true;
+        public void Dispose()
+        {
+            IsDisposed = true;
+            _onDisposed?.Invoke();
+        }
 
         /// <inheritdoc/>
         public void Execute() => _action();

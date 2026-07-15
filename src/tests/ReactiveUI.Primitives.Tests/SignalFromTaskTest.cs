@@ -21,8 +21,13 @@ public class SignalFromTaskTest
     /// <summary>The value produced by the disposed pending subscription.</summary>
     private const int DisposedValue = 99;
 
-    /// <summary>Maximum wait for cancellation callbacks that are intentionally driven by timers.</summary>
-    private const int CancellationCallbackTimeoutMilliseconds = 15_000;
+    /// <summary>
+    /// Maximum wait for cancellation callbacks that are intentionally driven by timers. The callbacks fire on pool
+    /// threads, so on a saturated runner they can arrive far later than on an idle box; a cancellation that never
+    /// fires the callbacks never signals, so this window only has to outlast a slow runner and costs nothing when
+    /// the callbacks arrive promptly.
+    /// </summary>
+    private const int CancellationCallbackTimeoutMilliseconds = 30_000;
 
     /// <summary>Message carried by a failure an observer raises from inside a notification.</summary>
     private const string ObserverFailureMessage = "observer failed";
@@ -626,9 +631,7 @@ public class SignalFromTaskTest
         using var subscription = fixture.Subscribe(_ => result = true);
         await Task.Delay(InitialDelayMilliseconds).ConfigureAwait(true);
         await Assert.That(StatusMessages(statusTrail)).Contains(StartedCommand);
-        await WaitForAsync(
-            Task.WhenAll(cleanupCompleted.Task, finallyCompleted.Task),
-            CancellationCallbackTimeoutMilliseconds).ConfigureAwait(false);
+        await WaitForCancellationCallbacks(cleanupCompleted.Task, finallyCompleted.Task).ConfigureAwait(false);
         await Assert.That(StatusMessages(statusTrail)).Contains(StartingCancellingCommand);
         await Assert.That(StatusMessages(statusTrail)).Contains(ShouldAlwaysComeHere);
         await Assert.That(StatusMessages(statusTrail)).Contains(FinishedCancellingCommand);
@@ -815,9 +818,7 @@ public class SignalFromTaskTest
         using var subscription = fixture.Subscribe(_ => result = true);
         await Task.Delay(InitialDelayMilliseconds).ConfigureAwait(true);
         await Assert.That(StatusMessages(statusTrail)).Contains(StartedCommand);
-        await WaitForAsync(
-            Task.WhenAll(cleanupCompleted.Task, finallyCompleted.Task),
-            CancellationCallbackTimeoutMilliseconds).ConfigureAwait(false);
+        await WaitForCancellationCallbacks(cleanupCompleted.Task, finallyCompleted.Task).ConfigureAwait(false);
         await Assert.That(StatusMessages(statusTrail)).Contains(StartingCancellingCommand);
         await Assert.That(StatusMessages(statusTrail)).Contains(ShouldAlwaysComeHere);
         await Assert.That(StatusMessages(statusTrail)).Contains(FinishedCancellingCommand);
@@ -1018,20 +1019,30 @@ public class SignalFromTaskTest
     /// <returns>The recorded messages.</returns>
     private static string[] StatusMessages(StatusTrail statusTrail) => statusTrail.Messages();
 
-    /// <summary>Waits for a timed test callback to complete.</summary>
-    /// <param name = "task">The task to await.</param>
-    /// <param name = "timeoutMilliseconds">The timeout in milliseconds.</param>
+    /// <summary>Awaits both timer-driven cancellation callbacks, or fails once the generous window closes.</summary>
+    /// <param name = "cleanupCompleted">Completes when the cancellation cleanup callback has run.</param>
+    /// <param name = "finallyCompleted">Completes when the terminal cleanup callback has run.</param>
     /// <returns>A <see cref = "Task"/> representing the asynchronous operation.</returns>
-    private static async Task WaitForAsync(Task task, int timeoutMilliseconds)
+    /// <remarks>
+    /// The callbacks are driven by timers and run on pool threads, so the wait must stay asynchronous: blocking a pool
+    /// thread would starve the very chain it is waiting on. It also must not decide the outcome from which continuation
+    /// the pool dequeues first — <c>Task.WhenAny</c> reports whichever continuation ran first, not whichever task
+    /// completed first, so on a saturated runner the timeout can be reported as the winner even though the callbacks
+    /// already fired. This awaits the race for liveness but then decides from the callback tasks' own completion state,
+    /// which <see cref = "TaskCompletionSource.TrySetResult"/> flips synchronously and no pool pressure can misreport.
+    /// A cancellation that never fires the callbacks never completes, so the generous window still fails on a real hang.
+    /// </remarks>
+    private static async Task WaitForCancellationCallbacks(Task cleanupCompleted, Task finallyCompleted)
     {
-        var timeout = Task.Delay(timeoutMilliseconds);
-        var completed = await Task.WhenAny(task, timeout).ConfigureAwait(false);
-        if (completed == timeout)
+        var callbacks = Task.WhenAll(cleanupCompleted, finallyCompleted);
+        _ = await Task.WhenAny(callbacks, Task.Delay(CancellationCallbackTimeoutMilliseconds)).ConfigureAwait(false);
+        if (!cleanupCompleted.IsCompleted || !finallyCompleted.IsCompleted)
         {
-            throw new TimeoutException($"Timed out after {timeoutMilliseconds}ms waiting for cancellation callbacks.");
+            throw new TimeoutException(
+                $"Timed out after {CancellationCallbackTimeoutMilliseconds}ms waiting for cancellation callbacks.");
         }
 
-        await task.ConfigureAwait(false);
+        await callbacks.ConfigureAwait(false);
     }
 
     /// <summary>Records a status message.</summary>
