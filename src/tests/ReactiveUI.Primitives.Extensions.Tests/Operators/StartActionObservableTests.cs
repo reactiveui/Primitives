@@ -14,6 +14,9 @@ public class StartActionObservableTests
     /// <summary>Synthetic error message attached to action failures.</summary>
     private const string ActionFailedMessage = "action failed";
 
+    /// <summary>Guard timeout so a hung rendezvous fails this test rather than stalling the run.</summary>
+    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
+
     /// <summary>Verifies that <c>Start</c> with a null scheduler runs synchronously and completes.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -42,7 +45,7 @@ public class StartActionObservableTests
         using var sub = ReactiveExtensions.Start(() => ran = true, TaskPoolSequencer.Default)
             .Subscribe(static _ => { }, () => completed.TrySetResult(true));
 
-        await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await completed.Task.WaitAsync(GuardTimeout);
         await Assert.That(ran).IsTrue();
     }
 
@@ -71,7 +74,7 @@ public class StartActionObservableTests
         using var sub = ReactiveExtensions.Start(() => throw expected, TaskPoolSequencer.Default)
             .Subscribe(static _ => { }, ex => faulted.TrySetResult(ex));
 
-        var caught = await faulted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var caught = await faulted.Task.WaitAsync(GuardTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 }

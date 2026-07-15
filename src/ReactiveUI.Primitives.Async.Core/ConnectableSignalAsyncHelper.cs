@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
-
 using ReactiveUI.Primitives.Async.Advanced;
 using ReactiveUI.Primitives.Async.Disposables;
 
@@ -17,10 +16,16 @@ internal static class ConnectableSignalAsyncHelper
     /// <param name="state">The connectable signal state to operate on.</param>
     /// <param name="cancellationToken">A token that can cancel connection establishment.</param>
     /// <returns>The active connection handle.</returns>
+    /// <exception cref="OperationCanceledException">The connectable signal has been disposed, or
+    /// <paramref name="cancellationToken"/> was cancelled.</exception>
     public static async ValueTask<IAsyncDisposable> ConnectAsync<T>(
         ConnectableSignalAsyncState<T> state,
         CancellationToken cancellationToken)
     {
+        // A disposed signal cancels this token, and the gate's uncontended fast path does not observe
+        // cancellation, so without this check a post-disposal connect would resubscribe the cold source.
+        state.DisposedCancellationToken.ThrowIfCancellationRequested();
+
         CancellationTokenSource? linkedCts = null;
         CancellationToken token;
         if (cancellationToken == state.DisposedCancellationToken || !cancellationToken.CanBeCanceled)
@@ -51,21 +56,21 @@ internal static class ConnectableSignalAsyncHelper
                     token).ConfigureAwait(false);
                 await connection.SetDisposableAsync(subscription).ConfigureAwait(false);
 
-                return DisposableAsync.Create(async () =>
-                {
-                    using (await state.Gate.EnterAsync(state.DisposedCancellationToken).ConfigureAwait(false))
+                return DisposableAsync.Create(
+                    (state, connection),
+                    static async s =>
                     {
-                        if (connection is null)
+                        using (await s.state.Gate.EnterAsync(s.state.DisposedCancellationToken).ConfigureAwait(false))
                         {
-                            return;
-                        }
+                            if (!ReferenceEquals(s.state.Connection, s.connection))
+                            {
+                                return;
+                            }
 
-                        var localConnection = connection;
-                        connection = null;
-                        state.Connection = null;
-                        await localConnection.DisposeAsync().ConfigureAwait(false);
-                    }
-                });
+                            s.state.Connection = null;
+                            await s.connection.DisposeAsync().ConfigureAwait(false);
+                        }
+                    });
             }
         }
         finally
@@ -78,9 +83,10 @@ internal static class ConnectableSignalAsyncHelper
     /// <typeparam name="T">The type of elements produced by the source sequence.</typeparam>
     /// <param name="state">The connectable signal state to dispose.</param>
     [SuppressMessage(
-        "Major Bug",
-        "S4462:Calls to async methods should not be blocking",
-        Justification = "IDisposable.Dispose is intrinsically synchronous; this method must tear down async connection state on the sync dispose path.")]
+        "Concurrency",
+        "PSH1315:A blocking wait on an awaitable that may not be done",
+        Justification =
+            "IDisposable.Dispose is intrinsically synchronous; this method must tear down async connection state on the sync dispose path.")]
     public static void Dispose<T>(ConnectableSignalAsyncState<T> state)
     {
         if (!state.TryMarkDisposed())

@@ -45,12 +45,20 @@ public class FilteringOperatorTests
     /// <summary>Hoisted source array used by tests (was inline literal).</summary>
     private static readonly string[] SequenceAbcAbADefDe = ["abc", "ab", "a", "def", "de"];
 
+    /// <summary>Maximum time a test waits for a forwarded error to arrive.</summary>
+    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(5);
+
     /// <summary>Tests sync Where filters elements.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenWhereSync_ThenFiltersElements()
     {
-        var result = await SignalAsync.Range(1, 6).Where(x => x % 2 == 0).ToListAsync();
+        const int SourceValueCount = 6;
+        const int EvenDivisor = 2;
+
+        var result = await SignalAsync.Range(1, SourceValueCount)
+            .Where(static x => x % EvenDivisor == 0)
+            .ToListAsync();
         await Assert.That(result).IsCollectionEqualTo([SecondElement, FourthElement, SixthElement]);
     }
 
@@ -59,10 +67,12 @@ public class FilteringOperatorTests
     [Test]
     public async Task WhenWhereAsync_ThenFiltersElements()
     {
-        var result = await SignalAsync.Range(1, 5).Where(async (x, _) =>
+        const int SourceValueCount = 5;
+
+        var result = await SignalAsync.Range(1, SourceValueCount).Where(static async (x, _) =>
         {
             await Task.Yield();
-            return x > 3;
+            return x > ThirdElement;
         }).ToListAsync();
         await Assert.That(result).IsCollectionEqualTo([FourthElement, FifthElement]);
     }
@@ -72,7 +82,9 @@ public class FilteringOperatorTests
     [Test]
     public async Task WhenWhereFilterAll_ThenEmitsNothing()
     {
-        var result = await SignalAsync.Range(1, 3).Where(_ => false).ToListAsync();
+        const int SourceValueCount = 3;
+
+        var result = await SignalAsync.Range(1, SourceValueCount).Where(static _ => false).ToListAsync();
         await Assert.That(result).IsEmpty();
     }
 
@@ -81,7 +93,10 @@ public class FilteringOperatorTests
     [Test]
     public async Task WhenTake_ThenEmitsOnlyFirstN()
     {
-        var result = await SignalAsync.Range(1, 10).Take(3).ToListAsync();
+        const int SourceValueCount = 10;
+        const int TakeCount = 3;
+
+        var result = await SignalAsync.Range(1, SourceValueCount).Take(TakeCount).ToListAsync();
         await Assert.That(result).IsCollectionEqualTo([1, SecondElement, ThirdElement]);
     }
 
@@ -90,7 +105,9 @@ public class FilteringOperatorTests
     [Test]
     public async Task WhenTakeZero_ThenEmitsNothing()
     {
-        var result = await SignalAsync.Range(1, 10).Take(0).ToListAsync();
+        const int SourceValueCount = 10;
+
+        var result = await SignalAsync.Range(1, SourceValueCount).Take(0).ToListAsync();
         await Assert.That(result).IsEmpty();
     }
 
@@ -99,21 +116,27 @@ public class FilteringOperatorTests
     [Test]
     public async Task WhenTakeMoreThanAvailable_ThenEmitsAll()
     {
-        var result = await SignalAsync.Range(1, 3).Take(100).ToListAsync();
+        const int SourceValueCount = 3;
+        const int TakeCountBeyondSource = 100;
+
+        var result = await SignalAsync.Range(1, SourceValueCount).Take(TakeCountBeyondSource).ToListAsync();
         await Assert.That(result).IsCollectionEqualTo([1, SecondElement, ThirdElement]);
     }
 
     /// <summary>Tests Take negative throws.</summary>
     [Test]
     public void WhenTakeNegative_ThenThrowsArgumentOutOfRange() =>
-        Assert.Throws<ArgumentOutOfRangeException>(() => SignalAsync.Return(1).Take(-1));
+        Assert.Throws<ArgumentOutOfRangeException>(static () => SignalAsync.Return(1).Take(-1));
 
     /// <summary>Tests Skip skips first N.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSkip_ThenSkipsFirstN()
     {
-        var result = await SignalAsync.Range(1, 5).Skip(2).ToListAsync();
+        const int SourceValueCount = 5;
+        const int SkipCount = 2;
+
+        var result = await SignalAsync.Range(1, SourceValueCount).Skip(SkipCount).ToListAsync();
         await Assert.That(result).IsCollectionEqualTo([ThirdElement, FourthElement, FifthElement]);
     }
 
@@ -122,7 +145,9 @@ public class FilteringOperatorTests
     [Test]
     public async Task WhenSkipZero_ThenEmitsAll()
     {
-        var result = await SignalAsync.Range(1, 3).Skip(0).ToListAsync();
+        const int SourceValueCount = 3;
+
+        var result = await SignalAsync.Range(1, SourceValueCount).Skip(0).ToListAsync();
         await Assert.That(result).IsCollectionEqualTo([1, SecondElement, ThirdElement]);
     }
 
@@ -131,21 +156,28 @@ public class FilteringOperatorTests
     [Test]
     public async Task WhenSkipMoreThanAvailable_ThenEmitsNothing()
     {
-        var result = await SignalAsync.Range(1, 3).Skip(100).ToListAsync();
+        const int SourceValueCount = 3;
+        const int SkipCountBeyondSource = 100;
+
+        var result = await SignalAsync.Range(1, SourceValueCount).Skip(SkipCountBeyondSource).ToListAsync();
         await Assert.That(result).IsEmpty();
     }
 
     /// <summary>Tests Skip negative throws.</summary>
     [Test]
     public void WhenSkipNegative_ThenThrowsArgumentOutOfRange() =>
-        Assert.Throws<ArgumentOutOfRangeException>(() => SignalAsync.Return(1).Skip(-1));
+        Assert.Throws<ArgumentOutOfRangeException>(static () => SignalAsync.Return(1).Skip(-1));
 
     /// <summary>Tests sync TakeWhile emits while true.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTakeWhileSync_ThenEmitsWhileTrue()
     {
-        var result = await SignalAsync.Range(1, 10).TakeWhile(x => x < 4).ToListAsync();
+        const int SourceValueCount = 10;
+
+        var result = await SignalAsync.Range(1, SourceValueCount)
+            .TakeWhile(static x => x < FourthElement)
+            .ToListAsync();
         await Assert.That(result).IsCollectionEqualTo([1, SecondElement, ThirdElement]);
     }
 
@@ -154,10 +186,12 @@ public class FilteringOperatorTests
     [Test]
     public async Task WhenTakeWhileAsync_ThenEmitsWhileTrue()
     {
-        var result = await SignalAsync.Range(1, 10).TakeWhile(async (x, _) =>
+        const int SourceValueCount = 10;
+
+        var result = await SignalAsync.Range(1, SourceValueCount).TakeWhile(static async (x, _) =>
         {
             await Task.Yield();
-            return x <= 2;
+            return x <= SecondElement;
         }).ToListAsync();
         await Assert.That(result).IsCollectionEqualTo([1, SecondElement]);
     }
@@ -167,7 +201,9 @@ public class FilteringOperatorTests
     [Test]
     public async Task WhenTakeWhileAllTrue_ThenEmitsAll()
     {
-        var result = await SignalAsync.Range(1, 3).TakeWhile(_ => true).ToListAsync();
+        const int SourceValueCount = 3;
+
+        var result = await SignalAsync.Range(1, SourceValueCount).TakeWhile(static _ => true).ToListAsync();
         await Assert.That(result).IsCollectionEqualTo([1, SecondElement, ThirdElement]);
     }
 
@@ -176,21 +212,27 @@ public class FilteringOperatorTests
     [Test]
     public async Task WhenTakeWhileAllFalse_ThenEmitsNothing()
     {
-        var result = await SignalAsync.Range(1, 3).TakeWhile(_ => false).ToListAsync();
+        const int SourceValueCount = 3;
+
+        var result = await SignalAsync.Range(1, SourceValueCount).TakeWhile(static _ => false).ToListAsync();
         await Assert.That(result).IsEmpty();
     }
 
     /// <summary>Tests TakeWhile null predicate throws.</summary>
     [Test]
     public void WhenTakeWhileNullPredicate_ThenThrowsArgumentNull() =>
-        Assert.Throws<ArgumentNullException>(() => SignalAsync.Return(1).TakeWhile((Func<int, bool>)null!));
+        Assert.Throws<ArgumentNullException>(static () => SignalAsync.Return(1).TakeWhile((Func<int, bool>)null!));
 
     /// <summary>Tests sync SkipWhile skips while true.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSkipWhileSync_ThenSkipsWhileTrue()
     {
-        var result = await SignalAsync.Range(1, 6).SkipWhile(x => x < 4).ToListAsync();
+        const int SourceValueCount = 6;
+
+        var result = await SignalAsync.Range(1, SourceValueCount)
+            .SkipWhile(static x => x < FourthElement)
+            .ToListAsync();
         await Assert.That(result).IsCollectionEqualTo([FourthElement, FifthElement, SixthElement]);
     }
 
@@ -199,10 +241,12 @@ public class FilteringOperatorTests
     [Test]
     public async Task WhenSkipWhileAsync_ThenSkipsWhileTrue()
     {
-        var result = await SignalAsync.Range(1, 5).SkipWhile(async (x, _) =>
+        const int SourceValueCount = 5;
+
+        var result = await SignalAsync.Range(1, SourceValueCount).SkipWhile(static async (x, _) =>
         {
             await Task.Yield();
-            return x < 3;
+            return x < ThirdElement;
         }).ToListAsync();
         await Assert.That(result).IsCollectionEqualTo([ThirdElement, FourthElement, FifthElement]);
     }
@@ -212,7 +256,9 @@ public class FilteringOperatorTests
     [Test]
     public async Task WhenSkipWhileAlwaysTrue_ThenEmitsNothing()
     {
-        var result = await SignalAsync.Range(1, 3).SkipWhile(_ => true).ToListAsync();
+        const int SourceValueCount = 3;
+
+        var result = await SignalAsync.Range(1, SourceValueCount).SkipWhile(static _ => true).ToListAsync();
         await Assert.That(result).IsEmpty();
     }
 
@@ -221,14 +267,16 @@ public class FilteringOperatorTests
     [Test]
     public async Task WhenSkipWhileAlwaysFalse_ThenEmitsAll()
     {
-        var result = await SignalAsync.Range(1, 3).SkipWhile(_ => false).ToListAsync();
+        const int SourceValueCount = 3;
+
+        var result = await SignalAsync.Range(1, SourceValueCount).SkipWhile(static _ => false).ToListAsync();
         await Assert.That(result).IsCollectionEqualTo([1, SecondElement, ThirdElement]);
     }
 
     /// <summary>Tests SkipWhile null predicate throws.</summary>
     [Test]
     public void WhenSkipWhileNullPredicate_ThenThrowsArgumentNull() =>
-        Assert.Throws<ArgumentNullException>(() => SignalAsync.Return(1).SkipWhile((Func<int, bool>)null!));
+        Assert.Throws<ArgumentNullException>(static () => SignalAsync.Return(1).SkipWhile((Func<int, bool>)null!));
 
     /// <summary>Tests Distinct removes duplicates.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -256,8 +304,19 @@ public class FilteringOperatorTests
     public async Task WhenDistinctBy_ThenDistinguishesByKey()
     {
         var source = SequenceAbcAbADefDe.ToAsyncSignal();
-        var result = await source.DistinctBy(s => s.Length).ToListAsync();
+        var result = await source.DistinctBy(static s => s.Length).ToListAsync();
         await Assert.That(result).IsCollectionEqualTo(["abc", "ab", "a"]);
+    }
+
+    /// <summary>Tests DistinctBy with an explicit key comparer compares keys through that comparer,
+    /// so keys the default comparer would treat as distinct collapse into one.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenDistinctByWithKeyComparer_ThenKeysComparedThroughComparer()
+    {
+        var source = SequenceAABBB.ToAsyncSignal();
+        var result = await source.DistinctBy(static s => s, StringComparer.OrdinalIgnoreCase).ToListAsync();
+        await Assert.That(result).IsCollectionEqualTo(["a", "b"]);
     }
 
     /// <summary>Tests DistinctUntilChanged suppresses consecutive duplicates.</summary>
@@ -286,7 +345,7 @@ public class FilteringOperatorTests
     public async Task WhenDistinctUntilChangedBy_ThenDistinguishesByKey()
     {
         var source = SequenceAaAbBaBb.ToAsyncSignal();
-        var result = await source.DistinctUntilChangedBy(s => s[0]).ToListAsync();
+        var result = await source.DistinctUntilChangedBy(static s => s[0]).ToListAsync();
         await Assert.That(result).IsCollectionEqualTo(["aa", "ba"]);
     }
 
@@ -309,7 +368,7 @@ public class FilteringOperatorTests
         var signal = Signal.Create<int>();
         Exception? caught = null;
         TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using var sub = await signal.Values.SkipWhile(static x => x < 2).SubscribeAsync(
+        await using var sub = await signal.Values.SkipWhile(static x => x < SecondElement).SubscribeAsync(
             static (_, _) => default,
             (ex, _) =>
             {
@@ -319,7 +378,7 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("skip-while-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await errorTcs.Task.WaitAsync(WaitTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -328,10 +387,12 @@ public class FilteringOperatorTests
     [Test]
     public async Task WhenTakeWhileSyncSourceErrorResume_ThenForwarded()
     {
+        const int TakeWhileLimit = 10;
+
         var signal = Signal.Create<int>();
         Exception? caught = null;
         TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using var sub = await signal.Values.TakeWhile(static x => x < 10).SubscribeAsync(
+        await using var sub = await signal.Values.TakeWhile(static x => x < TakeWhileLimit).SubscribeAsync(
             static (_, _) => default,
             (ex, _) =>
             {
@@ -341,7 +402,7 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("take-while-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await errorTcs.Task.WaitAsync(WaitTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -352,7 +413,11 @@ public class FilteringOperatorTests
     [Test]
     public async Task WhenSkipWhileAsyncWithSyncPredicate_ThenLatchesOnFalse()
     {
-        var result = await SignalAsync.Range(1, 5).SkipWhile(static (x, _) => new(x < 3)).ToListAsync();
+        const int SourceValueCount = 5;
+
+        var result = await SignalAsync.Range(1, SourceValueCount)
+            .SkipWhile(static (x, _) => new(x < ThirdElement))
+            .ToListAsync();
         await Assert.That(result).IsCollectionEqualTo([ThirdElement, FourthElement, FifthElement]);
     }
 
@@ -362,7 +427,11 @@ public class FilteringOperatorTests
     [Test]
     public async Task WhenTakeWhileAsyncWithSyncPredicate_ThenTerminatesOnFalse()
     {
-        var result = await SignalAsync.Range(1, 5).TakeWhile(static (x, _) => new(x < 3)).ToListAsync();
+        const int SourceValueCount = 5;
+
+        var result = await SignalAsync.Range(1, SourceValueCount)
+            .TakeWhile(static (x, _) => new(x < ThirdElement))
+            .ToListAsync();
         await Assert.That(result).IsCollectionEqualTo([1, SecondElement]);
     }
 
@@ -384,7 +453,7 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("skip-while-async-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await errorTcs.Task.WaitAsync(WaitTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -406,7 +475,7 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("take-while-async-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await errorTcs.Task.WaitAsync(WaitTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -427,7 +496,7 @@ public class FilteringOperatorTests
         });
         InvalidOperationException expected = new("distinct-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await errorTcs.Task.WaitAsync(WaitTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -449,7 +518,7 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("distinct-by-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await errorTcs.Task.WaitAsync(WaitTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -471,7 +540,7 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("distinct-until-changed-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await errorTcs.Task.WaitAsync(WaitTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -493,7 +562,7 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("distinct-until-changed-by-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await errorTcs.Task.WaitAsync(WaitTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -516,7 +585,7 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("where-sync-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await errorTcs.Task.WaitAsync(WaitTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -537,7 +606,7 @@ public class FilteringOperatorTests
         });
         InvalidOperationException expected = new("skip-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await errorTcs.Task.WaitAsync(WaitTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -546,10 +615,12 @@ public class FilteringOperatorTests
     [Test]
     public async Task WhenTakeSourceErrorResume_ThenForwarded()
     {
+        const int TakeCount = 10;
+
         var signal = Signal.Create<int>();
         Exception? caught = null;
         TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using var sub = await signal.Values.Take(10).SubscribeAsync(static (_, _) => default, (ex, _) =>
+        await using var sub = await signal.Values.Take(TakeCount).SubscribeAsync(static (_, _) => default, (ex, _) =>
         {
             caught = ex;
             IgnoredResult.Of(errorTcs.TrySetResult());
@@ -557,7 +628,7 @@ public class FilteringOperatorTests
         });
         InvalidOperationException expected = new("take-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await errorTcs.Task.WaitAsync(WaitTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -579,7 +650,7 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("cast-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await errorTcs.Task.WaitAsync(WaitTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -601,7 +672,7 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("of-type-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await errorTcs.Task.WaitAsync(WaitTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -624,7 +695,7 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("select-sync-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await errorTcs.Task.WaitAsync(WaitTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -647,7 +718,7 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("select-async-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await errorTcs.Task.WaitAsync(WaitTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -670,7 +741,7 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("where-async-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await errorTcs.Task.WaitAsync(WaitTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 }

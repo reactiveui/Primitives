@@ -69,7 +69,14 @@ public sealed class EmitIfQuietWitness<T> : IObserver<T>, IDisposable
             return;
         }
 
-        Disposables.Add(Sequencer.Schedule(DueTime, () => EmitIfLatest(currentVersion)));
+        Disposables.Add(Sequencer.Schedule(
+            (self: this, currentVersion),
+            DueTime,
+            static (_, s) =>
+            {
+                s.self.EmitIfLatest(s.currentVersion);
+                return EmptyDisposable.Instance;
+            }));
     }
 
     /// <inheritdoc/>

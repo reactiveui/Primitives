@@ -12,11 +12,6 @@ public partial class CombineLatestOperatorTests
     /// <summary>Verifies that CombineLatest with 8 sources completes when source 1 is the last to complete.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107",
-        Justification =
-            "Arity-N CombineLatest selector lambda parameter count mirrors the operator signature under test.")]
     public async Task WhenCombineLatest8Sources_Source1CompletesLast_ThenCombinedCompletes()
     {
         var s1 = Signal.Create<int>();
@@ -37,8 +32,8 @@ public partial class CombineLatestOperatorTests
             s6.Values,
             s7.Values,
             s8.Values,
-            (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
-            (_, _) => default,
+            static (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
+            static (_, _) => default,
             null,
             r =>
             {
@@ -70,11 +65,6 @@ public partial class CombineLatestOperatorTests
     /// <summary>Verifies that CombineLatest with 8 sources completes when source 2 is the last to complete.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107",
-        Justification =
-            "Arity-N CombineLatest selector lambda parameter count mirrors the operator signature under test.")]
     public async Task WhenCombineLatest8Sources_Source2CompletesLast_ThenCombinedCompletes()
     {
         var s1 = Signal.Create<int>();
@@ -95,8 +85,8 @@ public partial class CombineLatestOperatorTests
             s6.Values,
             s7.Values,
             s8.Values,
-            (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
-            (_, _) => default,
+            static (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
+            static (_, _) => default,
             null,
             r =>
             {
@@ -128,11 +118,6 @@ public partial class CombineLatestOperatorTests
     /// <summary>Verifies that CombineLatest with 8 sources completes when source 3 is the last to complete.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107",
-        Justification =
-            "Arity-N CombineLatest selector lambda parameter count mirrors the operator signature under test.")]
     public async Task WhenCombineLatest8Sources_Source3CompletesLast_ThenCombinedCompletes()
     {
         var s1 = Signal.Create<int>();
@@ -153,8 +138,8 @@ public partial class CombineLatestOperatorTests
             s6.Values,
             s7.Values,
             s8.Values,
-            (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
-            (_, _) => default,
+            static (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
+            static (_, _) => default,
             null,
             r =>
             {
@@ -186,11 +171,6 @@ public partial class CombineLatestOperatorTests
     /// <summary>Verifies that CombineLatest with 8 sources completes when source 4 is the last to complete.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107",
-        Justification =
-            "Arity-N CombineLatest selector lambda parameter count mirrors the operator signature under test.")]
     public async Task WhenCombineLatest8Sources_Source4CompletesLast_ThenCombinedCompletes()
     {
         var s1 = Signal.Create<int>();
@@ -211,8 +191,8 @@ public partial class CombineLatestOperatorTests
             s6.Values,
             s7.Values,
             s8.Values,
-            (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
-            (_, _) => default,
+            static (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
+            static (_, _) => default,
             null,
             r =>
             {
@@ -244,11 +224,6 @@ public partial class CombineLatestOperatorTests
     /// <summary>Verifies that CombineLatest with 8 sources completes when source 5 is the last to complete.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107",
-        Justification =
-            "Arity-N CombineLatest selector lambda parameter count mirrors the operator signature under test.")]
     public async Task WhenCombineLatest8Sources_Source5CompletesLast_ThenCombinedCompletes()
     {
         var s1 = Signal.Create<int>();
@@ -269,8 +244,8 @@ public partial class CombineLatestOperatorTests
             s6.Values,
             s7.Values,
             s8.Values,
-            (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
-            (_, _) => default,
+            static (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
+            static (_, _) => default,
             null,
             r =>
             {
@@ -302,11 +277,6 @@ public partial class CombineLatestOperatorTests
     /// <summary>Verifies that CombineLatest with 8 sources completes when source 6 is the last to complete.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107",
-        Justification =
-            "Arity-N CombineLatest selector lambda parameter count mirrors the operator signature under test.")]
     public async Task WhenCombineLatest8Sources_Source6CompletesLast_ThenCombinedCompletes()
     {
         var s1 = Signal.Create<int>();
@@ -327,8 +297,8 @@ public partial class CombineLatestOperatorTests
             s6.Values,
             s7.Values,
             s8.Values,
-            (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
-            (_, _) => default,
+            static (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
+            static (_, _) => default,
             null,
             r =>
             {
@@ -360,11 +330,6 @@ public partial class CombineLatestOperatorTests
     /// <summary>Verifies that CombineLatest with 8 sources completes when source 7 is the last to complete.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107",
-        Justification =
-            "Arity-N CombineLatest selector lambda parameter count mirrors the operator signature under test.")]
     public async Task WhenCombineLatest8Sources_Source7CompletesLast_ThenCombinedCompletes()
     {
         var s1 = Signal.Create<int>();
@@ -385,8 +350,8 @@ public partial class CombineLatestOperatorTests
             s6.Values,
             s7.Values,
             s8.Values,
-            (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
-            (_, _) => default,
+            static (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
+            static (_, _) => default,
             null,
             r =>
             {
@@ -418,11 +383,6 @@ public partial class CombineLatestOperatorTests
     /// <summary>Verifies that CombineLatest with 8 sources completes when source 8 is the last to complete.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107",
-        Justification =
-            "Arity-N CombineLatest selector lambda parameter count mirrors the operator signature under test.")]
     public async Task WhenCombineLatest8Sources_Source8CompletesLast_ThenCombinedCompletes()
     {
         var s1 = Signal.Create<int>();
@@ -443,8 +403,8 @@ public partial class CombineLatestOperatorTests
             s6.Values,
             s7.Values,
             s8.Values,
-            (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
-            (_, _) => default,
+            static (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
+            static (_, _) => default,
             null,
             r =>
             {
@@ -476,11 +436,6 @@ public partial class CombineLatestOperatorTests
     /// <summary>Verifies that CombineLatest with 8 sources handles disposal during active emission gracefully.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107",
-        Justification =
-            "Arity-N CombineLatest selector lambda parameter count mirrors the operator signature under test.")]
     public async Task WhenCombineLatest8Sources_DisposedDuringEmission_ThenNoError()
     {
         var s1 = Signal.Create<int>();
@@ -501,14 +456,14 @@ public partial class CombineLatestOperatorTests
             s6.Values,
             s7.Values,
             s8.Values,
-            (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
+            static (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
             (x, _) =>
             {
                 results.Add(x);
                 return default;
             },
             null,
-            _ => default);
+            static _ => default);
 
         await s1.OnNextAsync(1, CancellationToken.None);
         await s2.OnNextAsync(Source1Value, CancellationToken.None);
@@ -536,11 +491,6 @@ public partial class CombineLatestOperatorTests
     /// <summary>Verifies that CombineLatest with 8 sources ignores error resume after disposal.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107",
-        Justification =
-            "Arity-N CombineLatest selector lambda parameter count mirrors the operator signature under test.")]
     public async Task WhenCombineLatest8Sources_ErrorResumeAfterDisposal_ThenIgnored()
     {
         var s1 = Signal.Create<int>();
@@ -560,10 +510,10 @@ public partial class CombineLatestOperatorTests
             s6.Values,
             s7.Values,
             s8.Values,
-            (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
-            (_, _) => default,
+            static (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
+            static (_, _) => default,
             null,
-            _ => default);
+            static _ => default);
 
         await sub.DisposeAsync();
 

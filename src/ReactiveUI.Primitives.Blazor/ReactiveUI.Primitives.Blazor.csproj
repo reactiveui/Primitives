@@ -10,18 +10,18 @@
        renderer sequencer becomes an IScheduler. The globalized usings let the shared file resolve its renderer
        sequencer, disposables, and operators without per-file usings (which differ between the two leaves). -->
   <ItemGroup>
-    <Compile Include="..\Primitives.Blazor.Shared\**\*.cs" Link="Primitives.Blazor.Shared\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\Primitives.Blazor.Shared\**\*.cs" Link="Primitives.Blazor.Shared\%(RecursiveDir)%(Filename)%(Extension)"/>
   </ItemGroup>
 
   <ItemGroup>
-    <Using Include="ReactiveUI.Primitives.Blazor.Concurrency" />
-    <Using Include="ReactiveUI.Primitives.Concurrency" />
-    <Using Include="ReactiveUI.Primitives.Disposables" />
+    <Using Include="ReactiveUI.Primitives.Blazor.Concurrency"/>
+    <Using Include="ReactiveUI.Primitives.Concurrency"/>
+    <Using Include="ReactiveUI.Primitives.Disposables"/>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components" />
-    <ProjectReference Include="..\ReactiveUI.Primitives\ReactiveUI.Primitives.csproj" />
+    <PackageReference Include="Microsoft.AspNetCore.Components"/>
+    <ProjectReference Include="..\ReactiveUI.Primitives\ReactiveUI.Primitives.csproj"/>
   </ItemGroup>
 
 </Project>

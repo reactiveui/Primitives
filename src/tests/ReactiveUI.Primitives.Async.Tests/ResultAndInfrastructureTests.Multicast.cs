@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 using ReactiveUI.Primitives.Async.Disposables;
 using ReactiveUI.Primitives.Async.Signals;
@@ -12,6 +13,18 @@ namespace ReactiveUI.Primitives.Async.Tests;
 /// <summary>Multicast / RefCount tests.</summary>
 public class ResultAndInfrastructureTests
 {
+    /// <summary>Seconds a test waits for a notification before giving up.</summary>
+    private const int WaitTimeoutSeconds = 5;
+
+    /// <summary>Number of values in the range sources used by the multicast tests.</summary>
+    private const int SourceValueCount = 3;
+
+    /// <summary>Value emitted by the single-value multicast source.</summary>
+    private const int MulticastValue = 42;
+
+    /// <summary>Maximum time a test waits for a notification to arrive.</summary>
+    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(WaitTimeoutSeconds);
+
     /// <summary>Verifies concurrent observer exception constructors preserve messages and inner exceptions.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -47,7 +60,7 @@ public class ResultAndInfrastructureTests
         var previousHandler = UnhandledExceptionHandler.CurrentHandler;
         try
         {
-            UnhandledExceptionHandler.Register(_ => throw new InvalidOperationException("handler failure"));
+            UnhandledExceptionHandler.Register(static _ => throw new InvalidOperationException("handler failure"));
             UnhandledExceptionHandler.ReportUnhandledException(new InvalidOperationException("reported failure"));
             completed = true;
         }
@@ -89,7 +102,7 @@ public class ResultAndInfrastructureTests
             TaskScheduler.Default).Unwrap();
         try
         {
-            await observer.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await observer.Entered.Task.WaitAsync(WaitTimeout);
             await observer.OnNextAsync(ConcurrentValue, CancellationToken.None);
         }
         finally
@@ -97,10 +110,10 @@ public class ResultAndInfrastructureTests
             _ = observer.Release.TrySetResult();
         }
 
-        await first.WaitAsync(TimeSpan.FromSeconds(5));
+        await first.WaitAsync(WaitTimeout);
         var reported = await capture.WaitForAsync(
             static exception => exception is ConcurrentWitnessCallsException,
-            TimeSpan.FromSeconds(5));
+            WaitTimeout);
         await Assert.That(reported).IsNotNull();
     }
 
@@ -109,10 +122,10 @@ public class ResultAndInfrastructureTests
     [Test]
     public async Task WhenSubscriptionHelperSubscribeThrows_ThenSubscriptionDisposed()
     {
-        var disposed = false;
-        var subscription = DisposableAsync.Create(() =>
+        StrongBox<bool> disposed = new();
+        var subscription = DisposableAsync.Create(disposed, static state =>
         {
-            disposed = true;
+            state.Value = true;
             return default;
         });
         await Assert
@@ -120,7 +133,7 @@ public class ResultAndInfrastructureTests
                 subscription,
                 static () => throw new InvalidOperationException("subscribe failure")))
             .ThrowsExactly<InvalidOperationException>();
-        await Assert.That(disposed).IsTrue();
+        await Assert.That(disposed.Value).IsTrue();
     }
 
     /// <summary>Verifies disposed cancellation sources report unsuccessful cancellation.</summary>
@@ -154,7 +167,7 @@ public class ResultAndInfrastructureTests
     public async Task WhenMulticastConnectTwice_ThenSecondConnectSucceeds()
     {
         var signal = Signal.Create<int>();
-        var source = SignalAsync.Range(1, 3);
+        var source = SignalAsync.Range(1, SourceValueCount);
         var connectable = source.Multicast(signal);
         await using var conn1 = await connectable.ConnectAsync(CancellationToken.None);
         var conn2 = await connectable.ConnectAsync(CancellationToken.None);
@@ -171,7 +184,7 @@ public class ResultAndInfrastructureTests
     {
         var signal = Signal.Create<int>();
         List<int> items = [];
-        var source = SignalAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(static async (observer, ct) =>
         {
             await observer.OnNextAsync(1, ct);
             await observer.OnCompletedAsync(Result.Success);
@@ -234,7 +247,7 @@ public class ResultAndInfrastructureTests
     public async Task WhenMulticastDispose_ThenConnectionAndGateDisposed()
     {
         var signal = Signal.Create<int>();
-        var source = SignalAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(static async (observer, ct) =>
         {
             await observer.OnNextAsync(1, ct);
             await observer.OnCompletedAsync(Result.Success);
@@ -265,7 +278,7 @@ public class ResultAndInfrastructureTests
         try
         {
             var signal = Signal.Create<int>();
-            var source = SignalAsync.Range(1, 3);
+            var source = SignalAsync.Range(1, SourceValueCount);
             var connectable = source.Multicast(signal);
 
             // Dispose without ever connecting
@@ -292,7 +305,7 @@ public class ResultAndInfrastructureTests
         TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         const int FirstValue = 10;
         const int SecondValue = 20;
-        var source = SignalAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(static async (observer, ct) =>
         {
             await observer.OnNextAsync(FirstValue, ct);
             await observer.OnNextAsync(SecondValue, ct);
@@ -313,7 +326,7 @@ public class ResultAndInfrastructureTests
                 return default;
             });
         await using var conn = await connectable.ConnectAsync(CancellationToken.None);
-        await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await completed.Task.WaitAsync(WaitTimeout);
         await Assert.That(items).IsCollectionEqualTo([FirstValue, SecondValue]);
     }
 
@@ -326,7 +339,7 @@ public class ResultAndInfrastructureTests
     public async Task WhenMulticastConnectDisposedTwice_ThenSecondDisposeIsNoop()
     {
         var signal = Signal.Create<int>();
-        var multicast = SignalAsync.Return(42).Multicast(signal);
+        var multicast = SignalAsync.Return(MulticastValue).Multicast(signal);
         var connection = await multicast.ConnectAsync(CancellationToken.None);
         await connection.DisposeAsync();
 
@@ -340,7 +353,7 @@ public class ResultAndInfrastructureTests
     public async Task WhenRefCountSourceErrorResume_ThenForwardsToSubscriber()
     {
         Exception? captured = null;
-        var source = SignalAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(static async (observer, ct) =>
         {
             await observer.OnNextAsync(1, ct);
             await observer.OnErrorResumeAsync(new InvalidOperationException("refcount-error"), ct);
@@ -361,7 +374,7 @@ public class ResultAndInfrastructureTests
                 captured = ex;
                 return default;
             });
-        await AsyncTestHelpers.WaitForConditionAsync(() => captured is not null, TimeSpan.FromSeconds(5));
+        await AsyncTestHelpers.WaitForConditionAsync(() => captured is not null, WaitTimeout);
         await Assert.That(items).Contains(1);
         await Assert.That(captured).IsNotNull();
         await Assert.That(captured!.Message).IsEqualTo("refcount-error");

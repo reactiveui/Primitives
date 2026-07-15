@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Reactive.Concurrency;
 using BenchmarkDotNet.Attributes;
 using R3;
@@ -40,6 +41,10 @@ public class CoreRuntimeBenchmarks
     /// <summary>Composite disposable dispose path in System.Reactive.</summary>
     /// <returns>The number of disposal callbacks executed.</returns>
     [Benchmark]
+    [SuppressMessage(
+        "Allocations",
+        "PSH1011:Use the overload with a state argument so this lambda does not capture",
+        Justification = "The baseline builds the same closure through a constructor, which has no state overload; de-closuring only this arm would invert the memory column it is compared on.")]
     public int SystemReactiveCompositeDispose()
     {
         var disposed = 0;
@@ -55,13 +60,17 @@ public class CoreRuntimeBenchmarks
     /// <summary>Composite disposable dispose path in R3.</summary>
     /// <returns>The number of disposal callbacks executed.</returns>
     [Benchmark]
+    [SuppressMessage(
+        "Allocations",
+        "PSH1011:Use the overload with a state argument so this lambda does not capture",
+        Justification = "The baseline builds the same closure through a constructor, which has no state overload; de-closuring only this arm would invert the memory column it is compared on.")]
     public int R3CompositeDispose()
     {
         var disposed = 0;
         CompositeDisposable pocket = new(
-            R3.Disposable.Create(() => disposed++),
-            R3.Disposable.Create(() => disposed++),
-            R3.Disposable.Create(() => disposed++));
+            Disposable.Create(() => disposed++),
+            Disposable.Create(() => disposed++),
+            Disposable.Create(() => disposed++));
 
         pocket.Dispose();
         return disposed;
@@ -93,7 +102,7 @@ public class CoreRuntimeBenchmarks
     public int R3CurrentThreadSchedule()
     {
         IntR3Witness observer = new();
-        using var subscription = R3.Observable.Return(1).Subscribe(observer);
+        using var subscription = Observable.Return(1).Subscribe(observer);
         return observer.LastValue;
     }
 
@@ -115,7 +124,7 @@ public class CoreRuntimeBenchmarks
     public int SystemReactiveSafeWitness()
     {
         var value = 0;
-        var observer = System.Reactive.Observer.Create<int>(x => value = x, _ => { }, () => { });
+        var observer = System.Reactive.Observer.Create<int>(x => value = x, static _ => { }, static () => { });
         observer.OnNext(ForwardedValue);
         observer.OnCompleted();
         return value;

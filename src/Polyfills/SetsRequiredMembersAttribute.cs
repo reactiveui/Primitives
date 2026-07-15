@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 // Polyfill implementation adapted from SimonCropp/Polyfill (https://github.com/SimonCropp/Polyfill).
+
 #if !NET7_0_OR_GREATER
 namespace System.Diagnostics.CodeAnalysis;
 

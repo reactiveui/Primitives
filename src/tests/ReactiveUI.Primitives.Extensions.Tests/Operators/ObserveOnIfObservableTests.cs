@@ -15,6 +15,9 @@ public class ObserveOnIfObservableTests
     /// <summary>Synthetic error message attached to source errors.</summary>
     private const string SourceErrorMessage = "source error";
 
+    /// <summary>Guard timeout so a hung rendezvous fails this test rather than stalling the run.</summary>
+    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
+
     /// <summary>Verifies that values dispatch on the false-scheduler before any condition arrives.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -29,7 +32,7 @@ public class ObserveOnIfObservableTests
         using var sub = source.ObserveOnIf(condition, trueScheduler, falseScheduler)
             .Subscribe(v => emitted.TrySetResult(v));
         source.OnNext(Value);
-        var v2 = await emitted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var v2 = await emitted.Task.WaitAsync(GuardTimeout);
         await Assert.That(v2).IsEqualTo(Value);
         await Assert.That(falseScheduler.ScheduleCount).IsGreaterThanOrEqualTo(1);
         await Assert.That(trueScheduler.ScheduleCount).IsEqualTo(0);
@@ -50,7 +53,7 @@ public class ObserveOnIfObservableTests
             .Subscribe(v => emitted.TrySetResult(v));
         condition.OnNext(true);
         source.OnNext(Value);
-        var v2 = await emitted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var v2 = await emitted.Task.WaitAsync(GuardTimeout);
         await Assert.That(v2).IsEqualTo(Value);
         await Assert.That(trueScheduler.ScheduleCount).IsGreaterThanOrEqualTo(1);
     }

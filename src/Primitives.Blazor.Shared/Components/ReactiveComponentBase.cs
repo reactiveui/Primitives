@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Blazor.Components;
 
 /// <summary>Base component that tracks reactive subscriptions and refreshes through Blazor's renderer dispatcher.</summary>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public abstract class ReactiveComponentBase : ComponentBase, IDisposable
+public class ReactiveComponentBase : ComponentBase, IDisposable
 {
     /// <summary>Tracks subscriptions owned by the component.</summary>
     private readonly MultipleDisposable _subscriptions = [];
@@ -37,7 +37,7 @@ public abstract class ReactiveComponentBase : ComponentBase, IDisposable
     /// <summary>Disposes the component and all tracked subscriptions.</summary>
     public void Dispose()
     {
-        Dispose(disposing: true);
+        Dispose(true);
         GC.SuppressFinalize(this);
     }
 

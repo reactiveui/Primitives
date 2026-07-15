@@ -121,7 +121,8 @@ internal sealed class DetectStaleObservable<T>(
         /// overload with a static lambda so no per-reschedule closure capturing <c>this</c> is
         /// allocated (the timer re-arms on every upstream emission).</summary>
         private void ScheduleStale() =>
-            _state.Timer.Disposable = scheduler.Schedule(this, stalenessPeriod, static (_, self) => self.OnStaleTimer());
+            _state.Timer.Disposable =
+                scheduler.Schedule(this, stalenessPeriod, static (_, self) => self.OnStaleTimer());
 
         /// <summary>Fires the stale marker downstream when the staleness window elapses.</summary>
         /// <returns>The singleton empty disposable for the scheduler contract.</returns>

@@ -15,207 +15,6 @@ namespace ReactiveUI.Primitives;
 /// </summary>
 public static partial class LinqExtensions
 {
-    /// <summary>Subscribes a nullable reference observer with downstream exception protection from static-call syntax.</summary>
-    /// <param name="source">The source sequence.</param>
-    /// <param name="observer">The observer to subscribe.</param>
-    /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
-    /// <typeparam name="T">The non-nullable reference value type.</typeparam>
-    /// <returns>A disposable that cancels the subscription.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="observer"/> is <see langword="null"/>.</exception>
-    [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
-    public static IDisposable SubscribeSafe<T>(IObservable<T?> source, IObserver<T> observer, params bool[] allowNullable)
-        where T : class
-    {
-        _ = allowNullable;
-        return SubscribeSafeCore(source, (IObserver<T?>)observer);
-    }
-
-    /// <summary>Subscribes a nullable value observer with downstream exception protection from static-call syntax.</summary>
-    /// <param name="source">The source sequence.</param>
-    /// <param name="observer">The observer to subscribe.</param>
-    /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
-    /// <typeparam name="T">The non-nullable value type.</typeparam>
-    /// <returns>A disposable that cancels the subscription.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="observer"/> is <see langword="null"/>.</exception>
-    [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
-    public static IDisposable SubscribeSafe<T>(IObservable<T?> source, IObserver<T?> observer, params bool[] allowNullable)
-        where T : struct
-    {
-        _ = allowNullable;
-        return SubscribeSafeCore(source, observer);
-    }
-
-    /// <summary>Subscribes nullable reference callbacks with downstream exception protection from static-call syntax.</summary>
-    /// <param name="source">The source sequence.</param>
-    /// <param name="onNext">The action to invoke for each value.</param>
-    /// <param name="onError">The action to invoke for an error.</param>
-    /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
-    /// <typeparam name="T">The non-nullable reference value type.</typeparam>
-    /// <returns>A disposable that cancels the subscription.</returns>
-    /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
-    [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
-    public static IDisposable SubscribeSafe<T>(
-        IObservable<T?> source,
-        Action<T> onNext,
-        Action<Exception> onError,
-        params bool[] allowNullable)
-        where T : class
-    {
-        _ = allowNullable;
-        return SubscribeSafeCore(source, Witness.Create<T?>(value => onNext(value!), onError));
-    }
-
-    /// <summary>Subscribes nullable value callbacks with downstream exception protection from static-call syntax.</summary>
-    /// <param name="source">The source sequence.</param>
-    /// <param name="onNext">The action to invoke for each value.</param>
-    /// <param name="onError">The action to invoke for an error.</param>
-    /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
-    /// <typeparam name="T">The non-nullable value type.</typeparam>
-    /// <returns>A disposable that cancels the subscription.</returns>
-    /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
-    [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
-    public static IDisposable SubscribeSafe<T>(
-        IObservable<T?> source,
-        Action<T?> onNext,
-        Action<Exception> onError,
-        params bool[] allowNullable)
-        where T : struct
-    {
-        _ = allowNullable;
-        return SubscribeSafeCore(source, Witness.Create(onNext, onError));
-    }
-
-    /// <summary>Subscribes nullable reference callbacks with downstream exception protection from static-call syntax.</summary>
-    /// <param name="source">The source sequence.</param>
-    /// <param name="onNext">The action to invoke for each value.</param>
-    /// <param name="onError">The action to invoke for an error.</param>
-    /// <param name="onCompleted">The action to invoke when the sequence completes.</param>
-    /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
-    /// <typeparam name="T">The non-nullable reference value type.</typeparam>
-    /// <returns>A disposable that cancels the subscription.</returns>
-    /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
-    [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
-    public static IDisposable SubscribeSafe<T>(
-        IObservable<T?> source,
-        Action<T> onNext,
-        Action<Exception> onError,
-        Action onCompleted,
-        params bool[] allowNullable)
-        where T : class
-    {
-        _ = allowNullable;
-        return SubscribeSafeCore(source, Witness.Create<T?>(value => onNext(value!), onError, onCompleted));
-    }
-
-    /// <summary>Subscribes nullable value callbacks with downstream exception protection from static-call syntax.</summary>
-    /// <param name="source">The source sequence.</param>
-    /// <param name="onNext">The action to invoke for each value.</param>
-    /// <param name="onError">The action to invoke for an error.</param>
-    /// <param name="onCompleted">The action to invoke when the sequence completes.</param>
-    /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
-    /// <typeparam name="T">The non-nullable value type.</typeparam>
-    /// <returns>A disposable that cancels the subscription.</returns>
-    /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
-    [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
-    public static IDisposable SubscribeSafe<T>(
-        IObservable<T?> source,
-        Action<T?> onNext,
-        Action<Exception> onError,
-        Action onCompleted,
-        params bool[] allowNullable)
-        where T : struct
-    {
-        _ = allowNullable;
-        return SubscribeSafeCore(source, Witness.Create(onNext, onError, onCompleted));
-    }
-
-    /// <summary>Subscribes nullable reference terminal callbacks with downstream exception protection from static-call syntax.</summary>
-    /// <param name="source">The source sequence.</param>
-    /// <param name="onError">The action to invoke for an error.</param>
-    /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
-    /// <typeparam name="T">The non-nullable reference value type.</typeparam>
-    /// <returns>A disposable that cancels the subscription.</returns>
-    /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
-    [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
-    public static IDisposable SubscribeSafe<T>(IObservable<T?> source, Action<Exception> onError, params bool[] allowNullable)
-        where T : class
-    {
-        _ = allowNullable;
-        return SubscribeSafeCore(source, Witness.Create<T?>(static _ => { }, onError));
-    }
-
-    /// <summary>Subscribes nullable value terminal callbacks with downstream exception protection from static-call syntax.</summary>
-    /// <param name="source">The source sequence.</param>
-    /// <param name="onError">The action to invoke for an error.</param>
-    /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
-    /// <typeparam name="T">The non-nullable value type.</typeparam>
-    /// <returns>A disposable that cancels the subscription.</returns>
-    /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
-    [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
-    public static IDisposable SubscribeSafe<T>(IObservable<T?> source, Action<Exception> onError, params bool[] allowNullable)
-        where T : struct
-    {
-        _ = allowNullable;
-        return SubscribeSafeCore(source, Witness.Create<T?>(static _ => { }, onError));
-    }
-
-    /// <summary>Subscribes nullable reference terminal callbacks with downstream exception protection from static-call syntax.</summary>
-    /// <param name="source">The source sequence.</param>
-    /// <param name="onError">The action to invoke for an error.</param>
-    /// <param name="onCompleted">The action to invoke when the sequence completes.</param>
-    /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
-    /// <typeparam name="T">The non-nullable reference value type.</typeparam>
-    /// <returns>A disposable that cancels the subscription.</returns>
-    /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
-    [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
-    public static IDisposable SubscribeSafe<T>(
-        IObservable<T?> source,
-        Action<Exception> onError,
-        Action onCompleted,
-        params bool[] allowNullable)
-        where T : class
-    {
-        _ = allowNullable;
-        return SubscribeSafeCore(source, Witness.Create<T?>(static _ => { }, onError, onCompleted));
-    }
-
-    /// <summary>Subscribes nullable value terminal callbacks with downstream exception protection from static-call syntax.</summary>
-    /// <param name="source">The source sequence.</param>
-    /// <param name="onError">The action to invoke for an error.</param>
-    /// <param name="onCompleted">The action to invoke when the sequence completes.</param>
-    /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
-    /// <typeparam name="T">The non-nullable value type.</typeparam>
-    /// <returns>A disposable that cancels the subscription.</returns>
-    /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
-    [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
-    public static IDisposable SubscribeSafe<T>(
-        IObservable<T?> source,
-        Action<Exception> onError,
-        Action onCompleted,
-        params bool[] allowNullable)
-        where T : struct
-    {
-        _ = allowNullable;
-        return SubscribeSafeCore(source, Witness.Create<T?>(static _ => { }, onError, onCompleted));
-    }
-
-    /// <summary>Subscribes an observer with downstream exception protection.</summary>
-    /// <param name="source">The source sequence.</param>
-    /// <param name="observer">The observer to subscribe.</param>
-    /// <typeparam name="T">The value type.</typeparam>
-    /// <returns>A disposable that cancels the subscription.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="observer"/> is <see langword="null"/>.</exception>
-    private static SubscribeSafeWitness<T> SubscribeSafeCore<T>(IObservable<T> source, IObserver<T> observer)
-    {
-        ArgumentExceptionHelper.ThrowIfNull(source);
-
-        ArgumentExceptionHelper.ThrowIfNull(observer);
-
-        SubscribeSafeWitness<T> safe = new(observer);
-        safe.SetSubscription(source.Subscribe(safe));
-        return safe;
-    }
-
     /// <summary>System.Reactive-named combining operators for enumerable observable sources.</summary>
     /// <param name="sources">The observable sources.</param>
     /// <typeparam name="T">The value type.</typeparam>
@@ -442,6 +241,11 @@ public static partial class LinqExtensions
         /// <param name="gate">The gate shared with other synchronized sequences.</param>
         /// <returns>A sequence that forwards the source notifications one at a time under the shared gate.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="gate"/> is <see langword="null"/>.</exception>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "ApiSelection",
+            "PSH1409",
+            Justification =
+                "Lock argument via ThrowIfNull(object) triggers CS9216 (unintended monitor-based locking).")]
         public IObservable<T> Synchronize(Lock gate)
         {
             if (gate is null)
@@ -859,7 +663,10 @@ public static partial class LinqExtensions
 
             return typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange &&
                    right is RangeSignal rightRange
-                ? new RangeCombineLatestSignal<TResult>(leftRange, rightRange, (Func<int, int, TResult>)(object)selector)
+                ? new RangeCombineLatestSignal<TResult>(
+                    leftRange,
+                    rightRange,
+                    (Func<int, int, TResult>)(object)selector)
                 : new CombineLatestSignal<TLeft, TRight, TResult>(left, right, selector);
         }
 
@@ -893,7 +700,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(left);
 
-            return left is RangeSignal range && CanReadRangeAs(typeof(TLeft))
+            return left is RangeSignal range && typeof(TLeft) == typeof(int)
                 ? new ShiftedRangeSignal<TLeft>(range, Sequencer.Normalize(dueTime), ThreadPoolSequencer.Instance)
                 : new ShiftSignal<TLeft>(left, dueTime, ThreadPoolSequencer.Instance);
         }
@@ -907,7 +714,7 @@ public static partial class LinqExtensions
             ArgumentExceptionHelper.ThrowIfNull(left);
 
             scheduler ??= ThreadPoolSequencer.Instance;
-            return left is RangeSignal range && CanReadRangeAs(typeof(TLeft))
+            return left is RangeSignal range && typeof(TLeft) == typeof(int)
                 ? new ShiftedRangeSignal<TLeft>(range, Sequencer.Normalize(dueTime), scheduler)
                 : new ShiftSignal<TLeft>(left, dueTime, scheduler);
         }
@@ -1134,9 +941,10 @@ public static partial class LinqExtensions
         /// <returns>A sequence containing only values assignable to <typeparamref name="TResult"/>.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
-            "Major Code Smell",
-            "S4018:Generic methods should provide type parameters",
-            Justification = "The type parameter defines the element type for this Rx-style operator and cannot be inferred from the arguments.")]
+            "Design",
+            "SST2307:Generic method type parameters should be inferable from the parameters",
+            Justification =
+                "The type parameter defines the element type for this Rx-style operator and cannot be inferred from the arguments.")]
         public IObservable<TResult> OfType<TResult>()
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -1149,9 +957,10 @@ public static partial class LinqExtensions
         /// <returns>A sequence containing each value cast to <typeparamref name="TResult"/>.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
-            "Major Code Smell",
-            "S4018:Generic methods should provide type parameters",
-            Justification = "The type parameter defines the element type for this Rx-style operator and cannot be inferred from the arguments.")]
+            "Design",
+            "SST2307:Generic method type parameters should be inferable from the parameters",
+            Justification =
+                "The type parameter defines the element type for this Rx-style operator and cannot be inferred from the arguments.")]
         public IObservable<TResult> Cast<TResult>()
         {
             ArgumentExceptionHelper.ThrowIfNull(source);

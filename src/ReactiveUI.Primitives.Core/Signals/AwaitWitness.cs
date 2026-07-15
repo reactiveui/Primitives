@@ -32,6 +32,13 @@ public sealed class AwaitWitness<T> : IObserver<T>
 
     /// <summary>Executes the OnError operation.</summary>
     /// <param name="error">The error value.</param>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "SST2318:Members should not have identical bodies",
+        Justification =
+            "OnCompleted and OnError are distinct IObserver<T> terminal notifications that intentionally both fire the "
+            + "witness by delegating to the shared InvokeOnOriginalContext helper. They are not a copy-paste of each "
+            + "other; having one call the other would misrepresent an error as a completion.")]
     public void OnError(Exception error) => InvokeOnOriginalContext();
 
     /// <summary>Executes the OnNext operation.</summary>

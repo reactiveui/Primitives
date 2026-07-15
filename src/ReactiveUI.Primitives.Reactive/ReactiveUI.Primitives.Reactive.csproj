@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <!-- System.Reactive-flavoured leaf: recompiles the shared Primitives source with RxVoid->Unit and
@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ReactiveUI.Primitives.Core\ReactiveUI.Primitives.Core.csproj" />
+    <ProjectReference Include="..\ReactiveUI.Primitives.Extensions.Core\ReactiveUI.Primitives.Extensions.Core.csproj" />
   </ItemGroup>
 
   <!-- Platform sequencers compile only on their matching OS-platform TFM (the coalescing IScheduler base below
@@ -50,6 +51,11 @@
     <Compile Include="..\Primitives.Shared\**\*.cs" Link="Primitives.Shared\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
+  <!-- The RxVoid/ISequencer-aware shared Extensions source, compiled here under the .Reactive namespace (REACTIVE_SHIM). -->
+  <ItemGroup>
+    <Compile Include="..\Primitives.Extensions.Shared\**\*.cs" Link="Primitives.Extensions.Shared\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
   <!-- The shared source shifts to ReactiveUI.Primitives.Reactive.* under REACTIVE_SHIM. These imports let the
        shifted files reach both their shifted siblings and the non-shifted Core siblings without per-file usings. -->
   <ItemGroup>
@@ -64,10 +70,25 @@
     <Using Include="ReactiveUI.Primitives.Reactive.Core" />
     <Using Include="ReactiveUI.Primitives.Reactive.Concurrency" />
     <Using Include="ReactiveUI.Primitives.Reactive.Signals" />
+
+    <Using Include="ReactiveUI.Primitives.Extensions.Reactive"/>
+    <Using Include="ReactiveUI.Primitives.Extensions.Reactive.Internal"/>
+    <Using Include="ReactiveUI.Primitives.Extensions.Reactive.Operators"/>
   </ItemGroup>
 
   <ItemGroup>
     <InternalsVisibleTo Include="ReactiveUI.Primitives.Reactive.Tests" />
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Extensions.Reactive.Tests" />
+  </ItemGroup>
+
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
+    <PackageReference Include="Microsoft.Bcl.TimeProvider" />
+    <PackageReference Include="System.Threading.Channels" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" />
+    <PackageReference Include="System.ComponentModel.Annotations" />
+    <PackageReference Include="System.Buffers" />
+    <PackageReference Include="System.Memory" />
+    <PackageReference Include="System.Collections.Immutable" />
   </ItemGroup>
 
 </Project>

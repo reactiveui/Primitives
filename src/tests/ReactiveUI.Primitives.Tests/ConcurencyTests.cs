@@ -31,7 +31,7 @@ public class ConcurencyTests
     public async Task TestCreate()
     {
         var scheduler = TaskPoolSequencer.Instance;
-        var disposable = scheduler.Schedule(0, (_, _) => EmptyDisposable.Instance);
+        var disposable = scheduler.Schedule(0, static (_, _) => EmptyDisposable.Instance);
         await Assert.That(disposable).IsNotNull();
         disposable.Dispose();
     }
@@ -51,14 +51,10 @@ public class ConcurencyTests
     public async Task TaskPoolScheduleAction()
     {
         var nt = TaskPoolSequencer.Instance;
-        var schedulingThreadId = Environment.CurrentManagedThreadId;
-        var scheduling = 1;
-        var completed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var scheduled = nt.Schedule(() => completed.TrySetResult(
-            Environment.CurrentManagedThreadId == schedulingThreadId &&
-            Volatile.Read(ref scheduling) != 0));
-        Volatile.Write(ref scheduling, 0);
-        var ranInline = await completed.Task.WaitAsync(ScheduleTimeout);
+        var probe = new InlineExecutionProbe();
+        using var scheduled = nt.Schedule(probe, static p => p.RecordExecution());
+        probe.MarkSchedulingFinished();
+        var ranInline = await probe.Completed.Task.WaitAsync(ScheduleTimeout);
         await Assert.That(ranInline).IsFalse();
     }
 
@@ -68,16 +64,10 @@ public class ConcurencyTests
     public async Task TaskPoolScheduleActionDueNow()
     {
         var nt = TaskPoolSequencer.Instance;
-        var schedulingThreadId = Environment.CurrentManagedThreadId;
-        var scheduling = 1;
-        var completed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var scheduled = nt.Schedule(
-            TimeSpan.Zero,
-            () => completed.TrySetResult(
-                Environment.CurrentManagedThreadId == schedulingThreadId &&
-                Volatile.Read(ref scheduling) != 0));
-        Volatile.Write(ref scheduling, 0);
-        var ranInline = await completed.Task.WaitAsync(ScheduleTimeout);
+        var probe = new InlineExecutionProbe();
+        using var scheduled = nt.Schedule(probe, TimeSpan.Zero, static p => p.RecordExecution());
+        probe.MarkSchedulingFinished();
+        var ranInline = await probe.Completed.Task.WaitAsync(ScheduleTimeout);
         await Assert.That(ranInline).IsFalse();
     }
 
@@ -87,16 +77,10 @@ public class ConcurencyTests
     public async Task TaskPoolScheduleActionDue()
     {
         var nt = TaskPoolSequencer.Instance;
-        var schedulingThreadId = Environment.CurrentManagedThreadId;
-        var scheduling = 1;
-        var completed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var scheduled = nt.Schedule(
-            ShortDueTime,
-            () => completed.TrySetResult(
-                Environment.CurrentManagedThreadId == schedulingThreadId &&
-                Volatile.Read(ref scheduling) != 0));
-        Volatile.Write(ref scheduling, 0);
-        var ranInline = await completed.Task.WaitAsync(ScheduleTimeout);
+        var probe = new InlineExecutionProbe();
+        using var scheduled = nt.Schedule(probe, ShortDueTime, static p => p.RecordExecution());
+        probe.MarkSchedulingFinished();
+        var ranInline = await probe.Completed.Task.WaitAsync(ScheduleTimeout);
         await Assert.That(ranInline).IsFalse();
     }
 
@@ -106,18 +90,13 @@ public class ConcurencyTests
     public async Task TaskPoolScheduleActionCancel()
     {
         var nt = TaskPoolSequencer.Instance;
-        var runCount = 0;
-        var completed = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var scheduled = nt.Schedule(CancelDueTime, () =>
-        {
-            Volatile.Write(ref runCount, 1);
-            _ = completed.TrySetResult(1);
-        });
+        var probe = new CancellationProbe();
+        using var scheduled = nt.Schedule(probe, CancelDueTime, static p => p.RecordExecution());
         scheduled.Dispose();
         var delay = Task.Delay(CancelObservationWindow);
-        var observed = await Task.WhenAny(completed.Task, delay);
+        var observed = await Task.WhenAny(probe.Completed.Task, delay);
         await Assert.That(observed).IsSameReferenceAs(delay);
-        await Assert.That(Volatile.Read(ref runCount)).IsEqualTo(0);
+        await Assert.That(probe.RunCount).IsEqualTo(0);
     }
 
     /// <summary>Verifies that delays larger than <see cref = "int.MaxValue"/> milliseconds are accepted.</summary>
@@ -126,7 +105,48 @@ public class ConcurencyTests
     public async Task TaskPoolDelayLargerThanIntMaxValue()
     {
         var dueTime = TimeSpan.FromMilliseconds((double)int.MaxValue + 1);
-        using var scheduled = TaskPoolSequencer.Instance.Schedule(dueTime, () => { });
+        using var scheduled = TaskPoolSequencer.Instance.Schedule(dueTime, static () => { });
         await Assert.That(scheduled).IsNotNull();
+    }
+
+    /// <summary>Records whether a scheduled callback ran on the scheduling thread before scheduling returned.</summary>
+    private sealed class InlineExecutionProbe
+    {
+        /// <summary>The thread the scheduling call was made on.</summary>
+        private readonly int _schedulingThreadId = Environment.CurrentManagedThreadId;
+
+        /// <summary>Non-zero while the scheduling call has not yet returned.</summary>
+        private int _scheduling = 1;
+
+        /// <summary>Gets the source completed with whether the callback observed an inline execution.</summary>
+        public TaskCompletionSource<bool> Completed { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        /// <summary>Signals that the scheduling call has returned, so any later callback cannot have run inline.</summary>
+        public void MarkSchedulingFinished() => Volatile.Write(ref _scheduling, 0);
+
+        /// <summary>Completes <see cref = "Completed"/> with whether this callback ran inline on the scheduling thread.</summary>
+        public void RecordExecution() => _ = Completed.TrySetResult(
+            Environment.CurrentManagedThreadId == _schedulingThreadId &&
+            Volatile.Read(ref _scheduling) != 0);
+    }
+
+    /// <summary>Records whether a scheduled callback ran at all, so a cancellation can be shown to have suppressed it.</summary>
+    private sealed class CancellationProbe
+    {
+        /// <summary>How many times the scheduled callback has run.</summary>
+        private int _runCount;
+
+        /// <summary>Gets the source completed when the scheduled callback runs.</summary>
+        public TaskCompletionSource<int> Completed { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        /// <summary>Gets the number of times the scheduled callback ran.</summary>
+        public int RunCount => Volatile.Read(ref _runCount);
+
+        /// <summary>Records that the scheduled callback ran.</summary>
+        public void RecordExecution()
+        {
+            Volatile.Write(ref _runCount, 1);
+            _ = Completed.TrySetResult(1);
+        }
     }
 }

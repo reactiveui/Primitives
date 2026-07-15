@@ -14,8 +14,8 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenGroupBySourceThrowsDuringSubscription_ThenDisposesAndRethrows()
     {
-        var failing = SignalAsync.Create<int>((_, _) => throw new InvalidOperationException("subscribe fail"));
-        await Assert.That(async () => await failing.GroupBy(x => x % SampleValue2).ToListAsync())
+        var failing = SignalAsync.Create<int>(static (_, _) => throw new InvalidOperationException("subscribe fail"));
+        await Assert.That(async () => await failing.GroupBy(static x => x % SampleValue2).ToListAsync())
             .ThrowsExactly<InvalidOperationException>();
     }
 
@@ -24,11 +24,13 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenGroupByGroupObservableSubscribed_ThenSubscriptionIsTracked()
     {
+        // The key selector splits the source into an even and an odd group.
+        const int EvenOddModulus = 2;
         var signal = Signal.Create<int>();
         List<int> evenItems = [];
         List<int> oddItems = [];
         List<IAsyncDisposable> innerSubs = [];
-        await using var sub = await signal.Values.GroupBy(x => x % 2).SubscribeAsync(
+        await using var sub = await signal.Values.GroupBy(static x => x % EvenOddModulus).SubscribeAsync(
             async (group, ct) =>
             {
                 var inner = await group.SubscribeAsync(

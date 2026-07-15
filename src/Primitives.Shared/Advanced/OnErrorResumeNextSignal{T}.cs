@@ -66,7 +66,7 @@ internal sealed class OnErrorResumeNextSignal<T> : IRequireCurrentThread<T>
                 return;
             }
 
-            Dispose(disposing: true);
+            Dispose(true);
         }
 
         /// <summary>Starts iterating and subscribing to sources.</summary>
@@ -152,7 +152,8 @@ internal sealed class OnErrorResumeNextSignal<T> : IRequireCurrentThread<T>
                     return;
                 }
 
-                source = enumerator.Current ?? throw new InvalidOperationException("OnErrorResumeNext source contained null.");
+                source = enumerator.Current ??
+                         throw new InvalidOperationException("OnErrorResumeNext source contained null.");
             }
             catch (Exception exception)
             {
@@ -184,18 +185,18 @@ internal sealed class OnErrorResumeNextSignal<T> : IRequireCurrentThread<T>
             switch (Interlocked.Exchange(ref _disposed, 1))
             {
                 case 0:
-                {
-                    try
                     {
-                        _observer.OnError(error);
-                    }
-                    finally
-                    {
-                        Dispose(disposing: true);
-                    }
+                        try
+                        {
+                            _observer.OnError(error);
+                        }
+                        finally
+                        {
+                            Dispose(true);
+                        }
 
-                    break;
-                }
+                        break;
+                    }
             }
         }
 
@@ -205,18 +206,18 @@ internal sealed class OnErrorResumeNextSignal<T> : IRequireCurrentThread<T>
             switch (Interlocked.Exchange(ref _disposed, 1))
             {
                 case 0:
-                {
-                    try
                     {
-                        _observer.OnCompleted();
-                    }
-                    finally
-                    {
-                        Dispose(disposing: true);
-                    }
+                        try
+                        {
+                            _observer.OnCompleted();
+                        }
+                        finally
+                        {
+                            Dispose(true);
+                        }
 
-                    break;
-                }
+                        break;
+                    }
             }
         }
 

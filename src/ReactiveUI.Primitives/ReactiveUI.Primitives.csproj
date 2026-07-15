@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFrameworks>$(LibraryTargetFrameworks);$(AndroidPrimitivesTargetFrameworks)</TargetFrameworks>
@@ -13,47 +13,65 @@
 
   <!-- Platform sequencers compile only on their matching OS-platform TFM. -->
   <ItemGroup>
-    <Compile Remove="Platforms\**\*.cs" />
-    <None Include="Platforms\**\*.cs" />
+    <Compile Remove="Platforms\**\*.cs"/>
+    <None Include="Platforms\**\*.cs"/>
   </ItemGroup>
   <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
-    <Compile Include="Platforms\android\**\*.cs" />
+    <Compile Include="Platforms\android\**\*.cs"/>
   </ItemGroup>
   <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios' or $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tvos' or $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst' or $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'macos'">
-    <Compile Include="Platforms\apple\**\*.cs" />
+    <Compile Include="Platforms\apple\**\*.cs"/>
   </ItemGroup>
 
   <!-- RxVoid/ISequencer-aware source shared with the Reactive leaf. Compiled here with the lean
        identity (RxVoid, ISequencer); the Reactive leaf links the same files with its aliases. -->
   <ItemGroup>
-    <Compile Include="..\Primitives.Shared\**\*.cs" Link="Primitives.Shared\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\Primitives.Shared\**\*.cs" Link="Primitives.Shared\%(RecursiveDir)%(Filename)%(Extension)"/>
+  </ItemGroup>
+
+  <!-- The RxVoid/ISequencer-aware shared source, compiled here under the lean namespace (no REACTIVE_SHIM). -->
+  <ItemGroup>
+    <Compile Include="..\Primitives.Extensions.Shared\**\*.cs" Link="Primitives.Extensions.Shared\%(RecursiveDir)%(Filename)%(Extension)"/>
   </ItemGroup>
 
   <!-- Namespaces the shared source resolves; globalized so the linked files carry no per-file usings
        (the Reactive leaf shifts the shared namespaces and so needs its own global imports). -->
   <ItemGroup>
-    <Using Include="ReactiveUI.Primitives.Advanced" />
-    <Using Include="ReactiveUI.Primitives.Concurrency" />
-    <Using Include="ReactiveUI.Primitives.Core" />
-    <Using Include="ReactiveUI.Primitives.Disposables" />
-    <Using Include="ReactiveUI.Primitives.Signals" />
+    <Using Include="ReactiveUI.Primitives.Advanced"/>
+    <Using Include="ReactiveUI.Primitives.Concurrency"/>
+    <Using Include="ReactiveUI.Primitives.Core"/>
+    <Using Include="ReactiveUI.Primitives.Disposables"/>
+    <Using Include="ReactiveUI.Primitives.Signals"/>
+
+    <Using Include="ReactiveUI.Primitives.Extensions.Internal"/>
   </ItemGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="ReactiveUI.Primitives.Tests" />
-    <InternalsVisibleTo Include="ReactiveUI.Primitives.Extensions.Tests" />
-    <InternalsVisibleTo Include="ReactiveUI.Primitives.Async.Tests" />
-    <InternalsVisibleTo Include="ReactiveUI.Primitives.Blazor.Tests" />
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Tests"/>
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Extensions.Tests"/>
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Async.Tests"/>
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Blazor.Tests"/>
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ReactiveUI.Disposables\ReactiveUI.Disposables.csproj" />
-    <ProjectReference Include="..\ReactiveUI.Primitives.Core\ReactiveUI.Primitives.Core.csproj" />
+    <ProjectReference Include="..\ReactiveUI.Disposables\ReactiveUI.Disposables.csproj"/>
+    <ProjectReference Include="..\ReactiveUI.Primitives.Core\ReactiveUI.Primitives.Core.csproj"/>
+    <ProjectReference Include="..\ReactiveUI.Primitives.Extensions.Core\ReactiveUI.Primitives.Extensions.Core.csproj"/>
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\..\Skill.md" Pack="true" PackagePath="Skill.md" Visible="false" />
-    <None Include="..\..\Skill.md" Pack="true" PackagePath=".agents/skills/reactiveui-primitives/SKILL.md" Visible="false" />
+    <None Include="..\..\Skill.md" Pack="true" PackagePath="Skill.md" Visible="false"/>
+    <None Include="..\..\Skill.md" Pack="true" PackagePath=".agents/skills/reactiveui-primitives/SKILL.md" Visible="false"/>
+  </ItemGroup>
+
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
+    <PackageReference Include="Microsoft.Bcl.TimeProvider"/>
+    <PackageReference Include="System.Threading.Channels"/>
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe"/>
+    <PackageReference Include="System.ComponentModel.Annotations"/>
+    <PackageReference Include="System.Buffers"/>
+    <PackageReference Include="System.Memory"/>
+    <PackageReference Include="System.Collections.Immutable"/>
   </ItemGroup>
 
 </Project>

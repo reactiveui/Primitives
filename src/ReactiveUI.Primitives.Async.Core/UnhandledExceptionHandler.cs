@@ -35,7 +35,8 @@ public static class UnhandledExceptionHandler
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST1429:Handle, rethrow, or narrow this catch; an empty catch of the base exception hides failures",
-        Justification = "This is the last-resort handler; if the registered handler itself throws there is no further sink to route to without recursing.")]
+        Justification =
+            "This is the last-resort handler; if the registered handler itself throws there is no further sink to route to without recursing.")]
     internal static void ReportUnhandledException(Exception e)
     {
         if (e is OperationCanceledException)

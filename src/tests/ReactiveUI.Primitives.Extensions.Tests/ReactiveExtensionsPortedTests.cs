@@ -157,8 +157,8 @@ public sealed class ReactiveExtensionsPortedTests
         List<string> trySelect = [];
         List<string> constants = [];
         using var whereSelectSub =
-            values.WhereSelect(x => x % EvenDivisor == 0, x => $"even-{x}").Subscribe(whereSelect.Add);
-        using var trySelectSub = values.TrySelect(x => x > OddInput ? $"value-{x}" : null).Subscribe(trySelect.Add);
+            values.WhereSelect(static x => x % EvenDivisor == 0, static x => $"even-{x}").Subscribe(whereSelect.Add);
+        using var trySelectSub = values.TrySelect(static x => x > OddInput ? $"value-{x}" : null).Subscribe(trySelect.Add);
         using var constantsSub = values.SelectConstant("tick").Subscribe(constants.Add);
         values.OnNext(OddInput);
         values.OnNext(EvenInput);
@@ -206,7 +206,7 @@ public sealed class ReactiveExtensionsPortedTests
         Subject<object> trigger = new();
         using var latestSub = source.LatestOrDefault(DefaultValue).Subscribe(latest.Add);
         using var pairwiseSub = source.Pairwise().Subscribe(pairwise.Add);
-        var (truePartition, falsePartition) = source.Partition(x => x % PartitionDivisor == 0);
+        var (truePartition, falsePartition) = source.Partition(static x => x % PartitionDivisor == 0);
         using var evenSub = truePartition.Subscribe(even.Add);
         using var oddSub = falsePartition.Subscribe(odd.Add);
         using var sampledSub = source.SampleLatest(trigger).Subscribe(sampled.Add);
@@ -240,10 +240,10 @@ public sealed class ReactiveExtensionsPortedTests
         Subject<int> source = new();
         List<int> sequential = [];
         List<int> concurrent = [];
-        using var seqSub = source.SelectAsyncSequential(x => Task.FromResult(x * SequentialMultiplier))
+        using var seqSub = source.SelectAsyncSequential(static x => Task.FromResult(x * SequentialMultiplier))
             .Subscribe(sequential.Add);
         using var conSub = source
-            .SelectAsyncConcurrent(x => Task.FromResult(x * ConcurrentMultiplier), MaxConcurrency)
+            .SelectAsyncConcurrent(static x => Task.FromResult(x * ConcurrentMultiplier), MaxConcurrency)
             .Subscribe(concurrent.Add);
         source.OnNext(InputValue);
         await Task.Delay(DelayMilliseconds);
@@ -262,9 +262,9 @@ public sealed class ReactiveExtensionsPortedTests
     {
         List<string> results = [];
         using var sub = MatchCandidates.FirstMatchFromCandidates(
-            key => Observable.Return(key),
-            value => $"value-{value}",
-            value => value.EndsWith("2", StringComparison.Ordinal),
+            Observable.Return,
+            static value => $"value-{value}",
+            static value => value.EndsWith('2'),
             "fallback").Subscribe(results.Add);
         await Assert.That(results).IsCollectionEqualTo(["value-2"]);
     }

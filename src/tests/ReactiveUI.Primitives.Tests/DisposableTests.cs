@@ -118,67 +118,10 @@ public class DisposableTests
         replaceable.Create(new ActionDisposable(() => replaced++));
         await Assert.That(replaced).IsEqualTo(ReplaceableDisposalCount);
         _ = Assert.Throws<ArgumentNullException>(() => replaceable.Create(null!));
-        var disposeFalse = 0;
-        ExposedSingleDisposable single = new(new ActionDisposable(() => disposeFalse++));
-        single.DisposeFalse();
-        single.Dispose();
-        await Assert.That(disposeFalse).IsEqualTo(1);
-        var replaceableFalse = 0;
-        ExposedSingleReplaceableDisposable exposedReplaceable = new(
-            new ActionDisposable(() => replaceableFalse++));
-        exposedReplaceable.DisposeFalse();
-        exposedReplaceable.Dispose();
-        await Assert.That(replaceableFalse).IsEqualTo(1);
-        var multipleFalse = 0;
-        ExposedMultipleDisposable exposedMultiple = new(new ActionDisposable(() => multipleFalse++));
-        exposedMultiple.DisposeFalse();
-        exposedMultiple.Dispose();
-        await Assert.That(multipleFalse).IsEqualTo(1);
-        var firstDisposed = 0;
-        var secondDisposed = 0;
-        var thirdDisposed = 0;
-        var fourthDisposed = 0;
-        var missing = EmptyDisposable.Instance;
-        ActionDisposable first = new(() => firstDisposed++);
-        ActionDisposable second = new(() => secondDisposed++);
-        ActionDisposable third = new(() => thirdDisposed++);
-        ActionDisposable fourth = new(() => fourthDisposed++);
-        MultipleDisposable group = [first, second, third, fourth];
-        await Assert.That(group.Remove(first)).IsTrue();
-        await Assert.That(group.Remove(second)).IsTrue();
-        await Assert.That(group.Remove(third)).IsTrue();
-        await Assert.That(group.Remove(missing)).IsFalse();
-        group.Dispose();
-        await Assert.That(firstDisposed).IsEqualTo(1);
-        await Assert.That(secondDisposed).IsEqualTo(1);
-        await Assert.That(thirdDisposed).IsEqualTo(1);
-        await Assert.That(fourthDisposed).IsEqualTo(1);
-        var factoryDisposed = 0;
-        var factoryGroup = MultipleDisposable.Create(
-            new ActionDisposable(() => factoryDisposed++),
-            null!,
-            new ActionDisposable(() => factoryDisposed++));
-        factoryGroup.Dispose();
-        factoryGroup.Dispose();
-        await Assert.That(factoryDisposed).IsEqualTo(DoubleDisposalCount);
-        _ = Assert.Throws<ArgumentNullException>(() => MultipleDisposable.Create(null!));
-        IDisposable[] constructedDisposables =
-        [
-            new AssignmentSlot(),
-            new AssignmentSlot(() => { }),
-            new AssignmentSlot(EmptyDisposable.Instance),
-            new Slot(),
-            new Slot(() => { }),
-            new Slot(EmptyDisposable.Instance),
-            new Pocket(),
-            new Pocket(EmptyDisposable.Instance, EmptyDisposable.Instance),
-            new Pocket(EmptyDisposable.Instance, EmptyDisposable.Instance, EmptyDisposable.Instance),
-        ];
-
-        foreach (var disposable in constructedDisposables)
-        {
-            disposable.Dispose();
-        }
+        await AssertProtectedDisposePathRunsTheUnderlyingDisposableOnce();
+        await AssertMultipleDisposableRemovesItemsAndDisposesTheRest();
+        await AssertMultipleDisposableFactorySkipsNullsAndDisposesOnce();
+        DisposeEveryConstructedSlotShape();
     }
 
     /// <summary>Verifies low-level disposables, collections, and schedulers cover deterministic edges.</summary>
@@ -193,8 +136,8 @@ public class DisposableTests
         }
 
         await Assert.That(multiple.Remove(EmptyDisposable.Instance)).IsTrue();
-        await Assert.That(multiple.Remove(new ActionDisposable(() => { }))).IsFalse();
-        _ = Assert.Throws<ArgumentNullException>(() =>
+        await Assert.That(multiple.Remove(new ActionDisposable(static () => { }))).IsFalse();
+        _ = Assert.Throws<ArgumentNullException>(static () =>
         {
             MultipleDisposable invalid = new((IDisposable[])null!);
             GC.KeepAlive(invalid);
@@ -249,6 +192,19 @@ public class DisposableTests
     [Test]
     public async Task CoreValueTypesDisposablesAndHandlesCoverEqualityAndLifecycleBranches()
     {
+        var ignored = 0;
+        InvalidOperationException thrown = new("throw-me");
+        await AssertMomentIntervalAndVoidEqualityContracts();
+        await InvokeInternalHandleMembers(thrown);
+        _ = Handle.CatchIgnore<int>(new InvalidOperationException("ignored")).Subscribe(_ => ignored++);
+        await Assert.That(ignored).IsEqualTo(0);
+        await AssertDisposableLifecycleBranches();
+    }
+
+    /// <summary>Asserts the equality, hashing, and formatting contracts of the core value types.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private static async Task AssertMomentIntervalAndVoidEqualityContracts()
+    {
         Moment<int> moment = new(Seven, new(CalendarYear, 1, 1, 0, 0, 0, TimeSpan.Zero));
         Moment<int> sameMoment = new(Seven, moment.Timestamp);
         Moment<int> differentMoment = new(Eight, moment.Timestamp.AddTicks(1));
@@ -256,8 +212,6 @@ public class DisposableTests
         TimeInterval<int> sameInterval = new(Seven, TimeSpan.FromTicks(Three));
         TimeInterval<int> differentInterval = new(Eight, TimeSpan.FromTicks(Four));
         var unit = default(RxVoid);
-        var ignored = 0;
-        InvalidOperationException thrown = new("throw-me");
         await Assert.That(moment == sameMoment).IsTrue();
         await Assert.That(moment.Equals((object)sameMoment)).IsTrue();
         await Assert.That(moment == differentMoment).IsFalse();
@@ -276,9 +230,12 @@ public class DisposableTests
         await Assert.That(unit.Equals((object)default(RxVoid))).IsTrue();
         await Assert.That(unit.GetHashCode()).IsEqualTo(0);
         await Assert.That(unit.ToString()).IsEqualTo("()");
-        await InvokeInternalHandleMembers(thrown);
-        _ = Handle.CatchIgnore<int>(new InvalidOperationException("ignored")).Subscribe(_ => ignored++);
-        await Assert.That(ignored).IsEqualTo(0);
+    }
+
+    /// <summary>Asserts the disposal lifecycle of the boolean, slot, pocket, single, and group disposables.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private static async Task AssertDisposableLifecycleBranches()
+    {
         BooleanDisposable boolean = new();
         await Assert.That(boolean.IsDisposed).IsFalse();
         boolean.Dispose();
@@ -292,7 +249,7 @@ public class DisposableTests
         await Assert.That(slotDisposed).IsEqualTo(Two);
         await Assert.That(assignmentDisposed).IsEqualTo(Two);
         await Assert.That(pocketDisposed).IsEqualTo(1);
-        SingleDisposable single = new(new ActionDisposable(() => { }), () => { });
+        SingleDisposable single = new(new ActionDisposable(static () => { }), static () => { });
         _ = Assert.Throws<InvalidOperationException>(() => single.Create(EmptyDisposable.Instance));
         var replaceableFirst = 0;
         var replaceableSecond = 0;
@@ -308,6 +265,90 @@ public class DisposableTests
         multiple.Add(new ActionDisposable(() => lateDisposed++));
         await Assert.That(lateDisposed).IsEqualTo(1);
         await Assert.That(multiple.IsDisposed).IsTrue();
+    }
+
+    /// <summary>Asserts the protected <c>Dispose(false)</c> path still disposes the underlying disposable exactly once.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private static async Task AssertProtectedDisposePathRunsTheUnderlyingDisposableOnce()
+    {
+        var disposeFalse = 0;
+        ExposedSingleDisposable single = new(new ActionDisposable(() => disposeFalse++));
+        single.DisposeFalse();
+        single.Dispose();
+        await Assert.That(disposeFalse).IsEqualTo(1);
+        var replaceableFalse = 0;
+        ExposedSingleReplaceableDisposable exposedReplaceable = new(
+            new ActionDisposable(() => replaceableFalse++));
+        exposedReplaceable.DisposeFalse();
+        exposedReplaceable.Dispose();
+        await Assert.That(replaceableFalse).IsEqualTo(1);
+        var multipleFalse = 0;
+        ExposedMultipleDisposable exposedMultiple = new(new ActionDisposable(() => multipleFalse++));
+        exposedMultiple.DisposeFalse();
+        exposedMultiple.Dispose();
+        await Assert.That(multipleFalse).IsEqualTo(1);
+    }
+
+    /// <summary>Asserts removal detaches an item from the group and disposal reaches only the items still in it.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private static async Task AssertMultipleDisposableRemovesItemsAndDisposesTheRest()
+    {
+        var firstDisposed = 0;
+        var secondDisposed = 0;
+        var thirdDisposed = 0;
+        var fourthDisposed = 0;
+        var missing = EmptyDisposable.Instance;
+        ActionDisposable first = new(() => firstDisposed++);
+        ActionDisposable second = new(() => secondDisposed++);
+        ActionDisposable third = new(() => thirdDisposed++);
+        ActionDisposable fourth = new(() => fourthDisposed++);
+        MultipleDisposable group = [first, second, third, fourth];
+        await Assert.That(group.Remove(first)).IsTrue();
+        await Assert.That(group.Remove(second)).IsTrue();
+        await Assert.That(group.Remove(third)).IsTrue();
+        await Assert.That(group.Remove(missing)).IsFalse();
+        group.Dispose();
+        await Assert.That(firstDisposed).IsEqualTo(1);
+        await Assert.That(secondDisposed).IsEqualTo(1);
+        await Assert.That(thirdDisposed).IsEqualTo(1);
+        await Assert.That(fourthDisposed).IsEqualTo(1);
+    }
+
+    /// <summary>Asserts the group factory ignores a null entry, rejects a null array, and disposes its items once.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private static async Task AssertMultipleDisposableFactorySkipsNullsAndDisposesOnce()
+    {
+        var factoryDisposed = 0;
+        var factoryGroup = MultipleDisposable.Create(
+            new ActionDisposable(() => factoryDisposed++),
+            null!,
+            new ActionDisposable(() => factoryDisposed++));
+        factoryGroup.Dispose();
+        factoryGroup.Dispose();
+        await Assert.That(factoryDisposed).IsEqualTo(DoubleDisposalCount);
+        _ = Assert.Throws<ArgumentNullException>(static () => MultipleDisposable.Create(null!));
+    }
+
+    /// <summary>Disposes one instance of every slot and pocket constructor overload.</summary>
+    private static void DisposeEveryConstructedSlotShape()
+    {
+        IDisposable[] constructedDisposables =
+        [
+            new AssignmentSlot(),
+            new AssignmentSlot(static () => { }),
+            new AssignmentSlot(EmptyDisposable.Instance),
+            new Slot(),
+            new Slot(static () => { }),
+            new Slot(EmptyDisposable.Instance),
+            new Pocket(),
+            new Pocket(EmptyDisposable.Instance, EmptyDisposable.Instance),
+            new Pocket(EmptyDisposable.Instance, EmptyDisposable.Instance, EmptyDisposable.Instance)
+        ];
+
+        foreach (var disposable in constructedDisposables)
+        {
+            disposable.Dispose();
+        }
     }
 
     /// <summary>Invokes the public handle members directly.</summary>

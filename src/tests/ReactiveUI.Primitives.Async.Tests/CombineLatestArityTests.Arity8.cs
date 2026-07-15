@@ -13,10 +13,6 @@ public partial class CombineLatestArityTests
     /// <summary>Verifies that CombineLatest8 disposes on subscription failure (catch block).</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "Test Reasons")]
     public async Task WhenCombineLatest8SubscriptionThrows_ThenDisposesAndRethrows()
     {
         var s1 = Signal.Create<int>();
@@ -26,27 +22,24 @@ public partial class CombineLatestArityTests
         var s5 = Signal.Create<int>();
         var s6 = Signal.Create<int>();
         var s7 = Signal.Create<int>();
-        var throwingSrc = AsyncObs.Create<int>((_, _) => throw new InvalidOperationException("subscribe failed"));
+        var throwingSrc = AsyncObs.Create<int>(static (_, _) => throw new InvalidOperationException("subscribe failed"));
         await Assert.That(async () =>
             await s1.Values
                 .CombineLatest(
-                s2.Values,
-                s3.Values,
-                s4.Values,
-                s5.Values,
-                s6.Values,
-                s7.Values,
-                throwingSrc,
-                (v1, v2, v3, v4, v5, v6, v7, v8) => v1 + v2 + v3 + v4 + v5 + v6 + v7 + v8).SubscribeAsync((_, _) => default, null)).ThrowsExactly<InvalidOperationException>();
+                    s2.Values,
+                    s3.Values,
+                    s4.Values,
+                    s5.Values,
+                    s6.Values,
+                    s7.Values,
+                    throwingSrc,
+                    static (v1, v2, v3, v4, v5, v6, v7, v8) => v1 + v2 + v3 + v4 + v5 + v6 + v7 + v8)
+                .SubscribeAsync(static (_, _) => default, null)).ThrowsExactly<InvalidOperationException>();
     }
 
     /// <summary>Verifies that CombineLatest8 OnNextCombined guard returns when disposed.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "Test Reasons")]
     public async Task WhenCombineLatest8DisposedBeforeCombine_ThenOnNextCombinedIsGuarded()
     {
         var s1 = Signal.Create<int>();
@@ -66,7 +59,7 @@ public partial class CombineLatestArityTests
             s6.Values,
             s7.Values,
             s8.Values,
-            (v1, v2, v3, v4, v5, v6, v7, v8) => v1 + v2 + v3 + v4 + v5 + v6 + v7 + v8).SubscribeAsync(
+            static (v1, v2, v3, v4, v5, v6, v7, v8) => v1 + v2 + v3 + v4 + v5 + v6 + v7 + v8).SubscribeAsync(
             (x, _) =>
             {
                 results.Add(x);
@@ -89,10 +82,6 @@ public partial class CombineLatestArityTests
     /// <summary>Verifies that CombineLatest8 OnErrorResume guard returns when disposed.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "Test Reasons")]
     public async Task WhenCombineLatest8DisposedBeforeError_ThenOnErrorResumeIsGuarded()
     {
         var s1 = Signal.Create<int>();
@@ -106,16 +95,16 @@ public partial class CombineLatestArityTests
         Exception? receivedError = null;
         var sub = await s1.Values
             .CombineLatest(
-            s2.Values,
-            s3.Values,
-            s4.Values,
-            s5.Values,
-            s6.Values,
-            s7.Values,
-            s8.Values,
-            (v1, v2, v3, v4, v5, v6, v7, v8) => v1 + v2 + v3 + v4 + v5 + v6 + v7 + v8).SubscribeAsync(
-            (_, _) => default,
-            (ex, _) =>
+                s2.Values,
+                s3.Values,
+                s4.Values,
+                s5.Values,
+                s6.Values,
+                s7.Values,
+                s8.Values,
+                static (v1, v2, v3, v4, v5, v6, v7, v8) => v1 + v2 + v3 + v4 + v5 + v6 + v7 + v8).SubscribeAsync(
+                static (_, _) => default,
+                (ex, _) =>
                 {
                     receivedError = ex;
                     return default;
@@ -128,10 +117,6 @@ public partial class CombineLatestArityTests
     /// <summary>Verifies that CombineLatest8 OnNext for the last source returns early when not all sources have values.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "Test Reasons")]
     public async Task WhenCombineLatest8LastSourceEmitsFirst_ThenNoEmission()
     {
         var s1 = Signal.Create<int>();
@@ -145,14 +130,14 @@ public partial class CombineLatestArityTests
         List<int> results = [];
         await using var sub = await s1.Values
             .CombineLatest(
-            s2.Values,
-            s3.Values,
-            s4.Values,
-            s5.Values,
-            s6.Values,
-            s7.Values,
-            s8.Values,
-            (v1, v2, v3, v4, v5, v6, v7, v8) => v1 + v2 + v3 + v4 + v5 + v6 + v7 + v8).SubscribeAsync(
+                s2.Values,
+                s3.Values,
+                s4.Values,
+                s5.Values,
+                s6.Values,
+                s7.Values,
+                s8.Values,
+                static (v1, v2, v3, v4, v5, v6, v7, v8) => v1 + v2 + v3 + v4 + v5 + v6 + v7 + v8).SubscribeAsync(
                 (x, _) =>
                 {
                     results.Add(x);
@@ -174,10 +159,6 @@ public partial class CombineLatestArityTests
     /// <summary>Verifies that CombineLatest8 OnNext for middle sources returns early when not all sources have values.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "Test Reasons")]
     public async Task WhenCombineLatest8MiddleSourcesEmitFirst_ThenNoEmission()
     {
         var s1 = Signal.Create<int>();
@@ -191,14 +172,14 @@ public partial class CombineLatestArityTests
         List<int> results = [];
         await using var sub = await s1.Values
             .CombineLatest(
-            s2.Values,
-            s3.Values,
-            s4.Values,
-            s5.Values,
-            s6.Values,
-            s7.Values,
-            s8.Values,
-            (v1, v2, v3, v4, v5, v6, v7, v8) => v1 + v2 + v3 + v4 + v5 + v6 + v7 + v8).SubscribeAsync(
+                s2.Values,
+                s3.Values,
+                s4.Values,
+                s5.Values,
+                s6.Values,
+                s7.Values,
+                s8.Values,
+                static (v1, v2, v3, v4, v5, v6, v7, v8) => v1 + v2 + v3 + v4 + v5 + v6 + v7 + v8).SubscribeAsync(
                 (x, _) =>
                 {
                     results.Add(x);
@@ -225,10 +206,6 @@ public partial class CombineLatestArityTests
     /// <summary>Verifies that CombineLatest8 OnNext_1 calls OnNextCombined when source 1 re-emits after all values are present.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "Test Reasons")]
     public async Task WhenCombineLatest8Source1ReEmits_ThenOnNextCombinedViaOnNext1()
     {
         const int ExpectedSum11111112 = 11_111_112;
@@ -243,14 +220,14 @@ public partial class CombineLatestArityTests
         List<int> results = [];
         await using var sub = await s1.Values
             .CombineLatest(
-            s2.Values,
-            s3.Values,
-            s4.Values,
-            s5.Values,
-            s6.Values,
-            s7.Values,
-            s8.Values,
-            (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
+                s2.Values,
+                s3.Values,
+                s4.Values,
+                s5.Values,
+                s6.Values,
+                s7.Values,
+                s8.Values,
+                static (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
                 (x, _) =>
                 {
                     results.Add(x);
@@ -280,10 +257,6 @@ public partial class CombineLatestArityTests
     /// <summary>Verifies that CombineLatest8 OnNext_2 calls OnNextCombined when source 2 re-emits after all values are present.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "Test Reasons")]
     public async Task WhenCombineLatest8Source2ReEmits_ThenOnNextCombinedViaOnNext2()
     {
         const int ExpectedSum11111121 = 11_111_121;
@@ -298,14 +271,14 @@ public partial class CombineLatestArityTests
         List<int> results = [];
         await using var sub = await s1.Values
             .CombineLatest(
-            s2.Values,
-            s3.Values,
-            s4.Values,
-            s5.Values,
-            s6.Values,
-            s7.Values,
-            s8.Values,
-            (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
+                s2.Values,
+                s3.Values,
+                s4.Values,
+                s5.Values,
+                s6.Values,
+                s7.Values,
+                s8.Values,
+                static (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
                 (x, _) =>
                 {
                     results.Add(x);
@@ -335,10 +308,6 @@ public partial class CombineLatestArityTests
     /// <summary>Verifies that CombineLatest8 OnNext_3 calls OnNextCombined when source 3 re-emits after all values are present.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "Test Reasons")]
     public async Task WhenCombineLatest8Source3ReEmits_ThenOnNextCombinedViaOnNext3()
     {
         const int ExpectedSum11111211 = 11_111_211;
@@ -353,14 +322,14 @@ public partial class CombineLatestArityTests
         List<int> results = [];
         await using var sub = await s1.Values
             .CombineLatest(
-            s2.Values,
-            s3.Values,
-            s4.Values,
-            s5.Values,
-            s6.Values,
-            s7.Values,
-            s8.Values,
-            (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
+                s2.Values,
+                s3.Values,
+                s4.Values,
+                s5.Values,
+                s6.Values,
+                s7.Values,
+                s8.Values,
+                static (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
                 (x, _) =>
                 {
                     results.Add(x);
@@ -390,10 +359,6 @@ public partial class CombineLatestArityTests
     /// <summary>Verifies that CombineLatest8 OnNext_4 calls OnNextCombined when source 4 re-emits after all values are present.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "Test Reasons")]
     public async Task WhenCombineLatest8Source4ReEmits_ThenOnNextCombinedViaOnNext4()
     {
         const int ExpectedSum11112111 = 11_112_111;
@@ -408,14 +373,14 @@ public partial class CombineLatestArityTests
         List<int> results = [];
         await using var sub = await s1.Values
             .CombineLatest(
-            s2.Values,
-            s3.Values,
-            s4.Values,
-            s5.Values,
-            s6.Values,
-            s7.Values,
-            s8.Values,
-            (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
+                s2.Values,
+                s3.Values,
+                s4.Values,
+                s5.Values,
+                s6.Values,
+                s7.Values,
+                s8.Values,
+                static (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
                 (x, _) =>
                 {
                     results.Add(x);
@@ -445,10 +410,6 @@ public partial class CombineLatestArityTests
     /// <summary>Verifies that CombineLatest8 OnNext_5 calls OnNextCombined when source 5 re-emits after all values are present.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "Test Reasons")]
     public async Task WhenCombineLatest8Source5ReEmits_ThenOnNextCombinedViaOnNext5()
     {
         const int ExpectedSum11121111 = 11_121_111;
@@ -463,14 +424,14 @@ public partial class CombineLatestArityTests
         List<int> results = [];
         await using var sub = await s1.Values
             .CombineLatest(
-            s2.Values,
-            s3.Values,
-            s4.Values,
-            s5.Values,
-            s6.Values,
-            s7.Values,
-            s8.Values,
-            (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
+                s2.Values,
+                s3.Values,
+                s4.Values,
+                s5.Values,
+                s6.Values,
+                s7.Values,
+                s8.Values,
+                static (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
                 (x, _) =>
                 {
                     results.Add(x);
@@ -500,10 +461,6 @@ public partial class CombineLatestArityTests
     /// <summary>Verifies that CombineLatest8 OnNext_6 calls OnNextCombined when source 6 re-emits after all values are present.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "Test Reasons")]
     public async Task WhenCombineLatest8Source6ReEmits_ThenOnNextCombinedViaOnNext6()
     {
         const int ExpectedSum11211111 = 11_211_111;
@@ -518,14 +475,14 @@ public partial class CombineLatestArityTests
         List<int> results = [];
         await using var sub = await s1.Values
             .CombineLatest(
-            s2.Values,
-            s3.Values,
-            s4.Values,
-            s5.Values,
-            s6.Values,
-            s7.Values,
-            s8.Values,
-            (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
+                s2.Values,
+                s3.Values,
+                s4.Values,
+                s5.Values,
+                s6.Values,
+                s7.Values,
+                s8.Values,
+                static (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
                 (x, _) =>
                 {
                     results.Add(x);
@@ -555,10 +512,6 @@ public partial class CombineLatestArityTests
     /// <summary>Verifies that CombineLatest8 OnNext_7 calls OnNextCombined when source 7 re-emits after all values are present.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "Test Reasons")]
     public async Task WhenCombineLatest8Source7ReEmits_ThenOnNextCombinedViaOnNext7()
     {
         const int ExpectedSum12111111 = 12_111_111;
@@ -573,14 +526,14 @@ public partial class CombineLatestArityTests
         List<int> results = [];
         await using var sub = await s1.Values
             .CombineLatest(
-            s2.Values,
-            s3.Values,
-            s4.Values,
-            s5.Values,
-            s6.Values,
-            s7.Values,
-            s8.Values,
-            (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
+                s2.Values,
+                s3.Values,
+                s4.Values,
+                s5.Values,
+                s6.Values,
+                s7.Values,
+                s8.Values,
+                static (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h).SubscribeAsync(
                 (x, _) =>
                 {
                     results.Add(x);

@@ -10,8 +10,8 @@ namespace ReactiveUI.Primitives;
 public static class Handle<T1, T2>
 {
     /// <summary>Callback that ignores both values.</summary>
-    public static readonly Action<T1, T2> Ignore = (_, _) => { };
+    public static readonly Action<T1, T2> Ignore = static (_, _) => { };
 
     /// <summary>Error callback that throws the supplied exception.</summary>
-    public static readonly Action<Exception, T1, T2> Throw = (ex, _, _) => ex.Throw();
+    public static readonly Action<Exception, T1, T2> Throw = static (ex, _, _) => ex.Throw();
 }

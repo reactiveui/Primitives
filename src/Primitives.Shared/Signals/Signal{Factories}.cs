@@ -40,7 +40,9 @@ public static partial class Signal
             return ImmutableEmptySignal<int>.Instance;
         }
 
-        return scheduler == Sequencer.Immediate || scheduler == Sequencer.CurrentThread ? new RangeSignal(start, count) : new SequenceSignal(start, count, scheduler);
+        return scheduler == Sequencer.Immediate || scheduler == Sequencer.CurrentThread
+            ? new RangeSignal(start, count)
+            : new SequenceSignal(start, count, scheduler);
     }
 
     /// <summary>Creates a signal that repeats a value forever.</summary>
@@ -114,7 +116,9 @@ public static partial class Signal
     /// <param name="resourceFactory">The factory that creates the resource.</param>
     /// <param name="signalFactory">The factory that creates the signal from the resource.</param>
     /// <returns>An Signals.</returns>
-    public static IObservable<T> Use<TResource, T>(Func<TResource> resourceFactory, Func<TResource, IObservable<T>> signalFactory)
+    public static IObservable<T> Use<TResource, T>(
+        Func<TResource> resourceFactory,
+        Func<TResource, IObservable<T>> signalFactory)
         where TResource : IDisposable
     {
         ArgumentExceptionHelper.ThrowIfNull(resourceFactory);
@@ -165,9 +169,10 @@ public static partial class Signal
     /// <exception cref="ArgumentNullException"><paramref name="addHandler"/> or <paramref name="removeHandler"/> is <see langword="null"/>.</exception>
     /// <exception cref="NotSupportedException"><typeparamref name="TEventHandler"/> is not a supported event delegate type.</exception>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
-        Justification = "The event argument type is part of the returned EventPattern and must be specified for non-generic event handlers.")]
+        "Design",
+        "SST2307:Generic method type parameters should be inferable from the parameters",
+        Justification =
+            "The event argument type is part of the returned EventPattern and must be specified for non-generic event handlers.")]
     public static IObservable<EventPattern<TEventArgs>> FromEventPattern<TEventHandler, TEventArgs>(
         Action<TEventHandler> addHandler,
         Action<TEventHandler> removeHandler)
@@ -211,9 +216,10 @@ public static partial class Signal
     /// <param name="task">The task to convert.</param>
     /// <returns>An Signals.</returns>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4462:Calls to \"async\" methods should not be blocking",
-        Justification = "Synchronous read of an already-completed (RanToCompletion) task for an allocation-free fast path; await is invalid in this synchronous factory.")]
+        "Concurrency",
+        "PSH1315:A blocking wait on an awaitable that may not be done",
+        Justification =
+            "Synchronous read of an already-completed (RanToCompletion) task for an allocation-free fast path; await is invalid in this synchronous factory.")]
     public static IObservable<T> FromTask<T>(Task<T> task)
     {
         ArgumentExceptionHelper.ThrowIfNull(task);
@@ -228,7 +234,9 @@ public static partial class Signal
             return new ImmediateThrowSignal<T>(new TaskCanceledException(task));
         }
 
-        return task.IsFaulted ? new ImmediateThrowSignal<T>(task.Exception!.InnerException ?? task.Exception) : new TaskInstanceSignal<T>(task);
+        return task.IsFaulted
+            ? new ImmediateThrowSignal<T>(task.Exception!.InnerException ?? task.Exception)
+            : new TaskInstanceSignal<T>(task);
     }
 
     /// <summary>Creates a signal by invoking an asynchronous factory at subscription time.</summary>
@@ -254,7 +262,9 @@ public static partial class Signal
     /// <param name="taskFactory">The factory that creates the task.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>An Signals.</returns>
-    public static IObservable<T> FromAsync<T>(Func<CancellationToken, Task<T>> taskFactory, CancellationToken cancellationToken)
+    public static IObservable<T> FromAsync<T>(
+        Func<CancellationToken, Task<T>> taskFactory,
+        CancellationToken cancellationToken)
     {
         ArgumentExceptionHelper.ThrowIfNull(taskFactory);
 
@@ -477,7 +487,10 @@ public static partial class Signal
     /// <param name="right">The right signal.</param>
     /// <param name="selector">The function that combines the paired values.</param>
     /// <returns>An Signals.</returns>
-    public static IObservable<TResult> Pair<TLeft, TRight, TResult>(IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector)
+    public static IObservable<TResult> Pair<TLeft, TRight, TResult>(
+        IObservable<TLeft> left,
+        IObservable<TRight> right,
+        Func<TLeft, TRight, TResult> selector)
     {
         ArgumentExceptionHelper.ThrowIfNull(left);
 
@@ -485,7 +498,8 @@ public static partial class Signal
 
         ArgumentExceptionHelper.ThrowIfNull(selector);
 
-        return typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange && right is RangeSignal rightRange
+        return typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange &&
+               right is RangeSignal rightRange
             ? new RangeZipSignal<TResult>(leftRange, rightRange, (Func<int, int, TResult>)(object)selector)
             : new PairSignal<TLeft, TRight, TResult>(left, right, selector);
     }
@@ -498,7 +512,10 @@ public static partial class Signal
     /// <param name="right">The right signal.</param>
     /// <param name="selector">The function that combines the latest values.</param>
     /// <returns>An Signals.</returns>
-    public static IObservable<TResult> SyncLatest<TLeft, TRight, TResult>(IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector)
+    public static IObservable<TResult> SyncLatest<TLeft, TRight, TResult>(
+        IObservable<TLeft> left,
+        IObservable<TRight> right,
+        Func<TLeft, TRight, TResult> selector)
     {
         ArgumentExceptionHelper.ThrowIfNull(left);
 
@@ -506,7 +523,8 @@ public static partial class Signal
 
         ArgumentExceptionHelper.ThrowIfNull(selector);
 
-        return typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange && right is RangeSignal rightRange
+        return typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange &&
+               right is RangeSignal rightRange
             ? new RangeSyncLatestSignal<TResult>(leftRange, rightRange, (Func<int, int, TResult>)(object)selector)
             : new SyncLatestSignal<TLeft, TRight, TResult>(left, right, selector);
     }
@@ -519,7 +537,10 @@ public static partial class Signal
     /// <param name="right">The right signal.</param>
     /// <param name="selector">The function that combines the last values.</param>
     /// <returns>An Signals.</returns>
-    public static IObservable<TResult> ForkJoin<TLeft, TRight, TResult>(IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector)
+    public static IObservable<TResult> ForkJoin<TLeft, TRight, TResult>(
+        IObservable<TLeft> left,
+        IObservable<TRight> right,
+        Func<TLeft, TRight, TResult> selector)
     {
         ArgumentExceptionHelper.ThrowIfNull(left);
 
@@ -527,7 +548,8 @@ public static partial class Signal
 
         ArgumentExceptionHelper.ThrowIfNull(selector);
 
-        return typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange && right is RangeSignal rightRange
+        return typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange &&
+               right is RangeSignal rightRange
             ? new RangeForkJoinSignal<TResult>(leftRange, rightRange, (Func<int, int, TResult>)(object)selector)
             : new ForkJoinSignal<TLeft, TRight, TResult>(left, right, selector);
     }

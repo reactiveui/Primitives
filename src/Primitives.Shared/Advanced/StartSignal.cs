@@ -34,20 +34,10 @@ public sealed class StartSignal : IRequireCurrentThread<RxVoid>
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        if (Scheduler == Sequencer.Immediate)
-        {
-            Run(observer);
-            return EmptyDisposable.Instance;
-        }
-
-        if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
-        {
-            return Scheduler.Schedule(() => Run(observer));
-        }
-
-        SingleDisposable subscription = new();
-        _ = Sequencer.CurrentThread.Schedule(() => subscription.Create(Scheduler.Schedule(() => Run(observer))));
-        return subscription;
+        return SubscriptionScheduling.RunOn(
+            Scheduler,
+            (self: this, observer),
+            static s => s.self.Run(s.observer));
     }
 
     /// <summary>Runs the action and forwards its terminal notification.</summary>

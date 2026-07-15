@@ -21,19 +21,19 @@ public sealed class CreateSinkTests
     [Test]
     public async Task ConstructorRejectsNullArguments()
     {
-        _ = Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(static () =>
         {
-            CreateSink<int> invalid = new(null!, disposeOnNextThrow: false);
+            CreateSink<int> invalid = new(null!, false);
             GC.KeepAlive(invalid);
         });
-        _ = Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(static () =>
         {
-            CreateSink<int> invalid = new(null!, EmptyDisposable.Instance, disposeOnNextThrow: false);
+            CreateSink<int> invalid = new(null!, EmptyDisposable.Instance, false);
             GC.KeepAlive(invalid);
         });
-        _ = Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(static () =>
         {
-            CreateSink<int> invalid = new(new RecordingWitness<int>(), null!, disposeOnNextThrow: false);
+            CreateSink<int> invalid = new(new RecordingWitness<int>(), null!, false);
             GC.KeepAlive(invalid);
         });
 
@@ -47,7 +47,7 @@ public sealed class CreateSinkTests
     {
         RecordingWitness<int> observer = new();
         RecordingDisposable cancel = new();
-        CreateSink<int> sink = new(observer, disposeOnNextThrow: false);
+        CreateSink<int> sink = new(observer, false);
         sink.SetCancel(cancel);
 
         sink.OnNext(One);
@@ -69,7 +69,7 @@ public sealed class CreateSinkTests
     {
         RecordingWitness<int> observer = new();
         RecordingDisposable cancel = new();
-        CreateSink<int> sink = new(observer, disposeOnNextThrow: false);
+        CreateSink<int> sink = new(observer, false);
         sink.SetCancel(cancel);
         InvalidOperationException error = new("create-sink");
 
@@ -87,7 +87,7 @@ public sealed class CreateSinkTests
     public async Task UnsafeVariantPropagatesOnNextThrowWithoutDisposing()
     {
         RecordingDisposable cancel = new();
-        CreateSink<int> sink = new(new ThrowingWitness<int>(true), disposeOnNextThrow: false);
+        CreateSink<int> sink = new(new ThrowingWitness<int>(true), false);
         sink.SetCancel(cancel);
 
         _ = Assert.Throws<InvalidOperationException>(() => sink.OnNext(One));
@@ -101,7 +101,7 @@ public sealed class CreateSinkTests
     public async Task SafeVariantDisposesOnNextThrow()
     {
         RecordingDisposable cancel = new();
-        CreateSink<int> sink = new(new ThrowingWitness<int>(true), disposeOnNextThrow: true);
+        CreateSink<int> sink = new(new ThrowingWitness<int>(true), true);
         sink.SetCancel(cancel);
 
         _ = Assert.Throws<InvalidOperationException>(() => sink.OnNext(One));
@@ -118,7 +118,7 @@ public sealed class CreateSinkTests
     {
         RecordingDisposable first = new();
         RecordingDisposable duplicate = new();
-        CreateSink<int> sink = new(new RecordingWitness<int>(), disposeOnNextThrow: false);
+        CreateSink<int> sink = new(new RecordingWitness<int>(), false);
         sink.SetCancel(first);
 
         _ = Assert.Throws<ArgumentNullException>(() => sink.SetCancel(null!));
@@ -140,7 +140,7 @@ public sealed class CreateSinkTests
     {
         RecordingWitness<int> observer = new();
         RecordingDisposable cancel = new();
-        CreateSink<int> sink = new(observer, cancel, disposeOnNextThrow: true);
+        CreateSink<int> sink = new(observer, cancel, true);
 
         sink.OnNext(One);
         sink.OnCompleted();

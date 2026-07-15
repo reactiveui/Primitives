@@ -27,12 +27,12 @@ public class AsyncSignalTests
     /// <summary>Subscribes the argument checking.</summary>
     [Test]
     public void Subscribe_ArgumentChecking() =>
-        Assert.Throws<ArgumentNullException>(() => new AsyncSignal<int>().Subscribe(null!));
+        Assert.Throws<ArgumentNullException>(static () => new AsyncSignal<int>().Subscribe(null!));
 
     /// <summary>Called when [error argument checking].</summary>
     [Test]
     public void OnError_ArgumentChecking() =>
-        Assert.Throws<ArgumentNullException>(() => new AsyncSignal<int>().OnError(null!));
+        Assert.Throws<ArgumentNullException>(static () => new AsyncSignal<int>().OnError(null!));
 
     /// <summary>Awaits the blocking.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
@@ -115,13 +115,13 @@ public class AsyncSignalTests
     {
         AsyncSignal<int> s = new();
         await Assert.That(s.HasObservers).IsFalse();
-        var d1 = s.Subscribe(_ => { });
+        var d1 = s.Subscribe(static _ => { });
         await Assert.That(s.HasObservers).IsTrue();
         d1.Dispose();
         await Assert.That(s.HasObservers).IsFalse();
-        var d2 = s.Subscribe(_ => { });
+        var d2 = s.Subscribe(static _ => { });
         await Assert.That(s.HasObservers).IsTrue();
-        var d3 = s.Subscribe(_ => { });
+        var d3 = s.Subscribe(static _ => { });
         await Assert.That(s.HasObservers).IsTrue();
         d2.Dispose();
         await Assert.That(s.HasObservers).IsTrue();
@@ -137,7 +137,7 @@ public class AsyncSignalTests
         AsyncSignal<int> s = new();
         await Assert.That(s.HasObservers).IsFalse();
         await Assert.That(s.IsDisposed).IsFalse();
-        var d = s.Subscribe(_ => { });
+        var d = s.Subscribe(static _ => { });
         await Assert.That(s.HasObservers).IsTrue();
         await Assert.That(s.IsDisposed).IsFalse();
         s.Dispose();
@@ -156,7 +156,7 @@ public class AsyncSignalTests
         AsyncSignal<int> s = new();
         await Assert.That(s.HasObservers).IsFalse();
         await Assert.That(s.IsDisposed).IsFalse();
-        var d = s.Subscribe(_ => { });
+        var d = s.Subscribe(static _ => { });
         await Assert.That(s.HasObservers).IsTrue();
         await Assert.That(s.IsDisposed).IsFalse();
         d.Dispose();
@@ -187,7 +187,7 @@ public class AsyncSignalTests
     {
         AsyncSignal<int> s = new();
         await Assert.That(s.HasObservers).IsFalse();
-        var d = s.Subscribe(_ => { });
+        var d = s.Subscribe(static _ => { });
         await Assert.That(s.HasObservers).IsTrue();
         s.OnNext(ExpectedValue);
         await Assert.That(s.HasObservers).IsTrue();
@@ -204,14 +204,35 @@ public class AsyncSignalTests
         AsyncSignal<int> s = new();
         await Assert.That(s.HasObservers).IsFalse();
         var d = s.Subscribe(
-            _ => { },
-            _ => { });
+            static _ => { },
+            static _ => { });
         await Assert.That(s.HasObservers).IsTrue();
         s.OnNext(ExpectedValue);
         await Assert.That(s.HasObservers).IsTrue();
         s.OnError(new InvalidOperationException());
         await Assert.That(s.HasObservers).IsFalse();
         d.Dispose();
+    }
+
+    /// <summary>
+    /// An async signal that completes without ever producing a value has no terminal value to replay. A late
+    /// subscriber must simply be completed — not handed a fabricated default, and not left hanging.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task CompletingWithoutAValueOnlyCompletesLateSubscribers()
+    {
+        AsyncSignal<int> signal = new();
+        signal.OnCompleted();
+
+        RecordingWitness<int> late = new();
+        signal.Subscribe(late).Dispose();
+
+        await Assert.That(late.Values.Count).IsEqualTo(0);
+        await Assert.That(late.Completed).IsEqualTo(1);
+        await Assert.That(late.Errors.Count).IsEqualTo(0);
+        await Assert.That(signal.IsCompleted).IsTrue();
+        await Assert.That(signal.HasObservers).IsFalse();
     }
 
     /// <summary>Covers async-signal subscriber churn, late subscriptions, disposal, and terminal no-op branches.</summary>

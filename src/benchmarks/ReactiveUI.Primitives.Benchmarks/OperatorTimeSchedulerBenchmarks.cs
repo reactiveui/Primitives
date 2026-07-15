@@ -42,7 +42,8 @@ public class OperatorTimeSchedulerBenchmarks
     {
         HistoricalScheduler scheduler = new();
         IntSignalWitness observer = new();
-        using var subscription = RxObservable.Range(1, Count).Delay(TimeSpan.FromTicks(1), scheduler).Subscribe(observer);
+        using var subscription =
+            RxObservable.Range(1, Count).Delay(TimeSpan.FromTicks(1), scheduler).Subscribe(observer);
         scheduler.AdvanceBy(TimeSpan.FromTicks(1));
         return observer.Total;
     }
@@ -219,7 +220,8 @@ public class OperatorTimeSchedulerBenchmarks
     public int SystemReactiveTimestampRange()
     {
         CountingSignalWitness<Timestamped<int>> observer = new();
-        using var subscription = RxObservable.Range(1, Count).Timestamp(ImmediateScheduler.Instance).Subscribe(observer);
+        using var subscription =
+            RxObservable.Range(1, Count).Timestamp(ImmediateScheduler.Instance).Subscribe(observer);
         return observer.Count;
     }
 
@@ -261,7 +263,8 @@ public class OperatorTimeSchedulerBenchmarks
     public int R3TimeIntervalRange()
     {
         CountingR3Witness<(TimeSpan Interval, int Value)> observer = new();
-        using var subscription = R3.ObservableExtensions.TimeInterval(R3.Observable.Range(1, Count)).Subscribe(observer);
+        using var subscription =
+            R3.ObservableExtensions.TimeInterval(R3.Observable.Range(1, Count)).Subscribe(observer);
         return observer.Count;
     }
 
@@ -327,7 +330,8 @@ public class OperatorTimeSchedulerBenchmarks
     public int SystemReactiveObserveOnImmediate()
     {
         IntSignalWitness observer = new();
-        using var subscription = RxObservable.Range(1, Count).ObserveOn(ImmediateScheduler.Instance).Subscribe(observer);
+        using var subscription =
+            RxObservable.Range(1, Count).ObserveOn(ImmediateScheduler.Instance).Subscribe(observer);
         return observer.Total;
     }
 
@@ -338,7 +342,8 @@ public class OperatorTimeSchedulerBenchmarks
     {
         IntR3Witness observer = new();
         using ImmediateSynchronizationContext context = new();
-        using var subscription = R3.ObservableExtensions.ObserveOn(R3.Observable.Range(1, Count), context).Subscribe(observer);
+        using var subscription = R3.ObservableExtensions.ObserveOn(R3.Observable.Range(1, Count), context)
+            .Subscribe(observer);
         return observer.Total;
     }
 
@@ -353,6 +358,13 @@ public class OperatorTimeSchedulerBenchmarks
         /// <summary>Invokes the callback synchronously.</summary>
         /// <param name="d">The callback to invoke.</param>
         /// <param name="state">The state passed to the callback.</param>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Design",
+            "SST2318:Members should not have identical bodies",
+            Justification =
+                "Post and Send are distinct SynchronizationContext overrides that this immediate context deliberately "
+                + "implements the same way: run the callback inline. They are separate base-class overrides and cannot "
+                + "be collapsed.")]
         public override void Send(SendOrPostCallback d, object? state) => d(state);
 
         /// <summary>Releases the resources used by the synchronization context.</summary>

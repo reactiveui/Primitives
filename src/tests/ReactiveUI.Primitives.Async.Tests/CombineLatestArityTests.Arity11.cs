@@ -14,15 +14,6 @@ public partial class CombineLatestArityTests
     /// <summary>Verifies that CombineLatest11 disposes on subscription failure (catch block).</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "Test Reasons")]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S138:Methods should not have too many lines",
-        Justification =
-            "Smoke test inherently lists N Signals + per-source calls; splitting would obscure the under-test sequence.")]
     public async Task WhenCombineLatest11SubscriptionThrows_ThenDisposesAndRethrows()
     {
         var s1 = Signal.Create<int>();
@@ -35,34 +26,26 @@ public partial class CombineLatestArityTests
         var s8 = Signal.Create<int>();
         var s9 = Signal.Create<int>();
         var s10 = Signal.Create<int>();
-        var throwingSrc = AsyncObs.Create<int>((_, _) => throw new InvalidOperationException("subscribe failed"));
+        var throwingSrc = AsyncObs.Create<int>(static (_, _) => throw new InvalidOperationException("subscribe failed"));
         await Assert.That(async () => await s1.Values.CombineLatest(
-            s2.Values,
-            s3.Values,
-            s4.Values,
-            s5.Values,
-            s6.Values,
-            s7.Values,
-            s8.Values,
-            s9.Values,
-            s10.Values,
-            throwingSrc,
-            (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11) =>
-                    v1 + v2 + v3 + v4 + v5 + v6 + v7 + v8 + v9 + v10 + v11).SubscribeAsync((_, _) => default, null)).ThrowsExactly<InvalidOperationException>();
+                s2.Values,
+                s3.Values,
+                s4.Values,
+                s5.Values,
+                s6.Values,
+                s7.Values,
+                s8.Values,
+                s9.Values,
+                s10.Values,
+                throwingSrc,
+                static (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11) =>
+                    v1 + v2 + v3 + v4 + v5 + v6 + v7 + v8 + v9 + v10 + v11).SubscribeAsync(static (_, _) => default, null))
+            .ThrowsExactly<InvalidOperationException>();
     }
 
     /// <summary>Verifies that CombineLatest11 OnNextCombined guard returns when disposed.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "Test Reasons")]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S138:Methods should not have too many lines",
-        Justification =
-            "Smoke test inherently lists N Signals + per-source calls; splitting would obscure the under-test sequence.")]
     public async Task WhenCombineLatest11DisposedBeforeCombine_ThenOnNextCombinedIsGuarded()
     {
         var s1 = Signal.Create<int>();
@@ -88,25 +71,9 @@ public partial class CombineLatestArityTests
             s9.Values,
             s10.Values,
             s11.Values,
-            (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11) =>
-                    v1 + v2 + v3 + v4 + v5 + v6 + v7 + v8 + v9 + v10 + v11).SubscribeAsync(
-                (x, _) =>
-                {
-                    results.Add(x);
-                    return default;
-                },
-                null);
-        await s1.OnNextAsync(1, CancellationToken.None);
-        await s2.OnNextAsync(PlaceValue1, CancellationToken.None);
-        await s3.OnNextAsync(PlaceValue2, CancellationToken.None);
-        await s4.OnNextAsync(PlaceValue3, CancellationToken.None);
-        await s5.OnNextAsync(PlaceValue4, CancellationToken.None);
-        await s6.OnNextAsync(PlaceValue5, CancellationToken.None);
-        await s7.OnNextAsync(PlaceValue6, CancellationToken.None);
-        await s8.OnNextAsync(PlaceValue7, CancellationToken.None);
-        await s9.OnNextAsync(PlaceValue8, CancellationToken.None);
-        await s10.OnNextAsync(PlaceValue9, CancellationToken.None);
-        await s11.OnNextAsync(PlaceValue10, CancellationToken.None);
+            static (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11) =>
+                v1 + v2 + v3 + v4 + v5 + v6 + v7 + v8 + v9 + v10 + v11).SubscribeAsync(RecordValues(results), null);
+        await EmitSeedAndPlaceValuesAsync(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11);
         await sub.DisposeAsync();
         await s1.OnNextAsync(PostDisposeValue, CancellationToken.None);
         await Assert.That(results).Count().IsEqualTo(1);
@@ -115,15 +82,6 @@ public partial class CombineLatestArityTests
     /// <summary>Verifies that CombineLatest11 forwards a source error to the downstream observer.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "Test Reasons")]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S138:Methods should not have too many lines",
-        Justification =
-            "Smoke test inherently lists N Signals + per-source calls; splitting would obscure the under-test sequence.")]
     public async Task WhenCombineLatest11OneSourceErrors_ThenCombinedErrorForwarded()
     {
         var s1 = Signal.Create<int>();
@@ -150,31 +108,22 @@ public partial class CombineLatestArityTests
             s9.Values,
             s10.Values,
             s11.Values,
-            (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11) =>
-                    v1 + v2 + v3 + v4 + v5 + v6 + v7 + v8 + v9 + v10 + v11).SubscribeAsync((_, _) => default, (ex, _) =>
-            {
-                receivedError = ex;
-                IgnoredResult.Of(errorReceived.TrySetResult());
-                return default;
-            });
+            static (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11) =>
+                v1 + v2 + v3 + v4 + v5 + v6 + v7 + v8 + v9 + v10 + v11).SubscribeAsync(static (_, _) => default, (ex, _) =>
+        {
+            receivedError = ex;
+            IgnoredResult.Of(errorReceived.TrySetResult());
+            return default;
+        });
         InvalidOperationException expected = new("source error");
         await s1.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorReceived.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await errorReceived.Task.WaitAsync(TimeSpan.FromSeconds(EmissionTimeoutSeconds));
         await Assert.That(receivedError).IsEqualTo(expected);
     }
 
     /// <summary>Verifies that CombineLatest11 produces the selector's result once every source has emitted at least once.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "Test Reasons")]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S138:Methods should not have too many lines",
-        Justification =
-            "Smoke test inherently lists N Signals + per-source calls; splitting would obscure the under-test sequence.")]
     public async Task WhenCombineLatest11AllSourcesEmit_ThenSelectorResultEmitted()
     {
         var s1 = Signal.Create<int>();
@@ -201,55 +150,19 @@ public partial class CombineLatestArityTests
             s9.Values,
             s10.Values,
             s11.Values,
-            (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11) =>
-                    v1 + v2 + v3 + v4 + v5 + v6 + v7 + v8 + v9 + v10 + v11).SubscribeAsync(
-                (x, _) =>
-                {
-                    results.Add(x);
-                    IgnoredResult.Of(emitted.TrySetResult());
-                    return default;
-                },
-                null);
-        await s1.OnNextAsync(1, CancellationToken.None);
-        await s2.OnNextAsync(PlaceValue1, CancellationToken.None);
-        await s3.OnNextAsync(PlaceValue2, CancellationToken.None);
-        await s4.OnNextAsync(PlaceValue3, CancellationToken.None);
-        await s5.OnNextAsync(PlaceValue4, CancellationToken.None);
-        await s6.OnNextAsync(PlaceValue5, CancellationToken.None);
-        await s7.OnNextAsync(PlaceValue6, CancellationToken.None);
-        await s8.OnNextAsync(PlaceValue7, CancellationToken.None);
-        await s9.OnNextAsync(PlaceValue8, CancellationToken.None);
-        await s10.OnNextAsync(PlaceValue9, CancellationToken.None);
-        await s11.OnNextAsync(PlaceValue10, CancellationToken.None);
-        await emitted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            static (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11) =>
+                v1 + v2 + v3 + v4 + v5 + v6 + v7 + v8 + v9 + v10 + v11).SubscribeAsync(RecordAndSignalValues(results, emitted), null);
+        await EmitSeedAndPlaceValuesAsync(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11);
+        await emitted.Task.WaitAsync(TimeSpan.FromSeconds(EmissionTimeoutSeconds));
         await Assert.That(results[0]).IsEqualTo(1 + PlaceValue1 + PlaceValue2 + PlaceValue3 + PlaceValue4 +
                                                 PlaceValue5 + PlaceValue6 + PlaceValue7 + PlaceValue8 + PlaceValue9 +
                                                 PlaceValue10);
-        await s1.OnCompletedAsync(Result.Success);
-        await s2.OnCompletedAsync(Result.Success);
-        await s3.OnCompletedAsync(Result.Success);
-        await s4.OnCompletedAsync(Result.Success);
-        await s5.OnCompletedAsync(Result.Success);
-        await s6.OnCompletedAsync(Result.Success);
-        await s7.OnCompletedAsync(Result.Success);
-        await s8.OnCompletedAsync(Result.Success);
-        await s9.OnCompletedAsync(Result.Success);
-        await s10.OnCompletedAsync(Result.Success);
-        await s11.OnCompletedAsync(Result.Success);
+        await CompleteAllAsync(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11);
     }
 
     /// <summary>Verifies that CombineLatest11 completes once every source has completed.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "Test Reasons")]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S138:Methods should not have too many lines",
-        Justification =
-            "Smoke test inherently lists N Signals + per-source calls; splitting would obscure the under-test sequence.")]
     public async Task WhenCombineLatest11AllSourcesComplete_ThenCombinedCompletes()
     {
         var s1 = Signal.Create<int>();
@@ -275,35 +188,15 @@ public partial class CombineLatestArityTests
             s9.Values,
             s10.Values,
             s11.Values,
-            (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11) =>
-                    v1 + v2 + v3 + v4 + v5 + v6 + v7 + v8 + v9 + v10 + v11).SubscribeAsync((_, _) => default, null, r =>
-            {
-                _ = completed.TrySetResult(r);
-                return default;
-            });
-        await s1.OnNextAsync(1, CancellationToken.None);
-        await s2.OnNextAsync(PlaceValue1, CancellationToken.None);
-        await s3.OnNextAsync(PlaceValue2, CancellationToken.None);
-        await s4.OnNextAsync(PlaceValue3, CancellationToken.None);
-        await s5.OnNextAsync(PlaceValue4, CancellationToken.None);
-        await s6.OnNextAsync(PlaceValue5, CancellationToken.None);
-        await s7.OnNextAsync(PlaceValue6, CancellationToken.None);
-        await s8.OnNextAsync(PlaceValue7, CancellationToken.None);
-        await s9.OnNextAsync(PlaceValue8, CancellationToken.None);
-        await s10.OnNextAsync(PlaceValue9, CancellationToken.None);
-        await s11.OnNextAsync(PlaceValue10, CancellationToken.None);
-        await s1.OnCompletedAsync(Result.Success);
-        await s2.OnCompletedAsync(Result.Success);
-        await s3.OnCompletedAsync(Result.Success);
-        await s4.OnCompletedAsync(Result.Success);
-        await s5.OnCompletedAsync(Result.Success);
-        await s6.OnCompletedAsync(Result.Success);
-        await s7.OnCompletedAsync(Result.Success);
-        await s8.OnCompletedAsync(Result.Success);
-        await s9.OnCompletedAsync(Result.Success);
-        await s10.OnCompletedAsync(Result.Success);
-        await s11.OnCompletedAsync(Result.Success);
-        var result = await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            static (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11) =>
+                v1 + v2 + v3 + v4 + v5 + v6 + v7 + v8 + v9 + v10 + v11).SubscribeAsync(static (_, _) => default, null, r =>
+        {
+            _ = completed.TrySetResult(r);
+            return default;
+        });
+        await EmitSeedAndPlaceValuesAsync(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11);
+        await CompleteAllAsync(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11);
+        var result = await completed.Task.WaitAsync(TimeSpan.FromSeconds(EmissionTimeoutSeconds));
         await Assert.That(result.IsSuccess).IsTrue();
     }
 }

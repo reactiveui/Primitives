@@ -45,8 +45,9 @@ public partial class SignalOperatorParityMixinsTests
     [Test]
     public async Task ToTaskOnNullTaskThrowsArgumentNull()
     {
-        await Assert.That(() => ((Task<int>)null!).ToTask()).ThrowsExactly<ArgumentNullException>();
-        await Assert.That(() => ((Task<int>)null!).ToTask(CancellationToken.None)).ThrowsExactly<ArgumentNullException>();
+        await Assert.That(static () => ((Task<int>)null!).ToTask()).ThrowsExactly<ArgumentNullException>();
+        await Assert.That(static () => ((Task<int>)null!).ToTask(CancellationToken.None))
+            .ThrowsExactly<ArgumentNullException>();
     }
 
     /// <summary>Verifies that <c>ToTask</c> on a pending task returns a canceled task for a pre-canceled token.</summary>
@@ -56,7 +57,7 @@ public partial class SignalOperatorParityMixinsTests
     {
         using CancellationTokenSource cts = new();
         await cts.CancelAsync();
-        TaskCompletionSource<int> pending = new();
+        TaskCompletionSource<int> pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         var task = pending.Task.ToTask(cts.Token);
 
@@ -71,7 +72,8 @@ public partial class SignalOperatorParityMixinsTests
         using CancellationTokenSource cts = new();
         Signal<string> messageStream = new();
 
-        var task = messageStream.Keep(message => message.StartsWith("ERROR", StringComparison.Ordinal)).FirstAsync().ToTask(cts.Token);
+        var task = messageStream.Keep(static message => message.StartsWith("ERROR", StringComparison.Ordinal)).FirstAsync()
+            .ToTask(cts.Token);
         await cts.CancelAsync();
         Task pending = task;
 
@@ -86,7 +88,8 @@ public partial class SignalOperatorParityMixinsTests
         using CancellationTokenSource cts = new();
         Signal<string> messageStream = new();
 
-        var task = messageStream.Keep(message => message.StartsWith("ERROR", StringComparison.Ordinal)).FirstAsync().ToTask(cts.Token);
+        var task = messageStream.Keep(static message => message.StartsWith("ERROR", StringComparison.Ordinal)).FirstAsync()
+            .ToTask(cts.Token);
         messageStream.OnNext("info");
         messageStream.OnNext("ERROR: boom");
 
@@ -180,7 +183,7 @@ public partial class SignalOperatorParityMixinsTests
     public async Task FirstAsyncWithTokenIgnoresLateSynchronousCallbacks()
     {
         using CancellationTokenSource cts = new();
-        ScriptedObservable<int> source = new(observer =>
+        ScriptedObservable<int> source = new(static observer =>
         {
             observer.OnNext(One);
             observer.OnNext(Two);
@@ -377,11 +380,17 @@ public partial class SignalOperatorParityMixinsTests
     [Test]
     public async Task CancellationOverloadsValidateNullSource()
     {
-        await Assert.That(() => ((IObservable<int>)null!).FirstAsync(CancellationToken.None)).ThrowsExactly<ArgumentNullException>();
-        await Assert.That(() => ((IObservable<int>)null!).FirstOrDefaultAsync(CancellationToken.None)).ThrowsExactly<ArgumentNullException>();
-        await Assert.That(() => ((IObservable<int>)null!).FirstOrDefaultAsync(One, CancellationToken.None)).ThrowsExactly<ArgumentNullException>();
-        await Assert.That(() => ((IObservable<int>)null!).LastAsync(CancellationToken.None)).ThrowsExactly<ArgumentNullException>();
-        await Assert.That(() => ((IObservable<int>)null!).LastOrDefaultAsync(CancellationToken.None)).ThrowsExactly<ArgumentNullException>();
-        await Assert.That(() => ((IObservable<int>)null!).LastOrDefaultAsync(One, CancellationToken.None)).ThrowsExactly<ArgumentNullException>();
+        await Assert.That(static () => ((IObservable<int>)null!).FirstAsync(CancellationToken.None))
+            .ThrowsExactly<ArgumentNullException>();
+        await Assert.That(static () => ((IObservable<int>)null!).FirstOrDefaultAsync(CancellationToken.None))
+            .ThrowsExactly<ArgumentNullException>();
+        await Assert.That(static () => ((IObservable<int>)null!).FirstOrDefaultAsync(One, CancellationToken.None))
+            .ThrowsExactly<ArgumentNullException>();
+        await Assert.That(static () => ((IObservable<int>)null!).LastAsync(CancellationToken.None))
+            .ThrowsExactly<ArgumentNullException>();
+        await Assert.That(static () => ((IObservable<int>)null!).LastOrDefaultAsync(CancellationToken.None))
+            .ThrowsExactly<ArgumentNullException>();
+        await Assert.That(static () => ((IObservable<int>)null!).LastOrDefaultAsync(One, CancellationToken.None))
+            .ThrowsExactly<ArgumentNullException>();
     }
 }

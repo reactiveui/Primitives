@@ -13,6 +13,29 @@ namespace ReactiveUI.Primitives.Tests;
 /// <summary>Helper methods and case records for Rx-name parity tests.</summary>
 public partial class RxNamesTests
 {
+    /// <summary>The narrowest generated multi-source <c>CombineLatest</c> overload.</summary>
+    private const int MinMultiSourceArity = 4;
+
+    /// <summary>
+    /// The generated multi-source <c>CombineLatest</c> builders, ordered by arity from
+    /// <see cref="MinMultiSourceArity"/> upwards, so an arity selects its overload without a literal case label.
+    /// </summary>
+    private static readonly Func<CombineLatestSources, IObservable<int>>[] _combineLatestBuilders =
+    [
+        CombineLatestOfFour,
+        CombineLatestOfFive,
+        CombineLatestOfSix,
+        CombineLatestOfSeven,
+        CombineLatestOfEight,
+        CombineLatestOfNine,
+        CombineLatestOfTen,
+        CombineLatestOfEleven,
+        CombineLatestOfTwelve,
+        CombineLatestOfThirteen,
+        CombineLatestOfFourteen,
+        CombineLatestOfFifteen,
+    ];
+
     /// <summary>Runs a unary operator over a cold source and collects the forwarded values.</summary>
     /// <param name = "op">The operator under test.</param>
     /// <param name = "input">The source values.</param>
@@ -68,7 +91,7 @@ public partial class RxNamesTests
         VirtualClock clock = new(DateTimeOffset.UnixEpoch);
         List<int> values = [];
         Exception? error = null;
-        using var subscription = op(source(), clock).Subscribe(values.Add, captured => error = captured, () => { });
+        using var subscription = op(source(), clock).Subscribe(values.Add, captured => error = captured, static () => { });
         clock.AdvanceBy(TimeSpan.FromTicks(AdvanceTicks));
         return (values, error);
     }
@@ -81,7 +104,7 @@ public partial class RxNamesTests
         Signal<int> source = new();
         List<int> values = [];
         Exception? error = null;
-        using var subscription = op(source).Subscribe(values.Add, captured => error = captured, () => { });
+        using var subscription = op(source).Subscribe(values.Add, captured => error = captured, static () => { });
         source.OnNext(Two);
         source.OnError(new InvalidOperationException(Boom));
         return values.Count == One && error is InvalidOperationException;
@@ -97,7 +120,7 @@ public partial class RxNamesTests
         using var subscription = op(source).Subscribe(
             static _ => { },
             captured => error = captured,
-            () => { });
+            static () => { });
         source.OnNext(One);
         return error is InvalidOperationException;
     }
@@ -106,12 +129,14 @@ public partial class RxNamesTests
     /// <param name = "state">The unused state.</param>
     /// <param name = "value">The unused value.</param>
     /// <returns>Never returns; always throws.</returns>
+    [SuppressMessage("Maintainability", "SST1461:Remove unread private parameters", Justification = "The signature is fixed by the delegate this method is passed to as a method group.")]
     private static int ThrowProjection(int state, int value) => throw new InvalidOperationException(Boom);
 
     /// <summary>A stateful predicate that always throws (drives the sink catch path).</summary>
     /// <param name = "state">The unused state.</param>
     /// <param name = "value">The unused value.</param>
     /// <returns>Never returns; always throws.</returns>
+    [SuppressMessage("Maintainability", "SST1461:Remove unread private parameters", Justification = "The signature is fixed by the delegate this method is passed to as a method group.")]
     private static bool ThrowPredicate(int state, int value) => throw new InvalidOperationException(Boom);
 
     /// <summary>Runs a sampling operator against a virtual clock with a fixed drive and collects the sampled values.</summary>
@@ -136,119 +161,147 @@ public partial class RxNamesTests
     /// <returns>The combined value.</returns>
     private static int AddPair(int source, int inner) => source + inner;
 
-    /// <summary>Creates the requested multi-source CombineLatest overload.</summary>
-    /// <param name="arity">The arity to create.</param>
-    /// <param name="sources">The source signals.</param>
+    /// <summary>Creates the generated multi-source CombineLatest overload of the requested arity.</summary>
+    /// <param name="arity">The arity to create, from <see cref="MinMultiSourceArity"/> upwards.</param>
+    /// <param name="sources">The named source signals.</param>
     /// <returns>The combined observable.</returns>
-    [SuppressMessage(
-        "Style",
-        "S1541:Methods and properties should not be too complex",
-        Justification = "Compile-time overload coverage intentionally invokes each generated arity.")]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "Compile-time overload coverage intentionally invokes high-arity selector lambdas.")]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S109:Magic numbers should not be used",
-        Justification = "Compile-time overload coverage indexes each source slot by arity.")]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S138:Functions should not have too many lines of code",
-        Justification = "Compile-time overload coverage keeps the arity switch in one audited helper.")]
-    private static IObservable<int> CreateCombineLatest(int arity, Signal<int>[] sources) =>
-        arity switch
-        {
-            4 => sources[0].CombineLatest(
-                sources[1],
-                sources[2],
-                sources[3],
-                static (value1, value2, value3, value4) =>
-                    value1 + value2 + value3 + value4),
-            5 => sources[0].CombineLatest(
-                sources[1],
-                sources[2],
-                sources[3],
-                sources[4],
-                static (value1, value2, value3, value4, value5) =>
-                    value1 + value2 + value3 + value4 + value5),
-            6 => sources[0].CombineLatest(
-                sources[1],
-                sources[2],
-                sources[3],
-                sources[4],
-                sources[5],
-                static (value1, value2, value3, value4, value5, value6) =>
-                    value1 + value2 + value3 + value4 + value5 + value6),
-            7 => sources[0].CombineLatest(
-                sources[1],
-                sources[2],
-                sources[3],
-                sources[4],
-                sources[5],
-                sources[6],
-                static (value1, value2, value3, value4, value5, value6, value7) =>
-                    value1 + value2 + value3 + value4 + value5 + value6 + value7),
-            8 => sources[0].CombineLatest(
-                sources[1],
-                sources[2],
-                sources[3],
-                sources[4],
-                sources[5],
-                sources[6],
-                sources[7],
-                static (value1, value2, value3, value4, value5, value6, value7, value8) =>
-                    value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8),
-            9 => sources[0].CombineLatest(
-                sources[1],
-                sources[2],
-                sources[3],
-                sources[4],
-                sources[5],
-                sources[6],
-                sources[7],
-                sources[8],
-                static (value1, value2, value3, value4, value5, value6, value7, value8, value9) =>
-                    value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9),
-            10 => sources[0].CombineLatest(
-                sources[1],
-                sources[2],
-                sources[3],
-                sources[4],
-                sources[5],
-                sources[6],
-                sources[7],
-                sources[8],
-                sources[9],
-                static (value1, value2, value3, value4, value5, value6, value7, value8, value9, value10) =>
-                    value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9 + value10),
-            11 => sources[0].CombineLatest(
-                sources[1],
-                sources[2],
-                sources[3],
-                sources[4],
-                sources[5],
-                sources[6],
-                sources[7],
-                sources[8],
-                sources[9],
-                sources[10],
-                static (value1, value2, value3, value4, value5, value6, value7, value8, value9, value10, value11) =>
-                    value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9 + value10 +
-                    value11),
-            12 => sources[0].CombineLatest(
-                sources[1],
-                sources[2],
-                sources[3],
-                sources[4],
-                sources[5],
-                sources[6],
-                sources[7],
-                sources[8],
-                sources[9],
-                sources[10],
-                sources[11],
-                static (
+    private static IObservable<int> CreateCombineLatest(int arity, CombineLatestSources sources) =>
+        _combineLatestBuilders[arity - MinMultiSourceArity](sources);
+
+    /// <summary>Builds the four-source CombineLatest overload.</summary>
+    /// <param name="sources">The named source signals.</param>
+    /// <returns>The combined observable.</returns>
+    private static IObservable<int> CombineLatestOfFour(CombineLatestSources sources) =>
+        sources.First.CombineLatest(
+            sources.Second,
+            sources.Third,
+            sources.Fourth,
+            static (value1, value2, value3, value4) =>
+                value1 + value2 + value3 + value4);
+
+    /// <summary>Builds the five-source CombineLatest overload.</summary>
+    /// <param name="sources">The named source signals.</param>
+    /// <returns>The combined observable.</returns>
+    private static IObservable<int> CombineLatestOfFive(CombineLatestSources sources) =>
+        sources.First.CombineLatest(
+            sources.Second,
+            sources.Third,
+            sources.Fourth,
+            sources.Fifth,
+            static (value1, value2, value3, value4, value5) =>
+                value1 + value2 + value3 + value4 + value5);
+
+    /// <summary>Builds the six-source CombineLatest overload.</summary>
+    /// <param name="sources">The named source signals.</param>
+    /// <returns>The combined observable.</returns>
+    private static IObservable<int> CombineLatestOfSix(CombineLatestSources sources) =>
+        sources.First.CombineLatest(
+            sources.Second,
+            sources.Third,
+            sources.Fourth,
+            sources.Fifth,
+            sources.Sixth,
+            static (value1, value2, value3, value4, value5, value6) =>
+                value1 + value2 + value3 + value4 + value5 + value6);
+
+    /// <summary>Builds the seven-source CombineLatest overload.</summary>
+    /// <param name="sources">The named source signals.</param>
+    /// <returns>The combined observable.</returns>
+    private static IObservable<int> CombineLatestOfSeven(CombineLatestSources sources) =>
+        sources.First.CombineLatest(
+            sources.Second,
+            sources.Third,
+            sources.Fourth,
+            sources.Fifth,
+            sources.Sixth,
+            sources.Seventh,
+            static (value1, value2, value3, value4, value5, value6, value7) =>
+                value1 + value2 + value3 + value4 + value5 + value6 + value7);
+
+    /// <summary>Builds the eight-source CombineLatest overload.</summary>
+    /// <param name="sources">The named source signals.</param>
+    /// <returns>The combined observable.</returns>
+    private static IObservable<int> CombineLatestOfEight(CombineLatestSources sources) =>
+        sources.First.CombineLatest(
+            sources.Second,
+            sources.Third,
+            sources.Fourth,
+            sources.Fifth,
+            sources.Sixth,
+            sources.Seventh,
+            sources.Eighth,
+            static (value1, value2, value3, value4, value5, value6, value7, value8) =>
+                value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8);
+
+    /// <summary>Builds the nine-source CombineLatest overload.</summary>
+    /// <param name="sources">The named source signals.</param>
+    /// <returns>The combined observable.</returns>
+    private static IObservable<int> CombineLatestOfNine(CombineLatestSources sources) =>
+        sources.First.CombineLatest(
+            sources.Second,
+            sources.Third,
+            sources.Fourth,
+            sources.Fifth,
+            sources.Sixth,
+            sources.Seventh,
+            sources.Eighth,
+            sources.Ninth,
+            static (value1, value2, value3, value4, value5, value6, value7, value8, value9) =>
+                value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9);
+
+    /// <summary>Builds the ten-source CombineLatest overload.</summary>
+    /// <param name="sources">The named source signals.</param>
+    /// <returns>The combined observable.</returns>
+    private static IObservable<int> CombineLatestOfTen(CombineLatestSources sources) =>
+        sources.First.CombineLatest(
+            sources.Second,
+            sources.Third,
+            sources.Fourth,
+            sources.Fifth,
+            sources.Sixth,
+            sources.Seventh,
+            sources.Eighth,
+            sources.Ninth,
+            sources.Tenth,
+            static (value1, value2, value3, value4, value5, value6, value7, value8, value9, value10) =>
+                value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9 + value10);
+
+    /// <summary>Builds the eleven-source CombineLatest overload.</summary>
+    /// <param name="sources">The named source signals.</param>
+    /// <returns>The combined observable.</returns>
+    private static IObservable<int> CombineLatestOfEleven(CombineLatestSources sources) =>
+        sources.First.CombineLatest(
+            sources.Second,
+            sources.Third,
+            sources.Fourth,
+            sources.Fifth,
+            sources.Sixth,
+            sources.Seventh,
+            sources.Eighth,
+            sources.Ninth,
+            sources.Tenth,
+            sources.Eleventh,
+            static (value1, value2, value3, value4, value5, value6, value7, value8, value9, value10, value11) =>
+                value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9 + value10 +
+                value11);
+
+    /// <summary>Builds the twelve-source CombineLatest overload.</summary>
+    /// <param name="sources">The named source signals.</param>
+    /// <returns>The combined observable.</returns>
+    private static IObservable<int> CombineLatestOfTwelve(CombineLatestSources sources) =>
+        sources.First.CombineLatest(
+            sources.Second,
+            sources.Third,
+            sources.Fourth,
+            sources.Fifth,
+            sources.Sixth,
+            sources.Seventh,
+            sources.Eighth,
+            sources.Ninth,
+            sources.Tenth,
+            sources.Eleventh,
+            sources.Twelfth,
+            static (
                     value1,
                     value2,
                     value3,
@@ -261,22 +314,27 @@ public partial class RxNamesTests
                     value10,
                     value11,
                     value12) =>
-                    value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9 + value10 +
-                    value11 + value12),
-            13 => sources[0].CombineLatest(
-                sources[1],
-                sources[2],
-                sources[3],
-                sources[4],
-                sources[5],
-                sources[6],
-                sources[7],
-                sources[8],
-                sources[9],
-                sources[10],
-                sources[11],
-                sources[12],
-                static (
+                value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9 + value10 +
+                value11 + value12);
+
+    /// <summary>Builds the thirteen-source CombineLatest overload.</summary>
+    /// <param name="sources">The named source signals.</param>
+    /// <returns>The combined observable.</returns>
+    private static IObservable<int> CombineLatestOfThirteen(CombineLatestSources sources) =>
+        sources.First.CombineLatest(
+            sources.Second,
+            sources.Third,
+            sources.Fourth,
+            sources.Fifth,
+            sources.Sixth,
+            sources.Seventh,
+            sources.Eighth,
+            sources.Ninth,
+            sources.Tenth,
+            sources.Eleventh,
+            sources.Twelfth,
+            sources.Thirteenth,
+            static (
                     value1,
                     value2,
                     value3,
@@ -290,23 +348,28 @@ public partial class RxNamesTests
                     value11,
                     value12,
                     value13) =>
-                    value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9 + value10 +
-                    value11 + value12 + value13),
-            14 => sources[0].CombineLatest(
-                sources[1],
-                sources[2],
-                sources[3],
-                sources[4],
-                sources[5],
-                sources[6],
-                sources[7],
-                sources[8],
-                sources[9],
-                sources[10],
-                sources[11],
-                sources[12],
-                sources[13],
-                static (
+                value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9 + value10 +
+                value11 + value12 + value13);
+
+    /// <summary>Builds the fourteen-source CombineLatest overload.</summary>
+    /// <param name="sources">The named source signals.</param>
+    /// <returns>The combined observable.</returns>
+    private static IObservable<int> CombineLatestOfFourteen(CombineLatestSources sources) =>
+        sources.First.CombineLatest(
+            sources.Second,
+            sources.Third,
+            sources.Fourth,
+            sources.Fifth,
+            sources.Sixth,
+            sources.Seventh,
+            sources.Eighth,
+            sources.Ninth,
+            sources.Tenth,
+            sources.Eleventh,
+            sources.Twelfth,
+            sources.Thirteenth,
+            sources.Fourteenth,
+            static (
                     value1,
                     value2,
                     value3,
@@ -321,24 +384,29 @@ public partial class RxNamesTests
                     value12,
                     value13,
                     value14) =>
-                    value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9 + value10 +
-                    value11 + value12 + value13 + value14),
-            15 => sources[0].CombineLatest(
-                sources[1],
-                sources[2],
-                sources[3],
-                sources[4],
-                sources[5],
-                sources[6],
-                sources[7],
-                sources[8],
-                sources[9],
-                sources[10],
-                sources[11],
-                sources[12],
-                sources[13],
-                sources[14],
-                static (
+                value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9 + value10 +
+                value11 + value12 + value13 + value14);
+
+    /// <summary>Builds the fifteen-source CombineLatest overload.</summary>
+    /// <param name="sources">The named source signals.</param>
+    /// <returns>The combined observable.</returns>
+    private static IObservable<int> CombineLatestOfFifteen(CombineLatestSources sources) =>
+        sources.First.CombineLatest(
+            sources.Second,
+            sources.Third,
+            sources.Fourth,
+            sources.Fifth,
+            sources.Sixth,
+            sources.Seventh,
+            sources.Eighth,
+            sources.Ninth,
+            sources.Tenth,
+            sources.Eleventh,
+            sources.Twelfth,
+            sources.Thirteenth,
+            sources.Fourteenth,
+            sources.Fifteenth,
+            static (
                     value1,
                     value2,
                     value3,
@@ -354,10 +422,8 @@ public partial class RxNamesTests
                     value13,
                     value14,
                     value15) =>
-                    value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9 + value10 +
-                    value11 + value12 + value13 + value14 + value15),
-            _ => throw new ArgumentOutOfRangeException(nameof(arity), arity, null)
-        };
+                value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9 + value10 +
+                value11 + value12 + value13 + value14 + value15);
 
     /// <summary>Sums sixteen values for the widest CombineLatest overload.</summary>
     /// <param name="value1">Value 1.</param>
@@ -378,9 +444,9 @@ public partial class RxNamesTests
     /// <param name="value16">Value 16.</param>
     /// <returns>The sum of all values.</returns>
     [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "Has more than 7 parameters - required to exercise the arity-16 CombineLatest selector.")]
+        "Maintainability",
+        "SST1472:Signatures should not declare too many parameters",
+        Justification = "The arity-16 CombineLatest selector delegate fixes this signature.")]
     private static int SumSixteen(
         int value1,
         int value2,
@@ -454,6 +520,92 @@ public partial class RxNamesTests
     }
 
     /// <summary>
+    /// The sources of the widest generated CombineLatest overload, named by argument position so every arity can
+    /// be built without indexing into an array.
+    /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "SST2315:A type that owns a disposable should be disposable",
+        Justification =
+            "Test helper that holds the source subjects for a CombineLatest arity test. The subjects live for the "
+            + "duration of the test and the test process owns them; this helper is deliberately not IDisposable.")]
+    private sealed class CombineLatestSources
+    {
+        /// <summary>Initializes a new instance of the <see cref="CombineLatestSources"/> class.</summary>
+        public CombineLatestSources() =>
+            InOrder =
+            [
+                First,
+                Second,
+                Third,
+                Fourth,
+                Fifth,
+                Sixth,
+                Seventh,
+                Eighth,
+                Ninth,
+                Tenth,
+                Eleventh,
+                Twelfth,
+                Thirteenth,
+                Fourteenth,
+                Fifteenth,
+                Sixteenth,
+            ];
+
+        /// <summary>Gets every source in argument order.</summary>
+        public Signal<int>[] InOrder { get; }
+
+        /// <summary>Gets the source in the first argument position.</summary>
+        public Signal<int> First { get; } = new();
+
+        /// <summary>Gets the source in the second argument position.</summary>
+        public Signal<int> Second { get; } = new();
+
+        /// <summary>Gets the source in the third argument position.</summary>
+        public Signal<int> Third { get; } = new();
+
+        /// <summary>Gets the source in the fourth argument position.</summary>
+        public Signal<int> Fourth { get; } = new();
+
+        /// <summary>Gets the source in the fifth argument position.</summary>
+        public Signal<int> Fifth { get; } = new();
+
+        /// <summary>Gets the source in the sixth argument position.</summary>
+        public Signal<int> Sixth { get; } = new();
+
+        /// <summary>Gets the source in the seventh argument position.</summary>
+        public Signal<int> Seventh { get; } = new();
+
+        /// <summary>Gets the source in the eighth argument position.</summary>
+        public Signal<int> Eighth { get; } = new();
+
+        /// <summary>Gets the source in the ninth argument position.</summary>
+        public Signal<int> Ninth { get; } = new();
+
+        /// <summary>Gets the source in the tenth argument position.</summary>
+        public Signal<int> Tenth { get; } = new();
+
+        /// <summary>Gets the source in the eleventh argument position.</summary>
+        public Signal<int> Eleventh { get; } = new();
+
+        /// <summary>Gets the source in the twelfth argument position.</summary>
+        public Signal<int> Twelfth { get; } = new();
+
+        /// <summary>Gets the source in the thirteenth argument position.</summary>
+        public Signal<int> Thirteenth { get; } = new();
+
+        /// <summary>Gets the source in the fourteenth argument position.</summary>
+        public Signal<int> Fourteenth { get; } = new();
+
+        /// <summary>Gets the source in the fifteenth argument position.</summary>
+        public Signal<int> Fifteenth { get; } = new();
+
+        /// <summary>Gets the source in the sixteenth argument position.</summary>
+        public Signal<int> Sixteenth { get; } = new();
+    }
+
+    /// <summary>
     /// An observable whose subscription retains its observer and ignores disposal, letting a test push raw
     /// notifications (including ones after a terminal notification) to exercise a sink's terminal guards.
     /// </summary>
@@ -516,10 +668,6 @@ public partial class RxNamesTests
     /// <param name = "Rx">The Rx/LINQ-named builder.</param>
     /// <param name = "Inners">The inner source values.</param>
     /// <param name = "Expected">The expected forwarded values.</param>
-    [SuppressMessage(
-        "Major Code Smell",
-        "S2368:Public methods should not have multidimensional array parameters",
-        Justification = "The jagged array is the public TUnit method-data shape for higher-order parity cases.")]
     public sealed record HigherOrderCase(
         string Name,
         Func<IObservable<IObservable<int>>, IObservable<int>> Deviant,

@@ -33,7 +33,8 @@ public class OperatorStatefulVariantBenchmarks
     public int PrimitivesMapWith()
     {
         IntSignalWitness observer = new();
-        using var subscription = Signal.Sequence(1, Count).MapWith(_factor, static (factor, x) => x * factor).Subscribe(observer);
+        using var subscription = Signal.Sequence(1, Count).MapWith(_factor, static (factor, x) => x * factor)
+            .Subscribe(observer);
         return observer.Total;
     }
 
@@ -55,7 +56,8 @@ public class OperatorStatefulVariantBenchmarks
     {
         var factor = _factor;
         IntR3Witness observer = new();
-        using var subscription = R3.ObservableExtensions.Select(R3.Observable.Range(1, Count), x => x * factor).Subscribe(observer);
+        using var subscription = R3.ObservableExtensions.Select(R3.Observable.Range(1, Count), x => x * factor)
+            .Subscribe(observer);
         return observer.Total;
     }
 
@@ -65,7 +67,8 @@ public class OperatorStatefulVariantBenchmarks
     public int PrimitivesKeepWith()
     {
         IntSignalWitness observer = new();
-        using var subscription = Signal.Sequence(1, Count).KeepWith(_threshold, static (threshold, x) => x > threshold).Subscribe(observer);
+        using var subscription = Signal.Sequence(1, Count).KeepWith(_threshold, static (threshold, x) => x > threshold)
+            .Subscribe(observer);
         return observer.Total;
     }
 
@@ -76,7 +79,8 @@ public class OperatorStatefulVariantBenchmarks
     {
         var threshold = _threshold;
         IntSignalWitness observer = new();
-        using var subscription = RxObservable.Where(RxObservable.Range(1, Count), x => x > threshold).Subscribe(observer);
+        using var subscription =
+            RxObservable.Where(RxObservable.Range(1, Count), x => x > threshold).Subscribe(observer);
         return observer.Total;
     }
 
@@ -87,7 +91,8 @@ public class OperatorStatefulVariantBenchmarks
     {
         var threshold = _threshold;
         IntR3Witness observer = new();
-        using var subscription = R3.ObservableExtensions.Where(R3.Observable.Range(1, Count), x => x > threshold).Subscribe(observer);
+        using var subscription = R3.ObservableExtensions.Where(R3.Observable.Range(1, Count), x => x > threshold)
+            .Subscribe(observer);
         return observer.Total;
     }
 
@@ -97,7 +102,8 @@ public class OperatorStatefulVariantBenchmarks
     public int PrimitivesTapWith()
     {
         IntSignalWitness observer = new();
-        using var subscription = Signal.Sequence(1, Count).TapWith(_factor, static (factor, x) => _ = x * factor).Subscribe(observer);
+        using var subscription = Signal.Sequence(1, Count).TapWith(_factor, static (factor, x) => _ = x * factor)
+            .Subscribe(observer);
         return observer.Total;
     }
 
@@ -119,7 +125,8 @@ public class OperatorStatefulVariantBenchmarks
     {
         var factor = _factor;
         IntR3Witness observer = new();
-        using var subscription = R3.ObservableExtensions.Do(R3.Observable.Range(1, Count), onNext: x => _ = x * factor).Subscribe(observer);
+        using var subscription = R3.ObservableExtensions.Do(R3.Observable.Range(1, Count), x => _ = x * factor)
+            .Subscribe(observer);
         return observer.Total;
     }
 }

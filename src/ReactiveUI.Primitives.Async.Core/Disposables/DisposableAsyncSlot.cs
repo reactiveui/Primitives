@@ -13,7 +13,6 @@ namespace ReactiveUI.Primitives.Async.Disposables;
 /// against a caller-owned <see cref="IAsyncDisposable"/> field. Use these when the wrapper-class
 /// allocation that the convenience types incur is on a hot path.
 /// </summary>
-[SuppressMessage("Design", "CA1045:Do not pass types by reference", Justification = "Ref-on-field is the entire point — mirrors Interlocked/Volatile.")]
 public static class DisposableAsyncSlot
 {
     /// <summary>Shared marker used by all async-disposable slot implementations once a slot is closed.</summary>
@@ -67,7 +66,9 @@ public static class DisposableAsyncSlot
             return default;
         }
 
-        return ReferenceEquals(current, DisposedSentinel) ? value?.DisposeAsync() ?? default : throw CreateAlreadyAssignedException();
+        return ReferenceEquals(current, DisposedSentinel)
+            ? value?.DisposeAsync() ?? default
+            : throw CreateAlreadyAssignedException();
     }
 
     /// <summary>Asynchronously disposes the slot's current contents and marks the slot as disposed.

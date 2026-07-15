@@ -1,10 +1,10 @@
 [![NuGet Stats](https://img.shields.io/nuget/v/ReactiveUI.Primitives.svg)](https://www.nuget.org/packages/ReactiveUI.Primitives) [![Build](https://github.com/reactiveui/Primitives/actions/workflows/ci-build.yml/badge.svg)](https://github.com/reactiveui/Primitives/actions/workflows/ci-build.yml) [![Code Coverage](https://codecov.io/gh/reactiveui/Primitives/branch/main/graph/badge.svg)](https://codecov.io/gh/reactiveui/Primitives) [![#yourfirstpr](https://img.shields.io/badge/first--timers--only-friendly-blue.svg)](https://reactiveui.net/contribute)
 <br>
 <a href="https://www.nuget.org/packages/ReactiveUI.Primitives">
-        <img src="https://img.shields.io/nuget/dt/ReactiveUI.Primitives.svg">
+<img src="https://img.shields.io/nuget/dt/ReactiveUI.Primitives.svg">
 </a>
 <a href="https://reactiveui.net/slack">
-        <img src="https://img.shields.io/badge/chat-slack-blue.svg">
+<img src="https://img.shields.io/badge/chat-slack-blue.svg">
 </a>
 
 <img alt="ReactiveUI.Primitives" width="160" height="160" src="https://github.com/reactiveui/styleguide/blob/master/logo_primitives/logo.png?raw=true">
@@ -92,7 +92,7 @@ variants close the gap: they recompile the same source with `ISequencer` mapped 
 5. [Creation factories](#creation-factories)
 6. [Operators](#operators)
 7. [ReactiveUI.Primitives.Async](#reactiveuiprimitivesasync)
-8. [ReactiveUI.Primitives.Extensions](#reactiveuiprimitivesextensions)
+8. [Extension helpers](#extension-helpers)
 9. [Stateful signals and subject-like types](#stateful-signals-and-subject-like-types)
 10. [Sequencers](#sequencers)
 11. [Threading, disposal, and error semantics](#threading-disposal-and-error-semantics)
@@ -103,7 +103,8 @@ variants close the gap: they recompile the same source with `ISequencer` mapped 
 
 ## Install
 
-All packages are published on [NuGet.org](https://www.nuget.org/packages?q=ReactiveUI.Primitives). Install the base package:
+All packages are published on [NuGet.org](https://www.nuget.org/packages?q=ReactiveUI.Primitives). Install the base
+package:
 
 ```bash
 dotnet add package ReactiveUI.Primitives
@@ -113,80 +114,112 @@ The library is split into a layered set of packages, so you can pull only the su
 integration point. Every package below ships at the same version and targets the same `net8.0` to `net11.0` plus
 `net462` to `net481` matrix. The platform packages add their OS-specific TFMs.
 
-| Package | NuGet | Use when |
-|---------|-------|----------|
-| [ReactiveUI.Disposables][Disp] | [![DispB]][Disp] | You only need the disposable primitives such as `Disposable`, `MultipleDisposable`, `Slot`, or `Pocket`. |
-| [ReactiveUI.Primitives.Core][Core] | [![CoreB]][Core] | The type-agnostic core shared by the lean and System.Reactive-flavoured leaves (usually a transitive dependency). |
-| [ReactiveUI.Primitives][Prim] | [![PrimB]][Prim] | The default lean signal/operator/sequencer package. |
-| [ReactiveUI.Primitives.Reactive][Rx] | [![RxB]][Rx] | The Primitives API compiled against System.Reactive `Unit` and `IScheduler`. |
-| [ReactiveUI.Primitives.Async.Core][AsyncCore] | [![AsyncCoreB]][AsyncCore] | The type-agnostic async core shared by the async leaves. |
-| [ReactiveUI.Primitives.Async][Async] | [![AsyncB]][Async] | Native `IObservableAsync<T>` / `IObserverAsync<T>` signals. |
-| [ReactiveUI.Primitives.R3Bridge.Generator][R3Bridge] | [![R3BridgeB]][R3Bridge] | Optional analyzer package that generates R3 and R3Async bridge adapters. |
-| [ReactiveUI.Primitives.Async.Reactive][AsyncRx] | [![AsyncRxB]][AsyncRx] | Async Primitives compiled against System.Reactive `Unit` and `IScheduler`. |
-| [ReactiveUI.Primitives.Extensions.Core][ExtCore] | [![ExtCoreB]][ExtCore] | The type-agnostic core for the migrated `ReactiveUI.Extensions` helpers. |
-| [ReactiveUI.Primitives.Extensions][Ext] | [![ExtB]][Ext] | The migrated non-async `ReactiveUI.Extensions` helper operators on lean Primitives. |
-| [ReactiveUI.Primitives.Extensions.Reactive][ExtRx] | [![ExtRxB]][ExtRx] | Migrated extension helpers compiled against System.Reactive `Unit` and `IScheduler`. |
-| [ReactiveUI.Primitives.Wpf][Wpf] | [![WpfB]][Wpf] | WPF dispatcher sequencer integration. |
-| [ReactiveUI.Primitives.Wpf.Reactive][WpfRx] | [![WpfRxB]][WpfRx] | WPF dispatcher scheduler integration for System.Reactive-first projects. |
-| [ReactiveUI.Primitives.WinForms][WinForms] | [![WinFormsB]][WinForms] | Windows Forms control sequencer integration. |
-| [ReactiveUI.Primitives.WinForms.Reactive][WinFormsRx] | [![WinFormsRxB]][WinFormsRx] | Windows Forms control scheduler integration for System.Reactive-first projects. |
-| [ReactiveUI.Primitives.WinUI][WinUI] | [![WinUIB]][WinUI] | WinUI dispatcher-queue sequencer integration. |
-| [ReactiveUI.Primitives.WinUI.Reactive][WinUIRx] | [![WinUIRxB]][WinUIRx] | WinUI dispatcher-queue scheduler integration for System.Reactive-first projects. |
-| [ReactiveUI.Primitives.Blazor][Blazor] | [![BlazorB]][Blazor] | Blazor renderer sequencer integration. |
-| [ReactiveUI.Primitives.Blazor.Reactive][BlazorRx] | [![BlazorRxB]][BlazorRx] | Blazor renderer scheduler integration for System.Reactive-first projects. |
-| [ReactiveUI.Primitives.Maui][Maui] | [![MauiB]][Maui] | MAUI dispatcher sequencer integration. |
-| [ReactiveUI.Primitives.Maui.Reactive][MauiRx] | [![MauiRxB]][MauiRx] | MAUI dispatcher scheduler integration for System.Reactive-first projects. |
+| Package                                               | NuGet                        | Use when                                                                                                          |
+|-------------------------------------------------------|------------------------------|-------------------------------------------------------------------------------------------------------------------|
+| [ReactiveUI.Disposables][Disp]                        | [![DispB]][Disp]             | You only need the disposable primitives such as `Disposable`, `MultipleDisposable`, `Slot`, or `Pocket`.          |
+| [ReactiveUI.Primitives.Core][Core]                    | [![CoreB]][Core]             | The type-agnostic core shared by the lean and System.Reactive-flavoured leaves (usually a transitive dependency). |
+| [ReactiveUI.Primitives][Prim]                         | [![PrimB]][Prim]             | The default lean signal/operator/sequencer package, including the migrated `ReactiveUI.Extensions` helpers.       |
+| [ReactiveUI.Primitives.Reactive][Rx]                  | [![RxB]][Rx]                 | The Primitives and extension-helper APIs compiled against System.Reactive `Unit` and `IScheduler`.                |
+| [ReactiveUI.Primitives.Async.Core][AsyncCore]         | [![AsyncCoreB]][AsyncCore]   | The type-agnostic async core shared by the async leaves.                                                          |
+| [ReactiveUI.Primitives.Async][Async]                  | [![AsyncB]][Async]           | Native `IObservableAsync<T>` / `IObserverAsync<T>` signals.                                                       |
+| [ReactiveUI.Primitives.R3Bridge.Generator][R3Bridge]  | [![R3BridgeB]][R3Bridge]     | Optional analyzer package that generates R3 and R3Async bridge adapters.                                          |
+| [ReactiveUI.Primitives.Async.Reactive][AsyncRx]       | [![AsyncRxB]][AsyncRx]       | Async Primitives compiled against System.Reactive `Unit` and `IScheduler`.                                        |
+| [ReactiveUI.Primitives.Extensions.Core][ExtCore]      | [![ExtCoreB]][ExtCore]       | The type-agnostic core for the migrated `ReactiveUI.Extensions` helpers.                                          |
+| [ReactiveUI.Primitives.Wpf][Wpf]                      | [![WpfB]][Wpf]               | WPF dispatcher sequencer integration.                                                                             |
+| [ReactiveUI.Primitives.Wpf.Reactive][WpfRx]           | [![WpfRxB]][WpfRx]           | WPF dispatcher scheduler integration for System.Reactive-first projects.                                          |
+| [ReactiveUI.Primitives.WinForms][WinForms]            | [![WinFormsB]][WinForms]     | Windows Forms control sequencer integration.                                                                      |
+| [ReactiveUI.Primitives.WinForms.Reactive][WinFormsRx] | [![WinFormsRxB]][WinFormsRx] | Windows Forms control scheduler integration for System.Reactive-first projects.                                   |
+| [ReactiveUI.Primitives.WinUI][WinUI]                  | [![WinUIB]][WinUI]           | WinUI dispatcher-queue sequencer integration.                                                                     |
+| [ReactiveUI.Primitives.WinUI.Reactive][WinUIRx]       | [![WinUIRxB]][WinUIRx]       | WinUI dispatcher-queue scheduler integration for System.Reactive-first projects.                                  |
+| [ReactiveUI.Primitives.Blazor][Blazor]                | [![BlazorB]][Blazor]         | Blazor renderer sequencer integration.                                                                            |
+| [ReactiveUI.Primitives.Blazor.Reactive][BlazorRx]     | [![BlazorRxB]][BlazorRx]     | Blazor renderer scheduler integration for System.Reactive-first projects.                                         |
+| [ReactiveUI.Primitives.Maui][Maui]                    | [![MauiB]][Maui]             | MAUI dispatcher sequencer integration.                                                                            |
+| [ReactiveUI.Primitives.Maui.Reactive][MauiRx]         | [![MauiRxB]][MauiRx]         | MAUI dispatcher scheduler integration for System.Reactive-first projects.                                         |
 
 [Disp]: https://www.nuget.org/packages/ReactiveUI.Disposables/
+
 [DispB]: https://img.shields.io/nuget/v/ReactiveUI.Disposables.svg
+
 [Core]: https://www.nuget.org/packages/ReactiveUI.Primitives.Core/
+
 [CoreB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Core.svg
+
 [Prim]: https://www.nuget.org/packages/ReactiveUI.Primitives/
+
 [PrimB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.svg
+
 [Rx]: https://www.nuget.org/packages/ReactiveUI.Primitives.Reactive/
+
 [RxB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Reactive.svg
+
 [AsyncCore]: https://www.nuget.org/packages/ReactiveUI.Primitives.Async.Core/
+
 [AsyncCoreB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Async.Core.svg
+
 [Async]: https://www.nuget.org/packages/ReactiveUI.Primitives.Async/
+
 [AsyncB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Async.svg
+
 [R3Bridge]: https://www.nuget.org/packages/ReactiveUI.Primitives.R3Bridge.Generator/
+
 [R3BridgeB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.R3Bridge.Generator.svg
+
 [AsyncRx]: https://www.nuget.org/packages/ReactiveUI.Primitives.Async.Reactive/
+
 [AsyncRxB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Async.Reactive.svg
+
 [ExtCore]: https://www.nuget.org/packages/ReactiveUI.Primitives.Extensions.Core/
+
 [ExtCoreB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Extensions.Core.svg
-[Ext]: https://www.nuget.org/packages/ReactiveUI.Primitives.Extensions/
-[ExtB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Extensions.svg
-[ExtRx]: https://www.nuget.org/packages/ReactiveUI.Primitives.Extensions.Reactive/
-[ExtRxB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Extensions.Reactive.svg
+
 [Wpf]: https://www.nuget.org/packages/ReactiveUI.Primitives.Wpf/
+
 [WpfB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Wpf.svg
+
 [WpfRx]: https://www.nuget.org/packages/ReactiveUI.Primitives.Wpf.Reactive/
+
 [WpfRxB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Wpf.Reactive.svg
+
 [WinForms]: https://www.nuget.org/packages/ReactiveUI.Primitives.WinForms/
+
 [WinFormsB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.WinForms.svg
+
 [WinFormsRx]: https://www.nuget.org/packages/ReactiveUI.Primitives.WinForms.Reactive/
+
 [WinFormsRxB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.WinForms.Reactive.svg
+
 [WinUI]: https://www.nuget.org/packages/ReactiveUI.Primitives.WinUI/
+
 [WinUIB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.WinUI.svg
+
 [WinUIRx]: https://www.nuget.org/packages/ReactiveUI.Primitives.WinUI.Reactive/
+
 [WinUIRxB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.WinUI.Reactive.svg
+
 [Blazor]: https://www.nuget.org/packages/ReactiveUI.Primitives.Blazor/
+
 [BlazorB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Blazor.svg
+
 [BlazorRx]: https://www.nuget.org/packages/ReactiveUI.Primitives.Blazor.Reactive/
+
 [BlazorRxB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Blazor.Reactive.svg
+
 [Maui]: https://www.nuget.org/packages/ReactiveUI.Primitives.Maui/
+
 [MauiB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Maui.svg
+
 [MauiRx]: https://www.nuget.org/packages/ReactiveUI.Primitives.Maui.Reactive/
+
 [MauiRxB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Maui.Reactive.svg
 
 ### How the packages layer
 
-Each family (base, async, extensions) follows the same shape: a type-agnostic `.Core` is compiled once, then a
-**lean** leaf binds the abstract `RxVoid`/`ISequencer` types to its own lightweight implementations, while the
-`.Reactive` leaf recompiles the same source against System.Reactive's `Unit`/`IScheduler`. Pick the lean leaf for a
-dependency-free build, or the `.Reactive` leaf to interoperate with an existing System.Reactive codebase. The platform
-packages also come in lean and `.Reactive` leaves. (Arrows point from a package to what it depends on.)
+The base and async families use type-agnostic `.Core` projects, with a **lean** leaf binding the shared
+`RxVoid`/`ISequencer` source to lightweight implementations and a `.Reactive` leaf recompiling it against
+System.Reactive's `Unit`/`IScheduler`. `ReactiveUI.Primitives.Extensions.Core` remains the shared implementation layer
+for the migrated extension helpers, but those helpers now ship directly from `ReactiveUI.Primitives` and
+`ReactiveUI.Primitives.Reactive`. The platform packages also come in lean and `.Reactive` leaves. (Arrows point from a
+package to what it depends on.)
 
 ```mermaid
 graph TD
@@ -199,15 +232,15 @@ graph TD
     Async["...Async (lean)"]
     AsyncRx["...Async.Reactive"]
     ExtCore["...Extensions.Core"]
-    Ext["...Extensions (lean)"]
-    ExtRx["...Extensions.Reactive"]
     Plat["Wpf / WinForms / WinUI<br/>Blazor / Maui"]
     PlatRx["Wpf.Reactive / WinForms.Reactive<br/>WinUI.Reactive / Blazor.Reactive / Maui.Reactive"]
 
     Core --> Disp
     Prim --> Core
     Prim --> Disp
+    Prim --> ExtCore
     Rx --> Core
+    Rx --> ExtCore
     Rx --> SR
     AsyncCore --> Core
     Async --> Prim
@@ -215,14 +248,16 @@ graph TD
     AsyncRx --> Rx
     AsyncRx --> AsyncCore
     ExtCore --> Core
-    Ext --> Prim
-    Ext --> ExtCore
-    ExtRx --> Rx
-    ExtRx --> ExtCore
     Plat --> Prim
     PlatRx --> Rx
 ```
 
+`ReactiveUI.Primitives.Extensions` and `ReactiveUI.Primitives.Extensions.Reactive` are no longer separate projects or
+NuGet packages. Their implementations now ship from `ReactiveUI.Primitives` and `ReactiveUI.Primitives.Reactive`,
+respectively. No API code was removed: the former lean Extensions package already depended on
+`ReactiveUI.Primitives`, and the former Reactive Extensions package already depended on
+`ReactiveUI.Primitives.Reactive`. Replace only the package reference; the existing
+`ReactiveUI.Primitives.Extensions*` namespaces remain unchanged.
 
 Then import the namespaces you need:
 
@@ -257,7 +292,7 @@ by the `.Reactive` package variants rather than by generated System.Reactive bri
 
 The base `ReactiveUI.Primitives` NuGet package includes `Skill.md` at the package root and a Codex-ready copy at
 `.agents/skills/reactiveui-primitives/SKILL.md`. It is an agent-oriented guide for choosing the correct
-ReactiveUI.Primitives package, using Async, Extensions, UI sequencers, bridge source generators, and migration from
+ReactiveUI.Primitives package, using Async, extension helpers, UI sequencers, bridge source generators, and migration from
 System.Reactive package variants, R3, or R3Async while assuming the libraries are consumed from NuGet packages.
 
 After package restore, locate the file in the local NuGet package cache:
@@ -302,10 +337,9 @@ Most shared library packages use `$(LibraryTargetFrameworks)` from `src/Director
 
 Package TFM groups are:
 
-- `ReactiveUI.Disposables`, `ReactiveUI.Primitives.Core`, `ReactiveUI.Primitives.Reactive`,
-  `ReactiveUI.Primitives.Async.Core`, `ReactiveUI.Primitives.Async`, `ReactiveUI.Primitives.Async.Reactive`,
-  `ReactiveUI.Primitives.Extensions.Core`, `ReactiveUI.Primitives.Extensions`, and
-  `ReactiveUI.Primitives.Extensions.Reactive`: `$(LibraryTargetFrameworks)`.
+- `ReactiveUI.Disposables`, `ReactiveUI.Primitives.Core`, `ReactiveUI.Primitives.Async.Core`,
+  `ReactiveUI.Primitives.Async`, `ReactiveUI.Primitives.Async.Reactive`, and
+  `ReactiveUI.Primitives.Extensions.Core`: `$(LibraryTargetFrameworks)`.
 - `ReactiveUI.Primitives`: `$(LibraryTargetFrameworks)` plus `net10.0-android`, `net11.0-android`, and Apple platform
   TFMs (`net10.0-ios`, `net11.0-ios`, `net10.0-tvos`, `net11.0-tvos`, `net10.0-macos`, `net11.0-macos`,
   `net10.0-maccatalyst`, `net11.0-maccatalyst`) when the build OS supports restoring those workloads.
@@ -322,16 +356,17 @@ Package TFM groups are:
 - `ReactiveUI.Primitives.Maui` and `ReactiveUI.Primitives.Maui.Reactive`: `net9.0`, `net10.0`, `net11.0`.
 
 Runtime package dependencies are intentionally small. The default production packages do not depend on System.Reactive,
-R3, R3Async, or the optional R3 bridge generator. `ReactiveUI.Primitives` references `ReactiveUI.Disposables` and
-`ReactiveUI.Primitives.Core`. `ReactiveUI.Disposables` references `System.ValueTuple` only for `net462`.
+R3, R3Async, or the optional R3 bridge generator. `ReactiveUI.Primitives` references `ReactiveUI.Disposables`,
+`ReactiveUI.Primitives.Core`, and `ReactiveUI.Primitives.Extensions.Core`. `ReactiveUI.Disposables` references
+`System.ValueTuple` only for `net462`.
 
 The `.Reactive` leaf packages intentionally reference `System.Reactive` through `src/Directory.Build.props`. They
 recompile the shared Primitives source with `RxVoid` aliased to `System.Reactive.Unit`, `ISequencer` aliased to
 `System.Reactive.Concurrency.IScheduler`, and the shared source shifted into `.Reactive` namespaces.
 
-`ReactiveUI.Primitives.Async.Core`, `ReactiveUI.Primitives.Async`, `ReactiveUI.Primitives.Async.Reactive`,
-`ReactiveUI.Primitives.Extensions.Core`, `ReactiveUI.Primitives.Extensions`, and
-`ReactiveUI.Primitives.Extensions.Reactive` add .NET Framework compatibility/support packages where required, such as
+`ReactiveUI.Primitives`, `ReactiveUI.Primitives.Reactive`, `ReactiveUI.Primitives.Async.Core`,
+`ReactiveUI.Primitives.Async`, `ReactiveUI.Primitives.Async.Reactive`, and `ReactiveUI.Primitives.Extensions.Core` add
+.NET Framework compatibility/support packages where required, such as
 `System.ValueTuple`, Microsoft.Bcl.TimeProvider, System.Threading.Channels, System.Runtime.CompilerServices.Unsafe,
 System.ComponentModel.Annotations, System.Buffers, System.Memory, and System.Collections.Immutable. Add the standalone
 `ReactiveUI.Primitives.R3Bridge.Generator` analyzer package to generate R3/R3Async bridge methods in consuming projects
@@ -340,11 +375,13 @@ that already reference those external libraries.
 `ReactiveUI.Primitives.Blazor` and `ReactiveUI.Primitives.Blazor.Reactive` reference `Microsoft.AspNetCore.Components`.
 `ReactiveUI.Primitives.Maui` and `ReactiveUI.Primitives.Maui.Reactive` reference `Microsoft.Maui.Core` and
 Microsoft.Extensions infrastructure packages. `ReactiveUI.Primitives.WinUI` and `ReactiveUI.Primitives.WinUI.Reactive`
-reference `Microsoft.WindowsAppSDK`. The remaining shared package references are analyzer, SourceLink, versioning, ILLink,
+reference `Microsoft.WindowsAppSDK`. The remaining shared package references are analyzer, SourceLink, versioning,
+ILLink,
 reference-assembly, or build-time support packages such as Blazor.Common.Analyzers, Microsoft.SourceLink.GitHub, MinVer,
 Roslynator.Analyzers, SonarAnalyzer.CSharp, StyleSharp.Analyzers, Microsoft.NET.ILLink.Tasks, and
 Microsoft.NETFramework.ReferenceAssemblies. Benchmark projects may reference System.Reactive,
-System.Reactive.Async 6.0.0-alpha.18, R3, and ReactiveUI.Extensions as comparison baselines, but those references are not
+System.Reactive.Async 6.0.0-alpha.18, R3, and ReactiveUI.Extensions as comparison baselines, but those references are
+not
 production dependencies.
 
 ## Core model
@@ -443,36 +480,36 @@ subscriptions.Dispose();
 
 Creation APIs live on `ReactiveUI.Primitives.Signals.Signal`.
 
-| Factory                                                                                        | Purpose                                                                                    |
-|------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------|
-| `Signal.Create<T>(Func<IObserver<T>, IDisposable>)`                                            | Build a custom observable.                                                                 |
-| `Signal.CreateSafe<T>(Func<IObserver<T>, IDisposable>)`                                        | Build a custom observable with safety wrapping.                                            |
-| `Signal.CreateWithState<T,TState>(...)`                                                        | Build a custom observable while passing state explicitly.                                  |
-| `Signal.Lazy<T>(Func<IObservable<T>>)`                                                         | Create the source per subscription.                                                        |
-| `Signal.Emit<T>(T)`                                                                            | Emit one value and complete. Specialized fast paths exist for `bool`, `int`, and `RxVoid`. |
-| `Signal.None<T>()`                                                                             | Complete without values.                                                                   |
-| `Signal.Silent<T>()` / `Signal.Silent<T>(T witness)`                                           | Never emit and never complete.                                                             |
-| `Signal.Fail<T>(Exception)`                                                                    | Terminate with an error.                                                                   |
-| `Signal.Sequence(int start, int count)`                                                        | Emit an integer range and complete.                                                        |
-| `Signal.Loop<T>(T value)` / `Signal.Loop<T>(T value, int count)`                               | Repeat indefinitely or a fixed number of times.                                            |
-| `Signal.Unfold<TState,TResult>(...)` / `Signal.Iterate<TState,TResult>(...)`                   | Generate a finite sequence from state.                                                     |
-| `Signal.Use<TResource,T>(...)`                                                                 | Tie a resource lifetime to a subscription.                                                 |
-| `Signal.FromEventPattern(...)`                                                                 | Convert .NET events to `EventPattern<TEventArgs>` values.                                  |
-| `Signal.FromEnumerable<T>(IEnumerable<T>)`                                                     | Convert an enumerable.                                                                     |
-| `Signal.FromEnumerable<T>(IEnumerable<T>, CancellationToken)`                                  | Convert an enumerable and stop synchronous enumeration when cancelled.                     |
-| `Signal.FromAsyncEnumerable<T>(IAsyncEnumerable<T>, CancellationToken)`                        | Convert an async enumerable on modern TFMs.                                                |
-| `Signal.FromTask<T>(Task<T>)`                                                                  | Convert an existing task to a signal.                                                      |
-| `Signal.FromAsync<T>(Func<Task<T>>)`                                                           | Invoke a task factory per subscription.                                                    |
-| `Signal.FromAsync<T>(Func<CancellationToken, Task<T>>)`                                        | Invoke a cancellable task factory per subscription; disposing that subscription cancels only that subscription's token. |
-| `Signal.FromAsync<T>(Func<CancellationToken, Task<T>>, CancellationToken)`                      | Link each subscription to an external token; external cancellation is forwarded as an observer error while subscribed. |
-| `Signal.After(TimeSpan, ISequencer?)`                                                          | Emit one `long` tick after a delay.                                                        |
-| `Signal.Every(TimeSpan, ISequencer?)`                                                          | Emit increasing `long` ticks repeatedly.                                                   |
-| `Signal.Pulse(...)`                                                                            | Alias of `Every`.                                                                          |
-| `Signal.After(...)`                                                                            | One-shot and periodic timer overloads.                                                     |
-| `Signal.Chain(...)`, `Signal.Blend(...)`, `Signal.Race(...)`                                   | Compose multiple sources.                                                                  |
-| `Signal.Pair(...)`, `Signal.SyncLatest(...)`, `Signal.PairLatest(...)`, `Signal.ForkJoin(...)` | Pairwise combination helpers.                                                              |
+| Factory                                                                                        | Purpose                                                                                                                                         |
+|------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|
+| `Signal.Create<T>(Func<IObserver<T>, IDisposable>)`                                            | Build a custom observable.                                                                                                                      |
+| `Signal.CreateSafe<T>(Func<IObserver<T>, IDisposable>)`                                        | Build a custom observable with safety wrapping.                                                                                                 |
+| `Signal.CreateWithState<T,TState>(...)`                                                        | Build a custom observable while passing state explicitly.                                                                                       |
+| `Signal.Lazy<T>(Func<IObservable<T>>)`                                                         | Create the source per subscription.                                                                                                             |
+| `Signal.Emit<T>(T)`                                                                            | Emit one value and complete. Specialized fast paths exist for `bool`, `int`, and `RxVoid`.                                                      |
+| `Signal.None<T>()`                                                                             | Complete without values.                                                                                                                        |
+| `Signal.Silent<T>()` / `Signal.Silent<T>(T witness)`                                           | Never emit and never complete.                                                                                                                  |
+| `Signal.Fail<T>(Exception)`                                                                    | Terminate with an error.                                                                                                                        |
+| `Signal.Sequence(int start, int count)`                                                        | Emit an integer range and complete.                                                                                                             |
+| `Signal.Loop<T>(T value)` / `Signal.Loop<T>(T value, int count)`                               | Repeat indefinitely or a fixed number of times.                                                                                                 |
+| `Signal.Unfold<TState,TResult>(...)` / `Signal.Iterate<TState,TResult>(...)`                   | Generate a finite sequence from state.                                                                                                          |
+| `Signal.Use<TResource,T>(...)`                                                                 | Tie a resource lifetime to a subscription.                                                                                                      |
+| `Signal.FromEventPattern(...)`                                                                 | Convert .NET events to `EventPattern<TEventArgs>` values.                                                                                       |
+| `Signal.FromEnumerable<T>(IEnumerable<T>)`                                                     | Convert an enumerable.                                                                                                                          |
+| `Signal.FromEnumerable<T>(IEnumerable<T>, CancellationToken)`                                  | Convert an enumerable and stop synchronous enumeration when cancelled.                                                                          |
+| `Signal.FromAsyncEnumerable<T>(IAsyncEnumerable<T>, CancellationToken)`                        | Convert an async enumerable on modern TFMs.                                                                                                     |
+| `Signal.FromTask<T>(Task<T>)`                                                                  | Convert an existing task to a signal.                                                                                                           |
+| `Signal.FromAsync<T>(Func<Task<T>>)`                                                           | Invoke a task factory per subscription.                                                                                                         |
+| `Signal.FromAsync<T>(Func<CancellationToken, Task<T>>)`                                        | Invoke a cancellable task factory per subscription; disposing that subscription cancels only that subscription's token.                         |
+| `Signal.FromAsync<T>(Func<CancellationToken, Task<T>>, CancellationToken)`                     | Link each subscription to an external token; external cancellation is forwarded as an observer error while subscribed.                          |
+| `Signal.After(TimeSpan, ISequencer?)`                                                          | Emit one `long` tick after a delay.                                                                                                             |
+| `Signal.Every(TimeSpan, ISequencer?)`                                                          | Emit increasing `long` ticks repeatedly.                                                                                                        |
+| `Signal.Pulse(...)`                                                                            | Alias of `Every`.                                                                                                                               |
+| `Signal.After(...)`                                                                            | One-shot and periodic timer overloads.                                                                                                          |
+| `Signal.Chain(...)`, `Signal.Blend(...)`, `Signal.Race(...)`                                   | Compose multiple sources.                                                                                                                       |
+| `Signal.Pair(...)`, `Signal.SyncLatest(...)`, `Signal.PairLatest(...)`, `Signal.ForkJoin(...)` | Pairwise combination helpers.                                                                                                                   |
 | `Signal.Scheduled<T>(ISequencer)` / `Signal.Scheduled<T>(ISequencer, IObserver<T>?)`           | Multicast signal that dispatches notifications on a sequencer, with an optional default observer active while no other subscribers are present. |
-| `Signal.Delayable<T>(Func<bool>, Func<IList<T>, IEnumerable<T>>)`                               | Multicast signal that buffers notifications while delayed and emits a de-duplicated batch when `Flush` is called. |
+| `Signal.Delayable<T>(Func<bool>, Func<IList<T>, IEnumerable<T>>)`                              | Multicast signal that buffers notifications while delayed and emits a de-duplicated batch when `Flush` is called.                               |
 
 Example:
 
@@ -715,12 +752,12 @@ key.Value = "abcd";
 Direct static helpers are available when a call site wants an explicit source argument instead of extension-method
 syntax:
 
-| Helper                       | Purpose                                                                 |
-|------------------------------|-------------------------------------------------------------------------|
-| `Signal.Expire(source, dueTime)` / `Signal.Expire(source, dueTime, sequencer)` | Apply the Primitives timeout operator directly to a source.              |
+| Helper                                                                           | Purpose                                                                  |
+|----------------------------------------------------------------------------------|--------------------------------------------------------------------------|
+| `Signal.Expire(source, dueTime)` / `Signal.Expire(source, dueTime, sequencer)`   | Apply the Primitives timeout operator directly to a source.              |
 | `Signal.Timeout(source, dueTime)` / `Signal.Timeout(source, dueTime, sequencer)` | System.Reactive-name alias for the direct `Expire` helper.               |
-| `Signal.ToTask(source)` / `Signal.ToTask(source, cancellationToken)`            | Await source completion and return the final value, matching `ToTask()`. |
-| `Signal.RunAsync(source)` / `Signal.RunAsync(source, cancellationToken)`        | Subscribe immediately and return an awaitable signal for the run.        |
+| `Signal.ToTask(source)` / `Signal.ToTask(source, cancellationToken)`             | Await source completion and return the final value, matching `ToTask()`. |
+| `Signal.RunAsync(source)` / `Signal.RunAsync(source, cancellationToken)`         | Subscribe immediately and return an awaitable signal for the run.        |
 
 After example:
 
@@ -763,19 +800,19 @@ generates the R3 and R3Async bridges, and offers System.Reactive-flavoured `.Rea
 
 Core async contracts and data types:
 
-| API                                | Purpose                                                                                                          |
-|------------------------------------|------------------------------------------------------------------------------------------------------------------|
-| `IObservableAsync<T>`              | Async observable contract. `SubscribeAsync` receives an `IObserverAsync<T>` and returns an `IAsyncDisposable`.   |
-| `IObserverAsync<T>`                | Async observer contract with `OnNextAsync`, `OnErrorResumeAsync`, `OnCompletedAsync`, and inherited `DisposeAsync`. |
-| `WitnessAsync<T>`                  | Base observer type for implementing async observers with disposal, cancellation linking, and concurrency checks. |
-| `ISignalAsync<T>`                  | Pushable async signal that combines `IObserverAsync<T>`, `IObservableAsync<T>`, and a `Values` observable.       |
-| `SignalAsync<T>`                   | Abstract base and static factory/operator host for async observables.                                            |
-| `ConnectableSignalAsync<T>`        | Async connectable sequence returned by multicast/publish operators.                                              |
-| `Result`                           | Completion result that represents success or terminal failure.                                                   |
-| `Optional<T>`                      | Allocation-free optional value used by replay/latest async signals.                                              |
-| `AsyncContext`                     | Dispatch abstraction over `SynchronizationContext`, `TaskScheduler`, or `ISequencer`.                            |
-| `ConcurrentWitnessCallsException`  | Raised when a serial witness detects concurrent observer calls.                                                  |
-| `UnhandledExceptionHandler`        | Central handler for async fire-and-forget failures.                                                              |
+| API                               | Purpose                                                                                                             |
+|-----------------------------------|---------------------------------------------------------------------------------------------------------------------|
+| `IObservableAsync<T>`             | Async observable contract. `SubscribeAsync` receives an `IObserverAsync<T>` and returns an `IAsyncDisposable`.      |
+| `IObserverAsync<T>`               | Async observer contract with `OnNextAsync`, `OnErrorResumeAsync`, `OnCompletedAsync`, and inherited `DisposeAsync`. |
+| `WitnessAsync<T>`                 | Base observer type for implementing async observers with disposal, cancellation linking, and concurrency checks.    |
+| `ISignalAsync<T>`                 | Pushable async signal that combines `IObserverAsync<T>`, `IObservableAsync<T>`, and a `Values` observable.          |
+| `SignalAsync<T>`                  | Abstract base and static factory/operator host for async observables.                                               |
+| `ConnectableSignalAsync<T>`       | Async connectable sequence returned by multicast/publish operators.                                                 |
+| `Result`                          | Completion result that represents success or terminal failure.                                                      |
+| `Optional<T>`                     | Allocation-free optional value used by replay/latest async signals.                                                 |
+| `AsyncContext`                    | Dispatch abstraction over `SynchronizationContext`, `TaskScheduler`, or `ISequencer`.                               |
+| `ConcurrentWitnessCallsException` | Raised when a serial witness detects concurrent observer calls.                                                     |
+| `UnhandledExceptionHandler`       | Central handler for async fire-and-forget failures.                                                                 |
 
 Async signal factories live in two places. Use `ReactiveUI.Primitives.Async.Signals.Signal` when you need a mutable
 signal, and use `SignalAsync` when you need a sequence factory or operator:
@@ -849,12 +886,17 @@ await using IAsyncDisposable subscription = await SignalAsync.Sequence(1, 3)
 `AsR3AsyncObservable<T>(this IObservableAsync<T>)`. System.Reactive-shaped async APIs are handled by
 `ReactiveUI.Primitives.Async.Reactive`, not by generated System.Reactive.Async adapters.
 
-## ReactiveUI.Primitives.Extensions
+## Extension helpers
 
-`ReactiveUI.Primitives.Extensions` migrates the non-async helper surface from `ReactiveUI.Extensions` onto
-`ReactiveUI.Primitives`. It is still based on the BCL `IObservable<T>` contract, but it uses `ISequencer` for scheduling
-and production references only `ReactiveUI.Primitives` plus framework compatibility packages. It does not reference
-System.Reactive, R3 or R3Async.
+The `ReactiveUI.Primitives.Extensions` namespace migrates the non-async helper surface from `ReactiveUI.Extensions` onto
+`ReactiveUI.Primitives`. The lean implementation is based on the BCL `IObservable<T>` contract, uses `ISequencer` for
+scheduling, and does not reference System.Reactive, R3, or R3Async. The corresponding
+`ReactiveUI.Primitives.Extensions.Reactive` namespace ships from `ReactiveUI.Primitives.Reactive` and uses
+System.Reactive `Unit` and `IScheduler` conventions.
+
+These namespaces previously shipped from separate `ReactiveUI.Primitives.Extensions` and
+`ReactiveUI.Primitives.Extensions.Reactive` packages. Their code has been consolidated into the base lean and Reactive
+packages; no helper implementation or public namespace was removed.
 
 Core utility surface:
 
@@ -923,8 +965,8 @@ IObservable<string> names = Signal.Sequence(1, 3)
 using IDisposable subscription = names.Subscribe(Console.WriteLine);
 ```
 
-The Extensions project is intended for applications that already use the helper operators from `ReactiveUI.Extensions`
-and want the same shapes without pulling System.Reactive or R3 into the production dependency graph.
+These helpers are intended for applications that already use the operators from `ReactiveUI.Extensions` and want the
+same shapes without pulling System.Reactive or R3 into the lean production dependency graph.
 `Filter(string pattern)` creates a regex with a 30-second match timeout so ordinary filters remain stable under
 instrumented CI runs while still protecting against runaway patterns. Use `Filter(Regex regex)` when a caller-specified
 regex timeout or options set must be preserved exactly.
@@ -933,15 +975,15 @@ regex timeout or options set must be preserved exactly.
 
 ReactiveUI.Primitives uses explicit names instead of cloning every System.Reactive subject type name.
 
-| System.Reactive type                 | ReactiveUI.Primitives equivalent         | Notes                                                                                    |
-|--------------------------------------|------------------------------------------|------------------------------------------------------------------------------------------|
-| `Subject<T>`                         | `Signal<T>`                              | Push values, errors, and completion to subscribers.                                      |
-| `BehaviorSubject<T>`                 | `StateSignal<T>`                         | Stores the latest value, exposes a mutable `Value`, and emits changes through `Changed`. |
-| `ReplaySubject<T>`                   | `ReplaySignal<T>`                        | Replays buffered values by size and/or time window.                                      |
-| `AsyncSubject<T>`                    | `FinalSignal<T>`                         | Awaitable subject-like signal; also implements `IAwaitSignal<T>`.                        |
-| `ReactiveProperty<T>` / state holder | `StateSignal<T>` plus `ReadOnlyState<T>` | Mutable state and read-only projected state.                                             |
-| `Subject<T>.ObserveOn(scheduler)`    | `ScheduledSignal<T>`                     | Multicast signal that dispatches its notifications on an `ISequencer`, with an optional default observer active while no other subscribers are present. |
-| `Buffer(boundary).SelectMany(distinct)` pipeline | `DelayableNotificationSignal<T>`     | Passes notifications through immediately while not delayed, buffers them while delayed, and emits a de-duplicated batch on `Flush`. |
+| System.Reactive type                             | ReactiveUI.Primitives equivalent         | Notes                                                                                                                                                   |
+|--------------------------------------------------|------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `Subject<T>`                                     | `Signal<T>`                              | Push values, errors, and completion to subscribers.                                                                                                     |
+| `BehaviorSubject<T>`                             | `StateSignal<T>`                         | Stores the latest value, exposes a mutable `Value`, and emits changes through `Changed`.                                                                |
+| `ReplaySubject<T>`                               | `ReplaySignal<T>`                        | Replays buffered values by size and/or time window.                                                                                                     |
+| `AsyncSubject<T>`                                | `FinalSignal<T>`                         | Awaitable subject-like signal; also implements `IAwaitSignal<T>`.                                                                                       |
+| `ReactiveProperty<T>` / state holder             | `StateSignal<T>` plus `ReadOnlyState<T>` | Mutable state and read-only projected state.                                                                                                            |
+| `Subject<T>.ObserveOn(scheduler)`                | `ScheduledSignal<T>`                     | Multicast signal that dispatches its notifications on an `ISequencer`, with an optional default observer active while no other subscribers are present. |
+| `Buffer(boundary).SelectMany(distinct)` pipeline | `DelayableNotificationSignal<T>`         | Passes notifications through immediately while not delayed, buffers them while delayed, and emits a de-duplicated batch on `Flush`.                     |
 
 State example:
 
@@ -1196,9 +1238,9 @@ but favors a smaller runtime, explicit state types, and Primitives naming. Migra
 factories first, then subject/state types, then operators and schedulers.
 
 When a project must keep System.Reactive `Unit` or `IScheduler` in its public surface, use
-`ReactiveUI.Primitives.Reactive`, `ReactiveUI.Primitives.Async.Reactive`, or
-`ReactiveUI.Primitives.Extensions.Reactive`. When the goal is to migrate away from those public System.Reactive types,
-use the lean packages and the mappings below.
+`ReactiveUI.Primitives.Reactive` or `ReactiveUI.Primitives.Async.Reactive`. The former
+`ReactiveUI.Primitives.Extensions.Reactive` helpers are included in `ReactiveUI.Primitives.Reactive`. When the goal is
+to migrate away from those public System.Reactive types, use the lean packages and the mappings below.
 
 ### Migration track: existing `xyz` project
 
@@ -1211,7 +1253,6 @@ ReactiveUI.Primitives package family.
 
 ```bash
 dotnet add xyz/xyz.csproj package ReactiveUI.Primitives
-dotnet add xyz/xyz.csproj package ReactiveUI.Primitives.Extensions
 dotnet add xyz/xyz.csproj package ReactiveUI.Primitives.Async
 ```
 
@@ -1262,7 +1303,6 @@ namespace xyz;
 
 ```bash
 dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.Reactive
-dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.Extensions.Reactive
 dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.Async.Reactive
 ```
 
@@ -1318,54 +1358,54 @@ dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.Maui.R
 
 ### Subject/state mapping
 
-| System.Reactive                    | ReactiveUI.Primitives              | Migration detail                                                 |
-|------------------------------------|------------------------------------|------------------------------------------------------------------|
-| `new Subject<T>()`                 | `new Signal<T>()`                  | Use `OnNext`, `OnError`, `OnCompleted`, and `Subscribe`.         |
-| `new BehaviorSubject<T>(initial)`  | `new StateSignal<T>(initial)`      | Keeps `Value` getter/setter and emits changes through `Changed`. |
-| mutable reactive property          | `new StateSignal<T>(initial)`      | Set `Value` to emit. Use `Changed` for observable state stream.  |
-| `new ReplaySubject<T>()`           | `new ReplaySignal<T>()`            | Unbounded replay.                                                |
-| `new ReplaySubject<T>(bufferSize)` | `new ReplaySignal<T>(bufferSize)`  | Size-limited replay.                                             |
-| `new ReplaySubject<T>(window)`     | `new ReplaySignal<T>(window)`      | Time-window replay.                                              |
-| `new AsyncSubject<T>()`            | `new FinalSignal<T>()`             | Awaitable final-value signal shape.                              |
+| System.Reactive                    | ReactiveUI.Primitives             | Migration detail                                                 |
+|------------------------------------|-----------------------------------|------------------------------------------------------------------|
+| `new Subject<T>()`                 | `new Signal<T>()`                 | Use `OnNext`, `OnError`, `OnCompleted`, and `Subscribe`.         |
+| `new BehaviorSubject<T>(initial)`  | `new StateSignal<T>(initial)`     | Keeps `Value` getter/setter and emits changes through `Changed`. |
+| mutable reactive property          | `new StateSignal<T>(initial)`     | Set `Value` to emit. Use `Changed` for observable state stream.  |
+| `new ReplaySubject<T>()`           | `new ReplaySignal<T>()`           | Unbounded replay.                                                |
+| `new ReplaySubject<T>(bufferSize)` | `new ReplaySignal<T>(bufferSize)` | Size-limited replay.                                             |
+| `new ReplaySubject<T>(window)`     | `new ReplaySignal<T>(window)`     | Time-window replay.                                              |
+| `new AsyncSubject<T>()`            | `new FinalSignal<T>()`            | Awaitable final-value signal shape.                              |
 
 ### Operator mapping
 
-| System.Reactive                  | ReactiveUI.Primitives                                  | Notes                                                                                               |
-|----------------------------------|--------------------------------------------------------|-----------------------------------------------------------------------------------------------------|
-| `Select`                         | `Map`                                                  | Prefer `Map` for distinct Primitives style.                                                         |
-| `Where`                          | `Keep`                                                 | Predicate filtering.                                                                                |
-| `SelectMany`                     | `FlatMap`, `Bind`, or Rx-name `SelectMany`             | Observable overloads preserve concurrent merge semantics; enumerable overloads flatten inline.      |
-| `Aggregate`                      | `Reduce`                                               | Emits final accumulated value on completion.                                                        |
-| `Scan`                           | `Fold`                                                 | Emits every accumulated value.                                                                      |
-| `Do`                             | `Tap`                                                  | Side effect while preserving values.                                                                |
-| `Take` / `Skip`                  | `Take` / `Skip`                                        | Count-based overloads.                                                                              |
-| `TakeWhile` / `SkipWhile`        | `TakeWhile` / `SkipWhile`                              | Predicate-based.                                                                                    |
-| `Distinct`                       | `Distinct`                                             | Full seen-set distinct.                                                                             |
-| `DistinctUntilChanged`           | `Unique`                                               | Adjacent dedupe.                                                                                    |
-| `OfType` / `Cast`                | `KeepType` / `CastTo`                                  | Object-source projections.                                                                          |
-| `Materialize`                    | `Spark`                                                | Converts notifications into `Spark<T>`.                                                             |
-| `Dematerialize`                  | `Unspark`                                              | Converts `Spark<T>` values back into notifications.                                                 |
-| `Where` + `Select`               | `Choose`                                               | Single fused sink; chooser returns `(HasValue, Value)` so a non-nullable value type can be skipped. |
-| `Merge`                          | `Blend` or `Signal.Blend`                              | Works over source-of-sources and params factories.                                                  |
-| `Merge` + `DistinctUntilChanged` | `BlendUnique`                                          | Single fused merge + adjacent dedupe over a params source set.                                      |
-| `Concat`                         | `Chain` or `Signal.Chain`                              | Sequential composition.                                                                             |
-| `Amb`                            | `Race`                                                 | First source to produce a value or terminal signal wins.                                            |
-| `Switch`                         | `SwitchTo`                                             | Latest inner observable wins.                                                                       |
-| `Select` + `Switch`              | `SwitchSelect`                                         | Filters null source values, projects each to an inner observable, and mirrors only the latest.      |
-| `Zip`                            | `Pair` or `Signal.Pair`                                | Pair values by index.                                                                               |
-| `CombineLatest`                  | `SyncLatest`, Rx-name `CombineLatest`, or `Signal.SyncLatest` | Latest values after all sources have emitted; overloads support up to 16 total sources.       |
-| `WithLatestFrom`                 | `Latch`                                                | Left emission paired with latest right value.                                                       |
-| `ForkJoin`                       | `ForkJoin`                                             | Last values after completion.                                                                       |
-| `Throttle`                       | `Calm` / `Stabilize`                                   | Quiet-period emission.                                                                              |
-| `Sample`                         | `Probe`                                                | Periodic latest-value sampling.                                                                     |
-| `Delay`                          | `Shift`                                                | Delay emitted values.                                                                               |
-| `DelaySubscription`              | `DelayStart`                                           | Delay source subscription.                                                                          |
-| `Timeout`                        | `Expire`                                               | Error on missing value before due time.                                                             |
-| `Buffer(count)`                  | `Buffer(count)`                                        | Fixed-size buffers.                                                                                 |
-| `SubscribeOn`                    | `SubscribeOn`                                          | Schedule source subscription.                                                                       |
-| `ToList` / `ToArray`             | `ToList` / `ToArray` or `CollectList` / `CollectArray` | Signal results.                                                                                     |
-| `FirstAsync` / `LastAsync`       | `FirstAsync` / `LastAsync`                             | Task result.                                                                                        |
-| `CountAsync` / `AnyAsync`        | `CountAsync` / `AnyAsync`                              | Task-shaped terminal helpers, including cancellation overloads.                                     |
+| System.Reactive                  | ReactiveUI.Primitives                                         | Notes                                                                                               |
+|----------------------------------|---------------------------------------------------------------|-----------------------------------------------------------------------------------------------------|
+| `Select`                         | `Map`                                                         | Prefer `Map` for distinct Primitives style.                                                         |
+| `Where`                          | `Keep`                                                        | Predicate filtering.                                                                                |
+| `SelectMany`                     | `FlatMap`, `Bind`, or Rx-name `SelectMany`                    | Observable overloads preserve concurrent merge semantics; enumerable overloads flatten inline.      |
+| `Aggregate`                      | `Reduce`                                                      | Emits final accumulated value on completion.                                                        |
+| `Scan`                           | `Fold`                                                        | Emits every accumulated value.                                                                      |
+| `Do`                             | `Tap`                                                         | Side effect while preserving values.                                                                |
+| `Take` / `Skip`                  | `Take` / `Skip`                                               | Count-based overloads.                                                                              |
+| `TakeWhile` / `SkipWhile`        | `TakeWhile` / `SkipWhile`                                     | Predicate-based.                                                                                    |
+| `Distinct`                       | `Distinct`                                                    | Full seen-set distinct.                                                                             |
+| `DistinctUntilChanged`           | `Unique`                                                      | Adjacent dedupe.                                                                                    |
+| `OfType` / `Cast`                | `KeepType` / `CastTo`                                         | Object-source projections.                                                                          |
+| `Materialize`                    | `Spark`                                                       | Converts notifications into `Spark<T>`.                                                             |
+| `Dematerialize`                  | `Unspark`                                                     | Converts `Spark<T>` values back into notifications.                                                 |
+| `Where` + `Select`               | `Choose`                                                      | Single fused sink; chooser returns `(HasValue, Value)` so a non-nullable value type can be skipped. |
+| `Merge`                          | `Blend` or `Signal.Blend`                                     | Works over source-of-sources and params factories.                                                  |
+| `Merge` + `DistinctUntilChanged` | `BlendUnique`                                                 | Single fused merge + adjacent dedupe over a params source set.                                      |
+| `Concat`                         | `Chain` or `Signal.Chain`                                     | Sequential composition.                                                                             |
+| `Amb`                            | `Race`                                                        | First source to produce a value or terminal signal wins.                                            |
+| `Switch`                         | `SwitchTo`                                                    | Latest inner observable wins.                                                                       |
+| `Select` + `Switch`              | `SwitchSelect`                                                | Filters null source values, projects each to an inner observable, and mirrors only the latest.      |
+| `Zip`                            | `Pair` or `Signal.Pair`                                       | Pair values by index.                                                                               |
+| `CombineLatest`                  | `SyncLatest`, Rx-name `CombineLatest`, or `Signal.SyncLatest` | Latest values after all sources have emitted; overloads support up to 16 total sources.             |
+| `WithLatestFrom`                 | `Latch`                                                       | Left emission paired with latest right value.                                                       |
+| `ForkJoin`                       | `ForkJoin`                                                    | Last values after completion.                                                                       |
+| `Throttle`                       | `Calm` / `Stabilize`                                          | Quiet-period emission.                                                                              |
+| `Sample`                         | `Probe`                                                       | Periodic latest-value sampling.                                                                     |
+| `Delay`                          | `Shift`                                                       | Delay emitted values.                                                                               |
+| `DelaySubscription`              | `DelayStart`                                                  | Delay source subscription.                                                                          |
+| `Timeout`                        | `Expire`                                                      | Error on missing value before due time.                                                             |
+| `Buffer(count)`                  | `Buffer(count)`                                               | Fixed-size buffers.                                                                                 |
+| `SubscribeOn`                    | `SubscribeOn`                                                 | Schedule source subscription.                                                                       |
+| `ToList` / `ToArray`             | `ToList` / `ToArray` or `CollectList` / `CollectArray`        | Signal results.                                                                                     |
+| `FirstAsync` / `LastAsync`       | `FirstAsync` / `LastAsync`                                    | Task result.                                                                                        |
+| `CountAsync` / `AnyAsync`        | `CountAsync` / `AnyAsync`                                     | Task-shaped terminal helpers, including cancellation overloads.                                     |
 
 ### Disposable mapping
 
@@ -1409,7 +1449,8 @@ virtual-time primitives rather than cloning the full Rx testing API. Prefer repo
 ## R3Async to ReactiveUI.Primitives.Async migration guide
 
 `ReactiveUI.Primitives.Async` is the native async-observable package. Use it when observer work is asynchronous,
-subscription/disposal needs `ValueTask`, or cancellation must flow through each notification. It differs from R3Async by using
+subscription/disposal needs `ValueTask`, or cancellation must flow through each notification. It differs from R3Async by
+using
 `ReactiveUI.Primitives.Result` for completion.
 
 There is no generated System.Reactive.Async bridge in the current package set. Use
@@ -1455,12 +1496,12 @@ Use the generated bridge only at boundaries. Prefer native ReactiveUI.Primitives
 
 ## ReactiveUI.Extensions migration notes
 
-`ReactiveUI.Primitives.Extensions` is the migration target for the non-async helpers that previously lived in
-`ReactiveUI.Extensions`. The package intentionally keeps the helper names where those names already describe the
-behavior and do not collide with the core Primitives vocabulary. Scheduling overloads use `ISequencer` instead of
-System.Reactive schedulers.
+`ReactiveUI.Primitives` is the migration target for the non-async helpers that previously lived in
+`ReactiveUI.Extensions`. The helpers remain in the `ReactiveUI.Primitives.Extensions` namespace and intentionally keep
+their names where those names already describe the behavior and do not collide with the core Primitives vocabulary.
+Scheduling overloads use `ISequencer` instead of System.Reactive schedulers.
 
-| ReactiveUI.Extensions usage                                                             | ReactiveUI.Primitives.Extensions usage                                                       |
+| ReactiveUI.Extensions usage                                                             | ReactiveUI.Primitives usage                                                                  |
 |-----------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------|
 | `WhereIsNotNull`, `SkipWhileNull`, `WhereTrue`, `WhereFalse`, `Not`                     | Same names over BCL `IObservable<T>`.                                                        |
 | `WhereSelect`, `SelectConstant`, `TrySelect`, `SelectManyThen`, `Pairwise`, `Partition` | Same helper names; implemented with direct observers and fused operator shapes where useful. |
@@ -1470,7 +1511,7 @@ System.Reactive schedulers.
 | `RunAll`, `BufferUntil`, `FirstMatchFromCandidates`, `ToHotTask`, `ToHotValueTask`      | Same helper names; backed by ReactiveUI.Primitives runtime utilities.                        |
 
 For async-native streams, prefer `ReactiveUI.Primitives.Async` and its `IObservableAsync<T>` operators. For existing BCL
-observable helpers, migrate to `ReactiveUI.Primitives.Extensions`.
+observable helpers, migrate to `ReactiveUI.Primitives`; existing `ReactiveUI.Primitives.Extensions` imports remain valid.
 
 ## Benchmarks and performance posture
 
@@ -1756,35 +1797,33 @@ duration is indistinguishable from empty method overhead; the benchmark run stil
 
 ## Repository layout
 
-| Path                                                   | Purpose                                                                                    |
-|--------------------------------------------------------|--------------------------------------------------------------------------------------------|
-| `src/ReactiveUI.Primitives.slnx`                       | Current solution entrypoint.                                                               |
-| `src/ReactiveUI.Disposables`                           | Disposable primitives shared by the package family.                                        |
-| `src/ReactiveUI.Primitives.Core`                       | Type-agnostic core shared by lean and System.Reactive-flavoured Primitives leaves.         |
-| `src/ReactiveUI.Primitives`                            | Default lean signal/operator/sequencer package with platform sequencers and R3 analyzer.   |
-| `src/ReactiveUI.Primitives.Reactive`                   | System.Reactive-flavoured Primitives leaf.                                                 |
-| `src/ReactiveUI.Primitives.Async.Core`                 | Type-agnostic async core shared by async leaves.                                           |
-| `src/ReactiveUI.Primitives.Async`                      | Lean async observable/signal package built on `IObservableAsync<T>` and `IObserverAsync<T>`. |
-| `src/ReactiveUI.Primitives.Async.Reactive`             | System.Reactive-flavoured async Primitives leaf.                                           |
-| `src/ReactiveUI.Primitives.Extensions.Core`            | Type-agnostic core for migrated ReactiveUI.Extensions helpers.                             |
-| `src/ReactiveUI.Primitives.Extensions`                 | Migrated non-async ReactiveUI.Extensions helper operators backed by lean Primitives.        |
-| `src/ReactiveUI.Primitives.Extensions.Reactive`        | System.Reactive-flavoured Extensions helper leaf.                                          |
-| `src/ReactiveUI.Primitives.Wpf`                        | Optional WPF dispatcher integration library.                                               |
-| `src/ReactiveUI.Primitives.Wpf.Reactive`               | Optional WPF dispatcher scheduler integration library for System.Reactive consumers.        |
-| `src/ReactiveUI.Primitives.WinForms`                   | Optional Windows Forms control integration library.                                        |
-| `src/ReactiveUI.Primitives.WinForms.Reactive`          | Optional Windows Forms control scheduler integration library for System.Reactive consumers. |
-| `src/ReactiveUI.Primitives.WinUI`                      | Optional WinUI dispatcher queue integration library.                                       |
-| `src/ReactiveUI.Primitives.WinUI.Reactive`             | Optional WinUI dispatcher queue scheduler integration library for System.Reactive consumers. |
-| `src/ReactiveUI.Primitives.Blazor`                     | Optional Blazor renderer integration library.                                              |
-| `src/ReactiveUI.Primitives.Blazor.Reactive`            | Optional Blazor renderer scheduler integration library for System.Reactive consumers.       |
-| `src/ReactiveUI.Primitives.Maui`                       | Optional MAUI dispatcher integration library.                                              |
-| `src/ReactiveUI.Primitives.Maui.Reactive`              | Optional MAUI dispatcher scheduler integration library for System.Reactive consumers.       |
-| `src/ReactiveUI.Primitives.R3Bridge.Generator`         | Standalone analyzer package for optional R3 and R3Async bridge generation.                 |
-| `src/Primitives.Shared`                                | Linked lean/Reactive synchronous source.                                                   |
-| `src/Primitives.Async.Shared`                          | Linked lean/Reactive async source.                                                         |
-| `src/Primitives.Extensions.Shared`                     | Linked lean/Reactive Extensions source.                                                    |
-| `src/tests`                                            | Microsoft Testing Platform/TUnit-style test projects.                                      |
-| `src/benchmarks/ReactiveUI.Primitives.Benchmarks`      | BenchmarkDotNet comparison harness.                                                        |
+| Path                                              | Purpose                                                                                      |
+|---------------------------------------------------|----------------------------------------------------------------------------------------------|
+| `src/ReactiveUI.Primitives.slnx`                  | Current solution entrypoint.                                                                 |
+| `src/ReactiveUI.Disposables`                      | Disposable primitives shared by the package family.                                          |
+| `src/ReactiveUI.Primitives.Core`                  | Type-agnostic core shared by lean and System.Reactive-flavoured Primitives leaves.           |
+| `src/ReactiveUI.Primitives`                       | Default lean signal/operator/sequencer package, extension helpers, platform sequencers, and R3 analyzer. |
+| `src/ReactiveUI.Primitives.Reactive`              | System.Reactive-flavoured Primitives leaf including the Reactive extension helpers.          |
+| `src/ReactiveUI.Primitives.Async.Core`            | Type-agnostic async core shared by async leaves.                                             |
+| `src/ReactiveUI.Primitives.Async`                 | Lean async observable/signal package built on `IObservableAsync<T>` and `IObserverAsync<T>`. |
+| `src/ReactiveUI.Primitives.Async.Reactive`        | System.Reactive-flavoured async Primitives leaf.                                             |
+| `src/ReactiveUI.Primitives.Extensions.Core`       | Type-agnostic core for migrated ReactiveUI.Extensions helpers.                               |
+| `src/ReactiveUI.Primitives.Wpf`                   | Optional WPF dispatcher integration library.                                                 |
+| `src/ReactiveUI.Primitives.Wpf.Reactive`          | Optional WPF dispatcher scheduler integration library for System.Reactive consumers.         |
+| `src/ReactiveUI.Primitives.WinForms`              | Optional Windows Forms control integration library.                                          |
+| `src/ReactiveUI.Primitives.WinForms.Reactive`     | Optional Windows Forms control scheduler integration library for System.Reactive consumers.  |
+| `src/ReactiveUI.Primitives.WinUI`                 | Optional WinUI dispatcher queue integration library.                                         |
+| `src/ReactiveUI.Primitives.WinUI.Reactive`        | Optional WinUI dispatcher queue scheduler integration library for System.Reactive consumers. |
+| `src/ReactiveUI.Primitives.Blazor`                | Optional Blazor renderer integration library.                                                |
+| `src/ReactiveUI.Primitives.Blazor.Reactive`       | Optional Blazor renderer scheduler integration library for System.Reactive consumers.        |
+| `src/ReactiveUI.Primitives.Maui`                  | Optional MAUI dispatcher integration library.                                                |
+| `src/ReactiveUI.Primitives.Maui.Reactive`         | Optional MAUI dispatcher scheduler integration library for System.Reactive consumers.        |
+| `src/ReactiveUI.Primitives.R3Bridge.Generator`    | Standalone analyzer package for optional R3 and R3Async bridge generation.                   |
+| `src/Primitives.Shared`                           | Linked lean/Reactive synchronous source.                                                     |
+| `src/Primitives.Async.Shared`                     | Linked lean/Reactive async source.                                                           |
+| `src/Primitives.Extensions.Shared`                | Linked lean/Reactive Extensions source.                                                      |
+| `src/tests`                                       | Microsoft Testing Platform/TUnit-style test projects.                                        |
+| `src/benchmarks/ReactiveUI.Primitives.Benchmarks` | BenchmarkDotNet comparison harness.                                                          |
 
 ## Practical migration checklist
 
@@ -1799,7 +1838,9 @@ duration is indistinguishable from empty method overhead; the benchmark run stil
 
 ## Contribute
 
-ReactiveUI.Primitives is developed under an OSI-approved open source license, making it freely usable and distributable, even for commercial use. We ❤ the people who are involved in this project, and we'd love to have you on board, especially if you are just getting started or have never contributed to open-source before.
+ReactiveUI.Primitives is developed under an OSI-approved open source license, making it freely usable and distributable,
+even for commercial use. We ❤ the people who are involved in this project, and we'd love to have you on board,
+especially if you are just getting started or have never contributed to open-source before.
 
 So here's to you, lovely person who wants to join us. This is how you can support us:
 
@@ -1810,7 +1851,8 @@ So here's to you, lovely person who wants to join us. This is how you can suppor
 
 ## Code of Conduct
 
-We are dedicated to providing a welcoming and inclusive community. Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md).
+We are dedicated to providing a welcoming and inclusive community. Please read and follow
+our [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## License
 

@@ -69,7 +69,7 @@ public static partial class SignalAsyncExtensions
         /// <returns>A task that represents the asynchronous operation. The task result contains the single element of the
         /// sequence.</returns>
         public ValueTask<T> SingleAsync(CancellationToken cancellationToken)
-            => SingleCoreAsync(@this, predicate: null, cancellationToken);
+            => SingleCoreAsync(@this, null, cancellationToken);
     }
 
     /// <summary>Shared body for the <c>SingleAsync</c> overloads; subscribes the shared observer and unwraps the result.</summary>
@@ -84,7 +84,7 @@ public static partial class SignalAsyncExtensions
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        SingleElementWitness<T> observer = new(predicate, requireExactlyOne: true, defaultValue: default, cancellationToken);
+        SingleElementWitness<T> observer = new(predicate, true, default, cancellationToken);
         await using var subscription = await source.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
         var result = await observer.AwaitResultAsync().ConfigureAwait(false);
         return result!;

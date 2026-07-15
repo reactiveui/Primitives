@@ -95,7 +95,8 @@ public class OperatorMapKeepBenchmarks
             .Distinct()
             .Count()
             .Subscribe(count);
-        using var anySubscription = RxObservable.Any(RxObservable.Range(StartValue, RangeCount), static x => x == MatchValue)
+        using var anySubscription = RxObservable
+            .Any(RxObservable.Range(StartValue, RangeCount), static x => x == MatchValue)
             .Subscribe(any);
         return any.Value ? count.Total : -count.Total;
     }

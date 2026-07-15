@@ -9,8 +9,7 @@ namespace ReactiveUI.Primitives.Async.Signals;
 
 /// <summary>Mutable state for a replay-latest async signal.</summary>
 /// <typeparam name="T">The observed value type.</typeparam>
-/// <param name="initialValue">The initial value to replay, if any.</param>
-internal sealed class ReplayLatestSignalAsyncState<T>(Optional<T> initialValue) : IDisposable
+internal sealed class ReplayLatestSignalAsyncState<T> : IDisposable
 {
     /// <summary>The asynchronous gate used to synchronize mutable state.</summary>
     [SuppressMessage(
@@ -19,11 +18,26 @@ internal sealed class ReplayLatestSignalAsyncState<T>(Optional<T> initialValue) 
         Justification = "Gate fields are intentionally direct readonly state for helper access.")]
     public readonly AsyncSerialGate Gate = new();
 
+    /// <summary>Initializes a new instance of the <see cref="ReplayLatestSignalAsyncState{T}"/> class.</summary>
+    /// <param name="initialValue">The initial value to replay, if any.</param>
+    public ReplayLatestSignalAsyncState(Optional<T> initialValue)
+    {
+        LastValue = initialValue;
+        DisposedCancellationToken = DisposedCts.Token;
+    }
+
     /// <summary>Gets the cancellation token source that is cancelled when this instance is disposed.</summary>
     public CancellationTokenSource DisposedCts { get; } = new();
 
+    /// <summary>Gets the token cancelled when this instance is disposed. Captured while the source is still
+    /// alive because <see cref="Dispose"/> disposes that source, and reading
+    /// <see cref="CancellationTokenSource.Token"/> from a disposed source throws
+    /// <see cref="ObjectDisposedException"/>. Disposal always cancels before it disposes, so this token is
+    /// already cancelled by the time anyone can observe it post-disposal.</summary>
+    public CancellationToken DisposedCancellationToken { get; }
+
     /// <summary>Gets the most recently published value, replayed to new subscribers upon subscription.</summary>
-    public Optional<T> LastValue { get; internal set; } = initialValue;
+    public Optional<T> LastValue { get; internal set; }
 
     /// <summary>Gets the currently subscribed observers.</summary>
     public ImmutableArray<IObserverAsync<T>> Observers { get; internal set; } = [];

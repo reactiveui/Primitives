@@ -16,9 +16,6 @@ public partial class ObservableSubscriptionExtensionsTests
     /// <summary>Sentinel value emitted by single-value scheduler tests.</summary>
     private const int SchedulerSentinelValue = 13;
 
-    /// <summary>Default test timeout for the scheduler-routed overloads.</summary>
-    private static readonly TimeSpan SchedulerWaitTimeout = TimeSpan.FromSeconds(5);
-
     /// <summary>Verifies that <c>WaitForValue</c> with a scheduler returns the emitted value.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -34,7 +31,7 @@ public partial class ObservableSubscriptionExtensionsTests
     public async Task WhenWaitForValueWithSchedulerAndTimeout_ThenReturnsEmittedValue()
     {
         var result = Observable.Return(SchedulerSentinelValue)
-            .WaitForValue(ImmediateSequencer.Instance, SchedulerWaitTimeout);
+            .WaitForValue(ImmediateSequencer.Instance, WaitTimeout);
         await Assert.That(result).IsEqualTo(SchedulerSentinelValue);
     }
 
@@ -43,8 +40,8 @@ public partial class ObservableSubscriptionExtensionsTests
     [Test]
     public async Task WhenWaitForValueWithSchedulerTimesOut_ThenTimeoutException()
     {
-        Action call = () =>
-            Observable.Never<int>().WaitForValue(ImmediateSequencer.Instance, TimeSpan.FromMilliseconds(50));
+        Action call = static () =>
+            Observable.Never<int>().WaitForValue(ImmediateSequencer.Instance, ExpiredTimeout);
         var ex = Assert.Throws<TimeoutException>(call);
         await Assert.That(ex).IsNotNull();
     }
@@ -66,7 +63,7 @@ public partial class ObservableSubscriptionExtensionsTests
     [Test]
     public async Task WhenWaitForCompletionWithSchedulerAndTimeout_ThenReturnsAfterTerminal()
     {
-        Observable.Return(RxVoid.Default).WaitForCompletion(ImmediateSequencer.Instance, SchedulerWaitTimeout);
+        Observable.Return(RxVoid.Default).WaitForCompletion(ImmediateSequencer.Instance, WaitTimeout);
         var sentinel = Observable.Return(SchedulerSentinelValue).SubscribeGetValue();
         await Assert.That(sentinel).IsEqualTo(SchedulerSentinelValue);
     }
@@ -86,7 +83,7 @@ public partial class ObservableSubscriptionExtensionsTests
     public async Task WhenWaitForErrorWithSchedulerAndTimeout_ThenCapturesError()
     {
         InvalidOperationException expected = new("scheduler-captured");
-        var error = Observable.Throw<int>(expected).WaitForError(ImmediateSequencer.Instance, SchedulerWaitTimeout);
+        var error = Observable.Throw<int>(expected).WaitForError(ImmediateSequencer.Instance, WaitTimeout);
         await Assert.That(error).IsEqualTo(expected);
     }
 }

@@ -29,7 +29,6 @@ public static partial class SignalAsyncExtensions
 
             return new TimeoutSignal<T>(@this, dueTime, TimeProvider.System);
         }
-
     }
 
     /// <summary>
@@ -162,6 +161,21 @@ public static partial class SignalAsyncExtensions
                 await base.DisposeAsyncCore().ConfigureAwait(false);
             }
 
+            /// <summary>Awaits the downstream <c>OnCompletedAsync</c> hand-off from the timer-pool callback.</summary>
+            /// <param name="target">The downstream observer to complete with the timeout failure.</param>
+            /// <returns>A task representing the asynchronous notification.</returns>
+            private static async Task FireTimeoutAsync(IObserverAsync<T> target)
+            {
+                try
+                {
+                    await target.OnCompletedAsync(Result.Failure(new TimeoutException())).ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    UnhandledExceptionHandler.ReportUnhandledException(e);
+                }
+            }
+
             /// <summary>Timer callback: signals the downstream observer with a <see cref="TimeoutException"/> completion unless the observer has already terminated.</summary>
             private void OnTimerFired()
             {
@@ -175,21 +189,7 @@ public static partial class SignalAsyncExtensions
                     _completed = true;
                 }
 
-                _ = FireTimeoutAsync();
-            }
-
-            /// <summary>Awaits the downstream <c>OnCompletedAsync</c> hand-off from the timer-pool callback.</summary>
-            /// <returns>A task representing the asynchronous notification.</returns>
-            private async Task FireTimeoutAsync()
-            {
-                try
-                {
-                    await observer.OnCompletedAsync(Result.Failure(new TimeoutException())).ConfigureAwait(false);
-                }
-                catch (Exception e)
-                {
-                    UnhandledExceptionHandler.ReportUnhandledException(e);
-                }
+                _ = FireTimeoutAsync(observer);
             }
 
             /// <summary>Rearms the timeout deadline for the next emission. Isolated from

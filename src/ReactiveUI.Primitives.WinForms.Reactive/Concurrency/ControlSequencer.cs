@@ -24,10 +24,7 @@ public sealed class ControlSequencer : CoalescingDispatchScheduler
     /// <exception cref="ObjectDisposedException">The control has been disposed.</exception>
     protected override bool Post(Action drain)
     {
-        if (Control.IsDisposed)
-        {
-            throw new ObjectDisposedException(Control.GetType().FullName);
-        }
+        ObjectDisposedExceptionHelper.ThrowIf(Control.IsDisposed, Control);
 
         if (!Control.IsHandleCreated)
         {

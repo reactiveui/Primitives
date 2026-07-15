@@ -12,27 +12,20 @@ namespace ReactiveUI.Primitives.Signals;
 /// </summary>
 /// <typeparam name="T">The value type.</typeparam>
 /// <typeparam name="TState">The state type passed to the action.</typeparam>
-public sealed class TapWithSignal<T, TState> : IRequireCurrentThread<T>
+/// <param name="source">The source sequence.</param>
+/// <param name="state">The state passed to the action.</param>
+/// <param name="onNext">The action invoked for each value and the state.</param>
+public sealed class TapWithSignal<T, TState>(IObservable<T> source, TState state, Action<TState, T> onNext)
+    : IRequireCurrentThread<T>
 {
     /// <summary>The source sequence.</summary>
-    private readonly IObservable<T> _source;
+    private readonly IObservable<T> _source = source;
 
     /// <summary>The state passed to the action.</summary>
-    private readonly TState _state;
+    private readonly TState _state = state;
 
     /// <summary>The action invoked for each value and the state.</summary>
-    private readonly Action<TState, T> _onNext;
-
-    /// <summary>Initializes a new instance of the <see cref="TapWithSignal{T, TState}"/> class.</summary>
-    /// <param name="source">The source sequence.</param>
-    /// <param name="state">The state passed to the action.</param>
-    /// <param name="onNext">The action invoked for each value and the state.</param>
-    public TapWithSignal(IObservable<T> source, TState state, Action<TState, T> onNext)
-    {
-        _source = source;
-        _state = state;
-        _onNext = onNext;
-    }
+    private readonly Action<TState, T> _onNext = onNext;
 
     /// <summary>Determines whether the sink must subscribe on the current thread.</summary>
     /// <returns><see langword="true"/> when the source requires current-thread subscription.</returns>
@@ -50,30 +43,22 @@ public sealed class TapWithSignal<T, TState> : IRequireCurrentThread<T>
     }
 
     /// <summary>Invokes the stateful side-effect action and forwards each value.</summary>
-    private sealed class TapWithWitness : IObserver<T>
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="state">The state passed to the action.</param>
+    /// <param name="onNext">The action invoked for each value and the state.</param>
+    private sealed class TapWithWitness(IObserver<T> observer, TState state, Action<TState, T> onNext) : IObserver<T>
     {
         /// <summary>The downstream observer.</summary>
-        private readonly IObserver<T> _observer;
+        private readonly IObserver<T> _observer = observer;
 
         /// <summary>The state passed to the action.</summary>
-        private readonly TState _state;
+        private readonly TState _state = state;
 
         /// <summary>The action invoked for each value and the state.</summary>
-        private readonly Action<TState, T> _onNext;
+        private readonly Action<TState, T> _onNext = onNext;
 
         /// <summary>Whether a terminal notification has been forwarded.</summary>
         private bool _stopped;
-
-        /// <summary>Initializes a new instance of the <see cref="TapWithWitness"/> class.</summary>
-        /// <param name="observer">The downstream observer.</param>
-        /// <param name="state">The state passed to the action.</param>
-        /// <param name="onNext">The action invoked for each value and the state.</param>
-        public TapWithWitness(IObserver<T> observer, TState state, Action<TState, T> onNext)
-        {
-            _observer = observer;
-            _state = state;
-            _onNext = onNext;
-        }
 
         /// <summary>Forwards completion downstream.</summary>
         public void OnCompleted()

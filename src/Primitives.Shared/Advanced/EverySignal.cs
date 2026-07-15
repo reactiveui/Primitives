@@ -12,22 +12,15 @@ namespace ReactiveUI.Primitives.Advanced;
 /// Dedicated signal for the interval timer factory (<c>Every</c>), replacing the self-referencing
 /// <c>CreateSafe</c> closure with a coordinator that reschedules itself through a method group.
 /// </summary>
-internal sealed class EverySignal : IRequireCurrentThread<long>
+/// <param name="period">The interval between ticks.</param>
+/// <param name="scheduler">The sequencer used to schedule ticks.</param>
+internal sealed class EverySignal(TimeSpan period, ISequencer scheduler) : IRequireCurrentThread<long>
 {
     /// <summary>The interval between ticks.</summary>
-    private readonly TimeSpan _period;
+    private readonly TimeSpan _period = period;
 
     /// <summary>The sequencer used to schedule ticks.</summary>
-    private readonly ISequencer _scheduler;
-
-    /// <summary>Initializes a new instance of the <see cref="EverySignal"/> class.</summary>
-    /// <param name="period">The interval between ticks.</param>
-    /// <param name="scheduler">The sequencer used to schedule ticks.</param>
-    internal EverySignal(TimeSpan period, ISequencer scheduler)
-    {
-        _period = period;
-        _scheduler = scheduler;
-    }
+    private readonly ISequencer _scheduler = scheduler;
 
     /// <inheritdoc/>
     public bool IsRequiredSubscribeOnCurrentThread() => _scheduler == Sequencer.CurrentThread;
@@ -44,7 +37,13 @@ internal sealed class EverySignal : IRequireCurrentThread<long>
         }
 
         SingleDisposable subscription = new();
-        _ = Sequencer.CurrentThread.Schedule(() => subscription.Create(coordinator.Run()));
+        _ = Sequencer.CurrentThread.Schedule(
+            (subscription, coordinator),
+            static (_, s) =>
+            {
+                s.subscription.Create(s.coordinator.Run());
+                return EmptyDisposable.Instance;
+            });
         return subscription;
     }
 
@@ -96,9 +95,22 @@ internal sealed class EverySignal : IRequireCurrentThread<long>
         private void ScheduleNext() => _slot.Create(_scheduler.Schedule(_period, _tickAction));
 
         /// <summary>Emits the current tick and reschedules unless cancelled.</summary>
+        /// <remarks>
+        /// Disposal is tested before the emit as well as after it. A cancelled subscription must not deliver another
+        /// value, and the sequencer's own cancellation check happens before the item is invoked, not before the
+        /// observer is called. The second test covers an observer that disposes the subscription from inside
+        /// <see cref="IObserver{T}.OnNext"/>, which must stop the recurring schedule rather than re-arm it.
+        /// </remarks>
         private void Tick()
         {
-            _observer.OnNext(_tick++);
+            if (_slot.IsDisposed)
+            {
+                return;
+            }
+
+            var tick = _tick;
+            _tick++;
+            _observer.OnNext(tick);
             if (_slot.IsDisposed)
             {
                 return;

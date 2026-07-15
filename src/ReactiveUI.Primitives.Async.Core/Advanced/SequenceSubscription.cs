@@ -25,7 +25,9 @@ public sealed class SequenceSubscription : TaskSignalSubscription<int>
     private int Count { get; }
 
     /// <inheritdoc/>
-    protected override async ValueTask ExecuteAsyncCore(IObserverAsync<int> observer, CancellationToken cancellationToken)
+    protected override async ValueTask ExecuteAsyncCore(
+        IObserverAsync<int> observer,
+        CancellationToken cancellationToken)
     {
         for (var i = 0; i < Count; i++)
         {

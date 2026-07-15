@@ -6,7 +6,6 @@ using System.Reactive.Subjects;
 using BenchmarkDotNet.Attributes;
 using R3;
 using ReactiveUI.Primitives.Signals;
-
 using RxObservable = System.Reactive.Linq.Observable;
 
 namespace ReactiveUI.Primitives.Benchmarks;
@@ -51,7 +50,7 @@ public class ConnectableShareBenchmarks
     public int R3PublishLiveConnect()
     {
         IntR3Witness observer = new();
-        var connectable = R3.ObservableExtensions.Publish(R3.Observable.Range(Start, Count));
+        var connectable = R3.ObservableExtensions.Publish(Observable.Range(Start, Count));
         using var subscription = connectable.Subscribe(observer);
         using var connection = connectable.Connect();
         return observer.Total;
@@ -84,7 +83,7 @@ public class ConnectableShareBenchmarks
     public int R3ShareLiveSubscribe()
     {
         IntR3Witness observer = new();
-        using var subscription = R3.ObservableExtensions.Share(R3.Observable.Range(Start, Count)).Subscribe(observer);
+        using var subscription = R3.ObservableExtensions.Share(Observable.Range(Start, Count)).Subscribe(observer);
         return observer.Total;
     }
 
@@ -118,7 +117,7 @@ public class ConnectableShareBenchmarks
     public int R3ReplayLiveLateSubscribe()
     {
         IntR3Witness observer = new();
-        var connectable = R3.ObservableExtensions.Replay(R3.Observable.Range(Start, Count), Count);
+        var connectable = R3.ObservableExtensions.Replay(Observable.Range(Start, Count), Count);
         using var connection = connectable.Connect();
         using var subscription = connectable.Subscribe(observer);
         return observer.Total;
@@ -141,7 +140,7 @@ public class ConnectableShareBenchmarks
     {
         IntR3Witness observer = new();
         using var subscription = R3.ObservableExtensions.RefCount(
-                R3.ObservableExtensions.Publish(R3.Observable.Range(Start, Count)))
+                R3.ObservableExtensions.Publish(Observable.Range(Start, Count)))
             .Subscribe(observer);
         return observer.Total;
     }

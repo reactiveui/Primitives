@@ -34,7 +34,9 @@ public sealed class StartSubscription : TaskSignalSubscription<RxVoid>
     private TaskScheduler? TaskScheduler { get; }
 
     /// <inheritdoc/>
-    protected override async ValueTask ExecuteAsyncCore(IObserverAsync<RxVoid> observer, CancellationToken cancellationToken)
+    protected override async ValueTask ExecuteAsyncCore(
+        IObserverAsync<RxVoid> observer,
+        CancellationToken cancellationToken)
     {
         var taskScheduler = TaskScheduler;
         if (taskScheduler is null)
@@ -44,7 +46,13 @@ public sealed class StartSubscription : TaskSignalSubscription<RxVoid>
         }
 
         await Task.Factory.StartNew(
-                () => ExecuteActionAsync(observer, cancellationToken).AsTask(),
+                static s =>
+                {
+                    var (self, observer, cancellationToken) =
+                        ((StartSubscription, IObserverAsync<RxVoid>, CancellationToken))s!;
+                    return self.ExecuteActionAsync(observer, cancellationToken).AsTask();
+                },
+                (this, observer, cancellationToken),
                 cancellationToken,
                 TaskCreationOptions.DenyChildAttach,
                 taskScheduler)

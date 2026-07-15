@@ -25,7 +25,8 @@ public class ObservableMixinsTests
     {
         using var other = new Subject<string>();
 
-        await Assert.That(() => LinqExtensions.TakeUntil<int, string>(null!, other)).ThrowsExactly<ArgumentNullException>();
+        await Assert.That(() => LinqExtensions.TakeUntil<int, string>(null!, other))
+            .ThrowsExactly<ArgumentNullException>();
     }
 
     /// <summary>Verifies that <c>TakeUntil</c> validates a null other observable.</summary>
@@ -35,7 +36,8 @@ public class ObservableMixinsTests
     {
         using var source = new Subject<int>();
 
-        await Assert.That(() => LinqExtensions.TakeUntil<int, string>(source, null!)).ThrowsExactly<ArgumentNullException>();
+        await Assert.That(() => LinqExtensions.TakeUntil<int, string>(source, null!))
+            .ThrowsExactly<ArgumentNullException>();
     }
 
     /// <summary>Verifies that <c>TakeUntil</c> validates a null downstream observer.</summary>
@@ -116,7 +118,7 @@ public class ObservableMixinsTests
         var source = new TrackingObservable<int>();
         var otherDisposable = new RecordingDisposable();
         var other = new ScriptedObservable<string>(
-            observer => observer.OnNext(StopValue),
+            static observer => observer.OnNext(StopValue),
             otherDisposable);
         var completed = 0;
 
@@ -139,7 +141,8 @@ public class ObservableMixinsTests
         var otherDisposable = new RecordingDisposable();
         var source = new TrackingObservable<int>(sourceDisposable);
         var other = new TrackingObservable<string>(otherDisposable);
-        using var subscription = LinqExtensions.TakeUntil(source, other).Subscribe(static _ => { }, ThrowUnexpectedError, static () => { });
+        using var subscription = LinqExtensions.TakeUntil(source, other)
+            .Subscribe(static _ => { }, ThrowUnexpectedError, static () => { });
 
         subscription.Dispose();
 

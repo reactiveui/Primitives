@@ -28,7 +28,7 @@ public partial class SignalTests
             },
             null);
 
-        await firstReceived.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await firstReceived.Task.WaitAsync(WaitTimeout);
 
         await Assert.That(items).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(items[0]).IsEqualTo(StartValue);
@@ -62,7 +62,7 @@ public partial class SignalTests
             },
             null);
 
-        await firstReceived.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await firstReceived.Task.WaitAsync(WaitTimeout);
 
         await Assert.That(items).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(items[0]).IsEqualTo(StartValue);
@@ -91,7 +91,7 @@ public partial class SignalTests
             },
             null);
 
-        await firstReceived.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await firstReceived.Task.WaitAsync(WaitTimeout);
 
         await Assert.That(items).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(items[0]).IsEqualTo(LatestValue);
@@ -127,7 +127,7 @@ public partial class SignalTests
             },
             null);
 
-        await firstReceived.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await firstReceived.Task.WaitAsync(WaitTimeout);
 
         await Assert.That(items).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(items[0]).IsEqualTo(PushedValue);
@@ -156,7 +156,7 @@ public partial class SignalTests
             },
             null);
 
-        await firstReceived.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await firstReceived.Task.WaitAsync(WaitTimeout);
 
         await Assert.That(items).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(items[0]).IsEqualTo("initial");
@@ -188,7 +188,7 @@ public partial class SignalTests
             },
             null);
 
-        await firstReceived.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await firstReceived.Task.WaitAsync(WaitTimeout);
 
         await Assert.That(items).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(items[0]).IsEqualTo(PushedValue);
@@ -224,7 +224,7 @@ public partial class SignalTests
             },
             null);
 
-        await firstReceived.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await firstReceived.Task.WaitAsync(WaitTimeout);
 
         await Assert.That(items).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(items[0]).IsEqualTo(PushedValue);
@@ -272,7 +272,7 @@ public partial class SignalTests
             IsStateless = true
         };
         var signal = Signal.CreateReplayLatest<int>(options);
-        TaskCompletionSource<Exception> errorTcs = new();
+        TaskCompletionSource<Exception> errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values.SubscribeAsync(
             static (_, _) => default,
@@ -300,7 +300,7 @@ public partial class SignalTests
             IsStateless = true
         };
         var signal = Signal.CreateReplayLatest<int>(options);
-        TaskCompletionSource<Exception> errorTcs = new();
+        TaskCompletionSource<Exception> errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values.SubscribeAsync(
             static (_, _) => default,
@@ -328,7 +328,7 @@ public partial class SignalTests
             IsStateless = true
         };
         var signal = Signal.CreateReplayLatest<int>(options);
-        TaskCompletionSource<Result> resultTcs = new();
+        TaskCompletionSource<Result> resultTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values.SubscribeAsync(
             static (_, _) => default,
@@ -370,7 +370,7 @@ public partial class SignalTests
             IsStateless = true
         };
         var signal = Signal.CreateReplayLatest<int>(options);
-        TaskCompletionSource<Result> resultTcs = new();
+        TaskCompletionSource<Result> resultTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values.SubscribeAsync(
             static (_, _) => default,
@@ -447,7 +447,7 @@ public partial class SignalTests
             },
             null);
 
-        await firstReceived.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await firstReceived.Task.WaitAsync(WaitTimeout);
 
         await Assert.That(items).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(items[0]).IsEqualTo(StartValue);
@@ -460,7 +460,7 @@ public partial class SignalTests
     {
         var signal = Signal.CreateReplayLatest<int>();
         List<int> items = [];
-        TaskCompletionSource completionTcs = new();
+        TaskCompletionSource completionTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values.SubscribeAsync(
             (x, _) =>
@@ -492,7 +492,7 @@ public partial class SignalTests
     public async Task WhenReplayLatestOnErrorResume_ThenObserverReceivesError()
     {
         var signal = Signal.CreateReplayLatest<int>();
-        TaskCompletionSource<Exception> errorTcs = new();
+        TaskCompletionSource<Exception> errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values.SubscribeAsync(
             static (_, _) => default,
@@ -516,7 +516,7 @@ public partial class SignalTests
     {
         var signal = Signal.CreateReplayLatest<int>();
         List<Exception> errors = [];
-        TaskCompletionSource completionTcs = new();
+        TaskCompletionSource completionTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values.SubscribeAsync(
             static (_, _) => default,
@@ -545,7 +545,7 @@ public partial class SignalTests
     public async Task WhenReplayLatestOnCompleted_ThenObserverReceivesCompletion()
     {
         var signal = Signal.CreateReplayLatest<int>();
-        TaskCompletionSource<Result> completionTcs = new();
+        TaskCompletionSource<Result> completionTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values.SubscribeAsync(
             static (_, _) => default,
@@ -569,7 +569,7 @@ public partial class SignalTests
     {
         var signal = Signal.CreateReplayLatest<int>();
         var completionCount = 0;
-        TaskCompletionSource completionTcs = new();
+        TaskCompletionSource completionTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values.SubscribeAsync(
             static (_, _) => default,
@@ -612,7 +612,7 @@ public partial class SignalTests
             IsStateless = false
         };
         var signal = Signal.CreateReplayLatest<int>(options);
-        TaskCompletionSource<Exception> errorTcs = new();
+        TaskCompletionSource<Exception> errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values.SubscribeAsync(
             static (_, _) => default,
@@ -640,7 +640,7 @@ public partial class SignalTests
             IsStateless = false
         };
         var signal = Signal.CreateReplayLatest<int>(options);
-        TaskCompletionSource<Result> resultTcs = new();
+        TaskCompletionSource<Result> resultTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values.SubscribeAsync(
             static (_, _) => default,
@@ -663,7 +663,7 @@ public partial class SignalTests
     public async Task WhenSubscribeToCompletedReplayLatest_ThenObserverReceivesImmediateCompletion()
     {
         var signal = Signal.CreateReplayLatest<int>();
-        TaskCompletionSource firstCompletionTcs = new();
+        TaskCompletionSource firstCompletionTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var firstSub = await signal.Values.SubscribeAsync(
             static (_, _) => default,
@@ -680,7 +680,7 @@ public partial class SignalTests
         await firstCompletionTcs.Task;
 
         Result? lateResult = null;
-        TaskCompletionSource lateTcs = new();
+        TaskCompletionSource lateTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var lateSub = await signal.Values.SubscribeAsync(
             static (_, _) => default,
@@ -721,7 +721,7 @@ public partial class SignalTests
         const int LinkedCtsValue = 11;
         await signal.OnNextAsync(LinkedCtsValue, cts.Token);
 
-        var received = await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var received = await tcs.Task.WaitAsync(WaitTimeout);
         await Assert.That(received).IsEqualTo(LinkedCtsValue);
     }
 
@@ -750,7 +750,7 @@ public partial class SignalTests
         using CancellationTokenSource cts = new();
         await signal.OnErrorResumeAsync(expected, cts.Token);
 
-        var received = await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var received = await tcs.Task.WaitAsync(WaitTimeout);
         await Assert.That(received).IsSameReferenceAs(expected);
     }
 
@@ -777,7 +777,7 @@ public partial class SignalTests
         const int LinkedCtsValue = 17;
         await signal.OnNextAsync(LinkedCtsValue, cts.Token);
 
-        var received = await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var received = await tcs.Task.WaitAsync(WaitTimeout);
         await Assert.That(received).IsEqualTo(LinkedCtsValue);
     }
 
@@ -806,7 +806,7 @@ public partial class SignalTests
         using CancellationTokenSource cts = new();
         await signal.OnErrorResumeAsync(expected, cts.Token);
 
-        var received = await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var received = await tcs.Task.WaitAsync(WaitTimeout);
         await Assert.That(received).IsSameReferenceAs(expected);
     }
 

@@ -12,6 +12,9 @@ public class DropIfBusyObservableTests
     /// <summary>Delay used to let fire-and-forget async continuations settle.</summary>
     private const int SettleDelayMilliseconds = 50;
 
+    /// <summary>Guard timeout so a hung rendezvous fails this test rather than stalling the run.</summary>
+    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
+
     /// <summary>Verifies a handler completion after source completion does not emit the value.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -90,7 +93,7 @@ public class DropIfBusyObservableTests
             ex => error.TrySetResult(ex));
         subject.OnNext(1);
         release.SetResult();
-        var caught = await error.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+        var caught = await error.Task.WaitAsync(GuardTimeout).ConfigureAwait(false);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 }

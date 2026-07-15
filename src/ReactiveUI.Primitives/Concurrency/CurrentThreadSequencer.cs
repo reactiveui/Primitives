@@ -17,7 +17,7 @@ public sealed class CurrentThreadSequencer : ISequencer
     private const int InitialQueueCapacity = 4;
 
     /// <summary>Singleton holder for the current-thread sequencer.</summary>
-    private static readonly Lazy<CurrentThreadSequencer> StaticInstance = new(() => new());
+    private static readonly Lazy<CurrentThreadSequencer> StaticInstance = new(static () => new());
 
     /// <summary>Tracks whether the current thread is running scheduled work.</summary>
     [ThreadStatic]
@@ -46,6 +46,7 @@ public sealed class CurrentThreadSequencer : ISequencer
     public long Timestamp => Sequencer.Timestamp;
 
     /// <summary>Gets the debugger display text.</summary>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 

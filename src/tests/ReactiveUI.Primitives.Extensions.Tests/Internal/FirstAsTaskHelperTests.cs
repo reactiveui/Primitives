@@ -11,6 +11,9 @@ namespace ReactiveUI.Primitives.Extensions.Tests.Internal;
 /// <summary>Tests for <see cref = "FirstAsTaskHelper"/> covering the error and empty-completion paths that <c>ToHotTask</c> does not otherwise exercise.</summary>
 public class FirstAsTaskHelperTests
 {
+    /// <summary>Message of an error the helper is expected to drop.</summary>
+    private const string IgnoredErrorMessage = "ignored";
+
     /// <summary>Value used by the latch-on-first-emission test.</summary>
     private const int FirstValue = 7;
 
@@ -94,7 +97,7 @@ public class FirstAsTaskHelperTests
         var task = FirstAsTaskHelper.FirstAsTask(source);
         source.Observer.OnNext(FirstValue);
         source.Observer.OnNext(SecondValue);
-        source.Observer.OnError(new InvalidOperationException("ignored"));
+        source.Observer.OnError(new InvalidOperationException(IgnoredErrorMessage));
         source.Observer.OnCompleted();
         await Assert.That(await task).IsEqualTo(FirstValue);
     }
@@ -108,7 +111,7 @@ public class FirstAsTaskHelperTests
         var task = FirstAsTaskHelper.FirstAsTask(source);
         InvalidOperationException expected = new("first");
         source.Observer.OnError(expected);
-        source.Observer.OnError(new InvalidOperationException("ignored"));
+        source.Observer.OnError(new InvalidOperationException(IgnoredErrorMessage));
         source.Observer.OnCompleted();
         var caught = await Assert.That(() => task).ThrowsExactly<InvalidOperationException>();
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -123,7 +126,7 @@ public class FirstAsTaskHelperTests
         var task = FirstAsTaskHelper.FirstAsTask(source);
         source.Observer.OnCompleted();
         source.Observer.OnCompleted();
-        source.Observer.OnError(new InvalidOperationException("ignored"));
+        source.Observer.OnError(new InvalidOperationException(IgnoredErrorMessage));
         await Assert.That(() => task).ThrowsExactly<InvalidOperationException>();
     }
 

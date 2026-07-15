@@ -73,7 +73,9 @@ public sealed class AsyncDeferSignal<T> : IObservable<T>
 
         try
         {
-            subscription.SetSubscription(subscription.IsCancellationRequested ? EmptyDisposable.Instance : source.Subscribe(observer));
+            subscription.SetSubscription(subscription.IsCancellationRequested
+                ? EmptyDisposable.Instance
+                : source.Subscribe(observer));
         }
         catch (Exception error)
         {

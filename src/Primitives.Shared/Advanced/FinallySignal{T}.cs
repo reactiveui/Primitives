@@ -10,22 +10,15 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Represents the FinallySignal class.</summary>
 /// <typeparam name="T">The T type.</typeparam>
-internal sealed class FinallySignal<T> : IRequireCurrentThread<T>
+/// <param name="source">The source value.</param>
+/// <param name="finallyAction">The finallyAction value.</param>
+internal sealed class FinallySignal<T>(IObservable<T> source, Action finallyAction) : IRequireCurrentThread<T>
 {
     /// <summary>Stores state for the signal implementation.</summary>
-    private readonly IObservable<T> _source;
+    private readonly IObservable<T> _source = source;
 
     /// <summary>Stores state for the signal implementation.</summary>
-    private readonly Action _finallyAction;
-
-    /// <summary>Initializes a new instance of the <see cref="FinallySignal{T}"/> class.</summary>
-    /// <param name="source">The source value.</param>
-    /// <param name="finallyAction">The finallyAction value.</param>
-    public FinallySignal(IObservable<T> source, Action finallyAction)
-    {
-        _source = source;
-        _finallyAction = finallyAction;
-    }
+    private readonly Action _finallyAction = finallyAction;
 
     /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
     /// <returns>The result.</returns>

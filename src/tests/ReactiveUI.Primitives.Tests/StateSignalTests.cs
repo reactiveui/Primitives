@@ -24,6 +24,9 @@ public class StateSignalTests
     /// <summary>Updated state value used by projection tests.</summary>
     private const int UpdatedStateValue = 11;
 
+    /// <summary>A third state value, published after a projection subscription has been detached.</summary>
+    private const int FinalStateValue = 12;
+
     /// <summary>Expected mutable state values.</summary>
     private static readonly int[] ExpectedStateValues = [InitialStateValue, UpdatedStateValue, UpdatedStateValue];
 
@@ -45,7 +48,7 @@ public class StateSignalTests
     public async Task ReadOnlyStateProjectionForwardsSelectorErrorToLateSubscribers()
     {
         StateSignal<int> source = new(First);
-        using var projection = source.ToReadOnlyState(value =>
+        using var projection = source.ToReadOnlyState(static value =>
             value == Second ? throw new InvalidOperationException("selector") : value);
         Recorder<int> projected = new();
         _ = projection.Subscribe(projected);
@@ -68,10 +71,10 @@ public class StateSignalTests
         Signal<SearchUpdate?> source = new();
         using var state = source.KeepNotNull().ToReadOnlyState(
             new(string.Empty, 0, false),
-            update => new SearchState(update.Query, update.Count, update.OptionalText is not null));
+            static update => new SearchState(update.Query, update.Count, update.OptionalText is not null));
         List<SearchState> firstValues = [];
         var completions = 0;
-        using var first = state.Subscribe(firstValues.Add, _ => { }, () => completions++);
+        using var first = state.Subscribe(firstValues.Add, static _ => { }, () => completions++);
         source.OnNext(null);
         source.OnNext(new("rx", FirstCount, null));
         source.OnNext(new(SearchQuery, SecondCount, "cached"));
@@ -99,7 +102,7 @@ public class StateSignalTests
         List<int> values = [];
         List<string> readonlyValues = [];
         _ = state.Changed.Subscribe(values.Add);
-        using var readOnly = state.ToReadOnlyState(value => $"v:{value}");
+        using var readOnly = state.ToReadOnlyState(static value => $"v:{value}");
         _ = readOnly.Changed.Subscribe(readonlyValues.Add);
         state.Value = UpdatedStateValue;
         state.Refresh();
@@ -137,6 +140,100 @@ public class StateSignalTests
 
         state.Dispose();
         await Assert.That(state.IsDisposed).IsTrue();
+    }
+
+    /// <summary>
+    /// A state signal that has already completed never replays its value on subscription, so the projection has
+    /// no value to seed from its source. It must fall back to projecting the source's current value directly,
+    /// and then replay that value plus the completion to anyone who subscribes later.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ReadOnlyStateProjectionSeedsItselfFromASourceThatHasAlreadyCompleted()
+    {
+        StateSignal<int> source = new(InitialStateValue);
+        source.OnCompleted();
+
+        using var projection = source.ToReadOnlyState(static value => $"v:{value}");
+        Recorder<string> late = new();
+        _ = projection.Subscribe(late);
+
+        await Assert.That(projection.Value).IsEqualTo("v:10");
+        await Assert.That(late.Values.SequenceEqual(["v:10"])).IsTrue();
+        await Assert.That(late.Completed).IsEqualTo(1);
+        await Assert.That(late.Errors.Count).IsEqualTo(0);
+    }
+
+    /// <summary>
+    /// Once the projection has completed, a source that keeps notifying must not be able to move the projected
+    /// value, complete the subscribers twice, or turn a completed projection into a faulted one.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ReadOnlyStateProjectionIgnoresSourceNotificationsAfterItsTerminal()
+    {
+        StateSignal<int> source = new(InitialStateValue);
+        using var projection = source.ToReadOnlyState(static value => $"v:{value}");
+        Recorder<string> observer = new();
+        _ = projection.Subscribe(observer);
+
+        // The projection is its own observer of the source, so driving it directly is what a source that
+        // keeps notifying after the terminal looks like from the projection's side.
+        projection.OnCompleted();
+        projection.OnCompleted();
+        projection.OnNext(UpdatedStateValue);
+        projection.OnError(new InvalidOperationException("late"));
+
+        await Assert.That(projection.Value).IsEqualTo("v:10");
+        await Assert.That(observer.Values.SequenceEqual(["v:10"])).IsTrue();
+        await Assert.That(observer.Completed).IsEqualTo(1);
+        await Assert.That(observer.Errors.Count).IsEqualTo(0);
+    }
+
+    /// <summary>
+    /// Disposing a projection subscription detaches that observer and only that observer; disposing the same
+    /// handle again is a no-op rather than a second detach.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ReadOnlyStateProjectionStopsFeedingADisposedSubscription()
+    {
+        StateSignal<int> source = new(InitialStateValue);
+        using var projection = source.ToReadOnlyState(static value => $"v:{value}");
+        Recorder<string> detached = new();
+        Recorder<string> attached = new();
+        var subscription = projection.Subscribe(detached);
+        _ = projection.Subscribe(attached);
+
+        source.Value = UpdatedStateValue;
+        subscription.Dispose();
+        subscription.Dispose();
+        source.Value = FinalStateValue;
+
+        await Assert.That(detached.Values.SequenceEqual(["v:10", "v:11"])).IsTrue();
+        await Assert.That(attached.Values.SequenceEqual(["v:10", "v:11", "v:12"])).IsTrue();
+    }
+
+    /// <summary>
+    /// A disposed projection has thrown its state away, so reading or subscribing to it must fail loudly rather
+    /// than hand back a stale value. Disposing twice must still be safe.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task DisposedReadOnlyStateProjectionRejectsReadsAndSubscriptions()
+    {
+        StateSignal<int> source = new(InitialStateValue);
+        var projection = source.ToReadOnlyState(static value => $"v:{value}");
+
+        projection.Dispose();
+        projection.Dispose();
+
+        _ = Assert.Throws<ObjectDisposedException>(() => _ = projection.Value);
+        _ = Assert.Throws<ObjectDisposedException>(() => projection.Subscribe(new Recorder<string>()));
+
+        // The source outlives its projection and must remain usable.
+        source.Value = UpdatedStateValue;
+        await Assert.That(source.Value).IsEqualTo(UpdatedStateValue);
     }
 
     /// <summary>Records observer notifications.</summary>

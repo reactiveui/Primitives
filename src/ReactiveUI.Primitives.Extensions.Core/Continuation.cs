@@ -84,6 +84,12 @@ public class Continuation : IDisposable
 
     /// <summary>Releases unmanaged and - optionally - managed resources.</summary>
     /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Concurrency",
+        "SST1905:Do not use async void",
+        Justification =
+            "This is the Dispose(bool) disposal-pattern overload, whose signature is fixed to return void; it cannot return "
+            + "Task. The await is best-effort teardown of the phase barrier during disposal, with no caller positioned to observe it.")]
     protected virtual async void Dispose(bool disposing)
     {
         if (_disposedValue)
@@ -102,7 +108,8 @@ public class Continuation : IDisposable
 
     /// <summary>Static state-carrying signal callback; avoids the per-call closure allocation a captured lambda would produce.</summary>
     /// <param name="state">The owning <see cref="Continuation"/> instance.</param>
-    private static void SignalPhaseSync(object? state) => ((Continuation)state!)._phaseSync.SignalAndWait(CancellationToken.None);
+    private static void SignalPhaseSync(object? state) =>
+        ((Continuation)state!)._phaseSync.SignalAndWait(CancellationToken.None);
 
     /// <summary>Schedules <see cref="SignalPhaseSync"/> on the default task scheduler. Hoisted
     /// out of the <see cref="Lock{T}"/> and <see cref="UnLock"/> call sites because cobertura

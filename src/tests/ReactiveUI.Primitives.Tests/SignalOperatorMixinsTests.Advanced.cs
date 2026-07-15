@@ -18,6 +18,64 @@ public partial class SignalOperatorMixinsTests
     /// <summary>The late terminal error message.</summary>
     private const string LateErrorMessage = "late";
 
+    /// <summary>
+    /// Map and Keep are pass-through wrappers: neither adds a thread affinity of its own, so each must report
+    /// exactly the current-thread requirement of the source it wraps. Reporting <see langword="true"/> for a
+    /// free-threaded source would needlessly pin subscription; reporting <see langword="false"/> for a pinned
+    /// one would subscribe on the wrong thread.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task MapAndKeepSignalsInheritTheCurrentThreadRequirementOfTheirSource()
+    {
+        MapSignal<int, int> mappedFree = new(new OptionalCurrentThreadObservable<int>(false), static value => value);
+        MapSignal<int, int> mappedPinned = new(new CurrentThreadObservable<int>(), static value => value);
+        MapSignal<int, int> mappedPlain = new(new Signal<int>(), static value => value);
+
+        KeepSignal<int> keptFree = new(new OptionalCurrentThreadObservable<int>(false), static _ => true);
+        KeepSignal<int> keptPinned = new(new CurrentThreadObservable<int>(), static _ => true);
+        KeepSignal<int> keptPlain = new(new Signal<int>(), static _ => true);
+
+        await Assert.That(mappedFree.IsRequiredSubscribeOnCurrentThread()).IsFalse();
+        await Assert.That(mappedPinned.IsRequiredSubscribeOnCurrentThread()).IsTrue();
+        await Assert.That(mappedPlain.IsRequiredSubscribeOnCurrentThread()).IsFalse();
+        await Assert.That(keptFree.IsRequiredSubscribeOnCurrentThread()).IsFalse();
+        await Assert.That(keptPinned.IsRequiredSubscribeOnCurrentThread()).IsTrue();
+        await Assert.That(keptPlain.IsRequiredSubscribeOnCurrentThread()).IsFalse();
+    }
+
+    /// <summary>
+    /// A source that keeps notifying after it has completed must not get a second bite at a Keep subscriber. The
+    /// filter must drop the late value before it even consults the predicate, and drop the late fault entirely.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task KeepSignalDropsSourceNotificationsThatArriveAfterItsTerminal()
+    {
+        var predicateCalls = 0;
+        InvalidOperationException lateError = new(LateErrorMessage);
+        KeepSignal<int> kept = new(
+            new ScriptedObservable<int>(observer =>
+            {
+                observer.OnCompleted();
+                observer.OnNext(One);
+                observer.OnError(lateError);
+            }),
+            _ =>
+            {
+                predicateCalls++;
+                return true;
+            });
+
+        RecordingWitness<int> observer = new();
+        _ = kept.Subscribe(observer);
+
+        await Assert.That(observer.Completed).IsEqualTo(1);
+        await Assert.That(observer.Values.Count).IsEqualTo(0);
+        await Assert.That(observer.Errors.Count).IsEqualTo(0);
+        await Assert.That(predicateCalls).IsEqualTo(0);
+    }
+
     /// <summary>Verifies advanced map-indexed and enumerable blend direct paths.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
@@ -41,10 +99,39 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(mapped.IsRequiredSubscribeOnCurrentThread()).IsFalse();
         await Assert.That(currentThreadMapped.IsRequiredSubscribeOnCurrentThread()).IsTrue();
         await Assert.That(optionalThreadMapped.IsRequiredSubscribeOnCurrentThread()).IsFalse();
-        await Assert.That(CurrentThreadRequirement.IsRequired(new ScriptedObservable<int>(_ => { }))).IsFalse();
+        await Assert.That(CurrentThreadRequirement.IsRequired(new ScriptedObservable<int>(static _ => { }))).IsFalse();
         await Assert.That(mappedValues.Values.SequenceEqual([One])).IsTrue();
         await Assert.That(mappedValues.Completed).IsEqualTo(1);
         await Assert.That(blended.SequenceEqual(ExpectedOneTwo)).IsTrue();
+    }
+
+    /// <summary>A bounded enumerable blend keeps only the allowed number of sources active and admits the rest in turn.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task EnumerableBlendWithAConcurrencyBoundAdmitsSourcesInTurn()
+    {
+        const int UnobservedValue = 7;
+        Signal<int> first = new();
+        Signal<int> second = new();
+        IEnumerable<IObservable<int>> sources = [first, second];
+        List<int> blended = [];
+        var completions = 0;
+
+        var bounded = sources.Blend(1);
+        using var subscription = bounded.Subscribe(blended.Add, static ex => throw ex, () => completions++);
+
+        // The bound is one, so the second source must not be subscribed while the first is still running.
+        second.OnNext(UnobservedValue);
+        first.OnNext(One);
+        first.OnCompleted();
+
+        // The first source completed, which frees the slot the second source was waiting for.
+        second.OnNext(Two);
+        second.OnCompleted();
+
+        await Assert.That(blended.SequenceEqual(ExpectedOneTwo)).IsTrue();
+        await Assert.That(completions).IsEqualTo(1);
+        _ = Assert.Throws<ArgumentNullException>(() => bounded.Subscribe((IObserver<int>)null!));
     }
 
     /// <summary>Verifies bounded blend drains enumerable sources and suppresses late terminals.</summary>
@@ -74,7 +161,7 @@ public partial class SignalOperatorMixinsTests
                     observer.OnError(first);
                     observer.OnError(late);
                     observer.OnCompleted();
-                }),
+                })
             ],
             One);
 
@@ -109,12 +196,20 @@ public partial class SignalOperatorMixinsTests
 
         var active = true;
         var done = false;
-        TaskChainCoordinatorState.OnInnerCompleted(new Lock(), ref done, ref active, new TaskChainCoordinator<int>(new RecordingWitness<int>()));
+        TaskChainCoordinatorState.OnInnerCompleted(
+            new(),
+            ref done,
+            ref active,
+            new TaskChainCoordinator<int>(new RecordingWitness<int>()));
         await Assert.That(active).IsFalse();
 
         active = true;
         done = true;
-        TaskChainCoordinatorState.OnInnerCompleted(new Lock(), ref done, ref active, new TaskChainCoordinator<int>(new RecordingWitness<int>()));
+        TaskChainCoordinatorState.OnInnerCompleted(
+            new(),
+            ref done,
+            ref active,
+            new TaskChainCoordinator<int>(new RecordingWitness<int>()));
         await Assert.That(active).IsTrue();
     }
 
@@ -127,12 +222,12 @@ public partial class SignalOperatorMixinsTests
         Signal.Silent<IObservable<int>>().Chain().Subscribe(chainDisposed).Dispose();
 
         RecordingWitness<int> chainNull = new();
-        _ = new ScriptedObservable<IObservable<int>>(observer => observer.OnNext(null!))
+        _ = new ScriptedObservable<IObservable<int>>(static observer => observer.OnNext(null!))
             .Chain()
             .Subscribe(chainNull);
 
         RecordingWitness<int> blendNull = new();
-        _ = new ScriptedObservable<IObservable<int>>(observer => observer.OnNext(null!))
+        _ = new ScriptedObservable<IObservable<int>>(static observer => observer.OnNext(null!))
             .Blend()
             .Subscribe(blendNull);
 
@@ -184,7 +279,7 @@ public partial class SignalOperatorMixinsTests
     public async Task TakeUntilAndDistinctTerminalBranchesAreCovered()
     {
         RecordingWitness<int> completed = new();
-        _ = new ScriptedObservable<int>(observer =>
+        _ = new ScriptedObservable<int>(static observer =>
         {
             observer.OnCompleted();
             observer.OnCompleted();
@@ -206,7 +301,7 @@ public partial class SignalOperatorMixinsTests
 
         RecordingWitness<int> otherCompleted = new();
         _ = Signal.Emit(One)
-            .TakeUntil(new ScriptedObservable<int>(observer => observer.OnCompleted()))
+            .TakeUntil(new ScriptedObservable<int>(static observer => observer.OnCompleted()))
             .Subscribe(otherCompleted);
 
         List<int> rangeDistinct = [];
@@ -251,6 +346,13 @@ public partial class SignalOperatorMixinsTests
         }
 
         /// <inheritdoc/>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Design",
+            "SST2318:Members should not have identical bodies",
+            Justification =
+                "The relative and absolute Schedule overloads of this test-double sequencer intentionally behave the "
+                + "same way; both are required by the ISequencer contract and, as distinct interface overloads, cannot "
+                + "forward to one another.")]
         public void Schedule(IWorkItem item, long dueTimestamp)
         {
             item.Execute();
@@ -267,10 +369,7 @@ public partial class SignalOperatorMixinsTests
 
         /// <summary>Initializes a new instance of the <see cref="NullEnumeratorEnumerable{T}"/> class.</summary>
         /// <param name="returnNullEnumerator">A value indicating whether the enumerable returns a null enumerator.</param>
-        public NullEnumeratorEnumerable(bool returnNullEnumerator)
-        {
-            ReturnNullEnumerator = returnNullEnumerator;
-        }
+        public NullEnumeratorEnumerable(bool returnNullEnumerator) => ReturnNullEnumerator = returnNullEnumerator;
 
         /// <summary>Gets a value indicating whether the enumerable returns a null enumerator.</summary>
         private bool ReturnNullEnumerator { get; }

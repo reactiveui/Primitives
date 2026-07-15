@@ -23,10 +23,30 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// <typeparam name="T14">Element type of source 14.</typeparam>
 /// <typeparam name="T15">Element type of source 15.</typeparam>
 /// <typeparam name="TResult">The projected element type.</typeparam>
-public sealed class SyncLatest15Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult> : SyncLatestCoordinatorBase<TResult>
+public sealed class
+    SyncLatest15Coordinator<
+        T1,
+        T2,
+        T3,
+        T4,
+        T5,
+        T6,
+        T7,
+        T8,
+        T9,
+        T10,
+        T11,
+        T12,
+        T13,
+        T14,
+        T15,
+        TResult> : SyncLatestCoordinatorBase<TResult>
 {
+    /// <summary>Number of upstream sources this coordinator combines.</summary>
+    private const int SourceCount = 15;
+
     /// <summary>Bit owned by source 1 inside the lifecycle's completion bitmask.</summary>
-    private const int Source1Bit = 1 << 0;
+    private const int Source1Bit = 1;
 
     /// <summary>Bit owned by source 2 inside the lifecycle's completion bitmask.</summary>
     private const int Source2Bit = 1 << 1;
@@ -70,6 +90,48 @@ public sealed class SyncLatest15Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
     /// <summary>Bit owned by source 15 inside the lifecycle's completion bitmask.</summary>
     private const int Source15Bit = 1 << 14;
 
+    /// <summary>0-based index of source 1 within the coordinator's subscribe dispatch.</summary>
+    private const int Source1Index = 0;
+
+    /// <summary>0-based index of source 2 within the coordinator's subscribe dispatch.</summary>
+    private const int Source2Index = 1;
+
+    /// <summary>0-based index of source 3 within the coordinator's subscribe dispatch.</summary>
+    private const int Source3Index = 2;
+
+    /// <summary>0-based index of source 4 within the coordinator's subscribe dispatch.</summary>
+    private const int Source4Index = 3;
+
+    /// <summary>0-based index of source 5 within the coordinator's subscribe dispatch.</summary>
+    private const int Source5Index = 4;
+
+    /// <summary>0-based index of source 6 within the coordinator's subscribe dispatch.</summary>
+    private const int Source6Index = 5;
+
+    /// <summary>0-based index of source 7 within the coordinator's subscribe dispatch.</summary>
+    private const int Source7Index = 6;
+
+    /// <summary>0-based index of source 8 within the coordinator's subscribe dispatch.</summary>
+    private const int Source8Index = 7;
+
+    /// <summary>0-based index of source 9 within the coordinator's subscribe dispatch.</summary>
+    private const int Source9Index = 8;
+
+    /// <summary>0-based index of source 10 within the coordinator's subscribe dispatch.</summary>
+    private const int Source10Index = 9;
+
+    /// <summary>0-based index of source 11 within the coordinator's subscribe dispatch.</summary>
+    private const int Source11Index = 10;
+
+    /// <summary>0-based index of source 12 within the coordinator's subscribe dispatch.</summary>
+    private const int Source12Index = 11;
+
+    /// <summary>0-based index of source 13 within the coordinator's subscribe dispatch.</summary>
+    private const int Source13Index = 12;
+
+    /// <summary>0-based index of source 14 within the coordinator's subscribe dispatch.</summary>
+    private const int Source14Index = 13;
+
     /// <summary>Initializes a new instance of the <see cref="SyncLatest15Coordinator{T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="sources">The bundled source observables.</param>
@@ -78,25 +140,10 @@ public sealed class SyncLatest15Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
         IObserverAsync<TResult> observer,
         SyncLatest15State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> sources,
         Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult> selector)
-        : base(observer, sourceCount: 15)
+        : base(observer, SourceCount)
     {
         Sources = sources;
         Selector = selector;
-        Observer1 = new(this, Source1Bit, value => Value1 = new(value));
-        Observer2 = new(this, Source2Bit, value => Value2 = new(value));
-        Observer3 = new(this, Source3Bit, value => Value3 = new(value));
-        Observer4 = new(this, Source4Bit, value => Value4 = new(value));
-        Observer5 = new(this, Source5Bit, value => Value5 = new(value));
-        Observer6 = new(this, Source6Bit, value => Value6 = new(value));
-        Observer7 = new(this, Source7Bit, value => Value7 = new(value));
-        Observer8 = new(this, Source8Bit, value => Value8 = new(value));
-        Observer9 = new(this, Source9Bit, value => Value9 = new(value));
-        Observer10 = new(this, Source10Bit, value => Value10 = new(value));
-        Observer11 = new(this, Source11Bit, value => Value11 = new(value));
-        Observer12 = new(this, Source12Bit, value => Value12 = new(value));
-        Observer13 = new(this, Source13Bit, value => Value13 = new(value));
-        Observer14 = new(this, Source14Bit, value => Value14 = new(value));
-        Observer15 = new(this, Source15Bit, value => Value15 = new(value));
     }
 
     /// <summary>Gets the bundled source observables.</summary>
@@ -104,51 +151,6 @@ public sealed class SyncLatest15Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
 
     /// <summary>Gets the selector that projects the latest values.</summary>
     private Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult> Selector { get; }
-
-    /// <summary>Gets the indexed observer for source 1.</summary>
-    private SyncLatestWitness<T1, TResult> Observer1 { get; }
-
-    /// <summary>Gets the indexed observer for source 2.</summary>
-    private SyncLatestWitness<T2, TResult> Observer2 { get; }
-
-    /// <summary>Gets the indexed observer for source 3.</summary>
-    private SyncLatestWitness<T3, TResult> Observer3 { get; }
-
-    /// <summary>Gets the indexed observer for source 4.</summary>
-    private SyncLatestWitness<T4, TResult> Observer4 { get; }
-
-    /// <summary>Gets the indexed observer for source 5.</summary>
-    private SyncLatestWitness<T5, TResult> Observer5 { get; }
-
-    /// <summary>Gets the indexed observer for source 6.</summary>
-    private SyncLatestWitness<T6, TResult> Observer6 { get; }
-
-    /// <summary>Gets the indexed observer for source 7.</summary>
-    private SyncLatestWitness<T7, TResult> Observer7 { get; }
-
-    /// <summary>Gets the indexed observer for source 8.</summary>
-    private SyncLatestWitness<T8, TResult> Observer8 { get; }
-
-    /// <summary>Gets the indexed observer for source 9.</summary>
-    private SyncLatestWitness<T9, TResult> Observer9 { get; }
-
-    /// <summary>Gets the indexed observer for source 10.</summary>
-    private SyncLatestWitness<T10, TResult> Observer10 { get; }
-
-    /// <summary>Gets the indexed observer for source 11.</summary>
-    private SyncLatestWitness<T11, TResult> Observer11 { get; }
-
-    /// <summary>Gets the indexed observer for source 12.</summary>
-    private SyncLatestWitness<T12, TResult> Observer12 { get; }
-
-    /// <summary>Gets the indexed observer for source 13.</summary>
-    private SyncLatestWitness<T13, TResult> Observer13 { get; }
-
-    /// <summary>Gets the indexed observer for source 14.</summary>
-    private SyncLatestWitness<T14, TResult> Observer14 { get; }
-
-    /// <summary>Gets the indexed observer for source 15.</summary>
-    private SyncLatestWitness<T15, TResult> Observer15 { get; }
 
     /// <summary>Gets or sets the latest value from source 1.</summary>
     private Optional<T1> Value1 { get; set; } = Optional<T1>.Empty;
@@ -223,32 +225,24 @@ public sealed class SyncLatest15Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
     }
 
     /// <inheritdoc/>
-    [SuppressMessage(
-        "Minor Code Smell",
-        "S109:Magic numbers should not be used",
-        Justification = "Switch dispatches on the 0..N-1 source index; naming each numeric arm would just rename the obvious.")]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S1541:Methods and properties should not be too complex",
-        Justification = "Switch arm per source; the high arm count is the dispatch surface.")]
     protected override ValueTask<IAsyncDisposable> SubscribeAtAsync(int index, CancellationToken cancellationToken) =>
         index switch
         {
-            0 => Sources.Source1.SubscribeAsync(Observer1, cancellationToken),
-            1 => Sources.Source2.SubscribeAsync(Observer2, cancellationToken),
-            2 => Sources.Source3.SubscribeAsync(Observer3, cancellationToken),
-            3 => Sources.Source4.SubscribeAsync(Observer4, cancellationToken),
-            4 => Sources.Source5.SubscribeAsync(Observer5, cancellationToken),
-            5 => Sources.Source6.SubscribeAsync(Observer6, cancellationToken),
-            6 => Sources.Source7.SubscribeAsync(Observer7, cancellationToken),
-            7 => Sources.Source8.SubscribeAsync(Observer8, cancellationToken),
-            8 => Sources.Source9.SubscribeAsync(Observer9, cancellationToken),
-            9 => Sources.Source10.SubscribeAsync(Observer10, cancellationToken),
-            10 => Sources.Source11.SubscribeAsync(Observer11, cancellationToken),
-            11 => Sources.Source12.SubscribeAsync(Observer12, cancellationToken),
-            12 => Sources.Source13.SubscribeAsync(Observer13, cancellationToken),
-            13 => Sources.Source14.SubscribeAsync(Observer14, cancellationToken),
-            _ => Sources.Source15.SubscribeAsync(Observer15, cancellationToken),
+            Source1Index => Sources.Source1.SubscribeAsync(new SyncLatestWitness<T1, TResult>(this, Source1Bit, value => Value1 = new(value)), cancellationToken),
+            Source2Index => Sources.Source2.SubscribeAsync(new SyncLatestWitness<T2, TResult>(this, Source2Bit, value => Value2 = new(value)), cancellationToken),
+            Source3Index => Sources.Source3.SubscribeAsync(new SyncLatestWitness<T3, TResult>(this, Source3Bit, value => Value3 = new(value)), cancellationToken),
+            Source4Index => Sources.Source4.SubscribeAsync(new SyncLatestWitness<T4, TResult>(this, Source4Bit, value => Value4 = new(value)), cancellationToken),
+            Source5Index => Sources.Source5.SubscribeAsync(new SyncLatestWitness<T5, TResult>(this, Source5Bit, value => Value5 = new(value)), cancellationToken),
+            Source6Index => Sources.Source6.SubscribeAsync(new SyncLatestWitness<T6, TResult>(this, Source6Bit, value => Value6 = new(value)), cancellationToken),
+            Source7Index => Sources.Source7.SubscribeAsync(new SyncLatestWitness<T7, TResult>(this, Source7Bit, value => Value7 = new(value)), cancellationToken),
+            Source8Index => Sources.Source8.SubscribeAsync(new SyncLatestWitness<T8, TResult>(this, Source8Bit, value => Value8 = new(value)), cancellationToken),
+            Source9Index => Sources.Source9.SubscribeAsync(new SyncLatestWitness<T9, TResult>(this, Source9Bit, value => Value9 = new(value)), cancellationToken),
+            Source10Index => Sources.Source10.SubscribeAsync(new SyncLatestWitness<T10, TResult>(this, Source10Bit, value => Value10 = new(value)), cancellationToken),
+            Source11Index => Sources.Source11.SubscribeAsync(new SyncLatestWitness<T11, TResult>(this, Source11Bit, value => Value11 = new(value)), cancellationToken),
+            Source12Index => Sources.Source12.SubscribeAsync(new SyncLatestWitness<T12, TResult>(this, Source12Bit, value => Value12 = new(value)), cancellationToken),
+            Source13Index => Sources.Source13.SubscribeAsync(new SyncLatestWitness<T13, TResult>(this, Source13Bit, value => Value13 = new(value)), cancellationToken),
+            Source14Index => Sources.Source14.SubscribeAsync(new SyncLatestWitness<T14, TResult>(this, Source14Bit, value => Value14 = new(value)), cancellationToken),
+            _ => Sources.Source15.SubscribeAsync(new SyncLatestWitness<T15, TResult>(this, Source15Bit, value => Value15 = new(value)), cancellationToken)
         };
 
     /// <summary>
@@ -260,26 +254,30 @@ public sealed class SyncLatest15Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
     [SuppressMessage(
         "Maintainability",
         "SST1442:A function has too many direct branch points",
-        Justification = "One short-circuited Optional check per source is the snapshot semantic; the branch count is inherent to the operator arity.")]
-    private bool TryReadValues(out (T1 V1, T2 V2, T3 V3, T4 V4, T5 V5, T6 V6, T7 V7, T8 V8, T9 V9, T10 V10, T11 V11, T12 V12, T13 V13, T14 V14, T15 V15) values)
+        Justification =
+            "One short-circuited Optional check per source is the snapshot semantic; the branch count is inherent to the operator arity.")]
+    private bool TryReadValues(
+        out (T1 V1, T2 V2, T3 V3, T4 V4, T5 V5, T6 V6, T7 V7, T8 V8, T9 V9, T10 V10, T11 V11, T12 V12, T13 V13, T14 V14,
+            T15 V15) values)
     {
         if (Value1.TryGetValue(out var value1)
-                    && Value2.TryGetValue(out var value2)
-                    && Value3.TryGetValue(out var value3)
-                    && Value4.TryGetValue(out var value4)
-                    && Value5.TryGetValue(out var value5)
-                    && Value6.TryGetValue(out var value6)
-                    && Value7.TryGetValue(out var value7)
-                    && Value8.TryGetValue(out var value8)
-                    && Value9.TryGetValue(out var value9)
-                    && Value10.TryGetValue(out var value10)
-                    && Value11.TryGetValue(out var value11)
-                    && Value12.TryGetValue(out var value12)
-                    && Value13.TryGetValue(out var value13)
-                    && Value14.TryGetValue(out var value14)
-                    && Value15.TryGetValue(out var value15))
+            && Value2.TryGetValue(out var value2)
+            && Value3.TryGetValue(out var value3)
+            && Value4.TryGetValue(out var value4)
+            && Value5.TryGetValue(out var value5)
+            && Value6.TryGetValue(out var value6)
+            && Value7.TryGetValue(out var value7)
+            && Value8.TryGetValue(out var value8)
+            && Value9.TryGetValue(out var value9)
+            && Value10.TryGetValue(out var value10)
+            && Value11.TryGetValue(out var value11)
+            && Value12.TryGetValue(out var value12)
+            && Value13.TryGetValue(out var value13)
+            && Value14.TryGetValue(out var value14)
+            && Value15.TryGetValue(out var value15))
         {
-            values = (value1, value2, value3, value4, value5, value6, value7, value8, value9, value10, value11, value12, value13, value14, value15);
+            values = (value1, value2, value3, value4, value5, value6, value7, value8, value9, value10, value11, value12,
+                value13, value14, value15);
             return true;
         }
 

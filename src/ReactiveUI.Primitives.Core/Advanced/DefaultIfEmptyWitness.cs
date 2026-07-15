@@ -6,28 +6,21 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Observer for default-if-empty.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
-public sealed class DefaultIfEmptyWitness<T> : IObserver<T>, IDisposable
+/// <param name="observer">The downstream observer.</param>
+/// <param name="defaultValue">Value emitted for an empty source.</param>
+public sealed class DefaultIfEmptyWitness<T>(IObserver<T> observer, T defaultValue) : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>
-    private readonly IObserver<T> _observer;
+    private readonly IObserver<T> _observer = observer;
 
     /// <summary>Value emitted for an empty source.</summary>
-    private readonly T _defaultValue;
+    private readonly T _defaultValue = defaultValue;
 
     /// <summary>A value indicating whether the source produced any values.</summary>
     private bool _seen;
 
     /// <summary>The upstream subscription.</summary>
     private IDisposable? _subscription;
-
-    /// <summary>Initializes a new instance of the <see cref="DefaultIfEmptyWitness{T}"/> class.</summary>
-    /// <param name="observer">The downstream observer.</param>
-    /// <param name="defaultValue">Value emitted for an empty source.</param>
-    public DefaultIfEmptyWitness(IObserver<T> observer, T defaultValue)
-    {
-        _observer = observer;
-        _defaultValue = defaultValue;
-    }
 
     /// <inheritdoc/>
     public void OnNext(T value)

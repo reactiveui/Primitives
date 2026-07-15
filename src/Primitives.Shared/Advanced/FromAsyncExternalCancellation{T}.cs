@@ -63,7 +63,8 @@ internal sealed class FromAsyncExternalCancellation<T> : IDisposable
             return true;
         }
 
-        Registration = CancellationToken.Register(static state => ((FromAsyncExternalCancellation<T>)state!).Cancel(), this);
+        Registration =
+            CancellationToken.Register(static state => ((FromAsyncExternalCancellation<T>)state!).Cancel(), this);
         return !Lifetime.IsCompleted;
     }
 

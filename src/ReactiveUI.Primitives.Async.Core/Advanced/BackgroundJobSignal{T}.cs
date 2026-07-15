@@ -73,7 +73,13 @@ public sealed class BackgroundJobSignal<T> : IObservableAsync<T>
         TaskScheduler taskScheduler,
         CancellationToken cancellationToken) =>
         await Task.Factory.StartNew(
-                () => Job(observer, cancellationToken).AsTask(),
+                static s =>
+                {
+                    var (self, observer, cancellationToken) =
+                        ((BackgroundJobSignal<T>, IObserverAsync<T>, CancellationToken))s!;
+                    return self.Job(observer, cancellationToken).AsTask();
+                },
+                (this, observer, cancellationToken),
                 cancellationToken,
                 TaskCreationOptions.DenyChildAttach,
                 taskScheduler)

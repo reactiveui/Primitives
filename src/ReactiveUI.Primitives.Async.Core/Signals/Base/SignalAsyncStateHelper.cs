@@ -44,7 +44,9 @@ internal static class SignalAsyncStateHelper
         SignalBroadcastKind kind,
         Exception error,
         CancellationToken cancellationToken) =>
-        !state.TryGetObservers(out var observers) ? default : BroadcastOnErrorResumeAsync(kind, observers, error, cancellationToken);
+        !state.TryGetObservers(out var observers)
+            ? default
+            : BroadcastOnErrorResumeAsync(kind, observers, error, cancellationToken);
 
     /// <summary>Completes the signal and notifies subscribed observers.</summary>
     /// <typeparam name="T">The observed value type.</typeparam>
@@ -101,9 +103,15 @@ internal static class SignalAsyncStateHelper
         CancellationToken cancellationToken) =>
         kind switch
         {
-            SignalBroadcastKind.Serial => SerialBroadcastHelpers.BroadcastOnNextAsync(observers, value, cancellationToken),
-            SignalBroadcastKind.SerialMulti => SerialBroadcastHelpers.BroadcastOnNextAsyncMulti(observers, value, cancellationToken),
-            _ => Concurrent.ForwardOnNextConcurrently(observers, value, cancellationToken),
+            SignalBroadcastKind.Serial => SerialBroadcastHelpers.BroadcastOnNextAsync(
+                observers,
+                value,
+                cancellationToken),
+            SignalBroadcastKind.SerialMulti => SerialBroadcastHelpers.BroadcastOnNextAsyncMulti(
+                observers,
+                value,
+                cancellationToken),
+            _ => Concurrent.ForwardOnNextConcurrently(observers, value, cancellationToken)
         };
 
     /// <summary>Forwards a recoverable error to observers according to <paramref name="kind"/>.</summary>

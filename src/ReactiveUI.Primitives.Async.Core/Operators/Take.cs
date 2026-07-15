@@ -94,7 +94,9 @@ public static partial class SignalAsyncExtensions
                 }
 
                 _remaining--;
-                return _remaining == 0 ? ForwardThenFinishAsync(value, cancellationToken) : downstream.OnNextAsync(value, cancellationToken);
+                return _remaining == 0
+                    ? ForwardThenFinishAsync(downstream, value, cancellationToken)
+                    : downstream.OnNextAsync(value, cancellationToken);
             }
 
             /// <inheritdoc/>
@@ -106,13 +108,17 @@ public static partial class SignalAsyncExtensions
                 downstream.OnCompletedAsync(result);
 
             /// <summary>Forwards the final value, then signals downstream completion.</summary>
+            /// <param name="target">The downstream observer receiving the final value and the completion.</param>
             /// <param name="value">The final value.</param>
             /// <param name="cancellationToken">The cancellation token.</param>
             /// <returns>A task that completes after both the value and the completion are forwarded.</returns>
-            private async ValueTask ForwardThenFinishAsync(T value, CancellationToken cancellationToken)
+            private static async ValueTask ForwardThenFinishAsync(
+                IObserverAsync<T> target,
+                T value,
+                CancellationToken cancellationToken)
             {
-                await downstream.OnNextAsync(value, cancellationToken).ConfigureAwait(false);
-                await downstream.OnCompletedAsync(Result.Success).ConfigureAwait(false);
+                await target.OnNextAsync(value, cancellationToken).ConfigureAwait(false);
+                await target.OnCompletedAsync(Result.Success).ConfigureAwait(false);
             }
         }
     }

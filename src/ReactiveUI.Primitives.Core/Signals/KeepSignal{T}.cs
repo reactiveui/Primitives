@@ -8,22 +8,15 @@ namespace ReactiveUI.Primitives.Signals;
 
 /// <summary>Represents the KeepSignal class.</summary>
 /// <typeparam name="T">The T type.</typeparam>
-public sealed class KeepSignal<T> : IRequireCurrentThread<T>
+/// <param name="source">The source value.</param>
+/// <param name="predicate">The predicate value.</param>
+public sealed class KeepSignal<T>(IObservable<T> source, Func<T, bool> predicate) : IRequireCurrentThread<T>
 {
     /// <summary>Stores state for the signal implementation.</summary>
-    private readonly IObservable<T> _source;
+    private readonly IObservable<T> _source = source;
 
     /// <summary>Stores state for the signal implementation.</summary>
-    private readonly Func<T, bool> _predicate;
-
-    /// <summary>Initializes a new instance of the <see cref="KeepSignal{T}"/> class.</summary>
-    /// <param name="source">The source value.</param>
-    /// <param name="predicate">The predicate value.</param>
-    public KeepSignal(IObservable<T> source, Func<T, bool> predicate)
-    {
-        _source = source;
-        _predicate = predicate;
-    }
+    private readonly Func<T, bool> _predicate = predicate;
 
     /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
     /// <returns>The result.</returns>
@@ -41,25 +34,18 @@ public sealed class KeepSignal<T> : IRequireCurrentThread<T>
     }
 
     /// <summary>Represents the KeepWitness class.</summary>
-    private sealed class KeepWitness : IObserver<T>
+    /// <param name="observer">The observer value.</param>
+    /// <param name="predicate">The predicate value.</param>
+    private sealed class KeepWitness(IObserver<T> observer, Func<T, bool> predicate) : IObserver<T>
     {
         /// <summary>Stores state for the signal implementation.</summary>
-        private readonly IObserver<T> _observer;
+        private readonly IObserver<T> _observer = observer;
 
         /// <summary>Stores state for the signal implementation.</summary>
-        private readonly Func<T, bool> _predicate;
+        private readonly Func<T, bool> _predicate = predicate;
 
         /// <summary>Stores state for the signal implementation.</summary>
         private bool _stopped;
-
-        /// <summary>Initializes a new instance of the <see cref="KeepWitness"/> class.</summary>
-        /// <param name="observer">The observer value.</param>
-        /// <param name="predicate">The predicate value.</param>
-        public KeepWitness(IObserver<T> observer, Func<T, bool> predicate)
-        {
-            _observer = observer;
-            _predicate = predicate;
-        }
 
         /// <summary>Executes the OnCompleted operation.</summary>
         public void OnCompleted()

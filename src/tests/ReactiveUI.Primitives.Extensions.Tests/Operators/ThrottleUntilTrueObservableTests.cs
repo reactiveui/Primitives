@@ -27,6 +27,9 @@ public class ThrottleUntilTrueObservableTests
     /// <summary>Throttle window for tests.</summary>
     private static readonly TimeSpan ThrottleWindow = TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds);
 
+    /// <summary>Guard timeout so a hung rendezvous fails this test rather than stalling the run.</summary>
+    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
+
     /// <summary>Verifies that elements matching the predicate emit immediately.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -38,7 +41,7 @@ public class ThrottleUntilTrueObservableTests
         using var sub = subject.ThrottleUntilTrue(ThrottleWindow, static x => x == MatchingValue)
             .Subscribe(v => emitted.TrySetResult(v));
         subject.OnNext(MatchingValue);
-        var got = await emitted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var got = await emitted.Task.WaitAsync(GuardTimeout);
         await Assert.That(got).IsEqualTo(MatchingValue);
     }
 
@@ -53,7 +56,7 @@ public class ThrottleUntilTrueObservableTests
         using var sub = subject.ThrottleUntilTrue(ThrottleWindow, static _ => false)
             .Subscribe(v => emitted.TrySetResult(v));
         subject.OnNext(NonMatchingValue);
-        var got = await emitted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var got = await emitted.Task.WaitAsync(GuardTimeout);
         await Assert.That(got).IsEqualTo(NonMatchingValue);
     }
 
@@ -79,7 +82,7 @@ public class ThrottleUntilTrueObservableTests
         // rather than racing the wall-clock window. Under scheduling pressure Earlier's timer may
         // still slip through first, so assert the invariant the operator guarantees: whatever the
         // intermediate emissions, the final value observed is the latest one.
-        await laterArrived.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await laterArrived.Task.WaitAsync(GuardTimeout);
         var observed = emissions.ToArray();
         await Assert.That(observed[^1]).IsEqualTo(Later);
     }

@@ -16,8 +16,8 @@ public sealed class TaskPoolSequencer : ISequencer
 
     /// <summary>Initializes a new instance of the <see cref="TaskPoolSequencer"/> class.</summary>
     /// <param name="taskFactory">The task factory.</param>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0001:Simplify Names", Justification = "The argument validation uses ArgumentExceptionHelper.")]
-    public TaskPoolSequencer(TaskFactory taskFactory) => _taskFactory = taskFactory ?? throw new ArgumentNullException(nameof(taskFactory));
+    public TaskPoolSequencer(TaskFactory taskFactory) =>
+        _taskFactory = taskFactory ?? throw new ArgumentNullException(nameof(taskFactory));
 
     /// <summary>Gets the instance.</summary>
     /// <value>
@@ -38,6 +38,7 @@ public sealed class TaskPoolSequencer : ISequencer
     public long Timestamp => Sequencer.Timestamp;
 
     /// <summary>Gets the debugger display text.</summary>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
@@ -100,44 +101,30 @@ public sealed class TaskPoolSequencer : ISequencer
     }
 
     /// <summary>Task factory dispatch state.</summary>
-    private sealed class DispatchState
+    /// <param name="owner">Owning sequencer.</param>
+    /// <param name="item">Work item to execute.</param>
+    private sealed class DispatchState(TaskPoolSequencer owner, IWorkItem item)
     {
         /// <summary>Owning sequencer.</summary>
-        private readonly TaskPoolSequencer _owner;
+        private readonly TaskPoolSequencer _owner = owner;
 
         /// <summary>Work item to execute.</summary>
-        private readonly IWorkItem _item;
-
-        /// <summary>Initializes a new instance of the <see cref="DispatchState"/> class.</summary>
-        /// <param name="owner">Owning sequencer.</param>
-        /// <param name="item">Work item to execute.</param>
-        public DispatchState(TaskPoolSequencer owner, IWorkItem item)
-        {
-            _owner = owner;
-            _item = item;
-        }
+        private readonly IWorkItem _item = item;
 
         /// <summary>Runs the work item.</summary>
         public void Run() => _owner.Execute(_item);
     }
 
     /// <summary>Work item that switches delayed work from the thread pool onto the task factory.</summary>
-    private sealed class DelayedDispatchWorkItem : IWorkItem
+    /// <param name="owner">Owning sequencer.</param>
+    /// <param name="item">Work item to execute.</param>
+    private sealed class DelayedDispatchWorkItem(TaskPoolSequencer owner, IWorkItem item) : IWorkItem
     {
         /// <summary>Owning sequencer.</summary>
-        private readonly TaskPoolSequencer _owner;
+        private readonly TaskPoolSequencer _owner = owner;
 
         /// <summary>Work item to execute.</summary>
-        private readonly IWorkItem _item;
-
-        /// <summary>Initializes a new instance of the <see cref="DelayedDispatchWorkItem"/> class.</summary>
-        /// <param name="owner">Owning sequencer.</param>
-        /// <param name="item">Work item to execute.</param>
-        public DelayedDispatchWorkItem(TaskPoolSequencer owner, IWorkItem item)
-        {
-            _owner = owner;
-            _item = item;
-        }
+        private readonly IWorkItem _item = item;
 
         /// <inheritdoc/>
         public void Execute()

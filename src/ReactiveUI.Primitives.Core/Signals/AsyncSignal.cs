@@ -69,6 +69,7 @@ public sealed class AsyncSignal<T> : IAwaitSignal<T>
     public bool IsCompleted { get; private set; }
 
     /// <summary>Gets the debugger display text.</summary>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
@@ -180,7 +181,9 @@ public sealed class AsyncSignal<T> : IAwaitSignal<T>
                 else
                 {
                     var current = _outObserver;
-                    _outObserver = current is EmptyWitness<T> ? new ListWitness<T>(new([observer])) : new ListWitness<T>(new([current, observer]));
+                    _outObserver = current is EmptyWitness<T>
+                        ? new ListWitness<T>(new([observer]))
+                        : new ListWitness<T>(new([current, observer]));
                 }
 
                 return new ObserverHandler<T>(this, observer);

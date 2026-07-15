@@ -43,7 +43,13 @@ public sealed class StartSubscription<TResult> : TaskSignalSubscription<TResult>
         }
 
         await Task.Factory.StartNew(
-                () => ExecuteFunctionAsync(observer, cancellationToken).AsTask(),
+                static s =>
+                {
+                    var (self, observer, cancellationToken) =
+                        ((StartSubscription<TResult>, IObserverAsync<TResult>, CancellationToken))s!;
+                    return self.ExecuteFunctionAsync(observer, cancellationToken).AsTask();
+                },
+                (this, observer, cancellationToken),
                 cancellationToken,
                 TaskCreationOptions.DenyChildAttach,
                 taskScheduler)

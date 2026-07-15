@@ -81,7 +81,8 @@ public sealed class SwitchToSignal<T>(IObservableAsync<IObservableAsync<T>> sour
             IObservableAsync<IObservableAsync<T>> source,
             CancellationToken subscriptionToken)
         {
-            var outerSubscription = await source.SubscribeAsync(new SwitchToOuterWitness(this), subscriptionToken).ConfigureAwait(false);
+            var outerSubscription = await source.SubscribeAsync(new SwitchToOuterWitness(this), subscriptionToken)
+                .ConfigureAwait(false);
             await _outerDisposable.SetDisposableAsync(outerSubscription).ConfigureAwait(false);
         }
 
@@ -228,7 +229,8 @@ public sealed class SwitchToSignal<T>(IObservableAsync<IObservableAsync<T>> sour
                 }
 
                 SwitchToInnerWitness innerObserver = new(this);
-                var innerSubscription = await inner.SubscribeAsync(innerObserver, _disposeCancellationToken).ConfigureAwait(false);
+                var innerSubscription = await inner.SubscribeAsync(innerObserver, _disposeCancellationToken)
+                    .ConfigureAwait(false);
                 var shouldDispose = false;
                 lock (_gate)
                 {
@@ -316,9 +318,11 @@ public sealed class SwitchToSignal<T>(IObservableAsync<IObservableAsync<T>> sour
                 CancellationToken cancellationToken)
             {
                 _ = cancellationToken;
-                using (await subscription._observerOnSomethingGate.EnterAsync(subscription._disposeCancellationToken).ConfigureAwait(false))
+                using (await subscription._observerOnSomethingGate.EnterAsync(subscription._disposeCancellationToken)
+                           .ConfigureAwait(false))
                 {
-                    await subscription._observer.OnErrorResumeAsync(error, subscription._disposeCancellationToken).ConfigureAwait(false);
+                    await subscription._observer.OnErrorResumeAsync(error, subscription._disposeCancellationToken)
+                        .ConfigureAwait(false);
                 }
             }
 

@@ -18,11 +18,14 @@ public sealed class DispatcherSequencerTests
     /// <summary>Maximum time to wait for work to be marshalled onto the dispatcher thread before failing.</summary>
     private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(5);
 
+    /// <summary>How far into the future the delayed work is scheduled.</summary>
+    private static readonly TimeSpan ScheduleDelay = TimeSpan.FromMilliseconds(50);
+
     /// <summary>Verifies the constructor rejects a null dispatcher.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task ConstructorRejectsNullDispatcher() =>
-        await Assert.That(() => new DispatcherSequencer(null!)).ThrowsExactly<ArgumentNullException>();
+        await Assert.That(static () => new DispatcherSequencer(null!)).ThrowsExactly<ArgumentNullException>();
 
     /// <summary>Verifies immediate work is posted to and executed on the dispatcher thread.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
@@ -48,7 +51,7 @@ public sealed class DispatcherSequencerTests
         var scheduler = new DispatcherSequencer(harness.Dispatcher);
         var completion = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        _ = scheduler.Schedule(TimeSpan.FromMilliseconds(50), () => completion.TrySetResult(Environment.CurrentManagedThreadId));
+        _ = scheduler.Schedule(ScheduleDelay, () => completion.TrySetResult(Environment.CurrentManagedThreadId));
 
         var ranOnThreadId = await completion.Task.WaitAsync(WaitTimeout);
         await Assert.That(ranOnThreadId).IsEqualTo(harness.ThreadId);

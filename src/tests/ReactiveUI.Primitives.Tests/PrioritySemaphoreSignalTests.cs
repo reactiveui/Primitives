@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 using System.Collections.Concurrent;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Signals;
@@ -49,11 +50,11 @@ public sealed class PrioritySemaphoreSignalTests
     /// <summary>The wait duration for each drain polling loop.</summary>
     private const int PollDelayMilliseconds = 1;
 
-    /// <summary>The spin delay used to amplify overlap detection.</summary>
-    private const int ProbeSpinWaitIterations = 1000;
-
     /// <summary>Task-group offsets for the concurrent operations phase.</summary>
     private const int OnNextTaskOffsetMultiplier = 2;
+
+    /// <summary>The number of worker groups (release, capacity, and OnNext) started for each stress worker.</summary>
+    private const int StressWorkerGroups = 3;
 
     /// <summary>The wait duration for terminal serialization probes.</summary>
     private static readonly TimeSpan TerminalProbeTimeout = TimeSpan.FromSeconds(5);
@@ -215,7 +216,7 @@ public sealed class PrioritySemaphoreSignalTests
         }
 
         var go = new ManualResetEventSlim();
-        var tasks = new Task[StressWorkers * 3];
+        var tasks = new Task[StressWorkers * StressWorkerGroups];
         var next = 0;
         for (var t = 0; t < StressWorkers; t++)
         {
@@ -363,8 +364,8 @@ public sealed class PrioritySemaphoreSignalTests
                 deliveries++;
                 throw failure;
             },
-            _ => { },
-            () => { });
+            static _ => { },
+            static () => { });
 
         // Delivery throws out of the drain loop; the finally path must still release ownership.
         var first = Assert.Throws<InvalidOperationException>(() => signal.OnNext(FirstValue));
@@ -542,10 +543,7 @@ public sealed class PrioritySemaphoreSignalTests
 
         /// <summary>Initializes a new instance of the <see cref="TerminalOverlapProbe"/> class.</summary>
         /// <param name="releaseOnNext">Gate used by tests to hold <see cref="OnNext"/> in-flight.</param>
-        public TerminalOverlapProbe(ManualResetEventSlim releaseOnNext)
-        {
-            _releaseOnNext = releaseOnNext;
-        }
+        public TerminalOverlapProbe(ManualResetEventSlim releaseOnNext) => _releaseOnNext = releaseOnNext;
 
         /// <summary>Gets whether overlapping terminal and value notifications were observed.</summary>
         public bool OverlapDetected => Volatile.Read(ref _overlapDetected) != 0;
@@ -633,6 +631,9 @@ public sealed class PrioritySemaphoreSignalTests
     /// <summary>Observer used to detect overlapping <see cref="IObserver{T}.OnNext"/> notifications.</summary>
     private sealed class ConcurrencyProbe : IObserver<int>
     {
+        /// <summary>The spin delay used to amplify overlap detection.</summary>
+        private const int ProbeSpinWaitIterations = 1000;
+
         /// <summary>Non-zero while a notification is in-flight.</summary>
         private int _inside;
 

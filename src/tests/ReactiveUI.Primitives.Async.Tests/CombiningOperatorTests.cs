@@ -115,6 +115,7 @@ public partial class CombiningOperatorTests
     {
         /// <summary>Throws an <see cref="InvalidOperationException"/> when disposal is attempted.</summary>
         /// <returns>Never returns normally.</returns>
+        [SuppressMessage("Maintainability", "SST1485:Members that must not throw should not throw", Justification = "The throwing disposal is the behaviour under test.")]
         public ValueTask DisposeAsync() => throw new InvalidOperationException("dispose boom");
     }
 

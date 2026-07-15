@@ -10,7 +10,8 @@
             "CodeCoverage": {
                 "ModulePaths": {
                     "Include": [
-                        ".*ReactiveUI\\.Primitives.*\\.dll$"
+                        ".*ReactiveUI\\.Primitives.*\\.dll$",
+                        ".*ReactiveUI\\.Disposables\\.dll$"
                     ],
                     "Exclude": [
                         ".*Tests\\.dll$",

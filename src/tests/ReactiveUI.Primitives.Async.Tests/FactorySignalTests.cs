@@ -17,6 +17,18 @@ public class FactorySignalTests
     /// <summary>Hoisted source array used by tests (was inline literal).</summary>
     private static readonly int[] Sequence123 = [1, 2, 3];
 
+    /// <summary>Maximum time a test waits for an emission or completion to arrive.</summary>
+    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(5);
+
+    /// <summary>Delay before the single-shot timer fires.</summary>
+    private static readonly TimeSpan SingleShotDelay = TimeSpan.FromMilliseconds(50);
+
+    /// <summary>Delay before the first tick of a periodic timer.</summary>
+    private static readonly TimeSpan PeriodicDueTime = TimeSpan.FromMilliseconds(10);
+
+    /// <summary>Interval between the ticks of a periodic timer.</summary>
+    private static readonly TimeSpan PeriodicInterval = TimeSpan.FromMilliseconds(50);
+
     /// <summary>Tests Return emits single value.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -69,7 +81,7 @@ public class FactorySignalTests
     /// <summary>Tests Throw rejects null exception.</summary>
     [Test]
     public void WhenThrowNullException_ThenThrowsArgumentNull() =>
-        Assert.Throws<ArgumentNullException>(() => SignalAsync.Throw<int>(null!));
+        Assert.Throws<ArgumentNullException>(static () => SignalAsync.Throw<int>(null!));
 
     /// <summary>Tests Never does not complete within timeout.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -77,7 +89,9 @@ public class FactorySignalTests
     public async Task WhenNever_ThenDoesNotCompleteWithinTimeout()
     {
         const int ObservationWindowMs = 250;
-        using CancellationTokenSource cts = new(200);
+        const int SubscriptionCancelledAfterMs = 200;
+
+        using CancellationTokenSource cts = new(SubscriptionCancelledAfterMs);
         List<int> items = [];
         var completed = false;
         await using var sub = await SignalAsync.Never<int>().SubscribeAsync(
@@ -106,7 +120,9 @@ public class FactorySignalTests
         const int ExpectedThird = 2;
         const int ExpectedFourth = 3;
         const int ExpectedFifth = 4;
-        var result = await SignalAsync.Range(0, 5).ToListAsync();
+        const int SourceValueCount = 5;
+
+        var result = await SignalAsync.Range(0, SourceValueCount).ToListAsync();
         await Assert.That(result).IsCollectionEqualTo([0, 1, ExpectedThird, ExpectedFourth, ExpectedFifth]);
     }
 
@@ -118,7 +134,9 @@ public class FactorySignalTests
         const int ExpectedFirst = 10;
         const int ExpectedSecond = 11;
         const int ExpectedThird = 12;
-        var result = await SignalAsync.Range(10, 3).ToListAsync();
+        const int SourceValueCount = 3;
+
+        var result = await SignalAsync.Range(ExpectedFirst, SourceValueCount).ToListAsync();
         await Assert.That(result).IsCollectionEqualTo([ExpectedFirst, ExpectedSecond, ExpectedThird]);
     }
 
@@ -137,7 +155,7 @@ public class FactorySignalTests
     public async Task WhenFromAsyncWithValue_ThenEmitsSingleValue()
     {
         const int ExpectedValue = 99;
-        var source = SignalAsync.FromAsync(async _ =>
+        var source = SignalAsync.FromAsync(static async _ =>
         {
             await Task.Yield();
             return ExpectedValue;
@@ -204,7 +222,7 @@ public class FactorySignalTests
     public async Task WhenCreate_ThenCustomSubscriptionLogicRuns()
     {
         const int SecondItem = 2;
-        var source = SignalAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(static async (observer, ct) =>
         {
             await observer.OnNextAsync(1, ct);
             await observer.OnNextAsync(SecondItem, ct);
@@ -218,7 +236,7 @@ public class FactorySignalTests
     /// <summary>Tests Create with null subscribe function.</summary>
     [Test]
     public void WhenCreateWithNullSubscribeFunc_ThenThrowsArgumentNull() =>
-        Assert.Throws<ArgumentNullException>(() => SignalAsync.Create<int>(null!));
+        Assert.Throws<ArgumentNullException>(static () => SignalAsync.Create<int>(null!));
 
     /// <summary>Tests CreateAsBackgroundJob runs on background.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -226,7 +244,7 @@ public class FactorySignalTests
     public async Task WhenCreateAsBackgroundJob_ThenRunsOnBackground()
     {
         var source = SignalAsync.CreateAsBackgroundJob<int>(
-            async (observer, ct) =>
+            static async (observer, ct) =>
             {
                 await Task.Yield();
                 await observer.OnNextAsync(SentinelValue, ct);
@@ -242,7 +260,7 @@ public class FactorySignalTests
     [Test]
     public async Task WhenTimerSingleShot_ThenEmitsSingleValueAfterDelay()
     {
-        var source = SignalAsync.Timer(TimeSpan.FromMilliseconds(50));
+        var source = SignalAsync.Timer(SingleShotDelay);
         var result = await source.ToListAsync();
         await Assert.That(result).Count().IsEqualTo(1);
         await Assert.That(result[0]).IsEqualTo(0L);
@@ -254,7 +272,7 @@ public class FactorySignalTests
     public async Task WhenTimerPeriodic_ThenEmitsMultipleValues()
     {
         const int MinimumEmissions = 2;
-        var source = SignalAsync.Timer(TimeSpan.FromMilliseconds(10), TimeSpan.FromMilliseconds(50));
+        var source = SignalAsync.Timer(PeriodicDueTime, PeriodicInterval);
         List<long> items = [];
         await using var sub = await source.SubscribeAsync(
             (x, _) =>
@@ -263,7 +281,7 @@ public class FactorySignalTests
                 return default;
             },
             null);
-        await AsyncTestHelpers.WaitForConditionAsync(() => items.Count >= MinimumEmissions, TimeSpan.FromSeconds(5));
+        await AsyncTestHelpers.WaitForConditionAsync(() => items.Count >= MinimumEmissions, WaitTimeout);
         await Assert.That(items.Count).IsGreaterThanOrEqualTo(MinimumEmissions);
         await Assert.That(items[0]).IsEqualTo(0L);
     }
@@ -271,12 +289,12 @@ public class FactorySignalTests
     /// <summary>Tests Timer negative due time.</summary>
     [Test]
     public void WhenTimerNegativeDueTime_ThenThrowsArgumentOutOfRange() =>
-        Assert.Throws<ArgumentOutOfRangeException>(() => SignalAsync.Timer(TimeSpan.FromMilliseconds(-1)));
+        Assert.Throws<ArgumentOutOfRangeException>(static () => SignalAsync.Timer(TimeSpan.FromMilliseconds(-1)));
 
     /// <summary>Tests Timer periodic with non-positive period.</summary>
     [Test]
     public void WhenTimerPeriodicNonPositivePeriod_ThenThrowsArgumentOutOfRange() =>
-        Assert.Throws<ArgumentOutOfRangeException>(() => SignalAsync.Timer(TimeSpan.Zero, TimeSpan.Zero));
+        Assert.Throws<ArgumentOutOfRangeException>(static () => SignalAsync.Timer(TimeSpan.Zero, TimeSpan.Zero));
 
     /// <summary>Tests IEnumerable to SignalAsync.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -293,7 +311,7 @@ public class FactorySignalTests
     /// <summary>Tests async observable ToAsyncSignal null source validation.</summary>
     [Test]
     public void WhenObservableToAsyncSignalWithNullSource_ThenThrowsArgumentNull() =>
-        Assert.Throws<ArgumentNullException>(() => ((IObservableAsync<int>)null!).ToAsyncSignal());
+        Assert.Throws<ArgumentNullException>(static () => ((IObservableAsync<int>)null!).ToAsyncSignal());
 
     /// <summary>Tests IAsyncEnumerable to SignalAsync.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -326,7 +344,7 @@ public class FactorySignalTests
     public async Task WhenTaskToAsyncSignal_ThenEmitsTaskResult()
     {
         const int ExpectedResult = 7;
-        var task = Task.FromResult(7);
+        var task = Task.FromResult(ExpectedResult);
         var source = task.ToAsyncSignal();
         var result = await source.FirstAsync();
         await Assert.That(result).IsEqualTo(ExpectedResult);
@@ -349,7 +367,7 @@ public class FactorySignalTests
     {
         const int MinimumEmissions = 2;
         using CancellationTokenSource cts = new();
-        var source = SignalAsync.Interval(TimeSpan.FromMilliseconds(50));
+        var source = SignalAsync.Interval(PeriodicInterval);
         List<long> items = [];
         var received = false;
         try
@@ -363,7 +381,9 @@ public class FactorySignalTests
                 null,
                 null,
                 cts.Token);
-            received = await AsyncTestHelpers.WaitForConditionAsync(() => items.Count >= 2, TimeSpan.FromSeconds(5));
+            received = await AsyncTestHelpers.WaitForConditionAsync(
+                () => items.Count >= MinimumEmissions,
+                WaitTimeout);
         }
         catch (OperationCanceledException)
         {
@@ -417,7 +437,7 @@ public class FactorySignalTests
     public async Task WhenSubscribeAsyncWithOnNextAsyncOnly_ThenReceivesItems()
     {
         List<int> items = [];
-        TaskCompletionSource received = new();
+        TaskCompletionSource received = new(TaskCreationOptions.RunContinuationsAsynchronously);
         const int EmittedValue = 77;
         await using var sub = await SignalAsync.Return(EmittedValue).SubscribeAsync((x, _) =>
         {
@@ -425,7 +445,7 @@ public class FactorySignalTests
             IgnoredResult.Of(received.TrySetResult());
             return default;
         });
-        await received.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await received.Task.WaitAsync(WaitTimeout);
         await Assert.That(items).IsCollectionEqualTo([EmittedValue]);
     }
 
@@ -435,7 +455,7 @@ public class FactorySignalTests
     public async Task WhenSubscribeAsyncWithOnNextAsyncAndCancellationToken_ThenReceivesItems()
     {
         List<int> items = [];
-        TaskCompletionSource received = new();
+        TaskCompletionSource received = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using CancellationTokenSource cts = new();
         const int EmittedValue = 55;
         await using var sub = await SignalAsync.Return(EmittedValue).SubscribeAsync(
@@ -446,7 +466,7 @@ public class FactorySignalTests
                 return default;
             },
             cts.Token);
-        await received.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await received.Task.WaitAsync(WaitTimeout);
         await Assert.That(items).IsCollectionEqualTo([EmittedValue]);
     }
 
@@ -456,18 +476,18 @@ public class FactorySignalTests
     public async Task WhenSubscribeAsyncSyncOverloadWithError_ThenInvokesOnErrorResume()
     {
         TaskCompletionSource<Exception> errorReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        var source = SignalAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(static async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(new InvalidOperationException("sync error"), ct);
             await observer.OnCompletedAsync(Result.Success);
             return DisposableAsync.Empty;
         });
         await using var sub = await source.SubscribeAsync(
-            (Action<int>)(_ => { }),
+            (Action<int>)(static _ => { }),
             ex => errorReceived.TrySetResult(ex),
             null,
             CancellationToken.None);
-        var error = await errorReceived.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var error = await errorReceived.Task.WaitAsync(WaitTimeout);
         await Assert.That(error).IsTypeOf<InvalidOperationException>();
         await Assert.That(error.Message).IsEqualTo("sync error");
     }
@@ -477,13 +497,13 @@ public class FactorySignalTests
     [Test]
     public async Task WhenSubscribeAsyncSyncOverloadWithCompletion_ThenInvokesOnCompleted()
     {
-        TaskCompletionSource<Result> completedResult = new();
+        TaskCompletionSource<Result> completedResult = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await SignalAsync.Return(1).SubscribeAsync(
-            (Action<int>)(_ => { }),
+            (Action<int>)(static _ => { }),
             null,
             r => completedResult.TrySetResult(r),
             CancellationToken.None);
-        var result = await completedResult.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var result = await completedResult.Task.WaitAsync(WaitTimeout);
         await Assert.That(result.IsSuccess).IsTrue();
     }
 
@@ -493,13 +513,13 @@ public class FactorySignalTests
     public async Task WhenSubscribeAsyncWithNullOnErrorResume_ThenCompletesNormally()
     {
         List<int> items = [];
-        TaskCompletionSource completed = new();
+        TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await SignalAsync.Return(SentinelValue).SubscribeAsync(
             (Action<int>)items.Add,
             null,
             _ => completed.TrySetResult(),
             CancellationToken.None);
-        await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await completed.Task.WaitAsync(WaitTimeout);
         await Assert.That(items).IsCollectionEqualTo([SentinelValue]);
     }
 
@@ -509,17 +529,17 @@ public class FactorySignalTests
     public async Task WhenSubscribeAsyncWithNullOnCompleted_ThenCompletesNormally()
     {
         List<int> items = [];
-        TaskCompletionSource received = new();
+        TaskCompletionSource received = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await SignalAsync.Return(SentinelValue).SubscribeAsync(
             (Action<int>)(x =>
             {
                 items.Add(x);
                 _ = received.TrySetResult();
             }),
-            _ => { },
+            static _ => { },
             null,
             CancellationToken.None);
-        await received.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await received.Task.WaitAsync(WaitTimeout);
         await Assert.That(items).IsCollectionEqualTo([SentinelValue]);
     }
 
@@ -531,6 +551,6 @@ public class FactorySignalTests
     public void WhenFromAsyncWithNullFactory_ThenThrowsArgumentNull()
     {
         const Func<CancellationToken, ValueTask> Factory = null!;
-        _ = Assert.Throws<ArgumentNullException>(() => SignalAsyncReactiveExtensions.FromAsync(Factory));
+        _ = Assert.Throws<ArgumentNullException>(static () => SignalAsyncReactiveExtensions.FromAsync(Factory));
     }
 }

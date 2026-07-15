@@ -6,28 +6,22 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Observer for detecting whether all values match a predicate.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
-public sealed class AllPredicateWitness<T> : IObserver<T>, IDisposable
+/// <param name="observer">The downstream observer.</param>
+/// <param name="predicate">The predicate.</param>
+public sealed class AllPredicateWitness<T>(IObserver<bool> observer, Func<T, bool> predicate)
+    : IObserver<T>, IDisposable
 {
     /// <summary>The predicate.</summary>
-    private readonly Func<T, bool> _predicate;
+    private readonly Func<T, bool> _predicate = predicate;
 
     /// <summary>The downstream observer.</summary>
-    private readonly IObserver<bool> _observer;
+    private readonly IObserver<bool> _observer = observer;
 
     /// <summary>A value indicating whether the observer has terminated.</summary>
     private bool _done;
 
     /// <summary>The upstream subscription.</summary>
     private IDisposable? _subscription;
-
-    /// <summary>Initializes a new instance of the <see cref="AllPredicateWitness{T}"/> class.</summary>
-    /// <param name="observer">The downstream observer.</param>
-    /// <param name="predicate">The predicate.</param>
-    public AllPredicateWitness(IObserver<bool> observer, Func<T, bool> predicate)
-    {
-        _observer = observer;
-        _predicate = predicate;
-    }
 
     /// <inheritdoc/>
     public void OnNext(T value)

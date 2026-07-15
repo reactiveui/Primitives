@@ -32,6 +32,9 @@ public sealed class ExpireCoordinatorTests
     /// <summary>Timeout used while waiting for background work in this test.</summary>
     private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(5);
 
+    /// <summary>How long the superseded timeout is given to reach the observer before the invariant is checked.</summary>
+    private static readonly TimeSpan RaceSettleDelay = TimeSpan.FromMilliseconds(50);
+
     /// <summary>Verifies the timeout re-arms on each value so an active source never expires.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
@@ -118,6 +121,54 @@ public sealed class ExpireCoordinatorTests
         await Assert.That(errors.SequenceEqual([nameof(InvalidOperationException)])).IsTrue();
     }
 
+    /// <summary>
+    /// Verifies a value that arrives after the inactivity window closed expires the sequence even though the armed
+    /// timeout has not been dispatched yet. The timeout runs on the sequencer, and a thread-pool sequencer whose pool
+    /// is saturated can dispatch it arbitrarily late while a source ticking on its own thread keeps producing. The
+    /// window is a property of the clock, not of whether the timer callback has been given a thread, so a value that
+    /// missed it must not reach the observer.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ValueArrivingAfterTheWindowClosedExpiresWhileTheTimeoutIsStillUndispatched()
+    {
+        UndispatchedSequencer sequencer = new(DateTimeOffset.UnixEpoch);
+        Signal<int> source = new();
+        List<int> values = [];
+        List<string> errors = [];
+        using var subscription = source.Expire(TimeSpan.FromTicks(DueTicks), sequencer)
+            .Subscribe(values.Add, ex => errors.Add(ex.GetType().Name));
+
+        sequencer.Advance(TimeSpan.FromTicks(DueTicks));
+        source.OnNext(One);
+
+        await Assert.That(sequencer.Pending).IsGreaterThan(0);
+        await Assert.That(values.Count).IsEqualTo(0);
+        await Assert.That(errors.SequenceEqual([nameof(TimeoutException)])).IsTrue();
+    }
+
+    /// <summary>
+    /// Verifies the deadline check does not expire a value that is still inside its window. This is the guard against
+    /// the previous test's fix over-firing: an undispatched timeout must not turn an on-time value into a timeout.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ValueArrivingInsideTheWindowIsForwardedWhileTheTimeoutIsStillUndispatched()
+    {
+        UndispatchedSequencer sequencer = new(DateTimeOffset.UnixEpoch);
+        Signal<int> source = new();
+        List<int> values = [];
+        List<string> errors = [];
+        using var subscription = source.Expire(TimeSpan.FromTicks(DueTicks), sequencer)
+            .Subscribe(values.Add, ex => errors.Add(ex.GetType().Name));
+
+        sequencer.Advance(TimeSpan.FromTicks(ActiveGapTicks));
+        source.OnNext(One);
+
+        await Assert.That(values.SequenceEqual([One])).IsTrue();
+        await Assert.That(errors.Count).IsEqualTo(0);
+    }
+
     /// <summary>Verifies an in-flight value wins the race and suppresses the superseded timeout.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
@@ -132,7 +183,7 @@ public sealed class ExpireCoordinatorTests
         await observer.OnNextEntered.Task.WaitAsync(WaitTimeout).ConfigureAwait(false);
 
         var timeoutTask = Task.Run(() => clock.AdvanceBy(TimeSpan.FromTicks(One)));
-        await Task.Delay(TimeSpan.FromMilliseconds(50)).ConfigureAwait(false);
+        await Task.Delay(RaceSettleDelay).ConfigureAwait(false);
 
         await Assert.That(observer.ErrorEnteredDuringOnNext).IsFalse();
 
@@ -146,7 +197,52 @@ public sealed class ExpireCoordinatorTests
         await Assert.That(observer.Values).IsEqualTo(One);
     }
 
+    /// <summary>
+    /// A sequencer that accepts scheduled work and never dispatches it, modelling a thread-pool sequencer whose pool
+    /// is saturated: the timer becomes due on the clock, but no thread is free to run the callback. Its clock is
+    /// driven by the test.
+    /// </summary>
+    /// <param name="start">The instant the clock starts at.</param>
+    private sealed class UndispatchedSequencer(DateTimeOffset start) : ISequencer
+    {
+        /// <summary>The current instant.</summary>
+        private DateTimeOffset _now = start;
+
+        /// <summary>Gets the number of work items accepted and never dispatched.</summary>
+        public int Pending { get; private set; }
+
+        /// <inheritdoc/>
+        public DateTimeOffset Now => _now;
+
+        /// <inheritdoc/>
+        public long Timestamp => _now.UtcTicks;
+
+        /// <summary>Moves the clock forward without dispatching anything that became due.</summary>
+        /// <param name="time">The amount of time to advance by.</param>
+        public void Advance(TimeSpan time) => _now = _now.Add(time);
+
+        /// <inheritdoc/>
+        public void Schedule(IWorkItem item) => Pending++;
+
+        /// <inheritdoc/>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Design",
+            "SST2318:Members should not have identical bodies",
+            Justification =
+                "The relative and absolute Schedule overloads of this test-double sequencer intentionally behave the "
+                + "same way; both are required by the ISequencer contract and, as distinct interface overloads, cannot "
+                + "forward to one another.")]
+        public void Schedule(IWorkItem item, long dueTimestamp) => Pending++;
+    }
+
     /// <summary>Observer that blocks source value handling so timeout serialization can be observed.</summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "SST2315:A type that owns a disposable should be disposable",
+        Justification =
+            "Test double that owns a ManualResetEventSlim used to gate OnNext so the test can observe timeout "
+            + "serialization. Its lifetime is the test's; the test process owns and releases it, so it is deliberately "
+            + "not IDisposable.")]
     private sealed class BlockingObserver : IObserver<int>
     {
         /// <summary>Gets the task completed when <see cref="OnNext"/> is entered.</summary>

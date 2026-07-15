@@ -52,7 +52,6 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
     /// <summary>Initializes a new instance of the <see cref="CommandSignal{TResult}"/> class.</summary>
     /// <param name="execute">The async operation to execute.</param>
     /// <param name="canRun">Gating signal. When null, execution is always allowed.</param>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0001:Simplify Names", Justification = "The argument validation uses ArgumentExceptionHelper")]
     public CommandSignal(Func<CancellationToken, Task<TResult>> execute, IObservable<bool>? canRun)
     {
         _executeAsync = execute ?? throw new ArgumentNullException(nameof(execute));
@@ -69,7 +68,6 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
     /// <summary>Initializes a new instance of the <see cref="CommandSignal{TResult}"/> class.</summary>
     /// <param name="execute">The synchronous operation to execute.</param>
     /// <param name="canRun">Gating signal. When null, execution is always allowed.</param>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0001:Simplify Names", Justification = "The argument validation uses ArgumentExceptionHelper")]
     public CommandSignal(Func<TResult> execute, IObservable<bool>? canRun)
     {
         _executeSync = execute ?? throw new ArgumentNullException(nameof(execute));
@@ -140,6 +138,7 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
     }
 
     /// <summary>Gets the debugger display text.</summary>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
@@ -432,33 +431,27 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
     }
 
     /// <summary>Result stream subscription.</summary>
-    private sealed class ResultSubscription : IDisposable
+    /// <param name="parent">Parent command.</param>
+    /// <param name="observer">Observer to remove.</param>
+    private sealed class ResultSubscription(CommandSignal<TResult> parent, IObserver<TResult> observer) : IDisposable
     {
         /// <summary>Parent command.</summary>
-        private CommandSignal<TResult>? _parent;
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "Back-reference to the parent command; unsubscribed, not owned.")]
+        private CommandSignal<TResult>? _parent = parent;
 
         /// <summary>Observer to remove on disposal.</summary>
-        private IObserver<TResult>? _observer;
-
-        /// <summary>Initializes a new instance of the <see cref="ResultSubscription"/> class.</summary>
-        /// <param name="parent">Parent command.</param>
-        /// <param name="observer">Observer to remove.</param>
-        public ResultSubscription(CommandSignal<TResult> parent, IObserver<TResult> observer)
-        {
-            _parent = parent;
-            _observer = observer;
-        }
+        private IObserver<TResult>? _observer = observer;
 
         /// <inheritdoc/>
         public void Dispose()
         {
-            var parent = Interlocked.Exchange(ref _parent, null);
-            if (parent is null)
+            var parentState = Interlocked.Exchange(ref _parent, null);
+            if (parentState is null)
             {
                 return;
             }
 
-            parent.RemoveResult(_observer!);
+            parentState.RemoveResult(_observer!);
             _observer = null;
         }
     }

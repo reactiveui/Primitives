@@ -39,6 +39,13 @@ public class DetectStaleObservableTests
     /// handle it returned so tests can assert it was disposed.</summary>
     /// <typeparam name = "T">The element type.</typeparam>
     /// <param name = "error">The exception to emit synchronously.</param>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "SST2315:A type that owns a disposable should be disposable",
+        Justification =
+            "Test double that returns and exposes the BooleanDisposable subscription handle so the test can assert the "
+            + "operator under test disposed it. The operator owns disposal; making this double IDisposable would "
+            + "misattribute ownership, and the object's lifetime is the test's.")]
     private sealed class SyncErroringObservable<T>(Exception error) : IObservable<T>
     {
         /// <summary>Gets the subscription handle returned from the most recent subscribe.</summary>

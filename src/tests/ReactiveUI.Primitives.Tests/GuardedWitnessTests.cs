@@ -21,12 +21,12 @@ public sealed class GuardedWitnessTests
     [Test]
     public async Task ConstructorRejectsNullArguments()
     {
-        _ = Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(static () =>
         {
             GuardedWitness<int> invalid = new(new RecordingWitness<int>(), null!);
             GC.KeepAlive(invalid);
         });
-        _ = Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(static () =>
         {
             GuardedWitness<int> invalid = new(null!, EmptyDisposable.Instance);
             GC.KeepAlive(invalid);

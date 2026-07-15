@@ -101,7 +101,7 @@ public static partial class SignalAsyncExtensions
         /// sequence, the specified default value if the sequence is empty, or throws if more than one element is
         /// present.</returns>
         public ValueTask<T?> SingleOrDefaultAsync(T? defaultValue, CancellationToken cancellationToken) =>
-            SingleOrDefaultCoreAsync(@this, predicate: null, defaultValue, cancellationToken);
+            SingleOrDefaultCoreAsync(@this, null, defaultValue, cancellationToken);
     }
 
     /// <summary>Shared body for the <c>SingleOrDefaultAsync</c> overloads; subscribes the shared observer.</summary>
@@ -118,7 +118,7 @@ public static partial class SignalAsyncExtensions
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        SingleElementWitness<T> observer = new(predicate, requireExactlyOne: false, defaultValue, cancellationToken);
+        SingleElementWitness<T> observer = new(predicate, false, defaultValue, cancellationToken);
         await using var subscription = await source.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
         return await observer.AwaitResultAsync().ConfigureAwait(false);
     }

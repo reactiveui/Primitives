@@ -15,6 +15,12 @@ public class UsingAndSwitchIfEmptyEdgeTests
     /// <summary>Sentinel value the fallback observable would emit if it were subscribed.</summary>
     private const int FallbackSentinel = 99;
 
+    /// <summary>How long the scheduler test spins for the resource dispose to land, in milliseconds.</summary>
+    private const int DisposeWaitMilliseconds = 5000;
+
+    /// <summary>Longest a test waits for an asynchronous signal before failing.</summary>
+    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
+
     /// <summary>Verifies that <c>Using</c> with a null action still emits RxVoid, completes, and disposes the resource.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -55,12 +61,12 @@ public class UsingAndSwitchIfEmptyEdgeTests
         using var sub = resource.Using(_ => ran = true, Sequencer.Default).Subscribe(
             static _ => { },
             () => completed.TrySetResult());
-        await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await completed.Task.WaitAsync(GuardTimeout);
         await Assert.That(ran).IsTrue();
 
         // OnCompleted is signalled before the resource is disposed on the scheduler
         // thread, so spin briefly for the dispose to land.
-        var deadline = Environment.TickCount64 + 5000;
+        var deadline = Environment.TickCount64 + DisposeWaitMilliseconds;
         while (resource.DisposeCount == 0 && Environment.TickCount64 < deadline)
         {
             await Task.Yield();
@@ -77,7 +83,7 @@ public class UsingAndSwitchIfEmptyEdgeTests
         const int Expected = 42;
         TrackedDisposable resource = new();
         List<int> results = [];
-        using var sub = resource.Using(_ => Expected).Subscribe(results.Add);
+        using var sub = resource.Using(static _ => Expected).Subscribe(results.Add);
         await Assert.That(results).IsCollectionEqualTo([Expected]);
         await Assert.That(resource.DisposeCount).IsEqualTo(1);
     }

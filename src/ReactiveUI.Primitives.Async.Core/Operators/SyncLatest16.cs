@@ -52,9 +52,10 @@ public static partial class SignalAsyncExtensions
         /// <param name="selector">Projects the latest value of every source into a result.</param>
         /// <returns>An observable sequence of projected results.</returns>
         [SuppressMessage(
-            "Major Code Smell",
-            "S107:Methods should not have too many parameters",
-            Justification = "Has more than 7 parameters - just expected for arity-N CombineLatest operator surface.")]
+            "Maintainability",
+            "SST1472:Signatures should not declare too many parameters",
+            Justification =
+                "An arity-N combinator takes N distinctly-typed sources; a parameter object would need the same N type arguments.")]
         public IObservableAsync<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult>(
             IObservableAsync<T2> src2,
             IObservableAsync<T3> src3,
@@ -73,7 +74,23 @@ public static partial class SignalAsyncExtensions
             IObservableAsync<T16> src16,
             Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult> selector) =>
             new SyncLatest16Signal<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult>(
-                new(src1, src2, src3, src4, src5, src6, src7, src8, src9, src10, src11, src12, src13, src14, src15, src16),
+                new(
+                    src1,
+                    src2,
+                    src3,
+                    src4,
+                    src5,
+                    src6,
+                    src7,
+                    src8,
+                    src9,
+                    src10,
+                    src11,
+                    src12,
+                    src13,
+                    src14,
+                    src15,
+                    src16),
                 selector);
 
         /// <summary>
@@ -114,9 +131,10 @@ public static partial class SignalAsyncExtensions
         /// <param name="selector">Projects the latest value of every source into a result.</param>
         /// <returns>An observable sequence of projected results.</returns>
         [SuppressMessage(
-            "Major Code Smell",
-            "S107:Methods should not have too many parameters",
-            Justification = "Has more than 7 parameters - just expected for arity-N CombineLatest operator surface.")]
+            "Maintainability",
+            "SST1472:Signatures should not declare too many parameters",
+            Justification =
+                "An arity-N combinator takes N distinctly-typed sources; a parameter object would need the same N type arguments.")]
         public IObservableAsync<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult>(
             IObservableAsync<T2> src2,
             IObservableAsync<T3> src3,
@@ -135,7 +153,23 @@ public static partial class SignalAsyncExtensions
             IObservableAsync<T16> src16,
             Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult> selector) =>
             new SyncLatest16Signal<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult>(
-                new(src1, src2, src3, src4, src5, src6, src7, src8, src9, src10, src11, src12, src13, src14, src15, src16),
+                new(
+                    src1,
+                    src2,
+                    src3,
+                    src4,
+                    src5,
+                    src6,
+                    src7,
+                    src8,
+                    src9,
+                    src10,
+                    src11,
+                    src12,
+                    src13,
+                    src14,
+                    src15,
+                    src16),
                 selector);
     }
 }

@@ -64,7 +64,9 @@ public static partial class LinqExtensions
     /// <typeparam name="TOut">The forwarded element type.</typeparam>
     /// <param name="source">The source observable whose values are filtered and mapped.</param>
     /// <param name="chooser">Maps a source value to <c>(HasValue, Value)</c>; the value is skipped when <c>HasValue</c> is <see langword="false"/>.</param>
-    private sealed class ChooseSignal<TIn, TOut>(IObservable<TIn> source, Func<TIn, (bool HasValue, TOut Value)> chooser) : IObservable<TOut>
+    private sealed class ChooseSignal<TIn, TOut>(
+        IObservable<TIn> source,
+        Func<TIn, (bool HasValue, TOut Value)> chooser) : IObservable<TOut>
     {
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TOut> observer)
@@ -77,7 +79,8 @@ public static partial class LinqExtensions
         /// <summary>Applies the chooser to each value and forwards only the chosen ones.</summary>
         /// <param name="downstream">The downstream observer that receives the chosen values.</param>
         /// <param name="chooser">Maps a source value to <c>(HasValue, Value)</c>; the value is skipped when <c>HasValue</c> is <see langword="false"/>.</param>
-        private sealed class Sink(IObserver<TOut> downstream, Func<TIn, (bool HasValue, TOut Value)> chooser) : IObserver<TIn>
+        private sealed class Sink(IObserver<TOut> downstream, Func<TIn, (bool HasValue, TOut Value)> chooser)
+            : IObserver<TIn>
         {
             /// <inheritdoc/>
             public void OnNext(TIn value)
@@ -114,7 +117,9 @@ public static partial class LinqExtensions
     /// <typeparam name="TResult">The element type of the projected inner observables.</typeparam>
     /// <param name="source">The source observable whose non-null values are projected to inner observables.</param>
     /// <param name="selector">Projects each non-null source value to an inner observable.</param>
-    private sealed class SwitchSelectSignal<TSource, TResult>(IObservable<TSource?> source, Func<TSource, IObservable<TResult>> selector) : IObservable<TResult>
+    private sealed class SwitchSelectSignal<TSource, TResult>(
+        IObservable<TSource?> source,
+        Func<TSource, IObservable<TResult>> selector) : IObservable<TResult>
     {
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TResult> observer)

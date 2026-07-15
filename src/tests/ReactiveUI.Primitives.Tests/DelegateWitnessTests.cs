@@ -38,12 +38,12 @@ public class DelegateWitnessTests
     [Test]
     public void DelegateWitnessOptionalHandlersAreNoOpsAndOnNextIsRequired()
     {
-        DelegateWitness<int> witness = new(_ => { });
+        DelegateWitness<int> witness = new(static _ => { });
 
         // No onError/onCompleted supplied: terminal notifications are ignored without throwing.
         witness.OnError(new InvalidOperationException("ignored"));
         witness.OnCompleted();
-        _ = Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(static () =>
         {
             DelegateWitness<int> invalid = new(null!);
             GC.KeepAlive(invalid);

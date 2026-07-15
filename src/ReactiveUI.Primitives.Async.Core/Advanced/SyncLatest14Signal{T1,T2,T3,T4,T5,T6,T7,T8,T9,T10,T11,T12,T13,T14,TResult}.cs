@@ -20,7 +20,8 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// <typeparam name="T13">Element type of source 13.</typeparam>
 /// <typeparam name="T14">Element type of source 14.</typeparam>
 /// <typeparam name="TResult">The projected element type.</typeparam>
-public sealed class SyncLatest14Signal<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult> : IObservableAsync<TResult>
+public sealed class
+    SyncLatest14Signal<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult> : IObservableAsync<TResult>
 {
     /// <summary>Initializes a new instance of the <see cref="SyncLatest14Signal{T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,T13,T14,TResult}"/> class.</summary>
     /// <param name="sources">The bundled source observables.</param>
@@ -44,7 +45,8 @@ public sealed class SyncLatest14Signal<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
         IObserverAsync<TResult> observer,
         CancellationToken cancellationToken)
     {
-        SyncLatest14Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult> subscription = new(observer, Sources, Selector);
+        SyncLatest14Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult> subscription =
+            new(observer, Sources, Selector);
         subscription.Lifecycle.LinkExternalCancellation(cancellationToken);
         return SubscriptionHelper.SubscribeAndDisposeOnFailureAsync(
             subscription,

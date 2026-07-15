@@ -42,7 +42,7 @@ public class ResultTests
     /// <summary>Covers failure result argument validation.</summary>
     [Test]
     public void ResultRejectsNullException() =>
-        Assert.Throws<ArgumentNullException>(() =>
+        Assert.Throws<ArgumentNullException>(static () =>
         {
             Result invalid = new(null!);
             GC.KeepAlive(invalid);

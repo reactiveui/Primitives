@@ -13,7 +13,11 @@ namespace ReactiveUI.Primitives.Advanced;
 /// A sealed sequencer holds one inline and injects its platform <c>post</c> (and optionally <c>scheduleDelayed</c>)
 /// delegates plus the cached drain callback; immediate work is queued and drained one batch per post.
 /// </summary>
-[SuppressMessage("Performance", "SST1803:Make record struct readonly", Justification = "Mutable dispatch-coalescing engine: holds the ready queue plus drain/post latches that mutate in place.")]
+[SuppressMessage(
+    "Performance",
+    "SST1803:Make record struct readonly",
+    Justification =
+        "Mutable dispatch-coalescing engine: holds the ready queue plus drain/post latches that mutate in place.")]
 public record struct DispatchSequencerState
 {
     /// <summary>Ready work items awaiting a UI-thread drain.</summary>
@@ -119,7 +123,7 @@ public record struct DispatchSequencerState
             return;
         }
 
-        ThreadPoolSequencer.Instance.Schedule(new MarshalOnDueWorkItem(_owner, item), dueTimestamp);
+        ScheduleOnSharedTimer(item, dueTimestamp);
     }
 
     /// <summary>Attempts to post a drain if queued work is waiting.</summary>
@@ -158,9 +162,13 @@ public record struct DispatchSequencerState
 
         try
         {
-            var remaining = Volatile.Read(ref _readyCount);
-            while (remaining-- > 0 && _ready.TryDequeue(out var item))
+            for (var remaining = Volatile.Read(ref _readyCount); remaining > 0; remaining--)
             {
+                if (!_ready.TryDequeue(out var item))
+                {
+                    break;
+                }
+
                 _ = Interlocked.Decrement(ref _readyCount);
                 if (!Sequencer.IsCancelled(item))
                 {
@@ -177,23 +185,50 @@ public record struct DispatchSequencerState
         }
     }
 
+    /// <summary>
+    /// Cancels and drops every ready work item. The items are the handles their callers hold, so disposing them
+    /// releases the caller's work instead of stranding it in a queue nothing will ever drain again.
+    /// </summary>
+    /// <remarks>
+    /// Internal rather than public because only a sequencer that can retire its own dispatcher needs it: the platform
+    /// dispatchers (WPF, WinForms, WinUI, MAUI, Blazor) outlive the sequencer that posts to them and keep draining, so
+    /// they never release a queue. <see cref="WasmSequencer"/> owns the timer that is its dispatcher, and once that is
+    /// disposed nothing can drain the queue again — so it, alone, hands the queued work back.
+    /// </remarks>
+    internal void ReleaseQueued()
+    {
+        while (_ready.TryDequeue(out var item))
+        {
+            _ = Interlocked.Decrement(ref _readyCount);
+            if (item is IDisposable cancellable)
+            {
+                cancellable.Dispose();
+            }
+        }
+    }
+
+    // The only trigger for this path is the real shared thread-pool timer coming due, so no deterministic test can
+    // reach it without waiting on a live OS timer; that timer race is exactly what flaked, so exclude it from coverage.
+    /// <summary>Parks delayed work on the shared thread-pool timer, which marshals it back to the dispatcher when due.</summary>
+    /// <param name="item">Work item to execute once due.</param>
+    /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
+    [ExcludeFromCodeCoverage]
+    private readonly void ScheduleOnSharedTimer(IWorkItem item, long dueTimestamp) =>
+        ThreadPoolSequencer.Instance.Schedule(new MarshalOnDueWorkItem(_owner, item), dueTimestamp);
+
+    // Constructed only by ScheduleOnSharedTimer and run only by the shared thread-pool timer, so it shares that
+    // path's lack of a deterministic trigger; exclude it from coverage.
     /// <summary>Work item used by the shared timer path to marshal delayed work back to the dispatcher.</summary>
-    private sealed class MarshalOnDueWorkItem : IWorkItem
+    /// <param name="owner">Owning dispatch sequencer.</param>
+    /// <param name="item">Work item to marshal.</param>
+    [ExcludeFromCodeCoverage]
+    private sealed class MarshalOnDueWorkItem(ISequencer owner, IWorkItem item) : IWorkItem
     {
         /// <summary>Owning dispatch sequencer.</summary>
-        private readonly ISequencer _owner;
+        private readonly ISequencer _owner = owner;
 
         /// <summary>Work item to marshal.</summary>
-        private readonly IWorkItem _item;
-
-        /// <summary>Initializes a new instance of the <see cref="MarshalOnDueWorkItem"/> class.</summary>
-        /// <param name="owner">Owning dispatch sequencer.</param>
-        /// <param name="item">Work item to marshal.</param>
-        public MarshalOnDueWorkItem(ISequencer owner, IWorkItem item)
-        {
-            _owner = owner;
-            _item = item;
-        }
+        private readonly IWorkItem _item = item;
 
         /// <inheritdoc/>
         public void Execute()

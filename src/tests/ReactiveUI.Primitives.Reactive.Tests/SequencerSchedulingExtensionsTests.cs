@@ -9,7 +9,7 @@ using ReactiveUI.Primitives.Reactive.Signals;
 namespace ReactiveUI.Primitives.Reactive.Tests;
 
 /// <summary>Verifies the seam that gives <see cref="IScheduler"/> the shared-source sequencer scheduling shape.</summary>
-public class SequencerSchedulingExtensionsTests
+public partial class SequencerSchedulingExtensionsTests
 {
     /// <summary>The relative delay, in ticks, applied by the shift.</summary>
     private const long ShiftTicks = 10;
@@ -28,7 +28,8 @@ public class SequencerSchedulingExtensionsTests
         TestScheduler scheduler = new();
         List<int> received = [];
 
-        using var sub = Signal.FromEnumerable(Values).Shift(TimeSpan.FromTicks(ShiftTicks), scheduler).Subscribe(received.Add);
+        using var sub = Signal.FromEnumerable(Values).Shift(TimeSpan.FromTicks(ShiftTicks), scheduler)
+            .Subscribe(received.Add);
 
         // The shift defers delivery onto the scheduler, so nothing arrives until virtual time advances.
         await Assert.That(received).IsEmpty();
@@ -45,7 +46,8 @@ public class SequencerSchedulingExtensionsTests
     {
         List<int> received = [];
 
-        using var sub = Signal.FromEnumerable(Values).Shift(TimeSpan.Zero, ImmediateScheduler.Instance).Subscribe(received.Add);
+        using var sub = Signal.FromEnumerable(Values).Shift(TimeSpan.Zero, ImmediateScheduler.Instance)
+            .Subscribe(received.Add);
 
         await Assert.That(received).IsEquivalentTo(Values, EqualityComparer<int>.Default);
     }

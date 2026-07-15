@@ -4,7 +4,6 @@
 
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-
 using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async;
@@ -58,9 +57,10 @@ public static partial class SignalAsyncExtensions
         /// <summary>Releases managed resources if <paramref name="disposing"/> is true.</summary>
         /// <param name="disposing">True to release managed resources; false when called from a finalizer.</param>
         [SuppressMessage(
-            "Major Bug",
-            "S4462:Calls to async methods should not be blocking",
-            Justification = "IDisposable.Dispose is intrinsically synchronous; this method must tear down the async connection on the sync dispose path.")]
+            "Concurrency",
+            "PSH1315:A blocking wait on an awaitable that may not be done",
+            Justification =
+                "IDisposable.Dispose is intrinsically synchronous; this method must tear down the async connection on the sync dispose path.")]
         internal void Dispose(bool disposing)
         {
             if (_disposedValue)
@@ -146,7 +146,8 @@ public static partial class SignalAsyncExtensions
             {
                 using (await parent._gate.EnterAsync().ConfigureAwait(false))
                 {
-                    if (--parent._refCount == 0)
+                    --parent._refCount;
+                    if (parent._refCount == 0)
                     {
                         var connection = parent._connection;
                         parent._connection = null;

@@ -18,7 +18,9 @@ public sealed class SyncLatest7Signal<T1, T2, T3, T4, T5, T6, T7, TResult> : IOb
     /// <summary>Initializes a new instance of the <see cref="SyncLatest7Signal{T1, T2, T3, T4, T5, T6, T7, TResult}"/> class.</summary>
     /// <param name="sources">The bundled source observables.</param>
     /// <param name="selector">The selector that projects the latest values.</param>
-    public SyncLatest7Signal(SyncLatest7State<T1, T2, T3, T4, T5, T6, T7> sources, Func<T1, T2, T3, T4, T5, T6, T7, TResult> selector)
+    public SyncLatest7Signal(
+        SyncLatest7State<T1, T2, T3, T4, T5, T6, T7> sources,
+        Func<T1, T2, T3, T4, T5, T6, T7, TResult> selector)
     {
         Sources = sources;
         Selector = selector;

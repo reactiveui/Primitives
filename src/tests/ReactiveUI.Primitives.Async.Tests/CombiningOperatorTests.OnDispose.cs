@@ -18,7 +18,7 @@ public partial class CombiningOperatorTests
         List<int> items = [];
         var disposed = false;
 
-        var source = SignalAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(static async (observer, ct) =>
         {
             await observer.OnNextAsync(SampleValue1, ct);
             await observer.OnNextAsync(SampleValue2, ct);
@@ -47,7 +47,7 @@ public partial class CombiningOperatorTests
     {
         List<Exception> errors = [];
 
-        var source = SignalAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(static async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(new InvalidOperationException("resume"), ct);
             await observer.OnCompletedAsync(Result.Success);
@@ -55,9 +55,9 @@ public partial class CombiningOperatorTests
         });
 
         await using var sub = await source
-            .OnDispose(() => { })
+            .OnDispose(static () => { })
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 (ex, _) =>
                 {
                     errors.Add(ex);
@@ -75,16 +75,16 @@ public partial class CombiningOperatorTests
     {
         Result? completionResult = null;
 
-        var source = SignalAsync.Create<int>(async (observer, _) =>
+        var source = SignalAsync.Create<int>(static async (observer, _) =>
         {
             await observer.OnCompletedAsync(Result.Failure(new InvalidOperationException("fail")));
             return DisposableAsync.Empty;
         });
 
         await using var sub = await source
-            .OnDispose(() => { })
+            .OnDispose(static () => { })
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null,
                 result =>
                 {
@@ -107,7 +107,7 @@ public partial class CombiningOperatorTests
         await using var sub = await signal.Values
             .OnDispose(() => disposed = true)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null);
 
         await Assert.That(disposed).IsFalse();
@@ -125,10 +125,10 @@ public partial class CombiningOperatorTests
         List<int> items = [];
         var disposed = false;
 
-        var source = SignalAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(static async (observer, ct) =>
         {
-            await observer.OnNextAsync(1, ct);
-            await observer.OnNextAsync(2, ct);
+            await observer.OnNextAsync(SampleValue1, ct);
+            await observer.OnNextAsync(SampleValue2, ct);
             await observer.OnCompletedAsync(Result.Success);
             return DisposableAsync.Empty;
         });
@@ -158,7 +158,7 @@ public partial class CombiningOperatorTests
     {
         List<Exception> errors = [];
 
-        var source = SignalAsync.Create<int>(async (observer, ct) =>
+        var source = SignalAsync.Create<int>(static async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(new InvalidOperationException("async resume"), ct);
             await observer.OnCompletedAsync(Result.Success);
@@ -166,9 +166,9 @@ public partial class CombiningOperatorTests
         });
 
         await using var sub = await source
-            .OnDispose(() => default)
+            .OnDispose(static () => default)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 (ex, _) =>
                 {
                     errors.Add(ex);
@@ -186,16 +186,16 @@ public partial class CombiningOperatorTests
     {
         Result? completionResult = null;
 
-        var source = SignalAsync.Create<int>(async (observer, _) =>
+        var source = SignalAsync.Create<int>(static async (observer, _) =>
         {
             await observer.OnCompletedAsync(Result.Failure(new InvalidOperationException("async fail")));
             return DisposableAsync.Empty;
         });
 
         await using var sub = await source
-            .OnDispose(() => default)
+            .OnDispose(static () => default)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null,
                 result =>
                 {
@@ -222,7 +222,7 @@ public partial class CombiningOperatorTests
                 return default;
             })
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null);
 
         await Assert.That(disposed).IsFalse();
@@ -237,7 +237,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenBlendCoordinatorDisposed_ThenRelayNextAsyncReturnsDirectly()
     {
-        CallbackWitnessAsync<int> observer = new((_, _) => default);
+        CallbackWitnessAsync<int> observer = new(static (_, _) => default);
         SignalAsyncExtensions.BlendCoordinator<int> subscription = new(observer);
         await subscription.DisposeAsync();
 
@@ -249,7 +249,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenBlendCoordinatorDisposed_ThenRelayErrorAsyncReturnsDirectly()
     {
-        CallbackWitnessAsync<int> observer = new((_, _) => default);
+        CallbackWitnessAsync<int> observer = new(static (_, _) => default);
         SignalAsyncExtensions.BlendCoordinator<int> subscription = new(observer);
         await subscription.DisposeAsync();
 
@@ -307,7 +307,7 @@ public partial class CombiningOperatorTests
         List<Exception> errors = [];
 
         CallbackWitnessAsync<int> observer = new(
-            (_, _) => default,
+            static (_, _) => default,
             (ex, _) =>
             {
                 errors.Add(ex);
@@ -338,7 +338,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenBlendSequenceCoordinatorDisposed_ThenOnNextReturnsDirectly()
     {
-        CallbackWitnessAsync<int> observer = new((_, _) => default);
+        CallbackWitnessAsync<int> observer = new(static (_, _) => default);
         IObservableAsync<int>[] sources = [];
         SignalAsyncExtensions.BlendEnumerableSignal<int>.BlendSequenceCoordinator subscription = new(observer, sources);
         subscription.BeginSubscribing();
@@ -352,7 +352,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenBlendSequenceCoordinatorDisposed_ThenOnErrorResumeReturnsDirectly()
     {
-        CallbackWitnessAsync<int> observer = new((_, _) => default);
+        CallbackWitnessAsync<int> observer = new(static (_, _) => default);
         IObservableAsync<int>[] sources = [];
         SignalAsyncExtensions.BlendEnumerableSignal<int>.BlendSequenceCoordinator subscription = new(observer, sources);
         subscription.BeginSubscribing();

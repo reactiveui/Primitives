@@ -26,7 +26,9 @@ public sealed class FromAsyncSubscription : TaskSignalSubscription<RxVoid>
     private Func<CancellationToken, ValueTask> Factory { get; }
 
     /// <inheritdoc/>
-    protected override async ValueTask ExecuteAsyncCore(IObserverAsync<RxVoid> observer, CancellationToken cancellationToken)
+    protected override async ValueTask ExecuteAsyncCore(
+        IObserverAsync<RxVoid> observer,
+        CancellationToken cancellationToken)
     {
         await Factory(cancellationToken).ConfigureAwait(false);
         await observer.OnNextAsync(RxVoid.Default, cancellationToken).ConfigureAwait(false);

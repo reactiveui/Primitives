@@ -35,7 +35,6 @@ public readonly record struct CommandExecution<TResult>
 
     /// <summary>Initializes a new instance of the <see cref="CommandExecution{TResult}"/> struct.</summary>
     /// <param name="task">Asynchronous execution task.</param>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0001:Simplify Names", Justification = "The argument validation uses ArgumentExceptionHelper")]
     public CommandExecution(Task<TResult> task)
     {
         _task = task ?? throw new ArgumentNullException(nameof(task));
@@ -46,7 +45,6 @@ public readonly record struct CommandExecution<TResult>
 
     /// <summary>Initializes a new instance of the <see cref="CommandExecution{TResult}"/> struct.</summary>
     /// <param name="exception">Synchronous exception.</param>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0001:Simplify Names", Justification = "The argument validation uses ArgumentExceptionHelper")]
     public CommandExecution(Exception exception)
     {
         _task = null;
@@ -112,9 +110,10 @@ public readonly record struct CommandExecution<TResult>
         /// <summary>Gets the command result or rethrows the command exception.</summary>
         /// <returns>The command result.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
-            "Major Code Smell",
-            "S4462:Calls to \"async\" methods should not be blocking",
-            Justification = "Awaiter GetResult must be synchronous; it runs only after completion and unwraps exceptions without AggregateException wrapping.")]
+            "Concurrency",
+            "PSH1315:A blocking wait on an awaitable that may not be done",
+            Justification =
+                "Awaiter GetResult must be synchronous; it runs only after completion and unwraps exceptions without AggregateException wrapping.")]
         public TResult GetResult()
         {
             if (_task is not null)

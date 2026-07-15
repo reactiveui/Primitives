@@ -30,7 +30,8 @@ public static class TaskSignalSubscription
         IObserverAsync<T> observer) : TaskSignalSubscription<T>(observer)
     {
         /// <inheritdoc/>
-        protected override ValueTask ExecuteAsyncCore(IObserverAsync<T> observer, CancellationToken cancellationToken) =>
+        protected override ValueTask
+            ExecuteAsyncCore(IObserverAsync<T> observer, CancellationToken cancellationToken) =>
             executeAsyncCore(observer, cancellationToken);
     }
 }

@@ -11,6 +11,18 @@ namespace ReactiveUI.Primitives.Extensions.Tests;
 /// <summary>Tests for ReactiveExtensionsTests.</summary>
 public partial class ReactiveExtensionsTests
 {
+    /// <summary>Throttle/debounce window in milliseconds used by the real-time (non-virtual) throttle tests.</summary>
+    private const int ThrottleWindowMilliseconds = 100;
+
+    /// <summary>Longest a real-time test waits for a slow scheduled signal before failing.</summary>
+    private static readonly TimeSpan LongWaitTimeout = TimeSpan.FromSeconds(30);
+
+    /// <summary>Window used by the real-time throttle tests that poll for their result rather than advancing a clock.</summary>
+    private static readonly TimeSpan PolledThrottleWindow = TimeSpan.FromMilliseconds(200);
+
+    /// <summary>Debounce window used by the real-time <c>DebounceUntil</c> test.</summary>
+    private static readonly TimeSpan DebounceWindow = TimeSpan.FromMilliseconds(500);
+
     /// <summary>Tests DebounceImmediate emits first immediately.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -19,7 +31,7 @@ public partial class ReactiveExtensionsTests
         VirtualClock scheduler = new();
         Subject<int> subject = new();
         List<int> results = [];
-        using var sub = subject.DebounceImmediate(TimeSpan.FromTicks(100), scheduler).Subscribe(results.Add);
+        using var sub = subject.DebounceImmediate(TimeSpan.FromTicks(SchedulerWindowTicks), scheduler).Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
         scheduler.AdvanceBy(SchedulerAdvancePastWindowTicks);
@@ -36,7 +48,7 @@ public partial class ReactiveExtensionsTests
         List<int> results = [];
 
         // Throttle window of 100 ms
-        _ = subject.ThrottleFirst(TimeSpan.FromMilliseconds(100)).Subscribe(results.Add);
+        _ = subject.ThrottleFirst(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds)).Subscribe(results.Add);
         subject.OnNext(1); // Should be emitted immediately
         subject.OnNext(SampleValue2); // Should be ignored (within throttle window)
         subject.OnNext(SampleValue3); // Should be ignored (within throttle window)
@@ -66,7 +78,7 @@ public partial class ReactiveExtensionsTests
         subject.OnNext(SampleValue2); // Should drop
         subject.OnNext(SampleValue3); // Should drop
         release.SetResult(new()); // Complete the async action
-        await processed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await processed.Task.WaitAsync(WaitTimeout);
         await Assert.That(results).IsCollectionEqualTo([1]);
     }
 
@@ -78,7 +90,7 @@ public partial class ReactiveExtensionsTests
         VirtualClock scheduler = new();
         Subject<int> subject = new();
         List<int> results = [];
-        _ = subject.ThrottleDistinct(TimeSpan.FromTicks(100), scheduler).Subscribe(results.Add);
+        _ = subject.ThrottleDistinct(TimeSpan.FromTicks(SchedulerWindowTicks), scheduler).Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnNext(1); // Duplicate, ignored
         subject.OnNext(SampleValue2);
@@ -95,7 +107,8 @@ public partial class ReactiveExtensionsTests
         VirtualClock scheduler = new();
         Subject<int> subject = new();
         List<int> results = [];
-        _ = subject.DebounceUntil(TimeSpan.FromTicks(100), x => x % SampleValue2 == 0, scheduler).Subscribe(results.Add);
+        _ = subject.DebounceUntil(TimeSpan.FromTicks(SchedulerWindowTicks), static x => x % SampleValue2 == 0, scheduler)
+            .Subscribe(results.Add);
         subject.OnNext(1); // Odd, should be delayed
         scheduler.AdvanceBy(SchedulerHalfWindowTicks); // Advance less than debounce period
         subject.OnNext(SampleValue2); // Even, should emit immediately, cancelling delayed 1
@@ -111,7 +124,7 @@ public partial class ReactiveExtensionsTests
         VirtualClock scheduler = new();
         Subject<int> subject = new();
         List<int> results = [];
-        _ = subject.ThrottleOnScheduler(TimeSpan.FromTicks(100), scheduler).Subscribe(results.Add);
+        _ = subject.ThrottleOnScheduler(TimeSpan.FromTicks(SchedulerWindowTicks), scheduler).Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
         scheduler.AdvanceBy(SchedulerAdvancePastWindowTicks);
@@ -126,7 +139,7 @@ public partial class ReactiveExtensionsTests
         VirtualClock scheduler = new();
         Subject<int> subject = new();
         List<int> results = [];
-        _ = subject.ThrottleDistinct(TimeSpan.FromTicks(100), scheduler).Subscribe(results.Add);
+        _ = subject.ThrottleDistinct(TimeSpan.FromTicks(SchedulerWindowTicks), scheduler).Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnNext(1); // Duplicate, suppressed by DistinctUntilChanged
         subject.OnNext(SampleValue2);
@@ -143,7 +156,8 @@ public partial class ReactiveExtensionsTests
         Subject<int> subject = new();
         List<int> results = [];
         Exception? observedError = null;
-        _ = subject.DebounceImmediate(TimeSpan.FromTicks(100), scheduler).Subscribe(results.Add, ex => observedError = ex);
+        _ = subject.DebounceImmediate(TimeSpan.FromTicks(SchedulerWindowTicks), scheduler)
+            .Subscribe(results.Add, ex => observedError = ex);
         subject.OnNext(1); // Emitted immediately (first)
         subject.OnNext(SampleValue2); // Buffered as pending
         subject.OnError(new InvalidOperationException("test"));
@@ -163,7 +177,8 @@ public partial class ReactiveExtensionsTests
         Subject<int> subject = new();
         List<int> results = [];
         var completed = false;
-        _ = subject.DebounceImmediate(TimeSpan.FromTicks(100), scheduler).Subscribe(results.Add, () => completed = true);
+        _ = subject.DebounceImmediate(TimeSpan.FromTicks(SchedulerWindowTicks), scheduler)
+            .Subscribe(results.Add, () => completed = true);
         subject.OnNext(1); // Emitted immediately (first)
         subject.OnNext(SampleValue2); // Buffered as pending
         subject.OnCompleted();
@@ -182,7 +197,8 @@ public partial class ReactiveExtensionsTests
         VirtualClock scheduler = new();
         Subject<int> subject = new();
         List<int> results = [];
-        _ = subject.DebounceUntil(TimeSpan.FromTicks(100), x => x % SampleValue2 == 0, scheduler).Subscribe(results.Add);
+        _ = subject.DebounceUntil(TimeSpan.FromTicks(SchedulerWindowTicks), static x => x % SampleValue2 == 0, scheduler)
+            .Subscribe(results.Add);
         subject.OnNext(SampleValue2); // Even, emits immediately
         subject.OnNext(1); // Odd, delayed
         scheduler.AdvanceBy(SchedulerAdvancePastWindowTicks);
@@ -197,7 +213,8 @@ public partial class ReactiveExtensionsTests
         Subject<int> subject = new();
         List<int> results = [];
         TaskCompletionSource<int> throttledArrived = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var sub = subject.ThrottleUntilTrue(TimeSpan.FromMilliseconds(100), x => x > 5).Subscribe(value =>
+        using var sub = subject.ThrottleUntilTrue(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds), static x => x > PredicateThreshold)
+            .Subscribe(value =>
         {
             results.Add(value);
             _ = value == 1 && throttledArrived.TrySetResult(value);
@@ -208,7 +225,7 @@ public partial class ReactiveExtensionsTests
 
         // Predicate false: throttled — wait on the event instead of racing a fixed delay.
         subject.OnNext(1);
-        await throttledArrived.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await throttledArrived.Task.WaitAsync(WaitTimeout);
         await Assert.That(results).Contains(SampleValue10);
         await Assert.That(results).Contains(1);
     }
@@ -220,11 +237,11 @@ public partial class ReactiveExtensionsTests
     {
         Subject<int> subject = new();
         List<int> results = [];
-        using var sub = subject.ThrottleDistinct(TimeSpan.FromMilliseconds(200)).Subscribe(results.Add);
+        using var sub = subject.ThrottleDistinct(PolledThrottleWindow).Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
-        await AsyncTestHelpers.WaitForConditionAsync(() => results.Contains(SampleValue2), TimeSpan.FromSeconds(30));
+        await AsyncTestHelpers.WaitForConditionAsync(() => results.Contains(SampleValue2), LongWaitTimeout);
         await Assert.That(results).Contains(SampleValue2);
     }
 
@@ -236,7 +253,8 @@ public partial class ReactiveExtensionsTests
         VirtualClock scheduler = new();
         Subject<int> subject = new();
         List<int> results = [];
-        _ = subject.DebounceUntil(TimeSpan.FromTicks(100), x => x % SampleValue2 == 0, scheduler).Subscribe(results.Add);
+        _ = subject.DebounceUntil(TimeSpan.FromTicks(SchedulerWindowTicks), static x => x % SampleValue2 == 0, scheduler)
+            .Subscribe(results.Add);
         subject.OnNext(SampleValue2); // condition true -> immediate
         subject.OnNext(SampleValue3); // condition false -> delayed
         scheduler.AdvanceBy(SchedulerWindowTicks + 1);
@@ -251,10 +269,10 @@ public partial class ReactiveExtensionsTests
     {
         Subject<int> subject = new();
         List<int> results = [];
-        using var sub = subject.DebounceImmediate(TimeSpan.FromMilliseconds(200)).Subscribe(results.Add);
+        using var sub = subject.DebounceImmediate(PolledThrottleWindow).Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
-        await AsyncTestHelpers.WaitForConditionAsync(() => results.Count >= 2, TimeSpan.FromSeconds(30));
+        await AsyncTestHelpers.WaitForConditionAsync(() => results.Count >= 2, LongWaitTimeout);
         await Assert.That(results).Contains(1);
         await Assert.That(results).Contains(SampleValue2);
     }
@@ -267,7 +285,7 @@ public partial class ReactiveExtensionsTests
         Subject<int> subject = new();
         List<int> results = [];
         TaskCompletionSource received = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var sub = subject.DebounceUntil(TimeSpan.FromMilliseconds(500), x => x % 2 == 0).Subscribe(v =>
+        using var sub = subject.DebounceUntil(DebounceWindow, static x => x % SampleValue2 == 0).Subscribe(v =>
         {
             results.Add(v);
             _ = received.TrySetResult();
@@ -275,7 +293,7 @@ public partial class ReactiveExtensionsTests
 
         // Even values should emit immediately (condition true)
         subject.OnNext(SampleValue2);
-        await received.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await received.Task.WaitAsync(WaitTimeout);
         await Assert.That(results).Contains(SampleValue2);
     }
 

@@ -20,7 +20,8 @@ public sealed class BufferEachWitness<T> : IObserver<T>, IDisposable
 
     /// <summary>Initializes a new instance of the <see cref="BufferEachWitness{T}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
-    public BufferEachWitness(IObserver<IList<T>> observer) => Observer = observer ?? throw new ArgumentNullException(nameof(observer));
+    public BufferEachWitness(IObserver<IList<T>> observer) =>
+        Observer = observer ?? throw new ArgumentNullException(nameof(observer));
 
     /// <summary>Gets the downstream observer.</summary>
     private IObserver<IList<T>> Observer { get; }

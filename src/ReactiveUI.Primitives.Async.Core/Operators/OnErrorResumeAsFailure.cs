@@ -26,12 +26,7 @@ public static partial class SignalAsyncExtensions
         /// instead of throwing exceptions.</returns>
         public IObservableAsync<T> OnErrorResumeAsFailure()
         {
-            if (@this is null)
-            {
-                throw new ArgumentNullException(
-                    nameof(@this),
-                    "Cannot create an OnErrorResumeAsFailure signal from a null source.");
-            }
+            ArgumentExceptionHelper.ThrowIfNull(@this);
 
             return new OnErrorResumeAsFailureSignal<T>(@this);
         }

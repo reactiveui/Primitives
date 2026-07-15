@@ -42,8 +42,10 @@ public class OperatorZipBenchmarks
     public int SystemReactiveZip()
     {
         IntSignalWitness observer = new();
-        using var subscription = RxObservable.Zip(RxObservable.Range(LeftStart, Count), RxObservable.Range(RightStart, Count), static (left, right) => left + right)
-            .Subscribe(observer);
+        using var subscription = RxObservable.Zip(
+            RxObservable.Range(LeftStart, Count),
+            RxObservable.Range(RightStart, Count),
+            static (left, right) => left + right).Subscribe(observer);
         return observer.Total;
     }
 

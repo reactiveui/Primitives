@@ -26,8 +26,8 @@ public static partial class SignalAsyncExtensions
         /// <returns>An observable sequence whose elements are the result of casting each element of the source sequence to
         /// <typeparamref name="TResult"/>.</returns>
         [SuppressMessage(
-            "Major Code Smell",
-            "S4018:Generic methods should provide type parameters",
+            "Design",
+            "SST2307:Generic method type parameters should be inferable from the parameters",
             Justification = "Public extension API — caller specifies TResult explicitly: source.Cast<Derived>().")]
         public IObservableAsync<TResult> Cast<TResult>()
         {
@@ -45,8 +45,8 @@ public static partial class SignalAsyncExtensions
         /// <typeparam name="TResult">The result element type to cast to.</typeparam>
         /// <returns>An observable sequence of values cast to <typeparamref name="TResult"/>.</returns>
         [SuppressMessage(
-            "Minor Code Smell",
-            "S4018:All type parameters should be used in the parameter list to enable type inference",
+            "Design",
+            "SST2307:Generic method type parameters should be inferable from the parameters",
             Justification = "Deliberate lack of type inference.")]
         public IObservableAsync<TResult> CastTo<TResult>()
         {

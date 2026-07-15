@@ -25,7 +25,9 @@ public static partial class Signal
     /// <returns>
     /// An ITaskSignal of T.
     /// </returns>
-    public static ITaskSignal<RxVoid> FromTask(Func<CancellationTokenSource, Task<RxVoid>> execution, ISequencer? scheduler) =>
+    public static ITaskSignal<RxVoid> FromTask(
+        Func<CancellationTokenSource, Task<RxVoid>> execution,
+        ISequencer? scheduler) =>
         FromTask(execution, scheduler, null);
 
     /// <summary>Handles Asnyc Tasks with cancellation.</summary>
@@ -57,7 +59,9 @@ public static partial class Signal
     /// <returns>
     /// An TaskSignal of T.
     /// </returns>
-    public static ITaskSignal<TResult> FromTask<TResult>(Func<CancellationTokenSource, Task<TResult>> actionAsync, ISequencer? scheduler) =>
+    public static ITaskSignal<TResult> FromTask<TResult>(
+        Func<CancellationTokenSource, Task<TResult>> actionAsync,
+        ISequencer? scheduler) =>
         FromTask(actionAsync, scheduler, null);
 
     /// <summary>Froms the asynchronous.</summary>
@@ -152,9 +156,10 @@ public static partial class Signal
     /// Runs before any disposer is handed out, so no dispose race is possible and the emission is ungated.
     /// </remarks>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4462:Calls to \"async\" methods should not be blocking",
-        Justification = "Synchronous read of an already-completed (RanToCompletion) task for an allocation-free fast path; await is invalid in this synchronous factory.")]
+        "Concurrency",
+        "PSH1315:A blocking wait on an awaitable that may not be done",
+        Justification =
+            "Synchronous read of an already-completed (RanToCompletion) task for an allocation-free fast path; await is invalid in this synchronous factory.")]
     private static bool TryEmitSynchronously<TResult>(
         Task<TResult> task,
         IObserver<TResult> observer,
@@ -285,7 +290,7 @@ public static partial class Signal
             _ = SourceCore.Token.Register(
                 static state => ((IObserver<Exception>)state!).OnNext(new OperationCanceledException()),
                 observer,
-                useSynchronizationContext: false);
+                false);
         }
 
         /// <inheritdoc/>

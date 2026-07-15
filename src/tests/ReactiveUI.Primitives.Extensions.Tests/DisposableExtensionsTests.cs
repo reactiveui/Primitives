@@ -17,7 +17,7 @@ public class DisposableExtensionsTests
     public async Task GivenNull_WhenDisposeWith_ThenExceptionThrown()
     {
         // Given
-        ActionDisposable sut = new(() => { });
+        ActionDisposable sut = new(static () => { });
 
         // When
         var result = Assert.Throws<ArgumentNullException>(() => sut.DisposeWith((CompositeDisposable)null!));

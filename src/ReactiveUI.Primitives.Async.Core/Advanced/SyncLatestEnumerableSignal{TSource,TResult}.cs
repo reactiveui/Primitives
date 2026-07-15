@@ -20,7 +20,8 @@ public sealed class SyncLatestEnumerableSignal<TSource, TResult> : IObservableAs
     {
         ArgumentExceptionHelper.ThrowIfNull(resultSelector);
 
-        Sources = (sources as IObservableAsync<TSource>[]) ?? [.. sources ?? throw new ArgumentNullException(nameof(sources))];
+        Sources = (sources as IObservableAsync<TSource>[]) ??
+                  [.. sources ?? throw new ArgumentNullException(nameof(sources))];
         ResultSelector = resultSelector;
     }
 

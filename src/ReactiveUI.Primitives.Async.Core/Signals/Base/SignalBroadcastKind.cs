@@ -14,5 +14,5 @@ internal enum SignalBroadcastKind
     SerialMulti,
 
     /// <summary>Notify observers concurrently.</summary>
-    Concurrent,
+    Concurrent
 }

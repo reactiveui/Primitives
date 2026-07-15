@@ -14,6 +14,9 @@ public class UsingFuncObservableTests
     /// <summary>Sentinel result emitted by the happy-path test.</summary>
     private const int Sentinel = 42;
 
+    /// <summary>Longest a test waits for an asynchronous signal before failing.</summary>
+    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
+
     /// <summary>Verifies the happy path — the function's result is emitted, completion fires,
     /// and the resource is disposed exactly once.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
@@ -63,7 +66,7 @@ public class UsingFuncObservableTests
             .Using(new Func<CountingDisposable, int>(_ => throw expected), TaskPoolSequencer.Default)
             .Subscribe(static _ => { }, ex => faulted.TrySetResult(ex));
 
-        var caught = await faulted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var caught = await faulted.Task.WaitAsync(GuardTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
         await Assert.That(resource.DisposeCount).IsEqualTo(1);
     }

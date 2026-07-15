@@ -33,22 +33,22 @@ public sealed class WitnessOnWitness<T> : WitnessAsync<T>
     private bool ForceYielding { get; }
 
     /// <inheritdoc/>
-    protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
-    {
-        return !ForceYielding && AsyncContext.IsSameAsCurrentAsyncContext() ? Observer.OnNextAsync(value, cancellationToken) : ForwardAfterContextSwitchAsync(value, cancellationToken);
-    }
+    protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
+        !ForceYielding && AsyncContext.IsSameAsCurrentAsyncContext()
+            ? Observer.OnNextAsync(value, cancellationToken)
+            : ForwardAfterContextSwitchAsync(value, cancellationToken);
 
     /// <inheritdoc/>
-    protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken)
-    {
-        return !ForceYielding && AsyncContext.IsSameAsCurrentAsyncContext() ? Observer.OnErrorResumeAsync(error, cancellationToken) : ForwardErrorAfterContextSwitchAsync(error, cancellationToken);
-    }
+    protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+        !ForceYielding && AsyncContext.IsSameAsCurrentAsyncContext()
+            ? Observer.OnErrorResumeAsync(error, cancellationToken)
+            : ForwardErrorAfterContextSwitchAsync(error, cancellationToken);
 
     /// <inheritdoc/>
-    protected override ValueTask OnCompletedAsyncCore(Result result)
-    {
-        return !ForceYielding && AsyncContext.IsSameAsCurrentAsyncContext() ? Observer.OnCompletedAsync(result) : ForwardCompletionAfterContextSwitchAsync(result);
-    }
+    protected override ValueTask OnCompletedAsyncCore(Result result) =>
+        !ForceYielding && AsyncContext.IsSameAsCurrentAsyncContext()
+            ? Observer.OnCompletedAsync(result)
+            : ForwardCompletionAfterContextSwitchAsync(result);
 
     /// <summary>Switches context and forwards a value notification.</summary>
     /// <param name="value">The value to forward.</param>

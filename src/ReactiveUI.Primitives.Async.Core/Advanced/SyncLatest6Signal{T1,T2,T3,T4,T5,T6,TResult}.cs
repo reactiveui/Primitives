@@ -17,7 +17,9 @@ public sealed class SyncLatest6Signal<T1, T2, T3, T4, T5, T6, TResult> : IObserv
     /// <summary>Initializes a new instance of the <see cref="SyncLatest6Signal{T1, T2, T3, T4, T5, T6, TResult}"/> class.</summary>
     /// <param name="sources">The bundled source observables.</param>
     /// <param name="selector">The selector that projects the latest values.</param>
-    public SyncLatest6Signal(SyncLatest6State<T1, T2, T3, T4, T5, T6> sources, Func<T1, T2, T3, T4, T5, T6, TResult> selector)
+    public SyncLatest6Signal(
+        SyncLatest6State<T1, T2, T3, T4, T5, T6> sources,
+        Func<T1, T2, T3, T4, T5, T6, TResult> selector)
     {
         Sources = sources;
         Selector = selector;

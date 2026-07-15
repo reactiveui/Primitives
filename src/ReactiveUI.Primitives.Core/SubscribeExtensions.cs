@@ -11,10 +11,10 @@ namespace ReactiveUI.Primitives;
 public static class SubscribeExtensions
 {
     /// <summary>Error callback that rethrows with the original exception dispatch information.</summary>
-    private static readonly Action<Exception> rethrow = e => ExceptionDispatchInfo.Capture(e).Throw();
+    private static readonly Action<Exception> rethrow = static e => ExceptionDispatchInfo.Capture(e).Throw();
 
     /// <summary>Completion callback that does nothing.</summary>
-    private static readonly Action nop = () => { };
+    private static readonly Action nop = static () => { };
 
     /// <summary>Exception helpers for a nullable exception receiver.</summary>
     /// <param name="exception">The exception.</param>
@@ -63,7 +63,7 @@ public static class SubscribeExtensions
             {
                 Signals.Signal<T> signal => signal.SubscribeAction(onNext),
                 IInlineSignal<T> inline => inline.Subscribe(onNext, rethrow, nop),
-                _ => source.Subscribe(onNext, rethrow, nop),
+                _ => source.Subscribe(onNext, rethrow, nop)
             };
         }
 
@@ -115,6 +115,6 @@ public static class SubscribeExtensions
     private static class OnNextNoOpCache<T>
     {
         /// <summary>Gets the cached no-op value callback.</summary>
-        public static readonly Action<T> Instance = _ => { };
+        public static readonly Action<T> Instance = static _ => { };
     }
 }

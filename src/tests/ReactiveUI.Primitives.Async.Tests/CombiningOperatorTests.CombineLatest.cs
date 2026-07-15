@@ -20,7 +20,7 @@ public partial class CombiningOperatorTests
 
         List<(int, string)> results = [];
         await using var sub = await signal1.Values
-            .CombineLatest(signal2.Values, (a, b) => (a, b))
+            .CombineLatest(signal2.Values, static (a, b) => (a, b))
             .SubscribeAsync(
                 (x, _) =>
                 {
@@ -47,7 +47,7 @@ public partial class CombiningOperatorTests
         Result? completionResult = null;
         await using var sub = await sources.CombineLatest()
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null,
                 result =>
                 {
@@ -102,7 +102,7 @@ public partial class CombiningOperatorTests
 
         await using var sub = await sources.CombineLatest()
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null,
                 result =>
                 {
@@ -119,7 +119,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenCombineLatestSourceErrorResume_ThenForwarded()
     {
-        var inner = SignalAsync.Create<int>(async (observer, ct) =>
+        var inner = SignalAsync.Create<int>(static async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(new InvalidOperationException("warning"), ct);
             await observer.OnNextAsync(1, ct);
@@ -159,7 +159,7 @@ public partial class CombiningOperatorTests
 
         var sub = await sources.CombineLatest()
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null);
 
         await signal1.OnNextAsync(1, CancellationToken.None);
@@ -181,7 +181,7 @@ public partial class CombiningOperatorTests
 
         List<int> results = [];
         await using var sub = await s1.Values
-            .CombineLatest(s2.Values, s3.Values, (a, b, c) => a + b + c)
+            .CombineLatest(s2.Values, s3.Values, static (a, b, c) => a + b + c)
             .SubscribeAsync(
                 (x, _) =>
                 {

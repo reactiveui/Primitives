@@ -26,13 +26,21 @@ public sealed class ConcurrentReplayLatestSignalAsync<T>(Optional<T> startValue)
     public ValueTask OnNextAsync(
         T value,
         CancellationToken cancellationToken) =>
-        ReplayLatestSignalAsyncStateHelper.OnNextAsync(_state, SignalBroadcastKind.Concurrent, value, cancellationToken);
+        ReplayLatestSignalAsyncStateHelper.OnNextAsync(
+            _state,
+            SignalBroadcastKind.Concurrent,
+            value,
+            cancellationToken);
 
     /// <inheritdoc/>
     public ValueTask OnErrorResumeAsync(
         Exception error,
         CancellationToken cancellationToken) =>
-        ReplayLatestSignalAsyncStateHelper.OnErrorResumeAsync(_state, SignalBroadcastKind.Concurrent, error, cancellationToken);
+        ReplayLatestSignalAsyncStateHelper.OnErrorResumeAsync(
+            _state,
+            SignalBroadcastKind.Concurrent,
+            error,
+            cancellationToken);
 
     /// <inheritdoc/>
     public ValueTask OnCompletedAsync(Result result) =>

@@ -29,6 +29,7 @@ public sealed class ImmediateSequencer : ISequencer
     public long Timestamp => Sequencer.Timestamp;
 
     /// <summary>Gets the debugger display text.</summary>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
@@ -39,11 +40,8 @@ public sealed class ImmediateSequencer : ISequencer
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Performance",
         "CA1822:Mark members as static",
-        Justification = "Must remain an instance method so overload resolution selects it over the allocating ISequencer.Schedule(Action) extension, giving an allocation-free immediate path.")]
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S2325:Methods and properties that don't access instance data should be static",
-        Justification = "Must remain an instance method so overload resolution selects it over the allocating ISequencer.Schedule(Action) extension.")]
+        Justification =
+            "Must remain an instance method so overload resolution selects it over the allocating ISequencer.Schedule(Action) extension, giving an allocation-free immediate path.")]
     public IDisposable Schedule(Action action)
     {
         ArgumentExceptionHelper.ThrowIfNull(action);

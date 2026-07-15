@@ -17,27 +17,19 @@ public static partial class LinqExtensions
     /// and safe-guard sink that <c>Signal.CreateSafe(observer =&gt; ...)</c> would allocate.
     /// </summary>
     /// <typeparam name="TResult">The result value type.</typeparam>
-    private sealed class RangeWithLatestSignal<TResult> : IObservable<TResult>
+    /// <param name="left">The left source range.</param>
+    /// <param name="right">The right source range.</param>
+    /// <param name="selector">The result projection.</param>
+    private sealed class RangeWithLatestSignal<TResult>(RangeSignal left, RangeSignal right, Func<int, int, TResult> selector) : IObservable<TResult>
     {
         /// <summary>The left source range.</summary>
-        private readonly RangeSignal _left;
+        private readonly RangeSignal _left = left;
 
         /// <summary>The right source range (its final value is the latched value).</summary>
-        private readonly RangeSignal _right;
+        private readonly RangeSignal _right = right;
 
         /// <summary>The result projection.</summary>
-        private readonly Func<int, int, TResult> _selector;
-
-        /// <summary>Initializes a new instance of the <see cref="RangeWithLatestSignal{TResult}"/> class.</summary>
-        /// <param name="left">The left source range.</param>
-        /// <param name="right">The right source range.</param>
-        /// <param name="selector">The result projection.</param>
-        internal RangeWithLatestSignal(RangeSignal left, RangeSignal right, Func<int, int, TResult> selector)
-        {
-            _left = left;
-            _right = right;
-            _selector = selector;
-        }
+        private readonly Func<int, int, TResult> _selector = selector;
 
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TResult> observer)
@@ -75,51 +67,23 @@ public static partial class LinqExtensions
         }
     }
 
-    /// <summary>Dedicated signal for <c>SwitchTo</c>; runs the coordinator without a Create closure.</summary>
-    /// <typeparam name="T">The value type.</typeparam>
-    private sealed class SwitchSignal<T> : IObservable<T>
-    {
-        /// <summary>The outer sequence of inner sources.</summary>
-        private readonly IObservable<IObservable<T>> _sources;
-
-        /// <summary>Initializes a new instance of the <see cref="SwitchSignal{T}"/> class.</summary>
-        /// <param name="sources">The outer sequence of inner sources.</param>
-        internal SwitchSignal(IObservable<IObservable<T>> sources) => _sources = sources;
-
-        /// <inheritdoc/>
-        public IDisposable Subscribe(IObserver<T> observer)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(observer);
-
-            return new SwitchCoordinator<T>(observer).Run(_sources);
-        }
-    }
-
     /// <summary>Dedicated signal for <c>Zip</c>; runs the coordinator without a Create closure.</summary>
     /// <typeparam name="TLeft">The left value type.</typeparam>
     /// <typeparam name="TRight">The right value type.</typeparam>
     /// <typeparam name="TResult">The result value type.</typeparam>
-    private sealed class ZipSignal<TLeft, TRight, TResult> : IObservable<TResult>
+    /// <param name="left">The left source.</param>
+    /// <param name="right">The right source.</param>
+    /// <param name="selector">The projection function.</param>
+    private sealed class ZipSignal<TLeft, TRight, TResult>(IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector) : IObservable<TResult>
     {
         /// <summary>The left source.</summary>
-        private readonly IObservable<TLeft> _left;
+        private readonly IObservable<TLeft> _left = left;
 
         /// <summary>The right source.</summary>
-        private readonly IObservable<TRight> _right;
+        private readonly IObservable<TRight> _right = right;
 
         /// <summary>The projection function.</summary>
-        private readonly Func<TLeft, TRight, TResult> _selector;
-
-        /// <summary>Initializes a new instance of the <see cref="ZipSignal{TLeft, TRight, TResult}"/> class.</summary>
-        /// <param name="left">The left source.</param>
-        /// <param name="right">The right source.</param>
-        /// <param name="selector">The projection function.</param>
-        internal ZipSignal(IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector)
-        {
-            _left = left;
-            _right = right;
-            _selector = selector;
-        }
+        private readonly Func<TLeft, TRight, TResult> _selector = selector;
 
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TResult> observer)
@@ -134,27 +98,22 @@ public static partial class LinqExtensions
     /// <typeparam name="TLeft">The left value type.</typeparam>
     /// <typeparam name="TRight">The right value type.</typeparam>
     /// <typeparam name="TResult">The result value type.</typeparam>
-    private sealed class CombineLatestSignal<TLeft, TRight, TResult> : IObservable<TResult>
+    /// <param name="left">The left source.</param>
+    /// <param name="right">The right source.</param>
+    /// <param name="selector">The projection function.</param>
+    private sealed class CombineLatestSignal<TLeft, TRight, TResult>(
+        IObservable<TLeft> left,
+        IObservable<TRight> right,
+        Func<TLeft, TRight, TResult> selector) : IObservable<TResult>
     {
         /// <summary>The left source.</summary>
-        private readonly IObservable<TLeft> _left;
+        private readonly IObservable<TLeft> _left = left;
 
         /// <summary>The right source.</summary>
-        private readonly IObservable<TRight> _right;
+        private readonly IObservable<TRight> _right = right;
 
         /// <summary>The projection function.</summary>
-        private readonly Func<TLeft, TRight, TResult> _selector;
-
-        /// <summary>Initializes a new instance of the <see cref="CombineLatestSignal{TLeft, TRight, TResult}"/> class.</summary>
-        /// <param name="left">The left source.</param>
-        /// <param name="right">The right source.</param>
-        /// <param name="selector">The projection function.</param>
-        internal CombineLatestSignal(IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector)
-        {
-            _left = left;
-            _right = right;
-            _selector = selector;
-        }
+        private readonly Func<TLeft, TRight, TResult> _selector = selector;
 
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TResult> observer)
@@ -162,169 +121,6 @@ public static partial class LinqExtensions
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
             return new CombineLatestCoordinator<TLeft, TRight, TResult>(observer, _selector).Run(_left, _right);
-        }
-    }
-
-    /// <summary>Dedicated signal for <c>Chain</c> (sequential concat of inner sources).</summary>
-    /// <typeparam name="T">The value type.</typeparam>
-    private sealed class ChainSignal<T> : IObservable<T>
-    {
-        /// <summary>The outer sequence of inner sources, when constructed from a source-of-sources.</summary>
-        private readonly IObservable<IObservable<T>>? _sources;
-
-        /// <summary>The first inner source, when constructed from two sources.</summary>
-        private readonly IObservable<T>? _first;
-
-        /// <summary>The second inner source, when constructed from two sources.</summary>
-        private readonly IObservable<T>? _second;
-
-        /// <summary>Initializes a new instance of the <see cref="ChainSignal{T}"/> class from a source-of-sources.</summary>
-        /// <param name="sources">The outer sequence of inner sources.</param>
-        internal ChainSignal(IObservable<IObservable<T>> sources) => _sources = sources;
-
-        /// <summary>Initializes a new instance of the <see cref="ChainSignal{T}"/> class from two sources.</summary>
-        /// <param name="first">The first source.</param>
-        /// <param name="second">The second source.</param>
-        internal ChainSignal(IObservable<T> first, IObservable<T> second)
-        {
-            _first = first;
-            _second = second;
-        }
-
-        /// <inheritdoc/>
-        public IDisposable Subscribe(IObserver<T> observer)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(observer);
-
-            ChainCoordinator<T> coordinator = new(observer);
-            return _sources is not null ? coordinator.Run(_sources) : coordinator.Run(_first!, _second!);
-        }
-    }
-
-    /// <summary>Coordinates sequential concatenation of inner sources for <c>Chain</c>.</summary>
-    /// <typeparam name="T">The value type.</typeparam>
-    private sealed class ChainCoordinator<T> : IDisposable
-    {
-        /// <summary>Guards the queue and active/completed flags.</summary>
-        private readonly Lock _gate = new();
-
-        /// <summary>Queued inner sources awaiting the active one to complete.</summary>
-        private readonly Queue<IObservable<T>> _queue = new();
-
-        /// <summary>Active subscriptions.</summary>
-        private readonly MultipleDisposable _pocket = [];
-
-        /// <summary>The downstream observer.</summary>
-        private readonly IObserver<T> _observer;
-
-        /// <summary>A value indicating whether an inner source is active.</summary>
-        private bool _active;
-
-        /// <summary>A value indicating whether the outer source completed.</summary>
-        private bool _outerCompleted;
-
-        /// <summary>Initializes a new instance of the <see cref="ChainCoordinator{T}"/> class.</summary>
-        /// <param name="observer">The downstream observer.</param>
-        internal ChainCoordinator(IObserver<T> observer) => _observer = observer;
-
-        /// <inheritdoc/>
-        public void Dispose() => _pocket.Dispose();
-
-        /// <summary>Subscribes to the outer source.</summary>
-        /// <param name="sources">The outer sequence of inner sources.</param>
-        /// <returns>The coordinator that owns the subscription cleanup.</returns>
-        internal ChainCoordinator<T> Run(IObservable<IObservable<T>> sources)
-        {
-            _pocket.Add(sources.Subscribe(OnSource, _observer.OnError, OnOuterCompleted));
-            return this;
-        }
-
-        /// <summary>Subscribes the two fixed inner sources in order.</summary>
-        /// <param name="first">The first source.</param>
-        /// <param name="second">The second source.</param>
-        /// <returns>The coordinator that owns the subscription cleanup.</returns>
-        internal ChainCoordinator<T> Run(IObservable<T> first, IObservable<T> second)
-        {
-            lock (_gate)
-            {
-                _queue.Enqueue(first);
-                _queue.Enqueue(second);
-                _outerCompleted = true;
-            }
-
-            Drain();
-            return this;
-        }
-
-        /// <summary>Queues a new inner source and pumps the drain.</summary>
-        /// <param name="source">The inner source.</param>
-        private void OnSource(IObservable<T> source)
-        {
-            if (source is null)
-            {
-                _observer.OnError(new InvalidOperationException("Chain source contained null."));
-                return;
-            }
-
-            lock (_gate)
-            {
-                _queue.Enqueue(source);
-            }
-
-            Drain();
-        }
-
-        /// <summary>Marks the outer source complete and pumps the drain.</summary>
-        private void OnOuterCompleted()
-        {
-            lock (_gate)
-            {
-                _outerCompleted = true;
-            }
-
-            Drain();
-        }
-
-        /// <summary>Marks the active inner complete and pumps the drain.</summary>
-        private void OnInnerCompleted()
-        {
-            lock (_gate)
-            {
-                _active = false;
-            }
-
-            Drain();
-        }
-
-        /// <summary>Subscribes the next queued inner source, or completes when the chain is drained.</summary>
-        private void Drain()
-        {
-            IObservable<T>? next = null;
-            lock (_gate)
-            {
-                if (_active)
-                {
-                    return;
-                }
-
-                if (_queue.Count > 0)
-                {
-                    _active = true;
-                    next = _queue.Dequeue();
-                }
-                else if (_outerCompleted)
-                {
-                    _observer.OnCompleted();
-                    return;
-                }
-            }
-
-            if (next is null)
-            {
-                return;
-            }
-
-            _pocket.Add(next.Subscribe(_observer.OnNext, _observer.OnError, OnInnerCompleted));
         }
     }
 
@@ -475,27 +271,19 @@ public static partial class LinqExtensions
     /// <typeparam name="TLeft">The left value type.</typeparam>
     /// <typeparam name="TRight">The right value type.</typeparam>
     /// <typeparam name="TResult">The result value type.</typeparam>
-    private sealed class LatchSignal<TLeft, TRight, TResult> : IObservable<TResult>
+    /// <param name="left">The left source.</param>
+    /// <param name="right">The right source.</param>
+    /// <param name="selector">The projection function.</param>
+    private sealed class LatchSignal<TLeft, TRight, TResult>(IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector) : IObservable<TResult>
     {
         /// <summary>The left (driving) source.</summary>
-        private readonly IObservable<TLeft> _left;
+        private readonly IObservable<TLeft> _left = left;
 
         /// <summary>The right (latched) source.</summary>
-        private readonly IObservable<TRight> _right;
+        private readonly IObservable<TRight> _right = right;
 
         /// <summary>The projection function.</summary>
-        private readonly Func<TLeft, TRight, TResult> _selector;
-
-        /// <summary>Initializes a new instance of the <see cref="LatchSignal{TLeft, TRight, TResult}"/> class.</summary>
-        /// <param name="left">The left source.</param>
-        /// <param name="right">The right source.</param>
-        /// <param name="selector">The projection function.</param>
-        internal LatchSignal(IObservable<TLeft> left, IObservable<TRight> right, Func<TLeft, TRight, TResult> selector)
-        {
-            _left = left;
-            _right = right;
-            _selector = selector;
-        }
+        private readonly Func<TLeft, TRight, TResult> _selector = selector;
 
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TResult> observer)
@@ -510,31 +298,24 @@ public static partial class LinqExtensions
     /// <typeparam name="TLeft">The left value type.</typeparam>
     /// <typeparam name="TRight">The right value type.</typeparam>
     /// <typeparam name="TResult">The result value type.</typeparam>
-    private sealed class LatchCoordinator<TLeft, TRight, TResult>
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="selector">The projection function.</param>
+    private sealed class LatchCoordinator<TLeft, TRight, TResult>(IObserver<TResult> observer, Func<TLeft, TRight, TResult> selector)
     {
         /// <summary>Guards the latest-right state.</summary>
         private readonly Lock _gate = new();
 
         /// <summary>The downstream observer.</summary>
-        private readonly IObserver<TResult> _observer;
+        private readonly IObserver<TResult> _observer = observer;
 
         /// <summary>The projection function.</summary>
-        private readonly Func<TLeft, TRight, TResult> _selector;
+        private readonly Func<TLeft, TRight, TResult> _selector = selector;
 
         /// <summary>A value indicating whether the right source has produced a value.</summary>
         private bool _hasRight;
 
         /// <summary>The latest right value.</summary>
         private TRight? _latestRight;
-
-        /// <summary>Initializes a new instance of the <see cref="LatchCoordinator{TLeft, TRight, TResult}"/> class.</summary>
-        /// <param name="observer">The downstream observer.</param>
-        /// <param name="selector">The projection function.</param>
-        internal LatchCoordinator(IObserver<TResult> observer, Func<TLeft, TRight, TResult> selector)
-        {
-            _observer = observer;
-            _selector = selector;
-        }
 
         /// <summary>Subscribes to both sources.</summary>
         /// <param name="left">The left source.</param>
@@ -615,16 +396,18 @@ public static partial class LinqExtensions
     /// <typeparam name="TLeft">The left value type.</typeparam>
     /// <typeparam name="TRight">The right value type.</typeparam>
     /// <typeparam name="TResult">The result value type.</typeparam>
-    private sealed class ZipCoordinator<TLeft, TRight, TResult>
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="selector">The projection function.</param>
+    private sealed class ZipCoordinator<TLeft, TRight, TResult>(IObserver<TResult> observer, Func<TLeft, TRight, TResult> selector)
     {
         /// <summary>The synchronization gate.</summary>
         private readonly Lock _gate = new();
 
         /// <summary>The downstream observer.</summary>
-        private readonly IObserver<TResult> _observer;
+        private readonly IObserver<TResult> _observer = observer;
 
         /// <summary>The projection function.</summary>
-        private readonly Func<TLeft, TRight, TResult> _selector;
+        private readonly Func<TLeft, TRight, TResult> _selector = selector;
 
         /// <summary>The queued left values.</summary>
         private readonly Queue<TLeft> _leftQueue = new();
@@ -640,15 +423,6 @@ public static partial class LinqExtensions
 
         /// <summary>A value indicating whether completion has been emitted downstream.</summary>
         private bool _completed;
-
-        /// <summary>Initializes a new instance of the <see cref="ZipCoordinator{TLeft, TRight, TResult}"/> class.</summary>
-        /// <param name="observer">The downstream observer.</param>
-        /// <param name="selector">The projection function.</param>
-        internal ZipCoordinator(IObserver<TResult> observer, Func<TLeft, TRight, TResult> selector)
-        {
-            _observer = observer;
-            _selector = selector;
-        }
 
         /// <summary>Subscribes to both zip sources.</summary>
         /// <param name="left">The left source.</param>
@@ -741,16 +515,18 @@ public static partial class LinqExtensions
     /// <typeparam name="TLeft">The left value type.</typeparam>
     /// <typeparam name="TRight">The right value type.</typeparam>
     /// <typeparam name="TResult">The result value type.</typeparam>
-    private sealed class CombineLatestCoordinator<TLeft, TRight, TResult>
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="selector">The projection function.</param>
+    private sealed class CombineLatestCoordinator<TLeft, TRight, TResult>(IObserver<TResult> observer, Func<TLeft, TRight, TResult> selector)
     {
         /// <summary>The synchronization gate.</summary>
         private readonly Lock _gate = new();
 
         /// <summary>The downstream observer.</summary>
-        private readonly IObserver<TResult> _observer;
+        private readonly IObserver<TResult> _observer = observer;
 
         /// <summary>The projection function.</summary>
-        private readonly Func<TLeft, TRight, TResult> _selector;
+        private readonly Func<TLeft, TRight, TResult> _selector = selector;
 
         /// <summary>A value indicating whether the left source has produced a value.</summary>
         private bool _hasLeft;
@@ -772,15 +548,6 @@ public static partial class LinqExtensions
 
         /// <summary>A value indicating whether completion has been emitted downstream.</summary>
         private bool _completed;
-
-        /// <summary>Initializes a new instance of the <see cref="CombineLatestCoordinator{TLeft, TRight, TResult}"/> class.</summary>
-        /// <param name="observer">The downstream observer.</param>
-        /// <param name="selector">The projection function.</param>
-        internal CombineLatestCoordinator(IObserver<TResult> observer, Func<TLeft, TRight, TResult> selector)
-        {
-            _observer = observer;
-            _selector = selector;
-        }
 
         /// <summary>Subscribes to both combine-latest sources.</summary>
         /// <param name="left">The left source.</param>
@@ -870,173 +637,6 @@ public static partial class LinqExtensions
 
             result = _selector(_latestLeft!, _latestRight!);
             return true;
-        }
-    }
-
-    /// <summary>Coordinates a switch operation.</summary>
-    /// <typeparam name="T">The source value type.</typeparam>
-    private sealed class SwitchCoordinator<T> : IDisposable
-    {
-        /// <summary>The synchronization gate.</summary>
-        private readonly Lock _gate = new();
-
-        /// <summary>The downstream observer.</summary>
-        private readonly IObserver<T> _observer;
-
-        /// <summary>The active subscriptions.</summary>
-        private readonly MultipleDisposable _subscriptions = [];
-
-        /// <summary>The active inner subscription.</summary>
-        private readonly SingleReplaceableDisposable _innerSlot = new();
-
-        /// <summary>A value indicating whether the outer source completed.</summary>
-        private bool _outerCompleted;
-
-        /// <summary>A value indicating whether an inner source is active.</summary>
-        private bool _innerActive;
-
-        /// <summary>The current inner source version.</summary>
-        private int _version;
-
-        /// <summary>A value indicating whether a terminal notification has been emitted.</summary>
-        private bool _done;
-
-        /// <summary>Initializes a new instance of the <see cref="SwitchCoordinator{T}"/> class.</summary>
-        /// <param name="observer">The downstream observer.</param>
-        internal SwitchCoordinator(IObserver<T> observer) => _observer = observer;
-
-        /// <summary>Releases the active subscriptions.</summary>
-        public void Dispose()
-        {
-            _innerSlot.Dispose();
-            _subscriptions.Dispose();
-        }
-
-        /// <summary>Subscribes to the outer source.</summary>
-        /// <param name="sources">The outer source.</param>
-        /// <returns>The coordinator that owns the subscription cleanup.</returns>
-        internal SwitchCoordinator<T> Run(IObservable<IObservable<T>> sources)
-        {
-            _subscriptions.Add(_innerSlot);
-            _subscriptions.Add(sources.Subscribe(OnSource, OnOuterError, OnOuterCompleted));
-            return this;
-        }
-
-        /// <summary>Switches to a new inner source.</summary>
-        /// <param name="source">The new inner source.</param>
-        private void OnSource(IObservable<T> source)
-        {
-            int current;
-            lock (_gate)
-            {
-                if (_done)
-                {
-                    return;
-                }
-
-                current = _version + 1;
-
-                // Publish the new version so readers in gated operations observe it.
-                Volatile.Write(ref _version, current);
-                _innerActive = true;
-            }
-
-            _innerSlot.Create(source.Subscribe(
-                value => OnNext(current, value),
-                error => OnError(current, error),
-                () => OnCompleted(current)));
-        }
-
-        /// <summary>Marks the outer source as complete.</summary>
-        private void OnOuterCompleted()
-        {
-            lock (_gate)
-            {
-                if (_done)
-                {
-                    return;
-                }
-
-                _outerCompleted = true;
-                TryComplete();
-            }
-        }
-
-        /// <summary>Forwards an outer source error once.</summary>
-        /// <param name="error">The error to forward.</param>
-        private void OnOuterError(Exception error)
-        {
-            lock (_gate)
-            {
-                if (_done)
-                {
-                    return;
-                }
-
-                _done = true;
-                _observer.OnError(error);
-            }
-        }
-
-        /// <summary>Forwards an inner value when it belongs to the current source.</summary>
-        /// <param name="version">The inner version.</param>
-        /// <param name="value">The value to forward.</param>
-        private void OnNext(int version, T value)
-        {
-            lock (_gate)
-            {
-                if (_done || version != _version)
-                {
-                    return;
-                }
-
-                _observer.OnNext(value);
-            }
-        }
-
-        /// <summary>Forwards an inner error when it belongs to the current source.</summary>
-        /// <param name="version">The inner version.</param>
-        /// <param name="error">The error to forward.</param>
-        private void OnError(int version, Exception error)
-        {
-            lock (_gate)
-            {
-                if (_done || version != _version)
-                {
-                    return;
-                }
-
-                _done = true;
-                _observer.OnError(error);
-            }
-        }
-
-        /// <summary>Completes an inner source when it belongs to the current source.</summary>
-        /// <param name="version">The inner version.</param>
-        private void OnCompleted(int version)
-        {
-            lock (_gate)
-            {
-                if (_done || version != _version)
-                {
-                    return;
-                }
-
-                _innerActive = false;
-                TryComplete();
-            }
-        }
-
-        /// <summary>Completes the observer when both outer and inner sources are complete.</summary>
-        private void TryComplete()
-        {
-            if (_done || !_outerCompleted || _innerActive)
-            {
-                return;
-            }
-
-            _done = true;
-            _observer.OnCompleted();
         }
     }
 }

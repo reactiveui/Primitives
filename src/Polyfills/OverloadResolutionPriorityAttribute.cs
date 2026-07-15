@@ -12,7 +12,9 @@ namespace System.Runtime.CompilerServices;
 /// <param name="priority">The overload resolution priority.</param>
 [ExcludeFromCodeCoverage]
 [DebuggerNonUserCode]
-[AttributeUsage(AttributeTargets.Method | AttributeTargets.Constructor | AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
+[AttributeUsage(
+    AttributeTargets.Method | AttributeTargets.Constructor | AttributeTargets.Property,
+    Inherited = false)]
 internal sealed class OverloadResolutionPriorityAttribute(int priority) : Attribute
 {
     /// <summary>Gets the overload resolution priority.</summary>

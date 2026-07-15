@@ -38,7 +38,7 @@ internal sealed class ScheduledSourceObservable<T> : IObservable<T>
     /// <summary>Initializes a new instance of the <see cref="ScheduledSourceObservable{T}"/> class.</summary>
     /// <param name="source">The upstream observable.</param>
     /// <param name="config">Bundled scheduling configuration (scheduler, optional delay, optional transform/action).</param>
-    public ScheduledSourceObservable(IObservable<T> source, ScheduleConfig<T> config)
+    public ScheduledSourceObservable(IObservable<T> source, in ScheduleConfig<T> config)
     {
         ArgumentExceptionHelper.ThrowIfNull(source);
         ArgumentExceptionHelper.ThrowIfNull(config.Scheduler);

@@ -13,27 +13,22 @@ namespace ReactiveUI.Primitives.Signals;
 /// <typeparam name="TSource">The source value type.</typeparam>
 /// <typeparam name="TState">The state type passed to the selector.</typeparam>
 /// <typeparam name="TResult">The result value type.</typeparam>
-public sealed class MapWithSignal<TSource, TState, TResult> : IRequireCurrentThread<TResult>
+/// <param name="source">The source sequence.</param>
+/// <param name="state">The state passed to the selector.</param>
+/// <param name="selector">The transform applied to each source value and the state.</param>
+public sealed class MapWithSignal<TSource, TState, TResult>(
+    IObservable<TSource> source,
+    TState state,
+    Func<TState, TSource, TResult> selector) : IRequireCurrentThread<TResult>
 {
     /// <summary>The source sequence.</summary>
-    private readonly IObservable<TSource> _source;
+    private readonly IObservable<TSource> _source = source;
 
     /// <summary>The state passed to the selector.</summary>
-    private readonly TState _state;
+    private readonly TState _state = state;
 
     /// <summary>The transform applied to each source value and the state.</summary>
-    private readonly Func<TState, TSource, TResult> _selector;
-
-    /// <summary>Initializes a new instance of the <see cref="MapWithSignal{TSource, TState, TResult}"/> class.</summary>
-    /// <param name="source">The source sequence.</param>
-    /// <param name="state">The state passed to the selector.</param>
-    /// <param name="selector">The transform applied to each source value and the state.</param>
-    public MapWithSignal(IObservable<TSource> source, TState state, Func<TState, TSource, TResult> selector)
-    {
-        _source = source;
-        _state = state;
-        _selector = selector;
-    }
+    private readonly Func<TState, TSource, TResult> _selector = selector;
 
     /// <summary>Determines whether the sink must subscribe on the current thread.</summary>
     /// <returns><see langword="true"/> when the source requires current-thread subscription.</returns>
@@ -51,30 +46,25 @@ public sealed class MapWithSignal<TSource, TState, TResult> : IRequireCurrentThr
     }
 
     /// <summary>Applies the stateful selector to each source value.</summary>
-    private sealed class MapWithWitness : IObserver<TSource>
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="state">The state passed to the selector.</param>
+    /// <param name="selector">The transform applied to each source value and the state.</param>
+    private sealed class MapWithWitness(
+        IObserver<TResult> observer,
+        TState state,
+        Func<TState, TSource, TResult> selector) : IObserver<TSource>
     {
         /// <summary>The downstream observer.</summary>
-        private readonly IObserver<TResult> _observer;
+        private readonly IObserver<TResult> _observer = observer;
 
         /// <summary>The state passed to the selector.</summary>
-        private readonly TState _state;
+        private readonly TState _state = state;
 
         /// <summary>The transform applied to each source value and the state.</summary>
-        private readonly Func<TState, TSource, TResult> _selector;
+        private readonly Func<TState, TSource, TResult> _selector = selector;
 
         /// <summary>Whether a terminal notification has been forwarded.</summary>
         private bool _stopped;
-
-        /// <summary>Initializes a new instance of the <see cref="MapWithWitness"/> class.</summary>
-        /// <param name="observer">The downstream observer.</param>
-        /// <param name="state">The state passed to the selector.</param>
-        /// <param name="selector">The transform applied to each source value and the state.</param>
-        public MapWithWitness(IObserver<TResult> observer, TState state, Func<TState, TSource, TResult> selector)
-        {
-            _observer = observer;
-            _state = state;
-            _selector = selector;
-        }
 
         /// <summary>Forwards completion downstream.</summary>
         public void OnCompleted()

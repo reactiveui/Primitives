@@ -117,7 +117,7 @@ public class IndexedSubscribeHelperTests
     public async Task WhenNullArgs_ThenArgumentNullException()
     {
         const IReadOnlyList<IObservable<int>> NullSources = null!;
-        var ex = Assert.Throws<ArgumentNullException>(() => IndexedSubscribeHelper.SubscribeIndexed(
+        var ex = Assert.Throws<ArgumentNullException>(static () => IndexedSubscribeHelper.SubscribeIndexed(
             NullSources,
             static (_, _) => { },
             static _ => { },

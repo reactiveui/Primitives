@@ -127,7 +127,9 @@ public static class Concurrent
     /// observers have finished processing the completion notification. If the observers list is empty, a default
     /// ValueTask is returned.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ValueTask ForwardOnCompletedConcurrently<T>(ImmutableArray<IObserverAsync<T>> observers, Result result)
+    public static ValueTask ForwardOnCompletedConcurrently<T>(
+        ImmutableArray<IObserverAsync<T>> observers,
+        Result result)
     {
         var count = observers.Length;
         if (count == 0)

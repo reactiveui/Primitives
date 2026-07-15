@@ -245,7 +245,13 @@ public static class ObservableSubscriptionExtensions
         }
 
         SwapDisposable swap = new();
-        var scheduled = scheduler.Schedule(() => swap.Disposable = source.Subscribe(observer));
+        var scheduled = scheduler.Schedule(
+            (Swap: swap, Source: source, Observer: observer),
+            static (_, state) =>
+            {
+                state.Swap.Disposable = state.Source.Subscribe(state.Observer);
+                return EmptyDisposable.Instance;
+            });
         return new DisposableBag(scheduled, swap);
     }
 
@@ -339,6 +345,13 @@ public static class ObservableSubscriptionExtensions
         public void OnError(Exception error) => done.Set();
 
         /// <inheritdoc/>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Design",
+            "SST2318:Members should not have identical bodies",
+            Justification =
+                "This blocking witness treats completion and error identically: either terminal signal releases the "
+                + "gate. OnError and OnCompleted are distinct IObserver<T> channels that share this by design, not a "
+                + "copy that was meant to differ.")]
         public void OnCompleted() => done.Set();
     }
 

@@ -75,8 +75,8 @@ internal sealed class FromAsyncTaskObservation<T>
     /// <summary>Forwards the task terminal state.</summary>
     /// <param name="task">The task to observe.</param>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4462:Calls to \"async\" methods should not be blocking",
+        "Concurrency",
+        "PSH1315:A blocking wait on an awaitable that may not be done",
         Justification = "Synchronous result access is limited to the completed task continuation.")]
     private void ObserveCore(Task<T> task)
     {
@@ -121,7 +121,8 @@ internal sealed class FromAsyncTaskObservation<T>
     /// <param name="error">The observed task error.</param>
     private void OnError(Exception error)
     {
-        if (Lifetime.IsCancellationRequested || ExternalCancellation.TryForwardCancellation() || !Lifetime.TryComplete())
+        if (Lifetime.IsCancellationRequested || ExternalCancellation.TryForwardCancellation() ||
+            !Lifetime.TryComplete())
         {
             return;
         }

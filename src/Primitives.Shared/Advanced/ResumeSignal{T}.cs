@@ -14,22 +14,15 @@ namespace ReactiveUI.Primitives.Advanced;
 /// management of <see cref="RecoverSignal{T, TException}"/>.
 /// </summary>
 /// <typeparam name="T">The value type.</typeparam>
-internal sealed class ResumeSignal<T> : IRequireCurrentThread<T>
+/// <param name="source">The source observable.</param>
+/// <param name="fallback">The fallback observable subscribed to after the source errors.</param>
+internal sealed class ResumeSignal<T>(IObservable<T> source, IObservable<T> fallback) : IRequireCurrentThread<T>
 {
     /// <summary>The source observable.</summary>
-    private readonly IObservable<T> _source;
+    private readonly IObservable<T> _source = source;
 
     /// <summary>The fallback observable subscribed to after the source errors.</summary>
-    private readonly IObservable<T> _fallback;
-
-    /// <summary>Initializes a new instance of the <see cref="ResumeSignal{T}"/> class.</summary>
-    /// <param name="source">The source observable.</param>
-    /// <param name="fallback">The fallback observable subscribed to after the source errors.</param>
-    internal ResumeSignal(IObservable<T> source, IObservable<T> fallback)
-    {
-        _source = source;
-        _fallback = fallback;
-    }
+    private readonly IObservable<T> _fallback = fallback;
 
     /// <inheritdoc/>
     public bool IsRequiredSubscribeOnCurrentThread() => true;
@@ -39,14 +32,9 @@ internal sealed class ResumeSignal<T> : IRequireCurrentThread<T>
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        if (!CurrentThreadSequencer.IsScheduleRequired)
-        {
-            return Run(observer);
-        }
-
-        SingleDisposable subscription = new();
-        _ = Sequencer.CurrentThread.Schedule(() => subscription.Create(Run(observer)));
-        return subscription;
+        return SubscriptionScheduling.OnCurrentThread(
+            (self: this, observer),
+            static s => s.self.Run(s.observer));
     }
 
     /// <summary>Builds the sink and subscribes it to the source.</summary>
@@ -55,28 +43,21 @@ internal sealed class ResumeSignal<T> : IRequireCurrentThread<T>
     private ResumeWitness Run(IObserver<T> observer) => new ResumeWitness(observer, _fallback).Run(_source);
 
     /// <summary>Forwards source values and, on any error, switches to the fallback sequence.</summary>
-    private sealed class ResumeWitness : IObserver<T>, IDisposable
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="fallback">The fallback observable.</param>
+    private sealed class ResumeWitness(IObserver<T> observer, IObservable<T> fallback) : IObserver<T>, IDisposable
     {
         /// <summary>The downstream observer.</summary>
-        private readonly IObserver<T> _observer;
+        private readonly IObserver<T> _observer = observer;
 
         /// <summary>The fallback observable.</summary>
-        private readonly IObservable<T> _fallback;
+        private readonly IObservable<T> _fallback = fallback;
 
         /// <summary>The source subscription slot.</summary>
         private IDisposable? _sourceSubscription;
 
         /// <summary>The fallback subscription slot, populated after an error.</summary>
         private IDisposable? _fallbackSubscription;
-
-        /// <summary>Initializes a new instance of the <see cref="ResumeWitness"/> class.</summary>
-        /// <param name="observer">The downstream observer.</param>
-        /// <param name="fallback">The fallback observable.</param>
-        internal ResumeWitness(IObserver<T> observer, IObservable<T> fallback)
-        {
-            _observer = observer;
-            _fallback = fallback;
-        }
 
         /// <inheritdoc/>
         public void OnNext(T value) => _observer.OnNext(value);
@@ -115,6 +96,7 @@ internal sealed class ResumeSignal<T> : IRequireCurrentThread<T>
 
         /// <summary>Stores the fallback subscription.</summary>
         /// <param name="subscription">The fallback subscription.</param>
-        private void SetFallback(IDisposable subscription) => SubscriptionSlots.Assign(ref _fallbackSubscription, subscription);
+        private void SetFallback(IDisposable subscription) =>
+            SubscriptionSlots.Assign(ref _fallbackSubscription, subscription);
     }
 }

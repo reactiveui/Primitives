@@ -64,6 +64,7 @@ public class AsyncSerialGateTests
     [Test]
     public async Task WhenContendedWaiter_ThenResumesAfterRelease()
     {
+        const int ContentionTimeoutSeconds = 30;
         using AsyncSerialGate gate = new();
         var first = await gate.EnterAsync();
 
@@ -85,14 +86,14 @@ public class AsyncSerialGateTests
 
         var contenderReady = await AsyncTestHelpers.WaitForConditionAsync(
             () => gate.WaitersCount >= 1 || secondAcquired.Task.IsCompleted,
-            TimeSpan.FromSeconds(30));
+            TimeSpan.FromSeconds(ContentionTimeoutSeconds));
         await Assert.That(contenderReady).IsTrue();
 
         // Releasing the first acquisition is the only thing that can let a slow-path contender
         // resume; a fast-path contender already completed and this is a no-op.
         first.Dispose();
 
-        var acquired = await secondAcquired.Task.WaitAsync(TimeSpan.FromSeconds(30));
+        var acquired = await secondAcquired.Task.WaitAsync(TimeSpan.FromSeconds(ContentionTimeoutSeconds));
         await Assert.That(acquired).IsTrue();
 
         _ = release.TrySetResult(true);

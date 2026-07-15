@@ -7,30 +7,25 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <summary>Sink that emits the final accumulation once the source completes.</summary>
 /// <typeparam name="TSource">The source value type.</typeparam>
 /// <typeparam name="TAccumulate">The accumulated value type.</typeparam>
-public sealed class ReduceWitness<TSource, TAccumulate> : IObserver<TSource>, IDisposable
+/// <param name="observer">The downstream observer.</param>
+/// <param name="seed">The initial accumulated value.</param>
+/// <param name="accumulator">The accumulator function.</param>
+public sealed class ReduceWitness<TSource, TAccumulate>(
+    IObserver<TAccumulate> observer,
+    TAccumulate seed,
+    Func<TAccumulate, TSource, TAccumulate> accumulator) : IObserver<TSource>, IDisposable
 {
     /// <summary>The downstream observer.</summary>
-    private readonly IObserver<TAccumulate> _observer;
+    private readonly IObserver<TAccumulate> _observer = observer;
 
     /// <summary>The accumulator function.</summary>
-    private readonly Func<TAccumulate, TSource, TAccumulate> _accumulator;
+    private readonly Func<TAccumulate, TSource, TAccumulate> _accumulator = accumulator;
 
     /// <summary>The current accumulated value.</summary>
-    private TAccumulate _current;
+    private TAccumulate _current = seed;
 
     /// <summary>The upstream subscription.</summary>
     private IDisposable? _subscription;
-
-    /// <summary>Initializes a new instance of the <see cref="ReduceWitness{TSource, TAccumulate}"/> class.</summary>
-    /// <param name="observer">The downstream observer.</param>
-    /// <param name="seed">The initial accumulated value.</param>
-    /// <param name="accumulator">The accumulator function.</param>
-    public ReduceWitness(IObserver<TAccumulate> observer, TAccumulate seed, Func<TAccumulate, TSource, TAccumulate> accumulator)
-    {
-        _observer = observer;
-        _current = seed;
-        _accumulator = accumulator;
-    }
 
     /// <inheritdoc/>
     public void OnNext(TSource value) => _current = _accumulator(_current, value);

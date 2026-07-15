@@ -25,6 +25,9 @@ public partial class SignalOperatorParityMixinsTests
     /// <summary>A value outside the tested ranges.</summary>
     private const int MissingRangeValue = 99;
 
+    /// <summary>The message raised by the faulting equality comparer test double.</summary>
+    private const string ComparerFaultMessage = "comparer-fault";
+
     /// <summary>Observed error index for the any error.</summary>
     private const int AnyErrorIndex = 2;
 
@@ -97,8 +100,8 @@ public partial class SignalOperatorParityMixinsTests
     /// <summary>Covers count, long-count, distinct fast count, and any helper branches.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [SuppressMessage(
-        "Major Code Smell",
-        "S6966:Awaitable method should be used",
+        "Concurrency",
+        "PSH1313:Call the async overload from an async method",
         Justification =
             "This test deliberately exercises the synchronous IObservable operator overloads, not their awaitable terminal counterparts.")]
     [Test]
@@ -119,21 +122,22 @@ public partial class SignalOperatorParityMixinsTests
         List<bool> rangeAllFalse = [];
         List<bool> rangeContainsTrue = [];
         List<bool> rangeContainsFalse = [];
-        _ = Signal.FromEnumerable(AggregateSource).Count(value => value % Second == 0).Subscribe(countPredicate.Add);
-        _ = Signal.FromEnumerable(DuplicateKeySource).DistinctBy(value => value).Count().Subscribe(distinctCount.Add);
+        _ = Signal.FromEnumerable(AggregateSource).Count(static value => value % Second == 0).Subscribe(countPredicate.Add);
+        _ = Signal.FromEnumerable(DuplicateKeySource).DistinctBy(static value => value).Count().Subscribe(distinctCount.Add);
         _ = Signal.FromEnumerable(AggregateSource).LongCount().Subscribe(longCount.Add);
-        _ = Signal.FromEnumerable(AggregateSource).LongCount(value => value > Second).Subscribe(longCountPredicate.Add);
-        _ = Signal.FromEnumerable(DuplicateKeySource).DistinctBy(value => value).LongCount()
+        _ = Signal.FromEnumerable(AggregateSource).LongCount(static value => value > Second).Subscribe(longCountPredicate.Add);
+        _ = Signal.FromEnumerable(DuplicateKeySource).DistinctBy(static value => value).LongCount()
             .Subscribe(distinctLongCount.Add);
         _ = Signal.FromEnumerable(AggregateSource).Any().Subscribe(anyTrue.Add);
         _ = Signal.None<int>().Any().Subscribe(anyFalse.Add);
-        _ = Signal.Sequence(First, Fourth).DistinctBy(value => value / Second).Count().Subscribe(rangeDistinctCount.Add);
-        _ = Signal.Sequence(First, Fourth).DistinctBy(value => value / Second).LongCount()
+        _ = Signal.Sequence(First, Fourth).DistinctBy(static value => value / Second).Count()
+            .Subscribe(rangeDistinctCount.Add);
+        _ = Signal.Sequence(First, Fourth).DistinctBy(static value => value / Second).LongCount()
             .Subscribe(rangeDistinctLongCount.Add);
-        _ = Signal.Sequence(First, Fourth).Any(value => value == Third).Subscribe(rangeAnyTrue.Add);
-        _ = Signal.Sequence(First, Fourth).Any(value => value == MissingRangeValue).Subscribe(rangeAnyFalse.Add);
-        _ = Signal.Sequence(First, Fourth).All(value => value > 0).Subscribe(rangeAllTrue.Add);
-        _ = Signal.Sequence(First, Fourth).All(value => value < Fourth).Subscribe(rangeAllFalse.Add);
+        _ = Signal.Sequence(First, Fourth).Any(static value => value == Third).Subscribe(rangeAnyTrue.Add);
+        _ = Signal.Sequence(First, Fourth).Any(static value => value == MissingRangeValue).Subscribe(rangeAnyFalse.Add);
+        _ = Signal.Sequence(First, Fourth).All(static value => value > 0).Subscribe(rangeAllTrue.Add);
+        _ = Signal.Sequence(First, Fourth).All(static value => value < Fourth).Subscribe(rangeAllFalse.Add);
         _ = Signal.Sequence(First, Fourth).Contains(Third).Subscribe(rangeContainsTrue.Add);
         _ = Signal.Sequence(First, Fourth).Contains(MissingRangeValue).Subscribe(rangeContainsFalse.Add);
         await Assert.That(countPredicate.SequenceEqual(CountTwoExpected)).IsTrue();
@@ -158,8 +162,8 @@ public partial class SignalOperatorParityMixinsTests
     /// <summary>Covers optimized aggregate observer error paths.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [SuppressMessage(
-        "Major Code Smell",
-        "S6966:Awaitable method should be used",
+        "Concurrency",
+        "PSH1313:Call the async overload from an async method",
         Justification =
             "This test deliberately exercises the synchronous IObservable operator overloads, not their awaitable terminal counterparts.")]
     [Test]
@@ -170,11 +174,11 @@ public partial class SignalOperatorParityMixinsTests
         InvalidOperationException anyError = new("any");
         InvalidOperationException distinctError = new("distinct");
         List<Exception> observed = [];
-        _ = Signal.Fail<int>(countError).Count().Subscribe(_ => { }, observed.Add, () => { });
-        _ = Signal.Fail<int>(longCountError).LongCount().Subscribe(_ => { }, observed.Add, () => { });
-        _ = Signal.Fail<int>(anyError).Any().Subscribe(_ => { }, observed.Add, () => { });
-        _ = Signal.Fail<int>(distinctError).DistinctBy(value => value).Count()
-            .Subscribe(_ => { }, observed.Add, () => { });
+        _ = Signal.Fail<int>(countError).Count().Subscribe(static _ => { }, observed.Add, static () => { });
+        _ = Signal.Fail<int>(longCountError).LongCount().Subscribe(static _ => { }, observed.Add, static () => { });
+        _ = Signal.Fail<int>(anyError).Any().Subscribe(static _ => { }, observed.Add, static () => { });
+        _ = Signal.Fail<int>(distinctError).DistinctBy(static value => value).Count()
+            .Subscribe(static _ => { }, observed.Add, static () => { });
         await Assert.That(observed[0]).IsSameReferenceAs(countError);
         await Assert.That(observed[1]).IsSameReferenceAs(longCountError);
         await Assert.That(observed[AnyErrorIndex]).IsSameReferenceAs(anyError);
@@ -188,7 +192,7 @@ public partial class SignalOperatorParityMixinsTests
     {
         InvalidOperationException allError = new(AllMessage);
         List<Exception> observed = [];
-        _ = Signal.Sequence(First, Fourth).All(_ => throw allError).Subscribe(_ => { }, observed.Add, () => { });
+        _ = Signal.Sequence(First, Fourth).All(_ => throw allError).Subscribe(static _ => { }, observed.Add, static () => { });
         await Assert.That(observed[0]).IsSameReferenceAs(allError);
     }
 
@@ -203,7 +207,7 @@ public partial class SignalOperatorParityMixinsTests
         List<int> values = [];
         var completed = 0;
         using var subscription = outer.FlatMap(value => value == First ? firstInner : secondInner)
-            .Subscribe(values.Add, ex => throw ex, () => completed++);
+            .Subscribe(values.Add, static ex => throw ex, () => completed++);
         outer.OnNext(First);
         outer.OnNext(Second);
         outer.OnCompleted();
@@ -222,7 +226,7 @@ public partial class SignalOperatorParityMixinsTests
     {
         List<int> values = [];
         _ = Signal.FromEnumerable(FirstSecondSource)
-            .FlatMap(value => Signal.FromEnumerable(SingleInnerSource), (outer, inner) => outer + inner)
+            .FlatMap(static value => Signal.FromEnumerable(SingleInnerSource), static (outer, inner) => outer + inner)
             .Subscribe(values.Add);
         await Assert.That(values.SequenceEqual(ResultFlatMapExpected)).IsTrue();
     }
@@ -237,10 +241,10 @@ public partial class SignalOperatorParityMixinsTests
         InvalidOperationException outerError = new(OuterMessage);
         List<Exception> observed = [];
         _ = Signal.FromEnumerable(SingleFirstSource).FlatMap<int, int>(_ => throw selectorError)
-            .Subscribe(_ => { }, observed.Add, () => { });
+            .Subscribe(static _ => { }, observed.Add, static () => { });
         _ = Signal.FromEnumerable(SingleFirstSource).FlatMap(_ => Signal.Fail<int>(innerError))
-            .Subscribe(_ => { }, observed.Add, () => { });
-        _ = Signal.Fail<int>(outerError).FlatMap(ReturnValue).Subscribe(_ => { }, observed.Add, () => { });
+            .Subscribe(static _ => { }, observed.Add, static () => { });
+        _ = Signal.Fail<int>(outerError).FlatMap(ReturnValue).Subscribe(static _ => { }, observed.Add, static () => { });
         await Assert.That(observed[0]).IsSameReferenceAs(selectorError);
         await Assert.That(observed[1]).IsSameReferenceAs(innerError);
         await Assert.That(observed[OuterErrorIndex]).IsSameReferenceAs(outerError);
@@ -259,16 +263,74 @@ public partial class SignalOperatorParityMixinsTests
         var source = Signal.FromEnumerable(contacts);
         var collectedArray = await source.CollectArrayAsync();
         var collectedList = await source.CollectListAsync();
-        var firstDefault = await Signal.None<Contact>().FirstOrDefaultAsync(new Contact("empty", null));
+        var firstDefault = await Signal.None<Contact>().FirstOrDefaultAsync(new("empty", null));
         var last = await source.LastAsync();
-        var anyNullLastName = await source.AnyAsync(contact => contact.LastName is null);
-        var countWithLastName = await source.CountAsync(contact => contact.LastName is not null);
+        var anyNullLastName = await source.AnyAsync(static contact => contact.LastName is null);
+        var countWithLastName = await source.CountAsync(static contact => contact.LastName is not null);
         await Assert.That(collectedArray.SequenceEqual(contacts)).IsTrue();
         await Assert.That(collectedList.SequenceEqual(contacts)).IsTrue();
         await Assert.That(firstDefault).IsEqualTo(new("empty", null));
         await Assert.That(last).IsEqualTo(new("Katherine", "Johnson"));
         await Assert.That(anyNullLastName).IsTrue();
         await Assert.That(countWithLastName).IsEqualTo(ExpectedLastNameCount);
+    }
+
+    /// <summary>The range-optimized Contains surfaces a faulting comparer as an error instead of throwing.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ContainsOverARangeSurfacesAFaultingComparerAsAnError()
+    {
+        List<Exception> observed = [];
+        var completions = 0;
+
+        Signal.Sequence(First, Fourth)
+            .Contains(Third, new ThrowingComparer())
+            .Subscribe(static _ => { }, observed.Add, () => completions++)
+            .Dispose();
+
+        await Assert.That(observed.Count).IsEqualTo(1);
+        await Assert.That(observed[0].Message).IsEqualTo(ComparerFaultMessage);
+        await Assert.That(completions).IsEqualTo(0);
+    }
+
+    /// <summary>The range-optimized any terminal reports false when no value in the range matches.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task RangeAnyAsyncReportsFalseWhenNoValueMatches()
+    {
+        await Assert.That(await Signal.Sequence(First, Fourth).AnyAsync(static value => value == MissingRangeValue))
+            .IsFalse();
+        await Assert.That(await Signal.Sequence(First, Fourth).AnyAsync(static value => value == Third)).IsTrue();
+    }
+
+    /// <summary>A predicate that throws faults the range-optimized any and count terminals.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task RangeTerminalTasksFaultWhenThePredicateThrows()
+    {
+        InvalidOperationException expected = new("range-predicate");
+
+        var anyError = await Assert.That(() => Signal.Sequence(First, Fourth).AnyAsync(_ => throw expected))
+            .Throws<InvalidOperationException>();
+        var countError = await Assert.That(() => Signal.Sequence(First, Fourth).CountAsync(_ => throw expected))
+            .Throws<InvalidOperationException>();
+
+        await Assert.That(anyError!).IsSameReferenceAs(expected);
+        await Assert.That(countError!).IsSameReferenceAs(expected);
+    }
+
+    /// <summary>The predicate terminals cancel up front when handed an already-cancelled token.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task PredicateTerminalTasksCancelUpFrontOnAnAlreadyCancelledToken()
+    {
+        using CancellationTokenSource cts = new();
+        await cts.CancelAsync();
+
+        await Assert.That(() => Signal.Sequence(First, Fourth).AnyAsync(static value => value == Third, cts.Token))
+            .Throws<TaskCanceledException>();
+        await Assert.That(() => Signal.Sequence(First, Fourth).CountAsync(static value => value == Third, cts.Token))
+            .Throws<TaskCanceledException>();
     }
 
     /// <summary>Returns a scalar signal for the supplied value.</summary>

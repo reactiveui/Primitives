@@ -12,22 +12,26 @@ namespace ReactiveUI.Primitives.Extensions.Tests;
 /// <summary>Tests for ReactiveExtensionsTests.</summary>
 public partial class ReactiveExtensionsTests
 {
+    /// <summary>Longest a retry test waits for the final error to propagate after the retries are exhausted.</summary>
+    private static readonly TimeSpan ErrorPropagationTimeout = TimeSpan.FromSeconds(2);
+
     /// <summary>Tests OnErrorRetry without parameters.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task OnErrorRetry_RetriesOnError()
     {
+        const int SuccessAttempt = 3;
         var attempts = 0;
         var source = Observable.Create<int>(observer =>
         {
             attempts++;
-            if (attempts < 3)
+            if (attempts < SuccessAttempt)
             {
                 observer.OnError(new InvalidOperationException());
             }
             else
             {
-                observer.OnNext(42);
+                observer.OnNext(SampleValue42);
                 observer.OnCompleted();
             }
 
@@ -48,27 +52,32 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task RetryWithBackoff_RespectsMaxDelay()
     {
+        const int SuccessAttempt = 5;
+        const int MaxRetries = 10;
+        const int InitialDelayMilliseconds = 10;
+        const double BackoffFactor = 2.0;
+        const int MaxDelayMilliseconds = 50;
         var attempts = 0;
         var source = Observable.Create<int>(observer =>
         {
             attempts++;
-            if (attempts < 5)
+            if (attempts < SuccessAttempt)
             {
                 observer.OnError(new InvalidOperationException());
             }
             else
             {
-                observer.OnNext(42);
+                observer.OnNext(SampleValue42);
                 observer.OnCompleted();
             }
 
             return EmptyDisposable.Instance;
         });
         var result = source.RetryWithBackoff(
-            10,
-            TimeSpan.FromMilliseconds(10),
-            2.0,
-            TimeSpan.FromMilliseconds(50),
+            MaxRetries,
+            TimeSpan.FromMilliseconds(InitialDelayMilliseconds),
+            BackoffFactor,
+            TimeSpan.FromMilliseconds(MaxDelayMilliseconds),
             null).Wait();
         await Assert.That(result).IsEqualTo(SampleValue42);
     }
@@ -91,7 +100,7 @@ public partial class ReactiveExtensionsTests
         Exception? caughtException = null;
         using var sub = source.OnErrorRetry<int, InvalidOperationException>(ex => errorCount++, RetryCount)
             .Subscribe(
-                _ => { },
+                static _ => { },
                 ex => caughtException = ex);
         using (Assert.Multiple())
         {
@@ -106,17 +115,20 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task OnErrorRetry_WithDelay_DelaysRetries()
     {
+        const int SuccessAttempt = 3;
+        const int RetryCount = 5;
+        const int DelayMilliseconds = 50;
         var attempts = 0;
         var source = Observable.Create<int>(observer =>
         {
             attempts++;
-            if (attempts < 3)
+            if (attempts < SuccessAttempt)
             {
                 observer.OnError(new InvalidOperationException());
             }
             else
             {
-                observer.OnNext(42);
+                observer.OnNext(SampleValue42);
                 observer.OnCompleted();
             }
 
@@ -124,9 +136,9 @@ public partial class ReactiveExtensionsTests
         });
         var startTimestamp = TimeProvider.System.GetTimestamp();
         var result = source.OnErrorRetry<int, InvalidOperationException>(
-            ex => { },
-            5,
-            TimeSpan.FromMilliseconds(50)).Wait();
+            static ex => { },
+            RetryCount,
+            TimeSpan.FromMilliseconds(DelayMilliseconds)).Wait();
         var elapsed = TimeProvider.System.GetElapsedTime(startTimestamp);
         using (Assert.Multiple())
         {
@@ -140,6 +152,8 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task OnErrorRetry_WithDelayAndErrorAction_RetriesWithDelay()
     {
+        const int SuccessAttempt = 2;
+        const int DelayMilliseconds = 10;
         var attemptCount = 0;
         var errorsCaught = 0;
         List<int> results = [];
@@ -147,13 +161,13 @@ public partial class ReactiveExtensionsTests
         var source = Observable.Create<int>(observer =>
         {
             attemptCount++;
-            if (attemptCount < 2)
+            if (attemptCount < SuccessAttempt)
             {
                 observer.OnError(new InvalidOperationException($"Attempt {attemptCount}"));
             }
             else
             {
-                observer.OnNext(42);
+                observer.OnNext(SampleValue42);
                 observer.OnCompleted();
             }
 
@@ -162,9 +176,9 @@ public partial class ReactiveExtensionsTests
         _ = source.OnErrorRetry<int, InvalidOperationException>(
             ex => errorsCaught++,
             int.MaxValue,
-            TimeSpan.FromMilliseconds(10),
+            TimeSpan.FromMilliseconds(DelayMilliseconds),
             scheduler).Subscribe(results.Add);
-        scheduler.AdvanceBy(TimeSpan.FromMilliseconds(10).Ticks);
+        scheduler.AdvanceBy(TimeSpan.FromMilliseconds(DelayMilliseconds).Ticks);
         using (Assert.Multiple())
         {
             await Assert.That(errorsCaught).IsEqualTo(1);
@@ -189,10 +203,10 @@ public partial class ReactiveExtensionsTests
             return EmptyDisposable.Instance;
         });
         _ = source.OnErrorRetry<int, InvalidOperationException>(ex => errorsCaught++, RetryCount).Subscribe(
-            _ => { },
+            static _ => { },
             ex => finalError = true);
         var finalErrorReceived =
-            await AsyncTestHelpers.WaitForConditionAsync(() => finalError, TimeSpan.FromSeconds(2));
+            await AsyncTestHelpers.WaitForConditionAsync(() => finalError, ErrorPropagationTimeout);
         using (Assert.Multiple())
         {
             // OnError callback fires for every failure (including the final propagated one):
@@ -226,7 +240,7 @@ public partial class ReactiveExtensionsTests
             RetryCount,
             TimeSpan.FromMilliseconds(DelayMilliseconds),
             scheduler).Subscribe(
-            _ => { },
+            static _ => { },
             ex => finalError = true);
 
         // Advance enough virtual time to drain all retries plus the final propagation.
@@ -244,18 +258,20 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task OnErrorRetry_WithRetryCountDelayAndScheduler_RetriesCorrectly()
     {
+        const int SuccessAttempt = 2;
+        const int DelayMilliseconds = 10;
         var attemptCount = 0;
         var errorsCaught = 0;
         var source = Observable.Create<int>(observer =>
         {
             attemptCount++;
-            if (attemptCount < 2)
+            if (attemptCount < SuccessAttempt)
             {
                 observer.OnError(new InvalidOperationException($"Attempt {attemptCount}"));
             }
             else
             {
-                observer.OnNext(42);
+                observer.OnNext(SampleValue42);
                 observer.OnCompleted();
             }
 
@@ -266,7 +282,7 @@ public partial class ReactiveExtensionsTests
         _ = source.OnErrorRetry<int, InvalidOperationException>(
             ex => errorsCaught++,
             RetryCount,
-            TimeSpan.FromMilliseconds(10),
+            TimeSpan.FromMilliseconds(DelayMilliseconds),
             Sequencer.Immediate).Subscribe(r => result = r);
         using (Assert.Multiple())
         {
@@ -280,18 +296,19 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenOnErrorRetryWithActionOnly_ThenRetriesImmediately()
     {
+        const int SuccessAttempt = 3;
         var attempts = 0;
         var errorCount = 0;
         var source = Observable.Create<int>(observer =>
         {
             attempts++;
-            if (attempts < 3)
+            if (attempts < SuccessAttempt)
             {
                 observer.OnError(new InvalidOperationException());
             }
             else
             {
-                observer.OnNext(42);
+                observer.OnNext(SampleValue42);
                 observer.OnCompleted();
             }
 
@@ -311,25 +328,27 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenOnErrorRetryWithDelay_ThenRetriesAfterDelay()
     {
+        const int SuccessAttempt = 2;
+        const int DelayMilliseconds = 10;
         var attempts = 0;
         var source = Observable.Create<int>(observer =>
         {
             attempts++;
-            if (attempts < 2)
+            if (attempts < SuccessAttempt)
             {
                 observer.OnError(new InvalidOperationException());
             }
             else
             {
-                observer.OnNext(42);
+                observer.OnNext(SampleValue42);
                 observer.OnCompleted();
             }
 
             return EmptyDisposable.Instance;
         });
         var result = source.OnErrorRetry<int, InvalidOperationException>(
-            ex => { },
-            TimeSpan.FromMilliseconds(10)).Wait();
+            static ex => { },
+            TimeSpan.FromMilliseconds(DelayMilliseconds)).Wait();
         await Assert.That(result).IsEqualTo(SampleValue42);
     }
 
@@ -348,7 +367,7 @@ public partial class ReactiveExtensionsTests
             BackoffFactor,
             null,
             Sequencer.Immediate).Subscribe(
-            _ => { },
+            static _ => { },
             ex => caughtError = ex);
         await Assert.That(caughtError).IsNotNull();
     }
@@ -358,27 +377,32 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenRetryWithBackoffDelayExceedsMax_ThenCapsDelay()
     {
+        const int SuccessAttempt = 4;
+        const int MaxRetries = 5;
+        const int InitialDelayMilliseconds = 5;
+        const double BackoffFactor = 10.0;
+        const int MaxDelayMilliseconds = 20;
         var attempts = 0;
         var source = Observable.Create<int>(observer =>
         {
             attempts++;
-            if (attempts < 4)
+            if (attempts < SuccessAttempt)
             {
                 observer.OnError(new InvalidOperationException());
             }
             else
             {
-                observer.OnNext(42);
+                observer.OnNext(SampleValue42);
                 observer.OnCompleted();
             }
 
             return EmptyDisposable.Instance;
         });
         var result = source.RetryWithBackoff(
-            5,
-            TimeSpan.FromMilliseconds(5),
-            10.0,
-            TimeSpan.FromMilliseconds(20),
+            MaxRetries,
+            TimeSpan.FromMilliseconds(InitialDelayMilliseconds),
+            BackoffFactor,
+            TimeSpan.FromMilliseconds(MaxDelayMilliseconds),
             Sequencer.Immediate).Wait();
         await Assert.That(result).IsEqualTo(SampleValue42);
     }
@@ -388,23 +412,25 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenRetryWithDelay_ThenRetriesWithCustomDelay()
     {
+        const int SuccessAttempt = 3;
+        const int MaxRetries = 5;
         var attempts = 0;
         var source = Observable.Create<int>(observer =>
         {
             attempts++;
-            if (attempts < 3)
+            if (attempts < SuccessAttempt)
             {
                 observer.OnError(new InvalidOperationException());
             }
             else
             {
-                observer.OnNext(42);
+                observer.OnNext(SampleValue42);
                 observer.OnCompleted();
             }
 
             return EmptyDisposable.Instance;
         });
-        var result = source.RetryWithDelay(5, attempt => TimeSpan.FromMilliseconds(1)).Wait();
+        var result = source.RetryWithDelay(MaxRetries, static attempt => TimeSpan.FromMilliseconds(1)).Wait();
         await Assert.That(result).IsEqualTo(SampleValue42);
     }
 
@@ -413,17 +439,18 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenRetryForeverWithDelay_ThenRetriesIndefinitely()
     {
+        const int SuccessAttempt = 4;
         var attempts = 0;
         var source = Observable.Create<int>(observer =>
         {
             attempts++;
-            if (attempts < 4)
+            if (attempts < SuccessAttempt)
             {
                 observer.OnError(new InvalidOperationException());
             }
             else
             {
-                observer.OnNext(42);
+                observer.OnNext(SampleValue42);
                 observer.OnCompleted();
             }
 
@@ -438,23 +465,25 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenRetryWithFixedDelay_ThenRetriesWithConstantDelay()
     {
+        const int SuccessAttempt = 3;
+        const int MaxRetries = 5;
         var attempts = 0;
         var source = Observable.Create<int>(observer =>
         {
             attempts++;
-            if (attempts < 3)
+            if (attempts < SuccessAttempt)
             {
                 observer.OnError(new InvalidOperationException());
             }
             else
             {
-                observer.OnNext(42);
+                observer.OnNext(SampleValue42);
                 observer.OnCompleted();
             }
 
             return EmptyDisposable.Instance;
         });
-        var result = source.RetryWithFixedDelay(5, TimeSpan.FromMilliseconds(1)).Wait();
+        var result = source.RetryWithFixedDelay(MaxRetries, TimeSpan.FromMilliseconds(1)).Wait();
         await Assert.That(result).IsEqualTo(SampleValue42);
     }
 
@@ -463,24 +492,27 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenRetryWithBackoffInnerRetry_ThenRetriesAndCapsDelay()
     {
+        const int SuccessAttempt = 3;
+        const int MaxRetries = 5;
+        const int InitialDelayTicks = 10;
+        const double BackoffFactor = 2.0;
+        const int MaxDelayTicks = 15;
         VirtualClock scheduler = new();
         var attempt = 0;
         var source = Observable.Defer(() =>
         {
             attempt++;
-            return attempt < 3
+            return attempt < SuccessAttempt
                 ? Observable.Throw<int>(new InvalidOperationException("retry"))
-                : Observable.Return(42);
+                : Observable.Return(SampleValue42);
         });
         List<int> results = [];
         Exception? error = null;
-        const int MaxRetries = 5;
-        const double BackoffFactor = 2.0;
         _ = source.RetryWithBackoff(
             MaxRetries,
-            TimeSpan.FromTicks(10),
+            TimeSpan.FromTicks(InitialDelayTicks),
             BackoffFactor,
-            TimeSpan.FromTicks(15),
+            TimeSpan.FromTicks(MaxDelayTicks),
             scheduler).Subscribe(results.Add, ex => error = ex);
 
         // Advance through retry delays
@@ -494,20 +526,21 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenOnErrorRetryNegativeDelay_ThenUsesZeroDelay()
     {
+        const int SuccessAttempt = 3;
         var attempt = 0;
         var source = Observable.Defer(() =>
         {
             attempt++;
-            return attempt < 3
+            return attempt < SuccessAttempt
                 ? Observable.Throw<int>(new InvalidOperationException("fail"))
-                : Observable.Return(42);
+                : Observable.Return(SampleValue42);
         });
         List<int> results = [];
         Exception? error = null;
         TaskCompletionSource received = new(TaskCreationOptions.RunContinuationsAsynchronously);
         const int RetryCount = 5;
         _ = source.OnErrorRetry<int, InvalidOperationException>(
-            _ => { },
+            static _ => { },
             RetryCount,
             TimeSpan.FromTicks(-1)).Subscribe(
             v =>
@@ -516,7 +549,7 @@ public partial class ReactiveExtensionsTests
                 _ = received.TrySetResult();
             },
             ex => error = ex);
-        await received.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await received.Task.WaitAsync(WaitTimeout);
         await Assert.That(results).Contains(SampleValue42);
     }
 
@@ -530,16 +563,16 @@ public partial class ReactiveExtensionsTests
         TaskCompletionSource errorReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
         const int RetryCount = 2;
         _ = source.OnErrorRetry<int, InvalidOperationException>(
-            _ => { },
+            static _ => { },
             RetryCount,
             TimeSpan.Zero).Subscribe(
-            _ => { },
+            static _ => { },
             ex =>
             {
                 caught = ex;
                 _ = errorReceived.TrySetResult();
             });
-        await errorReceived.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await errorReceived.Task.WaitAsync(WaitTimeout);
         await Assert.That(caught).IsNotNull();
         await Assert.That(caught).IsTypeOf<InvalidOperationException>();
     }
@@ -549,18 +582,24 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenRetryWithBackoffExceedsMaxDelay_ThenCapsAtMaxDelay()
     {
+        const int FailingAttempts = 3;
+        const int MaxRetries = 5;
+        const int InitialDelayMilliseconds = 100;
+        const double BackoffFactor = 10.0;
+        const int MaxDelayMilliseconds = 200;
+        const int AdvanceMilliseconds = 250;
         VirtualClock scheduler = new();
         var attempt = 0;
         var source = Observable.Create<int>(obs =>
         {
             attempt++;
-            if (attempt <= 3)
+            if (attempt <= FailingAttempts)
             {
                 obs.OnError(new InvalidOperationException($"fail {attempt}"));
             }
             else
             {
-                obs.OnNext(42);
+                obs.OnNext(SampleValue42);
                 obs.OnCompleted();
             }
 
@@ -568,16 +607,16 @@ public partial class ReactiveExtensionsTests
         });
         List<int> results = [];
         using var sub = source.RetryWithBackoff(
-            5,
-            TimeSpan.FromMilliseconds(100),
-            10.0,
-            TimeSpan.FromMilliseconds(200),
+            MaxRetries,
+            TimeSpan.FromMilliseconds(InitialDelayMilliseconds),
+            BackoffFactor,
+            TimeSpan.FromMilliseconds(MaxDelayMilliseconds),
             scheduler).Subscribe(results.Add);
 
         // Advance through retry delays
         for (var i = 0; i < SampleValue5; i++)
         {
-            scheduler.AdvanceBy(TimeSpan.FromMilliseconds(250).Ticks);
+            scheduler.AdvanceBy(TimeSpan.FromMilliseconds(AdvanceMilliseconds).Ticks);
         }
 
         await Assert.That(results).Contains(SampleValue42);
@@ -591,18 +630,22 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenRetryWithBackoffDelayExceedsMaxDelay_ThenCappedAtMaxDelay()
     {
+        const int FailingAttempts = 3;
+        const int MaxRetries = 5;
+        const double BackoffFactor = 100.0;
+        const int MaxDelayMilliseconds = 5;
         VirtualClock scheduler = new();
         var attemptCount = 0;
         var source = Observable.Create<int>(observer =>
         {
             attemptCount++;
-            if (attemptCount <= 3)
+            if (attemptCount <= FailingAttempts)
             {
                 observer.OnError(new InvalidOperationException($"attempt {attemptCount}"));
             }
             else
             {
-                observer.OnNext(99);
+                observer.OnNext(SampleValue99);
                 observer.OnCompleted();
             }
 
@@ -611,13 +654,11 @@ public partial class ReactiveExtensionsTests
 
         // initialDelay=1ms, backoffFactor=100 => attempt 2 delay = 1*100^1 = 100ms, exceeds maxDelay=5ms
         List<int> results = [];
-        const int MaxRetries = 5;
-        const double BackoffFactor = 100.0;
         _ = source.RetryWithBackoff(
             MaxRetries,
             TimeSpan.FromMilliseconds(1),
             BackoffFactor,
-            TimeSpan.FromMilliseconds(5),
+            TimeSpan.FromMilliseconds(MaxDelayMilliseconds),
             scheduler).Subscribe(results.Add);
 
         // Advance past the capped delays
@@ -634,19 +675,23 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenRetryWithBackoffComputedDelayExceedsMaxDelay_ThenCappedToMaxDelay()
     {
+        const int FailingAttempts = 2;
+        const int MaxRetries = 5;
+        const double BackoffFactor = 1000.0;
+        const int MaxDelayMilliseconds = 2;
         var attemptCount = 0;
         var source = Observable.Create<int>(observer =>
         {
             attemptCount++;
 
             // Fail on first two attempts, succeed on third
-            if (attemptCount <= 2)
+            if (attemptCount <= FailingAttempts)
             {
                 observer.OnError(new InvalidOperationException($"attempt {attemptCount}"));
             }
             else
             {
-                observer.OnNext(42);
+                observer.OnNext(SampleValue42);
                 observer.OnCompleted();
             }
 
@@ -656,10 +701,10 @@ public partial class ReactiveExtensionsTests
         // initialDelay=1ms, backoffFactor=1000 => computed delay = 1000ms >> maxDelay=2ms
         // This ensures the cap path at line 1240 is hit
         var result = source.RetryWithBackoff(
-            5,
+            MaxRetries,
             TimeSpan.FromMilliseconds(1),
-            1000.0,
-            TimeSpan.FromMilliseconds(2),
+            BackoffFactor,
+            TimeSpan.FromMilliseconds(MaxDelayMilliseconds),
             Sequencer.Immediate).Wait();
         await Assert.That(result).IsEqualTo(SampleValue42);
         await Assert.That(attemptCount).IsEqualTo(SampleValue3);
@@ -674,18 +719,24 @@ public partial class ReactiveExtensionsTests
     public async Task WhenRetryWithBackoff_GivenLargeBackoffFactor_ThenDelayIsCappedAtMaxDelay()
     {
         // Given
+        const int FailingAttempts = 3;
+        const int SuccessValue = 100;
+        const int MaxRetries = 5;
+        const double BackoffFactor = 500.0;
+        const int MaxDelayMilliseconds = 5;
+        const int AdvanceMilliseconds = 10;
         VirtualClock scheduler = new();
         var attemptCount = 0;
         var source = Observable.Create<int>(observer =>
         {
             attemptCount++;
-            if (attemptCount <= 3)
+            if (attemptCount <= FailingAttempts)
             {
                 observer.OnError(new InvalidOperationException($"fail {attemptCount}"));
             }
             else
             {
-                observer.OnNext(100);
+                observer.OnNext(SuccessValue);
                 observer.OnCompleted();
             }
 
@@ -696,20 +747,20 @@ public partial class ReactiveExtensionsTests
         // When — backoffFactor 500 with initialDelay 1ms yields huge computed delays,
         // all of which must be capped to maxDelay 5ms.
         using var sub = source.RetryWithBackoff(
-            5,
+            MaxRetries,
             TimeSpan.FromMilliseconds(1),
-            500.0,
-            TimeSpan.FromMilliseconds(5),
+            BackoffFactor,
+            TimeSpan.FromMilliseconds(MaxDelayMilliseconds),
             scheduler).Subscribe(results.Add);
 
         // Advance the scheduler enough for each capped retry delay
         for (var i = 0; i < SampleValue10; i++)
         {
-            scheduler.AdvanceBy(TimeSpan.FromMilliseconds(10).Ticks);
+            scheduler.AdvanceBy(TimeSpan.FromMilliseconds(AdvanceMilliseconds).Ticks);
         }
 
         // Then
-        await Assert.That(results).Contains(SchedulerWindowTicks);
+        await Assert.That(results).Contains(SuccessValue);
         await Assert.That(attemptCount).IsEqualTo(SampleValue4);
     }
 
@@ -722,11 +773,12 @@ public partial class ReactiveExtensionsTests
     public async Task WhenRetryWithDelayExhaustsRetries_ThenRethrowsOriginalException()
     {
         // Given — source always fails
+        const int MaxRetries = 2;
         var source = Observable.Throw<int>(new InvalidOperationException("permanent"));
-        TaskCompletionSource<Exception> completion = new();
+        TaskCompletionSource<Exception> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         // When
-        using var sub = source.RetryWithDelay(2, _ => TimeSpan.FromMilliseconds(1)).Subscribe(
+        using var sub = source.RetryWithDelay(MaxRetries, static _ => TimeSpan.FromMilliseconds(1)).Subscribe(
             static _ => { },
             ex => completion.TrySetResult(ex));
 

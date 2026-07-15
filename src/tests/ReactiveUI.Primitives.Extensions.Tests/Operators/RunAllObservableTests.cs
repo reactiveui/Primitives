@@ -16,6 +16,9 @@ public class RunAllObservableTests
     /// <summary>Synthetic error message attached to source errors.</summary>
     private const string SourceErrorMessage = "source error";
 
+    /// <summary>Guard timeout so a hung rendezvous fails this test rather than stalling the run.</summary>
+    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
+
     /// <summary>Verifies that an empty list emits <see cref = "RxVoid"/> and completes immediately.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -72,7 +75,7 @@ public class RunAllObservableTests
         subjectA.OnCompleted();
         await Assert.That(subjectB.HasObservers).IsTrue();
         subjectB.OnCompleted();
-        var done = await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var done = await completed.Task.WaitAsync(GuardTimeout);
         await Assert.That(done).IsTrue();
     }
 

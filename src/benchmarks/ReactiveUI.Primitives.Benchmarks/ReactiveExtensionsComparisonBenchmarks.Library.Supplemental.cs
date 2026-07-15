@@ -6,15 +6,11 @@ using System.Globalization;
 using System.Reactive.Concurrency;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Signals;
-using PackageContinuation = ReactiveUI.Extensions.Continuation;
 using PackageExtensions = ReactiveUI.Extensions.ReactiveExtensions;
 using PackageObservables = ReactiveUI.Extensions.Observables;
-using PackageObserverExtensions = ReactiveUI.Extensions.ObserverExtensions;
 using PackageSubscriptionExtensions = ReactiveUI.Extensions.ObservableSubscriptionExtensions;
-using PrimitivesContinuation = ReactiveUI.Primitives.Extensions.Continuation;
 using PrimitivesExtensions = ReactiveUI.Primitives.Extensions.ReactiveExtensions;
 using PrimitivesObservables = ReactiveUI.Primitives.Extensions.Observables;
-using PrimitivesObserverExtensions = ReactiveUI.Primitives.Extensions.ObserverExtensions;
 using PrimitivesSubscriptionExtensions = ReactiveUI.Primitives.Extensions.ObservableSubscriptionExtensions;
 using RxObservable = System.Reactive.Linq.Observable;
 using RxUnit = System.Reactive.Unit;
@@ -67,8 +63,20 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>RunRetryWithBackoff</c> result.</returns>
     private static int RunRetryWithBackoff(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
-            ? PrimitivesExtensions.RetryWithBackoff(ArraySource(library), 1, TimeSpan.Zero, 1.0, TimeSpan.Zero, Sequencer.Immediate)
-            : PackageExtensions.RetryWithBackoff(ArraySource(library), 1, TimeSpan.Zero, 1.0, TimeSpan.Zero, ImmediateScheduler.Instance));
+            ? PrimitivesExtensions.RetryWithBackoff(
+                ArraySource(library),
+                1,
+                TimeSpan.Zero,
+                1.0,
+                TimeSpan.Zero,
+                Sequencer.Immediate)
+            : PackageExtensions.RetryWithBackoff(
+                ArraySource(library),
+                1,
+                TimeSpan.Zero,
+                1.0,
+                TimeSpan.Zero,
+                ImmediateScheduler.Instance));
 
     /// <summary>Executes the <c>RunRetryWithDelay</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>
@@ -107,8 +115,12 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>RunSampleLatest</c> result.</returns>
     private static int RunSampleLatest(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
-            ? PrimitivesExtensions.SampleLatest(ArraySource(library), PrimitivesExtensions.SelectConstant(ArraySource(library), new object()))
-            : PackageExtensions.SampleLatest(ArraySource(library), PackageExtensions.SelectConstant(ArraySource(library), new object())));
+            ? PrimitivesExtensions.SampleLatest(
+                ArraySource(library),
+                PrimitivesExtensions.SelectConstant(ArraySource(library), new object()))
+            : PackageExtensions.SampleLatest(
+                ArraySource(library),
+                PackageExtensions.SelectConstant(ArraySource(library), new object())));
 
     /// <summary>Executes the <c>RunScanWithInitial</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>
@@ -151,16 +163,26 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>RunSelectAsyncConcurrent</c> result.</returns>
     private static int RunSelectAsyncConcurrent(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
-            ? PrimitivesExtensions.SelectAsyncConcurrent(ArraySource(library), static value => Task.FromResult(value + 1), MaxConcurrency)
-            : PackageExtensions.SelectAsyncConcurrent(ArraySource(library), static value => Task.FromResult(value + 1), MaxConcurrency));
+            ? PrimitivesExtensions.SelectAsyncConcurrent(
+                ArraySource(library),
+                static value => Task.FromResult(value + 1),
+                MaxConcurrency)
+            : PackageExtensions.SelectAsyncConcurrent(
+                ArraySource(library),
+                static value => Task.FromResult(value + 1),
+                MaxConcurrency));
 
     /// <summary>Executes the <c>RunSelectAsyncSequential</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>
     /// <returns>The <c>RunSelectAsyncSequential</c> result.</returns>
     private static int RunSelectAsyncSequential(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
-            ? PrimitivesExtensions.SelectAsyncSequential(ArraySource(library), static value => Task.FromResult(value + 1))
-            : PackageExtensions.SelectAsyncSequential(ArraySource(library), static value => Task.FromResult(value + 1)));
+            ? PrimitivesExtensions.SelectAsyncSequential(
+                ArraySource(library),
+                static value => Task.FromResult(value + 1))
+            : PackageExtensions.SelectAsyncSequential(
+                ArraySource(library),
+                static value => Task.FromResult(value + 1)));
 
     /// <summary>Executes the <c>RunSelectConstant</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>
@@ -375,8 +397,14 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>RunThrottleUntilTrue</c> result.</returns>
     private static int RunThrottleUntilTrue(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
-            ? PrimitivesExtensions.ThrottleUntilTrue(ArraySource(library), TimeSpan.Zero, static value => value >= Match)
-            : PackageExtensions.ThrottleUntilTrue(ArraySource(library), TimeSpan.Zero, static value => value >= Match));
+            ? PrimitivesExtensions.ThrottleUntilTrue(
+                ArraySource(library),
+                TimeSpan.Zero,
+                static value => value >= Match)
+            : PackageExtensions.ThrottleUntilTrue(
+                ArraySource(library),
+                TimeSpan.Zero,
+                static value => value >= Match));
 
     /// <summary>Executes the <c>RunToHotTask</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>
@@ -401,9 +429,10 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     {
         PropertySource source = new();
         IntSignalWitness observer = new();
-        using var subscription = (library == ExtensionsLibrary.Primitives
-            ? PrimitivesExtensions.ToPropertyObservable(source, static item => item.CurrentValue)
-            : PackageExtensions.ToPropertyObservable(source, static item => item.CurrentValue))
+        using var subscription = (
+                library == ExtensionsLibrary.Primitives
+                    ? PrimitivesExtensions.ToPropertyObservable(source, static item => item.CurrentValue)
+                    : PackageExtensions.ToPropertyObservable(source, static item => item.CurrentValue))
             .Subscribe(observer);
         source.CurrentValue = Value;
         return observer.Total;
@@ -436,8 +465,12 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>RunTrySelect</c> result.</returns>
     private static int RunTrySelect(ExtensionsLibrary library) =>
         DrainString(library == ExtensionsLibrary.Primitives
-            ? PrimitivesExtensions.TrySelect(ArraySource(library), static value => value % EvenDivisor == 0 ? value.ToString(CultureInfo.InvariantCulture) : null)
-            : PackageExtensions.TrySelect(ArraySource(library), static value => value % EvenDivisor == 0 ? value.ToString(CultureInfo.InvariantCulture) : null));
+            ? PrimitivesExtensions.TrySelect(
+                ArraySource(library),
+                static value => value % EvenDivisor == 0 ? value.ToString(CultureInfo.InvariantCulture) : null)
+            : PackageExtensions.TrySelect(
+                ArraySource(library),
+                static value => value % EvenDivisor == 0 ? value.ToString(CultureInfo.InvariantCulture) : null));
 
     /// <summary>Executes the <c>RunUsing</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>
@@ -454,7 +487,9 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     {
         if (library == ExtensionsLibrary.Primitives)
         {
-            PrimitivesSubscriptionExtensions.WaitForCompletion(PrimitivesObservables.Return(RxVoid.Default), WaitTimeout);
+            PrimitivesSubscriptionExtensions.WaitForCompletion(
+                PrimitivesObservables.Return(RxVoid.Default),
+                WaitTimeout);
         }
         else
         {
@@ -513,8 +548,14 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>RunWhereSelect</c> result.</returns>
     private static int RunWhereSelect(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
-            ? PrimitivesExtensions.WhereSelect(ArraySource(library), static value => (value & 1) == 0, static value => value * ResultMultiplier)
-            : PackageExtensions.WhereSelect(ArraySource(library), static value => (value & 1) == 0, static value => value * ResultMultiplier));
+            ? PrimitivesExtensions.WhereSelect(
+                ArraySource(library),
+                static value => (value & 1) == 0,
+                static value => value * ResultMultiplier)
+            : PackageExtensions.WhereSelect(
+                ArraySource(library),
+                static value => (value & 1) == 0,
+                static value => value * ResultMultiplier));
 
     /// <summary>Executes the <c>RunWhereTrue</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>

@@ -110,7 +110,10 @@ public sealed class SelectLatestAsyncObservable<TSource, TResult>(
                 return;
             }
 
-            _ = toAwait.ContinueWith(static (_, s) => ((SelectLatestAsyncSink)s!).SignalCompleted(), this, TaskScheduler.Default);
+            _ = toAwait.ContinueWith(
+                static (_, s) => ((SelectLatestAsyncSink)s!).SignalCompleted(),
+                this,
+                TaskScheduler.Default);
         }
 
         /// <inheritdoc/>

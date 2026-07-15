@@ -25,5 +25,11 @@ public static partial class SignalAsync
     /// <param name="count">The number of sequential integers to emit. Must be non-negative.</param>
     /// <returns>An observable sequence that emits integers from <paramref name="start"/> to <paramref name="start"/> + <paramref
     /// name="count"/> - 1, in order.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "SST2318:Members should not have identical bodies",
+        Justification =
+            "Range is the System.Reactive name for Sequence. Both operators intentionally build the same signal "
+            + "directly rather than one forwarding to the other, so the Rx-named alias costs nothing at the call site.")]
     public static IObservableAsync<int> Range(int start, int count) => new SequenceSignal(start, count);
 }

@@ -2,7 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks.Sources;
 
 namespace ReactiveUI.Primitives.Extensions;
@@ -13,10 +12,6 @@ namespace ReactiveUI.Primitives.Extensions;
 /// so steady-state callers pay zero allocations after the pool warms up.
 /// </summary>
 /// <typeparam name="T">The element type.</typeparam>
-[SuppressMessage(
-    "Major Code Smell",
-    "S2743:Static fields should not be used in generic types",
-    Justification = "The pooled witness stores T-specific value task source state, so a per-type pool is intentional.")]
 public static class FirstAsValueTaskHelper<T>
 {
     /// <summary>Single-slot pool. <c>null</c> when the previous instance is in flight.</summary>
@@ -51,7 +46,7 @@ public static class FirstAsValueTaskHelper<T>
         public ValueTask<T> Begin(IObservable<T> source)
         {
             _core.Reset();
-            _settled = 0;
+            Volatile.Write(ref _settled, 0);
             _subscription = source.Subscribe(this);
             return new(this, _core.Version);
         }

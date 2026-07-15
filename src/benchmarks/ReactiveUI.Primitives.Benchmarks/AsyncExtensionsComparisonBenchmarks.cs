@@ -230,6 +230,12 @@ public class AsyncExtensionsComparisonBenchmarks
     /// <summary>Sums the totals recorded by ReactiveUI.Extensions async observers.</summary>
     /// <param name="observers">The observers to sum.</param>
     /// <returns>The combined observed total.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "SST2318:Members should not have identical bodies",
+        Justification =
+            "Type-specialized overloads over different witness array types. The summation loop is identical, but the "
+            + "overloads take different element types and cannot forward to one another.")]
     private static int Sum(ExtensionsCountingWitness[] observers)
     {
         var total = 0;

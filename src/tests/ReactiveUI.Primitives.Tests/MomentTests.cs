@@ -9,14 +9,16 @@ namespace ReactiveUI.Primitives.Tests;
 /// <summary>Verifies <see cref="Moment{T}"/> equality and hashing contracts.</summary>
 public class MomentTests
 {
+    /// <summary>The timestamp used by moment tests; only its stability matters.</summary>
+    private static readonly DateTimeOffset SampleTimestamp = new(2026, 5, 24, 22, 52, 0, TimeSpan.Zero);
+
     /// <summary>Verifies a moment with a null value uses a deterministic null hash code.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task NullValueMomentUsesDeterministicNullHashCode()
     {
         const int NullHashSeed = 1963;
-        DateTimeOffset timestamp = new(2026, 5, 24, 22, 52, 0, TimeSpan.Zero);
-        Moment<string?> moment = new(null, timestamp);
-        await Assert.That(moment.GetHashCode()).IsEqualTo(timestamp.GetHashCode() ^ NullHashSeed);
+        Moment<string?> moment = new(null, SampleTimestamp);
+        await Assert.That(moment.GetHashCode()).IsEqualTo(SampleTimestamp.GetHashCode() ^ NullHashSeed);
     }
 }

@@ -24,7 +24,7 @@ public sealed class ForkJoinWitnessTests
         RecordingWitness<int> observer = new();
         CapturingObservable<int> left = new();
         CapturingObservable<int> right = new();
-        using var subscription = new ForkJoinWitness<int, int, int>(observer, (a, b) => a + b).Run(left, right);
+        using var subscription = new ForkJoinWitness<int, int, int>(observer, static (a, b) => a + b).Run(left, right);
 
         left.Observer!.OnNext(One);
         right.Observer!.OnNext(Two);
@@ -46,7 +46,7 @@ public sealed class ForkJoinWitnessTests
         CapturingObservable<int> left = new();
         CapturingObservable<int> right = new();
         InvalidOperationException error = new("left");
-        using var subscription = new ForkJoinWitness<int, int, int>(observer, (a, b) => a + b).Run(left, right);
+        using var subscription = new ForkJoinWitness<int, int, int>(observer, static (a, b) => a + b).Run(left, right);
 
         left.Observer!.OnError(error);
 
@@ -74,7 +74,7 @@ public sealed class ForkJoinWitnessTests
         CapturingObservable<int> right = new();
         InvalidOperationException first = new("first");
         InvalidOperationException second = new("second");
-        using var subscription = new ForkJoinWitness<int, int, int>(observer, (a, b) => a + b).Run(left, right);
+        using var subscription = new ForkJoinWitness<int, int, int>(observer, static (a, b) => a + b).Run(left, right);
 
         left.Observer!.OnError(first);
         right.Observer!.OnError(second);
@@ -91,7 +91,7 @@ public sealed class ForkJoinWitnessTests
         RecordingWitness<int> observer = new();
         CapturingObservable<int> left = new();
         CapturingObservable<int> right = new();
-        using var subscription = new ForkJoinWitness<int, int, int>(observer, (a, b) => a + b).Run(left, right);
+        using var subscription = new ForkJoinWitness<int, int, int>(observer, static (a, b) => a + b).Run(left, right);
 
         left.Observer!.OnNext(One);
         right.Observer!.OnNext(Two);
@@ -116,7 +116,7 @@ public sealed class ForkJoinWitnessTests
         RecordingWitness<int> observer = new();
         CapturingObservable<int> left = new();
         CapturingObservable<int> right = new();
-        using var subscription = new ForkJoinWitness<int, int, int>(observer, (a, b) => a + b).Run(left, right);
+        using var subscription = new ForkJoinWitness<int, int, int>(observer, static (a, b) => a + b).Run(left, right);
 
         left.Observer!.OnNext(One);
         left.Observer.OnCompleted();
@@ -136,7 +136,7 @@ public sealed class ForkJoinWitnessTests
         RecordingWitness<int> observer = new();
         CapturingObservable<int> left = new();
         CapturingObservable<int> right = new();
-        using var subscription = new ForkJoinWitness<int, int, int>(observer, (a, b) => a + b).Run(left, right);
+        using var subscription = new ForkJoinWitness<int, int, int>(observer, static (a, b) => a + b).Run(left, right);
 
         left.Observer!.OnNext(One);
         right.Observer!.OnNext(Two);

@@ -23,7 +23,9 @@ public static partial class Signal
     /// <param name="source">The source value.</param>
     /// <param name="cancellationToken">The cancellationToken value.</param>
     /// <returns>The result.</returns>
-    public static IAwaitSignal<TSource> RunAsync<TSource>(IObservable<TSource> source, CancellationToken cancellationToken)
+    public static IAwaitSignal<TSource> RunAsync<TSource>(
+        IObservable<TSource> source,
+        CancellationToken cancellationToken)
     {
         ArgumentExceptionHelper.ThrowIfNull(source);
 
@@ -111,13 +113,19 @@ public static partial class Signal
     /// <param name="subject">The subject value.</param>
     /// <param name="subscription">The subscription value.</param>
     /// <param name="token">The token value.</param>
-    internal static void RegisterCancelation<T>(IAwaitSignal<T> subject, IDisposable subscription, CancellationToken token)
+    internal static void RegisterCancelation<T>(
+        IAwaitSignal<T> subject,
+        IDisposable subscription,
+        CancellationToken token)
     {
-        var ctr = token.Register(() =>
-        {
-            subscription.Dispose();
-            _ = Cancel(subject, token);
-        });
+        var ctr = token.Register(
+            static state =>
+            {
+                var (subscription, subject, token) = ((IDisposable, IAwaitSignal<T>, CancellationToken))state!;
+                subscription.Dispose();
+                _ = Cancel(subject, token);
+            },
+            (subscription, subject, token));
 
         _ = subject.Subscribe(Handle<T>.Ignore, _ => ctr.Dispose(), ctr.Dispose);
     }
@@ -127,7 +135,10 @@ public static partial class Signal
     /// <param name="source">The source sequence.</param>
     /// <param name="task">The completed task when the fast path applies.</param>
     /// <returns><see langword="true"/> when the range fast path applies.</returns>
-    private static bool TryCompleteTaskFromRange<T>(IObservable<T> source, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out Task<T>? task)
+    private static bool TryCompleteTaskFromRange<T>(
+        IObservable<T> source,
+        [System.Diagnostics.CodeAnalysis.NotNullWhen(true)]
+        out Task<T>? task)
     {
         if (source is RangeSignal range && typeof(T).IsAssignableFrom(typeof(int)))
         {

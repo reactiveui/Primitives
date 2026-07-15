@@ -23,6 +23,12 @@ public static partial class SignalAsync
     /// <typeparam name="T">The type of the value to be emitted by the observable sequence.</typeparam>
     /// <param name="value">The value to be emitted by the observable sequence.</param>
     /// <returns>An observable sequence that emits the specified value and then signals completion.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "SST2318:Members should not have identical bodies",
+        Justification =
+            "Return is the System.Reactive name for Emit. Both operators intentionally build the same signal directly "
+            + "rather than one forwarding to the other, so the Rx-named alias costs nothing at the call site.")]
     public static IObservableAsync<T> Return<T>(T value) => new ReturnSignalAsync<T>(value);
 
     /// <summary>
@@ -47,10 +53,13 @@ public static partial class SignalAsync
         /// <summary>Per-subscription task body that emits the captured value and signals completion.</summary>
         /// <param name="observer">The downstream observer.</param>
         /// <param name="value">The captured value.</param>
-        private sealed class ReturnSubscription(IObserverAsync<T> observer, T value) : TaskSignalSubscription<T>(observer)
+        private sealed class ReturnSubscription(IObserverAsync<T> observer, T value)
+            : TaskSignalSubscription<T>(observer)
         {
             /// <inheritdoc/>
-            protected override async ValueTask ExecuteAsyncCore(IObserverAsync<T> observer, CancellationToken cancellationToken)
+            protected override async ValueTask ExecuteAsyncCore(
+                IObserverAsync<T> observer,
+                CancellationToken cancellationToken)
             {
                 await observer.OnNextAsync(value, cancellationToken).ConfigureAwait(false);
                 await observer.OnCompletedAsync(Result.Success).ConfigureAwait(false);

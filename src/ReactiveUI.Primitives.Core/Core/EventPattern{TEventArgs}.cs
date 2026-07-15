@@ -13,7 +13,6 @@ public readonly struct EventPattern<TEventArgs> : IEquatable<EventPattern<TEvent
     /// <summary>Initializes a new instance of the <see cref="EventPattern{TEventArgs}"/> struct.</summary>
     /// <param name="sender">The event sender.</param>
     /// <param name="eventArgs">The event arguments.</param>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0001:Simplify Names", Justification = "The argument validation uses ArgumentExceptionHelper")]
     public EventPattern(object? sender, TEventArgs eventArgs)
     {
         Sender = sender;
@@ -27,6 +26,7 @@ public readonly struct EventPattern<TEventArgs> : IEquatable<EventPattern<TEvent
     public TEventArgs EventArgs { get; }
 
     /// <summary>Gets the debugger display text.</summary>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString();
 
@@ -40,11 +40,13 @@ public readonly struct EventPattern<TEventArgs> : IEquatable<EventPattern<TEvent
     /// <param name="left">The first value.</param>
     /// <param name="right">The second value.</param>
     /// <returns><see langword="true"/> when the values are not equal; otherwise, <see langword="false"/>.</returns>
-    public static bool operator !=(EventPattern<TEventArgs> left, EventPattern<TEventArgs> right) => !left.Equals(right);
+    public static bool operator !=(EventPattern<TEventArgs> left, EventPattern<TEventArgs> right) =>
+        !left.Equals(right);
 
     /// <inheritdoc/>
     public bool Equals(EventPattern<TEventArgs> other) =>
-        ReferenceEquals(Sender, other.Sender) && EqualityComparer<TEventArgs>.Default.Equals(EventArgs, other.EventArgs);
+        ReferenceEquals(Sender, other.Sender) &&
+        EqualityComparer<TEventArgs>.Default.Equals(EventArgs, other.EventArgs);
 
     /// <inheritdoc/>
     public override bool Equals(object? obj) => obj is EventPattern<TEventArgs> other && Equals(other);

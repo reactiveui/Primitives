@@ -23,7 +23,7 @@ public sealed class FatalExceptionHelperTests
             new CannotUnloadAppDomainException(),
             new InvalidProgramException(),
             CreateException(typeof(ThreadAbortException)),
-            CreateException(typeof(OutOfMemoryException)),
+            CreateException(typeof(OutOfMemoryException))
         ];
 
         foreach (var exception in fatal)
@@ -45,7 +45,8 @@ public sealed class FatalExceptionHelperTests
     /// <param name="exceptionType">The exception type.</param>
     /// <returns>An exception instance.</returns>
     private static Exception CreateException(
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors)]
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors |
+                                    DynamicallyAccessedMemberTypes.NonPublicConstructors)]
         Type exceptionType) =>
         (Exception)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject(exceptionType);
 }

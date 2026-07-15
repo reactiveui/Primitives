@@ -12,14 +12,14 @@ public sealed class SynchronizationContextSequencer : ISequencer
     /// <summary>Initializes a new instance of the <see cref="SynchronizationContextSequencer"/> class.</summary>
     /// <param name="context">The synchronization context used to schedule work.</param>
     /// <exception cref="ArgumentNullException"><paramref name="context"/> is <see langword="null"/>.</exception>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0001:Simplify Names", Justification = "The argument validation uses ArgumentExceptionHelper.")]
     public SynchronizationContextSequencer(SynchronizationContext context) =>
         Context = context ?? throw new ArgumentNullException(nameof(context));
 
     /// <summary>Gets a sequencer for the current synchronization context.</summary>
     /// <exception cref="InvalidOperationException">There is no current synchronization context.</exception>
     public static SynchronizationContextSequencer Current =>
-        new(SynchronizationContext.Current ?? throw new InvalidOperationException("There is no current synchronization context."));
+        new(SynchronizationContext.Current ??
+            throw new InvalidOperationException("There is no current synchronization context."));
 
     /// <summary>Gets the synchronization context used to schedule work.</summary>
     public SynchronizationContext Context { get; }
@@ -31,6 +31,7 @@ public sealed class SynchronizationContextSequencer : ISequencer
     public long Timestamp => Sequencer.Timestamp;
 
     /// <summary>Gets the debugger display text.</summary>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
@@ -69,22 +70,15 @@ public sealed class SynchronizationContextSequencer : ISequencer
     }
 
     /// <summary>Delayed post work item.</summary>
-    private sealed class DelayedPostWorkItem : IWorkItem
+    /// <param name="owner">Owning sequencer.</param>
+    /// <param name="item">Scheduled item.</param>
+    private sealed class DelayedPostWorkItem(SynchronizationContextSequencer owner, IWorkItem item) : IWorkItem
     {
         /// <summary>Owning sequencer.</summary>
-        private readonly SynchronizationContextSequencer _owner;
+        private readonly SynchronizationContextSequencer _owner = owner;
 
         /// <summary>Scheduled item.</summary>
-        private readonly IWorkItem _item;
-
-        /// <summary>Initializes a new instance of the <see cref="DelayedPostWorkItem"/> class.</summary>
-        /// <param name="owner">Owning sequencer.</param>
-        /// <param name="item">Scheduled item.</param>
-        public DelayedPostWorkItem(SynchronizationContextSequencer owner, IWorkItem item)
-        {
-            _owner = owner;
-            _item = item;
-        }
+        private readonly IWorkItem _item = item;
 
         /// <inheritdoc/>
         public void Execute()

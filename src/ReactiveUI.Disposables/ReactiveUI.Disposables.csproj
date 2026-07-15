@@ -5,15 +5,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="ReactiveUI.Disposables.Tests" />
-    <InternalsVisibleTo Include="ReactiveUI.Primitives.Tests" />
-    <InternalsVisibleTo Include="ReactiveUI.Primitives.Extensions.Tests" />
-    <InternalsVisibleTo Include="ReactiveUI.Primitives.Async.Tests" />
-    <InternalsVisibleTo Include="ReactiveUI.Primitives.Blazor.Tests" />
+    <InternalsVisibleTo Include="ReactiveUI.Disposables.Tests"/>
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Tests"/>
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Extensions.Tests"/>
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Async.Tests"/>
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Blazor.Tests"/>
   </ItemGroup>
 
   <ItemGroup Condition="$(TargetFramework.EndsWith('net462'))">
-    <PackageReference Include="System.ValueTuple" />
+    <PackageReference Include="System.ValueTuple"/>
   </ItemGroup>
 
 </Project>

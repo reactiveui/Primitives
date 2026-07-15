@@ -26,7 +26,8 @@ public static partial class SignalAsyncExtensions
         {
             cancellationToken.ThrowIfCancellationRequested();
             AnyTaskWitness<T> observer = new(predicate, cancellationToken);
-            await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
+            await using var subscription =
+                await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
             return await observer.AwaitResultAsync().ConfigureAwait(false);
         }
 
@@ -65,7 +66,8 @@ public static partial class SignalAsyncExtensions
             cancellationToken.ThrowIfCancellationRequested();
 
             AllTaskWitness<T> observer = new(predicate, cancellationToken);
-            await using var subscription = await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
+            await using var subscription =
+                await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
             return await observer.AwaitResultAsync().ConfigureAwait(false);
         }
     }

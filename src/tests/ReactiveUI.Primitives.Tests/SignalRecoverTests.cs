@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Collections;
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
@@ -37,27 +38,94 @@ public class SignalRecoverTests
         InvalidOperationException finalError = new("last");
         _ = Signal.Recover(
             Signal.Fail<int>(new InvalidOperationException(FirstMessage)),
-            Signal.Fail<int>(finalError)).Subscribe(_ => { }, finalErrors.Add, () => { });
+            Signal.Fail<int>(finalError)).Subscribe(static _ => { }, finalErrors.Add, static () => { });
         await Assert.That(finalErrors[0]).IsSameReferenceAs(finalError);
         var completed = 0;
-        var completedSubscription = Signal.Recover<int>().Subscribe(_ => { }, ex => throw ex, () => completed++);
+        var completedSubscription = Signal.Recover<int>().Subscribe(static _ => { }, static ex => throw ex, () => completed++);
         completedSubscription.Dispose();
         completedSubscription.Dispose();
         await Assert.That(completed).IsEqualTo(1);
-        var activeSubscription = Signal.Recover(Signal.Silent<int>()).Subscribe(_ => { }, ex => throw ex, () => { });
+        var activeSubscription = Signal.Recover(Signal.Silent<int>()).Subscribe(static _ => { }, static ex => throw ex, static () => { });
         activeSubscription.Dispose();
         List<Exception> nullSourceErrors = [];
-        _ = Signal.Recover(new IObservable<int>?[] { null! }!).Subscribe(_ => { }, nullSourceErrors.Add, () => { });
+        _ = Signal.Recover(new IObservable<int>?[] { null! }!).Subscribe(static _ => { }, nullSourceErrors.Add, static () => { });
         await Assert.That(nullSourceErrors[0] is InvalidOperationException).IsTrue();
         List<Exception> moveNextErrors = [];
         InvalidOperationException moveNextError = new("move-next");
         _ = new ThrowingMoveNextEnumerable<IObservable<int>>(moveNextError).Recover()
-            .Subscribe(_ => { }, moveNextErrors.Add, () => { });
+            .Subscribe(static _ => { }, moveNextErrors.Add, static () => { });
         await Assert.That(moveNextErrors[0]).IsSameReferenceAs(moveNextError);
         InvalidOperationException getEnumeratorError = new("enumerator");
         _ = Assert.Throws<InvalidOperationException>(() => new ThrowingEnumerable<IObservable<int>>(getEnumeratorError)
             .Recover()
-            .Subscribe(_ => { }, _ => { }, () => { }));
+            .Subscribe(static _ => { }, static _ => { }, static () => { }));
+    }
+
+    /// <summary>The recover, per-exception recover, and cleanup operators all drive their sources on the current thread.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task RecoverAndCleanupOperatorsRequireCurrentThreadSubscription()
+    {
+        var recoverSequence = Signal.Recover(Signal.Emit(First), Signal.Emit(Second));
+        await Assert.That(((IRequireCurrentThread<int>)recoverSequence).IsRequiredSubscribeOnCurrentThread()).IsTrue();
+
+        var recoverHandler = Signal.Emit(First).Recover<int, InvalidOperationException>(static _ => Signal.Emit(Second));
+        await Assert.That(((IRequireCurrentThread<int>)recoverHandler).IsRequiredSubscribeOnCurrentThread()).IsTrue();
+
+        var cleanup = Signal.Emit(First).OnCleanup(static () => { });
+        await Assert.That(((IRequireCurrentThread<int>)cleanup).IsRequiredSubscribeOnCurrentThread()).IsTrue();
+    }
+
+    /// <summary>A cleanup action runs even when subscribing to the source throws, and the failure still surfaces.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task OnCleanupRunsTheActionWhenSubscribingToTheSourceThrows()
+    {
+        InvalidOperationException expected = new(FirstMessage);
+        var cleanupRuns = 0;
+        var failingSource = new ScriptedObservable<int>(_ => throw expected);
+
+        var caught = Assert.Throws<InvalidOperationException>(() =>
+            failingSource.OnCleanup(() => cleanupRuns++).Subscribe(static _ => { }));
+
+        await Assert.That(caught!).IsSameReferenceAs(expected);
+        await Assert.That(cleanupRuns).IsEqualTo(1);
+    }
+
+    /// <summary>A cleanup action runs exactly once when the subscription is torn down.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task OnCleanupRunsTheActionOnceWhenTheSubscriptionIsDisposed()
+    {
+        var cleanupRuns = 0;
+        Signal<int> source = new();
+
+        var subscription = source.OnCleanup(() => cleanupRuns++).Subscribe(static _ => { });
+        await Assert.That(cleanupRuns).IsEqualTo(0);
+
+        subscription.Dispose();
+
+        await Assert.That(cleanupRuns).IsEqualTo(1);
+    }
+
+    /// <summary>A disposed recover sequence swallows a late upstream error instead of advancing to the next source.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task DisposedRecoverSequenceIgnoresALateUpstreamError()
+    {
+        IObserver<int>? upstream = null;
+        var capturing = new ScriptedObservable<int>(observer => upstream = observer);
+        RecordingWitness<int> witness = new();
+
+        var subscription = Signal.Recover(capturing, Signal.Emit(Second)).Subscribe(witness);
+        subscription.Dispose();
+
+        upstream!.OnError(new InvalidOperationException(FirstMessage));
+
+        // The sequence was torn down, so the fallback source must never be subscribed and nothing may reach downstream.
+        await Assert.That(witness.Values.Count).IsEqualTo(0);
+        await Assert.That(witness.Errors.Count).IsEqualTo(0);
+        await Assert.That(witness.Completed).IsEqualTo(0);
     }
 
     /// <summary>Enumerable test double whose enumerator throws from <see cref="IEnumerator.MoveNext"/>.</summary>

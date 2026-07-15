@@ -16,23 +16,27 @@ public sealed class BlazorRendererSequencerTests
     /// <summary>Expected values produced by an immediate burst, used to verify FIFO order.</summary>
     private static readonly int[] ExpectedBurst = [1, 2, 3];
 
+    /// <summary>Guard timeout so a hung rendezvous fails this test rather than stalling the run.</summary>
+    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
+
     /// <summary>Verifies the constructor rejects a null renderer delegate.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task ConstructorRejectsNullDelegate() =>
-        await Assert.That(() => new BlazorRendererSequencer((Func<Action, Task>)null!)).ThrowsExactly<ArgumentNullException>();
+        await Assert.That(static () => new BlazorRendererSequencer((Func<Action, Task>)null!))
+            .ThrowsExactly<ArgumentNullException>();
 
     /// <summary>Verifies the constructor rejects a null dispatcher.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task ConstructorRejectsNullDispatcher() =>
-        await Assert.That(() => new BlazorRendererSequencer((Dispatcher)null!)).ThrowsExactly<ArgumentNullException>();
+        await Assert.That(static () => new BlazorRendererSequencer((Dispatcher)null!)).ThrowsExactly<ArgumentNullException>();
 
     /// <summary>Verifies the dispatcher adapter extension rejects a null dispatcher.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task ToSequencerRejectsNullDispatcher() =>
-        await Assert.That(() => ((Dispatcher)null!).ToSequencer()).ThrowsExactly<ArgumentNullException>();
+        await Assert.That(static () => ((Dispatcher)null!).ToSequencer()).ThrowsExactly<ArgumentNullException>();
 
     /// <summary>Verifies a dispatcher-backed sequencer marshals and executes work.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
@@ -44,7 +48,7 @@ public sealed class BlazorRendererSequencerTests
 
         sequencer.Schedule(new DelegateWorkItem(() => executed.TrySetResult(true)));
 
-        await Assert.That(await executed.Task.WaitAsync(TimeSpan.FromSeconds(5))).IsTrue();
+        await Assert.That(await executed.Task.WaitAsync(GuardTimeout)).IsTrue();
     }
 
     /// <summary>Verifies renderer-task faults reach the unhandled-exception handler instead of vanishing.</summary>
@@ -59,7 +63,7 @@ public sealed class BlazorRendererSequencerTests
 
         sequencer.Schedule(new DelegateWorkItem(static () => { }));
 
-        await Assert.That(await observed.Task.WaitAsync(TimeSpan.FromSeconds(5))).IsSameReferenceAs(fault);
+        await Assert.That(await observed.Task.WaitAsync(GuardTimeout)).IsSameReferenceAs(fault);
     }
 
     /// <summary>Verifies reactive component observation guards reject null inputs.</summary>

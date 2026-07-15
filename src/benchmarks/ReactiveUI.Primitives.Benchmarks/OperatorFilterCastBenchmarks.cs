@@ -31,7 +31,8 @@ public class OperatorFilterCastBenchmarks
     public int PrimitivesKeepNotNull()
     {
         CountingSignalWitness<string> observer = new();
-        using var subscription = Signal.Sequence(1, Count).Map(static x => (string?)x.ToString()).KeepNotNull().Subscribe(observer);
+        using var subscription = Signal.Sequence(1, Count).Map(static x => (string?)x.ToString()).KeepNotNull()
+            .Subscribe(observer);
         return observer.Count;
     }
 
@@ -67,7 +68,8 @@ public class OperatorFilterCastBenchmarks
     public int PrimitivesKeepType()
     {
         CountingSignalWitness<string> observer = new();
-        using var subscription = Signal.Sequence(1, Count).Map(static _ => (object?)Shared).KeepType<string>().Subscribe(observer);
+        using var subscription = Signal.Sequence(1, Count).Map(static _ => (object?)Shared).KeepType<string>()
+            .Subscribe(observer);
         return observer.Count;
     }
 
@@ -77,7 +79,8 @@ public class OperatorFilterCastBenchmarks
     public int SystemReactiveKeepType()
     {
         CountingSignalWitness<string> observer = new();
-        using var subscription = RxObservable.Select(RxObservable.Range(1, Count), static _ => (object)Shared).OfType<string>().Subscribe(observer);
+        using var subscription = RxObservable.Select(RxObservable.Range(1, Count), static _ => (object)Shared)
+            .OfType<string>().Subscribe(observer);
         return observer.Count;
     }
 
@@ -98,7 +101,8 @@ public class OperatorFilterCastBenchmarks
     public int PrimitivesCastTo()
     {
         CountingSignalWitness<string> observer = new();
-        using var subscription = Signal.Sequence(1, Count).Map(static _ => (object?)Shared).CastTo<string>().Subscribe(observer);
+        using var subscription = Signal.Sequence(1, Count).Map(static _ => (object?)Shared).CastTo<string>()
+            .Subscribe(observer);
         return observer.Count;
     }
 
@@ -108,7 +112,8 @@ public class OperatorFilterCastBenchmarks
     public int SystemReactiveCastTo()
     {
         CountingSignalWitness<string> observer = new();
-        using var subscription = RxObservable.Select(RxObservable.Range(1, Count), static _ => (object)Shared).Cast<string>().Subscribe(observer);
+        using var subscription = RxObservable.Select(RxObservable.Range(1, Count), static _ => (object)Shared)
+            .Cast<string>().Subscribe(observer);
         return observer.Count;
     }
 

@@ -13,6 +13,15 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [MemoryDiagnoser]
 public class OperatorStartWithAppendDefaultIfEmptyBenchmarks
 {
+    /// <summary>The value substituted when the source completes without emitting.</summary>
+    private const int DefaultValue = 2;
+
+    /// <summary>The value prepended ahead of the source.</summary>
+    private const int PrependedValue = 1;
+
+    /// <summary>The value appended after the source.</summary>
+    private const int AppendedValue = 3;
+
     /// <summary>Baseline start-with / default-if-empty / append chain using primitives.</summary>
     /// <returns>The sum of emitted values.</returns>
     [Benchmark(Baseline = true)]
@@ -20,9 +29,9 @@ public class OperatorStartWithAppendDefaultIfEmptyBenchmarks
     {
         IntSignalWitness observer = new();
         using var subscription = Signal.None<int>()
-            .DefaultIfEmpty(2)
-            .Prepend(1)
-            .Append(3)
+            .DefaultIfEmpty(DefaultValue)
+            .Prepend(PrependedValue)
+            .Append(AppendedValue)
             .Subscribe(observer);
         return observer.Total;
     }
@@ -34,7 +43,7 @@ public class OperatorStartWithAppendDefaultIfEmptyBenchmarks
     {
         IntSignalWitness observer = new();
         using var subscription = Signal.None<int>()
-            .DefaultIfEmpty(2)
+            .DefaultIfEmpty(DefaultValue)
             .Subscribe(observer);
         return observer.Total;
     }
@@ -46,9 +55,9 @@ public class OperatorStartWithAppendDefaultIfEmptyBenchmarks
     {
         IntSignalWitness observer = new();
         using var subscription = RxObservable.Empty<int>()
-            .DefaultIfEmpty(2)
-            .StartWith(1)
-            .Append(3)
+            .DefaultIfEmpty(DefaultValue)
+            .StartWith(PrependedValue)
+            .Append(AppendedValue)
             .Subscribe(observer);
         return observer.Total;
     }
@@ -59,7 +68,7 @@ public class OperatorStartWithAppendDefaultIfEmptyBenchmarks
     public int SystemReactiveDefaultIfEmptyEmpty()
     {
         IntSignalWitness observer = new();
-        using var subscription = RxObservable.DefaultIfEmpty(RxObservable.Empty<int>(), 2)
+        using var subscription = RxObservable.DefaultIfEmpty(RxObservable.Empty<int>(), DefaultValue)
             .Subscribe(observer);
         return observer.Total;
     }
@@ -74,9 +83,9 @@ public class OperatorStartWithAppendDefaultIfEmptyBenchmarks
                 R3.ObservableExtensions.Prepend(
                     R3.ObservableExtensions.DefaultIfEmpty(
                         R3.Observable.Empty<int>(),
-                        2),
-                    1),
-                3)
+                        DefaultValue),
+                    PrependedValue),
+                AppendedValue)
             .Subscribe(observer);
         return observer.Total;
     }
@@ -87,7 +96,7 @@ public class OperatorStartWithAppendDefaultIfEmptyBenchmarks
     public int R3DefaultIfEmptyEmpty()
     {
         IntR3Witness observer = new();
-        using var subscription = R3.ObservableExtensions.DefaultIfEmpty(R3.Observable.Empty<int>(), 2)
+        using var subscription = R3.ObservableExtensions.DefaultIfEmpty(R3.Observable.Empty<int>(), DefaultValue)
             .Subscribe(observer);
         return observer.Total;
     }

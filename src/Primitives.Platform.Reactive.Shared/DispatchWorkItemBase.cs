@@ -14,7 +14,7 @@ namespace ReactiveUI.Primitives.Reactive.Concurrency;
 /// (for example a one-shot timer).
 /// </summary>
 /// <typeparam name="TState">The scheduled state type.</typeparam>
-internal abstract class DispatchWorkItemBase<TState>
+internal class DispatchWorkItemBase<TState>
 {
     /// <summary>The scheduler passed back to the scheduled action.</summary>
     private readonly IScheduler _scheduler;
@@ -35,7 +35,15 @@ internal abstract class DispatchWorkItemBase<TState>
     /// <param name="scheduler">The scheduler passed back to the scheduled action.</param>
     /// <param name="state">Scheduled state.</param>
     /// <param name="action">Scheduled action.</param>
-    protected DispatchWorkItemBase(IScheduler scheduler, TState state, Func<IScheduler, TState, IDisposable> action)
+    /// <remarks>
+    /// Written out rather than made a primary constructor so it can stay <c>protected</c>: a primary
+    /// constructor on a concrete class is public, which would let anything construct the base directly
+    /// instead of going through a derived work item.
+    /// </remarks>
+    protected DispatchWorkItemBase(
+        IScheduler scheduler,
+        TState state,
+        Func<IScheduler, TState, IDisposable> action)
     {
         _scheduler = scheduler;
         _state = state;

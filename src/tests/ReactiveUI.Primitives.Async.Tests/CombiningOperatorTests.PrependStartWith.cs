@@ -7,13 +7,18 @@ namespace ReactiveUI.Primitives.Async.Tests;
 /// <summary>Tests for the Prepend and StartWith operators.</summary>
 public partial class CombiningOperatorTests
 {
+    /// <summary>Maximum time the combining-operator tests wait for emissions to arrive.</summary>
+    private static readonly TimeSpan CombiningWaitTimeout = TimeSpan.FromSeconds(5);
+
     /// <summary>Tests Prepend value comes first.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenPrependValue_ThenValueComesFirst()
     {
-        var result = await SignalAsync.Range(2, 3)
-            .Prepend(1)
+        const int SourceValueCount = 3;
+
+        var result = await SignalAsync.Range(SampleValue2, SourceValueCount)
+            .Prepend(SampleValue1)
             .ToListAsync();
 
         await Assert.That(result).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3, SampleValue4]);
@@ -24,8 +29,10 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenPrependEnumerable_ThenValuesComesFirst()
     {
-        var result = await SignalAsync.Range(3, 2)
-            .Prepend([1, 2])
+        const int SourceValueCount = 2;
+
+        var result = await SignalAsync.Range(SampleValue3, SourceValueCount)
+            .Prepend([SampleValue1, SampleValue2])
             .ToListAsync();
 
         await Assert.That(result).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3, SampleValue4]);
@@ -36,8 +43,10 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenStartWithValue_ThenValueComesFirst()
     {
-        var result = await SignalAsync.Range(2, 2)
-            .StartWith(1)
+        const int SourceValueCount = 2;
+
+        var result = await SignalAsync.Range(SampleValue2, SourceValueCount)
+            .StartWith(SampleValue1)
             .ToListAsync();
 
         await Assert.That(result).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3]);
@@ -48,7 +57,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenStartWithEnumerable_ThenValuesComesFirst()
     {
-        var result = await SignalAsync.Return(3)
+        var result = await SignalAsync.Return(SampleValue3)
             .StartWith(SampleValue1, SampleValue2)
             .ToListAsync();
 
@@ -60,8 +69,8 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenStartWithParams_ThenValuesComesFirst()
     {
-        int[] values = [1, 2, 3];
-        var result = await SignalAsync.Return(4)
+        int[] values = [SampleValue1, SampleValue2, SampleValue3];
+        var result = await SignalAsync.Return(SampleValue4)
             .StartWith(values)
             .ToListAsync();
 
@@ -73,10 +82,12 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenPrependDisposedDuringPrependPhase_ThenStopsEmitting()
     {
+        const int SourceValueCount = 5;
+
         List<int> items = [];
 
-        var sub = await SignalAsync.Range(100, 5)
-            .Prepend([1, 2, 3, 4, 5])
+        var sub = await SignalAsync.Range(SampleValue100, SourceValueCount)
+            .Prepend([SampleValue1, SampleValue2, SampleValue3, SampleValue4, SampleValue5])
             .SubscribeAsync(
                 (x, _) =>
                 {
@@ -96,18 +107,20 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenPrependCancelledDuringValues_ThenOperationCanceledExceptionCaught()
     {
+        const int PrependedValueCount = 100;
+
         using CancellationTokenSource cts = new();
         List<int> items = [];
 
         // Create a long prepend that will be cancelled
-        var manyValues = Enumerable.Range(1, 100);
+        var manyValues = Enumerable.Range(1, PrependedValueCount);
         var source = SignalAsync.Never<int>().Prepend(manyValues);
 
         await using var sub = await source.SubscribeAsync(
             async (x, _) =>
             {
                 items.Add(x);
-                if (x != 5)
+                if (x != SampleValue5)
                 {
                     return;
                 }
@@ -120,7 +133,7 @@ public partial class CombiningOperatorTests
 
         await AsyncTestHelpers.WaitForConditionAsync(
             () => items.Count >= 5,
-            TimeSpan.FromSeconds(5));
+            CombiningWaitTimeout);
 
         await Assert.That(items).Contains(SampleValue5);
     }
@@ -130,7 +143,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenPrependSourceThrowsDuringSubscription_ThenCompletesWithFailure()
     {
-        var failing = SignalAsync.Create<int>((_, _) =>
+        var failing = SignalAsync.Create<int>(static (_, _) =>
             throw new InvalidOperationException("source subscribe fail"));
 
         Result? completionResult = null;
@@ -152,7 +165,7 @@ public partial class CombiningOperatorTests
 
         await AsyncTestHelpers.WaitForConditionAsync(
             () => completionResult is not null,
-            TimeSpan.FromSeconds(5));
+            CombiningWaitTimeout);
 
         await Assert.That(items).Contains(Sentinel42);
         await Assert.That(completionResult).IsNotNull();
@@ -164,7 +177,11 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenPrepend_ThenEmitsPrependedValuesFirst()
     {
-        var result = await SignalAsync.Range(4, 2).Prepend([1, 2, 3]).ToListAsync();
+        const int SourceValueCount = 2;
+
+        var result = await SignalAsync.Range(SampleValue4, SourceValueCount)
+            .Prepend([SampleValue1, SampleValue2, SampleValue3])
+            .ToListAsync();
         await Assert.That(result)
             .IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3, SampleValue4, SampleValue5]);
     }
@@ -174,7 +191,9 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenPrependSingleValue_ThenEmitsValueBeforeSource()
     {
-        var result = await SignalAsync.Range(2, 2).Prepend(1).ToListAsync();
+        const int SourceValueCount = 2;
+
+        var result = await SignalAsync.Range(SampleValue2, SourceValueCount).Prepend(SampleValue1).ToListAsync();
         await Assert.That(result).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3]);
     }
 
@@ -183,10 +202,13 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenPrependCancelledDuringPrepend_ThenStopsGracefully()
     {
+        const int SourceValueCount = 3;
+
         List<int> items = [];
         using CancellationTokenSource cts = new();
 
-        var source = SignalAsync.Range(100, 3).Prepend([1, 2, 3, 4, 5]);
+        var source = SignalAsync.Range(SampleValue100, SourceValueCount)
+            .Prepend([SampleValue1, SampleValue2, SampleValue3, SampleValue4, SampleValue5]);
 
         await using var sub = await source.SubscribeAsync(
             async (x, _) =>
@@ -196,7 +218,7 @@ public partial class CombiningOperatorTests
                     items.Add(x);
                 }
 
-                if (x != 2)
+                if (x != SampleValue2)
                 {
                     return;
                 }
@@ -209,10 +231,10 @@ public partial class CombiningOperatorTests
 
         await AsyncTestHelpers.WaitForConditionAsync(
             () => items.Contains(SampleValue2),
-            TimeSpan.FromSeconds(5));
+            CombiningWaitTimeout);
 
         // Should have emitted at least 1 and 2
-        await Assert.That(items).Contains(1);
+        await Assert.That(items).Contains(SampleValue1);
         await Assert.That(items).Contains(SampleValue2);
     }
 
@@ -221,7 +243,9 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenStartWith_ThenEmitsValueBeforeSource()
     {
-        var result = await SignalAsync.Range(1, 3)
+        const int SourceValueCount = 3;
+
+        var result = await SignalAsync.Range(1, SourceValueCount)
             .StartWith(0)
             .ToListAsync();
 
@@ -236,7 +260,7 @@ public partial class CombiningOperatorTests
         List<int> items = [];
 
         var sub = await SignalAsync.Never<int>()
-            .Prepend([1, 2, 3, 4, 5])
+            .Prepend([SampleValue1, SampleValue2, SampleValue3, SampleValue4, SampleValue5])
             .SubscribeAsync(
                 (x, _) =>
                 {
@@ -252,7 +276,7 @@ public partial class CombiningOperatorTests
         // Wait for prepended values to be emitted
         await AsyncTestHelpers.WaitForConditionAsync(
             () => items.Count >= 5,
-            TimeSpan.FromSeconds(5));
+            CombiningWaitTimeout);
 
         await sub.DisposeAsync();
 
@@ -265,15 +289,15 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenPrependSourceThrows_ThenCompletesWithFailure()
     {
-        var throwingSource = SignalAsync.Create<int>((_, _) =>
+        var throwingSource = SignalAsync.Create<int>(static (_, _) =>
             ValueTask.FromException<IAsyncDisposable>(new InvalidOperationException("source boom")));
 
         Result? completionResult = null;
 
         await using var sub = await throwingSource
-            .Prepend([10])
+            .Prepend([SampleValue10])
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null,
                 result =>
                 {
@@ -283,7 +307,7 @@ public partial class CombiningOperatorTests
 
         await AsyncTestHelpers.WaitForConditionAsync(
             () => completionResult.HasValue,
-            TimeSpan.FromSeconds(5));
+            CombiningWaitTimeout);
 
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
@@ -297,11 +321,11 @@ public partial class CombiningOperatorTests
         List<int> items = [];
 
         // Create a source that throws OperationCanceledException on subscribe
-        var cancellingSource = SignalAsync.Create<int>((_, _) =>
+        var cancellingSource = SignalAsync.Create<int>(static (_, _) =>
             ValueTask.FromException<IAsyncDisposable>(new OperationCanceledException()));
 
         var sub = await cancellingSource
-            .Prepend([1, 2])
+            .Prepend([SampleValue1, SampleValue2])
             .SubscribeAsync(
                 (x, _) =>
                 {
@@ -313,11 +337,11 @@ public partial class CombiningOperatorTests
                     return default;
                 },
                 null,
-                result => default);
+                static result => default);
 
         await AsyncTestHelpers.WaitForConditionAsync(
             () => items.Count >= 2,
-            TimeSpan.FromSeconds(5));
+            CombiningWaitTimeout);
 
         await sub.DisposeAsync();
 
@@ -330,8 +354,10 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenStartWithIEnumerable_ThenEmitsEnumerableBeforeSource()
     {
-        var prefix = Enumerable.Range(1, 2);
-        var result = await SignalAsync.Return(3)
+        const int PrefixValueCount = 2;
+
+        var prefix = Enumerable.Range(1, PrefixValueCount);
+        var result = await SignalAsync.Return(SampleValue3)
             .StartWith(prefix)
             .ToListAsync();
 

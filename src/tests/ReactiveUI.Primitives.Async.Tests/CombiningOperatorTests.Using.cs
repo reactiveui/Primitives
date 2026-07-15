@@ -16,7 +16,7 @@ public partial class CombiningOperatorTests
 
         var result = await SignalAsync.Using(
             _ => new ValueTask<TrackingAsyncDisposable>(trackingResource),
-            static _ => SignalAsync.Return(99)).ToListAsync();
+            static _ => SignalAsync.Return(Sentinel99)).ToListAsync();
 
         await Assert.That(result).Count().IsEqualTo(1);
         await Assert.That(result[0]).IsEqualTo(Sentinel99);
@@ -69,9 +69,11 @@ public partial class CombiningOperatorTests
     {
         TrackingAsyncDisposable trackingResource = new();
 
+        const int SourceValueCount = 3;
+
         var result = await SignalAsync.Using(
             _ => new ValueTask<TrackingAsyncDisposable>(trackingResource),
-            static _ => SignalAsync.Range(1, 3)).ToListAsync();
+            static _ => SignalAsync.Range(1, SourceValueCount)).ToListAsync();
 
         const int ResultIndexThird = 2;
 

@@ -45,7 +45,8 @@ public class OperatorCleanupBenchmarks
     public int R3DoOnDisposed()
     {
         IntR3Witness observer = new();
-        using var subscription = R3.ObservableExtensions.Do(R3.Observable.Range(Start, Count), onDispose: static () => { }).Subscribe(observer);
+        using var subscription = R3.ObservableExtensions
+            .Do(R3.Observable.Range(Start, Count), onDispose: static () => { }).Subscribe(observer);
         return observer.Total;
     }
 }

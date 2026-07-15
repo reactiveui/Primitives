@@ -26,8 +26,8 @@ public partial class CombineLatestOperatorTests
             s3.Values,
             s4.Values,
             s5.Values,
-            (a, b, c, d, e) => a + b + c + d + e).SubscribeAsync(
-            (_, _) => default,
+            static (a, b, c, d, e) => a + b + c + d + e).SubscribeAsync(
+            static (_, _) => default,
             null,
             r =>
             {
@@ -58,8 +58,8 @@ public partial class CombineLatestOperatorTests
             s3.Values,
             s4.Values,
             s5.Values,
-            (a, b, c, d, e) => a + b + c + d + e).SubscribeAsync(
-            (_, _) => default,
+            static (a, b, c, d, e) => a + b + c + d + e).SubscribeAsync(
+            static (_, _) => default,
             null,
             r =>
             {
@@ -90,8 +90,8 @@ public partial class CombineLatestOperatorTests
             s3.Values,
             s4.Values,
             s5.Values,
-            (a, b, c, d, e) => a + b + c + d + e).SubscribeAsync(
-            (_, _) => default,
+            static (a, b, c, d, e) => a + b + c + d + e).SubscribeAsync(
+            static (_, _) => default,
             null,
             r =>
             {
@@ -122,8 +122,8 @@ public partial class CombineLatestOperatorTests
             s3.Values,
             s4.Values,
             s5.Values,
-            (a, b, c, d, e) => a + b + c + d + e).SubscribeAsync(
-            (_, _) => default,
+            static (a, b, c, d, e) => a + b + c + d + e).SubscribeAsync(
+            static (_, _) => default,
             null,
             r =>
             {
@@ -154,8 +154,8 @@ public partial class CombineLatestOperatorTests
             s3.Values,
             s4.Values,
             s5.Values,
-            (a, b, c, d, e) => a + b + c + d + e).SubscribeAsync(
-            (_, _) => default,
+            static (a, b, c, d, e) => a + b + c + d + e).SubscribeAsync(
+            static (_, _) => default,
             null,
             r =>
             {
@@ -186,8 +186,8 @@ public partial class CombineLatestOperatorTests
             s3.Values,
             s4.Values,
             s5.Values,
-            (a, b, c, d, e) => a + b + c + d + e).SubscribeAsync(
-            (_, _) => default,
+            static (a, b, c, d, e) => a + b + c + d + e).SubscribeAsync(
+            static (_, _) => default,
             null,
             r =>
             {
@@ -227,8 +227,8 @@ public partial class CombineLatestOperatorTests
             s3.Values,
             s4.Values,
             s5.Values,
-            (a, b, c, d, e) => a + b + c + d + e).SubscribeAsync(
-            (_, _) => default,
+            static (a, b, c, d, e) => a + b + c + d + e).SubscribeAsync(
+            static (_, _) => default,
             null,
             r =>
             {
@@ -268,8 +268,8 @@ public partial class CombineLatestOperatorTests
             s3.Values,
             s4.Values,
             s5.Values,
-            (a, b, c, d, e) => a + b + c + d + e).SubscribeAsync(
-            (_, _) => default,
+            static (a, b, c, d, e) => a + b + c + d + e).SubscribeAsync(
+            static (_, _) => default,
             null,
             r =>
             {
@@ -309,8 +309,8 @@ public partial class CombineLatestOperatorTests
             s3.Values,
             s4.Values,
             s5.Values,
-            (a, b, c, d, e) => a + b + c + d + e).SubscribeAsync(
-            (_, _) => default,
+            static (a, b, c, d, e) => a + b + c + d + e).SubscribeAsync(
+            static (_, _) => default,
             null,
             r =>
             {
@@ -350,8 +350,8 @@ public partial class CombineLatestOperatorTests
             s3.Values,
             s4.Values,
             s5.Values,
-            (a, b, c, d, e) => a + b + c + d + e).SubscribeAsync(
-            (_, _) => default,
+            static (a, b, c, d, e) => a + b + c + d + e).SubscribeAsync(
+            static (_, _) => default,
             null,
             r =>
             {
@@ -391,14 +391,14 @@ public partial class CombineLatestOperatorTests
             s3.Values,
             s4.Values,
             s5.Values,
-            (a, b, c, d, e) => a + b + c + d + e).SubscribeAsync(
+            static (a, b, c, d, e) => a + b + c + d + e).SubscribeAsync(
             (x, _) =>
             {
                 results.Add(x);
                 return default;
             },
             null,
-            _ => default);
+            static _ => default);
 
         await s1.OnNextAsync(1, CancellationToken.None);
         await s2.OnNextAsync(Source1Value, CancellationToken.None);
@@ -433,10 +433,10 @@ public partial class CombineLatestOperatorTests
             s3.Values,
             s4.Values,
             s5.Values,
-            (a, b, c, d, e) => a + b + c + d + e).SubscribeAsync(
-            (_, _) => default,
+            static (a, b, c, d, e) => a + b + c + d + e).SubscribeAsync(
+            static (_, _) => default,
             null,
-            _ => default);
+            static _ => default);
 
         await sub.DisposeAsync();
 

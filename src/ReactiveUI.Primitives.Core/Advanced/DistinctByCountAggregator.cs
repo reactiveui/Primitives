@@ -7,7 +7,8 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <summary>Immutable accumulator that counts distinct selected keys as an <see cref="int"/>.</summary>
 /// <typeparam name="T">The observed value type.</typeparam>
 /// <typeparam name="TKey">The key type.</typeparam>
-public readonly record struct DistinctByCountAggregator<T, TKey> : IAggregator<T, int, DistinctByCountAggregator<T, TKey>>
+public readonly record struct
+    DistinctByCountAggregator<T, TKey> : IAggregator<T, int, DistinctByCountAggregator<T, TKey>>
 {
     /// <summary>The selector that projects each value to its distinctness key.</summary>
     private readonly Func<T, TKey> _keySelector;

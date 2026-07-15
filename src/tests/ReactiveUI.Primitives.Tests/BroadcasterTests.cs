@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
@@ -29,11 +30,35 @@ public class BroadcasterTests
         // Both empty -> same (null) observer set.
         await Assert.That(left == right).IsTrue();
         await Assert.That(left != right).IsFalse();
-        left.Add(new DelegateWitness<int>(_ => { }));
+        left.Add(new DelegateWitness<int>(static _ => { }));
 
         // Left now references an observer set; right is still empty.
         await Assert.That(left != right).IsTrue();
         await Assert.That(left == right).IsFalse();
+    }
+
+    /// <summary>
+    /// The hash follows the observer set, which has three shapes. An empty broadcaster hashes to zero, and a
+    /// broadcaster holding exactly one observer hashes to that observer's identity — so two broadcasters over
+    /// the same single observer agree, which is what equality promises.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task BroadcasterHashesToZeroWhenEmptyAndToTheObserverIdentityWhenSingle()
+    {
+        Broadcaster<int> empty = default;
+        await Assert.That(empty.GetHashCode()).IsEqualTo(0);
+
+        RecordingWitness<int> only = new();
+        Broadcaster<int> single = default;
+        Broadcaster<int> alsoSingle = default;
+        single.Add(only);
+        alsoSingle.Add(only);
+
+        await Assert.That(single.GetHashCode()).IsEqualTo(RuntimeHelpers.GetHashCode(only));
+        await Assert.That(single.GetHashCode()).IsEqualTo(alsoSingle.GetHashCode());
+        await Assert.That(single.GetHashCode()).IsNotEqualTo(empty.GetHashCode());
+        await Assert.That(single.Equals(alsoSingle)).IsTrue();
     }
 
     /// <summary>Covers broadcaster copy-on-write, signal late-terminal, and buffer disposal/error branches.</summary>
@@ -73,10 +98,10 @@ public class BroadcasterTests
         await Assert.That(fourth.Completed).IsEqualTo(1);
         Signal<int> completedSignal = new();
         completedSignal.OnCompleted();
-        completedSignal.Subscribe(_ => { }).Dispose();
+        completedSignal.Subscribe(static _ => { }).Dispose();
         Signal<int> failedSignal = new();
         failedSignal.OnError(new InvalidOperationException("late action"));
-        _ = Assert.Throws<InvalidOperationException>(() => failedSignal.Subscribe(_ => { }).Dispose());
+        _ = Assert.Throws<InvalidOperationException>(() => failedSignal.Subscribe(static _ => { }).Dispose());
         Signal<int> source = new();
         List<IList<int>> buffers = [];
         using (source.Buffer(Three, Two).Subscribe(buffers.Add))
@@ -92,7 +117,7 @@ public class BroadcasterTests
         await Assert.That(buffers[0].SequenceEqual([One, Two])).IsTrue();
         Signal<int> errorSource = new();
         var bufferError = false;
-        using (errorSource.Buffer(Two, One).Subscribe(_ => { }, _ => bufferError = true, () => { }))
+        using (errorSource.Buffer(Two, One).Subscribe(static _ => { }, _ => bufferError = true, static () => { }))
         {
             errorSource.OnError(new InvalidOperationException("buffer-error"));
         }

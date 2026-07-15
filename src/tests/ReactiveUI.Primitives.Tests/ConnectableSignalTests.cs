@@ -11,6 +11,9 @@ namespace ReactiveUI.Primitives.Tests;
 /// <summary>Verifies <see cref="ConnectableSignal{T}"/> sharing, replay, and auto-connect contracts.</summary>
 public sealed class ConnectableSignalTests
 {
+    /// <summary>Subscriber count that must be reached before <c>AutoConnect</c> connects to the source.</summary>
+    private const int RequiredSubscribers = 2;
+
     /// <summary>First value observed through a shared signal.</summary>
     private const int FirstSharedValue = 1;
 
@@ -25,6 +28,9 @@ public sealed class ConnectableSignalTests
 
     /// <summary>Second value observed through replay.</summary>
     private const int SecondReplayValue = 5;
+
+    /// <summary>A replay window wide enough that no value expires while a test runs.</summary>
+    private const int ReplayWindowSeconds = 30;
 
     /// <summary>Expected values for the first shared subscription.</summary>
     private static readonly int[] ExpectedFirstSharedValues = [FirstSharedValue];
@@ -85,7 +91,7 @@ public sealed class ConnectableSignalTests
             sourceSubscriptions++;
             return source.Subscribe(observer);
         });
-        var auto = cold.Share().AutoConnect(2);
+        var auto = cold.Share().AutoConnect(RequiredSubscribers);
         List<int> first = [];
         List<int> second = [];
         using var firstSubscription = auto.Subscribe(first.Add);
@@ -95,10 +101,10 @@ public sealed class ConnectableSignalTests
         await Assert.That(sourceSubscriptions).IsEqualTo(1);
         await Assert.That(first.SequenceEqual(ExpectedSecondSharedValues[1..])).IsTrue();
         await Assert.That(second.SequenceEqual(ExpectedSecondSharedValues[1..])).IsTrue();
-        _ = Assert.Throws<ArgumentNullException>(() => ConnectableSignalExtensions.Multicast(null!, new Signal<int>()));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.Silent<int>().Multicast(null!));
-        _ = Assert.Throws<ArgumentNullException>(() => ConnectableSignalExtensions.AutoShare<int>(null!));
-        _ = Assert.Throws<ArgumentNullException>(() => ConnectableSignalExtensions.AutoConnect<int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => ConnectableSignalExtensions.Multicast(null!, new Signal<int>()));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.Silent<int>().Multicast(null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => ConnectableSignalExtensions.AutoShare<int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => ConnectableSignalExtensions.AutoConnect<int>(null!));
         _ = Assert.Throws<ArgumentOutOfRangeException>(() => cold.ShareLive().AutoConnect(-1));
         var replayed = cold.Replay(1, TimeSpan.FromSeconds(1));
         using var connection = replayed.Connect();
@@ -106,6 +112,92 @@ public sealed class ConnectableSignalTests
         List<int> replayValues = [];
         _ = replayed.Subscribe(replayValues.Add);
         await Assert.That(replayValues.SequenceEqual(ExpectedReplayValues[..1])).IsTrue();
+    }
+
+    /// <summary>Multicast routes source values through the supplied hub only once the signal is connected.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task MulticastRoutesSourceValuesThroughTheSuppliedHub()
+    {
+        Signal<int> source = new();
+        Signal<int> hub = new();
+        var multicast = source.Multicast(hub);
+
+        List<int> observed = [];
+        using var subscription = multicast.Subscribe(observed.Add);
+
+        // No connection yet, so the hub must not see the source at all.
+        source.OnNext(UnobservedSharedValue);
+        await Assert.That(observed.Count).IsEqualTo(0);
+
+        using var connection = multicast.Connect();
+        source.OnNext(FirstSharedValue);
+        source.OnNext(SecondSharedValue);
+
+        await Assert.That(observed.SequenceEqual(ExpectedSecondSharedValues)).IsTrue();
+    }
+
+    /// <summary>An unbounded replay hub replays every connected value to a late subscriber.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task UnboundedReplayLiveReplaysEveryValueToALateSubscriber()
+    {
+        Signal<int> source = new();
+        var replayed = source.ReplayLive();
+
+        using var connection = replayed.Connect();
+        source.OnNext(FirstReplayValue);
+        source.OnNext(SecondReplayValue);
+
+        List<int> late = [];
+        using var subscription = replayed.Subscribe(late.Add);
+
+        await Assert.That(late.SequenceEqual(ExpectedReplayValues)).IsTrue();
+    }
+
+    /// <summary>A windowed replay hub still honours its buffer-size bound.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task WindowedReplayLiveHonoursItsBufferSizeBound()
+    {
+        Signal<int> source = new();
+        var replayed = source.ReplayLive(1, TimeSpan.FromSeconds(ReplayWindowSeconds));
+
+        using var connection = replayed.Connect();
+        source.OnNext(FirstReplayValue);
+        source.OnNext(SecondReplayValue);
+
+        List<int> late = [];
+        using var subscription = replayed.Subscribe(late.Add);
+
+        // The window is wide enough to keep both values, so only the buffer size may trim the replay.
+        await Assert.That(late.SequenceEqual(ExpectedReplayValues[1..])).IsTrue();
+    }
+
+    /// <summary>AutoConnect without a count connects to the source on the very first subscription.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task AutoConnectWithoutACountConnectsOnTheFirstSubscription()
+    {
+        Signal<int> source = new();
+        var sourceSubscriptions = 0;
+        var cold = Signal.Create<int>(observer =>
+        {
+            sourceSubscriptions++;
+            return source.Subscribe(observer);
+        });
+
+        var auto = cold.ShareLive().AutoConnect();
+        await Assert.That(sourceSubscriptions).IsEqualTo(0);
+
+        List<int> observed = [];
+        using var subscription = auto.Subscribe(observed.Add);
+
+        await Assert.That(sourceSubscriptions).IsEqualTo(1);
+
+        source.OnNext(FirstSharedValue);
+
+        await Assert.That(observed.SequenceEqual(ExpectedFirstSharedValues)).IsTrue();
     }
 
     /// <summary>Verifies AutoConnect reports the connection disposable once the subscriber threshold is reached.</summary>
@@ -128,7 +220,7 @@ public sealed class ConnectableSignalTests
         });
 
         List<IDisposable> connections = [];
-        var auto = cold.Publish().AutoConnect(2, connections.Add);
+        var auto = cold.Publish().AutoConnect(RequiredSubscribers, connections.Add);
         List<int> first = [];
         List<int> second = [];
         using var firstSubscription = auto.Subscribe(first.Add);
@@ -157,7 +249,7 @@ public sealed class ConnectableSignalTests
     {
         var sourceSubscriptions = 0;
         var sourceDisposals = 0;
-        IObservable<int> cold = Signal.Create<int>(observer =>
+        var cold = Signal.Create<int>(observer =>
         {
             sourceSubscriptions++;
             observer.OnNext(FirstSharedValue);
@@ -167,12 +259,14 @@ public sealed class ConnectableSignalTests
         AutoShareSignal<int> shared = new(cold.Share());
 
         var reentrantReleaseInvoked = false;
+
         void OnNext(int _)
         {
             reentrantReleaseInvoked = true;
             using AutoShareSubscription<int> reentrantRelease = new(shared, Scope.Empty);
             reentrantRelease.Dispose();
         }
+
         using var subscription = shared.Subscribe((Action<int>)OnNext);
 
         await Assert.That(reentrantReleaseInvoked).IsTrue();
@@ -339,12 +433,12 @@ public sealed class ConnectableSignalTests
     [Test]
     public async Task ConnectableSignalDirectConnectReusesConnectionAndForwardsTerminalError()
     {
-        _ = Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(static () =>
         {
             ConnectableSignal<int> invalid = new(null!, new Signal<int>());
             GC.KeepAlive(invalid);
         });
-        _ = Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(static () =>
         {
             ConnectableSignal<int> invalid = new(Signal.Silent<int>(), null!);
             GC.KeepAlive(invalid);
@@ -414,8 +508,8 @@ public sealed class ConnectableSignalTests
         await Assert.That(sourceDisposals).IsEqualTo(1);
 
         List<int> selectedValues = [];
-        using var selectedSubscription = ConnectableSignalExtensions
-            .Publish<int, int>(cold, shared => shared.Map(static value => value + SecondSharedValue))
+        using var selectedSubscription = ConnectableSignalRxNameExtensions
+            .Publish<int, int>(cold, static shared => shared.Map(static value => value + SecondSharedValue))
             .Subscribe(selectedValues.Add);
         source.OnNext(FirstSharedValue);
 
@@ -423,12 +517,12 @@ public sealed class ConnectableSignalTests
 
         Exception? selectorError = null;
         InvalidOperationException expectedSelectorError = new("selector");
-        _ = ConnectableSignalExtensions.Publish<int, int>(cold, _ => throw expectedSelectorError)
-            .Subscribe(_ => { }, error => selectorError = error);
+        _ = ConnectableSignalRxNameExtensions.Publish<int, int>(cold, _ => throw expectedSelectorError)
+            .Subscribe(static _ => { }, error => selectorError = error);
 
         Exception? nullSelectorError = null;
-        _ = ConnectableSignalExtensions.Publish<int, int>(cold, _ => null!)
-            .Subscribe(_ => { }, error => nullSelectorError = error);
+        _ = ConnectableSignalRxNameExtensions.Publish<int, int>(cold, static _ => null!)
+            .Subscribe(static _ => { }, error => nullSelectorError = error);
 
         await Assert.That(selectorError).IsSameReferenceAs(expectedSelectorError);
         await Assert.That(nullSelectorError is InvalidOperationException).IsTrue();
@@ -442,10 +536,10 @@ public sealed class ConnectableSignalTests
 
         await Assert.That(replayValues.SequenceEqual(ExpectedReplayValues)).IsTrue();
 
-        _ = Assert.Throws<ArgumentNullException>(() => ConnectableSignalExtensions.RefCount<int>(null!));
-        _ = Assert.Throws<ArgumentNullException>(() =>
-            ConnectableSignalExtensions.Publish<int, int>(null!, static source => source));
-        _ = Assert.Throws<ArgumentNullException>(() => ConnectableSignalExtensions.Publish<int, int>(cold, null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => ConnectableSignalRxNameExtensions.RefCount<int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(static () =>
+            ConnectableSignalRxNameExtensions.Publish<int, int>(null!, static source => source));
+        _ = Assert.Throws<ArgumentNullException>(() => ConnectableSignalRxNameExtensions.Publish<int, int>(cold, null!));
     }
 
     /// <summary>Verifies <c>RefCount</c> does not reconnect a published source after its hub has completed.</summary>

@@ -125,6 +125,13 @@ public class ObserveOnObservableTests
     /// handle it returned so tests can assert it was disposed.</summary>
     /// <typeparam name = "T">The element type.</typeparam>
     /// <param name = "error">The exception to emit synchronously.</param>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "SST2315:A type that owns a disposable should be disposable",
+        Justification =
+            "Test double that returns and exposes the BooleanDisposable subscription handle so the test can assert the "
+            + "operator under test disposed it. The operator owns disposal; making this double IDisposable would "
+            + "misattribute ownership, and the object's lifetime is the test's.")]
     private sealed class SyncErroringObservable<T>(Exception error) : IObservable<T>
     {
         /// <summary>Gets the subscription handle returned from the most recent subscribe.</summary>
@@ -153,6 +160,13 @@ public class ObserveOnObservableTests
         public void Schedule(IWorkItem item) => item.Execute();
 
         /// <inheritdoc/>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Design",
+            "SST2318:Members should not have identical bodies",
+            Justification =
+                "The relative and absolute Schedule overloads of this test-double sequencer intentionally behave the "
+                + "same way; both are required by the ISequencer contract and, as distinct interface overloads, cannot "
+                + "forward to one another.")]
         public void Schedule(IWorkItem item, long dueTimestamp) => item.Execute();
     }
 }

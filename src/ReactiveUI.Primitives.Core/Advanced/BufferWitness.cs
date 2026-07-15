@@ -6,16 +6,19 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Sink that batches source values into fixed-size windows.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-public sealed class BufferWitness<T> : IObserver<T>, IDisposable
+/// <param name="observer">The downstream observer.</param>
+/// <param name="count">The window size.</param>
+/// <param name="skip">The number of elements skipped between windows.</param>
+public sealed class BufferWitness<T>(IObserver<IList<T>> observer, int count, int skip) : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>
-    private readonly IObserver<IList<T>> _observer;
+    private readonly IObserver<IList<T>> _observer = observer;
 
     /// <summary>The window size.</summary>
-    private readonly int _count;
+    private readonly int _count = count;
 
     /// <summary>The number of elements skipped between windows.</summary>
-    private readonly int _skip;
+    private readonly int _skip = skip;
 
     /// <summary>The current window buffer, sized to <see cref="_count"/>; <see langword="null"/> between windows.</summary>
     private T[]? _buffer;
@@ -23,23 +26,20 @@ public sealed class BufferWitness<T> : IObserver<T>, IDisposable
     /// <summary>The window index, which doubles as the array slot while non-negative.</summary>
     private int _index;
 
+    /// <summary>A value indicating whether the sink has terminated and must ignore further notifications.</summary>
+    private bool _done;
+
     /// <summary>The upstream subscription.</summary>
     private IDisposable? _subscription;
-
-    /// <summary>Initializes a new instance of the <see cref="BufferWitness{T}"/> class.</summary>
-    /// <param name="observer">The downstream observer.</param>
-    /// <param name="count">The window size.</param>
-    /// <param name="skip">The number of elements skipped between windows.</param>
-    public BufferWitness(IObserver<IList<T>> observer, int count, int skip)
-    {
-        _observer = observer;
-        _count = count;
-        _skip = skip;
-    }
 
     /// <inheritdoc/>
     public void OnNext(T value)
     {
+        if (_done)
+        {
+            return;
+        }
+
         var idx = _index;
         var buffer = _buffer;
         if (idx == 0)
@@ -55,30 +55,40 @@ public sealed class BufferWitness<T> : IObserver<T>, IDisposable
             buffer![idx] = value;
         }
 
-        if (++idx == _count)
+        idx++;
+        if (idx != _count)
         {
-            _buffer = null;
-
-            // Set the skip.
-            idx = 0 - _skip;
-
-            // The window is full, so the array is exactly the right size; emit it directly.
-            Emit(buffer!);
+            _index = idx;
+            return;
         }
 
-        _index = idx;
+        // The window is full: hand the buffer over and reset to the skip *before* the hand-off. The
+        // observer may throw, and it must never be able to leave this sink holding an index into a
+        // buffer it has already released — the next value would index into null.
+        _buffer = null;
+        _index = 0 - _skip;
+
+        // The window is full, so the array is exactly the right size; emit it directly.
+        Emit(buffer!);
     }
 
     /// <inheritdoc/>
     public void OnError(Exception error)
     {
         _buffer = null;
-        SinkTerminal.Fault(_observer, error, this);
+        SinkTerminal.Fault(_observer, error, this, ref _done);
     }
 
     /// <inheritdoc/>
     public void OnCompleted()
     {
+        if (_done)
+        {
+            return;
+        }
+
+        _done = true;
+
         var buffer = _buffer;
         var length = _index;
         _buffer = null;
@@ -103,7 +113,13 @@ public sealed class BufferWitness<T> : IObserver<T>, IDisposable
     public void SetSubscription(IDisposable subscription) => SinkSubscription.Set(ref _subscription, subscription);
 
     /// <inheritdoc/>
-    public void Dispose() => SinkSubscription.Dispose(ref _subscription);
+    public void Dispose()
+    {
+        // Latching here is what makes the sink terminal on every teardown path, including the one taken
+        // when the downstream observer throws out of Emit: a source that ignores disposal is then a no-op.
+        _done = true;
+        SinkSubscription.Dispose(ref _subscription);
+    }
 
     /// <summary>Returns the window array, copying to an exact-size array only for a partial trailing window.</summary>
     /// <param name="buffer">The window buffer.</param>

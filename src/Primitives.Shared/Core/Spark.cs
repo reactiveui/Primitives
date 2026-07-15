@@ -29,9 +29,10 @@ public static class Spark
     /// <returns>The OnError spark containing the exception.</returns>
     /// <exception cref="ArgumentExceptionHelper"><paramref name="error"/> is null.</exception>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
-        Justification = "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
+        "Design",
+        "SST2307:Generic method type parameters should be inferable from the parameters",
+        Justification =
+            "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
     public static Spark<T> CreateOnError<T>(Exception error)
     {
         ArgumentExceptionHelper.ThrowIfNull(error);
@@ -46,8 +47,9 @@ public static class Spark
     /// </typeparam>
     /// <returns>The OnCompleted spark.</returns>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
-        Justification = "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
+        "Design",
+        "SST2307:Generic method type parameters should be inferable from the parameters",
+        Justification =
+            "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
     public static Spark<T> CreateOnCompleted<T>() => Spark<T>.OnCompleted();
 }

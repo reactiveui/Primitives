@@ -9,6 +9,9 @@ namespace ReactiveUI.Primitives.Extensions.Tests.Internal;
 /// <summary>Tests for <see cref="ReduceSinkState{TIn, TOut}"/>, the shared state object used by the synchronous combine-then-reduce operator family.</summary>
 public class ReduceSinkStateTests
 {
+    /// <summary>Number of sources wired into the two-source fixtures.</summary>
+    private const int PairedSourceCount = 2;
+
     /// <summary>Verifies that a freshly-constructed state reports zero values seen and is not terminal.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -34,7 +37,7 @@ public class ReduceSinkStateTests
         const int FirstSeed = 1;
         const int SecondSeed = 2;
         CaptureWitness<int> observer = new();
-        ReduceSinkState<int, int> state = new(observer, 2);
+        ReduceSinkState<int, int> state = new(observer, PairedSourceCount);
 
         state.Values[0] = FirstSeed;
         state.HasValueCount++;
@@ -51,7 +54,7 @@ public class ReduceSinkStateTests
     public async Task WhenHandleError_ThenForwardsAndIsTerminal()
     {
         CaptureWitness<int> observer = new();
-        ReduceSinkState<int, int> state = new(observer, 2);
+        ReduceSinkState<int, int> state = new(observer, PairedSourceCount);
         InvalidOperationException error = new("boom");
 
         state.HandleError(error);
@@ -71,7 +74,7 @@ public class ReduceSinkStateTests
         const int SeedValue2 = 2;
         const int SeededValueCount = 2;
         CaptureWitness<int> observer = new();
-        ReduceSinkState<int, int> state = new(observer, 2);
+        ReduceSinkState<int, int> state = new(observer, PairedSourceCount);
 
         // Seed both values so completion-without-value path isn't triggered.
         state.Values[0] = SeedValue1;
@@ -94,7 +97,7 @@ public class ReduceSinkStateTests
     {
         const int FirstSeed = 1;
         CaptureWitness<int> observer = new();
-        ReduceSinkState<int, int> state = new(observer, 2);
+        ReduceSinkState<int, int> state = new(observer, PairedSourceCount);
 
         // Source 0 emitted; source 1 completes without a value.
         state.Values[0] = FirstSeed;
@@ -112,7 +115,7 @@ public class ReduceSinkStateTests
     public async Task WhenSameSourceCompletesTwice_ThenSecondCallIgnored()
     {
         CaptureWitness<int> observer = new();
-        ReduceSinkState<int, int> state = new(observer, 2);
+        ReduceSinkState<int, int> state = new(observer, PairedSourceCount);
 
         state.HandleCompleted(0);
         state.HandleCompleted(0); // same index — should be no-op

@@ -6,27 +6,22 @@ namespace ReactiveUI.Primitives.Tests;
 
 /// <summary>An observer that can be configured to throw on specific callbacks.</summary>
 /// <typeparam name="T">The type of the observed values.</typeparam>
-internal sealed class ThrowingWitness<T> : IObserver<T>
+/// <param name="throwOnNext">Configures throwing from the value callback.</param>
+/// <param name="throwOnError">Configures throwing from the error callback.</param>
+/// <param name="throwOnCompleted">Configures throwing from the completion callback.</param>
+internal sealed class ThrowingWitness<T>(
+    bool throwOnNext = false,
+    bool throwOnError = false,
+    bool throwOnCompleted = false) : IObserver<T>
 {
     /// <summary>A value indicating whether to throw on <see cref="OnNext"/>.</summary>
-    private readonly bool _throwOnNext;
+    private readonly bool _throwOnNext = throwOnNext;
 
     /// <summary>A value indicating whether to throw on <see cref="OnError"/>.</summary>
-    private readonly bool _throwOnError;
+    private readonly bool _throwOnError = throwOnError;
 
     /// <summary>A value indicating whether to throw on <see cref="OnCompleted"/>.</summary>
-    private readonly bool _throwOnCompleted;
-
-    /// <summary>Initializes a new instance of the <see cref="ThrowingWitness{T}"/> class.</summary>
-    /// <param name="throwOnNext">Configures throwing from the value callback.</param>
-    /// <param name="throwOnError">Configures throwing from the error callback.</param>
-    /// <param name="throwOnCompleted">Configures throwing from the completion callback.</param>
-    public ThrowingWitness(bool throwOnNext = false, bool throwOnError = false, bool throwOnCompleted = false)
-    {
-        _throwOnNext = throwOnNext;
-        _throwOnError = throwOnError;
-        _throwOnCompleted = throwOnCompleted;
-    }
+    private readonly bool _throwOnCompleted = throwOnCompleted;
 
     /// <summary>Gets a value indicating whether an error callback has been observed.</summary>
     public bool SeenError { get; private set; }

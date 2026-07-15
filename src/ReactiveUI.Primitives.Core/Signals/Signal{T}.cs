@@ -15,6 +15,9 @@ public class Signal<T> : ISignal<T>
     /// <summary>Stores state for the signal implementation.</summary>
     private const int InitialSubscriptionCapacity = 4;
 
+    /// <summary>The factor the subscription array grows by when it fills.</summary>
+    private const int SubscriptionGrowthFactor = 2;
+
     /// <summary>
     /// Guards observer-set and terminal-state mutations. Dispatch (OnNext) reads the observer
     /// slots lock-free via Volatile; only subscribe/remove/terminal take the lock, and they mutate
@@ -48,19 +51,22 @@ public class Signal<T> : ISignal<T>
     private bool _isStopped;
 
     /// <summary>Gets a value indicating whether indicates whether the subject has observers subscribed to it.</summary>
-    public virtual bool HasObservers => (_singleActionSubscription is not null || _singleObserverSubscription is not null || _subscriptionCount != 0) && !_isStopped;
+    public virtual bool HasObservers =>
+        (_singleActionSubscription is not null || _singleObserverSubscription is not null || _subscriptionCount != 0) &&
+        !_isStopped;
 
     /// <summary>Gets a value indicating whether indicates whether the subject has been disposed.</summary>
     public virtual bool IsDisposed => _isDisposed;
 
     /// <summary>Gets the debugger display text.</summary>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <summary>Releases unmanaged and - optionally - managed resources.</summary>
     public void Dispose()
     {
-        Dispose(disposing: true);
+        Dispose(true);
         GC.SuppressFinalize(this);
     }
 
@@ -315,7 +321,10 @@ public class Signal<T> : ISignal<T>
     /// <param name="singleObserver">The single observer fast-path subscription.</param>
     /// <param name="subscriptions">The subscriptions value.</param>
     /// <param name="exception">The exception value.</param>
-    private static void Error(SignalSubscription? singleObserver, SignalSubscription?[]? subscriptions, Exception exception)
+    private static void Error(
+        SignalSubscription? singleObserver,
+        SignalSubscription?[]? subscriptions,
+        Exception exception)
     {
         singleObserver?.OnError(exception);
         if (subscriptions is null)
@@ -423,7 +432,7 @@ public class Signal<T> : ISignal<T>
 
         if (_subscriptionTail == subscriptions.Length)
         {
-            var copy = new SignalSubscription[subscriptions.Length * 2];
+            var copy = new SignalSubscription[subscriptions.Length * SubscriptionGrowthFactor];
             Array.Copy(subscriptions, copy, subscriptions.Length);
             subscriptions = copy;
             Volatile.Write(ref _subscriptions, subscriptions);

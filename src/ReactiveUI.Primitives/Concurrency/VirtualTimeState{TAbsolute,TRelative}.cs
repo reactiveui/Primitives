@@ -2,7 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Globalization;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Concurrency;
@@ -17,7 +16,8 @@ namespace ReactiveUI.Primitives.Concurrency;
 [System.Diagnostics.CodeAnalysis.SuppressMessage(
     "Performance",
     "SST1803:Make record struct readonly",
-    Justification = "This is mutable scheduler state; its members mutate the clock and running flag in place, so it cannot be readonly.")]
+    Justification =
+        "This is mutable scheduler state; its members mutate the clock and running flag in place, so it cannot be readonly.")]
 internal record struct VirtualTimeState<TAbsolute, TRelative>
     where TAbsolute : IComparable<TAbsolute>
 {
@@ -97,7 +97,7 @@ internal record struct VirtualTimeState<TAbsolute, TRelative>
 
         if (_isEnabled)
         {
-            throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "{0} cannot be called when the scheduler is already running. Try using Sleep instead.", nameof(AdvanceBy)));
+            throw new InvalidOperationException(VirtualTimeMessages.SchedulerAlreadyRunning(nameof(AdvanceBy)));
         }
 
         AdvanceTo(dt);
@@ -122,7 +122,7 @@ internal record struct VirtualTimeState<TAbsolute, TRelative>
 
         if (_isEnabled)
         {
-            throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "{0} cannot be called when the scheduler is already running. Try using Sleep instead.", nameof(AdvanceTo)));
+            throw new InvalidOperationException(VirtualTimeMessages.SchedulerAlreadyRunning(nameof(AdvanceTo)));
         }
 
         _isEnabled = true;
@@ -142,8 +142,7 @@ internal record struct VirtualTimeState<TAbsolute, TRelative>
             {
                 _isEnabled = false;
             }
-        }
-        while (_isEnabled);
+        } while (_isEnabled);
 
         _clock = time;
     }
@@ -189,8 +188,7 @@ internal record struct VirtualTimeState<TAbsolute, TRelative>
             {
                 _isEnabled = false;
             }
-        }
-        while (_isEnabled);
+        } while (_isEnabled);
     }
 
     /// <summary>Stops the virtual time scheduler.</summary>
@@ -203,7 +201,10 @@ internal record struct VirtualTimeState<TAbsolute, TRelative>
     /// <param name="action">Action to be executed.</param>
     /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
     /// <exception cref="ArgumentNullException"><paramref name="action"/> is <c>null</c>.</exception>
-    public readonly IDisposable Schedule<TState>(ISequencer owner, TState state, Func<ISequencer, TState, IDisposable> action)
+    public readonly IDisposable Schedule<TState>(
+        ISequencer owner,
+        TState state,
+        Func<ISequencer, TState, IDisposable> action)
     {
         ArgumentExceptionHelper.ThrowIfNull(action);
 
@@ -218,7 +219,11 @@ internal record struct VirtualTimeState<TAbsolute, TRelative>
     /// <param name="action">Action to be executed.</param>
     /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
     /// <exception cref="ArgumentNullException"><paramref name="action"/> is <c>null</c>.</exception>
-    public readonly IDisposable Schedule<TState>(ISequencer owner, TState state, TimeSpan dueTime, Func<ISequencer, TState, IDisposable> action)
+    public readonly IDisposable Schedule<TState>(
+        ISequencer owner,
+        TState state,
+        TimeSpan dueTime,
+        Func<ISequencer, TState, IDisposable> action)
     {
         ArgumentExceptionHelper.ThrowIfNull(action);
 
@@ -233,7 +238,11 @@ internal record struct VirtualTimeState<TAbsolute, TRelative>
     /// <param name="action">Action to be executed.</param>
     /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
     /// <exception cref="ArgumentNullException"><paramref name="action"/> is <c>null</c>.</exception>
-    public readonly IDisposable Schedule<TState>(ISequencer owner, TState state, DateTimeOffset dueTime, Func<ISequencer, TState, IDisposable> action)
+    public readonly IDisposable Schedule<TState>(
+        ISequencer owner,
+        TState state,
+        DateTimeOffset dueTime,
+        Func<ISequencer, TState, IDisposable> action)
     {
         ArgumentExceptionHelper.ThrowIfNull(action);
 
@@ -288,7 +297,11 @@ internal record struct VirtualTimeState<TAbsolute, TRelative>
     /// <param name="action">Action to be executed.</param>
     /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
     /// <exception cref="ArgumentNullException"><paramref name="action"/> is <c>null</c>.</exception>
-    public readonly IDisposable ScheduleAbsolute<TState>(ISequencer owner, TState state, TAbsolute dueTime, Func<ISequencer, TState, IDisposable> action)
+    public readonly IDisposable ScheduleAbsolute<TState>(
+        ISequencer owner,
+        TState state,
+        TAbsolute dueTime,
+        Func<ISequencer, TState, IDisposable> action)
     {
         ArgumentExceptionHelper.ThrowIfNull(action);
 
@@ -315,7 +328,11 @@ internal record struct VirtualTimeState<TAbsolute, TRelative>
     /// <param name="action">Action to be executed.</param>
     /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
     /// <exception cref="ArgumentNullException"><paramref name="action"/> is <c>null</c>.</exception>
-    public readonly IDisposable ScheduleRelative<TState>(ISequencer owner, TState state, TRelative dueTime, Func<ISequencer, TState, IDisposable> action)
+    public readonly IDisposable ScheduleRelative<TState>(
+        ISequencer owner,
+        TState state,
+        TRelative dueTime,
+        Func<ISequencer, TState, IDisposable> action)
     {
         ArgumentExceptionHelper.ThrowIfNull(action);
 

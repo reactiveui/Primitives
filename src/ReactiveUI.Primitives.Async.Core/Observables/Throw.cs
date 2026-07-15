@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
-
 using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async;
@@ -22,8 +21,8 @@ public static partial class SignalAsync
     /// <returns>An observable sequence of type <typeparamref name="T"/> that signals the specified exception upon subscription.</returns>
     /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="error"/> is null.</exception>
     [SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
+        "Design",
+        "SST2307:Generic method type parameters should be inferable from the parameters",
         Justification = "Public factory API — caller specifies T explicitly: SignalAsync.Throw<int>(ex).")]
     public static IObservableAsync<T> Fail<T>(Exception error)
     {
@@ -38,8 +37,8 @@ public static partial class SignalAsync
     /// <returns>An observable sequence of type <typeparamref name="T"/> that signals the specified exception upon subscription.</returns>
     /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="error"/> is null.</exception>
     [SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
+        "Design",
+        "SST2307:Generic method type parameters should be inferable from the parameters",
         Justification = "Public factory API — caller specifies T explicitly: SignalAsync.Throw<int>(ex).")]
     public static IObservableAsync<T> Throw<T>(Exception error) =>
         new ThrowSignalAsync<T>(error ?? throw new ArgumentNullException(nameof(error)));

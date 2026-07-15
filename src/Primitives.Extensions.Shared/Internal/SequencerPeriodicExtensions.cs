@@ -69,38 +69,33 @@ internal static class SequencerPeriodicExtensions
     /// drive <see cref="Tick"/> directly instead of via reflection.
     /// </summary>
     /// <typeparam name="TState">The state type.</typeparam>
-    internal sealed class PeriodicSubscription<TState> : IDisposable
+    /// <param name="scheduler">The scheduler used for each tick.</param>
+    /// <param name="state">The state passed to each tick.</param>
+    /// <param name="period">The period between ticks.</param>
+    /// <param name="action">The tick action.</param>
+    internal sealed class PeriodicSubscription<TState>(
+        ISequencer scheduler,
+        TState state,
+        TimeSpan period,
+        Action<TState> action) : IDisposable
     {
         /// <summary>The scheduler used for each tick.</summary>
-        private readonly ISequencer _scheduler;
+        private readonly ISequencer _scheduler = scheduler;
 
         /// <summary>The state passed to each tick.</summary>
-        private readonly TState _state;
+        private readonly TState _state = state;
 
         /// <summary>The period between ticks.</summary>
-        private readonly TimeSpan _period;
+        private readonly TimeSpan _period = period;
 
         /// <summary>The tick action.</summary>
-        private readonly Action<TState> _action;
+        private readonly Action<TState> _action = action;
 
         /// <summary>The current scheduled work.</summary>
         private readonly SwapDisposable _scheduled = new();
 
         /// <summary>0 = active, 1 = disposed.</summary>
         private int _disposed;
-
-        /// <summary>Initializes a new instance of the <see cref="PeriodicSubscription{TState}"/> class.</summary>
-        /// <param name="scheduler">The scheduler used for each tick.</param>
-        /// <param name="state">The state passed to each tick.</param>
-        /// <param name="period">The period between ticks.</param>
-        /// <param name="action">The tick action.</param>
-        public PeriodicSubscription(ISequencer scheduler, TState state, TimeSpan period, Action<TState> action)
-        {
-            _scheduler = scheduler;
-            _state = state;
-            _period = period;
-            _action = action;
-        }
 
         /// <summary>Schedules the next tick.</summary>
         /// <param name="dueTime">The delay before the tick.</param>

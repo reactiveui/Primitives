@@ -18,11 +18,14 @@ public sealed class DispatcherQueueSequencerTests
     /// <summary>Maximum time to wait for work to be marshalled onto the dispatcher-queue thread before failing.</summary>
     private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(5);
 
+    /// <summary>Stopwatch ticks until the delayed work falls due: one twentieth of a second, or 50 ms.</summary>
+    private static readonly long ScheduleDelayTicks = Stopwatch.Frequency / 20;
+
     /// <summary>Verifies the constructor rejects a null dispatcher queue.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task ConstructorRejectsNullDispatcherQueue() =>
-        await Assert.That(() => new DispatcherQueueSequencer(null!)).ThrowsExactly<ArgumentNullException>();
+        await Assert.That(static () => new DispatcherQueueSequencer(null!)).ThrowsExactly<ArgumentNullException>();
 
     /// <summary>Verifies immediate work is enqueued to and executed on the dispatcher-queue thread.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
@@ -48,7 +51,7 @@ public sealed class DispatcherQueueSequencerTests
         var sequencer = new DispatcherQueueSequencer(harness.DispatcherQueue);
         var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var due = sequencer.Timestamp + (Stopwatch.Frequency / 20); // ~50 ms into the future.
+        var due = sequencer.Timestamp + ScheduleDelayTicks;
         sequencer.Schedule(new DelegateWorkItem(() => completion.TrySetResult(harness.DispatcherQueue.HasThreadAccess)), due);
 
         var ranOnQueueThread = await completion.Task.WaitAsync(WaitTimeout);

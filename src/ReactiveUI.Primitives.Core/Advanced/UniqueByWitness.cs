@@ -7,16 +7,22 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <summary>Sink that suppresses adjacent values whose projected key matches the previous one.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 /// <typeparam name="TKey">The key type.</typeparam>
-public sealed class UniqueByWitness<T, TKey> : IObserver<T>, IDisposable
+/// <param name="observer">The downstream observer.</param>
+/// <param name="keySelector">The key projection.</param>
+/// <param name="comparer">The comparer used to compare adjacent keys.</param>
+public sealed class UniqueByWitness<T, TKey>(
+    IObserver<T> observer,
+    Func<T, TKey> keySelector,
+    IEqualityComparer<TKey> comparer) : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>
-    private readonly IObserver<T> _observer;
+    private readonly IObserver<T> _observer = observer;
 
     /// <summary>The key projection.</summary>
-    private readonly Func<T, TKey> _keySelector;
+    private readonly Func<T, TKey> _keySelector = keySelector;
 
     /// <summary>The comparer used to compare adjacent keys.</summary>
-    private readonly IEqualityComparer<TKey> _comparer;
+    private readonly IEqualityComparer<TKey> _comparer = comparer;
 
     /// <summary>A value indicating whether a previous key has been observed.</summary>
     private bool _hasLast;
@@ -26,17 +32,6 @@ public sealed class UniqueByWitness<T, TKey> : IObserver<T>, IDisposable
 
     /// <summary>The upstream subscription.</summary>
     private IDisposable? _subscription;
-
-    /// <summary>Initializes a new instance of the <see cref="UniqueByWitness{T, TKey}"/> class.</summary>
-    /// <param name="observer">The downstream observer.</param>
-    /// <param name="keySelector">The key projection.</param>
-    /// <param name="comparer">The comparer used to compare adjacent keys.</param>
-    public UniqueByWitness(IObserver<T> observer, Func<T, TKey> keySelector, IEqualityComparer<TKey> comparer)
-    {
-        _observer = observer;
-        _keySelector = keySelector;
-        _comparer = comparer;
-    }
 
     /// <inheritdoc/>
     public void OnNext(T value)

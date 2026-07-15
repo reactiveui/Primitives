@@ -56,7 +56,9 @@ public class TerminalAsyncVariantBenchmarks
     /// <returns>The first value or default.</returns>
     [Benchmark]
     public Task<int> R3FirstOrDefaultAsync() =>
-        R3.ObservableExtensions.FirstOrDefaultAsync(R3.Observable.Range(Start, Count), cancellationToken: CancellationToken.None);
+        R3.ObservableExtensions.FirstOrDefaultAsync(
+            R3.Observable.Range(Start, Count),
+            cancellationToken: CancellationToken.None);
 
     /// <summary>Benchmarks the last-or-default async terminal.</summary>
     /// <returns>The last value or default.</returns>
@@ -74,5 +76,7 @@ public class TerminalAsyncVariantBenchmarks
     /// <returns>The last value or default.</returns>
     [Benchmark]
     public Task<int> R3LastOrDefaultAsync() =>
-        R3.ObservableExtensions.LastOrDefaultAsync(R3.Observable.Range(Start, Count), cancellationToken: CancellationToken.None);
+        R3.ObservableExtensions.LastOrDefaultAsync(
+            R3.Observable.Range(Start, Count),
+            cancellationToken: CancellationToken.None);
 }

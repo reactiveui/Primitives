@@ -9,6 +9,9 @@ namespace ReactiveUI.Primitives.Tests;
 /// <summary>Verifies <see cref="Spark"/> value, error, completion, and equality contracts.</summary>
 public class SparkTests
 {
+    /// <summary>Event text recorded by the delegate-based completion callback.</summary>
+    private const string DelegateCompletedText = "delegate-completed";
+
     /// <summary>Forty-two as a named value.</summary>
     private const int FortyTwo = 42;
 
@@ -60,18 +63,18 @@ public class SparkTests
         next.Accept(
             value => observer.Events.Add("delegate-next:" + value),
             ex => observer.Events.Add(ex.Message),
-            () => observer.Events.Add("delegate-completed"));
-        await Assert.That(next.Accept(value => "fn-next:" + value, ex => ex.Message, () => FunctionCompletedText))
+            () => observer.Events.Add(DelegateCompletedText));
+        await Assert.That(next.Accept(static value => "fn-next:" + value, static ex => ex.Message, static () => FunctionCompletedText))
             .IsEqualTo("fn-next:42");
         _ = Assert.Throws<ArgumentNullException>(() => next.Accept((IObserver<int>)null!));
         _ = Assert.Throws<ArgumentNullException>(() => next.Accept<string>(null!));
-        _ = Assert.Throws<ArgumentNullException>(() => next.Accept(null!, ex => { }, () => { }));
-        _ = Assert.Throws<ArgumentNullException>(() => next.Accept(value => { }, null!, () => { }));
-        _ = Assert.Throws<ArgumentNullException>(() => next.Accept(value => { }, ex => { }, null!));
-        _ = Assert.Throws<ArgumentNullException>(() => next.Accept(null!, ex => ex.Message, () => "done"));
-        _ = Assert.Throws<ArgumentNullException>(() => next.Accept(value => value.ToString(), null!, () => "done"));
-        _ = Assert.Throws<ArgumentNullException>(() => next.Accept(value => value.ToString(), ex => ex.Message, null!));
-        _ = next.ToObservable().Subscribe(observableValues.Add, ex => throw ex, () => observableCompleted++);
+        _ = Assert.Throws<ArgumentNullException>(() => next.Accept(null!, static ex => { }, static () => { }));
+        _ = Assert.Throws<ArgumentNullException>(() => next.Accept(static value => { }, null!, static () => { }));
+        _ = Assert.Throws<ArgumentNullException>(() => next.Accept(static value => { }, static ex => { }, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => next.Accept(null!, static ex => ex.Message, static () => "done"));
+        _ = Assert.Throws<ArgumentNullException>(() => next.Accept(static value => value.ToString(), null!, static () => "done"));
+        _ = Assert.Throws<ArgumentNullException>(() => next.Accept(static value => value.ToString(), static ex => ex.Message, null!));
+        _ = next.ToObservable().Subscribe(observableValues.Add, static ex => throw ex, () => observableCompleted++);
         await Assert.That(observableValues.SequenceEqual(ExpectedObservableValues)).IsTrue();
         await Assert.That(observableCompleted).IsEqualTo(1);
         await Assert.That(observer.Events).Contains("next:42");
@@ -102,22 +105,23 @@ public class SparkTests
         errorSpark.Accept(
             value => observer.Events.Add(value.ToString()),
             ex => observer.Events.Add("delegate-error:" + ex.Message),
-            () => observer.Events.Add("delegate-completed"));
+            () => observer.Events.Add(DelegateCompletedText));
         var errorResult = errorSpark.Accept(
-            value => value.ToString(),
-            ex => "fn-error:" + ex.Message,
-            () => FunctionCompletedText);
+            static value => value.ToString(),
+            static ex => "fn-error:" + ex.Message,
+            static () => FunctionCompletedText);
         await Assert.That(errorResult).IsEqualTo("fn-error:spark-error");
-        _ = Assert.Throws<ArgumentNullException>(() => Spark.CreateOnError<int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => Spark.CreateOnError<int>(null!));
         _ = Assert.Throws<ArgumentNullException>(() => errorSpark.Accept((IObserver<int>)null!));
         _ = Assert.Throws<ArgumentNullException>(() => errorSpark.Accept<string>(null!));
-        _ = Assert.Throws<ArgumentNullException>(() => errorSpark.Accept(null!, ex => { }, () => { }));
-        _ = Assert.Throws<ArgumentNullException>(() => errorSpark.Accept(value => { }, null!, () => { }));
-        _ = Assert.Throws<ArgumentNullException>(() => errorSpark.Accept(value => { }, ex => { }, null!));
-        _ = Assert.Throws<ArgumentNullException>(() => errorSpark.Accept(null!, ex => ex.Message, () => "done"));
-        _ = Assert.Throws<ArgumentNullException>(() => errorSpark.Accept(value => value.ToString(), null!, () => "done"));
+        _ = Assert.Throws<ArgumentNullException>(() => errorSpark.Accept(null!, static ex => { }, static () => { }));
+        _ = Assert.Throws<ArgumentNullException>(() => errorSpark.Accept(static value => { }, null!, static () => { }));
+        _ = Assert.Throws<ArgumentNullException>(() => errorSpark.Accept(static value => { }, static ex => { }, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => errorSpark.Accept(null!, static ex => ex.Message, static () => "done"));
         _ = Assert.Throws<ArgumentNullException>(() =>
-            errorSpark.Accept(value => value.ToString(), ex => ex.Message, null!));
+            errorSpark.Accept(static value => value.ToString(), null!, static () => "done"));
+        _ = Assert.Throws<ArgumentNullException>(() =>
+            errorSpark.Accept(static value => value.ToString(), static ex => ex.Message, null!));
         await Assert.That(observer.Events).Contains("error:spark-error");
     }
 
@@ -140,26 +144,43 @@ public class SparkTests
         completed.Accept(
             value => observer.Events.Add(value.ToString()),
             ex => observer.Events.Add(ex.Message),
-            () => observer.Events.Add("delegate-completed"));
-        await Assert.That(completed.Accept(value => value.ToString(), ex => ex.Message, () => FunctionCompletedText))
+            () => observer.Events.Add(DelegateCompletedText));
+        await Assert.That(completed.Accept(static value => value.ToString(), static ex => ex.Message, static () => FunctionCompletedText))
             .IsEqualTo(FunctionCompletedText);
         _ = Assert.Throws<ArgumentNullException>(() => completed.Accept((IObserver<int>)null!));
         _ = Assert.Throws<ArgumentNullException>(() => completed.Accept<string>(null!));
-        _ = Assert.Throws<ArgumentNullException>(() => completed.Accept(null!, ex => { }, () => { }));
-        _ = Assert.Throws<ArgumentNullException>(() => completed.Accept(value => { }, null!, () => { }));
-        _ = Assert.Throws<ArgumentNullException>(() => completed.Accept(value => { }, ex => { }, null!));
-        _ = Assert.Throws<ArgumentNullException>(() => completed.Accept(null!, ex => ex.Message, () => "done"));
-        _ = Assert.Throws<ArgumentNullException>(() => completed.Accept(value => value.ToString(), null!, () => "done"));
+        _ = Assert.Throws<ArgumentNullException>(() => completed.Accept(null!, static ex => { }, static () => { }));
+        _ = Assert.Throws<ArgumentNullException>(() => completed.Accept(static value => { }, null!, static () => { }));
+        _ = Assert.Throws<ArgumentNullException>(() => completed.Accept(static value => { }, static ex => { }, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => completed.Accept(null!, static ex => ex.Message, static () => "done"));
         _ = Assert.Throws<ArgumentNullException>(() =>
-            completed.Accept(value => value.ToString(), ex => ex.Message, null!));
+            completed.Accept(static value => value.ToString(), null!, static () => "done"));
+        _ = Assert.Throws<ArgumentNullException>(() =>
+            completed.Accept(static value => value.ToString(), static ex => ex.Message, null!));
         _ = Assert.Throws<ArgumentNullException>(() => completed.ToObservable(null!));
         await Assert.That(observer.Events).Contains(CompletedText);
+    }
+
+    /// <summary>Verifies a completed spark hashes without a value or an exception to reach for.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task CompletedSparksWithNoValueOrExceptionHashEqual()
+    {
+        var completed = Spark.CreateOnCompleted<int>();
+        var sameCompleted = Spark.CreateOnCompleted<int>();
+        await Assert.That(completed.GetHashCode()).IsEqualTo(sameCompleted.GetHashCode());
     }
 
     /// <summary>Records observer events and result values.</summary>
     /// <typeparam name="T">The observed value type.</typeparam>
     private sealed class RecordingResultWitness<T> : IObserver<T>, IObserver<T, string>
     {
+        /// <summary>Prefix of a recorded error event.</summary>
+        private const string ErrorPrefix = "error:";
+
+        /// <summary>Prefix of a recorded value event.</summary>
+        private const string NextPrefix = "next:";
+
         /// <summary>Gets the recorded events.</summary>
         public List<string> Events { get; } = [];
 
@@ -168,11 +189,11 @@ public class SparkTests
 
         /// <summary>Records an error.</summary>
         /// <param name="error">The observed error.</param>
-        public void OnError(Exception error) => Events.Add("error:" + error.Message);
+        public void OnError(Exception error) => Events.Add(ErrorPrefix + error.Message);
 
         /// <summary>Records a next value.</summary>
         /// <param name="value">The observed value.</param>
-        public void OnNext(T value) => Events.Add("next:" + value);
+        public void OnNext(T value) => Events.Add(NextPrefix + value);
 
         /// <summary>Records completion and returns a result.</summary>
         /// <returns>The completion result.</returns>
@@ -187,8 +208,8 @@ public class SparkTests
         /// <returns>The error result.</returns>
         string IObserver<T, string>.OnError(Exception exception)
         {
-            Events.Add("error:" + exception.Message);
-            return "error:" + exception.Message;
+            Events.Add(ErrorPrefix + exception.Message);
+            return ErrorPrefix + exception.Message;
         }
 
         /// <summary>Records a value and returns a result.</summary>
@@ -196,8 +217,8 @@ public class SparkTests
         /// <returns>The value result.</returns>
         string IObserver<T, string>.OnNext(T value)
         {
-            Events.Add("next:" + value);
-            return "next:" + value;
+            Events.Add(NextPrefix + value);
+            return NextPrefix + value;
         }
     }
 }

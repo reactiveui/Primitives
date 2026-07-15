@@ -20,6 +20,9 @@ public class SubscribeAsyncObservableTests
     /// <summary>Settle delay in milliseconds used to confirm completion is deferred.</summary>
     private const int SettleDelayMilliseconds = 50;
 
+    /// <summary>Guard timeout so a hung rendezvous fails this test rather than stalling the run.</summary>
+    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
+
     /// <summary>Verifies that values are handled in order and completion fires.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -41,7 +44,7 @@ public class SubscribeAsyncObservableTests
         subject.OnNext(First);
         subject.OnNext(Second);
         subject.OnCompleted();
-        var done = await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var done = await completed.Task.WaitAsync(GuardTimeout);
         await Assert.That(done).IsTrue();
         await Assert.That(results).IsCollectionEqualTo([First, Second]);
     }
@@ -58,7 +61,7 @@ public class SubscribeAsyncObservableTests
         using var sub =
             subject.SubscribeSynchronous(_ => ValueTask.FromException(expected), ex => faulted.TrySetResult(ex));
         subject.OnNext(TriggerValue);
-        var caught = await faulted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var caught = await faulted.Task.WaitAsync(GuardTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -109,7 +112,7 @@ public class SubscribeAsyncObservableTests
         await Task.Delay(SettleDelayMilliseconds).ConfigureAwait(false);
         await Assert.That(completed.Task.IsCompleted).IsFalse();
         _ = gate.TrySetResult(true);
-        var done = await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var done = await completed.Task.WaitAsync(GuardTimeout);
         await Assert.That(done).IsTrue();
     }
 
@@ -130,7 +133,7 @@ public class SubscribeAsyncObservableTests
         subject.OnNext(Value);
         subject.OnCompleted();
         _ = gate.TrySetResult(true);
-        var done = await handled.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var done = await handled.Task.WaitAsync(GuardTimeout);
         await Task.Delay(SettleDelayMilliseconds).ConfigureAwait(false);
         await Assert.That(done).IsTrue();
     }
@@ -156,7 +159,7 @@ public class SubscribeAsyncObservableTests
             ex => caught = ex,
             () => completedCount++);
         subject.OnNext(Value);
-        await handlerStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await handlerStarted.Task.WaitAsync(GuardTimeout);
         subject.OnCompleted();
         sub.Dispose();
         _ = gate.TrySetResult(true);

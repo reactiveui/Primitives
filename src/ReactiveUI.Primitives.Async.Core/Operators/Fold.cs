@@ -51,7 +51,6 @@ public static partial class SignalAsyncExtensions
 
             return new FoldSyncSignal<T, TAcc>(@this, seed, accumulator);
         }
-
     }
 
     /// <summary>

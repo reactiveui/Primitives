@@ -20,7 +20,8 @@ internal static class ArgumentExceptionHelper
     /// <param name="paramName">The name of the parameter with which <paramref name="argument"/> corresponds.</param>
     public static void ThrowIfNull(
         [NotNull] object? argument,
-        [CallerArgumentExpression(nameof(argument))] string? paramName = null)
+        [CallerArgumentExpression(nameof(argument))]
+        string? paramName = null)
     {
         if (argument is not null)
         {

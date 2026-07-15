@@ -124,7 +124,7 @@ public class ScheduledSignal<T> : ISignal<T>
     /// <inheritdoc />
     public void Dispose()
     {
-        Dispose(disposing: true);
+        Dispose(true);
         GC.SuppressFinalize(this);
     }
 
@@ -163,7 +163,8 @@ public class ScheduledSignal<T> : ISignal<T>
     /// <summary>Subscribes the default observer through the configured scheduler.</summary>
     /// <param name="observer">The observer value.</param>
     /// <returns>The subscription value.</returns>
-    private IDisposable SubscribeDefaultObserver(IObserver<T> observer) => _subject.ObserveOn(_scheduler).Subscribe(observer);
+    private IDisposable SubscribeDefaultObserver(IObserver<T> observer) =>
+        _subject.ObserveOn(_scheduler).Subscribe(observer);
 
     /// <summary>Releases one non-default observer and restores the default observer when needed.</summary>
     private void ReleaseObserver()

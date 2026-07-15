@@ -17,7 +17,7 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestFourSources_Error_ThenCompletes()
     {
-        var signals = Enumerable.Range(0, FourSources).Select(_ => Signal.Create<int>()).ToList();
+        var signals = Enumerable.Range(0, FourSources).Select(static _ => Signal.Create<int>()).ToList();
 
         Result? completionResult = null;
         await using var sub = await signals[0].Values
@@ -25,9 +25,9 @@ public partial class CombineLatestOperatorTests
                 signals[1].Values,
                 signals[Source2Index].Values,
                 signals[Source3Index].Values,
-                (a, b, c, d) => a + b + c + d)
+                static (a, b, c, d) => a + b + c + d)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null,
                 result =>
                 {
@@ -47,7 +47,7 @@ public partial class CombineLatestOperatorTests
     public async Task WhenCombineLatestFourSources_AllComplete_ThenCombinedCompletes()
     {
         const int SourcesToCompleteFirst = 3;
-        var signals = Enumerable.Range(0, FourSources).Select(_ => Signal.Create<int>()).ToList();
+        var signals = Enumerable.Range(0, FourSources).Select(static _ => Signal.Create<int>()).ToList();
 
         Result? completionResult = null;
         await using var sub = await signals[0].Values
@@ -55,9 +55,9 @@ public partial class CombineLatestOperatorTests
                 signals[1].Values,
                 signals[Source2Index].Values,
                 signals[Source3Index].Values,
-                (a, b, c, d) => a + b + c + d)
+                static (a, b, c, d) => a + b + c + d)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null,
                 result =>
                 {
@@ -82,7 +82,7 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestFourSources_ErrorResume_ThenForwarded()
     {
-        var signals = Enumerable.Range(0, FourSources).Select(_ => Signal.Create<int>()).ToList();
+        var signals = Enumerable.Range(0, FourSources).Select(static _ => Signal.Create<int>()).ToList();
 
         List<Exception> errors = [];
         await using var sub = await signals[0].Values
@@ -90,9 +90,9 @@ public partial class CombineLatestOperatorTests
                 signals[1].Values,
                 signals[Source2Index].Values,
                 signals[Source3Index].Values,
-                (a, b, c, d) => a + b + c + d)
+                static (a, b, c, d) => a + b + c + d)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 (ex, _) =>
                 {
                     errors.Add(ex);
@@ -111,7 +111,7 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestFiveSources_Error_ThenCompletes()
     {
-        var signals = Enumerable.Range(0, FiveSources).Select(_ => Signal.Create<int>()).ToList();
+        var signals = Enumerable.Range(0, FiveSources).Select(static _ => Signal.Create<int>()).ToList();
 
         Result? completionResult = null;
         await using var sub = await signals[0].Values
@@ -120,9 +120,9 @@ public partial class CombineLatestOperatorTests
                 signals[Source2Index].Values,
                 signals[Source3Index].Values,
                 signals[Source4Index].Values,
-                (a, b, c, d, e) => a + b + c + d + e)
+                static (a, b, c, d, e) => a + b + c + d + e)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null,
                 result =>
                 {
@@ -142,7 +142,7 @@ public partial class CombineLatestOperatorTests
     public async Task WhenCombineLatestFiveSources_AllComplete_ThenCombinedCompletes()
     {
         const int SourcesToCompleteFirst = 4;
-        var signals = Enumerable.Range(0, FiveSources).Select(_ => Signal.Create<int>()).ToList();
+        var signals = Enumerable.Range(0, FiveSources).Select(static _ => Signal.Create<int>()).ToList();
 
         Result? completionResult = null;
         await using var sub = await signals[0].Values
@@ -151,9 +151,9 @@ public partial class CombineLatestOperatorTests
                 signals[Source2Index].Values,
                 signals[Source3Index].Values,
                 signals[Source4Index].Values,
-                (a, b, c, d, e) => a + b + c + d + e)
+                static (a, b, c, d, e) => a + b + c + d + e)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null,
                 result =>
                 {
@@ -178,7 +178,7 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestFiveSources_ErrorResume_ThenForwarded()
     {
-        var signals = Enumerable.Range(0, FiveSources).Select(_ => Signal.Create<int>()).ToList();
+        var signals = Enumerable.Range(0, FiveSources).Select(static _ => Signal.Create<int>()).ToList();
 
         List<Exception> errors = [];
         await using var sub = await signals[0].Values
@@ -187,9 +187,9 @@ public partial class CombineLatestOperatorTests
                 signals[Source2Index].Values,
                 signals[Source3Index].Values,
                 signals[Source4Index].Values,
-                (a, b, c, d, e) => a + b + c + d + e)
+                static (a, b, c, d, e) => a + b + c + d + e)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 (ex, _) =>
                 {
                     errors.Add(ex);
@@ -208,7 +208,7 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestSixSources_Error_ThenCompletes()
     {
-        var signals = Enumerable.Range(0, SixSources).Select(_ => Signal.Create<int>()).ToList();
+        var signals = Enumerable.Range(0, SixSources).Select(static _ => Signal.Create<int>()).ToList();
 
         Result? completionResult = null;
         await using var sub = await signals[0].Values
@@ -218,9 +218,9 @@ public partial class CombineLatestOperatorTests
                 signals[Source3Index].Values,
                 signals[Source4Index].Values,
                 signals[Source5Index].Values,
-                (a, b, c, d, e, f) => a + b + c + d + e + f)
+                static (a, b, c, d, e, f) => a + b + c + d + e + f)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null,
                 result =>
                 {
@@ -240,7 +240,7 @@ public partial class CombineLatestOperatorTests
     public async Task WhenCombineLatestSixSources_AllComplete_ThenCombinedCompletes()
     {
         const int SourcesToCompleteFirst = 5;
-        var signals = Enumerable.Range(0, SixSources).Select(_ => Signal.Create<int>()).ToList();
+        var signals = Enumerable.Range(0, SixSources).Select(static _ => Signal.Create<int>()).ToList();
 
         Result? completionResult = null;
         await using var sub = await signals[0].Values
@@ -250,9 +250,9 @@ public partial class CombineLatestOperatorTests
                 signals[Source3Index].Values,
                 signals[Source4Index].Values,
                 signals[Source5Index].Values,
-                (a, b, c, d, e, f) => a + b + c + d + e + f)
+                static (a, b, c, d, e, f) => a + b + c + d + e + f)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null,
                 result =>
                 {
@@ -277,7 +277,7 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestSixSources_ErrorResume_ThenForwarded()
     {
-        var signals = Enumerable.Range(0, SixSources).Select(_ => Signal.Create<int>()).ToList();
+        var signals = Enumerable.Range(0, SixSources).Select(static _ => Signal.Create<int>()).ToList();
 
         List<Exception> errors = [];
         await using var sub = await signals[0].Values
@@ -287,9 +287,9 @@ public partial class CombineLatestOperatorTests
                 signals[Source3Index].Values,
                 signals[Source4Index].Values,
                 signals[Source5Index].Values,
-                (a, b, c, d, e, f) => a + b + c + d + e + f)
+                static (a, b, c, d, e, f) => a + b + c + d + e + f)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 (ex, _) =>
                 {
                     errors.Add(ex);
@@ -308,7 +308,7 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestSevenSources_Error_ThenCompletes()
     {
-        var signals = Enumerable.Range(0, SevenSources).Select(_ => Signal.Create<int>()).ToList();
+        var signals = Enumerable.Range(0, SevenSources).Select(static _ => Signal.Create<int>()).ToList();
 
         Result? completionResult = null;
         await using var sub = await signals[0].Values
@@ -319,9 +319,9 @@ public partial class CombineLatestOperatorTests
                 signals[Source4Index].Values,
                 signals[Source5Index].Values,
                 signals[Source6Index].Values,
-                (a, b, c, d, e, f, g) => a + b + c + d + e + f + g)
+                static (a, b, c, d, e, f, g) => a + b + c + d + e + f + g)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null,
                 result =>
                 {
@@ -341,7 +341,7 @@ public partial class CombineLatestOperatorTests
     public async Task WhenCombineLatestSevenSources_AllComplete_ThenCombinedCompletes()
     {
         const int SourcesToCompleteFirst = 6;
-        var signals = Enumerable.Range(0, SevenSources).Select(_ => Signal.Create<int>()).ToList();
+        var signals = Enumerable.Range(0, SevenSources).Select(static _ => Signal.Create<int>()).ToList();
 
         Result? completionResult = null;
         await using var sub = await signals[0].Values
@@ -352,9 +352,9 @@ public partial class CombineLatestOperatorTests
                 signals[Source4Index].Values,
                 signals[Source5Index].Values,
                 signals[Source6Index].Values,
-                (a, b, c, d, e, f, g) => a + b + c + d + e + f + g)
+                static (a, b, c, d, e, f, g) => a + b + c + d + e + f + g)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null,
                 result =>
                 {
@@ -379,7 +379,7 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestSevenSources_ErrorResume_ThenForwarded()
     {
-        var signals = Enumerable.Range(0, SevenSources).Select(_ => Signal.Create<int>()).ToList();
+        var signals = Enumerable.Range(0, SevenSources).Select(static _ => Signal.Create<int>()).ToList();
 
         List<Exception> errors = [];
         await using var sub = await signals[0].Values
@@ -390,9 +390,9 @@ public partial class CombineLatestOperatorTests
                 signals[Source4Index].Values,
                 signals[Source5Index].Values,
                 signals[Source6Index].Values,
-                (a, b, c, d, e, f, g) => a + b + c + d + e + f + g)
+                static (a, b, c, d, e, f, g) => a + b + c + d + e + f + g)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 (ex, _) =>
                 {
                     errors.Add(ex);
@@ -409,13 +409,9 @@ public partial class CombineLatestOperatorTests
     /// <summary>Error propagation in 8-source variant.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "Test Purposes")]
     public async Task WhenCombineLatestEightSources_Error_ThenCompletes()
     {
-        var signals = Enumerable.Range(0, EightSources).Select(_ => Signal.Create<int>()).ToList();
+        var signals = Enumerable.Range(0, EightSources).Select(static _ => Signal.Create<int>()).ToList();
 
         Result? completionResult = null;
         await using var sub = await signals[0].Values
@@ -427,9 +423,9 @@ public partial class CombineLatestOperatorTests
                 signals[Source5Index].Values,
                 signals[Source6Index].Values,
                 signals[Source7Index].Values,
-                (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h)
+                static (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null,
                 result =>
                 {
@@ -446,14 +442,10 @@ public partial class CombineLatestOperatorTests
     /// <summary>All eight sources complete successfully.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107:Methods should not have too many parameters",
-        Justification = "Test Purposes")]
     public async Task WhenCombineLatestEightSources_AllComplete_ThenCombinedCompletes()
     {
         const int SourcesToCompleteFirst = 7;
-        var signals = Enumerable.Range(0, EightSources).Select(_ => Signal.Create<int>()).ToList();
+        var signals = Enumerable.Range(0, EightSources).Select(static _ => Signal.Create<int>()).ToList();
 
         Result? completionResult = null;
         await using var sub = await signals[0].Values
@@ -465,9 +457,9 @@ public partial class CombineLatestOperatorTests
                 signals[Source5Index].Values,
                 signals[Source6Index].Values,
                 signals[Source7Index].Values,
-                (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h)
+                static (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null,
                 result =>
                 {
@@ -490,14 +482,9 @@ public partial class CombineLatestOperatorTests
     /// <summary>Error resume forwarded in 8-source variant.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Major Code Smell",
-        "S107",
-        Justification =
-            "Arity-8 CombineLatest selector lambda parameter count mirrors the operator signature under test.")]
     public async Task WhenCombineLatestEightSources_ErrorResume_ThenForwarded()
     {
-        var signals = Enumerable.Range(0, EightSources).Select(_ => Signal.Create<int>()).ToList();
+        var signals = Enumerable.Range(0, EightSources).Select(static _ => Signal.Create<int>()).ToList();
 
         List<Exception> errors = [];
         await using var sub = await signals[0].Values
@@ -509,9 +496,9 @@ public partial class CombineLatestOperatorTests
                 signals[Source5Index].Values,
                 signals[Source6Index].Values,
                 signals[Source7Index].Values,
-                (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h)
+                static (a, b, c, d, e, f, g, h) => a + b + c + d + e + f + g + h)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 (ex, _) =>
                 {
                     errors.Add(ex);

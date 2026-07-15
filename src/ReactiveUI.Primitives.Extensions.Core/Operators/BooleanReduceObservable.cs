@@ -17,6 +17,12 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <param name="target">The value every source must hold for the operator to emit <c>true</c>.</param>
 public sealed class BooleanReduceObservable(IEnumerable<IObservable<bool>> sources, bool target) : IObservable<bool>
 {
+    /// <summary>Capacity the materialization buffer starts at when the source count is not known up front.</summary>
+    private const int InitialBufferCapacity = 4;
+
+    /// <summary>Factor the materialization buffer grows by when it fills.</summary>
+    private const int BufferGrowthFactor = 2;
+
     /// <summary>The source list.</summary>
     private readonly IReadOnlyList<IObservable<bool>> _sourceList = MaterializeSources(sources);
 
@@ -61,12 +67,13 @@ public sealed class BooleanReduceObservable(IEnumerable<IObservable<bool>> sourc
         {
             if (count == buffer.Length)
             {
-                var grown = new IObservable<bool>[buffer.Length == 0 ? 4 : buffer.Length * 2];
+                var grown = new IObservable<bool>[buffer.Length == 0 ? InitialBufferCapacity : buffer.Length * BufferGrowthFactor];
                 Array.Copy(buffer, grown, count);
                 buffer = grown;
             }
 
-            buffer[count++] = source;
+            buffer[count] = source;
+            count++;
         }
 
         if (count == buffer.Length)

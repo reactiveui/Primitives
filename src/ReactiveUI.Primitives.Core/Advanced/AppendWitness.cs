@@ -6,25 +6,18 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Observer for append.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
-public sealed class AppendWitness<T> : IObserver<T>, IDisposable
+/// <param name="observer">The downstream observer.</param>
+/// <param name="value">The appended value.</param>
+public sealed class AppendWitness<T>(IObserver<T> observer, T value) : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>
-    private readonly IObserver<T> _observer;
+    private readonly IObserver<T> _observer = observer;
 
     /// <summary>The appended value.</summary>
-    private readonly T _value;
+    private readonly T _value = value;
 
     /// <summary>The upstream subscription.</summary>
     private IDisposable? _subscription;
-
-    /// <summary>Initializes a new instance of the <see cref="AppendWitness{T}"/> class.</summary>
-    /// <param name="observer">The downstream observer.</param>
-    /// <param name="value">The appended value.</param>
-    public AppendWitness(IObserver<T> observer, T value)
-    {
-        _observer = observer;
-        _value = value;
-    }
 
     /// <inheritdoc/>
     public void OnNext(T value)

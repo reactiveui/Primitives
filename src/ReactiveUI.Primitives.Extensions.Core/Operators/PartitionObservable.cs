@@ -32,6 +32,11 @@ public sealed class PartitionObservable<T>
     /// <summary>Initializes a new instance of the <see cref="PartitionObservable{T}"/> class.</summary>
     /// <param name="source">The source observable.</param>
     /// <param name="predicate">The predicate to partition elements.</param>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Correctness",
+        "SST2403:Do not let 'this' escape from a constructor",
+        Justification =
+            "Each side is stored back into this object's own property and does nothing until someone subscribes to it.")]
     public PartitionObservable(IObservable<T> source, Func<T, bool> predicate)
     {
         _source = source;
@@ -113,25 +118,12 @@ public sealed class PartitionObservable<T>
     }
 
     /// <summary>Represents a side of the partition.</summary>
-    private sealed class PartitionSide : IObservable<T>
+    /// <param name="parent">The parent observable.</param>
+    /// <param name="side">The side (true or false).</param>
+    private sealed class PartitionSide(PartitionObservable<T> parent, bool side) : IObservable<T>
     {
-        /// <summary>The parent observable.</summary>
-        private readonly PartitionObservable<T> _parent;
-
-        /// <summary>The side.</summary>
-        private readonly bool _side;
-
-        /// <summary>Initializes a new instance of the <see cref="PartitionSide"/> class.</summary>
-        /// <param name="parent">The parent observable.</param>
-        /// <param name="side">The side (true or false).</param>
-        public PartitionSide(PartitionObservable<T> parent, bool side)
-        {
-            _parent = parent;
-            _side = side;
-        }
-
         /// <inheritdoc/>
-        public IDisposable Subscribe(IObserver<T> observer) => _parent.Subscribe(observer, _side);
+        public IDisposable Subscribe(IObserver<T> observer) => parent.Subscribe(observer, side);
     }
 
     /// <summary>Sink that partitions elements.</summary>

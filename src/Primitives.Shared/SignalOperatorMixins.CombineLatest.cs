@@ -26,7 +26,9 @@ public static partial class LinqExtensions
 
     /// <summary>Observable implementation for generated multi-source combine-latest overloads.</summary>
     /// <typeparam name="TResult">The projected result type.</typeparam>
-    private sealed class CombineLatestSignal<TResult> : IObservable<TResult>
+    /// <param name="selector">The array-based selector wrapper.</param>
+    /// <param name="sources">The typed source adapters.</param>
+    private sealed partial class CombineLatestSignal<TResult>(Func<object?[], TResult> selector, ICombineLatestSource<TResult>[] sources) : IObservable<TResult>
     {
         /// <summary>The first source slot.</summary>
         private const int FirstSourceIndex = 0;
@@ -77,19 +79,10 @@ public static partial class LinqExtensions
         private const int SixteenthSourceIndex = 15;
 
         /// <summary>The typed source adapters.</summary>
-        private readonly ICombineLatestSource<TResult>[] _sources;
+        private readonly ICombineLatestSource<TResult>[] _sources = sources;
 
         /// <summary>The selector applied once every source has produced a value.</summary>
-        private readonly Func<object?[], TResult> _selector;
-
-        /// <summary>Initializes a new instance of the <see cref="CombineLatestSignal{TResult}"/> class.</summary>
-        /// <param name="selector">The array-based selector wrapper.</param>
-        /// <param name="sources">The typed source adapters.</param>
-        internal CombineLatestSignal(Func<object?[], TResult> selector, ICombineLatestSource<TResult>[] sources)
-        {
-            _selector = selector;
-            _sources = sources;
-        }
+        private readonly Func<object?[], TResult> _selector = selector;
 
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TResult> observer)
@@ -108,10 +101,6 @@ public static partial class LinqExtensions
         /// <param name="source3">The third source observable.</param>
         /// <param name="selector">The selector that combines latest values from all sources.</param>
         /// <returns>The combine-latest signal.</returns>
-        [SuppressMessage(
-            "Major Code Smell",
-            "S107:Methods should not have too many parameters",
-            Justification = "Has more than 7 parameters - expected for arity-N CombineLatest factory surface.")]
         internal static CombineLatestSignal<TResult> Create<T1, T2, T3>(
             IObservable<T1> source,
             IObservable<T2> source2,
@@ -137,10 +126,6 @@ public static partial class LinqExtensions
         /// <param name="source4">The fourth source observable.</param>
         /// <param name="selector">The selector that combines latest values from all sources.</param>
         /// <returns>The combine-latest signal.</returns>
-        [SuppressMessage(
-            "Major Code Smell",
-            "S107:Methods should not have too many parameters",
-            Justification = "Has more than 7 parameters - expected for arity-N CombineLatest factory surface.")]
         internal static CombineLatestSignal<TResult> Create<T1, T2, T3, T4>(
             IObservable<T1> source,
             IObservable<T2> source2,
@@ -171,10 +156,6 @@ public static partial class LinqExtensions
         /// <param name="source5">The fifth source observable.</param>
         /// <param name="selector">The selector that combines latest values from all sources.</param>
         /// <returns>The combine-latest signal.</returns>
-        [SuppressMessage(
-            "Major Code Smell",
-            "S107:Methods should not have too many parameters",
-            Justification = "Has more than 7 parameters - expected for arity-N CombineLatest factory surface.")]
         internal static CombineLatestSignal<TResult> Create<T1, T2, T3, T4, T5>(
             IObservable<T1> source,
             IObservable<T2> source2,
@@ -210,10 +191,6 @@ public static partial class LinqExtensions
         /// <param name="source6">The sixth source observable.</param>
         /// <param name="selector">The selector that combines latest values from all sources.</param>
         /// <returns>The combine-latest signal.</returns>
-        [SuppressMessage(
-            "Major Code Smell",
-            "S107:Methods should not have too many parameters",
-            Justification = "Has more than 7 parameters - expected for arity-N CombineLatest factory surface.")]
         internal static CombineLatestSignal<TResult> Create<T1, T2, T3, T4, T5, T6>(
             IObservable<T1> source,
             IObservable<T2> source2,
@@ -255,9 +232,9 @@ public static partial class LinqExtensions
         /// <param name="selector">The selector that combines latest values from all sources.</param>
         /// <returns>The combine-latest signal.</returns>
         [SuppressMessage(
-            "Major Code Smell",
-            "S107:Methods should not have too many parameters",
-            Justification = "Has more than 7 parameters - expected for arity-N CombineLatest factory surface.")]
+            "Maintainability",
+            "SST1472:Signatures should not declare too many parameters",
+            Justification = "An arity-N combinator takes one observable per source; a parameter object would erase the element type each source contributes to the selector.")]
         internal static CombineLatestSignal<TResult> Create<T1, T2, T3, T4, T5, T6, T7>(
             IObservable<T1> source,
             IObservable<T2> source2,
@@ -304,9 +281,9 @@ public static partial class LinqExtensions
         /// <param name="selector">The selector that combines latest values from all sources.</param>
         /// <returns>The combine-latest signal.</returns>
         [SuppressMessage(
-            "Major Code Smell",
-            "S107:Methods should not have too many parameters",
-            Justification = "Has more than 7 parameters - expected for arity-N CombineLatest factory surface.")]
+            "Maintainability",
+            "SST1472:Signatures should not declare too many parameters",
+            Justification = "An arity-N combinator takes one observable per source; a parameter object would erase the element type each source contributes to the selector.")]
         internal static CombineLatestSignal<TResult> Create<T1, T2, T3, T4, T5, T6, T7, T8>(
             IObservable<T1> source,
             IObservable<T2> source2,
@@ -358,9 +335,9 @@ public static partial class LinqExtensions
         /// <param name="selector">The selector that combines latest values from all sources.</param>
         /// <returns>The combine-latest signal.</returns>
         [SuppressMessage(
-            "Major Code Smell",
-            "S107:Methods should not have too many parameters",
-            Justification = "Has more than 7 parameters - expected for arity-N CombineLatest factory surface.")]
+            "Maintainability",
+            "SST1472:Signatures should not declare too many parameters",
+            Justification = "An arity-N combinator takes one observable per source; a parameter object would erase the element type each source contributes to the selector.")]
         internal static CombineLatestSignal<TResult> Create<T1, T2, T3, T4, T5, T6, T7, T8, T9>(
             IObservable<T1> source,
             IObservable<T2> source2,
@@ -393,545 +370,6 @@ public static partial class LinqExtensions
                 CreateSource(source8),
                 CreateSource(source9));
 
-        /// <summary>Creates an arity-10 combine-latest signal.</summary>
-        /// <typeparam name="T1">The first source element type.</typeparam>
-        /// <typeparam name="T2">The second source element type.</typeparam>
-        /// <typeparam name="T3">The third source element type.</typeparam>
-        /// <typeparam name="T4">The fourth source element type.</typeparam>
-        /// <typeparam name="T5">The fifth source element type.</typeparam>
-        /// <typeparam name="T6">The sixth source element type.</typeparam>
-        /// <typeparam name="T7">The seventh source element type.</typeparam>
-        /// <typeparam name="T8">The eighth source element type.</typeparam>
-        /// <typeparam name="T9">The ninth source element type.</typeparam>
-        /// <typeparam name="T10">The tenth source element type.</typeparam>
-        /// <param name="source">The first source observable.</param>
-        /// <param name="source2">The second source observable.</param>
-        /// <param name="source3">The third source observable.</param>
-        /// <param name="source4">The fourth source observable.</param>
-        /// <param name="source5">The fifth source observable.</param>
-        /// <param name="source6">The sixth source observable.</param>
-        /// <param name="source7">The seventh source observable.</param>
-        /// <param name="source8">The eighth source observable.</param>
-        /// <param name="source9">The ninth source observable.</param>
-        /// <param name="source10">The tenth source observable.</param>
-        /// <param name="selector">The selector that combines latest values from all sources.</param>
-        /// <returns>The combine-latest signal.</returns>
-        [SuppressMessage(
-            "Major Code Smell",
-            "S107:Methods should not have too many parameters",
-            Justification = "Has more than 7 parameters - expected for arity-N CombineLatest factory surface.")]
-        internal static CombineLatestSignal<TResult> Create<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(
-            IObservable<T1> source,
-            IObservable<T2> source2,
-            IObservable<T3> source3,
-            IObservable<T4> source4,
-            IObservable<T5> source5,
-            IObservable<T6> source6,
-            IObservable<T7> source7,
-            IObservable<T8> source8,
-            IObservable<T9> source9,
-            IObservable<T10> source10,
-            Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult> selector) =>
-            Build(
-                values => selector(
-                    Value<T1>(values, FirstSourceIndex),
-                    Value<T2>(values, SecondSourceIndex),
-                    Value<T3>(values, ThirdSourceIndex),
-                    Value<T4>(values, FourthSourceIndex),
-                    Value<T5>(values, FifthSourceIndex),
-                    Value<T6>(values, SixthSourceIndex),
-                    Value<T7>(values, SeventhSourceIndex),
-                    Value<T8>(values, EighthSourceIndex),
-                    Value<T9>(values, NinthSourceIndex),
-                    Value<T10>(values, TenthSourceIndex)),
-                CreateSource(source),
-                CreateSource(source2),
-                CreateSource(source3),
-                CreateSource(source4),
-                CreateSource(source5),
-                CreateSource(source6),
-                CreateSource(source7),
-                CreateSource(source8),
-                CreateSource(source9),
-                CreateSource(source10));
-
-        /// <summary>Creates an arity-11 combine-latest signal.</summary>
-        /// <typeparam name="T1">The first source element type.</typeparam>
-        /// <typeparam name="T2">The second source element type.</typeparam>
-        /// <typeparam name="T3">The third source element type.</typeparam>
-        /// <typeparam name="T4">The fourth source element type.</typeparam>
-        /// <typeparam name="T5">The fifth source element type.</typeparam>
-        /// <typeparam name="T6">The sixth source element type.</typeparam>
-        /// <typeparam name="T7">The seventh source element type.</typeparam>
-        /// <typeparam name="T8">The eighth source element type.</typeparam>
-        /// <typeparam name="T9">The ninth source element type.</typeparam>
-        /// <typeparam name="T10">The tenth source element type.</typeparam>
-        /// <typeparam name="T11">The eleventh source element type.</typeparam>
-        /// <param name="source">The first source observable.</param>
-        /// <param name="source2">The second source observable.</param>
-        /// <param name="source3">The third source observable.</param>
-        /// <param name="source4">The fourth source observable.</param>
-        /// <param name="source5">The fifth source observable.</param>
-        /// <param name="source6">The sixth source observable.</param>
-        /// <param name="source7">The seventh source observable.</param>
-        /// <param name="source8">The eighth source observable.</param>
-        /// <param name="source9">The ninth source observable.</param>
-        /// <param name="source10">The tenth source observable.</param>
-        /// <param name="source11">The eleventh source observable.</param>
-        /// <param name="selector">The selector that combines latest values from all sources.</param>
-        /// <returns>The combine-latest signal.</returns>
-        [SuppressMessage(
-            "Major Code Smell",
-            "S107:Methods should not have too many parameters",
-            Justification = "Has more than 7 parameters - expected for arity-N CombineLatest factory surface.")]
-        internal static CombineLatestSignal<TResult> Create<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(
-            IObservable<T1> source,
-            IObservable<T2> source2,
-            IObservable<T3> source3,
-            IObservable<T4> source4,
-            IObservable<T5> source5,
-            IObservable<T6> source6,
-            IObservable<T7> source7,
-            IObservable<T8> source8,
-            IObservable<T9> source9,
-            IObservable<T10> source10,
-            IObservable<T11> source11,
-            Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult> selector) =>
-            Build(
-                values => selector(
-                    Value<T1>(values, FirstSourceIndex),
-                    Value<T2>(values, SecondSourceIndex),
-                    Value<T3>(values, ThirdSourceIndex),
-                    Value<T4>(values, FourthSourceIndex),
-                    Value<T5>(values, FifthSourceIndex),
-                    Value<T6>(values, SixthSourceIndex),
-                    Value<T7>(values, SeventhSourceIndex),
-                    Value<T8>(values, EighthSourceIndex),
-                    Value<T9>(values, NinthSourceIndex),
-                    Value<T10>(values, TenthSourceIndex),
-                    Value<T11>(values, EleventhSourceIndex)),
-                CreateSource(source),
-                CreateSource(source2),
-                CreateSource(source3),
-                CreateSource(source4),
-                CreateSource(source5),
-                CreateSource(source6),
-                CreateSource(source7),
-                CreateSource(source8),
-                CreateSource(source9),
-                CreateSource(source10),
-                CreateSource(source11));
-
-        /// <summary>Creates an arity-12 combine-latest signal.</summary>
-        /// <typeparam name="T1">The first source element type.</typeparam>
-        /// <typeparam name="T2">The second source element type.</typeparam>
-        /// <typeparam name="T3">The third source element type.</typeparam>
-        /// <typeparam name="T4">The fourth source element type.</typeparam>
-        /// <typeparam name="T5">The fifth source element type.</typeparam>
-        /// <typeparam name="T6">The sixth source element type.</typeparam>
-        /// <typeparam name="T7">The seventh source element type.</typeparam>
-        /// <typeparam name="T8">The eighth source element type.</typeparam>
-        /// <typeparam name="T9">The ninth source element type.</typeparam>
-        /// <typeparam name="T10">The tenth source element type.</typeparam>
-        /// <typeparam name="T11">The eleventh source element type.</typeparam>
-        /// <typeparam name="T12">The twelfth source element type.</typeparam>
-        /// <param name="source">The first source observable.</param>
-        /// <param name="source2">The second source observable.</param>
-        /// <param name="source3">The third source observable.</param>
-        /// <param name="source4">The fourth source observable.</param>
-        /// <param name="source5">The fifth source observable.</param>
-        /// <param name="source6">The sixth source observable.</param>
-        /// <param name="source7">The seventh source observable.</param>
-        /// <param name="source8">The eighth source observable.</param>
-        /// <param name="source9">The ninth source observable.</param>
-        /// <param name="source10">The tenth source observable.</param>
-        /// <param name="source11">The eleventh source observable.</param>
-        /// <param name="source12">The twelfth source observable.</param>
-        /// <param name="selector">The selector that combines latest values from all sources.</param>
-        /// <returns>The combine-latest signal.</returns>
-        [SuppressMessage(
-            "Major Code Smell",
-            "S107:Methods should not have too many parameters",
-            Justification = "Has more than 7 parameters - expected for arity-N CombineLatest factory surface.")]
-        internal static CombineLatestSignal<TResult> Create<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(
-            IObservable<T1> source,
-            IObservable<T2> source2,
-            IObservable<T3> source3,
-            IObservable<T4> source4,
-            IObservable<T5> source5,
-            IObservable<T6> source6,
-            IObservable<T7> source7,
-            IObservable<T8> source8,
-            IObservable<T9> source9,
-            IObservable<T10> source10,
-            IObservable<T11> source11,
-            IObservable<T12> source12,
-            Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TResult> selector) =>
-            Build(
-                values => selector(
-                    Value<T1>(values, FirstSourceIndex),
-                    Value<T2>(values, SecondSourceIndex),
-                    Value<T3>(values, ThirdSourceIndex),
-                    Value<T4>(values, FourthSourceIndex),
-                    Value<T5>(values, FifthSourceIndex),
-                    Value<T6>(values, SixthSourceIndex),
-                    Value<T7>(values, SeventhSourceIndex),
-                    Value<T8>(values, EighthSourceIndex),
-                    Value<T9>(values, NinthSourceIndex),
-                    Value<T10>(values, TenthSourceIndex),
-                    Value<T11>(values, EleventhSourceIndex),
-                    Value<T12>(values, TwelfthSourceIndex)),
-                CreateSource(source),
-                CreateSource(source2),
-                CreateSource(source3),
-                CreateSource(source4),
-                CreateSource(source5),
-                CreateSource(source6),
-                CreateSource(source7),
-                CreateSource(source8),
-                CreateSource(source9),
-                CreateSource(source10),
-                CreateSource(source11),
-                CreateSource(source12));
-
-        /// <summary>Creates an arity-13 combine-latest signal.</summary>
-        /// <typeparam name="T1">The first source element type.</typeparam>
-        /// <typeparam name="T2">The second source element type.</typeparam>
-        /// <typeparam name="T3">The third source element type.</typeparam>
-        /// <typeparam name="T4">The fourth source element type.</typeparam>
-        /// <typeparam name="T5">The fifth source element type.</typeparam>
-        /// <typeparam name="T6">The sixth source element type.</typeparam>
-        /// <typeparam name="T7">The seventh source element type.</typeparam>
-        /// <typeparam name="T8">The eighth source element type.</typeparam>
-        /// <typeparam name="T9">The ninth source element type.</typeparam>
-        /// <typeparam name="T10">The tenth source element type.</typeparam>
-        /// <typeparam name="T11">The eleventh source element type.</typeparam>
-        /// <typeparam name="T12">The twelfth source element type.</typeparam>
-        /// <typeparam name="T13">The thirteenth source element type.</typeparam>
-        /// <param name="source">The first source observable.</param>
-        /// <param name="source2">The second source observable.</param>
-        /// <param name="source3">The third source observable.</param>
-        /// <param name="source4">The fourth source observable.</param>
-        /// <param name="source5">The fifth source observable.</param>
-        /// <param name="source6">The sixth source observable.</param>
-        /// <param name="source7">The seventh source observable.</param>
-        /// <param name="source8">The eighth source observable.</param>
-        /// <param name="source9">The ninth source observable.</param>
-        /// <param name="source10">The tenth source observable.</param>
-        /// <param name="source11">The eleventh source observable.</param>
-        /// <param name="source12">The twelfth source observable.</param>
-        /// <param name="source13">The thirteenth source observable.</param>
-        /// <param name="selector">The selector that combines latest values from all sources.</param>
-        /// <returns>The combine-latest signal.</returns>
-        [SuppressMessage(
-            "Major Code Smell",
-            "S107:Methods should not have too many parameters",
-            Justification = "Has more than 7 parameters - expected for arity-N CombineLatest factory surface.")]
-        internal static CombineLatestSignal<TResult> Create<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(
-            IObservable<T1> source,
-            IObservable<T2> source2,
-            IObservable<T3> source3,
-            IObservable<T4> source4,
-            IObservable<T5> source5,
-            IObservable<T6> source6,
-            IObservable<T7> source7,
-            IObservable<T8> source8,
-            IObservable<T9> source9,
-            IObservable<T10> source10,
-            IObservable<T11> source11,
-            IObservable<T12> source12,
-            IObservable<T13> source13,
-            Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult> selector) =>
-            Build(
-                values => selector(
-                    Value<T1>(values, FirstSourceIndex),
-                    Value<T2>(values, SecondSourceIndex),
-                    Value<T3>(values, ThirdSourceIndex),
-                    Value<T4>(values, FourthSourceIndex),
-                    Value<T5>(values, FifthSourceIndex),
-                    Value<T6>(values, SixthSourceIndex),
-                    Value<T7>(values, SeventhSourceIndex),
-                    Value<T8>(values, EighthSourceIndex),
-                    Value<T9>(values, NinthSourceIndex),
-                    Value<T10>(values, TenthSourceIndex),
-                    Value<T11>(values, EleventhSourceIndex),
-                    Value<T12>(values, TwelfthSourceIndex),
-                    Value<T13>(values, ThirteenthSourceIndex)),
-                CreateSource(source),
-                CreateSource(source2),
-                CreateSource(source3),
-                CreateSource(source4),
-                CreateSource(source5),
-                CreateSource(source6),
-                CreateSource(source7),
-                CreateSource(source8),
-                CreateSource(source9),
-                CreateSource(source10),
-                CreateSource(source11),
-                CreateSource(source12),
-                CreateSource(source13));
-
-        /// <summary>Creates an arity-14 combine-latest signal.</summary>
-        /// <typeparam name="T1">The first source element type.</typeparam>
-        /// <typeparam name="T2">The second source element type.</typeparam>
-        /// <typeparam name="T3">The third source element type.</typeparam>
-        /// <typeparam name="T4">The fourth source element type.</typeparam>
-        /// <typeparam name="T5">The fifth source element type.</typeparam>
-        /// <typeparam name="T6">The sixth source element type.</typeparam>
-        /// <typeparam name="T7">The seventh source element type.</typeparam>
-        /// <typeparam name="T8">The eighth source element type.</typeparam>
-        /// <typeparam name="T9">The ninth source element type.</typeparam>
-        /// <typeparam name="T10">The tenth source element type.</typeparam>
-        /// <typeparam name="T11">The eleventh source element type.</typeparam>
-        /// <typeparam name="T12">The twelfth source element type.</typeparam>
-        /// <typeparam name="T13">The thirteenth source element type.</typeparam>
-        /// <typeparam name="T14">The fourteenth source element type.</typeparam>
-        /// <param name="source">The first source observable.</param>
-        /// <param name="source2">The second source observable.</param>
-        /// <param name="source3">The third source observable.</param>
-        /// <param name="source4">The fourth source observable.</param>
-        /// <param name="source5">The fifth source observable.</param>
-        /// <param name="source6">The sixth source observable.</param>
-        /// <param name="source7">The seventh source observable.</param>
-        /// <param name="source8">The eighth source observable.</param>
-        /// <param name="source9">The ninth source observable.</param>
-        /// <param name="source10">The tenth source observable.</param>
-        /// <param name="source11">The eleventh source observable.</param>
-        /// <param name="source12">The twelfth source observable.</param>
-        /// <param name="source13">The thirteenth source observable.</param>
-        /// <param name="source14">The fourteenth source observable.</param>
-        /// <param name="selector">The selector that combines latest values from all sources.</param>
-        /// <returns>The combine-latest signal.</returns>
-        [SuppressMessage(
-            "Major Code Smell",
-            "S107:Methods should not have too many parameters",
-            Justification = "Has more than 7 parameters - expected for arity-N CombineLatest factory surface.")]
-        internal static CombineLatestSignal<TResult> Create<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(
-            IObservable<T1> source,
-            IObservable<T2> source2,
-            IObservable<T3> source3,
-            IObservable<T4> source4,
-            IObservable<T5> source5,
-            IObservable<T6> source6,
-            IObservable<T7> source7,
-            IObservable<T8> source8,
-            IObservable<T9> source9,
-            IObservable<T10> source10,
-            IObservable<T11> source11,
-            IObservable<T12> source12,
-            IObservable<T13> source13,
-            IObservable<T14> source14,
-            Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult> selector) =>
-            Build(
-                values => selector(
-                    Value<T1>(values, FirstSourceIndex),
-                    Value<T2>(values, SecondSourceIndex),
-                    Value<T3>(values, ThirdSourceIndex),
-                    Value<T4>(values, FourthSourceIndex),
-                    Value<T5>(values, FifthSourceIndex),
-                    Value<T6>(values, SixthSourceIndex),
-                    Value<T7>(values, SeventhSourceIndex),
-                    Value<T8>(values, EighthSourceIndex),
-                    Value<T9>(values, NinthSourceIndex),
-                    Value<T10>(values, TenthSourceIndex),
-                    Value<T11>(values, EleventhSourceIndex),
-                    Value<T12>(values, TwelfthSourceIndex),
-                    Value<T13>(values, ThirteenthSourceIndex),
-                    Value<T14>(values, FourteenthSourceIndex)),
-                CreateSource(source),
-                CreateSource(source2),
-                CreateSource(source3),
-                CreateSource(source4),
-                CreateSource(source5),
-                CreateSource(source6),
-                CreateSource(source7),
-                CreateSource(source8),
-                CreateSource(source9),
-                CreateSource(source10),
-                CreateSource(source11),
-                CreateSource(source12),
-                CreateSource(source13),
-                CreateSource(source14));
-
-        /// <summary>Creates an arity-15 combine-latest signal.</summary>
-        /// <typeparam name="T1">The first source element type.</typeparam>
-        /// <typeparam name="T2">The second source element type.</typeparam>
-        /// <typeparam name="T3">The third source element type.</typeparam>
-        /// <typeparam name="T4">The fourth source element type.</typeparam>
-        /// <typeparam name="T5">The fifth source element type.</typeparam>
-        /// <typeparam name="T6">The sixth source element type.</typeparam>
-        /// <typeparam name="T7">The seventh source element type.</typeparam>
-        /// <typeparam name="T8">The eighth source element type.</typeparam>
-        /// <typeparam name="T9">The ninth source element type.</typeparam>
-        /// <typeparam name="T10">The tenth source element type.</typeparam>
-        /// <typeparam name="T11">The eleventh source element type.</typeparam>
-        /// <typeparam name="T12">The twelfth source element type.</typeparam>
-        /// <typeparam name="T13">The thirteenth source element type.</typeparam>
-        /// <typeparam name="T14">The fourteenth source element type.</typeparam>
-        /// <typeparam name="T15">The fifteenth source element type.</typeparam>
-        /// <param name="source">The first source observable.</param>
-        /// <param name="source2">The second source observable.</param>
-        /// <param name="source3">The third source observable.</param>
-        /// <param name="source4">The fourth source observable.</param>
-        /// <param name="source5">The fifth source observable.</param>
-        /// <param name="source6">The sixth source observable.</param>
-        /// <param name="source7">The seventh source observable.</param>
-        /// <param name="source8">The eighth source observable.</param>
-        /// <param name="source9">The ninth source observable.</param>
-        /// <param name="source10">The tenth source observable.</param>
-        /// <param name="source11">The eleventh source observable.</param>
-        /// <param name="source12">The twelfth source observable.</param>
-        /// <param name="source13">The thirteenth source observable.</param>
-        /// <param name="source14">The fourteenth source observable.</param>
-        /// <param name="source15">The fifteenth source observable.</param>
-        /// <param name="selector">The selector that combines latest values from all sources.</param>
-        /// <returns>The combine-latest signal.</returns>
-        [SuppressMessage(
-            "Major Code Smell",
-            "S107:Methods should not have too many parameters",
-            Justification = "Has more than 7 parameters - expected for arity-N CombineLatest factory surface.")]
-        internal static CombineLatestSignal<TResult> Create<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(
-            IObservable<T1> source,
-            IObservable<T2> source2,
-            IObservable<T3> source3,
-            IObservable<T4> source4,
-            IObservable<T5> source5,
-            IObservable<T6> source6,
-            IObservable<T7> source7,
-            IObservable<T8> source8,
-            IObservable<T9> source9,
-            IObservable<T10> source10,
-            IObservable<T11> source11,
-            IObservable<T12> source12,
-            IObservable<T13> source13,
-            IObservable<T14> source14,
-            IObservable<T15> source15,
-            Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult> selector) =>
-            Build(
-                values => selector(
-                    Value<T1>(values, FirstSourceIndex),
-                    Value<T2>(values, SecondSourceIndex),
-                    Value<T3>(values, ThirdSourceIndex),
-                    Value<T4>(values, FourthSourceIndex),
-                    Value<T5>(values, FifthSourceIndex),
-                    Value<T6>(values, SixthSourceIndex),
-                    Value<T7>(values, SeventhSourceIndex),
-                    Value<T8>(values, EighthSourceIndex),
-                    Value<T9>(values, NinthSourceIndex),
-                    Value<T10>(values, TenthSourceIndex),
-                    Value<T11>(values, EleventhSourceIndex),
-                    Value<T12>(values, TwelfthSourceIndex),
-                    Value<T13>(values, ThirteenthSourceIndex),
-                    Value<T14>(values, FourteenthSourceIndex),
-                    Value<T15>(values, FifteenthSourceIndex)),
-                CreateSource(source),
-                CreateSource(source2),
-                CreateSource(source3),
-                CreateSource(source4),
-                CreateSource(source5),
-                CreateSource(source6),
-                CreateSource(source7),
-                CreateSource(source8),
-                CreateSource(source9),
-                CreateSource(source10),
-                CreateSource(source11),
-                CreateSource(source12),
-                CreateSource(source13),
-                CreateSource(source14),
-                CreateSource(source15));
-
-        /// <summary>Creates an arity-16 combine-latest signal.</summary>
-        /// <typeparam name="T1">The first source element type.</typeparam>
-        /// <typeparam name="T2">The second source element type.</typeparam>
-        /// <typeparam name="T3">The third source element type.</typeparam>
-        /// <typeparam name="T4">The fourth source element type.</typeparam>
-        /// <typeparam name="T5">The fifth source element type.</typeparam>
-        /// <typeparam name="T6">The sixth source element type.</typeparam>
-        /// <typeparam name="T7">The seventh source element type.</typeparam>
-        /// <typeparam name="T8">The eighth source element type.</typeparam>
-        /// <typeparam name="T9">The ninth source element type.</typeparam>
-        /// <typeparam name="T10">The tenth source element type.</typeparam>
-        /// <typeparam name="T11">The eleventh source element type.</typeparam>
-        /// <typeparam name="T12">The twelfth source element type.</typeparam>
-        /// <typeparam name="T13">The thirteenth source element type.</typeparam>
-        /// <typeparam name="T14">The fourteenth source element type.</typeparam>
-        /// <typeparam name="T15">The fifteenth source element type.</typeparam>
-        /// <typeparam name="T16">The sixteenth source element type.</typeparam>
-        /// <param name="source">The first source observable.</param>
-        /// <param name="source2">The second source observable.</param>
-        /// <param name="source3">The third source observable.</param>
-        /// <param name="source4">The fourth source observable.</param>
-        /// <param name="source5">The fifth source observable.</param>
-        /// <param name="source6">The sixth source observable.</param>
-        /// <param name="source7">The seventh source observable.</param>
-        /// <param name="source8">The eighth source observable.</param>
-        /// <param name="source9">The ninth source observable.</param>
-        /// <param name="source10">The tenth source observable.</param>
-        /// <param name="source11">The eleventh source observable.</param>
-        /// <param name="source12">The twelfth source observable.</param>
-        /// <param name="source13">The thirteenth source observable.</param>
-        /// <param name="source14">The fourteenth source observable.</param>
-        /// <param name="source15">The fifteenth source observable.</param>
-        /// <param name="source16">The sixteenth source observable.</param>
-        /// <param name="selector">The selector that combines latest values from all sources.</param>
-        /// <returns>The combine-latest signal.</returns>
-        [SuppressMessage(
-            "Major Code Smell",
-            "S107:Methods should not have too many parameters",
-            Justification = "Has more than 7 parameters - expected for arity-N CombineLatest factory surface.")]
-        internal static CombineLatestSignal<TResult> Create<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>(
-            IObservable<T1> source,
-            IObservable<T2> source2,
-            IObservable<T3> source3,
-            IObservable<T4> source4,
-            IObservable<T5> source5,
-            IObservable<T6> source6,
-            IObservable<T7> source7,
-            IObservable<T8> source8,
-            IObservable<T9> source9,
-            IObservable<T10> source10,
-            IObservable<T11> source11,
-            IObservable<T12> source12,
-            IObservable<T13> source13,
-            IObservable<T14> source14,
-            IObservable<T15> source15,
-            IObservable<T16> source16,
-            Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult> selector) =>
-            Build(
-                values => selector(
-                    Value<T1>(values, FirstSourceIndex),
-                    Value<T2>(values, SecondSourceIndex),
-                    Value<T3>(values, ThirdSourceIndex),
-                    Value<T4>(values, FourthSourceIndex),
-                    Value<T5>(values, FifthSourceIndex),
-                    Value<T6>(values, SixthSourceIndex),
-                    Value<T7>(values, SeventhSourceIndex),
-                    Value<T8>(values, EighthSourceIndex),
-                    Value<T9>(values, NinthSourceIndex),
-                    Value<T10>(values, TenthSourceIndex),
-                    Value<T11>(values, EleventhSourceIndex),
-                    Value<T12>(values, TwelfthSourceIndex),
-                    Value<T13>(values, ThirteenthSourceIndex),
-                    Value<T14>(values, FourteenthSourceIndex),
-                    Value<T15>(values, FifteenthSourceIndex),
-                    Value<T16>(values, SixteenthSourceIndex)),
-                CreateSource(source),
-                CreateSource(source2),
-                CreateSource(source3),
-                CreateSource(source4),
-                CreateSource(source5),
-                CreateSource(source6),
-                CreateSource(source7),
-                CreateSource(source8),
-                CreateSource(source9),
-                CreateSource(source10),
-                CreateSource(source11),
-                CreateSource(source12),
-                CreateSource(source13),
-                CreateSource(source14),
-                CreateSource(source15),
-                CreateSource(source16));
-
         /// <summary>Creates the typed multi-source signal.</summary>
         /// <param name="selector">The array-based selector wrapper.</param>
         /// <param name="sources">The typed source adapters.</param>
@@ -954,9 +392,10 @@ public static partial class LinqExtensions
         /// <param name="index">The source index.</param>
         /// <returns>The typed value.</returns>
         [SuppressMessage(
-            "Major Code Smell",
-            "S4018:Generic methods should provide type parameters",
-            Justification = "The caller supplies the source slot type when casting from the shared latest-value array.")]
+            "Design",
+            "SST2307:Generic method type parameters should be inferable from the parameters",
+            Justification =
+                "The caller supplies the source slot type when casting from the shared latest-value array.")]
         private static T Value<T>(object?[] values, int index) => (T)values[index]!;
     }
 
@@ -968,7 +407,10 @@ public static partial class LinqExtensions
     {
         /// <inheritdoc/>
         public IDisposable Subscribe(CombineLatestCoordinator<TResult> coordinator, int index) =>
-            source.Subscribe(value => coordinator.OnNext(index, value), coordinator.OnError, () => coordinator.OnCompleted(index));
+            source.Subscribe(
+                value => coordinator.OnNext(index, value),
+                coordinator.OnError,
+                () => coordinator.OnCompleted(index));
     }
 
     /// <summary>Coordinates latest values, completion, and errors for a multi-source combine-latest subscription.</summary>
@@ -1009,7 +451,10 @@ public static partial class LinqExtensions
         /// <param name="observer">The downstream observer.</param>
         /// <param name="selector">The selector applied once every source has produced a value.</param>
         /// <param name="sourceCount">The number of sources being coordinated.</param>
-        internal CombineLatestCoordinator(IObserver<TResult> observer, Func<object?[], TResult> selector, int sourceCount)
+        internal CombineLatestCoordinator(
+            IObserver<TResult> observer,
+            Func<object?[], TResult> selector,
+            int sourceCount)
         {
             _observer = observer;
             _selector = selector;

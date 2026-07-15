@@ -60,7 +60,11 @@ public static partial class LinqExtensions
     }
 
     /// <summary>Eager range-backed signal for <c>CollectList</c> (no per-value subscription).</summary>
-    /// <typeparam name="T">The result element type.</typeparam>
+    /// <typeparam name="T">The result element type, which is always <see cref="int"/>.</typeparam>
+    /// <remarks><see cref="RangeSignal"/> is sealed and implements only <see cref="IObservable{T}"/> of
+    /// <see cref="int"/>. Covariance does not apply to a value-type argument, so an
+    /// <see cref="IObservable{T}"/> can only hold a range when <typeparamref name="T"/> is exactly
+    /// <see cref="int"/> — which is what every construction site asserts.</remarks>
     private sealed class RangeListSignal<T> : IObservable<IList<T>>
     {
         /// <summary>The source range.</summary>
@@ -75,34 +79,24 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            if (typeof(T) == typeof(int))
+            List<int> values = new(_range.Count);
+            for (var i = 0; i < _range.Count; i++)
             {
-                List<int> ints = new(_range.Count);
-                for (var i = 0; i < _range.Count; i++)
-                {
-                    ints.Add(_range.Start + i);
-                }
-
-                observer.OnNext((IList<T>)(object)ints);
-            }
-            else
-            {
-                List<T> values = new(_range.Count);
-                for (var i = 0; i < _range.Count; i++)
-                {
-                    values.Add((T)(object)(_range.Start + i));
-                }
-
-                observer.OnNext(values);
+                values.Add(_range.Start + i);
             }
 
+            observer.OnNext((IList<T>)(object)values);
             observer.OnCompleted();
             return EmptyDisposable.Instance;
         }
     }
 
     /// <summary>Eager range-backed signal for <c>CollectArray</c> (no per-value subscription).</summary>
-    /// <typeparam name="T">The result element type.</typeparam>
+    /// <typeparam name="T">The result element type, which is always <see cref="int"/>.</typeparam>
+    /// <remarks><see cref="RangeSignal"/> is sealed and implements only <see cref="IObservable{T}"/> of
+    /// <see cref="int"/>. Covariance does not apply to a value-type argument, so an
+    /// <see cref="IObservable{T}"/> can only hold a range when <typeparamref name="T"/> is exactly
+    /// <see cref="int"/> — which is what every construction site asserts.</remarks>
     private sealed class RangeArraySignal<T> : IObservable<T[]>
     {
         /// <summary>The source range.</summary>
@@ -117,27 +111,13 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            if (typeof(T) == typeof(int))
+            var values = new int[_range.Count];
+            for (var i = 0; i < values.Length; i++)
             {
-                var ints = new int[_range.Count];
-                for (var i = 0; i < ints.Length; i++)
-                {
-                    ints[i] = _range.Start + i;
-                }
-
-                observer.OnNext((T[])(object)ints);
-            }
-            else
-            {
-                var values = new T[_range.Count];
-                for (var i = 0; i < values.Length; i++)
-                {
-                    values[i] = (T)(object)(_range.Start + i);
-                }
-
-                observer.OnNext(values);
+                values[i] = _range.Start + i;
             }
 
+            observer.OnNext((T[])(object)values);
             observer.OnCompleted();
             return EmptyDisposable.Instance;
         }

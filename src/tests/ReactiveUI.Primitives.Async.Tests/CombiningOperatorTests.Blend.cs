@@ -16,7 +16,7 @@ public partial class CombiningOperatorTests
     public async Task WhenMergeTwoSequences_ThenEmitsFromBoth()
     {
         var first = SignalAsync.Return(1);
-        var second = SignalAsync.Return(2);
+        var second = SignalAsync.Return(SampleValue2);
         var result = await first.Merge(second).ToListAsync();
         await Assert.That(result).Count().IsEqualTo(SampleValue2);
         await Assert.That(result).Contains(1);
@@ -27,9 +27,28 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerable_ThenEmitsFromAll()
     {
-        IObservableAsync<int>[] sources = [SignalAsync.Return(10), SignalAsync.Return(20), SignalAsync.Return(30)];
+        IObservableAsync<int>[] sources =
+        [
+            SignalAsync.Return(SampleValue10), SignalAsync.Return(SampleValue20), SignalAsync.Return(SampleValue30)
+        ];
         var result = await sources.Merge().ToListAsync();
         await Assert.That(result).Count().IsEqualTo(SampleValue3);
+    }
+
+    /// <summary>Verifies the <c>Blend</c> spelling of the enumerable merge emits every source's items.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenBlendEnumerable_ThenEmitsFromAll()
+    {
+        IObservableAsync<int>[] sources =
+        [
+            SignalAsync.Return(SampleValue10), SignalAsync.Return(SampleValue20), SignalAsync.Return(SampleValue30)
+        ];
+        var result = await sources.Blend().ToListAsync();
+        await Assert.That(result).Count().IsEqualTo(SampleValue3);
+        await Assert.That(result).Contains(SampleValue10);
+        await Assert.That(result).Contains(SampleValue20);
+        await Assert.That(result).Contains(SampleValue30);
     }
 
     /// <summary>Tests Merge observable of observables flattens.</summary>
@@ -37,7 +56,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeObservableOfObservables_ThenFlattens()
     {
-        var source = new[] { SignalAsync.Return(1), SignalAsync.Return(2) }.ToAsyncSignal();
+        var source = new[] { SignalAsync.Return(1), SignalAsync.Return(SampleValue2) }.ToAsyncSignal();
         var result = await source.Merge().ToListAsync();
         await Assert.That(result).Count().IsEqualTo(SampleValue2);
     }
@@ -47,9 +66,12 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeWithMaxConcurrency_ThenRespectsLimit()
     {
+        const int SourceCount = 5;
+        const int WorkDelayMilliseconds = 50;
+        const int ConcurrencyLimit = 2;
         var activeConcurrency = 0;
         var maxConcurrency = 0;
-        var source = SignalAsync.Range(1, 5).Select(i => SignalAsync.CreateAsBackgroundJob<int>(async (obs, ct) =>
+        var source = SignalAsync.Range(1, SourceCount).Select(i => SignalAsync.CreateAsBackgroundJob<int>(async (obs, ct) =>
         {
             lock (_gate)
             {
@@ -57,7 +79,7 @@ public partial class CombiningOperatorTests
                 maxConcurrency = Math.Max(maxConcurrency, activeConcurrency);
             }
 
-            await Task.Delay(50, ct);
+            await Task.Delay(WorkDelayMilliseconds, ct);
             lock (_gate)
             {
                 activeConcurrency--;
@@ -66,9 +88,9 @@ public partial class CombiningOperatorTests
             await obs.OnNextAsync(i, ct);
             await obs.OnCompletedAsync(Result.Success);
         }));
-        var result = await source.Merge(2).ToListAsync();
-        await Assert.That(result).Count().IsEqualTo(SampleValue5);
-        await Assert.That(maxConcurrency).IsLessThanOrEqualTo(SampleValue2);
+        var result = await source.Merge(ConcurrencyLimit).ToListAsync();
+        await Assert.That(result).Count().IsEqualTo(SourceCount);
+        await Assert.That(maxConcurrency).IsLessThanOrEqualTo(ConcurrencyLimit);
     }
 
     /// <summary>
@@ -81,7 +103,7 @@ public partial class CombiningOperatorTests
     {
         var outer = Signal.Create<IObservableAsync<int>>();
         Result? completionResult = null;
-        await using var sub = await outer.Values.Merge().SubscribeAsync((_, _) => default, null, result =>
+        await using var sub = await outer.Values.Merge().SubscribeAsync(static (_, _) => default, null, result =>
         {
             completionResult = result;
             return default;
@@ -97,7 +119,8 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeWithMaxConcurrencySubscriptionThrows_ThenErrorPropagates()
     {
-        var failing = SignalAsync.Create<int>((_, _) =>
+        const int CompletionTimeoutSeconds = 2;
+        var failing = SignalAsync.Create<int>(static (_, _) =>
         {
             try
             {
@@ -110,12 +133,12 @@ public partial class CombiningOperatorTests
         });
         var source = new[] { failing }.ToAsyncSignal();
         Result? completionResult = null;
-        await using var sub = await source.Merge(1).SubscribeAsync((_, _) => default, null, result =>
+        await using var sub = await source.Merge(1).SubscribeAsync(static (_, _) => default, null, result =>
         {
             completionResult = result;
             return default;
         });
-        await AsyncTestHelpers.WaitForConditionAsync(() => completionResult.HasValue, TimeSpan.FromSeconds(2));
+        await AsyncTestHelpers.WaitForConditionAsync(() => completionResult.HasValue, TimeSpan.FromSeconds(CompletionTimeoutSeconds));
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
     }
@@ -127,8 +150,8 @@ public partial class CombiningOperatorTests
     {
         IObservableAsync<int>[] sources =
         [
-            SignalAsync.Return(1), SignalAsync.Throw<int>(new InvalidOperationException(InnerFailMessage)),
-            SignalAsync.Return(3)
+            SignalAsync.Return(SampleValue1), SignalAsync.Throw<int>(new InvalidOperationException(InnerFailMessage)),
+            SignalAsync.Return(SampleValue3)
         ];
         Result? completionResult = null;
         List<int> items = [];
@@ -153,7 +176,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableInnerErrorResume_ThenForwardedToObserver()
     {
-        var inner = SignalAsync.Create<int>(async (observer, ct) =>
+        var inner = SignalAsync.Create<int>(static async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(new InvalidOperationException("warning"), ct);
             await observer.OnNextAsync(1, ct);
@@ -185,13 +208,13 @@ public partial class CombiningOperatorTests
     {
         var outer = Signal.Create<IObservableAsync<int>>();
         List<Exception> errors = [];
-        var inner = SignalAsync.Create<int>(async (observer, ct) =>
+        var inner = SignalAsync.Create<int>(static async (observer, ct) =>
         {
             await observer.OnErrorResumeAsync(new InvalidOperationException(InnerWarningMessage), ct);
             await observer.OnCompletedAsync(Result.Success);
             return DisposableAsync.Empty;
         });
-        await using var sub = await outer.Values.Merge().SubscribeAsync((_, _) => default, (ex, _) =>
+        await using var sub = await outer.Values.Merge().SubscribeAsync(static (_, _) => default, (ex, _) =>
         {
             errors.Add(ex);
             return default;
@@ -210,7 +233,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeObservableOfObservablesSubscriptionThrows_ThenDisposesAndRethrows()
     {
-        var failing = SignalAsync.Create<IObservableAsync<int>>((_, _) =>
+        var failing = SignalAsync.Create<IObservableAsync<int>>(static (_, _) =>
         {
             try
             {
@@ -223,7 +246,7 @@ public partial class CombiningOperatorTests
         });
         var act = async () =>
         {
-            await using var sub = await failing.Merge().SubscribeAsync((_, _) => default, null);
+            await using var sub = await failing.Merge().SubscribeAsync(static (_, _) => default, null);
         };
         await Assert.That(act).ThrowsExactly<InvalidOperationException>();
     }
@@ -236,7 +259,8 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeWithMaxConcurrencySubscriptionThrowsDuringOuterSubscribe_ThenDisposesAndRethrows()
     {
-        var failing = SignalAsync.Create<IObservableAsync<int>>((_, _) =>
+        const int ConcurrencyLimit = 2;
+        var failing = SignalAsync.Create<IObservableAsync<int>>(static (_, _) =>
         {
             try
             {
@@ -249,7 +273,7 @@ public partial class CombiningOperatorTests
         });
         var act = async () =>
         {
-            await using var sub = await failing.Merge(2).SubscribeAsync((_, _) => default, null);
+            await using var sub = await failing.Merge(ConcurrencyLimit).SubscribeAsync(static (_, _) => default, null);
         };
         await Assert.That(act).ThrowsExactly<InvalidOperationException>();
     }
@@ -262,7 +286,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeObservableInnerSubscriptionThrows_ThenCompletesWithFailure()
     {
-        var throwingInner = SignalAsync.Create<int>((_, _) =>
+        var throwingInner = SignalAsync.Create<int>(static (_, _) =>
         {
             try
             {
@@ -275,7 +299,7 @@ public partial class CombiningOperatorTests
         });
         var outer = Signal.Create<IObservableAsync<int>>();
         Result? completionResult = null;
-        await using var sub = await outer.Values.Merge().SubscribeAsync((_, _) => default, null, result =>
+        await using var sub = await outer.Values.Merge().SubscribeAsync(static (_, _) => default, null, result =>
         {
             completionResult = result;
             return default;
@@ -301,7 +325,7 @@ public partial class CombiningOperatorTests
         }
 
         Result? completionResult = null;
-        await using var sub = await ThrowingEnumerable().Merge().SubscribeAsync((_, _) => default, null, result =>
+        await using var sub = await ThrowingEnumerable().Merge().SubscribeAsync(static (_, _) => default, null, result =>
         {
             completionResult = result;
             return default;
@@ -318,7 +342,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableInnerSubscriptionThrows_ThenCompletesWithFailure()
     {
-        var throwingInner = SignalAsync.Create<int>((_, _) =>
+        var throwingInner = SignalAsync.Create<int>(static (_, _) =>
         {
             try
             {
@@ -331,7 +355,7 @@ public partial class CombiningOperatorTests
         });
         IObservableAsync<int>[] sources = [throwingInner];
         Result? completionResult = null;
-        await using var sub = await sources.Merge().SubscribeAsync((_, _) => default, null, result =>
+        await using var sub = await sources.Merge().SubscribeAsync(static (_, _) => default, null, result =>
         {
             completionResult = result;
             return default;
@@ -349,14 +373,14 @@ public partial class CombiningOperatorTests
     public async Task WhenMergeEnumerableDoubleCompletionWithError_ThenUnhandledExceptionHandlerInvoked()
     {
         // Capture the unhandled exception
-        UnhandledExceptionHandler.Register(ex => _ = ex);
+        UnhandledExceptionHandler.Register(static ex => _ = ex);
         IObservableAsync<int>[] sources =
         [
             SignalAsync.Return(1), SignalAsync.Throw<int>(new InvalidOperationException(FirstFailMessage)),
             SignalAsync.Throw<int>(new InvalidOperationException("second fail"))
         ];
         Result? completionResult = null;
-        await using var sub = await sources.Merge().SubscribeAsync((_, _) => default, null, result =>
+        await using var sub = await sources.Merge().SubscribeAsync(static (_, _) => default, null, result =>
         {
             completionResult = result;
             return default;
@@ -376,7 +400,7 @@ public partial class CombiningOperatorTests
         var innerSignal = Signal.Create<int>();
         Result? completionResult = null;
         await using var sub = await new[] { innerSignal.Values }.Merge().SubscribeAsync(
-            (_, _) => default,
+            static (_, _) => default,
             null,
             result =>
             {
@@ -396,6 +420,8 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableBeginSubscribingThrows_ThenCatchBlockHandled()
     {
+        const int CompletionTimeoutSeconds = 5;
+
         // BeginSubscribing contains an async void path that catches exceptions
         // We exercise this by ensuring an error during inner subscription is caught
         static IEnumerable<IObservableAsync<int>> ThrowingEnumerable()
@@ -418,7 +444,7 @@ public partial class CombiningOperatorTests
                 completionResult = result;
                 return default;
             });
-        await AsyncTestHelpers.WaitForConditionAsync(() => completionResult is not null, TimeSpan.FromSeconds(5));
+        await AsyncTestHelpers.WaitForConditionAsync(() => completionResult is not null, TimeSpan.FromSeconds(CompletionTimeoutSeconds));
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
     }
@@ -432,7 +458,7 @@ public partial class CombiningOperatorTests
         var signal = Signal.Create<int>();
         var neverCompleting = SignalAsync.Never<int>();
         IObservableAsync<int>[] sources = [signal.Values, neverCompleting];
-        await using var sub = await sources.Merge().SubscribeAsync((_, _) => default, null, null, cts.Token);
+        await using var sub = await sources.Merge().SubscribeAsync(static (_, _) => default, null, null, cts.Token);
         await cts.CancelAsync();
 
         // After cancellation, the subscription should be cleaned up
@@ -459,15 +485,17 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeConcurrencyWithSlowSource_ThenLimitsAndCompletes()
     {
-        var source = SignalAsync.Range(1, 4).Select(i => SignalAsync.CreateAsBackgroundJob<int>(
+        const int SourceCount = 4;
+        const int ConcurrencyLimit = 2;
+        var source = SignalAsync.Range(1, SourceCount).Select(i => SignalAsync.CreateAsBackgroundJob<int>(
             async (obs, ct) =>
             {
                 await obs.OnNextAsync(i, ct);
                 await obs.OnCompletedAsync(Result.Success);
             },
             true));
-        var result = await source.Merge(2).ToListAsync();
-        await Assert.That(result).Count().IsEqualTo(SampleValue4);
+        var result = await source.Merge(ConcurrencyLimit).ToListAsync();
+        await Assert.That(result).Count().IsEqualTo(SourceCount);
     }
 
     /// <summary>Tests that Merge of empty enumerable returns empty.</summary>
@@ -485,6 +513,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeWithError_ThenErrorPropagated()
     {
+        const int CompletionTimeoutSeconds = 5;
         IObservableAsync<int>[] sources =
             [SignalAsync.Return(1), SignalAsync.Throw<int>(new InvalidOperationException("fail"))];
         Result? completionResult = null;
@@ -501,7 +530,7 @@ public partial class CombiningOperatorTests
                 completionResult = result;
                 return default;
             });
-        await AsyncTestHelpers.WaitForConditionAsync(() => completionResult.HasValue, TimeSpan.FromSeconds(5));
+        await AsyncTestHelpers.WaitForConditionAsync(() => completionResult.HasValue, TimeSpan.FromSeconds(CompletionTimeoutSeconds));
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
     }
@@ -511,16 +540,17 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableSourceThrowsDuringSubscribe_ThenCompletesWithFailure()
     {
-        var throwingSource = SignalAsync.Create<int>((_, _) =>
+        const int CompletionTimeoutSeconds = 5;
+        var throwingSource = SignalAsync.Create<int>(static (_, _) =>
             ValueTask.FromException<IAsyncDisposable>(new InvalidOperationException(SubscribeBoomMessage)));
         IObservableAsync<int>[] sources = [throwingSource];
         Result? completionResult = null;
-        await using var sub = await sources.Merge().SubscribeAsync((_, _) => default, null, result =>
+        await using var sub = await sources.Merge().SubscribeAsync(static (_, _) => default, null, result =>
         {
             completionResult = result;
             return default;
         });
-        await AsyncTestHelpers.WaitForConditionAsync(() => completionResult.HasValue, TimeSpan.FromSeconds(5));
+        await AsyncTestHelpers.WaitForConditionAsync(() => completionResult.HasValue, TimeSpan.FromSeconds(CompletionTimeoutSeconds));
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
     }
@@ -533,9 +563,9 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableInnerSubscribeThrowsTaskCanceled_ThenHandledGracefully()
     {
-        var canceledSource = SignalAsync.Create<int>((_, _) =>
+        const int SettleTimeoutSeconds = 2;
+        var canceledSource = SignalAsync.Create<int>(static (_, _) =>
             ValueTask.FromException<IAsyncDisposable>(new TaskCanceledException("subscribe canceled")));
-        Result? completionResult = null;
         List<int> items = [];
         await using var sub = await new[] { canceledSource }.Merge().SubscribeAsync(
             (x, _) =>
@@ -544,15 +574,11 @@ public partial class CombiningOperatorTests
                 return default;
             },
             null,
-            result =>
-            {
-                completionResult = result;
-                return default;
-            });
+            static _ => default);
 
         // The TaskCanceledException catch returns early without signaling completion,
-        // so completionResult should remain null (graceful early return).
-        await AsyncTestHelpers.WaitForConditionAsync(() => true, TimeSpan.FromSeconds(2));
+        // so the sequence yields nothing (graceful early return).
+        await AsyncTestHelpers.WaitForConditionAsync(static () => true, TimeSpan.FromSeconds(SettleTimeoutSeconds));
         await Assert.That(items).IsEmpty();
     }
 
@@ -564,15 +590,16 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableInnerSubscribeThrows_ThenCompletesWithFailure()
     {
+        const int CompletionTimeoutSeconds = 5;
         Result? completionResult = null;
-        var throwingSource = SignalAsync.Create<int>((_, _) =>
+        var throwingSource = SignalAsync.Create<int>(static (_, _) =>
             ValueTask.FromException<IAsyncDisposable>(new InvalidOperationException(SubscribeBoomMessage)));
-        await using var sub = await new[] { throwingSource }.Merge().SubscribeAsync((_, _) => default, null, result =>
+        await using var sub = await new[] { throwingSource }.Merge().SubscribeAsync(static (_, _) => default, null, result =>
         {
             completionResult = result;
             return default;
         });
-        await AsyncTestHelpers.WaitForConditionAsync(() => completionResult.HasValue, TimeSpan.FromSeconds(5));
+        await AsyncTestHelpers.WaitForConditionAsync(() => completionResult.HasValue, TimeSpan.FromSeconds(CompletionTimeoutSeconds));
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
         await Assert.That(completionResult.Value.Exception!.Message).Contains(SubscribeBoomMessage);
@@ -586,19 +613,20 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableSecondSourceSubscribeThrows_ThenCompletesWithFailure()
     {
+        const int CompletionTimeoutSeconds = 5;
         Result? completionResult = null;
         DirectSource<int> goodSource = new();
-        var throwingSource = SignalAsync.Create<int>((_, _) =>
+        var throwingSource = SignalAsync.Create<int>(static (_, _) =>
             ValueTask.FromException<IAsyncDisposable>(new InvalidOperationException("second subscribe boom")));
         await using var sub = await new IObservableAsync<int>[] { goodSource, throwingSource }.Merge().SubscribeAsync(
-            (_, _) => default,
+            static (_, _) => default,
             null,
             result =>
             {
                 completionResult = result;
                 return default;
             });
-        await AsyncTestHelpers.WaitForConditionAsync(() => completionResult.HasValue, TimeSpan.FromSeconds(5));
+        await AsyncTestHelpers.WaitForConditionAsync(() => completionResult.HasValue, TimeSpan.FromSeconds(CompletionTimeoutSeconds));
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
         await Assert.That(completionResult.Value.Exception!.Message).Contains("second subscribe boom");
@@ -609,6 +637,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeInnerSourceFails_ThenErrorPropagated()
     {
+        const int CompletionTimeoutSeconds = 5;
         InvalidOperationException error = new("inner-error");
         var inner = SignalAsync.Throw<int>(error);
         var outer = SignalAsync.Return(inner);
@@ -620,7 +649,7 @@ public partial class CombiningOperatorTests
             _ = completed.TrySetResult();
             return default;
         });
-        await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await completed.Task.WaitAsync(TimeSpan.FromSeconds(CompletionTimeoutSeconds));
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
     }
@@ -630,6 +659,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeWithMaxConcurrencyInnerFails_ThenErrorPropagated()
     {
+        const int CompletionTimeoutSeconds = 5;
         InvalidOperationException error = new("merge-fail");
         var inner = SignalAsync.Throw<int>(error);
         var outer = SignalAsync.Return(inner);
@@ -641,7 +671,7 @@ public partial class CombiningOperatorTests
             _ = completed.TrySetResult();
             return default;
         });
-        await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await completed.Task.WaitAsync(TimeSpan.FromSeconds(CompletionTimeoutSeconds));
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
     }
@@ -785,22 +815,17 @@ public partial class CombiningOperatorTests
     /// <c>OnNextAsync</c> or <c>OnErrorResumeAsync</c> via the supplied TCS so the assertion
     /// can verify the post-dispose call did not deliver anything.</summary>
     /// <typeparam name = "T">The element type.</typeparam>
-    private sealed class CapturingWitness<T> : IObserverAsync<T>
+    /// <param name = "onNext">Optional TCS for capturing the first <c>OnNextAsync</c> value.</param>
+    /// <param name = "onError">Optional TCS for capturing the first <c>OnErrorResumeAsync</c> exception.</param>
+    private sealed class CapturingWitness<T>(
+        TaskCompletionSource<T>? onNext = null,
+        TaskCompletionSource<Exception>? onError = null) : IObserverAsync<T>
     {
         /// <summary>Captures the first <c>OnNextAsync</c> value, if a TCS was supplied.</summary>
-        private readonly TaskCompletionSource<T>? _onNext;
+        private readonly TaskCompletionSource<T>? _onNext = onNext;
 
         /// <summary>Captures the first <c>OnErrorResumeAsync</c> exception, if a TCS was supplied.</summary>
-        private readonly TaskCompletionSource<Exception>? _onError;
-
-        /// <summary>Initializes a new instance of the <see cref = "CapturingWitness{T}"/> class.</summary>
-        /// <param name = "onNext">Optional TCS for capturing the first <c>OnNextAsync</c> value.</param>
-        /// <param name = "onError">Optional TCS for capturing the first <c>OnErrorResumeAsync</c> exception.</param>
-        public CapturingWitness(TaskCompletionSource<T>? onNext = null, TaskCompletionSource<Exception>? onError = null)
-        {
-            _onNext = onNext;
-            _onError = onError;
-        }
+        private readonly TaskCompletionSource<Exception>? _onError = onError;
 
         /// <inheritdoc/>
         /// <returns>A task representing the asynchronous operation.</returns>

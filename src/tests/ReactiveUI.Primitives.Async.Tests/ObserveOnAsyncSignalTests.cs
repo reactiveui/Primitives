@@ -15,6 +15,9 @@ public class ObserveOnAsyncSignalTests
     /// <summary>Single sentinel emitted by the happy-path tests.</summary>
     private const int Sentinel = 7;
 
+    /// <summary>Maximum time a test waits for a forwarded notification to arrive.</summary>
+    private static readonly TimeSpan ForwardTimeout = TimeSpan.FromSeconds(5);
+
     /// <summary>Verifies the <c>forceYielding: true</c> overload forwards values via the context-switching slow path.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -165,7 +168,7 @@ public class ObserveOnAsyncSignalTests
         InvalidOperationException expected = new("observeon-resume");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
-        await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await errorTcs.Task.WaitAsync(ForwardTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -182,7 +185,7 @@ public class ObserveOnAsyncSignalTests
 
         await sut.ForwardAfterContextSwitchAsync(Sentinel, CancellationToken.None);
 
-        var received = await captured.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var received = await captured.Task.WaitAsync(ForwardTimeout);
         await Assert.That(received).IsEqualTo(Sentinel);
     }
 
@@ -198,7 +201,7 @@ public class ObserveOnAsyncSignalTests
 
         await sut.ForwardErrorAfterContextSwitchAsync(expected, CancellationToken.None);
 
-        var received = await captured.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var received = await captured.Task.WaitAsync(ForwardTimeout);
         await Assert.That(received).IsSameReferenceAs(expected);
     }
 
@@ -213,8 +216,58 @@ public class ObserveOnAsyncSignalTests
 
         await sut.ForwardCompletionAfterContextSwitchAsync(Result.Success);
 
-        var result = await captured.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var result = await captured.Task.WaitAsync(ForwardTimeout);
         await Assert.That(result.IsSuccess).IsTrue();
+    }
+
+    /// <summary>Verifies that subscribing to a <see cref="ContextSwitchSignalAsync{T}"/> directly — rather than
+    /// through <c>WitnessOn</c>, which builds a <c>WitnessOnSignal</c> instead — wraps the downstream observer in
+    /// the context-switching witness and forwards source values through it.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenContextSwitchSignalSubscribed_ThenValueForwarded()
+    {
+        var signal = Signal.Create<int>();
+        ContextSwitchSignalAsync<int> sut = new(signal.Values, AsyncContext.Default, true);
+        TaskCompletionSource<int> received = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        await using var sub = await sut.SubscribeAsync((x, _) =>
+        {
+            IgnoredResult.Of(received.TrySetResult(x));
+            return default;
+        });
+
+        await signal.OnNextAsync(Sentinel, CancellationToken.None);
+
+        var value = await received.Task.WaitAsync(ForwardTimeout);
+        await Assert.That(value).IsEqualTo(Sentinel);
+    }
+
+    /// <summary>Verifies that a resumable error raised by the source of a <see cref="ContextSwitchSignalAsync{T}"/>
+    /// reaches the downstream observer through the witness's <c>OnErrorResumeAsyncCore</c> context-switch path.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenContextSwitchSignalSourceEmitsResumableError_ThenErrorForwarded()
+    {
+        var signal = Signal.Create<int>();
+        ContextSwitchSignalAsync<int> sut = new(signal.Values, AsyncContext.Default, true);
+        Exception? caught = null;
+        TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        await using var sub = await sut.SubscribeAsync(
+            static (_, _) => default,
+            (ex, _) =>
+            {
+                caught = ex;
+                IgnoredResult.Of(errorTcs.TrySetResult());
+                return default;
+            });
+
+        InvalidOperationException expected = new("context-switch-resume");
+        await signal.OnErrorResumeAsync(expected, CancellationToken.None);
+
+        await errorTcs.Task.WaitAsync(ForwardTimeout);
+        await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
     /// <summary>Test observer that captures the first <c>OnNextAsync</c> value, the first

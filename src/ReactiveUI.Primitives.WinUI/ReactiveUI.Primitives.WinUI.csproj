@@ -11,8 +11,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.WindowsAppSDK" />
-    <ProjectReference Include="..\ReactiveUI.Primitives\ReactiveUI.Primitives.csproj" />
+    <PackageReference Include="Microsoft.WindowsAppSDK"/>
+    <ProjectReference Include="..\ReactiveUI.Primitives\ReactiveUI.Primitives.csproj"/>
   </ItemGroup>
 
 </Project>

@@ -52,6 +52,7 @@ public readonly record struct Spark<T>
     public SparkKind Kind { get; }
 
     /// <summary>Gets the debugger display text.</summary>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
@@ -63,12 +64,14 @@ public readonly record struct Spark<T>
     /// including the Spark Kind and the Value or Exception (if any).
     /// </remarks>
     public bool Equals(Spark<T> other) =>
-        Kind != other.Kind ? false : Kind switch
-        {
-            SparkKind.OnNext => EqualityComparer<T>.Default.Equals(Value, other.Value),
-            SparkKind.OnError => Equals(_exception, other._exception),
-            _ => true,
-        };
+        Kind != other.Kind
+            ? false
+            : Kind switch
+            {
+                SparkKind.OnNext => EqualityComparer<T>.Default.Equals(Value, other.Value),
+                SparkKind.OnError => Equals(_exception, other._exception),
+                _ => true
+            };
 
     /// <summary>Returns the hash code for this spark.</summary>
     /// <returns>A hash code for this spark.</returns>
@@ -76,16 +79,21 @@ public readonly record struct Spark<T>
     {
         SparkKind.OnNext => EqualityComparer<T>.Default.GetHashCode(Value!),
         SparkKind.OnError => _exception!.GetHashCode(),
-        _ => typeof(T).GetHashCode() ^ 8510,
+        _ => typeof(T).GetHashCode() ^ 8510
     };
 
     /// <summary>Returns a string representation of this spark.</summary>
     /// <returns>A string representation of this spark.</returns>
     public override string ToString() => Kind switch
     {
+#if NET8_0_OR_GREATER
+        SparkKind.OnNext => string.Format(CultureInfo.CurrentCulture, SparkCompositeFormats.OnNext, Value),
+        SparkKind.OnError => string.Format(CultureInfo.CurrentCulture, SparkCompositeFormats.OnError, _exception!.GetType().FullName),
+#else
         SparkKind.OnNext => string.Format(CultureInfo.CurrentCulture, "OnNext({0})", Value),
         SparkKind.OnError => string.Format(CultureInfo.CurrentCulture, "OnError({0})", _exception!.GetType().FullName),
-        _ => "OnCompleted()",
+#endif
+        _ => "OnCompleted()"
     };
 
     /// <summary>Invokes the observer's method corresponding to the Spark.</summary>
@@ -120,7 +128,7 @@ public readonly record struct Spark<T>
         {
             SparkKind.OnNext => observer.OnNext(Value),
             SparkKind.OnError => observer.OnError(_exception!),
-            _ => observer.OnCompleted(),
+            _ => observer.OnCompleted()
         };
     }
 
@@ -168,7 +176,7 @@ public readonly record struct Spark<T>
         {
             SparkKind.OnNext => onNext(Value),
             SparkKind.OnError => onError(_exception!),
-            _ => onCompleted(),
+            _ => onCompleted()
         };
     }
 
@@ -184,16 +192,19 @@ public readonly record struct Spark<T>
         ArgumentExceptionHelper.ThrowIfNull(scheduler);
 
         var self = this;
-        return Signal.Create<T>(observer => scheduler.Schedule(() =>
-        {
-            self.Accept(observer);
-            if (self.Kind != SparkKind.OnNext)
+        return Signal.Create<T>(observer => scheduler.Schedule(
+            (self, observer),
+            static (_, s) =>
             {
-                return;
-            }
+                s.self.Accept(s.observer);
+                if (s.self.Kind != SparkKind.OnNext)
+                {
+                    return EmptyDisposable.Instance;
+                }
 
-            observer.OnCompleted();
-        }));
+                s.observer.OnCompleted();
+                return EmptyDisposable.Instance;
+            }));
     }
 
     /// <summary>Creates an OnNext spark carrying the supplied value.</summary>

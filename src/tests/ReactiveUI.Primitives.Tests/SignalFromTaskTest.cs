@@ -21,8 +21,16 @@ public class SignalFromTaskTest
     /// <summary>The value produced by the disposed pending subscription.</summary>
     private const int DisposedValue = 99;
 
-    /// <summary>Maximum wait for cancellation callbacks that are intentionally driven by timers.</summary>
-    private const int CancellationCallbackTimeoutMilliseconds = 15_000;
+    /// <summary>
+    /// Maximum wait for cancellation callbacks that are intentionally driven by timers. The callbacks fire on pool
+    /// threads, so on a saturated runner they can arrive far later than on an idle box; a cancellation that never
+    /// fires the callbacks never signals, so this window only has to outlast a slow runner and costs nothing when
+    /// the callbacks arrive promptly.
+    /// </summary>
+    private const int CancellationCallbackTimeoutMilliseconds = 30_000;
+
+    /// <summary>Message carried by a failure an observer raises from inside a notification.</summary>
+    private const string ObserverFailureMessage = "observer failed";
 
     /// <summary>Delay used before checking that a task has started.</summary>
     private const int InitialDelayMilliseconds = 500;
@@ -71,11 +79,14 @@ public class SignalFromTaskTest
     /// <summary>Status text recorded by the finalizer callback.</summary>
     private const string ShouldAlwaysComeHere = "Should always come here.";
 
+    /// <summary>How long a poll waits for an observed notification before failing.</summary>
+    private static readonly TimeSpan PollTimeout = TimeSpan.FromSeconds(2);
+
     /// <summary>Covers from-task cancellation callback argument validation.</summary>
     [Test]
     public void FromTaskValidatesCancellationCallback()
     {
-        var taskSignal = Signal.FromTask(_ => Task.FromResult(1), Sequencer.Immediate);
+        var taskSignal = Signal.FromTask(static _ => Task.FromResult(1), Sequencer.Immediate);
         try
         {
             _ = Assert.Throws<ArgumentNullException>(() => taskSignal.GetOperationCanceled(null!));
@@ -91,12 +102,12 @@ public class SignalFromTaskTest
     [Test]
     public async Task FromTaskEmitsResult()
     {
-        var taskSignal = Signal.FromTask(_ => Task.FromResult(EmittedValue), Sequencer.Immediate);
+        var taskSignal = Signal.FromTask(static _ => Task.FromResult(EmittedValue), Sequencer.Immediate);
         try
         {
             List<int> taskValues = [];
             var taskCompleted = 0;
-            _ = taskSignal.Subscribe(taskValues.Add, error => throw error, () => taskCompleted++);
+            _ = taskSignal.Subscribe(taskValues.Add, static error => throw error, () => taskCompleted++);
             await Assert.That(taskValues.SequenceEqual([EmittedValue])).IsTrue();
             await Assert.That(taskCompleted).IsEqualTo(1);
         }
@@ -125,10 +136,10 @@ public class SignalFromTaskTest
                    && Array.IndexOf(observedErrors, nameof(TaskCanceledException)) >= 0;
         }
 
-        TaskCompletionSource<int> success = new();
-        TaskCompletionSource<int> fault = new();
-        TaskCompletionSource<int> canceled = new();
-        TaskCompletionSource<int> disposed = new();
+        TaskCompletionSource<int> success = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<int> fault = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<int> canceled = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<int> disposed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var disposedSubscription = Signal.FromTask(disposed.Task).Subscribe(_ => AddValue(DisposedValue), AddError);
         disposedSubscription.Dispose();
         _ = Signal.FromTask(success.Task).Subscribe(AddValue, AddError);
@@ -138,7 +149,7 @@ public class SignalFromTaskTest
         fault.SetException(new InvalidOperationException("pending-fault"));
         canceled.SetCanceled(new(true));
         disposed.SetResult(DisposedValue);
-        await TestPolling.SpinUntil(ObservedPendingBranches, TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+        await TestPolling.SpinUntil(ObservedPendingBranches, PollTimeout).ConfigureAwait(false);
         var finalValues = values.ToArray();
         var finalErrors = errors.ToArray();
         await Assert.That(finalValues.Length).IsEqualTo(1);
@@ -155,10 +166,13 @@ public class SignalFromTaskTest
         ConcurrentQueue<int> values = new();
         ConcurrentQueue<string> errors = new();
         var completed = 0;
-        var taskSignal = Signal.FromTask(_ => Task.FromResult(SuccessValue), Sequencer.Immediate);
+        var taskSignal = Signal.FromTask(static _ => Task.FromResult(SuccessValue), Sequencer.Immediate);
         try
         {
-            _ = taskSignal.Subscribe(values.Enqueue, error => errors.Enqueue(error.GetType().Name), () => Interlocked.Increment(ref completed));
+            _ = taskSignal.Subscribe(
+                values.Enqueue,
+                error => errors.Enqueue(error.GetType().Name),
+                () => Interlocked.Increment(ref completed));
             await Assert.That(values.SequenceEqual([SuccessValue])).IsTrue();
             await Assert.That(errors).IsEmpty();
             await Assert.That(Volatile.Read(ref completed)).IsEqualTo(1);
@@ -176,10 +190,10 @@ public class SignalFromTaskTest
     {
         ConcurrentQueue<int> values = new();
         ConcurrentQueue<string> errors = new();
-        var taskSignal = Signal.FromTask(_ => Task.FromCanceled<int>(new(true)), Sequencer.Immediate);
+        var taskSignal = Signal.FromTask(static _ => Task.FromCanceled<int>(new(true)), Sequencer.Immediate);
         try
         {
-            _ = taskSignal.Subscribe(values.Enqueue, error => errors.Enqueue(error.GetType().Name), () => { });
+            _ = taskSignal.Subscribe(values.Enqueue, error => errors.Enqueue(error.GetType().Name), static () => { });
             await Assert.That(values).IsEmpty();
             await Assert.That(errors.SequenceEqual([nameof(OperationCanceledException)])).IsTrue();
         }
@@ -196,10 +210,13 @@ public class SignalFromTaskTest
     {
         ConcurrentQueue<int> values = new();
         ConcurrentQueue<string> errors = new();
-        var taskSignal = Signal.FromTask(_ => Task.FromException<int>(new InvalidOperationException(BreakExecutionMessage)), Sequencer.Immediate);
+        var taskSignal =
+            Signal.FromTask(
+                static _ => Task.FromException<int>(new InvalidOperationException(BreakExecutionMessage)),
+                Sequencer.Immediate);
         try
         {
-            _ = taskSignal.Subscribe(values.Enqueue, error => errors.Enqueue(error.GetType().Name), () => { });
+            _ = taskSignal.Subscribe(values.Enqueue, error => errors.Enqueue(error.GetType().Name), static () => { });
             await Assert.That(values).IsEmpty();
             await Assert.That(errors.SequenceEqual([nameof(InvalidOperationException)])).IsTrue();
         }
@@ -216,10 +233,12 @@ public class SignalFromTaskTest
     {
         ConcurrentQueue<int> values = new();
         ConcurrentQueue<string> errors = new();
-        var taskSignal = Signal.FromTask<int>(_ => throw new InvalidOperationException(BreakExecutionMessage), Sequencer.Immediate);
+        var taskSignal = Signal.FromTask<int>(
+            static _ => throw new InvalidOperationException(BreakExecutionMessage),
+            Sequencer.Immediate);
         try
         {
-            _ = taskSignal.Subscribe(values.Enqueue, error => errors.Enqueue(error.GetType().Name), () => { });
+            _ = taskSignal.Subscribe(values.Enqueue, error => errors.Enqueue(error.GetType().Name), static () => { });
             await Assert.That(values).IsEmpty();
             await Assert.That(errors.SequenceEqual([nameof(InvalidOperationException)])).IsTrue();
         }
@@ -236,11 +255,11 @@ public class SignalFromTaskTest
     {
         ConcurrentQueue<int> values = new();
         ConcurrentQueue<string> errors = new();
-        var taskSignal = Signal.FromTask<int>(_ => throw new InvalidOperationException(BreakExecutionMessage));
+        var taskSignal = Signal.FromTask<int>(static _ => throw new InvalidOperationException(BreakExecutionMessage));
         try
         {
-            _ = taskSignal.Subscribe(values.Enqueue, error => errors.Enqueue(error.GetType().Name), () => { });
-            await TestPolling.SpinUntil(() => !errors.IsEmpty, TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+            _ = taskSignal.Subscribe(values.Enqueue, error => errors.Enqueue(error.GetType().Name), static () => { });
+            await TestPolling.SpinUntil(() => !errors.IsEmpty, PollTimeout).ConfigureAwait(false);
             await Assert.That(values).IsEmpty();
             await Assert.That(errors.SequenceEqual([nameof(InvalidOperationException)])).IsTrue();
         }
@@ -258,11 +277,15 @@ public class SignalFromTaskTest
         ConcurrentQueue<int> values = new();
         ConcurrentQueue<string> errors = new();
         var completed = 0;
-        var taskSignal = Signal.FromTask(_ => Task.FromResult(SuccessValue), Sequencer.CurrentThread);
+        var taskSignal = Signal.FromTask(static _ => Task.FromResult(SuccessValue), Sequencer.CurrentThread);
         try
         {
-            _ = taskSignal.Subscribe(values.Enqueue, error => errors.Enqueue(error.GetType().Name), () => Interlocked.Increment(ref completed));
-            await TestPolling.SpinUntil(() => Volatile.Read(ref completed) == 1, TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+            _ = taskSignal.Subscribe(
+                values.Enqueue,
+                error => errors.Enqueue(error.GetType().Name),
+                () => Interlocked.Increment(ref completed));
+            await TestPolling.SpinUntil(() => Volatile.Read(ref completed) == 1, PollTimeout)
+                .ConfigureAwait(false);
             await Assert.That(values.SequenceEqual([SuccessValue])).IsTrue();
             await Assert.That(errors).IsEmpty();
         }
@@ -279,11 +302,11 @@ public class SignalFromTaskTest
     {
         ConcurrentQueue<int> values = new();
         ConcurrentQueue<string> errors = new();
-        var taskSignal = Signal.FromTask(_ => Task.FromCanceled<int>(new(true)), Sequencer.CurrentThread);
+        var taskSignal = Signal.FromTask(static _ => Task.FromCanceled<int>(new(true)), Sequencer.CurrentThread);
         try
         {
-            _ = taskSignal.Subscribe(values.Enqueue, error => errors.Enqueue(error.GetType().Name), () => { });
-            await TestPolling.SpinUntil(() => !errors.IsEmpty, TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+            _ = taskSignal.Subscribe(values.Enqueue, error => errors.Enqueue(error.GetType().Name), static () => { });
+            await TestPolling.SpinUntil(() => !errors.IsEmpty, PollTimeout).ConfigureAwait(false);
             await Assert.That(values).IsEmpty();
             await Assert.That(errors.SequenceEqual([nameof(OperationCanceledException)])).IsTrue();
         }
@@ -305,7 +328,8 @@ public class SignalFromTaskTest
         var taskSignal = Signal.FromTask(_ => gate.Task, Sequencer.Immediate, cts);
         try
         {
-            var subscription = taskSignal.Subscribe(values.Enqueue, error => errors.Enqueue(error.GetType().Name), () => { });
+            var subscription =
+                taskSignal.Subscribe(values.Enqueue, error => errors.Enqueue(error.GetType().Name), static () => { });
 
             // Dispose the cancellation source out from under the subscription, then dispose the
             // subscription. The disposer wins the gate and calls Cancel on the disposed source,
@@ -335,9 +359,9 @@ public class SignalFromTaskTest
         var taskSignal = Signal.FromTask(_ => gate.Task, Sequencer.Immediate);
         try
         {
-            _ = taskSignal.Subscribe(values.Enqueue, error => errors.Enqueue(error.GetType().Name), () => { });
+            _ = taskSignal.Subscribe(values.Enqueue, error => errors.Enqueue(error.GetType().Name), static () => { });
             gate.SetException(new InvalidOperationException(BreakExecutionMessage));
-            await TestPolling.SpinUntil(() => !errors.IsEmpty, TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+            await TestPolling.SpinUntil(() => !errors.IsEmpty, PollTimeout).ConfigureAwait(false);
             await Assert.That(values).IsEmpty();
             await Assert.That(errors.SequenceEqual([nameof(InvalidOperationException)])).IsTrue();
         }
@@ -359,9 +383,13 @@ public class SignalFromTaskTest
         var taskSignal = Signal.FromTask(_ => gate.Task, Sequencer.Immediate);
         try
         {
-            _ = taskSignal.Subscribe(values.Enqueue, error => errors.Enqueue(error.GetType().Name), () => Interlocked.Increment(ref completed));
+            _ = taskSignal.Subscribe(
+                values.Enqueue,
+                error => errors.Enqueue(error.GetType().Name),
+                () => Interlocked.Increment(ref completed));
             gate.SetResult(SuccessValue);
-            await TestPolling.SpinUntil(() => Volatile.Read(ref completed) == 1, TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+            await TestPolling.SpinUntil(() => Volatile.Read(ref completed) == 1, PollTimeout)
+                .ConfigureAwait(false);
             await Assert.That(values.SequenceEqual([SuccessValue])).IsTrue();
             await Assert.That(errors).IsEmpty();
             await Assert.That(Volatile.Read(ref completed)).IsEqualTo(1);
@@ -384,7 +412,10 @@ public class SignalFromTaskTest
         var taskSignal = Signal.FromTask(_ => gate.Task, Sequencer.Immediate);
         try
         {
-            var subscription = taskSignal.Subscribe(values.Enqueue, error => errors.Enqueue(error.GetType().Name), () => Interlocked.Increment(ref completed));
+            var subscription = taskSignal.Subscribe(
+                values.Enqueue,
+                error => errors.Enqueue(error.GetType().Name),
+                () => Interlocked.Increment(ref completed));
 
             // Dispose while the awaited task is still pending, then release the continuation.
             subscription.Dispose();
@@ -414,7 +445,10 @@ public class SignalFromTaskTest
         var taskSignal = Signal.FromTask(_ => gate.Task);
         try
         {
-            var subscription = taskSignal.Subscribe(values.Enqueue, error => errors.Enqueue(error.GetType().Name), () => Interlocked.Increment(ref completed));
+            var subscription = taskSignal.Subscribe(
+                values.Enqueue,
+                error => errors.Enqueue(error.GetType().Name),
+                () => Interlocked.Increment(ref completed));
 
             // Dispose while the awaited task is still pending, then release the continuation.
             subscription.Dispose();
@@ -438,10 +472,10 @@ public class SignalFromTaskTest
     public async Task RxVoidFactoryWithSchedulerEmitsCompletion()
     {
         var completed = 0;
-        var taskSignal = Signal.FromTask(_ => Task.FromResult(RxVoid.Default), Sequencer.Immediate);
+        var taskSignal = Signal.FromTask(static _ => Task.FromResult(RxVoid.Default), Sequencer.Immediate);
         try
         {
-            _ = taskSignal.Subscribe(_ => { }, error => throw error, () => Interlocked.Increment(ref completed));
+            _ = taskSignal.Subscribe(static _ => { }, static error => throw error, () => Interlocked.Increment(ref completed));
             await Assert.That(Volatile.Read(ref completed)).IsEqualTo(1);
         }
         finally
@@ -466,7 +500,8 @@ public class SignalFromTaskTest
 
         await Assert.That(taskSignal.IsDisposed).IsTrue();
         await Assert.That(taskSignal.IsCancellationRequested).IsTrue();
-        await TestPolling.SpinUntil(() => Volatile.Read(ref canceledRaised) == 1, TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+        await TestPolling.SpinUntil(() => Volatile.Read(ref canceledRaised) == 1, PollTimeout)
+            .ConfigureAwait(false);
         await Assert.That(Volatile.Read(ref canceledRaised)).IsEqualTo(1);
 
         // A second dispose is a no-op (covers the already-disposed early return).
@@ -478,9 +513,9 @@ public class SignalFromTaskTest
     [Test]
     public void ImmediateSignalSubscribeAfterDisposeThrows()
     {
-        var taskSignal = Signal.FromTask(_ => Task.FromResult(SuccessValue), Sequencer.Immediate);
+        var taskSignal = Signal.FromTask(static _ => Task.FromResult(SuccessValue), Sequencer.Immediate);
         ((IDisposable)taskSignal).Dispose();
-        _ = Assert.Throws<ObjectDisposedException>(() => taskSignal.Subscribe(_ => { }));
+        _ = Assert.Throws<ObjectDisposedException>(() => taskSignal.Subscribe(static _ => { }));
     }
 
     /// <summary>Signals from task handles user exceptions.</summary>
@@ -596,9 +631,7 @@ public class SignalFromTaskTest
         using var subscription = fixture.Subscribe(_ => result = true);
         await Task.Delay(InitialDelayMilliseconds).ConfigureAwait(true);
         await Assert.That(StatusMessages(statusTrail)).Contains(StartedCommand);
-        await WaitForAsync(
-            Task.WhenAll(cleanupCompleted.Task, finallyCompleted.Task),
-            CancellationCallbackTimeoutMilliseconds).ConfigureAwait(false);
+        await WaitForCancellationCallbacks(cleanupCompleted.Task, finallyCompleted.Task).ConfigureAwait(false);
         await Assert.That(StatusMessages(statusTrail)).Contains(StartingCancellingCommand);
         await Assert.That(StatusMessages(statusTrail)).Contains(ShouldAlwaysComeHere);
         await Assert.That(StatusMessages(statusTrail)).Contains(FinishedCancellingCommand);
@@ -785,9 +818,7 @@ public class SignalFromTaskTest
         using var subscription = fixture.Subscribe(_ => result = true);
         await Task.Delay(InitialDelayMilliseconds).ConfigureAwait(true);
         await Assert.That(StatusMessages(statusTrail)).Contains(StartedCommand);
-        await WaitForAsync(
-            Task.WhenAll(cleanupCompleted.Task, finallyCompleted.Task),
-            CancellationCallbackTimeoutMilliseconds).ConfigureAwait(false);
+        await WaitForCancellationCallbacks(cleanupCompleted.Task, finallyCompleted.Task).ConfigureAwait(false);
         await Assert.That(StatusMessages(statusTrail)).Contains(StartingCancellingCommand);
         await Assert.That(StatusMessages(statusTrail)).Contains(ShouldAlwaysComeHere);
         await Assert.That(StatusMessages(statusTrail)).Contains(FinishedCancellingCommand);
@@ -861,25 +892,157 @@ public class SignalFromTaskTest
         await Assert.That(result).IsTrue();
     }
 
+    /// <summary>
+    /// Verifies the immediate task signal exposes itself as its own source and owns a cancellation source, and
+    /// that a task whose token was cancelled before it produced its result errors instead of emitting it.
+    /// </summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous unit test.</returns>
+    [Test]
+    public async Task ImmediateTaskSignalErrorsWhenTheTokenIsCancelledBeforeTheResultArrives()
+    {
+        TaskCompletionSource<int> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var taskSignal = Signal.FromTask(_ => completion.Task, Sequencer.Immediate);
+        try
+        {
+            await Assert.That(taskSignal.CancellationTokenSource).IsNotNull();
+            await Assert.That(ReferenceEquals(taskSignal.Source, taskSignal)).IsTrue();
+            ConcurrentQueue<int> values = new();
+            ConcurrentQueue<Exception> errors = new();
+            _ = taskSignal.Subscribe(values.Enqueue, errors.Enqueue, static () => { });
+            await taskSignal.CancellationTokenSource!.CancelAsync();
+            completion.SetResult(SuccessValue);
+            await TestPolling.SpinUntil(() => !errors.IsEmpty, PollTimeout).ConfigureAwait(false);
+            await Assert.That(errors.Count).IsEqualTo(1);
+            _ = errors.TryPeek(out var error);
+            await Assert.That(error!).IsTypeOf<OperationCanceledException>();
+            await Assert.That(values).IsEmpty();
+        }
+        finally
+        {
+            (taskSignal as IDisposable)?.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Verifies a task that faults after its subscription was disposed notifies nobody. The task continuation still
+    /// runs, and it must find the subscription already stopped rather than push a terminal at an observer that has
+    /// unsubscribed.
+    /// </summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task FromTaskDropsAFaultRaisedAfterTheSubscriptionWasDisposed()
+    {
+        TaskCompletionSource<int> pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        RecordingObserver observer = new();
+
+        var subscription = Signal.FromTask(pending.Task).Subscribe(observer);
+        subscription.Dispose();
+
+        pending.SetException(new InvalidOperationException(ObserverFailureMessage));
+
+        // The continuation runs on the thread pool; give it room to reach the stopped subscription.
+        await Task.Delay(PollTimeout);
+
+        await Assert.That(observer.ErrorCount).IsEqualTo(0);
+        await Assert.That(observer.NextCount).IsEqualTo(0);
+        await Assert.That(observer.CompletedCount).IsEqualTo(0);
+    }
+
+    /// <summary>
+    /// Verifies an observer that throws out of its own <see cref = "IObserver{T}.OnNext"/> does not get a second
+    /// terminal. The task's terminal was already claimed before the value was pushed, so the observer's failure is
+    /// swallowed rather than turned into an <see cref = "IObserver{T}.OnError"/> the observer never expected.
+    /// </summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task FromAsyncSwallowsAFailureTheObserverRaisedFromOnNext()
+    {
+        TaskCompletionSource<int> pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        ThrowingObserver observer = new(new InvalidOperationException(ObserverFailureMessage));
+
+        using var subscription = Signal.FromAsync(_ => pending.Task).Subscribe(observer);
+        pending.SetResult(SuccessValue);
+
+        await Assert.That(observer.Observed.Task.WaitAsync(PollTimeout)).ThrowsNothing();
+        await Task.Delay(PollTimeout);
+
+        await Assert.That(observer.NextCount).IsEqualTo(1);
+        await Assert.That(observer.ErrorCount).IsEqualTo(0);
+        await Assert.That(observer.CompletedCount).IsEqualTo(0);
+    }
+
+    /// <summary>
+    /// Verifies an observer that disposes its own subscription and then throws is met with silence. Disposal owns that
+    /// cancellation path, so the failure must not be reported back down a subscription the observer has just torn down.
+    /// </summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task FromAsyncStaysSilentWhenTheObserverDisposesItselfAndThenThrows()
+    {
+        TaskCompletionSource<int> pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        SelfDisposingThrowingObserver observer = new(new InvalidOperationException(ObserverFailureMessage));
+
+        observer.Subscription = Signal.FromAsync(_ => pending.Task).Subscribe(observer);
+        pending.SetResult(SuccessValue);
+
+        await Assert.That(observer.Observed.Task.WaitAsync(PollTimeout)).ThrowsNothing();
+        await Task.Delay(PollTimeout);
+
+        await Assert.That(observer.NextCount).IsEqualTo(1);
+        await Assert.That(observer.ErrorCount).IsEqualTo(0);
+        await Assert.That(observer.CompletedCount).IsEqualTo(0);
+    }
+
+    /// <summary>
+    /// Verifies the external-cancellation overload still runs the factory when the caller passes a token that can never
+    /// be cancelled. There is nothing to register against, so the subscription must start rather than register a
+    /// callback on a token that will never fire.
+    /// </summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task FromAsyncWithAnUncancellableTokenStillRunsTheFactory()
+    {
+        RecordingObserver observer = new();
+
+        using var subscription = Signal
+            .FromAsync(static _ => Task.FromResult(SuccessValue), CancellationToken.None)
+            .Subscribe(observer);
+
+        await Assert.That(observer.NextCount).IsEqualTo(1);
+        await Assert.That(observer.LastValue).IsEqualTo(SuccessValue);
+        await Assert.That(observer.CompletedCount).IsEqualTo(1);
+        await Assert.That(observer.ErrorCount).IsEqualTo(0);
+    }
+
     /// <summary>Gets the recorded status messages.</summary>
     /// <param name = "statusTrail">The status trail.</param>
     /// <returns>The recorded messages.</returns>
     private static string[] StatusMessages(StatusTrail statusTrail) => statusTrail.Messages();
 
-    /// <summary>Waits for a timed test callback to complete.</summary>
-    /// <param name = "task">The task to await.</param>
-    /// <param name = "timeoutMilliseconds">The timeout in milliseconds.</param>
+    /// <summary>Awaits both timer-driven cancellation callbacks, or fails once the generous window closes.</summary>
+    /// <param name = "cleanupCompleted">Completes when the cancellation cleanup callback has run.</param>
+    /// <param name = "finallyCompleted">Completes when the terminal cleanup callback has run.</param>
     /// <returns>A <see cref = "Task"/> representing the asynchronous operation.</returns>
-    private static async Task WaitForAsync(Task task, int timeoutMilliseconds)
+    /// <remarks>
+    /// The callbacks are driven by timers and run on pool threads, so the wait must stay asynchronous: blocking a pool
+    /// thread would starve the very chain it is waiting on. It also must not decide the outcome from which continuation
+    /// the pool dequeues first — <c>Task.WhenAny</c> reports whichever continuation ran first, not whichever task
+    /// completed first, so on a saturated runner the timeout can be reported as the winner even though the callbacks
+    /// already fired. This awaits the race for liveness but then decides from the callback tasks' own completion state,
+    /// which <see cref = "TaskCompletionSource.TrySetResult"/> flips synchronously and no pool pressure can misreport.
+    /// A cancellation that never fires the callbacks never completes, so the generous window still fails on a real hang.
+    /// </remarks>
+    private static async Task WaitForCancellationCallbacks(Task cleanupCompleted, Task finallyCompleted)
     {
-        var timeout = Task.Delay(timeoutMilliseconds);
-        var completed = await Task.WhenAny(task, timeout).ConfigureAwait(false);
-        if (completed == timeout)
+        var callbacks = Task.WhenAll(cleanupCompleted, finallyCompleted);
+        _ = await Task.WhenAny(callbacks, Task.Delay(CancellationCallbackTimeoutMilliseconds)).ConfigureAwait(false);
+        if (!cleanupCompleted.IsCompleted || !finallyCompleted.IsCompleted)
         {
-            throw new TimeoutException($"Timed out after {timeoutMilliseconds}ms waiting for cancellation callbacks.");
+            throw new TimeoutException(
+                $"Timed out after {CancellationCallbackTimeoutMilliseconds}ms waiting for cancellation callbacks.");
         }
 
-        await task.ConfigureAwait(false);
+        await callbacks.ConfigureAwait(false);
     }
 
     /// <summary>Records a status message.</summary>
@@ -906,6 +1069,69 @@ public class SignalFromTaskTest
     {
         await Task.Delay(TokenCancellationDelayMilliseconds).ConfigureAwait(false);
         await cts.CancelAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>Observer that counts the notifications it received.</summary>
+    private class RecordingObserver : IObserver<int>
+    {
+        /// <summary>Gets the number of values received.</summary>
+        public int NextCount { get; private set; }
+
+        /// <summary>Gets the number of failures received.</summary>
+        public int ErrorCount { get; private set; }
+
+        /// <summary>Gets the number of completions received.</summary>
+        public int CompletedCount { get; private set; }
+
+        /// <summary>Gets the most recently received value.</summary>
+        public int LastValue { get; private set; }
+
+        /// <inheritdoc/>
+        public virtual void OnNext(int value)
+        {
+            NextCount++;
+            LastValue = value;
+        }
+
+        /// <inheritdoc/>
+        public void OnError(Exception error) => ErrorCount++;
+
+        /// <inheritdoc/>
+        public void OnCompleted() => CompletedCount++;
+    }
+
+    /// <summary>Observer that throws out of <see cref = "IObserver{T}.OnNext"/> after recording the value.</summary>
+    /// <param name = "failure">The failure the observer raises.</param>
+    private class ThrowingObserver(Exception failure) : RecordingObserver
+    {
+        /// <summary>The failure raised from the value notification.</summary>
+        private readonly Exception _failure = failure;
+
+        /// <summary>Gets a task that completes once the observer has seen its value.</summary>
+        public TaskCompletionSource Observed { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        /// <inheritdoc/>
+        public override void OnNext(int value)
+        {
+            base.OnNext(value);
+            _ = Observed.TrySetResult();
+            throw _failure;
+        }
+    }
+
+    /// <summary>Observer that tears its own subscription down before it throws.</summary>
+    /// <param name = "failure">The failure the observer raises.</param>
+    private sealed class SelfDisposingThrowingObserver(Exception failure) : ThrowingObserver(failure)
+    {
+        /// <summary>Gets or sets the subscription the observer disposes from inside its value notification.</summary>
+        public IDisposable? Subscription { get; set; }
+
+        /// <inheritdoc/>
+        public override void OnNext(int value)
+        {
+            Subscription?.Dispose();
+            base.OnNext(value);
+        }
     }
 
     /// <summary>Thread-safe status trail used by async cancellation tests.</summary>
@@ -936,7 +1162,8 @@ public class SignalFromTaskTest
         {
             lock (_gate)
             {
-                _items.Add((position++, message));
+                _items.Add((position, message));
+                position++;
             }
         }
 

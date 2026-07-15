@@ -26,7 +26,8 @@ public sealed class HandlerSequencer : ISequencer
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Maintainability",
         "SST1422:Move this field into the method that uses it",
-        Justification = "Persistent lazy cache: the JNI runnable bridge is built once and reused across every Post call, so it cannot be a method local.")]
+        Justification =
+            "Persistent lazy cache: the JNI runnable bridge is built once and reused across every Post call, so it cannot be a method local.")]
     private Java.Lang.IRunnable? _drainRunnable;
 
     /// <summary>Initializes a new instance of the <see cref="HandlerSequencer"/> class.</summary>
@@ -76,7 +77,9 @@ public sealed class HandlerSequencer : ISequencer
     /// <param name="item">Work item to execute at the due time.</param>
     /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
     private void ScheduleDelayed(IWorkItem item, long dueTimestamp) =>
-        Handler.PostDelayed(() => DispatchSequencerState.RunIfActive(item), (long)DispatchSequencerState.DelayUntil(dueTimestamp).TotalMilliseconds);
+        Handler.PostDelayed(
+            () => DispatchSequencerState.RunIfActive(item),
+            (long)DispatchSequencerState.DelayUntil(dueTimestamp).TotalMilliseconds);
 
     /// <summary>Forwards the cached drain callback to the engine.</summary>
     private void RunDrain() => _state.RunDrain();

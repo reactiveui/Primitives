@@ -13,6 +13,12 @@ public partial class ObservableSubscriptionExtensionsTests
     /// <summary>Sentinel value emitted by single-value tests.</summary>
     private const int SentinelValue = 7;
 
+    /// <summary>Deadline handed to the blocking helpers when the source is expected to terminate.</summary>
+    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(5);
+
+    /// <summary>Deadline handed to the blocking helpers when the source never terminates, so the wait must expire.</summary>
+    private static readonly TimeSpan ExpiredTimeout = TimeSpan.FromMilliseconds(50);
+
     /// <summary>Verifies that <c>SubscribeGetValue</c> returns the last synchronously-emitted value.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -77,7 +83,7 @@ public partial class ObservableSubscriptionExtensionsTests
     [Test]
     public async Task WhenWaitForValueWithTimeout_ThenReturnsEmittedValue()
     {
-        var result = Observable.Return(SentinelValue).WaitForValue(TimeSpan.FromSeconds(5));
+        var result = Observable.Return(SentinelValue).WaitForValue(WaitTimeout);
         await Assert.That(result).IsEqualTo(SentinelValue);
     }
 
@@ -86,7 +92,7 @@ public partial class ObservableSubscriptionExtensionsTests
     [Test]
     public async Task WhenWaitForValueTimesOut_ThenTimeoutException()
     {
-        Action call = () => Observable.Never<int>().WaitForValue(TimeSpan.FromMilliseconds(50));
+        Action call = static () => Observable.Never<int>().WaitForValue(ExpiredTimeout);
         var ex = Assert.Throws<TimeoutException>(call);
         await Assert.That(ex).IsNotNull();
     }
@@ -99,7 +105,7 @@ public partial class ObservableSubscriptionExtensionsTests
         // Helper returns void on success; the absence of TimeoutException after a synchronous
         // completion is the contract under test. Use the value-returning sibling for the actual
         // assertion so TUnit has a real check.
-        Observable.Return(RxVoid.Default).WaitForCompletion(TimeSpan.FromSeconds(5));
+        Observable.Return(RxVoid.Default).WaitForCompletion(WaitTimeout);
         var subsequent = Observable.Return(RxVoid.Default).SubscribeGetValue();
         await Assert.That(subsequent).IsEqualTo(RxVoid.Default);
     }
@@ -110,7 +116,7 @@ public partial class ObservableSubscriptionExtensionsTests
     public async Task WhenWaitForCompletionWithError_ThenRethrows()
     {
         InvalidOperationException expected = new("wait");
-        var call = () => Observable.Throw<RxVoid>(expected).WaitForCompletion(TimeSpan.FromSeconds(5));
+        var call = () => Observable.Throw<RxVoid>(expected).WaitForCompletion(WaitTimeout);
         var ex = Assert.Throws<InvalidOperationException>(call);
         await Assert.That(ex).IsEqualTo(expected);
     }
@@ -120,7 +126,7 @@ public partial class ObservableSubscriptionExtensionsTests
     [Test]
     public async Task WhenWaitForCompletionTimesOut_ThenTimeoutException()
     {
-        var call = () => Observable.Never<RxVoid>().WaitForCompletion(TimeSpan.FromMilliseconds(50));
+        var call = static () => Observable.Never<RxVoid>().WaitForCompletion(ExpiredTimeout);
         var ex = Assert.Throws<TimeoutException>(call);
         await Assert.That(ex).IsNotNull();
     }
@@ -130,7 +136,7 @@ public partial class ObservableSubscriptionExtensionsTests
     [Test]
     public async Task WhenWaitForErrorNormalCompletion_ThenReturnsNull()
     {
-        var error = Observable.Return(SentinelValue).WaitForError(TimeSpan.FromSeconds(5));
+        var error = Observable.Return(SentinelValue).WaitForError(WaitTimeout);
         await Assert.That(error).IsNull();
     }
 
@@ -149,7 +155,7 @@ public partial class ObservableSubscriptionExtensionsTests
     public async Task WhenWaitForErrorSourceErrors_ThenReturnsCapturedError()
     {
         InvalidOperationException expected = new("captured");
-        var error = Observable.Throw<int>(expected).WaitForError(TimeSpan.FromSeconds(5));
+        var error = Observable.Throw<int>(expected).WaitForError(WaitTimeout);
         await Assert.That(error).IsEqualTo(expected);
     }
 
@@ -168,7 +174,7 @@ public partial class ObservableSubscriptionExtensionsTests
     [Test]
     public async Task WhenWaitForErrorTimesOut_ThenTimeoutException()
     {
-        Action call = () => Observable.Never<int>().WaitForError(TimeSpan.FromMilliseconds(50));
+        Action call = static () => Observable.Never<int>().WaitForError(ExpiredTimeout);
         var ex = Assert.Throws<TimeoutException>(call);
         await Assert.That(ex).IsNotNull();
     }

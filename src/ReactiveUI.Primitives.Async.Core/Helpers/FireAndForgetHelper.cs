@@ -17,9 +17,11 @@ public static class FireAndForgetHelper
     /// <summary>Executes an async action as fire-and-forget, swallowing all exceptions.</summary>
     /// <param name="action">The async action to execute.</param>
     [SuppressMessage(
-        "Major Bug",
-        "S3168:\"async\" methods should not return \"void\"",
-        Justification = "This is a fire-and-forget helper.")]
+        "Concurrency",
+        "SST1905:Do not use async void",
+        Justification =
+            "Intentional fire-and-forget helper. There is no caller to hand a Task back to; failures are routed to the "
+            + "global handler instead. Returning Task would defeat the fire-and-forget contract this helper exists to provide.")]
     [SuppressMessage(
         "ReSharper",
         "AsyncVoidMethod",

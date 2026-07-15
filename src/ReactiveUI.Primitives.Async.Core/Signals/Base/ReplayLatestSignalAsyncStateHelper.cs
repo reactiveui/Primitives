@@ -17,12 +17,15 @@ internal static class ReplayLatestSignalAsyncStateHelper
     /// <param name="value">The value to publish.</param>
     /// <param name="cancellationToken">A token that can cancel the operation.</param>
     /// <returns>A task that represents the asynchronous notification.</returns>
+    /// <exception cref="OperationCanceledException">The signal has been disposed.</exception>
     public static async ValueTask OnNextAsync<T>(
         ReplayLatestSignalAsyncState<T> state,
         SignalBroadcastKind kind,
         T value,
         CancellationToken cancellationToken)
     {
+        state.DisposedCancellationToken.ThrowIfCancellationRequested();
+
         var token = GetOperationCancellationToken(state, cancellationToken, out var linkedCts);
         try
         {
@@ -57,12 +60,15 @@ internal static class ReplayLatestSignalAsyncStateHelper
     /// <param name="error">The recoverable error to publish.</param>
     /// <param name="cancellationToken">A token that can cancel the operation.</param>
     /// <returns>A task that represents the asynchronous notification.</returns>
+    /// <exception cref="OperationCanceledException">The signal has been disposed.</exception>
     public static async ValueTask OnErrorResumeAsync<T>(
         ReplayLatestSignalAsyncState<T> state,
         SignalBroadcastKind kind,
         Exception error,
         CancellationToken cancellationToken)
     {
+        state.DisposedCancellationToken.ThrowIfCancellationRequested();
+
         var token = GetOperationCancellationToken(state, cancellationToken, out var linkedCts);
         try
         {
@@ -77,7 +83,8 @@ internal static class ReplayLatestSignalAsyncStateHelper
                 observers = state.Observers;
             }
 
-            await SignalAsyncStateHelper.BroadcastOnErrorResumeAsync(kind, observers, error, token).ConfigureAwait(false);
+            await SignalAsyncStateHelper.BroadcastOnErrorResumeAsync(kind, observers, error, token)
+                .ConfigureAwait(false);
         }
         finally
         {
@@ -91,13 +98,16 @@ internal static class ReplayLatestSignalAsyncStateHelper
     /// <param name="kind">The broadcast mode for observer notifications.</param>
     /// <param name="result">The completion result to publish.</param>
     /// <returns>A task that represents the asynchronous notification.</returns>
+    /// <exception cref="OperationCanceledException">The signal has been disposed.</exception>
     public static async ValueTask OnCompletedAsync<T>(
         ReplayLatestSignalAsyncState<T> state,
         SignalBroadcastKind kind,
         Result result)
     {
+        state.DisposedCancellationToken.ThrowIfCancellationRequested();
+
         ImmutableArray<IObserverAsync<T>> observers;
-        using (await state.Gate.EnterAsync(state.DisposedCts.Token).ConfigureAwait(false))
+        using (await state.Gate.EnterAsync(state.DisposedCancellationToken).ConfigureAwait(false))
         {
             if (state.Result is not null)
             {
@@ -134,6 +144,8 @@ internal static class ReplayLatestSignalAsyncStateHelper
     /// <param name="observer">The observer to subscribe.</param>
     /// <param name="cancellationToken">A token that can cancel the operation.</param>
     /// <returns>The subscription handle for the observer.</returns>
+    /// <exception cref="OperationCanceledException">The signal has been disposed, or
+    /// <paramref name="cancellationToken"/> was cancelled.</exception>
     public static async ValueTask<IAsyncDisposable> SubscribeAsync<T>(
         ReplayLatestSignalAsyncState<T> state,
         IObserverAsync<T> observer,
@@ -185,7 +197,7 @@ internal static class ReplayLatestSignalAsyncStateHelper
         CancellationToken cancellationToken,
         out CancellationTokenSource? linkedCts)
     {
-        var disposedToken = state.DisposedCts.Token;
+        var disposedToken = state.DisposedCancellationToken;
         if (!cancellationToken.CanBeCanceled || cancellationToken == disposedToken)
         {
             linkedCts = null;

@@ -68,7 +68,9 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
     /// <param name="source">The source state signal.</param>
     /// <param name="selector">The projection applied to each source value.</param>
     /// <returns>The fully-initialized projected read-only state.</returns>
-    public static ProjectedReadOnlyState<TSource, TResult> Create(StateSignal<TSource> source, Func<TSource, TResult> selector)
+    public static ProjectedReadOnlyState<TSource, TResult> Create(
+        StateSignal<TSource> source,
+        Func<TSource, TResult> selector)
     {
         ArgumentExceptionHelper.ThrowIfNull(source);
 
@@ -222,38 +224,33 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
             return;
         }
 
-        throw new ObjectDisposedException("ProjectedReadOnlyState");
+        throw new ObjectDisposedException(nameof(ProjectedReadOnlyState<,>));
     }
 
     /// <summary>Projection subscription.</summary>
-    private sealed class Subscription : IDisposable
+    /// <param name="parent">Parent projection.</param>
+    /// <param name="observer">Observer to remove.</param>
+    private sealed class Subscription(ProjectedReadOnlyState<TSource, TResult> parent, IObserver<TResult> observer)
+        : IDisposable
     {
         /// <summary>Parent projection.</summary>
-        private ProjectedReadOnlyState<TSource, TResult>? _parent;
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "Back-reference to the parent projection; unsubscribed, not owned.")]
+        private ProjectedReadOnlyState<TSource, TResult>? _parent = parent;
 
         /// <summary>Observer to remove.</summary>
-        private IObserver<TResult>? _observer;
-
-        /// <summary>Initializes a new instance of the <see cref="Subscription"/> class.</summary>
-        /// <param name="parent">Parent projection.</param>
-        /// <param name="observer">Observer to remove.</param>
-        public Subscription(ProjectedReadOnlyState<TSource, TResult> parent, IObserver<TResult> observer)
-        {
-            _parent = parent;
-            _observer = observer;
-        }
+        private IObserver<TResult>? _observer = observer;
 
         /// <inheritdoc/>
         public void Dispose()
         {
-            var parent = Interlocked.Exchange(ref _parent, null);
-            var observer = Interlocked.Exchange(ref _observer, null);
-            if (parent is null || observer is null)
+            var parentState = Interlocked.Exchange(ref _parent, null);
+            var observerState = Interlocked.Exchange(ref _observer, null);
+            if (parentState is null || observerState is null)
             {
                 return;
             }
 
-            parent.Remove(observer);
+            parentState.Remove(observerState);
         }
     }
 }

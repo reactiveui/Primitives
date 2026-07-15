@@ -7,7 +7,6 @@ using BenchmarkDotNet.Attributes;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
-
 using RxDisposable = System.Reactive.Disposables.Disposable;
 using RxObservable = System.Reactive.Linq.Observable;
 
@@ -29,7 +28,7 @@ public class FactoryAdapterExpansionBenchmarks
     public int PrimitivesCreateSubscribe()
     {
         IntSignalWitness observer = new();
-        using var subscription = Signal.Create<int>(target =>
+        using var subscription = Signal.Create<int>(static target =>
         {
             target.OnNext(Value);
             target.OnCompleted();
@@ -44,7 +43,7 @@ public class FactoryAdapterExpansionBenchmarks
     public int SystemReactiveCreateSubscribe()
     {
         IntSignalWitness observer = new();
-        using var subscription = RxObservable.Create<int>(target =>
+        using var subscription = RxObservable.Create<int>(static target =>
         {
             target.OnNext(Value);
             target.OnCompleted();
@@ -74,7 +73,7 @@ public class FactoryAdapterExpansionBenchmarks
     public int PrimitivesCreateSafeSubscribe()
     {
         IntSignalWitness observer = new();
-        using var subscription = Signal.CreateSafe<int>(target =>
+        using var subscription = Signal.CreateSafe<int>(static target =>
         {
             target.OnNext(Value);
             target.OnCompleted();
@@ -89,7 +88,7 @@ public class FactoryAdapterExpansionBenchmarks
     public int PrimitivesDeferSubscribe()
     {
         IntSignalWitness observer = new();
-        using var subscription = Signal.Lazy(() => Signal.Sequence(1, Count)).Subscribe(observer);
+        using var subscription = Signal.Lazy(static () => Signal.Sequence(1, Count)).Subscribe(observer);
         return observer.Total;
     }
 
@@ -119,7 +118,7 @@ public class FactoryAdapterExpansionBenchmarks
     public int PrimitivesStartSubscribe()
     {
         IntSignalWitness observer = new();
-        using var subscription = Signal.Start(() => Value, Sequencer.Immediate).Subscribe(observer);
+        using var subscription = Signal.Start(static () => Value, Sequencer.Immediate).Subscribe(observer);
         return observer.Total;
     }
 
@@ -129,7 +128,8 @@ public class FactoryAdapterExpansionBenchmarks
     public int SystemReactiveStartSubscribe()
     {
         IntSignalWitness observer = new();
-        using var subscription = RxObservable.Start(static () => Value, ImmediateScheduler.Instance).Subscribe(observer);
+        using var subscription =
+            RxObservable.Start(static () => Value, ImmediateScheduler.Instance).Subscribe(observer);
         return observer.Total;
     }
 
@@ -139,7 +139,7 @@ public class FactoryAdapterExpansionBenchmarks
     public int R3StartSubscribe()
     {
         IntR3Witness observer = new();
-        using var subscription = R3.Observable.FromAsync(static _ => new ValueTask<int>(Value), configureAwait: false)
+        using var subscription = R3.Observable.FromAsync(static _ => new ValueTask<int>(Value), false)
             .Subscribe(observer);
         return observer.Total;
     }
@@ -150,7 +150,8 @@ public class FactoryAdapterExpansionBenchmarks
     public int PrimitivesUnfoldSubscribe()
     {
         IntSignalWitness observer = new();
-        using var subscription = Signal.Unfold(0, static state => state < Count, static state => state + 1, static state => state)
+        using var subscription = Signal
+            .Unfold(0, static state => state < Count, static state => state + 1, static state => state)
             .Subscribe(observer);
         return observer.Total;
     }
@@ -195,7 +196,8 @@ public class FactoryAdapterExpansionBenchmarks
     public int PrimitivesUseSubscribe()
     {
         IntSignalWitness observer = new();
-        using var subscription = Signal.Use(static () => EmptyDisposable.Instance, static _ => Signal.Emit(Value)).Subscribe(observer);
+        using var subscription = Signal.Use(static () => EmptyDisposable.Instance, static _ => Signal.Emit(Value))
+            .Subscribe(observer);
         return observer.Total;
     }
 
@@ -205,7 +207,8 @@ public class FactoryAdapterExpansionBenchmarks
     public int SystemReactiveUseSubscribe()
     {
         IntSignalWitness observer = new();
-        using var subscription = RxObservable.Using(static () => RxDisposable.Empty, static _ => RxObservable.Return(Value))
+        using var subscription = RxObservable
+            .Using(static () => RxDisposable.Empty, static _ => RxObservable.Return(Value))
             .Subscribe(observer);
         return observer.Total;
     }
@@ -229,7 +232,8 @@ public class FactoryAdapterExpansionBenchmarks
     /// <summary>Benchmarks async-enumerable adaptation.</summary>
     /// <returns>The number of values collected.</returns>
     [Benchmark]
-    public async Task<int> PrimitivesFromAsyncEnumerableSubscribeAsync() => (await Signal.FromAsyncEnumerable(ValuesAsync()).CollectArrayAsync().ConfigureAwait(false)).Length;
+    public async Task<int> PrimitivesFromAsyncEnumerableSubscribeAsync() =>
+        (await Signal.FromAsyncEnumerable(ValuesAsync()).CollectArrayAsync().ConfigureAwait(false)).Length;
 
     /// <summary>Benchmarks async-enumerable adaptation using System.Reactive create semantics.</summary>
     /// <returns>The number of values collected.</returns>

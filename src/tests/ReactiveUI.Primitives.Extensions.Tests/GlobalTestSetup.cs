@@ -10,6 +10,9 @@ internal static class GlobalTestSetup
     /// <summary>The worker-thread floor for the test process; see <see cref="ConfigureDefaults"/>.</summary>
     private const int MinPoolThreads = 32;
 
+    /// <summary>The per-test time cap for the whole assembly; see <see cref="ConfigureDefaults"/>.</summary>
+    private static readonly TimeSpan DefaultTestTimeout = TimeSpan.FromSeconds(60);
+
     /// <summary>
     /// Caps every test at 60 seconds and raises the thread-pool worker floor before any test runs.
     /// <para>
@@ -31,7 +34,7 @@ internal static class GlobalTestSetup
     [Before(TestDiscovery)]
     public static void ConfigureDefaults(BeforeTestDiscoveryContext context)
     {
-        context.Settings.Timeouts.DefaultTestTimeout = TimeSpan.FromSeconds(60);
+        context.Settings.Timeouts.DefaultTestTimeout = DefaultTestTimeout;
 
         ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
         _ = ThreadPool.SetMinThreads(

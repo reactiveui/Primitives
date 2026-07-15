@@ -26,6 +26,9 @@ public class WhileObservableTests
     /// <summary>Maximum tolerated extra iterations after Dispose() returns.</summary>
     private const int MaxStragglerIterations = 10;
 
+    /// <summary>Longest a test waits for an asynchronous signal before failing.</summary>
+    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
+
     /// <summary>Verifies that the inline form runs until the predicate returns <c>false</c>.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -55,7 +58,7 @@ public class WhileObservableTests
         using var sub = ReactiveExtensions.While(() => remaining > 0, () => remaining--, TaskPoolSequencer.Default)
             .Subscribe(_ => emitted++, () => completed.TrySetResult(emitted));
 
-        var final = await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var final = await completed.Task.WaitAsync(GuardTimeout);
         await Assert.That(final).IsEqualTo(IterationCount);
     }
 
@@ -101,7 +104,7 @@ public class WhileObservableTests
                 TaskPoolSequencer.Default)
             .Subscribe(static _ => { });
 
-        await gate.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await gate.Task.WaitAsync(GuardTimeout);
         sub.Dispose();
 
         var snapshot = Volatile.Read(ref ran);

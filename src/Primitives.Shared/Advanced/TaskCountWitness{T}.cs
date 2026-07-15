@@ -53,7 +53,11 @@ public sealed class TaskCountWitness<T> : IObserver<T>, IDisposable
 
     /// <summary>Registers cancellation after construction.</summary>
     public void RegisterCancellation() =>
-        TaskTerminalWitnessHelper.RegisterCancellation(this, static state => ((TaskCountWitness<T>)state!).Cancel(), ref _registration, _cancellationToken);
+        TaskTerminalWitnessHelper.RegisterCancellation(
+            this,
+            static state => ((TaskCountWitness<T>)state!).Cancel(),
+            ref _registration,
+            _cancellationToken);
 
     /// <summary>Assigns the source subscription.</summary>
     /// <param name="subscription">The source subscription.</param>

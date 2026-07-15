@@ -10,14 +10,11 @@ using PackageContinuation = ReactiveUI.Extensions.Continuation;
 using PackageExtensions = ReactiveUI.Extensions.ReactiveExtensions;
 using PackageObservables = ReactiveUI.Extensions.Observables;
 using PackageObserverExtensions = ReactiveUI.Extensions.ObserverExtensions;
-using PackageSubscriptionExtensions = ReactiveUI.Extensions.ObservableSubscriptionExtensions;
 using PrimitivesContinuation = ReactiveUI.Primitives.Extensions.Continuation;
 using PrimitivesExtensions = ReactiveUI.Primitives.Extensions.ReactiveExtensions;
 using PrimitivesObservables = ReactiveUI.Primitives.Extensions.Observables;
 using PrimitivesObserverExtensions = ReactiveUI.Primitives.Extensions.ObserverExtensions;
-using PrimitivesSubscriptionExtensions = ReactiveUI.Primitives.Extensions.ObservableSubscriptionExtensions;
 using RxObservable = System.Reactive.Linq.Observable;
-using RxUnit = System.Reactive.Unit;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
@@ -46,23 +43,34 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     private static int RunBufferUntilIdle(ExtensionsLibrary library) =>
         library == ExtensionsLibrary.Primitives
             ? DrainList(PrimitivesExtensions.BufferUntilIdle(ArraySource(library), TimeSpan.Zero, Sequencer.Immediate))
-            : DrainList(PackageExtensions.BufferUntilIdle(ArraySource(library), TimeSpan.Zero, ImmediateScheduler.Instance));
+            : DrainList(PackageExtensions.BufferUntilIdle(
+                ArraySource(library),
+                TimeSpan.Zero,
+                ImmediateScheduler.Instance));
 
     /// <summary>Executes the <c>RunBufferUntilInactive</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>
     /// <returns>The <c>RunBufferUntilInactive</c> result.</returns>
     private static int RunBufferUntilInactive(ExtensionsLibrary library) =>
         library == ExtensionsLibrary.Primitives
-            ? DrainList(PrimitivesExtensions.BufferUntilInactive(ArraySource(library), TimeSpan.Zero, Sequencer.Immediate))
-            : DrainList(PackageExtensions.BufferUntilInactive(ArraySource(library), TimeSpan.Zero, ImmediateScheduler.Instance));
+            ? DrainList(
+                PrimitivesExtensions.BufferUntilInactive(ArraySource(library), TimeSpan.Zero, Sequencer.Immediate))
+            : DrainList(PackageExtensions.BufferUntilInactive(
+                ArraySource(library),
+                TimeSpan.Zero,
+                ImmediateScheduler.Instance));
 
     /// <summary>Executes the <c>RunCatchAndReturn</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>
     /// <returns>The <c>RunCatchAndReturn</c> result.</returns>
     private static int RunCatchAndReturn(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
-            ? PrimitivesExtensions.CatchAndReturn<int, InvalidOperationException>(ThrowInt(library), static _ => Fallback)
-            : PackageExtensions.CatchAndReturn<int, InvalidOperationException>(ThrowInt(library), static _ => Fallback));
+            ? PrimitivesExtensions.CatchAndReturn<int, InvalidOperationException>(
+                ThrowInt(library),
+                static _ => Fallback)
+            : PackageExtensions.CatchAndReturn<int, InvalidOperationException>(
+                ThrowInt(library),
+                static _ => Fallback));
 
     /// <summary>Executes the <c>RunCatchIgnore</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>
@@ -180,8 +188,16 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>RunDebounceUntil</c> result.</returns>
     private static int RunDebounceUntil(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
-            ? PrimitivesExtensions.DebounceUntil(ArraySource(library), TimeSpan.Zero, static value => value >= Match, Sequencer.Immediate)
-            : PackageExtensions.DebounceUntil(ArraySource(library), TimeSpan.Zero, static value => value >= Match, ImmediateScheduler.Instance));
+            ? PrimitivesExtensions.DebounceUntil(
+                ArraySource(library),
+                TimeSpan.Zero,
+                static value => value >= Match,
+                Sequencer.Immediate)
+            : PackageExtensions.DebounceUntil(
+                ArraySource(library),
+                TimeSpan.Zero,
+                static value => value >= Match,
+                ImmediateScheduler.Instance));
 
     /// <summary>Executes the <c>RunDetectStale</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>
@@ -192,7 +208,8 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         {
             VirtualClock clock = new();
             CountingSignalWitness<Stale<int>> observer = new();
-            using var subscription = PrimitivesExtensions.DetectStale(Signal.Silent<int>(), Tick, clock).Subscribe(observer);
+            using var subscription =
+                PrimitivesExtensions.DetectStale(Signal.Silent<int>(), Tick, clock).Subscribe(observer);
             clock.AdvanceBy(Tick);
             return observer.Count + observer.CompletionCount;
         }
@@ -211,9 +228,10 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     private static int RunDoOnDispose(ExtensionsLibrary library)
     {
         var count = 0;
-        using var subscription = (library == ExtensionsLibrary.Primitives
-            ? PrimitivesExtensions.DoOnDispose(ArraySource(library), () => count++)
-            : PackageExtensions.DoOnDispose(ArraySource(library), () => count++))
+        using var subscription = (
+                library == ExtensionsLibrary.Primitives
+                    ? PrimitivesExtensions.DoOnDispose(ArraySource(library), () => count++)
+                    : PackageExtensions.DoOnDispose(ArraySource(library), () => count++))
             .Subscribe(new IntSignalWitness());
         return count;
     }
@@ -273,13 +291,13 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         return DrainInt(library == ExtensionsLibrary.Primitives
             ? PrimitivesExtensions.FirstMatchFromCandidates(
                 candidates,
-                static value => PrimitivesObservables.Return(value),
+                PrimitivesObservables.Return,
                 static value => value * CandidateMultiplier,
                 static value => value >= Match,
                 Fallback)
             : PackageExtensions.FirstMatchFromCandidates(
                 candidates,
-                static value => PackageObservables.Return(value),
+                PackageObservables.Return,
                 static value => value * CandidateMultiplier,
                 static value => value >= Match,
                 Fallback));
@@ -306,16 +324,24 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>RunGetMax</c> result.</returns>
     private static int RunGetMax(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
-            ? PrimitivesExtensions.GetMax(PrimitivesObservables.Return(FirstValue), PrimitivesObservables.Return(SecondValue))
-            : PackageExtensions.GetMax(PackageObservables.Return(FirstValue), PackageObservables.Return(SecondValue)));
+            ? PrimitivesExtensions.GetMax(
+                PrimitivesObservables.Return(FirstValue),
+                PrimitivesObservables.Return(SecondValue))
+            : PackageExtensions.GetMax(
+                PackageObservables.Return(FirstValue),
+                PackageObservables.Return(SecondValue)));
 
     /// <summary>Executes the <c>RunGetMin</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>
     /// <returns>The <c>RunGetMin</c> result.</returns>
     private static int RunGetMin(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
-            ? PrimitivesExtensions.GetMin(PrimitivesObservables.Return(FirstValue), PrimitivesObservables.Return(SecondValue))
-            : PackageExtensions.GetMin(PackageObservables.Return(FirstValue), PackageObservables.Return(SecondValue)));
+            ? PrimitivesExtensions.GetMin(
+                PrimitivesObservables.Return(FirstValue),
+                PrimitivesObservables.Return(SecondValue))
+            : PackageExtensions.GetMin(
+                PackageObservables.Return(FirstValue),
+                PackageObservables.Return(SecondValue)));
 
     /// <summary>Executes the <c>RunHeartbeat</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>
@@ -326,7 +352,8 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         {
             VirtualClock clock = new();
             CountingSignalWitness<Heartbeat<int>> observer = new();
-            using var subscription = PrimitivesExtensions.Heartbeat(Signal.Silent<int>(), Tick, clock).Subscribe(observer);
+            using var subscription =
+                PrimitivesExtensions.Heartbeat(Signal.Silent<int>(), Tick, clock).Subscribe(observer);
             clock.AdvanceBy(Tick);
             return observer.Count + observer.CompletionCount;
         }
@@ -388,8 +415,18 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The <c>RunOnErrorRetry</c> result.</returns>
     private static int RunOnErrorRetry(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
-            ? PrimitivesExtensions.OnErrorRetry<int, InvalidOperationException>(ArraySource(library), static _ => { }, 1, TimeSpan.Zero, Sequencer.Immediate)
-            : PackageExtensions.OnErrorRetry<int, InvalidOperationException>(ArraySource(library), static _ => { }, 1, TimeSpan.Zero, ImmediateScheduler.Instance));
+            ? PrimitivesExtensions.OnErrorRetry<int, InvalidOperationException>(
+                ArraySource(library),
+                static _ => { },
+                1,
+                TimeSpan.Zero,
+                Sequencer.Immediate)
+            : PackageExtensions.OnErrorRetry<int, InvalidOperationException>(
+                ArraySource(library),
+                static _ => { },
+                1,
+                TimeSpan.Zero,
+                ImmediateScheduler.Instance));
 
     /// <summary>Executes the <c>RunOnNext</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>

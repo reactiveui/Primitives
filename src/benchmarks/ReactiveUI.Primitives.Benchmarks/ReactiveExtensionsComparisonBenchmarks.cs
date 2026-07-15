@@ -31,6 +31,9 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <summary>The concurrency cap used by concurrent scenarios.</summary>
     private const int MaxConcurrency = 4;
 
+    /// <summary>The sliding window size used to rebuild pairwise semantics from buffering.</summary>
+    private const int PairwiseWindow = 2;
+
     /// <summary>The multiplier used by where-select scenarios.</summary>
     private const int ResultMultiplier = 3;
 
@@ -103,7 +106,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         Scenario("WhereFalse", SystemReactiveWhereFalse),
         Scenario("WhereIsNotNull", SystemReactiveWhereIsNotNull),
         Scenario("WhereSelect", SystemReactiveWhereSelect),
-        Scenario("WhereTrue", SystemReactiveWhereTrue),
+        Scenario("WhereTrue", SystemReactiveWhereTrue)
     ];
 
     /// <summary>The R3 comparison scenario list.</summary>
@@ -120,7 +123,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         Scenario("WhereFalse", R3WhereFalse),
         Scenario("WhereIsNotNull", R3WhereIsNotNull),
         Scenario("WhereSelect", R3WhereSelect),
-        Scenario("WhereTrue", R3WhereTrue),
+        Scenario("WhereTrue", R3WhereTrue)
     ];
 
     /// <summary>Identifies the library implementation used by paired scenario runners.</summary>
@@ -130,7 +133,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         Primitives,
 
         /// <summary>The ReactiveUI.Extensions implementation.</summary>
-        ReactiveUIExtensions,
+        ReactiveUIExtensions
     }
 
     /// <summary>Gets the ReactiveUI.Primitives scenarios.</summary>
@@ -157,6 +160,13 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The benchmark checksum.</returns>
     [Benchmark]
     [ArgumentsSource(nameof(ReactiveUIExtensionsScenarios))]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "SST2318:Members should not have identical bodies",
+        Justification =
+            "Distinct BenchmarkDotNet benchmarks that measure the same operation across libraries. The method body is "
+            + "identical by design; the library being compared is supplied by each method's own [ArgumentsSource]. They "
+            + "must stay separate so BenchmarkDotNet reports one row per library.")]
     public int ReactiveUIExtensions(ExtensionScenario scenario) => scenario.Run();
 
     /// <summary>Runs a System.Reactive comparison scenario.</summary>
@@ -164,6 +174,13 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The benchmark checksum.</returns>
     [Benchmark]
     [ArgumentsSource(nameof(SystemReactiveScenarios))]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "SST2318:Members should not have identical bodies",
+        Justification =
+            "Distinct BenchmarkDotNet benchmarks that measure the same operation across libraries. The method body is "
+            + "identical by design; the library being compared is supplied by each method's own [ArgumentsSource]. They "
+            + "must stay separate so BenchmarkDotNet reports one row per library.")]
     public int SystemReactive(ExtensionScenario scenario) => scenario.Run();
 
     /// <summary>Runs an R3 comparison scenario.</summary>
@@ -171,6 +188,13 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <returns>The benchmark checksum.</returns>
     [Benchmark]
     [ArgumentsSource(nameof(R3Scenarios))]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "SST2318:Members should not have identical bodies",
+        Justification =
+            "Distinct BenchmarkDotNet benchmarks that measure the same operation across libraries. The method body is "
+            + "identical by design; the library being compared is supplied by each method's own [ArgumentsSource]. They "
+            + "must stay separate so BenchmarkDotNet reports one row per library.")]
     public int R3Library(ExtensionScenario scenario) => scenario.Run();
 
     /// <summary>Creates the full paired library scenario list.</summary>
@@ -179,7 +203,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     private static ExtensionScenario[] CreateLibraryScenarios(ExtensionsLibrary library) =>
     [
         ..CreateCoreLibraryScenarios(library),
-        ..CreateSupplementalLibraryScenarios(library),
+        ..CreateSupplementalLibraryScenarios(library)
     ];
 
     /// <summary>Creates the core paired library scenario list.</summary>
@@ -222,7 +246,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         Scenario("ObserveOnSafe", () => RunObserveOnSafe(library)),
         Scenario("OnErrorRetry", () => RunOnErrorRetry(library)),
         Scenario("OnNext", () => RunOnNext(library)),
-        Scenario("Pairwise", () => RunPairwise(library)),
+        Scenario("Pairwise", () => RunPairwise(library))
     ];
 
     /// <summary>Creates the supplemental paired library scenario list.</summary>
@@ -280,7 +304,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         Scenario("WhereSelect", () => RunWhereSelect(library)),
         Scenario("WhereTrue", () => RunWhereTrue(library)),
         Scenario("While", () => RunWhile(library)),
-        Scenario("WithLimitedConcurrency", () => RunWithLimitedConcurrency(library)),
+        Scenario("WithLimitedConcurrency", () => RunWithLimitedConcurrency(library))
     ];
 
     /// <summary>Creates a named benchmark scenario.</summary>

@@ -41,8 +41,8 @@ public class SelectManyThenObservableTests
         List<int> results = [];
         using var sub = Observable.Return(SourceValue)
             .SelectManyThen(
-            static x => Observable.Return(x * IntermediateMultiplier),
-            static mid => Observable.Return(mid * FinalMultiplier)).Subscribe(results.Add);
+                static x => Observable.Return(x * IntermediateMultiplier),
+                static mid => Observable.Return(mid * FinalMultiplier)).Subscribe(results.Add);
         await Assert.That(results).IsCollectionEqualTo([SourceValue * IntermediateMultiplier * FinalMultiplier]);
     }
 
@@ -68,7 +68,7 @@ public class SelectManyThenObservableTests
         Exception? caught = null;
         InvalidOperationException expected = new(SecondProjectionFailedMessage);
         using var sub = Observable.Return(SourceValue)
-            .SelectManyThen<int, int, int>(static x => Observable.Return(x), _ => throw expected).Subscribe(
+            .SelectManyThen<int, int, int>(Observable.Return, _ => throw expected).Subscribe(
                 static _ => { },
                 ex => caught = ex);
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -82,7 +82,7 @@ public class SelectManyThenObservableTests
         Subject<int> subject = new();
         Exception? caught = null;
         InvalidOperationException expected = new(SourceErrorMessage);
-        using var sub = subject.SelectManyThen(static x => Observable.Return(x), static x => Observable.Return(x))
+        using var sub = subject.SelectManyThen(Observable.Return, Observable.Return)
             .Subscribe(
                 static _ => { },
                 ex => caught = ex);
@@ -97,7 +97,7 @@ public class SelectManyThenObservableTests
     {
         Subject<int> subject = new();
         var completed = false;
-        using var sub = subject.SelectManyThen(static x => Observable.Return(x), static x => Observable.Return(x))
+        using var sub = subject.SelectManyThen(Observable.Return, Observable.Return)
             .Subscribe(
                 static _ => { },
                 () => completed = true);
@@ -114,14 +114,14 @@ public class SelectManyThenObservableTests
         InvalidOperationException expected = new(InnerErrorMessage);
         using var sub = Observable.Return(SourceValue)
             .SelectManyThen(
-            static _ => Observable.Throw<int>(new InvalidOperationException("first-inner")),
-            static x => Observable.Return(x)).Subscribe(
+                static _ => Observable.Throw<int>(new InvalidOperationException("first-inner")),
+                Observable.Return).Subscribe(
                 static _ => { },
                 ex => caught = ex);
         await Assert.That(caught).IsNotNull();
         Exception? caughtSecond = null;
         using var sub2 = Observable.Return(SourceValue)
-            .SelectManyThen(static x => Observable.Return(x), _ => Observable.Throw<int>(expected)).Subscribe(
+            .SelectManyThen(Observable.Return, _ => Observable.Throw<int>(expected)).Subscribe(
                 static _ => { },
                 ex => caughtSecond = ex);
         await Assert.That(caughtSecond).IsSameReferenceAs(expected);

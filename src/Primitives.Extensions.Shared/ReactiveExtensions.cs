@@ -16,12 +16,12 @@ namespace ReactiveUI.Primitives.Extensions;
 #endif
 
 /// <summary>Extension methods for Reactive objects.</summary>
-[SuppressMessage("Roslynator", "RCS1047:Non-asynchronous method name should not end with \'Async\'", Justification = "Existing API")]
-public static class ReactiveExtensions
+[SuppressMessage(
+    "Roslynator",
+    "RCS1047:Non-asynchronous method name should not end with \'Async\'",
+    Justification = "Existing API")]
+public static partial class ReactiveExtensions
 {
-    /// <summary>Default backoff factor for <see cref="RetryWithBackoff{T}(IObservable{T}, int, TimeSpan)"/>: each retry doubles the previous delay.</summary>
-    private const double DefaultBackoffFactor = 2.0;
-
     /// <summary>Default match timeout for regex filters created from string patterns.</summary>
     private static readonly TimeSpan DefaultRegexMatchTimeout = TimeSpan.FromSeconds(30);
 
@@ -32,12 +32,12 @@ public static class ReactiveExtensions
         /// <summary>Latest values of each sequence are all false.</summary>
         /// <returns>A sequence that emits true when all latest booleans are false.</returns>
         public IObservable<bool> CombineLatestValuesAreAllFalse() =>
-            new BooleanReduceObservable(sources, target: false);
+            new BooleanReduceObservable(sources, false);
 
         /// <summary>Latest values of each sequence are all true.</summary>
         /// <returns>A sequence that emits true when all latest booleans are true.</returns>
         public IObservable<bool> CombineLatestValuesAreAllTrue() =>
-            new BooleanReduceObservable(sources, target: true);
+            new BooleanReduceObservable(sources, true);
     }
 
     /// <summary>Emission operators for an enumerable source.</summary>
@@ -277,153 +277,9 @@ public static class ReactiveExtensions
         /// <param name="function">The function.</param>
         /// <returns>An IObservable of T.</returns>
         public IObservable<T> Schedule(TimeSpan dueTime, ISequencer scheduler, Func<T, T> function) =>
-            new ScheduledSourceObservable<T>(source, ScheduleConfig<T>.Delayed(scheduler, dueTime).WithTransform(function));
-
-        /// <summary>Repeats the source until it terminates successfully (alias of Retry).</summary>
-        /// <returns>Retried sequence.</returns>
-        public IObservable<T> OnErrorRetry()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-            return new RetryForeverObservable<T>(source);
-        }
-
-        /// <summary>When caught exception, do onError action and repeat observable sequence.</summary>
-        /// <typeparam name="TException">The type of the exception.</typeparam>
-        /// <param name="onError">The on error.</param>
-        /// <returns>A sequence that retries on error with optional delay.</returns>
-        public IObservable<T> OnErrorRetry<TException>(Action<TException> onError)
-            where TException : Exception =>
-            new RetryWithBackoffObservable<T>(
+            new ScheduledSourceObservable<T>(
                 source,
-                new(
-                    MaxRetries: int.MaxValue,
-                    InitialDelay: TimeSpan.Zero,
-                    BackoffFactor: 1.0,
-                    MaxDelay: null,
-                    Scheduler: Sequencer.Default,
-                    OnError: ex =>
-                    {
-                        if (ex is not TException tex)
-                        {
-                            return;
-                        }
-
-                        onError(tex);
-                    }));
-
-        /// <summary>When caught exception, do onError action and repeat observable sequence after delay time.</summary>
-        /// <typeparam name="TException">The type of the exception.</typeparam>
-        /// <param name="onError">The on error.</param>
-        /// <param name="delay">The delay.</param>
-        /// <returns>A sequence that retries on error with optional delay.</returns>
-        public IObservable<T> OnErrorRetry<TException>(Action<TException> onError, TimeSpan delay)
-            where TException : Exception =>
-            new RetryWithBackoffObservable<T>(
-                source,
-                new(
-                    MaxRetries: int.MaxValue,
-                    InitialDelay: delay,
-                    BackoffFactor: 1.0,
-                    MaxDelay: null,
-                    Scheduler: Sequencer.Default,
-                    OnError: ex =>
-                    {
-                        if (ex is not TException tex)
-                        {
-                            return;
-                        }
-
-                        onError(tex);
-                    }));
-
-        /// <summary>When caught exception, do onError action and repeat observable sequence during within retryCount.</summary>
-        /// <typeparam name="TException">The type of the exception.</typeparam>
-        /// <param name="onError">The on error.</param>
-        /// <param name="retryCount">The retry count.</param>
-        /// <returns>A sequence that retries on error with optional delay.</returns>
-        public IObservable<T> OnErrorRetry<TException>(Action<TException> onError, int retryCount)
-            where TException : Exception =>
-            new RetryWithBackoffObservable<T>(
-                source,
-                new(
-                    MaxRetries: retryCount,
-                    InitialDelay: TimeSpan.Zero,
-                    BackoffFactor: 1.0,
-                    MaxDelay: null,
-                    Scheduler: Sequencer.Default,
-                    OnError: ex =>
-                    {
-                        if (ex is not TException tex)
-                        {
-                            return;
-                        }
-
-                        onError(tex);
-                    }));
-
-        /// <summary>When caught exception, do onError action and repeat observable sequence after delay time during within retryCount.</summary>
-        /// <typeparam name="TException">The type of the exception.</typeparam>
-        /// <param name="onError">The on error.</param>
-        /// <param name="retryCount">The retry count.</param>
-        /// <param name="delay">The delay.</param>
-        /// <returns>A sequence that retries on error with optional delay.</returns>
-        public IObservable<T> OnErrorRetry<TException>(Action<TException> onError, int retryCount, TimeSpan delay)
-            where TException : Exception =>
-            new RetryWithBackoffObservable<T>(
-                source,
-                new(
-                    MaxRetries: retryCount,
-                    InitialDelay: delay,
-                    BackoffFactor: 1.0,
-                    MaxDelay: null,
-                    Scheduler: Sequencer.Default,
-                    OnError: ex =>
-                    {
-                        if (ex is not TException tex)
-                        {
-                            return;
-                        }
-
-                        onError(tex);
-                    }));
-
-        /// <summary>
-        /// When caught exception, do onError action and repeat observable sequence after delay
-        /// time(work on delayScheduler) during within retryCount.
-        /// </summary>
-        /// <typeparam name="TException">The type of the exception.</typeparam>
-        /// <param name="onError">The on error.</param>
-        /// <param name="retryCount">The retry count.</param>
-        /// <param name="delay">The delay.</param>
-        /// <param name="delayScheduler">The delay scheduler.</param>
-        /// <returns>A sequence that retries on error with optional delay.</returns>
-        public IObservable<T> OnErrorRetry<TException>(
-            Action<TException> onError,
-            int retryCount,
-            TimeSpan delay,
-            ISequencer delayScheduler)
-            where TException : Exception
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return new RetryWithBackoffObservable<T>(
-                source,
-                new(
-                    MaxRetries: retryCount,
-                    InitialDelay: delay,
-                    BackoffFactor: 1.0,
-                    MaxDelay: null,
-                    Scheduler: delayScheduler,
-                    OnError: ex =>
-                    {
-                        if (ex is not TException tex)
-                        {
-                            return;
-                        }
-
-                        onError(tex);
-                    }));
-        }
+                ScheduleConfig<T>.Delayed(scheduler, dueTime).WithTransform(function));
 
         /// <summary>Takes elements until predicate returns true for an element (inclusive) then completes.</summary>
         /// <param name="predicate">Predicate for completion.</param>
@@ -463,7 +319,7 @@ public static class ReactiveExtensions
         /// <returns><see cref="IDisposable"/> object used to unsubscribe from the observable sequence.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="onNext"/> or <paramref name="onCompleted"/> is <c>null</c>.</exception>
         public IDisposable SubscribeSynchronous(Func<T, ValueTask> onNext, Action onCompleted) =>
-            new SubscribeAsyncObservable<T>(source, onNext, null, onCompleted: onCompleted);
+            new SubscribeAsyncObservable<T>(source, onNext, null, onCompleted);
 
         /// <summary>Subscribes an element handler to an observable sequence synchronously.</summary>
         /// <param name="onNext">Action to invoke for each element in the observable sequence.</param>
@@ -507,7 +363,7 @@ public static class ReactiveExtensions
             "RCS1047:Non-asynchronous method name should not end with \'Async\'",
             Justification = "This is an existing method")]
         public IDisposable SubscribeAsync(Func<T, ValueTask> onNext, Action onCompleted) =>
-            new SubscribeAsyncObservable<T>(source, onNext, null, onCompleted: onCompleted);
+            new SubscribeAsyncObservable<T>(source, onNext, null, onCompleted);
 
         /// <summary>Subscribes allowing asynchronous operations to be executed without blocking the source.</summary>
         /// <param name="onNext">Action to invoke for each element in the observable sequence.</param>
@@ -555,72 +411,6 @@ public static class ReactiveExtensions
             ArgumentExceptionHelper.ThrowIfNull(fallbackFactory);
             return new CatchAndReturnWithFactoryObservable<T, TException>(source, fallbackFactory);
         }
-
-        /// <summary>Retries with exponential backoff.</summary>
-        /// <param name="maxRetries">Maximum number of retries.</param>
-        /// <param name="initialDelay">Initial backoff delay.</param>
-        /// <returns>Retried sequence with backoff.</returns>
-        public IObservable<T> RetryWithBackoff(int maxRetries, TimeSpan initialDelay) =>
-            new RetryWithBackoffObservable<T>(
-                source,
-                new(
-                    MaxRetries: maxRetries,
-                    InitialDelay: initialDelay,
-                    BackoffFactor: DefaultBackoffFactor,
-                    MaxDelay: null,
-                    Scheduler: Sequencer.Default,
-                    OnError: null));
-
-        /// <summary>Retries with exponential backoff.</summary>
-        /// <param name="maxRetries">Maximum number of retries.</param>
-        /// <param name="initialDelay">Initial backoff delay.</param>
-        /// <param name="backoffFactor">Multiplier for each retry (default 2).</param>
-        /// <param name="maxDelay">Optional maximum delay.</param>
-        /// <param name="scheduler">Scheduler (optional).</param>
-        /// <returns>Retried sequence with backoff.</returns>
-        public IObservable<T> RetryWithBackoff(
-            int maxRetries,
-            TimeSpan initialDelay,
-            double backoffFactor,
-            TimeSpan? maxDelay,
-            ISequencer? scheduler) =>
-            new RetryWithBackoffObservable<T>(
-                source,
-                new(
-                    MaxRetries: maxRetries,
-                    InitialDelay: initialDelay,
-                    BackoffFactor: backoffFactor,
-                    MaxDelay: maxDelay,
-                    Scheduler: scheduler ?? Sequencer.Default,
-                    OnError: null));
-
-        /// <summary>Retry with exponential.</summary>
-        /// <param name="retryCount">The retry count.</param>
-        /// <param name="delaySelector">The delay selector.</param>
-        /// <returns>An IObservable of T.</returns>
-        public IObservable<T> RetryWithDelay(int retryCount, Func<int, TimeSpan> delaySelector) =>
-            new RetryWithDelayObservable<T>(source, retryCount, delaySelector);
-
-        /// <summary>Retries the forever with delay.</summary>
-        /// <param name="delay">The delay.</param>
-        /// <returns>An IObservable of T.</returns>
-        public IObservable<T> RetryForeverWithDelay(TimeSpan delay) =>
-            new RetryWithDelayObservable<T>(source, int.MaxValue, _ => delay);
-
-        /// <summary>Retry with fixed backoff.</summary>
-        /// <param name="retryCount">The retry count.</param>
-        /// <param name="delay">The delay.</param>
-        /// <returns>An IObservable of T.</returns>
-        public IObservable<T> RetryWithFixedDelay(int retryCount, TimeSpan delay)
-            => new RetryWithBackoffObservable<T>(
-                source,
-                new(
-                    MaxRetries: retryCount,
-                    InitialDelay: delay,
-                    BackoffFactor: 1.0,
-                    MaxDelay: null,
-                    Scheduler: Sequencer.Default,
-                    OnError: null));
 
         /// <summary>Always replay the last value, even if the source hasnt produced one yet.</summary>
         /// <param name="initialValue">The initial value.</param>
@@ -881,13 +671,13 @@ public static class ReactiveExtensions
 
             if (sources.Length == 1)
             {
-                return new BinaryMinMaxObservable<T>(@this, sources[0], emitMaximum: true);
+                return new BinaryMinMaxObservable<T>(@this, sources[0], true);
             }
 
             var allSources = new IObservable<T>[sources.Length + 1];
             allSources[0] = @this;
             Array.Copy(sources, 0, allSources, 1, sources.Length);
-            return new MinMaxObservable<T>(allSources, emitMaximum: true);
+            return new MinMaxObservable<T>(allSources, true);
         }
 
         /// <summary>Gets the minimum from all sources.</summary>
@@ -902,13 +692,13 @@ public static class ReactiveExtensions
 
             if (sources.Length == 1)
             {
-                return new BinaryMinMaxObservable<T>(@this, sources[0], emitMaximum: false);
+                return new BinaryMinMaxObservable<T>(@this, sources[0], false);
             }
 
             var allSources = new IObservable<T>[sources.Length + 1];
             allSources[0] = @this;
             Array.Copy(sources, 0, allSources, 1, sources.Length);
-            return new MinMaxObservable<T>(allSources, emitMaximum: false);
+            return new MinMaxObservable<T>(allSources, false);
         }
     }
 
@@ -985,7 +775,7 @@ public static class ReactiveExtensions
         /// <param name="regexPattern">Regex pattern.</param>
         /// <returns>Filtered sequence.</returns>
         public IObservable<string> Filter(string regexPattern) =>
-            new FilterRegexObservable(source, new Regex(regexPattern, RegexOptions.None, DefaultRegexMatchTimeout));
+            new FilterRegexObservable(source, new(regexPattern, RegexOptions.None, DefaultRegexMatchTimeout));
 
         /// <summary>Filters strings by regex.</summary>
         /// <param name="regex">Regex.</param>
@@ -1147,7 +937,7 @@ public static class ReactiveExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(propertyExpression);
 
-            var member = (propertyExpression.Body as MemberExpression)
+            var member = propertyExpression.Body as MemberExpression
                          ?? throw new ArgumentException("Expression must be a property");
 
             return new PropertyChangedObservable<T, TProperty>(

@@ -238,22 +238,15 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     private static partial Regex EvenRegex();
 
     /// <summary>Provides a named benchmark scenario.</summary>
-    public sealed class ExtensionScenario
+    /// <param name="name">The scenario name.</param>
+    /// <param name="run">The delegate that runs the scenario.</param>
+    public sealed class ExtensionScenario(string name, Func<int> run)
     {
         /// <summary>Stores the scenario name.</summary>
-        private readonly string _name;
+        private readonly string _name = name;
 
         /// <summary>Stores the scenario delegate.</summary>
-        private readonly Func<int> _run;
-
-        /// <summary>Initializes a new instance of the <see cref="ExtensionScenario"/> class.</summary>
-        /// <param name="name">The scenario name.</param>
-        /// <param name="run">The delegate that runs the scenario.</param>
-        public ExtensionScenario(string name, Func<int> run)
-        {
-            _name = name;
-            _run = run;
-        }
+        private readonly Func<int> _run = run;
 
         /// <summary>Runs the scenario delegate.</summary>
         /// <returns>The benchmark checksum.</returns>

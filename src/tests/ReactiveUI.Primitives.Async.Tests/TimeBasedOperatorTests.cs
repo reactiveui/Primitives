@@ -10,11 +10,71 @@ namespace ReactiveUI.Primitives.Async.Tests;
 /// <summary>Tests for time-based operators: Throttle, Delay, Timeout, Timer, Interval.</summary>
 public class TimeBasedOperatorTests
 {
+    /// <summary>Message of the resumable error raised by the source.</summary>
+    private const string TestErrorMessage = "test error";
+
+    /// <summary>Message thrown by an observer from the immediate-fire callback.</summary>
+    private const string ImmediateFireObserverExplodedMessage = "immediate fire observer exploded";
+
+    /// <summary>Message thrown by an observer from its completion callback.</summary>
+    private const string CompletionFailedMessage = "completion-failed";
+
     /// <summary>Expected value42 for assertions.</summary>
     private const int ExpectedValue42 = 42;
 
     /// <summary>Fallback value99 (99).</summary>
     private const int FallbackValue99 = 99;
+
+    /// <summary>Maximum time a test waits for an emission that is expected to arrive.</summary>
+    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(10);
+
+    /// <summary>Maximum time a test waits for a completion or an unhandled-exception report.</summary>
+    private static readonly TimeSpan CompletionWaitTimeout = TimeSpan.FromSeconds(5);
+
+    /// <summary>Window given to confirm that no further emissions arrive after disposal.</summary>
+    private static readonly TimeSpan NoFurtherEmissionWindow = TimeSpan.FromMilliseconds(200);
+
+    /// <summary>Throttle window used by the tests that emit a burst and expect one value.</summary>
+    private static readonly TimeSpan BurstThrottleWindow = TimeSpan.FromMilliseconds(100);
+
+    /// <summary>Throttle window used by the tests that wait for the throttled value to land.</summary>
+    private static readonly TimeSpan ThrottleWindow = TimeSpan.FromMilliseconds(50);
+
+    /// <summary>Throttle window used by the custom-time-provider supersede test.</summary>
+    private static readonly TimeSpan CustomProviderThrottleWindow = TimeSpan.FromMilliseconds(80);
+
+    /// <summary>Throttle window long enough for the test to supersede the pending value.</summary>
+    private static readonly TimeSpan SupersedingThrottleWindow = TimeSpan.FromMilliseconds(200);
+
+    /// <summary>Throttle window long enough that an error arrives before the pending value fires.</summary>
+    private static readonly TimeSpan UnfiredThrottleWindow = TimeSpan.FromMilliseconds(500);
+
+    /// <summary>Delay applied to a single emission.</summary>
+    private static readonly TimeSpan EmissionDelay = TimeSpan.FromMilliseconds(100);
+
+    /// <summary>Lower bound the delayed emission's elapsed time must clear.</summary>
+    private static readonly TimeSpan MinimumEmissionDelay = TimeSpan.FromMilliseconds(80);
+
+    /// <summary>Delay applied to every element of a sequence.</summary>
+    private static readonly TimeSpan SequenceDelay = TimeSpan.FromMilliseconds(30);
+
+    /// <summary>Timeout short enough that a never-emitting source trips it.</summary>
+    private static readonly TimeSpan ExpiringTimeout = TimeSpan.FromMilliseconds(100);
+
+    /// <summary>Timeout short enough that a never-emitting source trips it immediately.</summary>
+    private static readonly TimeSpan ImmediateTimeout = TimeSpan.FromMilliseconds(10);
+
+    /// <summary>Timeout long enough that a prompt source never trips it.</summary>
+    private static readonly TimeSpan GenerousTimeout = TimeSpan.FromSeconds(5);
+
+    /// <summary>Timeout long enough that only the source's error can end the wait.</summary>
+    private static readonly TimeSpan NonExpiringTimeout = TimeSpan.FromSeconds(30);
+
+    /// <summary>Interval between the ticks of the periodic-timer tests.</summary>
+    private static readonly TimeSpan TickInterval = TimeSpan.FromMilliseconds(20);
+
+    /// <summary>Interval between the ticks of the cancellation tests.</summary>
+    private static readonly TimeSpan FastTickInterval = TimeSpan.FromMilliseconds(10);
 
     /// <summary>Tests Throttle only last in burst is emitted.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -23,7 +83,7 @@ public class TimeBasedOperatorTests
     {
         var signal = Signal.Create<int>();
         List<int> results = [];
-        await using var sub = await signal.Values.Throttle(TimeSpan.FromMilliseconds(100)).SubscribeAsync(
+        await using var sub = await signal.Values.Throttle(BurstThrottleWindow).SubscribeAsync(
             (x, _) =>
             {
                 results.Add(x);
@@ -36,7 +96,7 @@ public class TimeBasedOperatorTests
         await signal.OnNextAsync(SecondValue, CancellationToken.None);
         await signal.OnNextAsync(LastValue, CancellationToken.None);
         var resultReceived =
-            await AsyncTestHelpers.WaitForConditionAsync(() => results.Count == 1, TimeSpan.FromSeconds(10));
+            await AsyncTestHelpers.WaitForConditionAsync(() => results.Count == 1, WaitTimeout);
         await signal.OnCompletedAsync(Result.Success);
         await Assert.That(resultReceived).IsTrue();
         await Assert.That(results).Count().IsEqualTo(1);
@@ -52,7 +112,7 @@ public class TimeBasedOperatorTests
         List<int> results = [];
         TaskCompletionSource<bool> firstReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource<bool> secondReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using var sub = await signal.Values.Throttle(TimeSpan.FromMilliseconds(50)).SubscribeAsync(
+        await using var sub = await signal.Values.Throttle(ThrottleWindow).SubscribeAsync(
             (x, _) =>
             {
                 results.Add(x);
@@ -71,29 +131,29 @@ public class TimeBasedOperatorTests
         const int SpacingDelayMillis = 75;
         const int SecondValue = 2;
         await signal.OnNextAsync(1, CancellationToken.None);
-        await firstReceived.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await firstReceived.Task.WaitAsync(WaitTimeout);
         await Task.Delay(SpacingDelayMillis);
         await signal.OnNextAsync(SecondValue, CancellationToken.None);
-        await secondReceived.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await secondReceived.Task.WaitAsync(WaitTimeout);
         await Assert.That(results).IsCollectionEqualTo([1, SecondValue]);
     }
 
     /// <summary>Tests Throttle negative due time throws.</summary>
     [Test]
     public void WhenThrottleNegativeDueTime_ThenThrowsArgumentOutOfRange() =>
-        Assert.Throws<ArgumentOutOfRangeException>(() => SignalAsync.Return(1).Throttle(TimeSpan.FromMilliseconds(-1)));
+        Assert.Throws<ArgumentOutOfRangeException>(
+            static () => SignalAsync.Return(1).Throttle(TimeSpan.FromMilliseconds(-1)));
 
     /// <summary>Tests Delay elements are time shifted.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenDelay_ThenElementsAreTimeShifted()
     {
-        const long MinElapsedMillis = 80;
-        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-        var result = await SignalAsync.Return(42).Delay(TimeSpan.FromMilliseconds(100)).FirstAsync();
-        stopwatch.Stop();
+        var start = Stopwatch.GetTimestamp();
+        var result = await SignalAsync.Return(ExpectedValue42).Delay(EmissionDelay).FirstAsync();
+        var elapsed = Stopwatch.GetElapsedTime(start);
         await Assert.That(result).IsEqualTo(ExpectedValue42);
-        await Assert.That(stopwatch.ElapsedMilliseconds).IsGreaterThanOrEqualTo(MinElapsedMillis);
+        await Assert.That(elapsed).IsGreaterThanOrEqualTo(MinimumEmissionDelay);
     }
 
     /// <summary>Tests Delay zero causes no delay.</summary>
@@ -101,14 +161,14 @@ public class TimeBasedOperatorTests
     [Test]
     public async Task WhenDelayZero_ThenNoDelay()
     {
-        var result = await SignalAsync.Return(42).Delay(TimeSpan.Zero).FirstAsync();
+        var result = await SignalAsync.Return(ExpectedValue42).Delay(TimeSpan.Zero).FirstAsync();
         await Assert.That(result).IsEqualTo(ExpectedValue42);
     }
 
     /// <summary>Tests Delay negative throws.</summary>
     [Test]
     public void WhenDelayNegative_ThenThrowsArgumentOutOfRange() =>
-        Assert.Throws<ArgumentOutOfRangeException>(() => SignalAsync.Return(1).Delay(TimeSpan.FromMilliseconds(-1)));
+        Assert.Throws<ArgumentOutOfRangeException>(static () => SignalAsync.Return(1).Delay(TimeSpan.FromMilliseconds(-1)));
 
     /// <summary>Tests Delay sequence delays all elements.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -117,7 +177,9 @@ public class TimeBasedOperatorTests
     {
         const int ExpectedSecond = 2;
         const int ExpectedThird = 3;
-        var result = await SignalAsync.Range(1, 3).Delay(TimeSpan.FromMilliseconds(30)).ToListAsync();
+        const int SourceValueCount = 3;
+
+        var result = await SignalAsync.Range(1, SourceValueCount).Delay(SequenceDelay).ToListAsync();
         await Assert.That(result).IsCollectionEqualTo([1, ExpectedSecond, ExpectedThird]);
     }
 
@@ -126,7 +188,7 @@ public class TimeBasedOperatorTests
     [Test]
     public async Task WhenTimeoutNotExceeded_ThenCompletesNormally()
     {
-        var result = await SignalAsync.Return(42).Timeout(TimeSpan.FromSeconds(5)).FirstAsync();
+        var result = await SignalAsync.Return(ExpectedValue42).Timeout(GenerousTimeout).FirstAsync();
         await Assert.That(result).IsEqualTo(ExpectedValue42);
     }
 
@@ -135,7 +197,7 @@ public class TimeBasedOperatorTests
     [Test]
     public async Task WhenTimeoutExceeded_ThenThrowsTimeoutException()
     {
-        var source = SignalAsync.Never<int>().Timeout(TimeSpan.FromMilliseconds(100));
+        var source = SignalAsync.Never<int>().Timeout(ExpiringTimeout);
         await Assert.That(async () => await source.FirstAsync()).ThrowsExactly<TimeoutException>();
     }
 
@@ -144,7 +206,7 @@ public class TimeBasedOperatorTests
     [Test]
     public async Task WhenTimeoutWithFallback_ThenSwitchesToFallback()
     {
-        var source = SignalAsync.Never<int>().Timeout(TimeSpan.FromMilliseconds(100), SignalAsync.Return(99));
+        var source = SignalAsync.Never<int>().Timeout(ExpiringTimeout, SignalAsync.Return(FallbackValue99));
         var result = await source.FirstAsync();
         await Assert.That(result).IsEqualTo(FallbackValue99);
     }
@@ -152,17 +214,18 @@ public class TimeBasedOperatorTests
     /// <summary>Tests Timeout zero duration throws.</summary>
     [Test]
     public void WhenTimeoutZeroDuration_ThenThrowsArgumentOutOfRange() =>
-        Assert.Throws<ArgumentOutOfRangeException>(() => SignalAsync.Return(1).Timeout(TimeSpan.Zero));
+        Assert.Throws<ArgumentOutOfRangeException>(static () => SignalAsync.Return(1).Timeout(TimeSpan.Zero));
 
     /// <summary>Tests Timeout negative duration throws.</summary>
     [Test]
     public void WhenTimeoutNegativeDuration_ThenThrowsArgumentOutOfRange() =>
-        Assert.Throws<ArgumentOutOfRangeException>(() => SignalAsync.Return(1).Timeout(TimeSpan.FromMilliseconds(-1)));
+        Assert.Throws<ArgumentOutOfRangeException>(
+            static () => SignalAsync.Return(1).Timeout(TimeSpan.FromMilliseconds(-1)));
 
     /// <summary>Tests Timeout with null fallback throws.</summary>
     [Test]
-    public void WhenTimeoutWithFallbackNull_ThenThrowsArgumentNull() => Assert.Throws<ArgumentNullException>(() =>
-        SignalAsync.Return(1).Timeout(TimeSpan.FromSeconds(1), (IObservableAsync<int>)null!));
+    public void WhenTimeoutWithFallbackNull_ThenThrowsArgumentNull() => Assert.Throws<ArgumentNullException>(
+        static () => SignalAsync.Return(1).Timeout(TimeSpan.FromSeconds(1), (IObservableAsync<int>)null!));
 
     /// <summary>
     /// Verifies that when the downstream observer throws a non-cancellation exception
@@ -176,10 +239,10 @@ public class TimeBasedOperatorTests
     {
         using UnhandledExceptionCapture unhandled = new();
         var signal = Signal.Create<int>();
-        await using var sub = await signal.Values.Throttle(TimeSpan.FromMilliseconds(50))
-            .SubscribeAsync((_, _) => throw new InvalidOperationException("observer exploded"), null);
+        await using var sub = await signal.Values.Throttle(ThrottleWindow)
+            .SubscribeAsync(static (_, _) => throw new InvalidOperationException("observer exploded"), null);
         await signal.OnNextAsync(ExpectedValue42, CancellationToken.None);
-        var exception = await unhandled.WaitForAsync("observer exploded", TimeSpan.FromSeconds(10));
+        var exception = await unhandled.WaitForAsync("observer exploded", WaitTimeout);
         await Assert.That(exception).IsNotNull();
         await Assert.That(exception!).IsTypeOf<InvalidOperationException>();
     }
@@ -195,12 +258,12 @@ public class TimeBasedOperatorTests
     public async Task WhenTimeoutOnCompletedThrows_ThenRoutedToUnhandledExceptionHandler()
     {
         using UnhandledExceptionCapture unhandled = new();
-        var source = SignalAsync.Never<int>().Timeout(TimeSpan.FromMilliseconds(50));
+        var source = SignalAsync.Never<int>().Timeout(ThrottleWindow);
         await using var sub = await source.SubscribeAsync(
             static (_, _) => default,
             null,
-            _ => throw new InvalidOperationException("completion handler exploded"));
-        var exception = await unhandled.WaitForAsync("completion handler exploded", TimeSpan.FromSeconds(10));
+            static _ => throw new InvalidOperationException("completion handler exploded"));
+        var exception = await unhandled.WaitForAsync("completion handler exploded", WaitTimeout);
         await Assert.That(exception).IsNotNull();
         await Assert.That(exception!).IsTypeOf<InvalidOperationException>();
     }
@@ -216,7 +279,7 @@ public class TimeBasedOperatorTests
     {
         CustomTimeProvider customProvider = new();
         List<long> results = [];
-        await using var sub = await SignalAsync.Interval(TimeSpan.FromMilliseconds(50), customProvider).SubscribeAsync(
+        await using var sub = await SignalAsync.Interval(ThrottleWindow, customProvider).SubscribeAsync(
             (x, _) =>
             {
                 results.Add(x);
@@ -224,7 +287,7 @@ public class TimeBasedOperatorTests
             },
             null);
         var receivedTwo =
-            await AsyncTestHelpers.WaitForConditionAsync(() => results.Count >= 2, TimeSpan.FromSeconds(10));
+            await AsyncTestHelpers.WaitForConditionAsync(() => results.Count >= 2, WaitTimeout);
         const long ExpectedSecondTick = 2L;
         await Assert.That(receivedTwo).IsTrue();
         await Assert.That(results[0]).IsEqualTo(1L);
@@ -241,7 +304,7 @@ public class TimeBasedOperatorTests
     public async Task WhenPeriodicTimerCancelled_ThenStopsEmitting()
     {
         List<long> results = [];
-        var sub = await SignalAsync.Timer(TimeSpan.Zero, TimeSpan.FromMilliseconds(50)).SubscribeAsync(
+        var sub = await SignalAsync.Timer(TimeSpan.Zero, ThrottleWindow).SubscribeAsync(
             (x, _) =>
             {
                 results.Add(x);
@@ -249,7 +312,7 @@ public class TimeBasedOperatorTests
             },
             null);
         var receivedTwo =
-            await AsyncTestHelpers.WaitForConditionAsync(() => results.Count >= 2, TimeSpan.FromSeconds(10));
+            await AsyncTestHelpers.WaitForConditionAsync(() => results.Count >= 2, WaitTimeout);
         await Assert.That(receivedTwo).IsTrue();
         var countAtDispose = results.Count;
         await sub.DisposeAsync();
@@ -257,7 +320,7 @@ public class TimeBasedOperatorTests
         // Allow a brief window to confirm no further emissions
         var noMoreEmissions = await AsyncTestHelpers.WaitForConditionAsync(
             () => results.Count == countAtDispose,
-            TimeSpan.FromMilliseconds(200));
+            NoFurtherEmissionWindow);
         await Assert.That(noMoreEmissions).IsTrue();
     }
 
@@ -274,7 +337,7 @@ public class TimeBasedOperatorTests
         var signal = Signal.Create<int>();
         List<int> results = [];
         TaskCompletionSource<bool> resultReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using var sub = await signal.Values.Throttle(TimeSpan.FromMilliseconds(50), customProvider)
+        await using var sub = await signal.Values.Throttle(ThrottleWindow, customProvider)
             .SubscribeAsync(
                 (x, _) =>
                 {
@@ -288,7 +351,7 @@ public class TimeBasedOperatorTests
         await signal.OnNextAsync(1, CancellationToken.None);
         await signal.OnNextAsync(SecondValue, CancellationToken.None);
         await signal.OnNextAsync(LastValue, CancellationToken.None);
-        await resultReceived.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await resultReceived.Task.WaitAsync(WaitTimeout);
         await signal.OnCompletedAsync(Result.Success);
         await Assert.That(results).Count().IsEqualTo(1);
         await Assert.That(results[0]).IsEqualTo(LastValue);
@@ -307,7 +370,7 @@ public class TimeBasedOperatorTests
         var signal = Signal.Create<int>();
         List<int> results = [];
         TaskCompletionSource<bool> resultReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using var sub = await signal.Values.Throttle(TimeSpan.FromMilliseconds(80), customProvider)
+        await using var sub = await signal.Values.Throttle(CustomProviderThrottleWindow, customProvider)
             .SubscribeAsync(
                 (x, _) =>
                 {
@@ -322,7 +385,7 @@ public class TimeBasedOperatorTests
         // Emit two values rapidly; first should be superseded
         await signal.OnNextAsync(FirstValue, CancellationToken.None);
         await signal.OnNextAsync(LastValue, CancellationToken.None);
-        await resultReceived.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await resultReceived.Task.WaitAsync(WaitTimeout);
         await signal.OnCompletedAsync(Result.Success);
         await Assert.That(results).Count().IsEqualTo(1);
         await Assert.That(results[0]).IsEqualTo(LastValue);
@@ -340,10 +403,12 @@ public class TimeBasedOperatorTests
         using UnhandledExceptionCapture unhandled = new();
         CustomTimeProvider customProvider = new();
         var signal = Signal.Create<int>();
-        await using var sub = await signal.Values.Throttle(TimeSpan.FromMilliseconds(50), customProvider)
-            .SubscribeAsync((_, _) => throw new InvalidOperationException("custom provider observer exploded"), null);
+        await using var sub = await signal.Values.Throttle(ThrottleWindow, customProvider)
+            .SubscribeAsync(
+                static (_, _) => throw new InvalidOperationException("custom provider observer exploded"),
+                null);
         await signal.OnNextAsync(1, CancellationToken.None);
-        var exception = await unhandled.WaitForAsync("custom provider observer exploded", TimeSpan.FromSeconds(10));
+        var exception = await unhandled.WaitForAsync("custom provider observer exploded", WaitTimeout);
         await Assert.That(exception).IsNotNull();
         await Assert.That(exception!).IsTypeOf<InvalidOperationException>();
     }
@@ -361,7 +426,7 @@ public class TimeBasedOperatorTests
         List<int> results = [];
         List<Exception> errors = [];
         TaskCompletionSource<bool> errorReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using var sub = await signal.Values.Throttle(TimeSpan.FromMilliseconds(500)).SubscribeAsync(
+        await using var sub = await signal.Values.Throttle(UnfiredThrottleWindow).SubscribeAsync(
             (x, _) =>
             {
                 results.Add(x);
@@ -378,8 +443,8 @@ public class TimeBasedOperatorTests
         await signal.OnNextAsync(1, CancellationToken.None);
 
         // Immediately send an error before the throttle timer fires
-        await signal.OnErrorResumeAsync(new InvalidOperationException("test error"), CancellationToken.None);
-        await errorReceived.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await signal.OnErrorResumeAsync(new InvalidOperationException(TestErrorMessage), CancellationToken.None);
+        await errorReceived.Task.WaitAsync(WaitTimeout);
 
         // Error should be forwarded, and the pending value should NOT be emitted
         await Assert.That(errors).Count().IsEqualTo(1);
@@ -400,9 +465,9 @@ public class TimeBasedOperatorTests
         using UnhandledExceptionCapture unhandled = new();
         ThrowingTimeProvider throwingProvider = new();
         DirectSource<int> source = new();
-        await using var sub = await source.Timeout(TimeSpan.FromMilliseconds(100), throwingProvider)
+        await using var sub = await source.Timeout(ExpiringTimeout, throwingProvider)
             .SubscribeAsync(static (_, _) => default, null);
-        var exception = await unhandled.WaitForAsync("timer creation failed", TimeSpan.FromSeconds(10));
+        var exception = await unhandled.WaitForAsync("timer creation failed", WaitTimeout);
         await Assert.That(exception).IsNotNull();
         await Assert.That(exception!).IsTypeOf<InvalidOperationException>();
     }
@@ -419,7 +484,7 @@ public class TimeBasedOperatorTests
         List<Exception> errors = [];
         TaskCompletionSource<bool> errorReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
         DirectSource<int> source = new();
-        await using var sub = await source.Timeout(TimeSpan.FromSeconds(30)).SubscribeAsync(
+        await using var sub = await source.Timeout(NonExpiringTimeout).SubscribeAsync(
             static (_, _) => default,
             (ex, _) =>
             {
@@ -427,12 +492,12 @@ public class TimeBasedOperatorTests
                 IgnoredResult.Of(errorReceived.TrySetResult(true));
                 return default;
             });
-        InvalidOperationException testError = new("test error");
+        InvalidOperationException testError = new(TestErrorMessage);
         await source.EmitError(testError);
-        await errorReceived.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await errorReceived.Task.WaitAsync(WaitTimeout);
         await Assert.That(errors).Count().IsEqualTo(1);
         await Assert.That(errors[0]).IsTypeOf<InvalidOperationException>();
-        await Assert.That(errors[0].Message).IsEqualTo("test error");
+        await Assert.That(errors[0].Message).IsEqualTo(TestErrorMessage);
     }
 
     /// <summary>
@@ -445,9 +510,9 @@ public class TimeBasedOperatorTests
     {
         DirectSource<int> source = new();
         List<Exception> errors = [];
-        TaskCompletionSource completed = new();
+        TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await source.Delay(TimeSpan.FromMilliseconds(1)).SubscribeAsync(
-            (_, _) => default,
+            static (_, _) => default,
             (ex, _) =>
             {
                 errors.Add(ex);
@@ -461,7 +526,7 @@ public class TimeBasedOperatorTests
         InvalidOperationException expectedError = new("resume error");
         await source.EmitError(expectedError);
         await source.Complete(Result.Success);
-        await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await completed.Task.WaitAsync(CompletionWaitTimeout);
         await Assert.That(errors).Count().IsEqualTo(1);
         await Assert.That(errors[0]).IsSameReferenceAs(expectedError);
     }
@@ -476,8 +541,8 @@ public class TimeBasedOperatorTests
     {
         var signal = Signal.Create<int>();
         List<int> results = [];
-        TaskCompletionSource completed = new();
-        await using var sub = await signal.Values.Throttle(TimeSpan.FromMilliseconds(200)).SubscribeAsync(
+        TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var sub = await signal.Values.Throttle(SupersedingThrottleWindow).SubscribeAsync(
             (x, _) =>
             {
                 results.Add(x);
@@ -496,9 +561,9 @@ public class TimeBasedOperatorTests
         await signal.OnNextAsync(LastValue, CancellationToken.None);
 
         // Wait for the throttled value to arrive before completing
-        await AsyncTestHelpers.WaitForConditionAsync(() => results.Count >= 1, TimeSpan.FromSeconds(5));
+        await AsyncTestHelpers.WaitForConditionAsync(() => results.Count >= 1, CompletionWaitTimeout);
         await signal.OnCompletedAsync(Result.Success);
-        await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await completed.Task.WaitAsync(CompletionWaitTimeout);
 
         // Only the last value (2) should have been emitted
         await Assert.That(results).Contains(LastValue);
@@ -518,7 +583,7 @@ public class TimeBasedOperatorTests
         await using var sub = await source.Throttle(TimeSpan.FromMilliseconds(1))
             .SubscribeAsync((_, _) => throw expectedError, null);
         await source.EmitNext(1);
-        var exception = await unhandled.WaitForAsync("downstream error", TimeSpan.FromSeconds(5));
+        var exception = await unhandled.WaitForAsync("downstream error", CompletionWaitTimeout);
         await Assert.That(exception).IsNotNull();
     }
 
@@ -531,14 +596,14 @@ public class TimeBasedOperatorTests
     public async Task WhenPeriodicTimerEmitsMultipleTicks_ThenAllTicksReceived()
     {
         List<long> results = [];
-        var sub = await SignalAsync.Timer(TimeSpan.Zero, TimeSpan.FromMilliseconds(20)).SubscribeAsync(
+        var sub = await SignalAsync.Timer(TimeSpan.Zero, TickInterval).SubscribeAsync(
             (x, _) =>
             {
                 results.Add(x);
                 return default;
             },
             null);
-        await AsyncTestHelpers.WaitForConditionAsync(() => results.Count >= 3, TimeSpan.FromSeconds(10));
+        await AsyncTestHelpers.WaitForConditionAsync(() => results.Count >= 3, WaitTimeout);
         await sub.DisposeAsync();
         const int MinTickCount = 3;
         const int ThirdTickIndex = 2;
@@ -560,7 +625,7 @@ public class TimeBasedOperatorTests
     {
         CustomTimeProvider customProvider = new();
         List<long> results = [];
-        var sub = await SignalAsync.Timer(TimeSpan.Zero, TimeSpan.FromMilliseconds(20), customProvider).SubscribeAsync(
+        var sub = await SignalAsync.Timer(TimeSpan.Zero, TickInterval, customProvider).SubscribeAsync(
             (x, _) =>
             {
                 results.Add(x);
@@ -568,13 +633,13 @@ public class TimeBasedOperatorTests
             },
             null);
         var receivedTwo =
-            await AsyncTestHelpers.WaitForConditionAsync(() => results.Count >= 2, TimeSpan.FromSeconds(10));
+            await AsyncTestHelpers.WaitForConditionAsync(() => results.Count >= 2, WaitTimeout);
         await Assert.That(receivedTwo).IsTrue();
         var countAtDispose = results.Count;
         await sub.DisposeAsync();
         var noMoreEmissions = await AsyncTestHelpers.WaitForConditionAsync(
             () => results.Count == countAtDispose,
-            TimeSpan.FromMilliseconds(200));
+            NoFurtherEmissionWindow);
         await Assert.That(noMoreEmissions).IsTrue();
         await Assert.That(results[0]).IsEqualTo(0L);
         await Assert.That(results[1]).IsEqualTo(1L);
@@ -594,13 +659,15 @@ public class TimeBasedOperatorTests
         using UnhandledExceptionCapture unhandled = new();
         ImmediateFireTimeProvider immediateProvider = new();
         var signal = Signal.Create<int>();
-        await using var sub = await signal.Values.Throttle(TimeSpan.FromMilliseconds(100), immediateProvider)
-            .SubscribeAsync((_, _) => throw new InvalidOperationException("immediate fire observer exploded"), null);
+        await using var sub = await signal.Values.Throttle(BurstThrottleWindow, immediateProvider)
+            .SubscribeAsync(
+                static (_, _) => throw new InvalidOperationException(ImmediateFireObserverExplodedMessage),
+                null);
         await signal.OnNextAsync(1, CancellationToken.None);
-        var exception = await unhandled.WaitForAsync("immediate fire observer exploded", TimeSpan.FromSeconds(5));
+        var exception = await unhandled.WaitForAsync(ImmediateFireObserverExplodedMessage, CompletionWaitTimeout);
         await Assert.That(exception).IsNotNull();
         await Assert.That(exception!).IsTypeOf<InvalidOperationException>();
-        await Assert.That(exception!.Message).IsEqualTo("immediate fire observer exploded");
+        await Assert.That(exception!.Message).IsEqualTo(ImmediateFireObserverExplodedMessage);
     }
 
     /// <summary>Tests Interval stops when cancelled.</summary>
@@ -612,11 +679,11 @@ public class TimeBasedOperatorTests
         CancellationTokenSource cts = new();
         List<long> items = [];
         TaskCompletionSource cancelled = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using var sub = await SignalAsync.Interval(TimeSpan.FromMilliseconds(10)).SubscribeAsync(
+        await using var sub = await SignalAsync.Interval(FastTickInterval).SubscribeAsync(
             async (x, _) =>
             {
                 items.Add(x);
-                if (x < 2)
+                if (x < MinItemCount)
                 {
                     return;
                 }
@@ -627,7 +694,7 @@ public class TimeBasedOperatorTests
             null,
             null,
             cts.Token);
-        await cancelled.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await cancelled.Task.WaitAsync(CompletionWaitTimeout);
         await Assert.That(items.Count).IsGreaterThanOrEqualTo(MinItemCount);
     }
 
@@ -640,12 +707,12 @@ public class TimeBasedOperatorTests
         CancellationTokenSource cts = new();
         List<long> items = [];
         TaskCompletionSource cancelled = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using var sub = await SignalAsync.Timer(TimeSpan.FromMilliseconds(1), TimeSpan.FromMilliseconds(10))
+        await using var sub = await SignalAsync.Timer(TimeSpan.FromMilliseconds(1), FastTickInterval)
             .SubscribeAsync(
                 async (x, _) =>
                 {
                     items.Add(x);
-                    if (x < 2)
+                    if (x < MinItemCount)
                     {
                         return;
                     }
@@ -656,7 +723,7 @@ public class TimeBasedOperatorTests
                 null,
                 null,
                 cts.Token);
-        await cancelled.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await cancelled.Task.WaitAsync(CompletionWaitTimeout);
         await Assert.That(items.Count).IsGreaterThanOrEqualTo(MinItemCount);
     }
 
@@ -671,7 +738,7 @@ public class TimeBasedOperatorTests
         DirectSource<int> source = new();
         List<int> items = [];
         TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using var sub = await source.Throttle(TimeSpan.FromMilliseconds(50), manualProvider).SubscribeAsync(
+        await using var sub = await source.Throttle(ThrottleWindow, manualProvider).SubscribeAsync(
             async (x, ct) =>
             {
                 _ = ct;
@@ -699,7 +766,7 @@ public class TimeBasedOperatorTests
 
         await Assert.That(manualProvider.TimerCount).IsEqualTo(LastValue);
         manualProvider.FireAll();
-        await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await completed.Task.WaitAsync(CompletionWaitTimeout);
         await Assert.That(items).Contains(LastValue);
     }
 
@@ -707,7 +774,7 @@ public class TimeBasedOperatorTests
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTimeoutFires_ThenThrowsTimeoutException() => await Assert
-        .That(async () => await SignalAsync.Never<int>().Timeout(TimeSpan.FromMilliseconds(10)).FirstAsync())
+        .That(static async () => await SignalAsync.Never<int>().Timeout(ImmediateTimeout).FirstAsync())
         .ThrowsExactly<TimeoutException>();
 
     /// <summary>Tests Timeout with fallback observable.</summary>
@@ -715,7 +782,7 @@ public class TimeBasedOperatorTests
     [Test]
     public async Task WhenTimeoutWithFallback_ThenFallbackUsed()
     {
-        var result = await SignalAsync.Never<int>().Timeout(TimeSpan.FromMilliseconds(10), SignalAsync.Return(99))
+        var result = await SignalAsync.Never<int>().Timeout(ImmediateTimeout, SignalAsync.Return(FallbackValue99))
             .FirstAsync();
         await Assert.That(result).IsEqualTo(FallbackValue99);
     }
@@ -727,7 +794,9 @@ public class TimeBasedOperatorTests
     {
         const int ExpectedSecond = 2;
         const int ExpectedThird = 3;
-        var result = await SignalAsync.Range(1, 3).Timeout(TimeSpan.FromSeconds(5)).ToListAsync();
+        const int SourceValueCount = 3;
+
+        var result = await SignalAsync.Range(1, SourceValueCount).Timeout(GenerousTimeout).ToListAsync();
         await Assert.That(result).IsCollectionEqualTo([1, ExpectedSecond, ExpectedThird]);
     }
 
@@ -737,12 +806,12 @@ public class TimeBasedOperatorTests
     public async Task WhenTimeoutFiresAndDownstreamCompletionThrows_ThenRoutedToUnhandled()
     {
         using UnhandledExceptionCapture unhandled = new();
-        TimeoutThrowingWitness<int> throwing = new(new InvalidOperationException("completion-failed"));
+        TimeoutThrowingWitness<int> throwing = new(new InvalidOperationException(CompletionFailedMessage));
         await using var sub = await SignalAsync.Never<int>().Timeout(TimeSpan.FromMilliseconds(1))
             .SubscribeAsync(throwing, CancellationToken.None);
-        var exception = await unhandled.WaitForAsync("completion-failed", TimeSpan.FromSeconds(5));
+        var exception = await unhandled.WaitForAsync(CompletionFailedMessage, CompletionWaitTimeout);
         await Assert.That(exception).IsNotNull();
-        await Assert.That(exception!.Message).IsEqualTo("completion-failed");
+        await Assert.That(exception!.Message).IsEqualTo(CompletionFailedMessage);
     }
 
     /// <summary>

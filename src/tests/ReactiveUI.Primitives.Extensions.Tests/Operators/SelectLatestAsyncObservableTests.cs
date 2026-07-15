@@ -23,8 +23,14 @@ public class SelectLatestAsyncObservableTests
     /// <summary>Poll interval in milliseconds used while waiting for an emission.</summary>
     private const int PollIntervalMilliseconds = 10;
 
+    /// <summary>Multiplier applied by the gated selector whose result is expected never to be delivered.</summary>
+    private const int SuppressedProjectionMultiplier = 2;
+
     /// <summary>Multiplier applied inside the projection selector.</summary>
     private const int ProjectionMultiplier = 10;
+
+    /// <summary>Guard timeout so a hung rendezvous fails this test rather than stalling the run.</summary>
+    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
 
     /// <summary>Verifies that <c>SelectLatestAsync</c> forwards selector exceptions.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -39,7 +45,7 @@ public class SelectLatestAsyncObservableTests
             static _ => { },
             ex => faulted.TrySetResult(ex));
         subject.OnNext(TriggerValue);
-        var caught = await faulted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var caught = await faulted.Task.WaitAsync(GuardTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -51,7 +57,7 @@ public class SelectLatestAsyncObservableTests
         Subject<int> subject = new();
         Exception? caught = null;
         InvalidOperationException expected = new(SourceErrorMessage);
-        using var sub = subject.SelectLatestAsync(static x => Task.FromResult(x)).Subscribe(
+        using var sub = subject.SelectLatestAsync(Task.FromResult).Subscribe(
             static _ => { },
             ex => caught = ex);
         subject.OnError(expected);
@@ -71,7 +77,7 @@ public class SelectLatestAsyncObservableTests
         var sub = subject.SelectLatestAsync(async x =>
         {
             await gate.Task.ConfigureAwait(false);
-            return x * 2;
+            return x * SuppressedProjectionMultiplier;
         }).Subscribe(results.Add, () => completed = true);
         subject.OnNext(TriggerValue);
         subject.OnCompleted();
@@ -115,7 +121,7 @@ public class SelectLatestAsyncObservableTests
 
         _ = slowGate.TrySetResult(true);
         subject.OnCompleted();
-        await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await completed.Task.WaitAsync(GuardTimeout);
 
         // Only the latest (Fast) projection's result should appear.
         await Assert.That(results).IsCollectionEqualTo([Fast * ProjectionMultiplier]);
@@ -128,11 +134,11 @@ public class SelectLatestAsyncObservableTests
     {
         Subject<int> subject = new();
         TaskCompletionSource<bool> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var sub = subject.SelectLatestAsync(static x => Task.FromResult(x)).Subscribe(
+        using var sub = subject.SelectLatestAsync(Task.FromResult).Subscribe(
             static _ => { },
             () => completed.TrySetResult(true));
         subject.OnCompleted();
-        var done = await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var done = await completed.Task.WaitAsync(GuardTimeout);
         await Assert.That(done).IsTrue();
     }
 
@@ -146,7 +152,7 @@ public class SelectLatestAsyncObservableTests
         List<int> values = [];
         Exception? caught = null;
         var completedCount = 0;
-        using var sub = source.SelectLatestAsync(static x => Task.FromResult(x))
+        using var sub = source.SelectLatestAsync(Task.FromResult)
             .Subscribe(values.Add, ex => caught = ex, () => completedCount++);
         source.Observer.OnCompleted();
         source.Observer.OnNext(1);

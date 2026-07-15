@@ -33,7 +33,10 @@ public static partial class SignalAsyncExtensions
             ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(keySelector);
 
-            return new GroupByAsyncSignal<TKey, TValue>(source, keySelector, static _ => AsyncSignalFactory.Create<TValue>());
+            return new GroupByAsyncSignal<TKey, TValue>(
+                source,
+                keySelector,
+                static _ => AsyncSignalFactory.Create<TValue>());
         }
 
         /// <summary>
@@ -134,7 +137,7 @@ public static partial class SignalAsyncExtensions
 
                     // We use the cancellationToken passed from the source subscription.
                     await observer.OnNextAsync(
-                        new GroupedAsyncSignal<TKey, TValue>(
+                        new(
                             key,
                             signal.Values,
                             _disposables,

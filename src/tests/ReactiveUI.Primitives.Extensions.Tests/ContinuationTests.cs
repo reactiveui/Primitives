@@ -11,6 +11,9 @@ namespace ReactiveUI.Primitives.Extensions.Tests;
 /// (ValueTask) entry points plus the already-locked short-circuit.</summary>
 public class ContinuationTests
 {
+    /// <summary>Item pushed while the continuation is already locked; the barrier is expected to drop it.</summary>
+    private const int DroppedItem = 2;
+
     /// <summary>Guard timeout to keep barrier rendezvous from hanging the test run.</summary>
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(5);
 
@@ -44,7 +47,7 @@ public class ContinuationTests
         var observer = Observer.Create<(int Value, IDisposable Sync)>(v => values.Add(v.Value));
 
         var first = continuation.LockValueTask(1, observer);
-        var second = continuation.LockValueTask(2, observer);
+        var second = continuation.LockValueTask(DroppedItem, observer);
 
         await Assert.That(second.IsCompleted).IsTrue();
         await second;
@@ -85,7 +88,7 @@ public class ContinuationTests
         var observer = Observer.Create<(int Value, IDisposable Sync)>(v => values.Add(v.Value));
 
         var first = continuation.Lock(1, observer);
-        var second = continuation.Lock(2, observer);
+        var second = continuation.Lock(DroppedItem, observer);
 
         await Assert.That(second.IsCompleted).IsTrue();
 

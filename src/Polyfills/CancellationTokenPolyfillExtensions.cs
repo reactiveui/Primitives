@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 // Polyfill implementation adapted from SimonCropp/Polyfill (https://github.com/SimonCropp/Polyfill).
+
 #if !NETCOREAPP3_0_OR_GREATER && !NETSTANDARD2_1_OR_GREATER
 namespace System.Threading;
 
@@ -18,21 +19,23 @@ internal static class CancellationTokenPolyfillExtensions
         /// <param name="state">The state passed to <paramref name="callback"/>.</param>
         /// <returns>A registration that can be disposed to remove the callback.</returns>
         public CancellationTokenRegistration UnsafeRegister(Action<object?> callback, object? state) =>
-            token.Register(callback, state, useSynchronizationContext: false);
+            token.Register(callback, state, false);
 
         /// <summary>Registers a delegate that is invoked with the triggering token when the token is cancelled, without capturing the execution context.</summary>
         /// <param name="callback">The delegate to invoke on cancellation, receiving the state and the triggering token.</param>
         /// <param name="state">The state passed to <paramref name="callback"/>.</param>
         /// <returns>A registration that can be disposed to remove the callback.</returns>
-        public CancellationTokenRegistration UnsafeRegister(Action<object?, CancellationToken> callback, object? state) =>
+        public CancellationTokenRegistration
+            UnsafeRegister(Action<object?, CancellationToken> callback, object? state) =>
             token.Register(
                 static boxed =>
                 {
-                    var (inner, innerState, innerToken) = ((Action<object?, CancellationToken> Callback, object? State, CancellationToken Token))boxed!;
+                    var (inner, innerState, innerToken) =
+                        ((Action<object?, CancellationToken> Callback, object? State, CancellationToken Token))boxed!;
                     inner(innerState, innerToken);
                 },
                 (callback, state, token),
-                useSynchronizationContext: false);
+                false);
     }
 
     /// <summary>Polyfill removal operations for a cancellation token registration.</summary>

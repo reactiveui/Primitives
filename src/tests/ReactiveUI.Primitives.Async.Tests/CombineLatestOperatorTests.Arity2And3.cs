@@ -20,7 +20,7 @@ public partial class CombineLatestOperatorTests
 
         List<int> results = [];
         await using var sub = await s1.Values
-            .CombineLatest(s2.Values, (a, b) => a + b)
+            .CombineLatest(s2.Values, static (a, b) => a + b)
             .SubscribeAsync(
                 (x, _) =>
                 {
@@ -54,7 +54,7 @@ public partial class CombineLatestOperatorTests
 
         List<int> results = [];
         await using var sub = await s1.Values
-            .CombineLatest(s2.Values, (a, b) => a + b)
+            .CombineLatest(s2.Values, static (a, b) => a + b)
             .SubscribeAsync(
                 (x, _) =>
                 {
@@ -84,9 +84,9 @@ public partial class CombineLatestOperatorTests
 
         Result? completionResult = null;
         await using var sub = await s1.Values
-            .CombineLatest(s2.Values, (a, b) => a + b)
+            .CombineLatest(s2.Values, static (a, b) => a + b)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null,
                 result =>
                 {
@@ -111,9 +111,9 @@ public partial class CombineLatestOperatorTests
 
         Result? completionResult = null;
         await using var sub = await s1.Values
-            .CombineLatest(s2.Values, (a, b) => a + b)
+            .CombineLatest(s2.Values, static (a, b) => a + b)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null,
                 result =>
                 {
@@ -137,9 +137,9 @@ public partial class CombineLatestOperatorTests
 
         Result? completionResult = null;
         await using var sub = await s1.Values
-            .CombineLatest(s2.Values, (a, b) => a + b)
+            .CombineLatest(s2.Values, static (a, b) => a + b)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null,
                 result =>
                 {
@@ -165,9 +165,9 @@ public partial class CombineLatestOperatorTests
 
         Result? completionResult = null;
         await using var sub = await s1.Values
-            .CombineLatest(s2.Values, (a, b) => a + b)
+            .CombineLatest(s2.Values, static (a, b) => a + b)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null,
                 result =>
                 {
@@ -190,7 +190,7 @@ public partial class CombineLatestOperatorTests
 
         List<int> results = [];
         var sub = await s1.Values
-            .CombineLatest(s2.Values, (a, b) => a + b)
+            .CombineLatest(s2.Values, static (a, b) => a + b)
             .SubscribeAsync(
                 (x, _) =>
                 {
@@ -219,9 +219,9 @@ public partial class CombineLatestOperatorTests
         var s2 = Signal.Create<int>();
 
         var sub = await s1.Values
-            .CombineLatest(s2.Values, (a, b) => a + b)
+            .CombineLatest(s2.Values, static (a, b) => a + b)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null);
 
         await sub.DisposeAsync();
@@ -238,9 +238,9 @@ public partial class CombineLatestOperatorTests
 
         List<Exception> errors = [];
         await using var sub = await s1.Values
-            .CombineLatest(s2.Values, (a, b) => a + b)
+            .CombineLatest(s2.Values, static (a, b) => a + b)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 (ex, _) =>
                 {
                     errors.Add(ex);
@@ -264,9 +264,9 @@ public partial class CombineLatestOperatorTests
 
         List<Exception> errors = [];
         await using var sub = await s1.Values
-            .CombineLatest(s2.Values, (a, b) => a + b)
+            .CombineLatest(s2.Values, static (a, b) => a + b)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 (ex, _) =>
                 {
                     errors.Add(ex);
@@ -292,7 +292,7 @@ public partial class CombineLatestOperatorTests
 
         List<int> results = [];
         await using var sub = await s1.Values
-            .CombineLatest(s2.Values, s3.Values, (a, b, c) => a + b + c)
+            .CombineLatest(s2.Values, s3.Values, static (a, b, c) => a + b + c)
             .SubscribeAsync(
                 (x, _) =>
                 {
@@ -320,7 +320,7 @@ public partial class CombineLatestOperatorTests
 
         List<int> results = [];
         await using var sub = await s1.Values
-            .CombineLatest(s2.Values, s3.Values, (a, b, c) => a + b + c)
+            .CombineLatest(s2.Values, s3.Values, static (a, b, c) => a + b + c)
             .SubscribeAsync(
                 (x, _) =>
                 {
@@ -346,9 +346,9 @@ public partial class CombineLatestOperatorTests
 
         Result? completionResult = null;
         await using var sub = await s1.Values
-            .CombineLatest(s2.Values, s3.Values, (a, b, c) => a + b + c)
+            .CombineLatest(s2.Values, s3.Values, static (a, b, c) => a + b + c)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null,
                 result =>
                 {
@@ -373,9 +373,9 @@ public partial class CombineLatestOperatorTests
 
         Result? completionResult = null;
         await using var sub = await s1.Values
-            .CombineLatest(s2.Values, s3.Values, (a, b, c) => a + b + c)
+            .CombineLatest(s2.Values, s3.Values, static (a, b, c) => a + b + c)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 null,
                 result =>
                 {
@@ -403,9 +403,9 @@ public partial class CombineLatestOperatorTests
 
         List<Exception> errors = [];
         await using var sub = await s1.Values
-            .CombineLatest(s2.Values, s3.Values, (a, b, c) => a + b + c)
+            .CombineLatest(s2.Values, s3.Values, static (a, b, c) => a + b + c)
             .SubscribeAsync(
-                (_, _) => default,
+                static (_, _) => default,
                 (ex, _) =>
                 {
                     errors.Add(ex);

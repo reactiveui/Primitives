@@ -26,7 +26,7 @@ public class LinqExtensionsTests
     [Test]
     public async Task SubscribeSafeFluentAcceptsNullableObjectHandlerWithRxImports()
     {
-        IObservable<object?> source = Observable.Concat(
+        var source = Observable.Concat(
             Observable.Return<object?>(null),
             Observable.Return<object?>(SubscribeSafeValue));
         List<object?> values = [];
@@ -45,7 +45,7 @@ public class LinqExtensionsTests
     [Test]
     public async Task SubscribeSafeStaticAliasAcceptsNullableObjectHandlerWithRxImports()
     {
-        IObservable<object?> source = Signal.FromEnumerable<object?>([null, SubscribeSafeValue]);
+        var source = Signal.FromEnumerable<object?>([null, SubscribeSafeValue]);
         List<object?> values = [];
         Exception? observed = null;
 
@@ -62,7 +62,7 @@ public class LinqExtensionsTests
     [Test]
     public async Task SubscribeSafeStaticAliasAcceptsNonNullableObjectHandlerWithRxImports()
     {
-        IObservable<string> source = Signal.FromEnumerable([SubscribeSafeValue]);
+        var source = Signal.FromEnumerable([SubscribeSafeValue]);
         List<string> values = [];
         Exception? observed = null;
 
@@ -79,7 +79,7 @@ public class LinqExtensionsTests
     [Test]
     public async Task SubscribeSafeFluentAcceptsNullableValueTypeHandlerWithRxImports()
     {
-        IObservable<int?> source = Signal.FromEnumerable<int?>([null, One, null, Two]);
+        var source = Signal.FromEnumerable<int?>([null, One, null, Two]);
         List<int?> values = [];
         Exception? observed = null;
 
@@ -96,7 +96,7 @@ public class LinqExtensionsTests
     [Test]
     public async Task SubscribeSafeStaticAliasAcceptsNullableValueTypeHandlerWithRxImports()
     {
-        IObservable<int?> source = Signal.FromEnumerable<int?>([null, One, null, Two]);
+        var source = Signal.FromEnumerable<int?>([null, One, null, Two]);
         List<int?> values = [];
         Exception? observed = null;
 
@@ -113,7 +113,7 @@ public class LinqExtensionsTests
     [Test]
     public async Task SubscribeSafeStaticAliasAcceptsNullableObserverOverloadsWithRxImports()
     {
-        IObservable<object?> referenceSource = Signal.FromEnumerable<object?>([null, SubscribeSafeValue]);
+        var referenceSource = Signal.FromEnumerable<object?>([null, SubscribeSafeValue]);
         List<object?> referenceValues = [];
         var referenceObserver = Witness.Create<object>(
             referenceValues.Add,
@@ -121,7 +121,7 @@ public class LinqExtensionsTests
 
         using var referenceSubscription = ReactiveLinqExtensions.SubscribeSafe(referenceSource, referenceObserver);
 
-        IObservable<int?> valueSource = Signal.FromEnumerable<int?>([null, One, null, Two]);
+        var valueSource = Signal.FromEnumerable<int?>([null, One, null, Two]);
         List<int?> valueValues = [];
         var valueObserver = Witness.Create<int?>(
             valueValues.Add,
@@ -138,7 +138,7 @@ public class LinqExtensionsTests
     [Test]
     public async Task SubscribeSafeStaticAliasAcceptsNullableCompletionCallbackOverloadsWithRxImports()
     {
-        IObservable<object?> referenceSource = Signal.FromEnumerable<object?>([null, SubscribeSafeValue]);
+        var referenceSource = Signal.FromEnumerable<object?>([null, SubscribeSafeValue]);
         List<object?> referenceValues = [];
         Exception? referenceObserved = null;
         var referenceCompleted = 0;
@@ -151,7 +151,7 @@ public class LinqExtensionsTests
             error => referenceObserved = error,
             () => referenceCompleted++);
 
-        IObservable<int?> valueSource = Signal.FromEnumerable<int?>([null, One, null, Two]);
+        var valueSource = Signal.FromEnumerable<int?>([null, One, null, Two]);
         List<int?> valueValues = [];
         Exception? valueObserved = null;
         var valueCompleted = 0;

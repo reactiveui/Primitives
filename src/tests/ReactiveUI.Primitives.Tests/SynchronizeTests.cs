@@ -16,9 +16,6 @@ public class SynchronizeTests
     /// <summary>The number of values sent by each producer thread.</summary>
     private const int PerThread = 500;
 
-    /// <summary>The number of wait spin iterations used by concurrent tests.</summary>
-    private const int SpinIterations = 50;
-
     /// <summary>The literal two.</summary>
     private const int Second = 2;
 
@@ -62,12 +59,12 @@ public class SynchronizeTests
     /// <summary>The operator validates its source argument.</summary>
     [Test]
     public void SynchronizeOnNullSourceThrows() =>
-        Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).Synchronize());
+        Assert.Throws<ArgumentNullException>(static () => ((IObservable<int>)null!).Synchronize());
 
     /// <summary>The shared-gate operator validates its gate argument.</summary>
     [Test]
     public void SynchronizeOnNullGateThrows() =>
-        Assert.Throws<ArgumentNullException>(() => new ImmediateSource<int>(1).Synchronize(null!));
+        Assert.Throws<ArgumentNullException>(static () => new ImmediateSource<int>(1).Synchronize(null!));
 
     /// <summary>Two witnesses sharing one gate are serialized relative to each other, never overlapping on the shared downstream.</summary>
     /// <returns>A task that completes when the assertions have run.</returns>
@@ -120,6 +117,103 @@ public class SynchronizeTests
         await Assert.That(probe.Count).IsEqualTo(Threads * PerThread);
     }
 
+    /// <summary>The object-gated sequence forwards every source value and its completion downstream.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ObjectGatedSynchronizeForwardsTheSourceSequence()
+    {
+        Recorder<int> recorder = new();
+        SynchronizeObjectSignal<int> signal = new(new ImmediateSource<int>(1, Second, Third), new object());
+
+        using var subscription = signal.Subscribe(recorder);
+
+        await Assert.That(recorder.Values.SequenceEqual([1, Second, Third])).IsTrue();
+        await Assert.That(recorder.Completed).IsEqualTo(1);
+        await Assert.That(recorder.Errors.Count).IsEqualTo(0);
+    }
+
+    /// <summary>The object-gated sequence forwards a source error and validates its observer.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ObjectGatedSynchronizeForwardsErrorsAndRejectsANullObserver()
+    {
+        InvalidOperationException expected = new("object-gate");
+        Recorder<int> recorder = new();
+        SynchronizeObjectSignal<int> signal = new(
+            new ScriptedObservable<int>(observer =>
+            {
+                observer.OnNext(1);
+                observer.OnError(expected);
+            }),
+            new object());
+
+        using var subscription = signal.Subscribe(recorder);
+
+        await Assert.That(recorder.Values.SequenceEqual([1])).IsTrue();
+        await Assert.That(recorder.Errors[0]).IsSameReferenceAs(expected);
+        await Assert.That(recorder.Completed).IsEqualTo(0);
+        _ = Assert.Throws<ArgumentNullException>(() => signal.Subscribe(null!));
+    }
+
+    /// <summary>Disposing an object-gated subscription releases the upstream subscription exactly once.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ObjectGatedSynchronizeDisposesTheUpstreamSubscriptionOnce()
+    {
+        RecordingDisposable upstream = new();
+        SynchronizeObjectWitness<int> witness = new(new Recorder<int>(), new object());
+        witness.SetSubscription(upstream);
+
+        witness.Dispose();
+        witness.Dispose();
+
+        await Assert.That(upstream.DisposeCount).IsEqualTo(1);
+    }
+
+    /// <summary>Two object-gated witnesses sharing one gate never overlap on the shared downstream.</summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
+    [Test]
+    public async Task ObjectGatedWitnessesSharingOneGateAreSerialized()
+    {
+        ConcurrencyProbe probe = new();
+        var gate = new object();
+        SynchronizeObjectWitness<int> first = new(probe, gate);
+        SynchronizeObjectWitness<int> second = new(probe, gate);
+        var tasks = new Task[Threads];
+        for (var t = 0; t < Threads; t++)
+        {
+            var sink = t % Second == 0 ? first : second;
+            tasks[t] = Task.Run(() =>
+            {
+                for (var i = 0; i < PerThread; i++)
+                {
+                    sink.OnNext(i);
+                }
+            });
+        }
+
+        await Task.WhenAll(tasks);
+        await Assert.That(probe.OverlapDetected).IsFalse();
+        await Assert.That(probe.Count).IsEqualTo(Threads * PerThread);
+    }
+
+#if NET9_0_OR_GREATER
+    /// <summary>The object-gate <c>Synchronize</c> overload forwards the source sequence unchanged.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task SynchronizeWithAnObjectGateForwardsTheSourceSequence()
+    {
+        Recorder<int> recorder = new();
+
+        using var subscription = new ImmediateSource<int>(1, Second, Third)
+            .Synchronize(new object())
+            .Subscribe(recorder);
+
+        await Assert.That(recorder.Values.SequenceEqual([1, Second, Third])).IsTrue();
+        await Assert.That(recorder.Completed).IsEqualTo(1);
+    }
+#endif
+
     /// <summary>An observer that records all values, errors, and completion counts.</summary>
     /// <typeparam name = "T">The type of the observed values.</typeparam>
     private sealed class Recorder<T> : IObserver<T>
@@ -171,6 +265,9 @@ public class SynchronizeTests
     /// <summary>A downstream observer that flags any re-entrant (overlapping) notification and counts deliveries.</summary>
     private sealed class ConcurrencyProbe : IObserver<int>
     {
+        /// <summary>The number of wait spin iterations used to widen the re-entrancy detection window.</summary>
+        private const int SpinIterations = 50;
+
         /// <summary>Non-zero while a notification is in flight, used to detect re-entrancy.</summary>
         private int _inside;
 

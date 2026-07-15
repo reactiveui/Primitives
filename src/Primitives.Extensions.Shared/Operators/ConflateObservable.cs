@@ -70,6 +70,11 @@ internal sealed class ConflateObservable<T>(
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="minimumUpdatePeriod">The minimum period between emissions.</param>
         /// <param name="scheduler">The scheduler to run the conflation on.</param>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Correctness",
+            "SST2403:Do not let 'this' escape from a constructor",
+            Justification =
+                "_state is owned solely by this sink and only stores the back-reference, so 'this' never escapes construction.")]
         public ConflateSink(IObserver<T> downstream, TimeSpan minimumUpdatePeriod, ISequencer scheduler)
         {
             _downstream = downstream;

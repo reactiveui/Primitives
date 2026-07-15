@@ -8,28 +8,21 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Observer used by Take to dispose the upstream subscription as soon as the requested count is reached.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-public sealed class TakeWitness<T> : IObserver<T>, IDisposable
+/// <param name="observer">Downstream observer.</param>
+/// <param name="count">Number of values to forward.</param>
+public sealed class TakeWitness<T>(IObserver<T> observer, int count) : IObserver<T>, IDisposable
 {
     /// <summary>Downstream observer.</summary>
-    private readonly IObserver<T> _observer;
+    private readonly IObserver<T> _observer = observer;
 
     /// <summary>Upstream subscription.</summary>
     private readonly SingleReplaceableDisposable _subscription = new();
 
     /// <summary>Remaining values to forward.</summary>
-    private int _remaining;
+    private int _remaining = count;
 
     /// <summary>Non-zero after completion, error, or disposal.</summary>
     private int _stopped;
-
-    /// <summary>Initializes a new instance of the <see cref="TakeWitness{T}"/> class.</summary>
-    /// <param name="observer">Downstream observer.</param>
-    /// <param name="count">Number of values to forward.</param>
-    public TakeWitness(IObserver<T> observer, int count)
-    {
-        _observer = observer;
-        _remaining = count;
-    }
 
     /// <summary>Sets the upstream subscription.</summary>
     /// <param name="subscription">Upstream subscription.</param>

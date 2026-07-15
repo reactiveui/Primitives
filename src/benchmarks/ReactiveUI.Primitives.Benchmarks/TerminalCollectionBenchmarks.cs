@@ -75,12 +75,14 @@ public class TerminalCollectionBenchmarks
     /// <summary>Benchmarks asynchronous array collection.</summary>
     /// <returns>The collected count.</returns>
     [Benchmark]
-    public async Task<int> PrimitivesCollectArrayAsync() => (await Signal.Sequence(1, Count).CollectArrayAsync().ConfigureAwait(false)).Length;
+    public async Task<int> PrimitivesCollectArrayAsync() =>
+        (await Signal.Sequence(1, Count).CollectArrayAsync().ConfigureAwait(false)).Length;
 
     /// <summary>Benchmarks asynchronous array collection using System.Reactive.</summary>
     /// <returns>The collected count.</returns>
     [Benchmark]
-    public async Task<int> SystemReactiveCollectArrayAsync() => (await RxObservable.Range(1, Count).ToArrayAsync().ToTask().ConfigureAwait(false)).Length;
+    public async Task<int> SystemReactiveCollectArrayAsync() =>
+        (await RxObservable.Range(1, Count).ToArrayAsync().ToTask().ConfigureAwait(false)).Length;
 
     /// <summary>Benchmarks asynchronous array collection using R3.</summary>
     /// <returns>The collected count.</returns>
@@ -131,7 +133,8 @@ public class TerminalCollectionBenchmarks
     public int PrimitivesCountPredicate()
     {
         IntSignalWitness observer = new();
-        using var subscription = Signal.Sequence(1, Count).Count(static value => value % EvenDivisor == 0).Subscribe(observer);
+        using var subscription = Signal.Sequence(1, Count).Count(static value => value % EvenDivisor == 0)
+            .Subscribe(observer);
         return observer.Total;
     }
 
@@ -141,7 +144,8 @@ public class TerminalCollectionBenchmarks
     public int SystemReactiveCountPredicate()
     {
         IntSignalWitness observer = new();
-        using var subscription = RxObservable.Range(1, Count).Count(static value => value % EvenDivisor == 0).Subscribe(observer);
+        using var subscription = RxObservable.Range(1, Count).Count(static value => value % EvenDivisor == 0)
+            .Subscribe(observer);
         return observer.Total;
     }
 
@@ -160,7 +164,8 @@ public class TerminalCollectionBenchmarks
     public long PrimitivesLongCountPredicate()
     {
         LongSignalWitness observer = new();
-        using var subscription = Signal.Sequence(1, Count).LongCount(static value => value % EvenDivisor == 0).Subscribe(observer);
+        using var subscription = Signal.Sequence(1, Count).LongCount(static value => value % EvenDivisor == 0)
+            .Subscribe(observer);
         return observer.Total;
     }
 
@@ -170,7 +175,8 @@ public class TerminalCollectionBenchmarks
     public long SystemReactiveLongCountPredicate()
     {
         LongSignalWitness observer = new();
-        using var subscription = RxObservable.Range(1, Count).LongCount(static value => value % EvenDivisor == 0).Subscribe(observer);
+        using var subscription = RxObservable.Range(1, Count).LongCount(static value => value % EvenDivisor == 0)
+            .Subscribe(observer);
         return observer.Total;
     }
 
@@ -210,7 +216,9 @@ public class TerminalCollectionBenchmarks
         await R3.ObservableExtensions.AllAsync(
             R3.Observable.Range(1, Count),
             static value => value > 0,
-            CancellationToken.None).ConfigureAwait(false) ? 1 : 0;
+            CancellationToken.None).ConfigureAwait(false)
+            ? 1
+            : 0;
 
     /// <summary>Benchmarks contains over a range signal.</summary>
     /// <returns>One when the value is present.</returns>
@@ -239,7 +247,9 @@ public class TerminalCollectionBenchmarks
         await R3.ObservableExtensions.ContainsAsync(
             R3.Observable.Range(1, Count),
             Count,
-            CancellationToken.None).ConfigureAwait(false) ? 1 : 0;
+            CancellationToken.None).ConfigureAwait(false)
+            ? 1
+            : 0;
 
     /// <summary>Benchmarks all and contains terminal predicates.</summary>
     /// <returns>The number of true results.</returns>

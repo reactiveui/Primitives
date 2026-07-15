@@ -56,10 +56,13 @@ public sealed class ReturnSignal<T> : IRequireCurrentThread<T>
             return EmptyDisposable.Instance;
         }
 
-        return _scheduler.Schedule(() =>
-        {
-            observer.OnNext(_value);
-            observer.OnCompleted();
-        });
+        return _scheduler.Schedule(
+            (self: this, observer),
+            static (_, s) =>
+            {
+                s.observer.OnNext(s.self._value);
+                s.observer.OnCompleted();
+                return EmptyDisposable.Instance;
+            });
     }
 }

@@ -31,8 +31,17 @@ public partial class SimpleSyncOperatorTests
     /// <summary>Shuffle test sentinel.</summary>
     private const int Shuffle5 = 5;
 
+    /// <summary>Length of the pathological input that drives the regex into catastrophic backtracking.</summary>
+    private const int PathologicalInputLength = 100;
+
+    /// <summary>Divisor the <c>TrySelect</c> projection uses to keep even values and drop the odd ones.</summary>
+    private const int EvenDivisor = 2;
+
     /// <summary>Inputs used by the <c>Shuffle</c> multiset test.</summary>
     private static readonly int[] ShuffleInput = [Shuffle1, Shuffle2, Shuffle3, Shuffle4, Shuffle5];
+
+    /// <summary>Inputs used by the <c>TrySelect</c> null-projection test; the odd values are dropped.</summary>
+    private static readonly int[] TrySelectInput = [1, 2, 3, 4];
 
     /// <summary>Verifies that <c>Shuffle</c> preserves the multiset of input values.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -144,7 +153,7 @@ public partial class SimpleSyncOperatorTests
         using var sub = subject.Filter(regex).Subscribe(
             static _ => { },
             ex => caught = ex);
-        subject.OnNext(new string('a', 100) + "!");
+        subject.OnNext(new string('a', PathologicalInputLength) + "!");
         await Assert.That(caught).IsNotNull();
     }
 
@@ -153,9 +162,8 @@ public partial class SimpleSyncOperatorTests
     [Test]
     public async Task WhenTrySelectNullProjection_ThenDropped()
     {
-        int[] input = [1, 2, 3, 4];
         List<string> results = [];
-        using var sub = input.ToObservable().TrySelect(static x => x % 2 == 0 ? x.ToString() : null)
+        using var sub = TrySelectInput.ToObservable().TrySelect(static x => x % EvenDivisor == 0 ? x.ToString() : null)
             .Subscribe(results.Add);
         await Assert.That(results).IsCollectionEqualTo(["2", "4"]);
     }

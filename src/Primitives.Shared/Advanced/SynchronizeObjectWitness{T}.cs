@@ -10,25 +10,18 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Observer that serializes notifications using an object gate.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-public sealed class SynchronizeObjectWitness<T> : IObserver<T>, IDisposable
+/// <param name="observer">The downstream observer.</param>
+/// <param name="gate">The gate shared with other synchronized observers.</param>
+public sealed class SynchronizeObjectWitness<T>(IObserver<T> observer, object gate) : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>
-    private readonly IObserver<T> _observer;
+    private readonly IObserver<T> _observer = observer;
 
     /// <summary>The gate that serializes every forwarded notification.</summary>
-    private readonly object _gate;
+    private readonly object _gate = gate;
 
     /// <summary>The upstream subscription.</summary>
     private IDisposable? _subscription;
-
-    /// <summary>Initializes a new instance of the <see cref="SynchronizeObjectWitness{T}"/> class.</summary>
-    /// <param name="observer">The downstream observer.</param>
-    /// <param name="gate">The gate shared with other synchronized observers.</param>
-    public SynchronizeObjectWitness(IObserver<T> observer, object gate)
-    {
-        _observer = observer;
-        _gate = gate;
-    }
 
     /// <inheritdoc/>
     public void OnNext(T value)

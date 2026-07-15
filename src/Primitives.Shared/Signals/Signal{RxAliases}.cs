@@ -100,7 +100,9 @@ public static partial class Signal
     {
         ArgumentExceptionHelper.ThrowIfNull(scheduler);
 
-        return scheduler == Sequencer.Immediate ? new ImmediateReturnSignal<T>(value) : new ReturnSignal<T>(value, scheduler);
+        return scheduler == Sequencer.Immediate
+            ? new ImmediateReturnSignal<T>(value)
+            : new ReturnSignal<T>(value, scheduler);
     }
 
     /// <summary>Returns an observable sequence that repeats a value indefinitely.</summary>
@@ -126,9 +128,10 @@ public static partial class Signal
     /// <typeparam name="T">The value type.</typeparam>
     /// <returns>An observable sequence that completes without values.</returns>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
-        Justification = "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
+        "Design",
+        "SST2307:Generic method type parameters should be inferable from the parameters",
+        Justification =
+            "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
     public static IObservable<T> Empty<T>() => ImmutableEmptySignal<T>.Instance;
 
     /// <summary>Returns an empty observable sequence on the supplied scheduler.</summary>
@@ -136,9 +139,10 @@ public static partial class Signal
     /// <param name="scheduler">The scheduler used to complete the sequence.</param>
     /// <returns>An observable sequence that completes without values.</returns>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
-        Justification = "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
+        "Design",
+        "SST2307:Generic method type parameters should be inferable from the parameters",
+        Justification =
+            "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
     public static IObservable<T> Empty<T>(ISequencer scheduler)
     {
         ArgumentExceptionHelper.ThrowIfNull(scheduler);
@@ -150,9 +154,10 @@ public static partial class Signal
     /// <typeparam name="T">The value type.</typeparam>
     /// <returns>An observable sequence that never emits and never terminates.</returns>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
-        Justification = "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
+        "Design",
+        "SST2307:Generic method type parameters should be inferable from the parameters",
+        Justification =
+            "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
     public static IObservable<T> Never<T>() => ImmutableNeverSignal<T>.Instance;
 
     /// <summary>Returns an observable sequence that terminates with an error.</summary>
@@ -160,9 +165,10 @@ public static partial class Signal
     /// <param name="error">The error used to terminate the sequence.</param>
     /// <returns>An observable sequence that terminates with <paramref name="error"/>.</returns>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
-        Justification = "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
+        "Design",
+        "SST2307:Generic method type parameters should be inferable from the parameters",
+        Justification =
+            "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
     public static IObservable<T> Throw<T>(Exception error) => new ImmediateThrowSignal<T>(error);
 
     /// <summary>Returns an observable sequence that terminates with a scheduled error.</summary>
@@ -171,14 +177,17 @@ public static partial class Signal
     /// <param name="scheduler">The scheduler used to emit the error.</param>
     /// <returns>An observable sequence that terminates with <paramref name="error"/>.</returns>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Major Code Smell",
-        "S4018:Generic methods should provide type parameters",
-        Justification = "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
+        "Design",
+        "SST2307:Generic method type parameters should be inferable from the parameters",
+        Justification =
+            "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
     public static IObservable<T> Throw<T>(Exception error, ISequencer scheduler)
     {
         ArgumentExceptionHelper.ThrowIfNull(scheduler);
 
-        return scheduler == Sequencer.Immediate ? new ImmediateThrowSignal<T>(error) : new ThrowSignal<T>(error, scheduler);
+        return scheduler == Sequencer.Immediate
+            ? new ImmediateThrowSignal<T>(error)
+            : new ThrowSignal<T>(error, scheduler);
     }
 
     /// <summary>Returns an observable sequence that emits a range of integral values.</summary>
@@ -443,7 +452,9 @@ public static partial class Signal
     {
         ArgumentExceptionHelper.ThrowIfNull(sources);
 
-        return TryCreateSynchronousSwitchRangeSignal(sources, out var rangeSignal) ? rangeSignal : new SwitchSignal<T>(sources);
+        return TryCreateSynchronousSwitchRangeSignal(sources, out var rangeSignal)
+            ? rangeSignal
+            : new SwitchSignal<T>(sources);
     }
 
     /// <summary>Combines latest values from two signals using latest-fusion semantics.</summary>
@@ -465,7 +476,8 @@ public static partial class Signal
 
         ArgumentExceptionHelper.ThrowIfNull(selector);
 
-        return typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange && right is RangeSignal rightRange
+        return typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange &&
+               right is RangeSignal rightRange
             ? new RangeSyncLatestSignal<TResult>(leftRange, rightRange, (Func<int, int, TResult>)(object)selector)
             : new SyncLatestSignal<TLeft, TRight, TResult>(left, right, selector);
     }
@@ -475,7 +487,9 @@ public static partial class Signal
     /// <param name="sources">The outer source.</param>
     /// <param name="signal">The optimized signal when available.</param>
     /// <returns><see langword="true"/> when the fast path applies.</returns>
-    private static bool TryCreateSynchronousSwitchRangeSignal<T>(IObservable<IObservable<T>> sources, out IObservable<T> signal)
+    private static bool TryCreateSynchronousSwitchRangeSignal<T>(
+        IObservable<IObservable<T>> sources,
+        out IObservable<T> signal)
     {
         signal = null!;
         if (typeof(T) != typeof(int) || sources is not FromEnumerableSignal<IObservable<T>> enumerable)

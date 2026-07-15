@@ -15,7 +15,8 @@ public sealed class AnonymousSignal<T> : IObservable<T>
 
     /// <summary>Initializes a new instance of the <see cref="AnonymousSignal{T}"/> class.</summary>
     /// <param name="subscribe">Subscription delegate.</param>
-    public AnonymousSignal(Func<IObserver<T>, IDisposable> subscribe) => _subscribe = subscribe ?? throw new ArgumentNullException(nameof(subscribe));
+    public AnonymousSignal(Func<IObserver<T>, IDisposable> subscribe) =>
+        _subscribe = subscribe ?? throw new ArgumentNullException(nameof(subscribe));
 
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)

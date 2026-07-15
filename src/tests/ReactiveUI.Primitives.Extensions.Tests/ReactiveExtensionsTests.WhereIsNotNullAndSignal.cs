@@ -104,7 +104,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task AsSignal_ConvertsToUnit()
     {
-        var source = Observable.Range(1, 3);
+        var source = Observable.Range(1, SampleValue3);
         List<RxVoid> results = [];
         using var sub = source.AsSignal().Subscribe(results.Add);
         await Assert.That(results).Count().IsEqualTo(SampleValue3);
@@ -157,6 +157,6 @@ public partial class ReactiveExtensionsTests
 
         // All values converted to RxVoid.Default
         await Assert.That(results).Count().IsEqualTo(SampleValue3);
-        await Assert.That(results).All(x => x == RxVoid.Default);
+        await Assert.That(results).All(static x => x == RxVoid.Default);
     }
 }

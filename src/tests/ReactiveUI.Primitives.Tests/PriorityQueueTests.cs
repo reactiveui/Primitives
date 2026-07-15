@@ -36,6 +36,9 @@ public class PriorityQueueTests
     /// <summary>The number of items to dequeue in the test.</summary>
     private const int DequeueLimit = 2;
 
+    /// <summary>The insertion id of the item enqueued after the equal pair, which orders it last.</summary>
+    private const long LaterInsertionId = 2L;
+
     /// <summary>Verifies public helper methods preserve priority order.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
@@ -125,7 +128,7 @@ public class PriorityQueueTests
     {
         PriorityQueue<int>.IndexedItem left = new() { Id = 1L, Value = 1 };
         PriorityQueue<int>.IndexedItem right = new() { Id = 1L, Value = 1 };
-        PriorityQueue<int>.IndexedItem later = new() { Id = 2L, Value = 1 };
+        PriorityQueue<int>.IndexedItem later = new() { Id = LaterInsertionId, Value = 1 };
 
         await Assert.That(left.Equals(right)).IsTrue();
         await Assert.That(left.Equals((object)right)).IsTrue();
@@ -167,9 +170,6 @@ public class PriorityQueueTests
         public int Priority { get; set; } = priority;
 
         /// <inheritdoc/>
-        public int CompareTo(PriorityItem? other)
-        {
-            return other is null ? 1 : Priority.CompareTo(other.Priority);
-        }
+        public int CompareTo(PriorityItem? other) => other is null ? 1 : Priority.CompareTo(other.Priority);
     }
 }

@@ -1,6 +1,7 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Async.Reactive;
 #else
@@ -37,10 +38,14 @@ public static partial class SignalAsyncReactiveExtensions
     /// <param name = "source">The source observable to yield from.</param>
     internal sealed class YieldSignal<T>(IObservableAsync<T> source) : IObservableAsync<T>
     {
-        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(IObserverAsync<T> observer, CancellationToken cancellationToken)
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
+            IObserverAsync<T> observer,
+            CancellationToken cancellationToken)
         {
             var currentContext = AsyncContext.GetCurrent();
-            return source.SubscribeAsync(new ContextSwitchSignalAsync<T>.ContextSwitchWitness(observer, currentContext, true), cancellationToken);
+            return source.SubscribeAsync(
+                new ContextSwitchSignalAsync<T>.ContextSwitchWitness(observer, currentContext, true),
+                cancellationToken);
         }
     }
 }

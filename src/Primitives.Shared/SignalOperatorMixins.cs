@@ -80,7 +80,9 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(sources);
 
-            return TryCreateSynchronousSwitchRangeSignal(sources, out var rangeSignal) ? rangeSignal : new SwitchSignal<T>(sources);
+            return TryCreateSynchronousSwitchRangeSignal(sources, out var rangeSignal)
+                ? rangeSignal
+                : new SwitchSignal<T>(sources);
         }
     }
 
@@ -218,7 +220,9 @@ public static partial class LinqExtensions
         /// <param name="accumulator">The function that combines the current state with the next source value.</param>
         /// <returns>A sequence of intermediate accumulated values.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="accumulator"/> is <see langword="null"/>.</exception>
-        public IObservable<TAccumulate> Fold<TAccumulate>(TAccumulate seed, Func<TAccumulate, T, TAccumulate> accumulator)
+        public IObservable<TAccumulate> Fold<TAccumulate>(
+            TAccumulate seed,
+            Func<TAccumulate, T, TAccumulate> accumulator)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
@@ -233,7 +237,9 @@ public static partial class LinqExtensions
         /// <param name="accumulator">The function that combines the current state with the next source value.</param>
         /// <returns>A sequence that emits one accumulated value on completion.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="accumulator"/> is <see langword="null"/>.</exception>
-        public IObservable<TAccumulate> Reduce<TAccumulate>(TAccumulate seed, Func<TAccumulate, T, TAccumulate> accumulator)
+        public IObservable<TAccumulate> Reduce<TAccumulate>(
+            TAccumulate seed,
+            Func<TAccumulate, T, TAccumulate> accumulator)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
@@ -384,9 +390,9 @@ public static partial class LinqExtensions
             ArgumentExceptionHelper.ThrowIfNull(selector);
 
             return typeof(T) == typeof(int) &&
-                typeof(TRight) == typeof(int) &&
-                source is RangeSignal leftRange &&
-                right is RangeSignal rightRange
+                   typeof(TRight) == typeof(int) &&
+                   source is RangeSignal leftRange &&
+                   right is RangeSignal rightRange
                 ? new RangeZipSignal<TResult>(
                     leftRange,
                     rightRange,
@@ -401,7 +407,9 @@ public static partial class LinqExtensions
         /// <param name="selector">The function that combines the latest values.</param>
         /// <returns>A sequence containing selected latest-value combinations.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="source"/>, <paramref name="right"/>, or <paramref name="selector"/> is <see langword="null"/>.</exception>
-        public IObservable<TResult> SyncLatest<TRight, TResult>(IObservable<TRight> right, Func<T, TRight, TResult> selector)
+        public IObservable<TResult> SyncLatest<TRight, TResult>(
+            IObservable<TRight> right,
+            Func<T, TRight, TResult> selector)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
@@ -410,9 +418,9 @@ public static partial class LinqExtensions
             ArgumentExceptionHelper.ThrowIfNull(selector);
 
             return typeof(T) == typeof(int) &&
-                typeof(TRight) == typeof(int) &&
-                source is RangeSignal leftRange &&
-                right is RangeSignal rightRange
+                   typeof(TRight) == typeof(int) &&
+                   source is RangeSignal leftRange &&
+                   right is RangeSignal rightRange
                 ? new RangeSyncLatestSignal<TResult>(
                     leftRange,
                     rightRange,
@@ -437,9 +445,9 @@ public static partial class LinqExtensions
             ArgumentExceptionHelper.ThrowIfNull(selector);
 
             return typeof(T) == typeof(int) &&
-                typeof(TRight) == typeof(int) &&
-                source is RangeSignal leftRange &&
-                right is RangeSignal rightRange
+                   typeof(TRight) == typeof(int) &&
+                   source is RangeSignal leftRange &&
+                   right is RangeSignal rightRange
                 ? new RangeWithLatestSignal<TResult>(
                     leftRange,
                     rightRange,
@@ -507,7 +515,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return source is RangeSignal range && CanReadRangeAs(typeof(T))
+            return source is RangeSignal range && typeof(T) == typeof(int)
                 ? new ShiftedRangeSignal<T>(
                     range,
                     Sequencer.Normalize(dueTime),
@@ -524,7 +532,7 @@ public static partial class LinqExtensions
             ArgumentExceptionHelper.ThrowIfNull(source);
 
             scheduler ??= ThreadPoolSequencer.Instance;
-            return source is RangeSignal range && CanReadRangeAs(typeof(T))
+            return source is RangeSignal range && typeof(T) == typeof(int)
                 ? new ShiftedRangeSignal<T>(
                     range,
                     Sequencer.Normalize(dueTime),
@@ -560,7 +568,9 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return source is RangeSignal range && CanReadRangeAs(typeof(T)) ? new RangeListSignal<T>(range) : new CollectListSignal<T>(source);
+            return source is RangeSignal range && typeof(T) == typeof(int)
+                ? new RangeListSignal<T>(range)
+                : new CollectListSignal<T>(source);
         }
 
         /// <summary>Collects all values into an array when the source completes.</summary>
@@ -569,12 +579,13 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return source is RangeSignal range && CanReadRangeAs(typeof(T)) ? new RangeArraySignal<T>(range) : new CollectArraySignal<T>(source);
+            return source is RangeSignal range && typeof(T) == typeof(int)
+                ? new RangeArraySignal<T>(range)
+                : new CollectArraySignal<T>(source);
         }
 
         /// <summary>Returns an observable sequence as a signal-compatible observable.</summary>
         /// <returns>The supplied source sequence.</returns>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0001:Simplify Names", Justification = "The argument validation uses ArgumentExceptionHelper")]
         public IObservable<T> ToSignal() => source ?? throw new ArgumentNullException(nameof(source));
     }
 
@@ -620,9 +631,10 @@ public static partial class LinqExtensions
         /// <returns>A sequence containing only values assignable to <typeparamref name="TResult"/>.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
-            "Major Code Smell",
-            "S4018:Generic methods should provide type parameters",
-            Justification = "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
+            "Design",
+            "SST2307:Generic method type parameters should be inferable from the parameters",
+            Justification =
+                "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
         public IObservable<TResult> KeepType<TResult>()
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -635,9 +647,10 @@ public static partial class LinqExtensions
         /// <returns>A sequence containing each value cast to <typeparamref name="TResult"/>.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
-            "Major Code Smell",
-            "S4018:Generic methods should provide type parameters",
-            Justification = "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
+            "Design",
+            "SST2307:Generic method type parameters should be inferable from the parameters",
+            Justification =
+                "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
         public IObservable<TResult> CastTo<TResult>()
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -655,9 +668,10 @@ public static partial class LinqExtensions
         /// <returns>A signal that emits the completed task result or faults with the task error.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="task"/> is <see langword="null"/>.</exception>
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
-            "Major Code Smell",
-            "S4462:Calls to \"async\" methods should not be blocking",
-            Justification = "Synchronous read of an already-completed (RanToCompletion) task preserves the existing allocation-free fast path; await is invalid in this synchronous factory.")]
+            "Concurrency",
+            "PSH1315:A blocking wait on an awaitable that may not be done",
+            Justification =
+                "Synchronous read of an already-completed (RanToCompletion) task preserves the existing allocation-free fast path; await is invalid in this synchronous factory.")]
         public IObservable<T> ToSignal()
         {
             ArgumentExceptionHelper.ThrowIfNull(task);
@@ -672,21 +686,20 @@ public static partial class LinqExtensions
                 return new ImmediateThrowSignal<T>(new TaskCanceledException(task));
             }
 
-            return task.IsFaulted ? new ImmediateThrowSignal<T>(task.Exception!.InnerException ?? task.Exception) : new TaskInstanceSignal<T>(task);
+            return task.IsFaulted
+                ? new ImmediateThrowSignal<T>(task.Exception!.InnerException ?? task.Exception)
+                : new TaskInstanceSignal<T>(task);
         }
     }
-
-    /// <summary>Determines whether a generic observer type can receive boxed range integers.</summary>
-    /// <param name="elementType">The observer value type.</param>
-    /// <returns><see langword="true"/> when the cast is valid.</returns>
-    private static bool CanReadRangeAs(Type elementType) => elementType.IsAssignableFrom(typeof(int));
 
     /// <summary>Creates a range-concat signal for synchronous Switch over known range inners.</summary>
     /// <typeparam name="T">The value type.</typeparam>
     /// <param name="sources">Outer sources.</param>
     /// <param name="signal">Optimized signal when available.</param>
     /// <returns><see langword="true"/> when the fast path applies.</returns>
-    private static bool TryCreateSynchronousSwitchRangeSignal<T>(IObservable<IObservable<T>> sources, out IObservable<T> signal)
+    private static bool TryCreateSynchronousSwitchRangeSignal<T>(
+        IObservable<IObservable<T>> sources,
+        out IObservable<T> signal)
     {
         signal = null!;
         if (typeof(T) != typeof(int) || sources is not FromEnumerableSignal<IObservable<T>> enumerable)

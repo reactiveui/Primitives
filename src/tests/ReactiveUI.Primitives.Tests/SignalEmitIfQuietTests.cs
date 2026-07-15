@@ -10,6 +10,28 @@ namespace ReactiveUI.Primitives.Tests;
 /// <summary>Verifies <see cref="Signal"/> emit-if-quiet debounce contracts.</summary>
 public sealed class SignalEmitIfQuietTests
 {
+    /// <summary>
+    /// Verifies a source that completes twice, or errors after completing, is not forwarded twice: the quiet
+    /// observer keeps the Rx grammar even when the source breaks it.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task EmitIfQuietDropsTerminalNotificationsAfterTheFirstOne()
+    {
+        const int QuietTicks = 1;
+        IObserver<int>? source = null;
+        RecordingWitness<int> witness = new();
+        using var subscription = new ScriptedObservable<int>(observer => source = observer)
+            .EmitIfQuiet(TimeSpan.FromTicks(QuietTicks), new VirtualClock())
+            .Subscribe(witness);
+        source!.OnCompleted();
+        source.OnCompleted();
+        source.OnError(new InvalidOperationException("late"));
+        await Assert.That(witness.Completed).IsEqualTo(1);
+        await Assert.That(witness.Errors.Count).IsEqualTo(0);
+        await Assert.That(witness.Values.Count).IsEqualTo(0);
+    }
+
     /// <summary>Verifies the EmitIfQuiet method covers immediate, scheduled, completion, stale emission, and error paths.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
@@ -26,7 +48,7 @@ public sealed class SignalEmitIfQuietTests
         List<int> delayedValues = [];
         var completed = 0;
         _ = source.EmitIfQuiet(TimeSpan.FromTicks(Third), clock)
-            .Subscribe(delayedValues.Add, ex => throw ex, () => completed++);
+            .Subscribe(delayedValues.Add, static ex => throw ex, () => completed++);
         source.OnNext(First);
         clock.AdvanceBy(TimeSpan.FromTicks(Second));
         source.OnNext(Second);
@@ -40,27 +62,29 @@ public sealed class SignalEmitIfQuietTests
         var emptyCompletion = 0;
         Signal<int> emptySource = new();
         _ = emptySource.EmitIfQuiet(TimeSpan.FromTicks(First), new VirtualClock())
-            .Subscribe(_ => { }, ex => throw ex, () => emptyCompletion++);
+            .Subscribe(static _ => { }, static ex => throw ex, () => emptyCompletion++);
         emptySource.OnCompleted();
         await Assert.That(emptyCompletion).IsEqualTo(1);
         VirtualClock errorClock = new();
         Signal<int> errorSource = new();
         InvalidOperationException expected = new("quiet");
         Exception? observed = null;
-        _ = errorSource.EmitIfQuiet(TimeSpan.FromTicks(First), errorClock).Subscribe(_ => { }, ex => observed = ex);
+        _ = errorSource.EmitIfQuiet(TimeSpan.FromTicks(First), errorClock).Subscribe(static _ => { }, ex => observed = ex);
         errorSource.OnNext(First);
         errorSource.OnError(expected);
         errorClock.AdvanceBy(TimeSpan.FromTicks(First));
         await Assert.That(observed!).IsSameReferenceAs(expected);
-        _ = Assert.Throws<ArgumentNullException>(() => ((IObservable<int>)null!).EmitIfQuiet(TimeSpan.FromTicks(First)));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.Emit(First).EmitIfQuiet(TimeSpan.FromTicks(First), null!));
+        _ = Assert.Throws<ArgumentNullException>(static () =>
+            ((IObservable<int>)null!).EmitIfQuiet(TimeSpan.FromTicks(First)));
+        _ = Assert.Throws<ArgumentNullException>(static () =>
+            Signal.Emit(First).EmitIfQuiet(TimeSpan.FromTicks(First), null!));
         var stoppedGuardCompleted = 0;
-        _ = new ScriptedObservable<int>(observer =>
+        _ = new ScriptedObservable<int>(static observer =>
             {
                 observer.OnCompleted();
                 observer.OnNext(First);
             }).EmitIfQuiet(TimeSpan.FromTicks(First), new VirtualClock())
-            .Subscribe(_ => { }, ex => throw ex, () => stoppedGuardCompleted++);
+            .Subscribe(static _ => { }, static ex => throw ex, () => stoppedGuardCompleted++);
         await Assert.That(stoppedGuardCompleted).IsEqualTo(1);
     }
 }

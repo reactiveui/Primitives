@@ -36,7 +36,9 @@ public static partial class LinqExtensions
 
             ArgumentExceptionHelper.ThrowIfNull(scheduler);
 
-            return scheduler == Sequencer.Immediate || scheduler == Sequencer.CurrentThread ? new FromEnumerableSignal<T>(values) : new ScheduledEnumerableSignal<T>(values, scheduler);
+            return scheduler == Sequencer.Immediate || scheduler == Sequencer.CurrentThread
+                ? new FromEnumerableSignal<T>(values)
+                : new ScheduledEnumerableSignal<T>(values, scheduler);
         }
 
         /// <summary>Converts an enumerable sequence to a Primitives signal using the System.Reactive conversion name.</summary>
@@ -95,7 +97,9 @@ public static partial class LinqExtensions
                 return source;
             }
 
-            return values.Length == 1 ? new PrependSignal<T>(source, values[0]) : new StartWithEnumerableSignal<T>(source, values);
+            return values.Length == 1
+                ? new PrependSignal<T>(source, values[0])
+                : new StartWithEnumerableSignal<T>(source, values);
         }
 
         /// <summary>Prepends values before the source sequence.</summary>
@@ -119,13 +123,14 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return source is PrependSignal<T> prepended ? new PrependAppendSignal<T>(prepended.GetSource(), prepended.GetValue(), value) : new AppendSignal<T>(source, value);
+            return source is PrependSignal<T> prepended
+                ? new PrependAppendSignal<T>(prepended.GetSource(), prepended.GetValue(), value)
+                : new AppendSignal<T>(source, value);
         }
 
         /// <summary>Returns the source as an observable. This is an identity adapter for BCL observable sources.</summary>
         /// <returns>The supplied source sequence.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0001:Simplify Names", Justification = "The argument validation uses ArgumentExceptionHelper")]
         public IObservable<T> AsObservable() => source ?? throw new ArgumentNullException(nameof(source));
 
         /// <summary>Schedules observer notifications on the supplied scheduler using the System.Reactive operator name.</summary>
@@ -162,7 +167,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return source is RangeSignal range && CanReadRangeAs(typeof(T))
+            return source is RangeSignal range && typeof(T) == typeof(int)
                 ? new ShiftedRangeSignal<T>(range, Sequencer.Normalize(dueTime), ThreadPoolSequencer.Instance)
                 : new DelayStartSignal<T>(source, dueTime, ThreadPoolSequencer.Instance);
         }
@@ -188,7 +193,7 @@ public static partial class LinqExtensions
             ArgumentExceptionHelper.ThrowIfNull(source);
 
             scheduler ??= ThreadPoolSequencer.Instance;
-            return source is RangeSignal range && CanReadRangeAs(typeof(T))
+            return source is RangeSignal range && typeof(T) == typeof(int)
                 ? new ShiftedRangeSignal<T>(range, Sequencer.Normalize(dueTime), scheduler)
                 : new DelayStartSignal<T>(source, dueTime, scheduler);
         }
@@ -536,7 +541,9 @@ public static partial class LinqExtensions
 
             var scheduler = ThreadPoolSequencer.Instance;
             var normalizedDueTime = Sequencer.Normalize(dueTime);
-            return source is RangeSignal range && CanReadRangeAs(typeof(T)) ? new ShiftedRangeSignal<T>(range, normalizedDueTime, scheduler) : new DelayStartSignal<T>(source, dueTime, scheduler);
+            return source is RangeSignal range && typeof(T) == typeof(int)
+                ? new ShiftedRangeSignal<T>(range, normalizedDueTime, scheduler)
+                : new DelayStartSignal<T>(source, dueTime, scheduler);
         }
 
         /// <summary>Emits values from source after delaying subscription by the due time.</summary>
@@ -550,7 +557,9 @@ public static partial class LinqExtensions
 
             var sequencer = scheduler ?? ThreadPoolSequencer.Instance;
             var normalizedDueTime = Sequencer.Normalize(dueTime);
-            return source is RangeSignal range && CanReadRangeAs(typeof(T)) ? new ShiftedRangeSignal<T>(range, normalizedDueTime, sequencer) : new DelayStartSignal<T>(source, dueTime, sequencer);
+            return source is RangeSignal range && typeof(T) == typeof(int)
+                ? new ShiftedRangeSignal<T>(range, normalizedDueTime, sequencer)
+                : new DelayStartSignal<T>(source, dueTime, sequencer);
         }
 
         /// <summary>Emits only the most recent value after the quiet period elapses.</summary>
@@ -637,7 +646,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return source is RangeSignal range && CanReadRangeAs(typeof(T))
+            return source is RangeSignal range && typeof(T) == typeof(int)
                 ? new TimestampRangeSignal<T>(range, Sequencer.Immediate)
                 : new MapWithSignal<T, ISequencer, Moment<T>>(source, Sequencer.Immediate, CreateMoment);
         }
@@ -651,7 +660,7 @@ public static partial class LinqExtensions
             ArgumentExceptionHelper.ThrowIfNull(source);
 
             scheduler ??= Sequencer.Immediate;
-            return source is RangeSignal range && CanReadRangeAs(typeof(T))
+            return source is RangeSignal range && typeof(T) == typeof(int)
                 ? new TimestampRangeSignal<T>(range, scheduler)
                 : new MapWithSignal<T, ISequencer, Moment<T>>(source, scheduler, CreateMoment);
         }
@@ -663,7 +672,9 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return source is RangeSignal range && CanReadRangeAs(typeof(T)) ? new TimeIntervalRangeSignal<T>(range, Sequencer.Immediate) : new TimeIntervalSignal<T>(source, Sequencer.Immediate);
+            return source is RangeSignal range && typeof(T) == typeof(int)
+                ? new TimeIntervalRangeSignal<T>(range, Sequencer.Immediate)
+                : new TimeIntervalSignal<T>(source, Sequencer.Immediate);
         }
 
         /// <summary>Annotates each value with the elapsed scheduler time since the previous value.</summary>
@@ -675,7 +686,9 @@ public static partial class LinqExtensions
             ArgumentExceptionHelper.ThrowIfNull(source);
 
             scheduler ??= Sequencer.Immediate;
-            return source is RangeSignal range && CanReadRangeAs(typeof(T)) ? new TimeIntervalRangeSignal<T>(range, scheduler) : new TimeIntervalSignal<T>(source, scheduler);
+            return source is RangeSignal range && typeof(T) == typeof(int)
+                ? new TimeIntervalRangeSignal<T>(range, scheduler)
+                : new TimeIntervalSignal<T>(source, scheduler);
         }
 
         /// <summary>Combines latest values from both sources. Alias for latest-fusion vocabulary.</summary>
@@ -685,7 +698,9 @@ public static partial class LinqExtensions
         /// <param name="selector">The function that combines the latest values.</param>
         /// <returns>A sequence containing selected latest-value combinations.</returns>
         /// <exception cref="ArgumentNullException">The left sequence, <paramref name="right"/>, or <paramref name="selector"/> is <see langword="null"/>.</exception>
-        public IObservable<TResult> PairLatest<TRight, TResult>(IObservable<TRight> right, Func<T, TRight, TResult> selector)
+        public IObservable<TResult> PairLatest<TRight, TResult>(
+            IObservable<TRight> right,
+            Func<T, TRight, TResult> selector)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
@@ -693,7 +708,8 @@ public static partial class LinqExtensions
 
             ArgumentExceptionHelper.ThrowIfNull(selector);
 
-            return typeof(T) == typeof(int) && typeof(TRight) == typeof(int) && source is RangeSignal leftRange && right is RangeSignal rightRange
+            return typeof(T) == typeof(int) && typeof(TRight) == typeof(int) && source is RangeSignal leftRange &&
+                   right is RangeSignal rightRange
                 ? new RangeSyncLatestSignal<TResult>(leftRange, rightRange, (Func<int, int, TResult>)(object)selector)
                 : new CombineLatestSignal<T, TRight, TResult>(source, right, selector);
         }
@@ -705,7 +721,9 @@ public static partial class LinqExtensions
         /// <param name="selector">The function that combines the latest values.</param>
         /// <returns>A sequence containing selected latest-value combinations.</returns>
         /// <exception cref="ArgumentNullException">The left sequence, <paramref name="right"/>, or <paramref name="selector"/> is <see langword="null"/>.</exception>
-        public IObservable<TResult> FuseLatest<TRight, TResult>(IObservable<TRight> right, Func<T, TRight, TResult> selector)
+        public IObservable<TResult> FuseLatest<TRight, TResult>(
+            IObservable<TRight> right,
+            Func<T, TRight, TResult> selector)
         {
             ArgumentExceptionHelper.ThrowIfNull(selector);
 
@@ -713,7 +731,8 @@ public static partial class LinqExtensions
 
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return typeof(T) == typeof(int) && typeof(TRight) == typeof(int) && source is RangeSignal leftRange && right is RangeSignal rightRange
+            return typeof(T) == typeof(int) && typeof(TRight) == typeof(int) && source is RangeSignal leftRange &&
+                   right is RangeSignal rightRange
                 ? new RangeSyncLatestSignal<TResult>(leftRange, rightRange, (Func<int, int, TResult>)(object)selector)
                 : new CombineLatestSignal<T, TRight, TResult>(source, right, selector);
         }
@@ -725,7 +744,9 @@ public static partial class LinqExtensions
         /// <param name="selector">The function that combines the final values.</param>
         /// <returns>A sequence that emits one selected value after both sources complete.</returns>
         /// <exception cref="ArgumentNullException">The left sequence, <paramref name="right"/>, or <paramref name="selector"/> is <see langword="null"/>.</exception>
-        public IObservable<TResult> ForkJoin<TRight, TResult>(IObservable<TRight> right, Func<T, TRight, TResult> selector)
+        public IObservable<TResult> ForkJoin<TRight, TResult>(
+            IObservable<TRight> right,
+            Func<T, TRight, TResult> selector)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
@@ -733,348 +754,10 @@ public static partial class LinqExtensions
 
             ArgumentExceptionHelper.ThrowIfNull(selector);
 
-            return typeof(T) == typeof(int) && typeof(TRight) == typeof(int) && source is RangeSignal leftRange && right is RangeSignal rightRange
+            return typeof(T) == typeof(int) && typeof(TRight) == typeof(int) && source is RangeSignal leftRange &&
+                   right is RangeSignal rightRange
                 ? new RangeForkJoinSignal<TResult>(leftRange, rightRange, (Func<int, int, TResult>)(object)selector)
                 : new ForkJoinSignal<T, TRight, TResult>(source, right, selector);
-        }
-
-        /// <summary>Awaits the first source value.</summary>
-        /// <returns>A task that completes with the first source value.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
-        /// <exception cref="InvalidOperationException">The source completes without producing a value.</exception>
-        public Task<T> FirstAsync()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return source.FirstCoreAsync(false, default!, CancellationToken.None);
-        }
-
-        /// <summary>Awaits the first source value.</summary>
-        /// <param name="cancellationToken">The token used to cancel the task and dispose the subscription.</param>
-        /// <returns>A task that completes with the first source value.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
-        /// <exception cref="InvalidOperationException">The source completes without producing a value.</exception>
-        public Task<T> FirstAsync(CancellationToken cancellationToken)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return source.FirstCoreAsync(false, default!, cancellationToken);
-        }
-
-        /// <summary>Awaits the first source value, returning a default value when the source is empty.</summary>
-        /// <returns>A task that completes with the first source value, or <see langword="default"/> when the source is empty.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
-        public Task<T> FirstOrDefaultAsync()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return source.FirstCoreAsync(true, default!, CancellationToken.None);
-        }
-
-        /// <summary>Awaits the first source value, returning a default value when the source is empty.</summary>
-        /// <param name="defaultValue">The value to return when the source is empty.</param>
-        /// <returns>A task that completes with the first source value, or <paramref name="defaultValue"/> when the source is empty.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
-        public Task<T> FirstOrDefaultAsync(T defaultValue)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return source.FirstCoreAsync(true, defaultValue, CancellationToken.None);
-        }
-
-        /// <summary>Awaits the first source value, returning a default value when the source is empty.</summary>
-        /// <param name="cancellationToken">The token used to cancel the task and dispose the subscription.</param>
-        /// <returns>A task that completes with the first source value, or <see langword="default"/> when the source is empty.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
-        /// <remarks>Deprioritized so calls like <c>FirstOrDefaultAsync(default!)</c> keep binding to the
-        /// <c>FirstOrDefaultAsync(T)</c> overload they compiled against before this overload existed.</remarks>
-        [System.Runtime.CompilerServices.OverloadResolutionPriority(-1)]
-        public Task<T> FirstOrDefaultAsync(CancellationToken cancellationToken)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return source.FirstCoreAsync(true, default!, cancellationToken);
-        }
-
-        /// <summary>Awaits the first source value, returning a default value when the source is empty.</summary>
-        /// <param name="defaultValue">The value to return when the source is empty.</param>
-        /// <param name="cancellationToken">The token used to cancel the task and dispose the subscription.</param>
-        /// <returns>A task that completes with the first source value, or <paramref name="defaultValue"/> when the source is empty.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
-        public Task<T> FirstOrDefaultAsync(T defaultValue, CancellationToken cancellationToken)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return source.FirstCoreAsync(true, defaultValue, cancellationToken);
-        }
-
-        /// <summary>Awaits source completion and returns the last value produced by the source.</summary>
-        /// <returns>A task that completes with the final source value.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
-        /// <exception cref="InvalidOperationException">The source completes without producing a value.</exception>
-        public Task<T> ToTask() => Signal.ToTask(source);
-
-        /// <summary>Awaits source completion and returns the last value produced by the source.</summary>
-        /// <param name="cancellationToken">The token used to cancel the task and dispose the subscription.</param>
-        /// <returns>A task that completes with the final source value.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
-        /// <exception cref="InvalidOperationException">The source completes without producing a value.</exception>
-        public Task<T> ToTask(CancellationToken cancellationToken)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return Signal.ToTask(source, cancellationToken);
-        }
-
-        /// <summary>Awaits source completion and returns the last value produced by the source.</summary>
-        /// <returns>A task that completes with the final source value.</returns>
-        public Task<T> LastAsync() => Signal.ToTask(source);
-
-        /// <summary>Awaits source completion and returns the last value produced by the source.</summary>
-        /// <param name="cancellationToken">The token used to cancel the task and dispose the subscription.</param>
-        /// <returns>A task that completes with the final source value.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
-        /// <exception cref="InvalidOperationException">The source completes without producing a value.</exception>
-        public Task<T> LastAsync(CancellationToken cancellationToken) =>
-            source.ToTask(cancellationToken);
-
-        /// <summary>Awaits source completion and returns the last value produced by the source, or <see langword="default"/> when the source is empty.</summary>
-        /// <returns>A task that completes with the final source value, or <see langword="default"/> when the source is empty.</returns>
-        public Task<T> LastOrDefaultAsync() =>
-            source.LastOrDefaultAsync(default(T)!);
-
-        /// <summary>Awaits source completion and returns the last value produced by the source, or <paramref name="defaultValue"/> when the source is empty.</summary>
-        /// <param name="defaultValue">The fallback value to use when the source is empty.</param>
-        /// <returns>A task that completes with the final source value, or <paramref name="defaultValue"/> when the source is empty.</returns>
-        public Task<T> LastOrDefaultAsync(T defaultValue)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return source.DefaultIfEmpty(defaultValue).ToTask();
-        }
-
-        /// <summary>Awaits source completion and returns the last value produced by the source, or <see langword="default"/> when the source is empty.</summary>
-        /// <param name="cancellationToken">The token used to cancel the task and dispose the subscription.</param>
-        /// <returns>A task that completes with the final source value, or <see langword="default"/> when the source is empty.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
-        /// <remarks>Deprioritized so calls like <c>LastOrDefaultAsync(default!)</c> keep binding to the
-        /// <c>LastOrDefaultAsync(T)</c> overload they compiled against before this overload existed.</remarks>
-        [System.Runtime.CompilerServices.OverloadResolutionPriority(-1)]
-        public Task<T> LastOrDefaultAsync(CancellationToken cancellationToken) =>
-            source.LastOrDefaultAsync(default!, cancellationToken);
-
-        /// <summary>Awaits source completion and returns the last value produced by the source, or <paramref name="defaultValue"/> when the source is empty.</summary>
-        /// <param name="defaultValue">The fallback value to use when the source is empty.</param>
-        /// <param name="cancellationToken">The token used to cancel the task and dispose the subscription.</param>
-        /// <returns>A task that completes with the final source value, or <paramref name="defaultValue"/> when the source is empty.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
-        public Task<T> LastOrDefaultAsync(T defaultValue, CancellationToken cancellationToken)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return source.DefaultIfEmpty(defaultValue).ToTask(cancellationToken);
-        }
-
-        /// <summary>Awaits the source count as a task.</summary>
-        /// <returns>A task that completes with the number of source values.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
-        public Task<int> CountAsync() => CountTaskAsync(source, CancellationToken.None);
-
-        /// <summary>Awaits the source count as a task.</summary>
-        /// <param name="cancellationToken">The token used to cancel the task.</param>
-        /// <returns>A task that completes with the number of source values.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
-        public Task<int> CountAsync(CancellationToken cancellationToken) => CountTaskAsync(source, cancellationToken);
-
-        /// <summary>Awaits the source predicate count as a task.</summary>
-        /// <param name="predicate">The function that identifies values to count.</param>
-        /// <returns>A task that completes with the matching value count.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence or <paramref name="predicate"/> is <see langword="null"/>.</exception>
-        public Task<int> CountAsync(Func<T, bool> predicate) => CountTaskAsync(source, predicate, CancellationToken.None);
-
-        /// <summary>Awaits the source predicate count as a task.</summary>
-        /// <param name="predicate">The function that identifies values to count.</param>
-        /// <param name="cancellationToken">The token used to cancel the task.</param>
-        /// <returns>A task that completes with the matching value count.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence or <paramref name="predicate"/> is <see langword="null"/>.</exception>
-        public Task<int> CountAsync(Func<T, bool> predicate, CancellationToken cancellationToken) => CountTaskAsync(source, predicate, cancellationToken);
-
-        /// <summary>Awaits whether any value is present.</summary>
-        /// <returns>A task that completes with whether the source produced any values.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
-        public Task<bool> AnyAsync() => AnyTaskAsync(source, CancellationToken.None);
-
-        /// <summary>Awaits whether any value is present.</summary>
-        /// <param name="cancellationToken">The token used to cancel the task.</param>
-        /// <returns>A task that completes with whether the source produced any values.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
-        public Task<bool> AnyAsync(CancellationToken cancellationToken) => AnyTaskAsync(source, cancellationToken);
-
-        /// <summary>Awaits whether any value matches a predicate.</summary>
-        /// <param name="predicate">The function that tests each value.</param>
-        /// <returns>A task that completes with whether any source value satisfies <paramref name="predicate"/>.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence or <paramref name="predicate"/> is <see langword="null"/>.</exception>
-        public Task<bool> AnyAsync(Func<T, bool> predicate) => AnyTaskAsync(source, predicate, CancellationToken.None);
-
-        /// <summary>Awaits whether any value matches a predicate.</summary>
-        /// <param name="predicate">The function that tests each value.</param>
-        /// <param name="cancellationToken">The token used to cancel the task.</param>
-        /// <returns>A task that completes with whether any source value satisfies <paramref name="predicate"/>.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence or <paramref name="predicate"/> is <see langword="null"/>.</exception>
-        public Task<bool> AnyAsync(Func<T, bool> predicate, CancellationToken cancellationToken) => AnyTaskAsync(source, predicate, cancellationToken);
-
-        /// <summary>Collects all values into an array task.</summary>
-        /// <returns>A task that completes with all source values in an array.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
-        public Task<T[]> CollectArrayAsync()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
-            {
-                if (typeof(T) == typeof(int))
-                {
-                    var integers = new int[range.Count];
-                    for (var i = 0; i < integers.Length; i++)
-                    {
-                        integers[i] = range.Start + i;
-                    }
-
-                    return Task.FromResult((T[])(object)integers);
-                }
-
-                var boxed = new T[range.Count];
-                for (var i = 0; i < boxed.Length; i++)
-                {
-                    boxed[i] = (T)(object)(range.Start + i);
-                }
-
-                return Task.FromResult(boxed);
-            }
-
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER || NET5_0_OR_GREATER
-            if (TryCollectArrayFromAsyncEnumerable(source, out var asyncEnumerableTask))
-            {
-                return asyncEnumerableTask;
-            }
-#endif
-
-            TaskCompletionSource<T[]> completion = new();
-            List<T> values = [];
-            _ = source.Subscribe(values.Add, error => completion.TrySetException(error), () => completion.TrySetResult([.. values]));
-            return completion.Task;
-        }
-
-        /// <summary>Collects all values into an array.</summary>
-        /// <returns>A sequence that emits a single array containing all source values.</returns>
-        public IObservable<T[]> ToArray()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return source is RangeSignal range && CanReadRangeAs(typeof(T)) ? new RangeArraySignal<T>(range) : new CollectArraySignal<T>(source);
-        }
-
-        /// <summary>Collects all values into an array task.</summary>
-        /// <returns>A task that completes with all source values in an array.</returns>
-        public Task<T[]> ToArrayAsync() => source.CollectArrayAsync();
-
-        /// <summary>Collects all values into a list task.</summary>
-        /// <returns>A task that completes with all source values in a list.</returns>
-        /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
-        public Task<IList<T>> CollectListAsync()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
-            {
-                if (typeof(T) == typeof(int))
-                {
-                    List<int> integers = new(range.Count);
-                    for (var i = 0; i < range.Count; i++)
-                    {
-                        integers.Add(range.Start + i);
-                    }
-
-                    return Task.FromResult((IList<T>)(object)integers);
-                }
-
-                List<T> rangeValues = new(range.Count);
-                for (var i = 0; i < range.Count; i++)
-                {
-                    rangeValues.Add((T)(object)(range.Start + i));
-                }
-
-                return Task.FromResult<IList<T>>(rangeValues);
-            }
-
-            TaskCompletionSource<IList<T>> completion = new();
-            List<T> values = [];
-            _ = source.Subscribe(values.Add, error => completion.TrySetException(error), () => completion.TrySetResult(values));
-            return completion.Task;
-        }
-
-        /// <summary>Collects all values into a list.</summary>
-        /// <returns>A sequence that emits a single list containing all source values.</returns>
-        public IObservable<IList<T>> ToList()
-        {
-            ArgumentExceptionHelper.ThrowIfNull(source);
-
-            return source is RangeSignal range && CanReadRangeAs(typeof(T)) ? new RangeListSignal<T>(range) : new CollectListSignal<T>(source);
-        }
-
-        /// <summary>Collects all values into a list task.</summary>
-        /// <returns>A task that completes with all source values in a list.</returns>
-        public Task<IList<T>> ToListAsync() => source.CollectListAsync();
-
-        /// <summary>Awaits the first source value, applying the configured empty-source behavior and optional cancellation.</summary>
-        /// <param name="hasDefault">A value indicating whether to use <paramref name="defaultValue"/> when the source is empty.</param>
-        /// <param name="defaultValue">The fallback value to use when the source is empty.</param>
-        /// <param name="cancellationToken">The token used to cancel the task and dispose the subscription.</param>
-        /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
-        private Task<T> FirstCoreAsync(bool hasDefault, T defaultValue, CancellationToken cancellationToken)
-        {
-            if (cancellationToken.IsCancellationRequested)
-            {
-                return Task.FromCanceled<T>(cancellationToken);
-            }
-
-            if (source is RangeSignal range && CanReadRangeAs(typeof(T)))
-            {
-                return Task.FromResult((T)(object)range.Start);
-            }
-
-            TaskTerminalCompletion<T> completion = new();
-            var seen = false;
-            var subscription = source.Subscribe(
-                value =>
-                {
-                    if (seen)
-                    {
-                        return;
-                    }
-
-                    seen = true;
-                    completion.Resolve(value);
-                },
-                completion.Fail,
-                () =>
-                {
-                    if (seen)
-                    {
-                        return;
-                    }
-
-                    if (hasDefault)
-                    {
-                        completion.Resolve(defaultValue);
-                    }
-                    else
-                    {
-                        completion.FailEmpty();
-                    }
-                });
-
-            return completion.Attach(subscription, cancellationToken);
         }
     }
 
@@ -1087,8 +770,8 @@ public static partial class LinqExtensions
         /// <returns>An observable sequence that emits the completed task result or faults with the task error.</returns>
         /// <exception cref="ArgumentNullException">The receiver task is <see langword="null"/>.</exception>
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
-            "Major Code Smell",
-            "S4462:Calls to \"async\" methods should not be blocking",
+            "Concurrency",
+            "PSH1315:A blocking wait on an awaitable that may not be done",
             Justification = "Synchronous read is limited to the already-completed task fast path.")]
         public IObservable<T> ToObservable()
         {
@@ -1104,13 +787,14 @@ public static partial class LinqExtensions
                 return new ImmediateThrowSignal<T>(new TaskCanceledException(task));
             }
 
-            return task.IsFaulted ? new ImmediateThrowSignal<T>(task.Exception!.InnerException ?? task.Exception) : new TaskInstanceSignal<T>(task);
+            return task.IsFaulted
+                ? new ImmediateThrowSignal<T>(task.Exception!.InnerException ?? task.Exception)
+                : new TaskInstanceSignal<T>(task);
         }
 
         /// <summary>Identity helper that keeps source-compatible <c>FirstAsync().ToTask()</c> migrations compiling.</summary>
         /// <returns>The supplied task.</returns>
         /// <exception cref="ArgumentNullException">The receiver task is <see langword="null"/>.</exception>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0001:Simplify Names", Justification = "The argument validation uses ArgumentExceptionHelper")]
         public Task<T> ToTask() => task ?? throw new ArgumentNullException(nameof(task));
 
         /// <summary>Returns a task that mirrors the supplied task but transitions to the canceled state when
@@ -1149,7 +833,8 @@ public static partial class LinqExtensions
     {
         try
         {
-            return await task.WaitAsync(System.Threading.Timeout.InfiniteTimeSpan, cancellationToken).ConfigureAwait(false);
+            return await task.WaitAsync(System.Threading.Timeout.InfiniteTimeSpan, cancellationToken)
+                .ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {

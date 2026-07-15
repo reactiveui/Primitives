@@ -26,6 +26,9 @@ public class SelectAsyncConcurrentObservableTests
     /// <summary>Max concurrency used for four-in-flight tests.</summary>
     private const int MaxConcurrencyFour = 4;
 
+    /// <summary>Guard timeout so a hung rendezvous fails this test rather than stalling the run.</summary>
+    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
+
     /// <summary>Verifies that <c>SelectAsyncConcurrent</c> forwards selector exceptions.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -40,7 +43,7 @@ public class SelectAsyncConcurrentObservableTests
                 static _ => { },
                 ex => faulted.TrySetResult(ex));
         subject.OnNext(TriggerValue);
-        var caught = await faulted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var caught = await faulted.Task.WaitAsync(GuardTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -52,7 +55,7 @@ public class SelectAsyncConcurrentObservableTests
         Subject<int> subject = new();
         Exception? caught = null;
         InvalidOperationException expected = new(SourceErrorMessage);
-        using var sub = subject.SelectAsyncConcurrent(static x => Task.FromResult(x), MaxConcurrencyTwo).Subscribe(
+        using var sub = subject.SelectAsyncConcurrent(Task.FromResult, MaxConcurrencyTwo).Subscribe(
             static _ => { },
             ex => caught = ex);
         subject.OnError(expected);
@@ -111,7 +114,7 @@ public class SelectAsyncConcurrentObservableTests
         await Task.Delay(SettleDelayMilliseconds).ConfigureAwait(false);
         await Assert.That(completed.Task.IsCompleted).IsFalse();
         _ = gate.TrySetResult(true);
-        var done = await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var done = await completed.Task.WaitAsync(GuardTimeout);
         await Assert.That(done).IsTrue();
 
         // Downstream OnNext from this operator is serialized inside the sink's lock, so the
@@ -131,7 +134,7 @@ public class SelectAsyncConcurrentObservableTests
         List<int> values = [];
         Exception? caught = null;
         var completedCount = 0;
-        using var sub = source.SelectAsyncConcurrent(static x => Task.FromResult(x), 1)
+        using var sub = source.SelectAsyncConcurrent(Task.FromResult, 1)
             .Subscribe(values.Add, ex => caught = ex, () => completedCount++);
         source.Observer.OnCompleted();
         source.Observer.OnNext(1);

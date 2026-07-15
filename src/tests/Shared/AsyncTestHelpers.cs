@@ -7,6 +7,12 @@ namespace ReactiveUI.Primitives.Async.Tests;
 /// <summary>Shared test helpers for async observable tests.</summary>
 internal static class AsyncTestHelpers
 {
+    /// <summary>How long <see cref="CollectAsync{T}(IObservableAsync{T}, TimeProvider, CancellationToken)"/> waits for completion to propagate.</summary>
+    private static readonly TimeSpan CompletionPropagationTimeout = TimeSpan.FromSeconds(5);
+
+    /// <summary>How often a wait re-evaluates its condition when the caller does not choose an interval.</summary>
+    private static readonly TimeSpan DefaultPollInterval = TimeSpan.FromMilliseconds(10);
+
     /// <summary>Collects all items and the completion result from an async observable.</summary>
     /// <typeparam name="T">The type of elements in the observable sequence.</typeparam>
     /// <param name="source">The async observable to collect from.</param>
@@ -31,7 +37,6 @@ internal static class AsyncTestHelpers
         TimeProvider timeProvider,
         CancellationToken cancellationToken = default)
     {
-        const int CompletionPollIntervalMs = 10;
         ArgumentNullException.ThrowIfNull(timeProvider);
 
         var items = new List<T>();
@@ -52,10 +57,11 @@ internal static class AsyncTestHelpers
             cancellationToken);
 
         // Wait briefly for completion to propagate
-        var deadline = timeProvider.GetUtcNow().AddSeconds(5);
+        var deadline = timeProvider.GetUtcNow().Add(CompletionPropagationTimeout);
+        using PeriodicTimer poll = new(DefaultPollInterval);
         while (completion is null && timeProvider.GetUtcNow() < deadline)
         {
-            await Task.Delay(CompletionPollIntervalMs, CancellationToken.None);
+            _ = await poll.WaitForNextTickAsync(CancellationToken.None);
         }
 
         return (items, completion);
@@ -101,9 +107,10 @@ internal static class AsyncTestHelpers
         ArgumentNullException.ThrowIfNull(timeProvider);
         ArgumentOutOfRangeException.ThrowIfLessThan(timeout, TimeSpan.Zero);
 
-        var interval = pollInterval ?? TimeSpan.FromMilliseconds(10);
+        var interval = pollInterval ?? DefaultPollInterval;
         var deadline = timeProvider.GetUtcNow().Add(timeout);
 
+        using PeriodicTimer poll = new(interval);
         while (timeProvider.GetUtcNow() < deadline)
         {
             if (condition())
@@ -111,7 +118,7 @@ internal static class AsyncTestHelpers
                 return true;
             }
 
-            await Task.Delay(interval, CancellationToken.None);
+            _ = await poll.WaitForNextTickAsync(CancellationToken.None);
         }
 
         return condition();

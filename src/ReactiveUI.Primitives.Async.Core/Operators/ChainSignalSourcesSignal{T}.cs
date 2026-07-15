@@ -78,7 +78,8 @@ public sealed class ChainSignalSourcesSignal<T>(IObservableAsync<IObservableAsyn
             IObservableAsync<IObservableAsync<T>> source,
             CancellationToken subscriptionToken)
         {
-            var outerSubscription = await source.SubscribeAsync(new ChainOuterWitness(this), subscriptionToken).ConfigureAwait(false);
+            var outerSubscription = await source.SubscribeAsync(new ChainOuterWitness(this), subscriptionToken)
+                .ConfigureAwait(false);
             await _outerDisposable.SetDisposableAsync(outerSubscription).ConfigureAwait(false);
         }
 
@@ -179,7 +180,8 @@ public sealed class ChainSignalSourcesSignal<T>(IObservableAsync<IObservableAsyn
             try
             {
                 var innerSubscription =
-                    await currentInner.SubscribeAsync(new ChainInnerWitness(this), _disposedCancellationToken).ConfigureAwait(false);
+                    await currentInner.SubscribeAsync(new ChainInnerWitness(this), _disposedCancellationToken)
+                        .ConfigureAwait(false);
                 await _innerSubscription.SetDisposableAsync(innerSubscription).ConfigureAwait(false);
             }
             catch (Exception e)

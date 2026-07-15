@@ -35,7 +35,7 @@ internal sealed class StatelessReplayLatestSignalAsyncStateObserverLease<T>(
 
         try
         {
-            using (await state.Gate.EnterAsync(state.DisposedCts.Token).ConfigureAwait(false))
+            using (await state.Gate.EnterAsync(state.DisposedCancellationToken).ConfigureAwait(false))
             {
                 state.Observers = state.Observers.Remove(observer);
                 if (state.Observers.IsEmpty)

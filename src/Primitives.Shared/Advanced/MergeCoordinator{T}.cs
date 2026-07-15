@@ -17,7 +17,8 @@ public sealed class MergeCoordinator<T> : IDisposable
 
     /// <summary>Initializes a new instance of the <see cref="MergeCoordinator{T}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
-    public MergeCoordinator(IObserver<T> observer) => Observer = observer ?? throw new ArgumentNullException(nameof(observer));
+    public MergeCoordinator(IObserver<T> observer) =>
+        Observer = observer ?? throw new ArgumentNullException(nameof(observer));
 
     /// <summary>Gets the active subscriptions.</summary>
     private MultipleDisposable Subscriptions { get; } = [];

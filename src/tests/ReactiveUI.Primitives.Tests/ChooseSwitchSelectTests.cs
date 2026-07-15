@@ -52,7 +52,7 @@ public class ChooseSwitchSelectTests
     public async Task ChooseForwardsOnlyChosenValues()
     {
         List<int> values = [];
-        _ = Signal.FromEnumerable(_oneToFour).Choose(x => (x % Two == 0, x)).Subscribe(values.Add);
+        _ = Signal.FromEnumerable(_oneToFour).Choose(static x => (x % Two == 0, x)).Subscribe(values.Add);
         await Assert.That(values.SequenceEqual(_evens)).IsTrue();
     }
 
@@ -62,10 +62,11 @@ public class ChooseSwitchSelectTests
     public async Task ChooseForwardsChooserError()
     {
         Exception? error = null;
-        _ = Signal.FromEnumerable(_oneToFour).Choose<int, int>(_ => throw new InvalidOperationException("boom")).Subscribe(
-            _ => { },
-            ex => error = ex,
-            () => { });
+        _ = Signal.FromEnumerable(_oneToFour).Choose<int, int>(static _ => throw new InvalidOperationException("boom"))
+            .Subscribe(
+                static _ => { },
+                ex => error = ex,
+                static () => { });
         await Assert.That(error).IsNotNull();
         await Assert.That(error is InvalidOperationException).IsTrue();
     }
@@ -101,8 +102,8 @@ public class ChooseSwitchSelectTests
         Signal<int> inner = new();
         var completed = 0;
         _ = outer.SwitchSelect(_ => inner).Subscribe(
-            _ => { },
-            ex => throw ex,
+            static _ => { },
+            static ex => throw ex,
             () => completed++);
         outer.OnNext(KeyA); // active inner
         outer.OnCompleted(); // outer done, inner still active -> not complete
@@ -118,10 +119,10 @@ public class ChooseSwitchSelectTests
     {
         Signal<int> source = new();
         Exception? error = null;
-        _ = source.Choose(x => (true, x)).Subscribe(
-            _ => { },
+        _ = source.Choose(static x => (true, x)).Subscribe(
+            static _ => { },
             ex => error = ex,
-            () => { });
+            static () => { });
         source.OnError(new InvalidOperationException(Boom));
         await Assert.That(error is InvalidOperationException).IsTrue();
     }
@@ -133,10 +134,10 @@ public class ChooseSwitchSelectTests
     {
         Signal<string?> outer = new();
         Exception? error = null;
-        _ = outer.SwitchSelect<string, int>(_ => throw new InvalidOperationException(Boom)).Subscribe(
-            _ => { },
+        _ = outer.SwitchSelect<string, int>(static _ => throw new InvalidOperationException(Boom)).Subscribe(
+            static _ => { },
             ex => error = ex,
-            () => { });
+            static () => { });
         outer.OnNext(KeyA);
         await Assert.That(error is InvalidOperationException).IsTrue();
     }
@@ -150,9 +151,9 @@ public class ChooseSwitchSelectTests
         Signal<int> inner = new();
         Exception? error = null;
         _ = outer.SwitchSelect(_ => inner).Subscribe(
-            _ => { },
+            static _ => { },
             ex => error = ex,
-            () => { });
+            static () => { });
         outer.OnNext(KeyA);
         outer.OnError(new InvalidOperationException(Boom));
         await Assert.That(error is InvalidOperationException).IsTrue();
@@ -167,9 +168,9 @@ public class ChooseSwitchSelectTests
         Signal<int> inner = new();
         Exception? error = null;
         _ = outer.SwitchSelect(_ => inner).Subscribe(
-            _ => { },
+            static _ => { },
             ex => error = ex,
-            () => { });
+            static () => { });
         outer.OnNext(KeyA);
         inner.OnError(new InvalidOperationException(Boom));
         await Assert.That(error is InvalidOperationException).IsTrue();
@@ -201,8 +202,8 @@ public class ChooseSwitchSelectTests
         Signal<int> inner = new();
         var completed = 0;
         _ = outer.SwitchSelect(_ => inner).Subscribe(
-            _ => { },
-            ex => throw ex,
+            static _ => { },
+            static ex => throw ex,
             () => completed++);
         outer.OnNext(KeyA);
         inner.OnCompleted(); // inner done; outer still open -> not complete
@@ -218,9 +219,9 @@ public class ChooseSwitchSelectTests
     {
         Signal<string?> outer = new();
         var completed = 0;
-        _ = outer.SwitchSelect(_ => new Signal<int>()).Subscribe(
-            _ => { },
-            ex => throw ex,
+        _ = outer.SwitchSelect(static _ => new Signal<int>()).Subscribe(
+            static _ => { },
+            static ex => throw ex,
             () => completed++);
         outer.OnCompleted();
         await Assert.That(completed).IsEqualTo(Once);
@@ -269,15 +270,15 @@ public class ChooseSwitchSelectTests
     [Test]
     public void NullArgumentsThrow()
     {
-        _ = Assert.Throws<ArgumentNullException>(() => default(IObservable<int>)!.Choose(x => (true, x)));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.FromEnumerable(_oneToFour).Choose<int, int>(null!));
-        _ = Assert.Throws<ArgumentNullException>(() =>
-            Signal.FromEnumerable(_oneToFour).Choose(x => (true, x)).Subscribe((IObserver<int>)null!));
-        _ = Assert.Throws<ArgumentNullException>(() =>
-            default(IObservable<string?>)!.SwitchSelect(_ => Signal.None<int>()));
-        _ = Assert.Throws<ArgumentNullException>(() => new Signal<string?>().SwitchSelect<string, int>(null!));
-        _ = Assert.Throws<ArgumentNullException>(() =>
-            new Signal<string?>().SwitchSelect(_ => Signal.None<int>()).Subscribe((IObserver<int>)null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => default(IObservable<int>)!.Choose(static x => (true, x)));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.FromEnumerable(_oneToFour).Choose<int, int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(static () =>
+            Signal.FromEnumerable(_oneToFour).Choose(static x => (true, x)).Subscribe((IObserver<int>)null!));
+        _ = Assert.Throws<ArgumentNullException>(static () =>
+            default(IObservable<string?>)!.SwitchSelect(static _ => Signal.None<int>()));
+        _ = Assert.Throws<ArgumentNullException>(static () => new Signal<string?>().SwitchSelect<string, int>(null!));
+        _ = Assert.Throws<ArgumentNullException>(static () =>
+            new Signal<string?>().SwitchSelect(static _ => Signal.None<int>()).Subscribe((IObserver<int>)null!));
     }
 
     /// <summary>

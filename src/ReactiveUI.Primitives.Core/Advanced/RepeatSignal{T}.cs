@@ -8,22 +8,15 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Represents the RepeatSignal class.</summary>
 /// <typeparam name="T">The T type.</typeparam>
-public sealed class RepeatSignal<T> : IRequireCurrentThread<T>, IInlineSignal<T>
+/// <param name="value">The value.</param>
+/// <param name="count">The count value.</param>
+public sealed class RepeatSignal<T>(T value, int count) : IRequireCurrentThread<T>, IInlineSignal<T>
 {
     /// <summary>Stores state for the signal implementation.</summary>
-    private readonly T _value;
+    private readonly T _value = value;
 
     /// <summary>Stores state for the signal implementation.</summary>
-    private readonly int _count;
-
-    /// <summary>Initializes a new instance of the <see cref="RepeatSignal{T}"/> class.</summary>
-    /// <param name="value">The value.</param>
-    /// <param name="count">The count value.</param>
-    public RepeatSignal(T value, int count)
-    {
-        _value = value;
-        _count = count;
-    }
+    private readonly int _count = count;
 
     /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
     /// <returns>The result.</returns>

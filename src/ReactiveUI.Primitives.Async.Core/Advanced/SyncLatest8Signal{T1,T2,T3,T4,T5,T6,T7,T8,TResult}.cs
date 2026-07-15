@@ -19,7 +19,9 @@ public sealed class SyncLatest8Signal<T1, T2, T3, T4, T5, T6, T7, T8, TResult> :
     /// <summary>Initializes a new instance of the <see cref="SyncLatest8Signal{T1, T2, T3, T4, T5, T6, T7, T8, TResult}"/> class.</summary>
     /// <param name="sources">The bundled source observables.</param>
     /// <param name="selector">The selector that projects the latest values.</param>
-    public SyncLatest8Signal(SyncLatest8State<T1, T2, T3, T4, T5, T6, T7, T8> sources, Func<T1, T2, T3, T4, T5, T6, T7, T8, TResult> selector)
+    public SyncLatest8Signal(
+        SyncLatest8State<T1, T2, T3, T4, T5, T6, T7, T8> sources,
+        Func<T1, T2, T3, T4, T5, T6, T7, T8, TResult> selector)
     {
         Sources = sources;
         Selector = selector;

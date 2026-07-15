@@ -29,6 +29,9 @@ public class FirstMatchFromCandidatesAsyncPathTests
     /// <summary>Candidate key whose projection emits the match value.</summary>
     private const string HitKey = "hit";
 
+    /// <summary>Guard timeout so a hung rendezvous fails this test rather than stalling the run.</summary>
+    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
+
     /// <summary>Verifies that an empty candidate list emits the fallback and completes.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -38,10 +41,10 @@ public class FirstMatchFromCandidatesAsyncPathTests
         var completed = false;
         using var sub = Array.Empty<string>()
             .FirstMatchFromCandidates(
-            static _ => Observable.Empty<string>(),
-            static raw => raw,
-            static value => value.Length > 0,
-            Fallback).Subscribe(results.Add, () => completed = true);
+                static _ => Observable.Empty<string>(),
+                static raw => raw,
+                static value => value.Length > 0,
+                Fallback).Subscribe(results.Add, () => completed = true);
         await Assert.That(results).IsCollectionEqualTo([Fallback]);
         await Assert.That(completed).IsTrue();
     }
@@ -58,13 +61,13 @@ public class FirstMatchFromCandidatesAsyncPathTests
         TaskCompletionSource<bool> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var sub = ((IReadOnlyList<string>)keys)
             .FirstMatchFromCandidates(
-            key => key == HitKey ? emissionGate : Observable.Empty<string>(),
-            static raw => raw,
-            static value => value == HitKey,
-            Fallback).Subscribe(results.Add, () => completed.TrySetResult(true));
+                key => key == HitKey ? emissionGate : Observable.Empty<string>(),
+                static raw => raw,
+                static value => value == HitKey,
+                Fallback).Subscribe(results.Add, () => completed.TrySetResult(true));
         emissionGate.OnNext(HitKey);
         emissionGate.OnCompleted();
-        var done = await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var done = await completed.Task.WaitAsync(GuardTimeout);
         await Assert.That(done).IsTrue();
         await Assert.That(results).IsCollectionEqualTo([HitKey]);
     }
@@ -81,13 +84,13 @@ public class FirstMatchFromCandidatesAsyncPathTests
         TaskCompletionSource<bool> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var sub = ((IReadOnlyList<string>)keys)
             .FirstMatchFromCandidates(
-            _ => subject,
-            static raw => raw,
-            static value => value == "match-impossible",
-            Fallback).Subscribe(results.Add, () => completed.TrySetResult(true));
+                _ => subject,
+                static raw => raw,
+                static value => value == "match-impossible",
+                Fallback).Subscribe(results.Add, () => completed.TrySetResult(true));
         subject.OnNext("nope");
         subject.OnCompleted();
-        await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await completed.Task.WaitAsync(GuardTimeout);
         await Assert.That(results).IsCollectionEqualTo([Fallback]);
     }
 
@@ -104,14 +107,14 @@ public class FirstMatchFromCandidatesAsyncPathTests
         TaskCompletionSource<bool> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var sub = ((IReadOnlyList<string>)keys)
             .FirstMatchFromCandidates(
-            key => key == "bad" ? badSubject : goodSubject,
-            static raw => raw,
-            static value => value == "good",
-            Fallback).Subscribe(results.Add, () => completed.TrySetResult(true));
+                key => key == "bad" ? badSubject : goodSubject,
+                static raw => raw,
+                static value => value == "good",
+                Fallback).Subscribe(results.Add, () => completed.TrySetResult(true));
         badSubject.OnError(new InvalidOperationException("bad failed"));
         goodSubject.OnNext("good");
         goodSubject.OnCompleted();
-        await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await completed.Task.WaitAsync(GuardTimeout);
         await Assert.That(results).IsCollectionEqualTo(["good"]);
     }
 
@@ -149,7 +152,7 @@ public class FirstMatchFromCandidatesAsyncPathTests
         List<string> results = [];
         var completed = false;
         using var sub = ((IReadOnlyList<string>)keys).FirstMatchFromCandidates(
-            static key => Observable.Return(key),
+            Observable.Return,
             static raw => raw == "throw" ? throw new InvalidOperationException("transform-throws") : raw,
             static value => value == HitKey,
             Fallback).Subscribe(results.Add, () => completed = true);
@@ -173,7 +176,7 @@ public class FirstMatchFromCandidatesAsyncPathTests
                 static key => key switch
                 {
                     SyncErrorKey => new SyncErroringObservable<string>(new InvalidOperationException(SyncErrorKey)),
-                    _ => Observable.Return(key),
+                    _ => Observable.Return(key)
                 },
                 static raw => raw,
                 static value => value == HitKey,
@@ -195,10 +198,10 @@ public class FirstMatchFromCandidatesAsyncPathTests
         var completed = false;
         using var sub = ((IReadOnlyList<string>)keys)
             .FirstMatchFromCandidates(
-            key => key == SyncCompleteKey ? new SyncCompletingObservable<string>() : Observable.Return(key),
-            static raw => raw,
-            static value => value == HitKey,
-            Fallback).Subscribe(results.Add, () => completed = true);
+                static key => key == SyncCompleteKey ? new SyncCompletingObservable<string>() : Observable.Return(key),
+                static raw => raw,
+                static value => value == HitKey,
+                Fallback).Subscribe(results.Add, () => completed = true);
         await Assert.That(results).IsCollectionEqualTo([HitKey]);
         await Assert.That(completed).IsTrue();
     }
@@ -217,7 +220,7 @@ public class FirstMatchFromCandidatesAsyncPathTests
             .FirstMatchFromCandidates(_ => subject, static raw => raw, static value => value == HitKey, Fallback)
             .Subscribe(results.Add, () => completed.TrySetResult());
         subject.OnNext(HitKey);
-        await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await completed.Task.WaitAsync(GuardTimeout);
         subject.OnNext("ignored-late");
         subject.OnError(new InvalidOperationException("ignored-late"));
         subject.OnCompleted();
@@ -255,7 +258,7 @@ public class FirstMatchFromCandidatesAsyncPathTests
         // SyncErroringObservable.Subscribe calls observer.OnError synchronously, re-entering
         // AsyncSink.OnError while _looping is still true — hitting the looping-guard return.
         asyncSubject.OnCompleted();
-        await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await completed.Task.WaitAsync(GuardTimeout);
         await Assert.That(results).IsCollectionEqualTo([HitKey]);
     }
 
@@ -281,7 +284,7 @@ public class FirstMatchFromCandidatesAsyncPathTests
             static value => value == HitKey,
             Fallback).Subscribe(results.Add, () => completed.TrySetResult());
         asyncSubject.OnCompleted();
-        await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await completed.Task.WaitAsync(GuardTimeout);
         await Assert.That(results).IsCollectionEqualTo([HitKey]);
     }
 

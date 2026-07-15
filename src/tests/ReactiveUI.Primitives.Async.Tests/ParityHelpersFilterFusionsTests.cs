@@ -13,6 +13,9 @@ namespace ReactiveUI.Primitives.Async.Tests;
 [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "TUnit requires instance methods")]
 public class ParityHelpersFilterFusionsTests
 {
+    /// <summary>Seconds a test waits for a notification before giving up.</summary>
+    private const int WaitTimeoutSeconds = 5;
+
     /// <summary>Sentinel "found" sentinel string.</summary>
     private const string Hit = "hit";
 
@@ -24,6 +27,15 @@ public class ParityHelpersFilterFusionsTests
 
     /// <summary>Predicate threshold for the <c>WaitUntil</c> test.</summary>
     private const int WaitUntilThreshold = 3;
+
+    /// <summary>Five-element ascending source sequence.</summary>
+    private static readonly int[] Sequence12345 = [1, 2, 3, 4, 5];
+
+    /// <summary>Three-element ascending source sequence.</summary>
+    private static readonly int[] Sequence123 = [1, 2, 3];
+
+    /// <summary>Maximum time a test waits for a forwarded notification to arrive.</summary>
+    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(WaitTimeoutSeconds);
 
     /// <summary>Verifies that <c>SkipWhileNull</c> drops leading nulls then forwards every value.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
@@ -80,9 +92,7 @@ public class ParityHelpersFilterFusionsTests
     [Test]
     public async Task WhenWaitUntilMatches_ThenEmitsFirstHitAndCompletes()
     {
-        int[] inputs = [1, 2, 3, 4, 5];
-
-        var result = await inputs.ToAsyncSignal()
+        var result = await Sequence12345.ToAsyncSignal()
             .WaitUntil(static x => x >= WaitUntilThreshold)
             .ToListAsync();
 
@@ -94,9 +104,7 @@ public class ParityHelpersFilterFusionsTests
     [Test]
     public async Task WhenWaitUntilNoMatch_ThenCompletesEmpty()
     {
-        int[] inputs = [1, 2, 3];
-
-        var result = await inputs.ToAsyncSignal()
+        var result = await Sequence123.ToAsyncSignal()
             .WaitUntil(static _ => false)
             .ToListAsync();
 
@@ -108,9 +116,7 @@ public class ParityHelpersFilterFusionsTests
     [Test]
     public async Task WhenAsSignal_ThenProjectsToUnit()
     {
-        int[] inputs = [1, 2, 3];
-
-        var result = await inputs.ToAsyncSignal()
+        var result = await Sequence123.ToAsyncSignal()
             .AsSignal()
             .ToListAsync();
 
@@ -193,7 +199,7 @@ public class ParityHelpersFilterFusionsTests
 
         await AsyncTestHelpers.WaitForConditionAsync(
             () => received is not null,
-            TimeSpan.FromSeconds(5));
+            WaitTimeout);
 
         await Assert.That(received).IsNotNull();
         await Assert.That(received!.Message).IsEqualTo(Hit);
@@ -220,7 +226,7 @@ public class ParityHelpersFilterFusionsTests
         InvalidOperationException expected = new("pairwise-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
-        await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await errorTcs.Task.WaitAsync(WaitTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -245,7 +251,7 @@ public class ParityHelpersFilterFusionsTests
         InvalidOperationException expected = new("skip-while-null-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
-        await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await errorTcs.Task.WaitAsync(WaitTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -270,7 +276,7 @@ public class ParityHelpersFilterFusionsTests
         InvalidOperationException expected = new("latest-or-default-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
-        await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await errorTcs.Task.WaitAsync(WaitTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -295,7 +301,7 @@ public class ParityHelpersFilterFusionsTests
         InvalidOperationException expected = new("wait-until-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
-        await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await errorTcs.Task.WaitAsync(WaitTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -320,7 +326,7 @@ public class ParityHelpersFilterFusionsTests
         InvalidOperationException expected = new("as-signal-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
-        await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await errorTcs.Task.WaitAsync(WaitTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -345,7 +351,7 @@ public class ParityHelpersFilterFusionsTests
         InvalidOperationException expected = new("not-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
-        await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await errorTcs.Task.WaitAsync(WaitTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -370,7 +376,7 @@ public class ParityHelpersFilterFusionsTests
         InvalidOperationException expected = new("where-true-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
-        await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await errorTcs.Task.WaitAsync(WaitTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -395,7 +401,7 @@ public class ParityHelpersFilterFusionsTests
         InvalidOperationException expected = new("where-false-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
-        await errorTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await errorTcs.Task.WaitAsync(WaitTimeout);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 }

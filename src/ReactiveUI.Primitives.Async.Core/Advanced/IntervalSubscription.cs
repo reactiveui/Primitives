@@ -25,7 +25,9 @@ public sealed class IntervalSubscription : TaskSignalSubscription<long>
     private TimeProvider? TimeProvider { get; }
 
     /// <inheritdoc/>
-    protected override async ValueTask ExecuteAsyncCore(IObserverAsync<long> observer, CancellationToken cancellationToken)
+    protected override async ValueTask ExecuteAsyncCore(
+        IObserverAsync<long> observer,
+        CancellationToken cancellationToken)
     {
         long tick = 1;
         while (!cancellationToken.IsCancellationRequested)
@@ -39,7 +41,9 @@ public sealed class IntervalSubscription : TaskSignalSubscription<long>
                 await DelayWithProviderAsync(cancellationToken).ConfigureAwait(false);
             }
 
-            await observer.OnNextAsync(tick++, cancellationToken).ConfigureAwait(false);
+            var current = tick;
+            tick++;
+            await observer.OnNextAsync(current, cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -50,7 +54,7 @@ public sealed class IntervalSubscription : TaskSignalSubscription<long>
     {
         TaskCompletionSource<bool> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var tp = TimeProvider!.CreateTimer(
-            x => ((TaskCompletionSource<bool>)x!).TrySetResult(true),
+            static x => ((TaskCompletionSource<bool>)x!).TrySetResult(true),
             tcs,
             Period,
             Timeout.InfiniteTimeSpan);
@@ -58,13 +62,21 @@ public sealed class IntervalSubscription : TaskSignalSubscription<long>
 #if NET8_0_OR_GREATER
         await using var ct =
             cancellationToken.Register(
-                x => ((TaskCompletionSource<bool>)x!).TrySetCanceled(cancellationToken),
-                tcs);
+                static x =>
+                {
+                    var (tcs, ct) = ((TaskCompletionSource<bool>, CancellationToken))x!;
+                    _ = tcs.TrySetCanceled(ct);
+                },
+                (tcs, cancellationToken));
 #else
         using var ct =
             cancellationToken.Register(
-                x => ((TaskCompletionSource<bool>)x!).TrySetCanceled(cancellationToken),
-                tcs);
+                static x =>
+                {
+                    var (tcs, ct) = ((TaskCompletionSource<bool>, CancellationToken))x!;
+                    _ = tcs.TrySetCanceled(ct);
+                },
+                (tcs, cancellationToken));
 #endif
 
         await tcs.Task.ConfigureAwait(false);

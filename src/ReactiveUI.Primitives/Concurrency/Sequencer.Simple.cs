@@ -42,25 +42,18 @@ public static partial class Sequencer
 
     /// <summary>Disposable work item used by closure-free stateful scheduler overloads.</summary>
     /// <typeparam name="TState">The scheduled state type.</typeparam>
-    internal sealed class ActionWorkItem<TState> : IWorkItem, IsDisposed
+    /// <param name="state">Scheduled state.</param>
+    /// <param name="action">Scheduled action.</param>
+    internal sealed class ActionWorkItem<TState>(TState state, Action<TState> action) : IWorkItem, IsDisposed
     {
         /// <summary>Scheduled state.</summary>
-        private TState _state;
+        private TState _state = state;
 
         /// <summary>Scheduled action.</summary>
-        private Action<TState>? _action;
+        private Action<TState>? _action = action;
 
         /// <summary>Tracks cancellation.</summary>
         private int _isDisposed;
-
-        /// <summary>Initializes a new instance of the <see cref="ActionWorkItem{TState}"/> class.</summary>
-        /// <param name="state">Scheduled state.</param>
-        /// <param name="action">Scheduled action.</param>
-        public ActionWorkItem(TState state, Action<TState> action)
-        {
-            _state = state;
-            _action = action;
-        }
 
         /// <inheritdoc/>
         public bool IsDisposed => Volatile.Read(ref _isDisposed) != 0;
@@ -92,33 +85,28 @@ public static partial class Sequencer
 
     /// <summary>Disposable work item used by the compatibility delegate scheduler overloads.</summary>
     /// <typeparam name="TState">The scheduled state type.</typeparam>
-    internal sealed class DelegateWorkItem<TState> : IWorkItem, IsDisposed
+    /// <param name="scheduler">The sequencer passed back to the scheduled action.</param>
+    /// <param name="state">The scheduled state.</param>
+    /// <param name="action">The scheduled action.</param>
+    internal sealed class DelegateWorkItem<TState>(
+        ISequencer scheduler,
+        TState state,
+        Func<ISequencer, TState, IDisposable> action) : IWorkItem, IsDisposed
     {
         /// <summary>The sequencer passed back to the scheduled action.</summary>
-        private readonly ISequencer _scheduler;
+        private readonly ISequencer _scheduler = scheduler;
 
         /// <summary>Scheduled state.</summary>
-        private readonly TState _state;
+        private readonly TState _state = state;
 
         /// <summary>Scheduled action.</summary>
-        private readonly Func<ISequencer, TState, IDisposable> _action;
+        private readonly Func<ISequencer, TState, IDisposable> _action = action;
 
         /// <summary>Disposable returned by the scheduled action after it starts.</summary>
         private IDisposable? _disposable;
 
         /// <summary>Tracks cancellation.</summary>
         private int _isDisposed;
-
-        /// <summary>Initializes a new instance of the <see cref="DelegateWorkItem{TState}"/> class.</summary>
-        /// <param name="scheduler">The sequencer passed back to the scheduled action.</param>
-        /// <param name="state">The scheduled state.</param>
-        /// <param name="action">The scheduled action.</param>
-        public DelegateWorkItem(ISequencer scheduler, TState state, Func<ISequencer, TState, IDisposable> action)
-        {
-            _scheduler = scheduler;
-            _state = state;
-            _action = action;
-        }
 
         /// <inheritdoc/>
         public bool IsDisposed => Volatile.Read(ref _isDisposed) != 0;
@@ -198,34 +186,53 @@ public static partial class Sequencer
         /// <summary>Schedules the next recursive action invocation.</summary>
         private void Reschedule()
         {
-            var isAdded = false;
-            var isDone = false;
-            IDisposable? disposable = null;
-            disposable = _scheduler.Schedule(() =>
-            {
-                lock (_gate)
-                {
-                    if (isAdded)
-                    {
-                        _ = Remove(disposable!);
-                    }
-                    else
-                    {
-                        isDone = true;
-                    }
-                }
-
-                RunRecursiveAction();
-            });
+            RescheduleHandoff handoff = new();
+            handoff.Disposable = _scheduler.Schedule(
+                (self: this, handoff),
+                static (_, s) => s.self.RunRescheduledWork(s.handoff));
 
             lock (_gate)
             {
-                if (!isDone)
+                if (!handoff.IsDone)
                 {
-                    Add(disposable);
-                    isAdded = true;
+                    Add(handoff.Disposable);
+                    handoff.IsAdded = true;
                 }
             }
+        }
+
+        /// <summary>Reconciles the handoff with the scheduling call under the gate, then invokes the recursive action.</summary>
+        /// <param name="handoff">The handoff shared with the scheduling call.</param>
+        /// <returns>An empty disposable; the rescheduled work item needs no further cancellation.</returns>
+        private EmptyDisposable RunRescheduledWork(RescheduleHandoff handoff)
+        {
+            lock (_gate)
+            {
+                if (handoff.IsAdded)
+                {
+                    _ = Remove(handoff.Disposable!);
+                }
+                else
+                {
+                    handoff.IsDone = true;
+                }
+            }
+
+            RunRecursiveAction();
+            return EmptyDisposable.Instance;
+        }
+
+        /// <summary>Carries the mutable handoff state shared between a rescheduled work item and its scheduling call.</summary>
+        private sealed class RescheduleHandoff
+        {
+            /// <summary>Gets or sets the disposable returned for the rescheduled work item.</summary>
+            public IDisposable? Disposable { get; set; }
+
+            /// <summary>Gets or sets a value indicating whether the disposable was added to the collection.</summary>
+            public bool IsAdded { get; set; }
+
+            /// <summary>Gets or sets a value indicating whether the rescheduled work item already ran.</summary>
+            public bool IsDone { get; set; }
         }
     }
 }

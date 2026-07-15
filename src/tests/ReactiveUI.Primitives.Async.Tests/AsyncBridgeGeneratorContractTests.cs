@@ -232,13 +232,14 @@ public sealed class AsyncBridgeGeneratorContractTests
             compilation,
             out var updatedCompilation,
             out var generatorDiagnostics);
-        ImmutableArray<Diagnostic> diagnostics = [
+        ImmutableArray<Diagnostic> diagnostics =
+        [
             ..generatorDiagnostics
                 .Concat(updatedCompilation.GetDiagnostics()
-                    .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error))
+                    .Where(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error))
         ];
-        var generatedSources = driver.GetRunResult().Results.SelectMany(result => result.GeneratedSources)
-            .Select(sourceText => sourceText.SourceText.ToString()).ToArray();
+        var generatedSources = driver.GetRunResult().Results.SelectMany(static result => result.GeneratedSources)
+            .Select(static sourceText => sourceText.SourceText.ToString()).ToArray();
         return (diagnostics, generatedSources);
     }
 
@@ -248,6 +249,8 @@ public sealed class AsyncBridgeGeneratorContractTests
     [RequiresAssemblyFiles("Calls System.Reflection.Assembly.Location")]
     private static List<MetadataReference> CreateReferences(bool includeAsyncReference)
     {
+        // Signal and StateSignal<> are always referenced on top of the platform assemblies.
+        const int SignalReferenceCount = 2;
         Dictionary<string, string> platformAssemblies = new(StringComparer.OrdinalIgnoreCase);
         foreach (var path in AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!.ToString()!.Split(Path.PathSeparator))
         {
@@ -258,7 +261,7 @@ public sealed class AsyncBridgeGeneratorContractTests
             }
         }
 
-        List<MetadataReference> references = new(PlatformReferenceNames.Length + 2);
+        List<MetadataReference> references = new(PlatformReferenceNames.Length + SignalReferenceCount);
         foreach (var name in PlatformReferenceNames)
         {
             if (platformAssemblies.TryGetValue(name, out var path))

@@ -55,7 +55,8 @@ public class OperatorTakeBufferRecoverBenchmarks
     public int R3TakeRange()
     {
         IntR3Witness observer = new();
-        using var subscription = R3.ObservableExtensions.Take(R3.Observable.Range(1, Count), TakeCount).Subscribe(observer);
+        using var subscription =
+            R3.ObservableExtensions.Take(R3.Observable.Range(1, Count), TakeCount).Subscribe(observer);
         return observer.Total;
     }
 
@@ -85,7 +86,8 @@ public class OperatorTakeBufferRecoverBenchmarks
     public int R3BufferRange()
     {
         CountingR3Witness<int[]> observer = new();
-        using var subscription = R3.ObservableExtensions.Chunk(R3.Observable.Range(1, Count), BufferSize).Subscribe(observer);
+        using var subscription = R3.ObservableExtensions.Chunk(R3.Observable.Range(1, Count), BufferSize)
+            .Subscribe(observer);
         return observer.Count;
     }
 
