@@ -4,7 +4,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
     <!-- StyleSharp.Analyzers and PerformanceSharp.Analyzers ship from the same release pipeline and always share a version. -->
-    <RoslynCommonAnalyzersVersion>3.26.1</RoslynCommonAnalyzersVersion>
+    <RoslynCommonAnalyzersVersion>3.28.1</RoslynCommonAnalyzersVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.301"/>
