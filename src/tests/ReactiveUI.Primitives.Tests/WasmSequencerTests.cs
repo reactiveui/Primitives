@@ -217,6 +217,51 @@ public sealed class WasmSequencerTests
         await Assert.That(Volatile.Read(ref ran)).IsEqualTo(0);
     }
 
+    /// <summary>
+    /// Verifies delayed work cancelled before it comes due is dropped by the marshal step rather than pushed onto the
+    /// drain. The shared timer still fires, but the marshalled item observes the cancellation and returns without
+    /// scheduling anything.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task DelayedItemCancelledBeforeItIsDueIsSkippedByTheMarshalStep()
+    {
+        WasmSequencer sequencer = new();
+        var ran = 0;
+        CancellableWorkItem delayed = new(() => Interlocked.Increment(ref ran));
+
+        sequencer.Schedule(delayed, Sequencer.AddTimestamp(sequencer.Timestamp, ScheduleDelay));
+        delayed.Dispose();
+
+        // Outlast the due time: the marshal step must observe the cancellation and drop the item.
+        await Task.Delay(ScheduleDelay + PostDisposeObservationWindow);
+
+        await Assert.That(delayed.IsDisposed).IsTrue();
+        await Assert.That(Volatile.Read(ref ran)).IsEqualTo(0);
+    }
+
+    /// <summary>
+    /// Verifies delayed work that carries no cancellation handle is simply dropped when the sequencer is disposed
+    /// before the item comes due. The marshal step cannot hand a non-disposable item back to a caller, so it releases
+    /// nothing and never runs it.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task DisposeDropsDelayedNonDisposableWorkThatComesDueAfterwards()
+    {
+        WasmSequencer sequencer = new();
+        var ran = 0;
+        DelegateWorkItem delayed = new(() => Interlocked.Increment(ref ran));
+
+        sequencer.Schedule(delayed, Sequencer.AddTimestamp(sequencer.Timestamp, ScheduleDelay));
+        sequencer.Dispose();
+
+        // Outlast the due time: the marshal step sees the disposed owner and, with no handle to release, drops it.
+        await Task.Delay(ScheduleDelay + PostDisposeObservationWindow);
+
+        await Assert.That(Volatile.Read(ref ran)).IsEqualTo(0);
+    }
+
     /// <summary>Work item that invokes a delegate when executed.</summary>
     private sealed class DelegateWorkItem : IWorkItem
     {

@@ -85,6 +85,26 @@ public partial class SequencerTests
         await Assert.That(calls.SequenceEqual(expected)).IsTrue();
     }
 
+    /// <summary>
+    /// Verifies nested current-thread work cancelled before the trampoline reaches it never runs. Scheduling from
+    /// inside a running action queues a cancellable work item and hands its handle back; disposing that handle must
+    /// leave the trampoline nothing to execute.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task CurrentThreadSequencerSkipsNestedWorkCancelledBeforeTheTrampolineRunsIt()
+    {
+        var innerRan = false;
+        _ = Sequencer.CurrentThread.Schedule(() =>
+        {
+            // Re-entrant scheduling queues an ActionWorkItem and returns its cancellation handle.
+            var handle = Sequencer.CurrentThread.Schedule(() => innerRan = true);
+            handle.Dispose();
+        });
+
+        await Assert.That(innerRan).IsFalse();
+    }
+
     /// <summary>Verifies the immediate sequencer waits until an absolute due time.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]

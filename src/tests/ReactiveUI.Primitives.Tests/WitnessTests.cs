@@ -917,6 +917,23 @@ public class WitnessTests
         _ = Assert.Throws<ArgumentNullException>(() => signal.Subscribe(null!));
     }
 
+    /// <summary>
+    /// Verifies removing an observer the list never held leaves the witness unchanged, so a stray unsubscribe
+    /// cannot drop a live observer or allocate a new snapshot.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ListWitnessRemoveReturnsTheSameWitnessWhenTheObserverIsNotPresent()
+    {
+        RecordingWitness<int> present = new();
+        RecordingWitness<int> absent = new();
+        ListWitness<int> witness = new(CopyOnWriteList<IObserver<int>>.Empty.Add(present));
+
+        var result = witness.Remove(absent);
+
+        await Assert.That(result).IsSameReferenceAs(witness);
+    }
+
     /// <summary>Asserts each witness rejects the callback or observer it cannot work without.</summary>
     private static void AssertWitnessConstructorsRejectMissingCallbacks()
     {

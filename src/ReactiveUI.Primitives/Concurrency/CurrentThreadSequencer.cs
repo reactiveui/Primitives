@@ -46,6 +46,7 @@ public sealed class CurrentThreadSequencer : ISequencer
     public long Timestamp => Sequencer.Timestamp;
 
     /// <summary>Gets the debugger display text.</summary>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 

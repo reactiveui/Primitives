@@ -34,6 +34,7 @@ public sealed class MauiDispatcherSequencer : ISequencer
     public long Timestamp => DispatchSequencerState.Timestamp;
 
     /// <summary>Gets the debugger display text.</summary>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 

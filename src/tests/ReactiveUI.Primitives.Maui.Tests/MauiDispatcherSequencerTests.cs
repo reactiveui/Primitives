@@ -108,6 +108,19 @@ public sealed class MauiDispatcherSequencerTests
         await Assert.That(values).IsEquivalentTo(ExpectedBurst, EqualityComparer<int>.Default);
     }
 
+    /// <summary>Verifies the sequencer surfaces the shared dispatch clock through both clock properties.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ClockPropertiesReportTheSharedDispatchClock()
+    {
+        FakeDispatcher dispatcher = new();
+        MauiDispatcherSequencer sequencer = new(dispatcher);
+        var before = sequencer.Timestamp;
+
+        await Assert.That(sequencer.Now).IsGreaterThan(DateTimeOffset.MinValue);
+        await Assert.That(sequencer.Timestamp).IsGreaterThanOrEqualTo(before);
+    }
+
     /// <summary>Work item that invokes a delegate when executed.</summary>
     private sealed class DelegateWorkItem : IWorkItem
     {

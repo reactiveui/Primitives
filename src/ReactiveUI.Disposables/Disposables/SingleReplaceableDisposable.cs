@@ -50,6 +50,7 @@ public class SingleReplaceableDisposable : IsDisposed
     public bool IsDisposed => ReferenceEquals(Volatile.Read(ref _disposable), DisposedSentinel);
 
     /// <summary>Gets the debugger display text.</summary>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
@@ -103,12 +104,14 @@ public class SingleReplaceableDisposable : IsDisposed
     }
 
     /// <summary>Disposable marker for disposed slots.</summary>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     private sealed class DisposedMarker : IDisposable
     {
         /// <inheritdoc/>
         public void Dispose()
         {
-            // Intentionally empty: a sentinel marking an already-disposed slot; there is nothing to release.
+            // Intentionally empty: a reference-identity sentinel marking an already-disposed slot. It is only
+            // ever compared with ReferenceEquals and never itself disposed, so this body is unreachable.
         }
     }
 }
