@@ -18,10 +18,12 @@
 
     Tests, benchmarks, and source generators are skipped structurally.
 
-    Each (project, TFM) pair is independent — `dotnet format` builds an in-memory
-    MSBuildWorkspace and only writes its own PublicAPI/<tfm>/ files — so the pairs run
-    in parallel (PowerShell 7+ runspaces; falls back to sequential on 5.1). Override the
-    width with -Jobs <n> or $env:JOBS.
+    Projects run in parallel (PowerShell 7+ runspaces; sequential on 5.1), while the
+    TFMs within one project run serially. `dotnet format` can keep AdditionalFiles for
+    sibling TFMs memory-mapped, so concurrent TFMs from the same project are unsafe.
+    The formatter can also simplify source imports while applying analyzer fixes; the
+    script snapshots tracked source content and restores any such incidental edits.
+    Override the project concurrency width with -Jobs <n> or $env:JOBS.
 
     Run on Windows to generate the Windows-desktop and (with the relevant workloads)
     Apple/Android target frameworks. Use the bash sibling (generate-publicapi.sh) on
@@ -236,21 +238,72 @@ foreach ($proj in $restoreSet) {
 Write-Host ''
 
 Write-Host "Generating $($items.Count) (project, TFM) baseline(s) across $Jobs job(s)..."
-if ($PSVersionTable.PSVersion.Major -ge 7 -and $Jobs -gt 1) {
-    $funcDef = ${function:Invoke-PublicApiOne}.ToString()
-    $results = $items | ForEach-Object -ThrottleLimit $Jobs -Parallel {
-        ${function:Invoke-PublicApiOne} = $using:funcDef
-        Invoke-PublicApiOne -Item $_ -Diags $using:diags
+$projectGroups = @($items | Group-Object -Property Proj)
+
+# PublicApiAnalyzers fixes target AdditionalFiles, but dotnet-format can also apply
+# source simplification operations (for example, removing imports). Preserve the exact
+# pre-run source bytes, including any intentional dirty-worktree changes, and restore
+# only files that the formatter actually changed.
+$sourceSnapshot = [System.Collections.Generic.Dictionary[string, byte[]]]::new(
+    [System.StringComparer]::OrdinalIgnoreCase)
+$sourceFiles = Get-ChildItem -Path $srcDir -Recurse -Filter '*.cs' -File |
+    Where-Object { $_.FullName -notmatch '[\\/](bin|obj)[\\/]' }
+foreach ($sourceFile in $sourceFiles) {
+    $sourceSnapshot.Add($sourceFile.FullName, [IO.File]::ReadAllBytes($sourceFile.FullName))
+}
+
+function Restore-SourceSnapshot {
+    $restored = 0
+    foreach ($entry in $sourceSnapshot.GetEnumerator()) {
+        if (-not (Test-Path -LiteralPath $entry.Key)) { continue }
+
+        $current = [IO.File]::ReadAllBytes($entry.Key)
+        $original = $entry.Value
+        $equal = $current.Length -eq $original.Length
+        if ($equal) {
+            for ($index = 0; $index -lt $current.Length; $index++) {
+                if ($current[$index] -ne $original[$index]) {
+                    $equal = $false
+                    break
+                }
+            }
+        }
+
+        if (-not $equal) {
+            [IO.File]::WriteAllBytes($entry.Key, $original)
+            $restored++
+        }
+    }
+    return $restored
+}
+
+$restoredSourceFiles = 0
+try {
+    if ($PSVersionTable.PSVersion.Major -ge 7 -and $Jobs -gt 1) {
+        $funcDef = ${function:Invoke-PublicApiOne}.ToString()
+        $results = $projectGroups | ForEach-Object -ThrottleLimit $Jobs -Parallel {
+            ${function:Invoke-PublicApiOne} = $using:funcDef
+            foreach ($it in $_.Group) {
+                Invoke-PublicApiOne -Item $it -Diags $using:diags
+            }
+        }
+    }
+    else {
+        if ($Jobs -gt 1) { Write-Host '  (PowerShell 5.1: running sequentially — use pwsh 7+ for parallelism)' }
+        $results = foreach ($group in $projectGroups) {
+            foreach ($it in $group.Group) {
+                Invoke-PublicApiOne -Item $it -Diags $diags
+            }
+        }
     }
 }
-else {
-    if ($Jobs -gt 1) { Write-Host '  (PowerShell 5.1: running sequentially — use pwsh 7+ for parallelism)' }
-    $results = foreach ($it in $items) { Invoke-PublicApiOne -Item $it -Diags $diags }
+finally {
+    $restoredSourceFiles = Restore-SourceSnapshot
 }
 Write-Host ''
 
 $generated = @($results | Where-Object { $_.Ok }).Count
 $failed = @($results | Where-Object { -not $_.Ok }).Count
 
-Write-Host "Done. generated: $generated TFM baseline(s), failed: $failed, projects skipped: $skipped"
+Write-Host "Done. generated: $generated TFM baseline(s), failed: $failed, projects skipped: $skipped, source files restored: $restoredSourceFiles"
 if ($failed -ne 0) { exit 1 }

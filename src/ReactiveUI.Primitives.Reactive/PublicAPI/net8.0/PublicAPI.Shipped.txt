@@ -1229,6 +1229,11 @@ static ReactiveUI.Primitives.Reactive.LinqExtensions.Stabilize<T>(this System.IO
 static ReactiveUI.Primitives.Reactive.LinqExtensions.StartWith<T>(this System.IObservable<T>! source, System.Collections.Generic.IEnumerable<T>! values) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.StartWith<T>(this System.IObservable<T>! source, params T[]! values) -> System.IObservable<T>!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.SubscribeOn<T>(this System.IObservable<T>! source, System.Reactive.Concurrency.IScheduler! scheduler) -> System.IObservable<T>!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.SubscribeSafe<T>(System.IObservable<T>! source, System.Action<System.Exception!>! onError, System.Action! onCompleted, params byte[]! allowValueType) -> System.IDisposable!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.SubscribeSafe<T>(System.IObservable<T>! source, System.Action<System.Exception!>! onError, params byte[]! allowValueType) -> System.IDisposable!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.SubscribeSafe<T>(System.IObservable<T>! source, System.Action<T>! onNext, System.Action<System.Exception!>! onError, System.Action! onCompleted, params byte[]! allowValueType) -> System.IDisposable!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.SubscribeSafe<T>(System.IObservable<T>! source, System.Action<T>! onNext, System.Action<System.Exception!>! onError, params byte[]! allowValueType) -> System.IDisposable!
+static ReactiveUI.Primitives.Reactive.LinqExtensions.SubscribeSafe<T>(System.IObservable<T>! source, System.IObserver<T>! observer, params byte[]! allowValueType) -> System.IDisposable!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.SubscribeSafe<T>(System.IObservable<T?>! source, System.Action<System.Exception!>! onError, System.Action! onCompleted, params bool[]! allowNullable) -> System.IDisposable!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.SubscribeSafe<T>(System.IObservable<T?>! source, System.Action<System.Exception!>! onError, params bool[]! allowNullable) -> System.IDisposable!
 static ReactiveUI.Primitives.Reactive.LinqExtensions.SubscribeSafe<T>(System.IObservable<T?>! source, System.Action<T!>! onNext, System.Action<System.Exception!>! onError, System.Action! onCompleted, params bool[]! allowNullable) -> System.IDisposable!
