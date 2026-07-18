@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reactive;
 using System.Reactive.Linq;
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Reactive.Signals;
@@ -72,6 +73,50 @@ public class LinqExtensionsTests
 
         await Assert.That(values.SequenceEqual([SubscribeSafeValue])).IsTrue();
         await Assert.That(observed).IsNull();
+    }
+
+    /// <summary>Verifies static alias <c>SubscribeSafe</c> accepts every non-nullable value-type overload.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task SubscribeSafeStaticAliasAcceptsNonNullableValueTypeOverloads()
+    {
+        var source = Observable.Return(Unit.Default);
+        List<Unit> values = [];
+        Exception? observed = null;
+        var completed = 0;
+
+        void OnError(Exception error) => observed = error;
+
+        using var callbackSubscription = ReactiveLinqExtensions.SubscribeSafe<Unit>(
+            source,
+            values.Add,
+            OnError,
+            (byte)0);
+        using var completionSubscription = ReactiveLinqExtensions.SubscribeSafe<Unit>(
+            source,
+            values.Add,
+            OnError,
+            () => completed++,
+            (byte)0);
+        using var observerSubscription = ReactiveLinqExtensions.SubscribeSafe<Unit>(
+            source,
+            Observer.Create<Unit>(values.Add, OnError),
+            (byte)0);
+
+        InvalidOperationException expected = new("expected");
+        using var errorSubscription = ReactiveLinqExtensions.SubscribeSafe<Unit>(
+            Observable.Throw<Unit>(expected),
+            OnError,
+            (byte)0);
+        using var terminalSubscription = ReactiveLinqExtensions.SubscribeSafe<Unit>(
+            source,
+            OnError,
+            () => completed++,
+            (byte)0);
+
+        await Assert.That(values.SequenceEqual([Unit.Default, Unit.Default, Unit.Default])).IsTrue();
+        await Assert.That(observed).IsSameReferenceAs(expected);
+        await Assert.That(completed).IsEqualTo(Two);
     }
 
     /// <summary>Verifies fluent <c>SubscribeSafe</c> accepts nullable value types with Rx imports present.</summary>

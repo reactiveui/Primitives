@@ -221,6 +221,104 @@ public static partial class LinqExtensions
         return SubscribeSafeCore(source, Witness.Create<T?>(static _ => { }, onError, onCompleted));
     }
 
+    /// <summary>Subscribes a non-nullable value observer with downstream exception protection from static-call syntax.</summary>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="observer">The observer to subscribe.</param>
+    /// <param name="allowValueType">Reserved for value-type overload resolution.</param>
+    /// <typeparam name="T">The non-nullable value type.</typeparam>
+    /// <returns>A disposable that cancels the subscription.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="observer"/> is <see langword="null"/>.</exception>
+    [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+    public static IDisposable SubscribeSafe<T>(
+        IObservable<T> source,
+        IObserver<T> observer,
+        params byte[] allowValueType)
+        where T : struct
+    {
+        _ = allowValueType;
+        return SubscribeSafeCore(source, observer);
+    }
+
+    /// <summary>Subscribes non-nullable value callbacks with downstream exception protection from static-call syntax.</summary>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="onNext">The action to invoke for each value.</param>
+    /// <param name="onError">The action to invoke for an error.</param>
+    /// <param name="allowValueType">Reserved for value-type overload resolution.</param>
+    /// <typeparam name="T">The non-nullable value type.</typeparam>
+    /// <returns>A disposable that cancels the subscription.</returns>
+    /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+    [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+    public static IDisposable SubscribeSafe<T>(
+        IObservable<T> source,
+        Action<T> onNext,
+        Action<Exception> onError,
+        params byte[] allowValueType)
+        where T : struct
+    {
+        _ = allowValueType;
+        return SubscribeSafeCore(source, Witness.Create(onNext, onError));
+    }
+
+    /// <summary>Subscribes non-nullable value callbacks with downstream exception protection from static-call syntax.</summary>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="onNext">The action to invoke for each value.</param>
+    /// <param name="onError">The action to invoke for an error.</param>
+    /// <param name="onCompleted">The action to invoke when the sequence completes.</param>
+    /// <param name="allowValueType">Reserved for value-type overload resolution.</param>
+    /// <typeparam name="T">The non-nullable value type.</typeparam>
+    /// <returns>A disposable that cancels the subscription.</returns>
+    /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+    [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+    public static IDisposable SubscribeSafe<T>(
+        IObservable<T> source,
+        Action<T> onNext,
+        Action<Exception> onError,
+        Action onCompleted,
+        params byte[] allowValueType)
+        where T : struct
+    {
+        _ = allowValueType;
+        return SubscribeSafeCore(source, Witness.Create(onNext, onError, onCompleted));
+    }
+
+    /// <summary>Subscribes non-nullable value terminal callbacks with downstream exception protection from static-call syntax.</summary>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="onError">The action to invoke for an error.</param>
+    /// <param name="allowValueType">Reserved for value-type overload resolution.</param>
+    /// <typeparam name="T">The non-nullable value type.</typeparam>
+    /// <returns>A disposable that cancels the subscription.</returns>
+    /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+    [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+    public static IDisposable SubscribeSafe<T>(
+        IObservable<T> source,
+        Action<Exception> onError,
+        params byte[] allowValueType)
+        where T : struct
+    {
+        _ = allowValueType;
+        return SubscribeSafeCore(source, Witness.Create<T>(static _ => { }, onError));
+    }
+
+    /// <summary>Subscribes non-nullable value terminal callbacks with downstream exception protection from static-call syntax.</summary>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="onError">The action to invoke for an error.</param>
+    /// <param name="onCompleted">The action to invoke when the sequence completes.</param>
+    /// <param name="allowValueType">Reserved for value-type overload resolution.</param>
+    /// <typeparam name="T">The non-nullable value type.</typeparam>
+    /// <returns>A disposable that cancels the subscription.</returns>
+    /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+    [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+    public static IDisposable SubscribeSafe<T>(
+        IObservable<T> source,
+        Action<Exception> onError,
+        Action onCompleted,
+        params byte[] allowValueType)
+        where T : struct
+    {
+        _ = allowValueType;
+        return SubscribeSafeCore(source, Witness.Create<T>(static _ => { }, onError, onCompleted));
+    }
+
     /// <summary>Subscribes an observer with downstream exception protection.</summary>
     /// <param name="source">The source sequence.</param>
     /// <param name="observer">The observer to subscribe.</param>
