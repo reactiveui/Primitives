@@ -32,19 +32,19 @@
     <PackageVersion Include="Microsoft.AspNetCore.Components" Version="8.0.29" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0')) AND !$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0'))"/>
     <PackageVersion Include="Microsoft.AspNetCore.Components" Version="9.0.18" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0')) AND !$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0'))"/>
     <PackageVersion Include="Microsoft.AspNetCore.Components" Version="10.0.10" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0')) AND !$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
-    <PackageVersion Include="Microsoft.AspNetCore.Components" Version="11.0.0-preview.5.26302.115" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
+    <PackageVersion Include="Microsoft.AspNetCore.Components" Version="11.0.0-preview.6.26359.118" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
     <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="8.0.29" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0')) AND !$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0'))"/>
     <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="9.0.18" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0')) AND !$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0'))"/>
     <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="10.0.10" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0')) AND !$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
-    <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="11.0.0-preview.5.26302.115" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
+    <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="11.0.0-preview.6.26359.118" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
     <PackageVersion Include="Microsoft.Bcl.TimeProvider" Version="10.0.10"/>
-    <PackageVersion Include="Microsoft.Extensions.Configuration" Version="11.0.0-preview.5.26302.115" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="11.0.0-preview.5.26302.115" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
-    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="11.0.0-preview.5.26302.115" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
-    <PackageVersion Include="Microsoft.Extensions.Logging" Version="11.0.0-preview.5.26302.115" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="11.0.0-preview.5.26302.115" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
+    <PackageVersion Include="Microsoft.Extensions.Configuration" Version="11.0.0-preview.6.26359.118" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="11.0.0-preview.6.26359.118" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="11.0.0-preview.6.26359.118" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="11.0.0-preview.6.26359.118" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="11.0.0-preview.6.26359.118" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
     <PackageVersion Include="Microsoft.Maui.Core" Version="10.0.80" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0')) AND !$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
-    <PackageVersion Include="Microsoft.Maui.Core" Version="11.0.0-preview.5.26304.4" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
+    <PackageVersion Include="Microsoft.Maui.Core" Version="11.0.0-preview.6.26360.8" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
     <PackageVersion Include="Microsoft.WindowsAppSDK" Version="2.2.0"/>
   </ItemGroup>
   <!-- .NET Framework legs -->
@@ -63,7 +63,7 @@
   <ItemGroup>
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0"/>
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1"/>
-    <PackageVersion Include="TUnit" Version="1.60.0"/>
+    <PackageVersion Include="TUnit" Version="1.61.0"/>
     <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.9.0"/>
   </ItemGroup>
   <Import Project="$(MSBuildThisFileDirectory)/directory.packages.support.props" Condition="Exists('$(MSBuildThisFileDirectory)/directory.packages.support.props')"/>
