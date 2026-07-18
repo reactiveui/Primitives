@@ -1,6 +1,1 @@
 #nullable enable
-static ReactiveUI.Primitives.Reactive.LinqExtensions.SubscribeSafe<T>(System.IObservable<T>! source, System.Action<System.Exception!>! onError, params byte[]! allowValueType) -> System.IDisposable!
-static ReactiveUI.Primitives.Reactive.LinqExtensions.SubscribeSafe<T>(System.IObservable<T>! source, System.Action<System.Exception!>! onError, System.Action! onCompleted, params byte[]! allowValueType) -> System.IDisposable!
-static ReactiveUI.Primitives.Reactive.LinqExtensions.SubscribeSafe<T>(System.IObservable<T>! source, System.Action<T>! onNext, System.Action<System.Exception!>! onError, params byte[]! allowValueType) -> System.IDisposable!
-static ReactiveUI.Primitives.Reactive.LinqExtensions.SubscribeSafe<T>(System.IObservable<T>! source, System.Action<T>! onNext, System.Action<System.Exception!>! onError, System.Action! onCompleted, params byte[]! allowValueType) -> System.IDisposable!
-static ReactiveUI.Primitives.Reactive.LinqExtensions.SubscribeSafe<T>(System.IObservable<T>! source, System.IObserver<T>! observer, params byte[]! allowValueType) -> System.IDisposable!

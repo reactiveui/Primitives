@@ -16,9 +16,11 @@
 #
 # Tests, benchmarks, and source generators are skipped structurally.
 #
-# Each (project, TFM) pair is independent — `dotnet format` builds an in-memory
-# MSBuildWorkspace and only writes its own PublicAPI/<tfm>/ files — so the pairs run
-# in parallel through a bounded pool (override the width with JOBS=<n>).
+# Projects run in parallel through a bounded pool, while TFMs within one project run
+# serially. `dotnet format` can retain sibling-TFM AdditionalFiles as memory-mapped
+# inputs, so parallel TFMs from the same project are unsafe. The formatter can also
+# simplify source imports while applying analyzer fixes; exact pre-run source bytes are
+# restored on exit. Override project concurrency with JOBS=<n>.
 #
 # Usage:
 #   tools/generate-publicapi.sh [project-name-filter]
@@ -236,14 +238,58 @@ export -f merge_api_files
 
 RESULTS_DIR="$(mktemp -d)"
 export RESULTS_DIR
-trap 'rm -rf "$RESULTS_DIR"' EXIT
+
+REPO_DIR="$(cd "$SRC_DIR/.." && pwd)"
+SOURCE_BACKUP="$RESULTS_DIR/source-backup"
+ITEMS_FILE="$RESULTS_DIR/items"
+export SOURCE_BACKUP ITEMS_FILE REPO_DIR
+mkdir -p "$SOURCE_BACKUP"
+
+# Preserve exact source bytes, including intentional dirty-worktree changes. Analyzer
+# fixes should update only PublicAPI AdditionalFiles, but dotnet-format may also simplify
+# source imports as a side effect.
+while IFS= read -r -d '' source; do
+  rel="${source#"$REPO_DIR/"}"
+  mkdir -p "$SOURCE_BACKUP/$(dirname "$rel")"
+  cp "$source" "$SOURCE_BACKUP/$rel"
+done < <(find "$SRC_DIR" -type f -name '*.cs' ! -path '*/bin/*' ! -path '*/obj/*' -print0)
+
+restore_sources() {
+  local restored=0 backup rel target
+  while IFS= read -r -d '' backup; do
+    rel="${backup#$SOURCE_BACKUP/}"
+    target="$REPO_DIR/$rel"
+    if [ -f "$target" ] && ! cmp -s "$backup" "$target"; then
+      cp "$backup" "$target"
+      restored=$((restored + 1))
+    fi
+  done < <(find "$SOURCE_BACKUP" -type f -print0)
+  printf '%s' "$restored" >"$RESULTS_DIR/source-files-restored"
+}
+
+trap 'restore_sources; rm -rf "$RESULTS_DIR"' EXIT
+
+printf '%s\n' "${items[@]}" >"$ITEMS_FILE"
+
+generate_project() {
+  local project="$1" item item_project
+  while IFS= read -r item; do
+    IFS='|' read -r item_project _ <<<"$item"
+    if [ "$item_project" = "$project" ]; then
+      generate_one "$item"
+    fi
+  done <"$ITEMS_FILE"
+}
+export -f generate_project
 
 echo "Generating ${#items[@]} (project, TFM) baseline(s) across $JOBS job(s)..."
-printf '%s\n' "${items[@]}" | xargs -P "$JOBS" -I{} bash -c 'generate_one "$1"' _ {}
+printf '%s\0' "${restore_set[@]}" | xargs -0 -P "$JOBS" -I{} bash -c 'generate_project "$1"' _ "{}"
 echo
 
 generated="$(find "$RESULTS_DIR" -name '*.ok' | wc -l | tr -d '[:space:]')"
 failed="$(find "$RESULTS_DIR" -name '*.fail' | wc -l | tr -d '[:space:]')"
+restore_sources
+restored_sources="$(cat "$RESULTS_DIR/source-files-restored")"
 
-echo "Done. generated: $generated TFM baseline(s), failed: $failed, projects skipped: $skipped"
+echo "Done. generated: $generated TFM baseline(s), failed: $failed, projects skipped: $skipped, source files restored: $restored_sources"
 [ "$failed" -eq 0 ]
