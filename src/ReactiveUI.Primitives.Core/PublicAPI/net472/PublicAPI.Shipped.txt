@@ -428,7 +428,7 @@ ReactiveUI.Primitives.Extensions.Continuation.CompletedPhases.get -> long
 ReactiveUI.Primitives.Extensions.Continuation.Continuation() -> void
 ReactiveUI.Primitives.Extensions.Continuation.Dispose() -> void
 ReactiveUI.Primitives.Extensions.Continuation.Lock<T>(T item, System.IObserver<(T value, System.IDisposable! Sync)>? observer) -> System.Threading.Tasks.Task!
-ReactiveUI.Primitives.Extensions.Continuation.LockValueTask<T>(T item, System.IObserver<(T value, System.IDisposable! Sync)>? observer) -> ValueTask!
+ReactiveUI.Primitives.Extensions.Continuation.LockValueTask<T>(T item, System.IObserver<(T value, System.IDisposable! Sync)>? observer) -> System.Threading.Tasks.ValueTask
 ReactiveUI.Primitives.Extensions.CurrentValueSubject<T>
 ReactiveUI.Primitives.Extensions.CurrentValueSubject<T>.AsObservable() -> System.IObservable<T>!
 ReactiveUI.Primitives.Extensions.CurrentValueSubject<T>.CurrentValueSubject(T initialValue) -> void
@@ -491,7 +491,7 @@ ReactiveUI.Primitives.Extensions.Operators.DoOnSubscribeObservable<T>
 ReactiveUI.Primitives.Extensions.Operators.DoOnSubscribeObservable<T>.DoOnSubscribeObservable(System.IObservable<T>! source, System.Action! action) -> void
 ReactiveUI.Primitives.Extensions.Operators.DoOnSubscribeObservable<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
 ReactiveUI.Primitives.Extensions.Operators.DropIfBusyObservable<T>
-ReactiveUI.Primitives.Extensions.Operators.DropIfBusyObservable<T>.DropIfBusyObservable(System.IObservable<T>! source, System.Func<T, ValueTask!>! asyncAction) -> void
+ReactiveUI.Primitives.Extensions.Operators.DropIfBusyObservable<T>.DropIfBusyObservable(System.IObservable<T>! source, System.Func<T, System.Threading.Tasks.ValueTask>! asyncAction) -> void
 ReactiveUI.Primitives.Extensions.Operators.DropIfBusyObservable<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
 ReactiveUI.Primitives.Extensions.Operators.FilterRegexObservable
 ReactiveUI.Primitives.Extensions.Operators.FilterRegexObservable.FilterRegexObservable(System.IObservable<string!>! source, System.Text.RegularExpressions.Regex! regex) -> void
@@ -558,7 +558,7 @@ ReactiveUI.Primitives.Extensions.Operators.SkipWhileNullObservable<T>.SkipWhileN
 ReactiveUI.Primitives.Extensions.Operators.SkipWhileNullObservable<T>.Subscribe(System.IObserver<T!>! observer) -> System.IDisposable!
 ReactiveUI.Primitives.Extensions.Operators.SubscribeAsyncObservable<T>
 ReactiveUI.Primitives.Extensions.Operators.SubscribeAsyncObservable<T>.Dispose() -> void
-ReactiveUI.Primitives.Extensions.Operators.SubscribeAsyncObservable<T>.SubscribeAsyncObservable(System.IObservable<T>! source, System.Func<T, ValueTask!>! onNext, System.Action<System.Exception!>? onError, System.Action? onCompleted) -> void
+ReactiveUI.Primitives.Extensions.Operators.SubscribeAsyncObservable<T>.SubscribeAsyncObservable(System.IObservable<T>! source, System.Func<T, System.Threading.Tasks.ValueTask>! onNext, System.Action<System.Exception!>? onError, System.Action? onCompleted) -> void
 ReactiveUI.Primitives.Extensions.Operators.SwitchIfEmptyObservable<T>
 ReactiveUI.Primitives.Extensions.Operators.SwitchIfEmptyObservable<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
 ReactiveUI.Primitives.Extensions.Operators.SwitchIfEmptyObservable<T>.SwitchIfEmptyObservable(System.IObservable<T>! source, System.IObservable<T>! fallback) -> void
@@ -860,7 +860,7 @@ static ReactiveUI.Primitives.Core.TimeInterval<T>.operator !=(ReactiveUI.Primiti
 static ReactiveUI.Primitives.Core.TimeInterval<T>.operator ==(ReactiveUI.Primitives.Core.TimeInterval<T> first, ReactiveUI.Primitives.Core.TimeInterval<T> second) -> bool
 static ReactiveUI.Primitives.ExceptionExtensions.Throw(this System.Exception! exception) -> void
 static ReactiveUI.Primitives.Extensions.FirstAsTaskHelper.FirstAsTask<T>(System.IObservable<T>! source) -> System.Threading.Tasks.Task<T>!
-static ReactiveUI.Primitives.Extensions.FirstAsValueTaskHelper<T>.FirstAsValueTask(System.IObservable<T>! source) -> ValueTask<T>!
+static ReactiveUI.Primitives.Extensions.FirstAsValueTaskHelper<T>.FirstAsValueTask(System.IObservable<T>! source) -> System.Threading.Tasks.ValueTask<T>
 static ReactiveUI.Primitives.Extensions.Heartbeat<T>.operator !=(ReactiveUI.Primitives.Extensions.Heartbeat<T> left, ReactiveUI.Primitives.Extensions.Heartbeat<T> right) -> bool
 static ReactiveUI.Primitives.Extensions.Heartbeat<T>.operator ==(ReactiveUI.Primitives.Extensions.Heartbeat<T> left, ReactiveUI.Primitives.Extensions.Heartbeat<T> right) -> bool
 static ReactiveUI.Primitives.Extensions.Observables.Return<T>(T value) -> System.IObservable<T>!
