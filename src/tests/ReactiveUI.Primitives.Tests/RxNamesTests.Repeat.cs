@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
 
@@ -191,6 +192,94 @@ public partial class RxNamesTests
         await Assert.That(observer.Values.SequenceEqual([Two])).IsTrue();
         await Assert.That(observer.Errors.Count).IsEqualTo(0);
         await Assert.That(observer.Completed).IsEqualTo(1);
+    }
+
+    /// <summary>Verifies values produced after disposal are ignored by the active repeat attempt.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task RepeatIgnoresValueAfterDisposal()
+    {
+        ManualRepeatSource<int> source = new();
+        RecordingWitness<int> observer = new();
+        var subscription = source.Repeat(Two).Subscribe(observer);
+
+        source.Emit(0, One);
+        subscription.Dispose();
+        source.Emit(0, Two);
+
+        await Assert.That(observer.Values.SequenceEqual([One])).IsTrue();
+        await Assert.That(observer.Errors.Count).IsEqualTo(0);
+        await Assert.That(observer.Completed).IsEqualTo(0);
+    }
+
+    /// <summary>Verifies errors produced after disposal are ignored by the active repeat attempt.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task RepeatIgnoresErrorAfterDisposal()
+    {
+        ManualRepeatSource<int> source = new();
+        RecordingWitness<int> observer = new();
+        var subscription = source.Repeat(Two).Subscribe(observer);
+        InvalidOperationException error = new(Boom);
+
+        subscription.Dispose();
+        source.Error(0, error);
+
+        await Assert.That(observer.Values.Count).IsEqualTo(0);
+        await Assert.That(observer.Errors.Count).IsEqualTo(0);
+        await Assert.That(observer.Completed).IsEqualTo(0);
+    }
+
+    /// <summary>Verifies completion produced after disposal does not resubscribe or complete downstream.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task RepeatIgnoresCompletionAfterDisposal()
+    {
+        ManualRepeatSource<int> source = new();
+        RecordingWitness<int> observer = new();
+        var subscription = source.Repeat(Two).Subscribe(observer);
+
+        subscription.Dispose();
+        source.Complete(0);
+
+        await Assert.That(source.SubscriptionCount).IsEqualTo(1);
+        await Assert.That(observer.Values.Count).IsEqualTo(0);
+        await Assert.That(observer.Errors.Count).IsEqualTo(0);
+        await Assert.That(observer.Completed).IsEqualTo(0);
+    }
+
+    /// <summary>Verifies the coordinator ignores completion for a stale repeat generation.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task RepeatCoordinatorIgnoresStaleCompletionGeneration()
+    {
+        RecordingWitness<int> observer = new();
+        RepeatSourceCoordinator<int> coordinator = new(new ScriptedObservable<int>(static _ => { }), Two, observer);
+
+        using var subscription = coordinator.Run();
+        coordinator.OnCompleted(0);
+
+        await Assert.That(observer.Values.Count).IsEqualTo(0);
+        await Assert.That(observer.Errors.Count).IsEqualTo(0);
+        await Assert.That(observer.Completed).IsEqualTo(0);
+    }
+
+    /// <summary>Verifies the repeat coordinator race guards return without signalling after disposal.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task RepeatCoordinatorRaceGuardsReturnAfterDisposal()
+    {
+        RecordingWitness<int> observer = new();
+        RepeatSourceCoordinator<int> coordinator = new(new ScriptedObservable<int>(static _ => { }), One, observer);
+
+        coordinator.Dispose();
+        coordinator.Complete();
+        coordinator.ScheduleNext();
+        coordinator.SubscribeNext();
+
+        await Assert.That(observer.Values.Count).IsEqualTo(0);
+        await Assert.That(observer.Errors.Count).IsEqualTo(0);
+        await Assert.That(observer.Completed).IsEqualTo(0);
     }
 
     /// <summary>Verifies Repeat validates null sources and negative counts.</summary>

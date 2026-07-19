@@ -126,7 +126,7 @@ public sealed class RepeatSourceCoordinator<T> : IDisposable
     /// <param name="value">The source value.</param>
     internal void OnNext(int generation, T value)
     {
-        if (!IsCurrentGeneration(generation))
+        if (IsDisposed() || !IsCurrentGeneration(generation))
         {
             return;
         }
@@ -135,7 +135,7 @@ public sealed class RepeatSourceCoordinator<T> : IDisposable
     }
 
     /// <summary>Completes the downstream observer once.</summary>
-    private void Complete()
+    internal void Complete()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
         {
@@ -153,7 +153,7 @@ public sealed class RepeatSourceCoordinator<T> : IDisposable
     }
 
     /// <summary>Schedules the next source subscription on the current-thread trampoline.</summary>
-    private void ScheduleNext()
+    internal void ScheduleNext()
     {
         if (IsDisposed())
         {
@@ -175,7 +175,7 @@ public sealed class RepeatSourceCoordinator<T> : IDisposable
     }
 
     /// <summary>Subscribes to the source for the next repetition.</summary>
-    private void SubscribeNext()
+    internal void SubscribeNext()
     {
         if (IsDisposed())
         {
@@ -242,7 +242,7 @@ public sealed class RepeatSourceCoordinator<T> : IDisposable
 
     /// <summary>Gets a value indicating whether a notification belongs to the active generation.</summary>
     /// <param name="generation">The source subscription generation.</param>
-    /// <returns><see langword="true"/> when the generation can still forward; otherwise, <see langword="false"/>.</returns>
+    /// <returns><see langword="true"/> when the notification belongs to the active generation; otherwise, <see langword="false"/>.</returns>
     private bool IsCurrentGeneration(int generation) =>
-        !IsDisposed() && Volatile.Read(ref _activeGeneration) == generation;
+        Volatile.Read(ref _activeGeneration) == generation;
 }
