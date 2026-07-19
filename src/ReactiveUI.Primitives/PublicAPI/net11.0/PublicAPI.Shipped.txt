@@ -837,6 +837,8 @@ ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<T>!).Probe(
 ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<T>!).Reattempt(int retryCount) -> System.IObservable<T>!
 ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<T>!).Recover(System.Func<System.Exception!, System.IObservable<T>!>! handler) -> System.IObservable<T>!
 ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<T>!).Reduce<TAccumulate>(TAccumulate seed, System.Func<TAccumulate, T, TAccumulate>! accumulator) -> System.IObservable<TAccumulate>!
+ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<T>!).Repeat() -> System.IObservable<T>!
+ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<T>!).Repeat(int repeatCount) -> System.IObservable<T>!
 ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<T>!).Rescue(System.Func<System.Exception!, System.IObservable<T>!>! handler) -> System.IObservable<T>!
 ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<T>!).Resume(System.IObservable<T>! fallback) -> System.IObservable<T>!
 ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<T>!).Scan<TAccumulate>(TAccumulate seed, System.Func<TAccumulate, T, TAccumulate>! accumulator) -> System.IObservable<TAccumulate>!
@@ -1353,6 +1355,8 @@ static ReactiveUI.Primitives.LinqExtensions.Race<T>(this System.IObservable<Syst
 static ReactiveUI.Primitives.LinqExtensions.Reattempt<T>(this System.IObservable<T>! source, int retryCount) -> System.IObservable<T>!
 static ReactiveUI.Primitives.LinqExtensions.Recover<T>(this System.IObservable<T>! source, System.Func<System.Exception!, System.IObservable<T>!>! handler) -> System.IObservable<T>!
 static ReactiveUI.Primitives.LinqExtensions.Reduce<T, TAccumulate>(this System.IObservable<T>! source, TAccumulate seed, System.Func<TAccumulate, T, TAccumulate>! accumulator) -> System.IObservable<TAccumulate>!
+static ReactiveUI.Primitives.LinqExtensions.Repeat<T>(this System.IObservable<T>! source) -> System.IObservable<T>!
+static ReactiveUI.Primitives.LinqExtensions.Repeat<T>(this System.IObservable<T>! source, int repeatCount) -> System.IObservable<T>!
 static ReactiveUI.Primitives.LinqExtensions.Rescue<T>(this System.IObservable<T>! source, System.Func<System.Exception!, System.IObservable<T>!>! handler) -> System.IObservable<T>!
 static ReactiveUI.Primitives.LinqExtensions.Resume<T>(this System.IObservable<T>! source, System.IObservable<T>! fallback) -> System.IObservable<T>!
 static ReactiveUI.Primitives.LinqExtensions.Retry<TLeft>(this System.IObservable<TLeft>! left, int retryCount) -> System.IObservable<TLeft>!
