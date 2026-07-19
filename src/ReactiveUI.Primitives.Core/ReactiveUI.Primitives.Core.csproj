@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <!-- Type-agnostic shared layer: no RxVoid / ISequencer, so no platform-specific sequencers and no
@@ -15,10 +15,14 @@
     <InternalsVisibleTo Include="ReactiveUI.Primitives.Extensions.Tests"/>
     <InternalsVisibleTo Include="ReactiveUI.Primitives.Async.Tests"/>
     <InternalsVisibleTo Include="ReactiveUI.Primitives.Blazor.Tests"/>
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Extensions.Reactive.Tests"/>
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\ReactiveUI.Disposables\ReactiveUI.Disposables.csproj"/>
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="..\ReactiveUI.Primitives.Extensions.Core\**\*.cs" Link="Extensions\%(RecursiveDir)%(Filename)%(Extension)"/>
+  </ItemGroup>
 </Project>
