@@ -92,6 +92,29 @@ public partial class RxNamesTests
         await Assert.That(observer.Completed).IsEqualTo(0);
     }
 
+    /// <summary>Verifies a source subscribe exception is converted to one downstream error.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task RepeatConvertsSourceSubscribeExceptionToSingleErrorWithoutResubscribing()
+    {
+        var subscriptions = 0;
+        InvalidOperationException error = new(Boom);
+        ScriptedObservable<int> source = new(_ =>
+        {
+            subscriptions++;
+            throw error;
+        });
+        RecordingWitness<int> observer = new();
+
+        using var subscription = source.Repeat(Two).Subscribe(observer);
+
+        await Assert.That(subscriptions).IsEqualTo(1);
+        await Assert.That(observer.Values.Count).IsEqualTo(0);
+        await Assert.That(observer.Errors.Count).IsEqualTo(1);
+        await Assert.That(observer.Errors[0]).IsSameReferenceAs(error);
+        await Assert.That(observer.Completed).IsEqualTo(0);
+    }
+
     /// <summary>Verifies duplicate source errors are ignored after the first terminal notification.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
@@ -114,6 +137,28 @@ public partial class RxNamesTests
         await Assert.That(observer.Completed).IsEqualTo(0);
     }
 
+    /// <summary>Verifies duplicate source completions do not schedule extra repetitions.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task RepeatIgnoresDuplicateSourceCompletion()
+    {
+        var subscriptions = 0;
+        ScriptedObservable<int> source = new(observer =>
+        {
+            subscriptions++;
+            observer.OnCompleted();
+            observer.OnCompleted();
+        });
+        RecordingWitness<int> observer = new();
+
+        using var subscription = source.Repeat(Two).Subscribe(observer);
+
+        await Assert.That(subscriptions).IsEqualTo(Two);
+        await Assert.That(observer.Values.Count).IsEqualTo(0);
+        await Assert.That(observer.Errors.Count).IsEqualTo(0);
+        await Assert.That(observer.Completed).IsEqualTo(1);
+    }
+
     /// <summary>Verifies a stale terminal callback from an earlier repeat attempt is ignored.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
@@ -133,9 +178,11 @@ public partial class RxNamesTests
 
         source.Complete(0);
         source.Emit(0, Three);
+        source.Error(0, new InvalidOperationException(Boom));
 
         await Assert.That(source.SubscriptionCount).IsEqualTo(Two);
         await Assert.That(observer.Completed).IsEqualTo(0);
+        await Assert.That(observer.Errors.Count).IsEqualTo(0);
         await Assert.That(observer.Values.Count).IsEqualTo(0);
 
         source.Emit(1, Two);
@@ -183,5 +230,11 @@ public partial class RxNamesTests
         /// <param name="subscriptionIndex">The subscription index.</param>
         internal void Complete(int subscriptionIndex) =>
             _observers[subscriptionIndex].OnCompleted();
+
+        /// <summary>Fails the selected subscription.</summary>
+        /// <param name="subscriptionIndex">The subscription index.</param>
+        /// <param name="failure">The error to emit.</param>
+        internal void Error(int subscriptionIndex, Exception failure) =>
+            _observers[subscriptionIndex].OnError(failure);
     }
 }

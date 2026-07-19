@@ -381,6 +381,19 @@ ReactiveUI.Primitives.Reactive.Advanced.RangeSyncLatestSignal<TResult>.Subscribe
 ReactiveUI.Primitives.Reactive.Advanced.RangeWithLatestSignal<TResult>
 ReactiveUI.Primitives.Reactive.Advanced.RangeWithLatestSignal<TResult>.RangeWithLatestSignal(ReactiveUI.Primitives.Advanced.RangeSignal! left, ReactiveUI.Primitives.Advanced.RangeSignal! right, System.Func<int, int, TResult>! selector) -> void
 ReactiveUI.Primitives.Reactive.Advanced.RangeWithLatestSignal<TResult>.Subscribe(System.IObserver<TResult>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.RepeatSourceCoordinator<T>
+ReactiveUI.Primitives.Reactive.Advanced.RepeatSourceCoordinator<T>.Dispose() -> void
+ReactiveUI.Primitives.Reactive.Advanced.RepeatSourceCoordinator<T>.RepeatSourceCoordinator(System.IObservable<T>! source, int? repeatCount, System.IObserver<T>! observer) -> void
+ReactiveUI.Primitives.Reactive.Advanced.RepeatSourceCoordinator<T>.Run() -> ReactiveUI.Primitives.Reactive.Advanced.RepeatSourceCoordinator<T>!
+ReactiveUI.Primitives.Reactive.Advanced.RepeatSourceSignal<T>
+ReactiveUI.Primitives.Reactive.Advanced.RepeatSourceSignal<T>.IsRequiredSubscribeOnCurrentThread() -> bool
+ReactiveUI.Primitives.Reactive.Advanced.RepeatSourceSignal<T>.RepeatSourceSignal(System.IObservable<T>! source, int? repeatCount) -> void
+ReactiveUI.Primitives.Reactive.Advanced.RepeatSourceSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Reactive.Advanced.RepeatSourceWitness<T>
+ReactiveUI.Primitives.Reactive.Advanced.RepeatSourceWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.Reactive.Advanced.RepeatSourceWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.Reactive.Advanced.RepeatSourceWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.Reactive.Advanced.RepeatSourceWitness<T>.RepeatSourceWitness(ReactiveUI.Primitives.Reactive.Advanced.RepeatSourceCoordinator<T>! parent, int generation) -> void
 ReactiveUI.Primitives.Reactive.Advanced.ReturnSignal<T>
 ReactiveUI.Primitives.Reactive.Advanced.ReturnSignal<T>.IsRequiredSubscribeOnCurrentThread() -> bool
 ReactiveUI.Primitives.Reactive.Advanced.ReturnSignal<T>.ReturnSignal(T value, System.Reactive.Concurrency.IScheduler! scheduler) -> void

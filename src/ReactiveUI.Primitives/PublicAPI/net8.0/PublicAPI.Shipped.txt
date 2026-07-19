@@ -238,6 +238,19 @@ ReactiveUI.Primitives.Advanced.RangeSyncLatestSignal<TResult>.Subscribe(System.I
 ReactiveUI.Primitives.Advanced.RangeWithLatestSignal<TResult>
 ReactiveUI.Primitives.Advanced.RangeWithLatestSignal<TResult>.RangeWithLatestSignal(ReactiveUI.Primitives.Advanced.RangeSignal! left, ReactiveUI.Primitives.Advanced.RangeSignal! right, System.Func<int, int, TResult>! selector) -> void
 ReactiveUI.Primitives.Advanced.RangeWithLatestSignal<TResult>.Subscribe(System.IObserver<TResult>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Advanced.RepeatSourceCoordinator<T>
+ReactiveUI.Primitives.Advanced.RepeatSourceCoordinator<T>.Dispose() -> void
+ReactiveUI.Primitives.Advanced.RepeatSourceCoordinator<T>.RepeatSourceCoordinator(System.IObservable<T>! source, int? repeatCount, System.IObserver<T>! observer) -> void
+ReactiveUI.Primitives.Advanced.RepeatSourceCoordinator<T>.Run() -> ReactiveUI.Primitives.Advanced.RepeatSourceCoordinator<T>!
+ReactiveUI.Primitives.Advanced.RepeatSourceSignal<T>
+ReactiveUI.Primitives.Advanced.RepeatSourceSignal<T>.IsRequiredSubscribeOnCurrentThread() -> bool
+ReactiveUI.Primitives.Advanced.RepeatSourceSignal<T>.RepeatSourceSignal(System.IObservable<T>! source, int? repeatCount) -> void
+ReactiveUI.Primitives.Advanced.RepeatSourceSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Advanced.RepeatSourceWitness<T>
+ReactiveUI.Primitives.Advanced.RepeatSourceWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.Advanced.RepeatSourceWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.Advanced.RepeatSourceWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.Advanced.RepeatSourceWitness<T>.RepeatSourceWitness(ReactiveUI.Primitives.Advanced.RepeatSourceCoordinator<T>! parent, int generation) -> void
 ReactiveUI.Primitives.Advanced.ReturnSignal<T>
 ReactiveUI.Primitives.Advanced.ReturnSignal<T>.IsRequiredSubscribeOnCurrentThread() -> bool
 ReactiveUI.Primitives.Advanced.ReturnSignal<T>.ReturnSignal(T value, ReactiveUI.Primitives.Concurrency.ISequencer! scheduler) -> void
