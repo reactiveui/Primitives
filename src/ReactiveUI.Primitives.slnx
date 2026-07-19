@@ -63,6 +63,5 @@
     <Project Path="ReactiveUI.Disposables/ReactiveUI.Disposables.csproj" />
     <Project Path="ReactiveUI.Primitives.Async.Core/ReactiveUI.Primitives.Async.Core.csproj" />
     <Project Path="ReactiveUI.Primitives.Core/ReactiveUI.Primitives.Core.csproj" />
-    <Project Path="ReactiveUI.Primitives.Extensions.Core/ReactiveUI.Primitives.Extensions.Core.csproj" />
     <Project Path="ReactiveUI.Primitives.R3Bridge.Generator/ReactiveUI.Primitives.R3Bridge.Generator.csproj" />
 </Solution>

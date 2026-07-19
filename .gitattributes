@@ -1,6 +1,6 @@
 # Auto-detect text files and normalise line endings to LF in the repository.
 # Working trees check out LF on every platform (auto, no forced CRLF).
-* text=auto
+* text eol=lf
 
 # Source code
 *.cs       text diff=csharp

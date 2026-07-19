@@ -16,7 +16,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ReactiveUI.Primitives.Core\ReactiveUI.Primitives.Core.csproj" />
-    <ProjectReference Include="..\ReactiveUI.Primitives.Extensions.Core\ReactiveUI.Primitives.Extensions.Core.csproj" />
   </ItemGroup>
 
   <!-- Platform sequencers compile only on their matching OS-platform TFM (the coalescing IScheduler base below
@@ -71,9 +70,9 @@
     <Using Include="ReactiveUI.Primitives.Reactive.Concurrency" />
     <Using Include="ReactiveUI.Primitives.Reactive.Signals" />
 
-    <Using Include="ReactiveUI.Primitives.Extensions.Reactive"/>
-    <Using Include="ReactiveUI.Primitives.Extensions.Reactive.Internal"/>
-    <Using Include="ReactiveUI.Primitives.Extensions.Reactive.Operators"/>
+    <Using Include="ReactiveUI.Primitives.Extensions.Reactive" />
+    <Using Include="ReactiveUI.Primitives.Extensions.Reactive.Internal" />
+    <Using Include="ReactiveUI.Primitives.Extensions.Reactive.Operators" />
   </ItemGroup>
 
   <ItemGroup>

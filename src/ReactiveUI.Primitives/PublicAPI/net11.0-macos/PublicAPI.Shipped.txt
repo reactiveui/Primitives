@@ -238,6 +238,19 @@ ReactiveUI.Primitives.Advanced.RangeSyncLatestSignal<TResult>.Subscribe(System.I
 ReactiveUI.Primitives.Advanced.RangeWithLatestSignal<TResult>
 ReactiveUI.Primitives.Advanced.RangeWithLatestSignal<TResult>.RangeWithLatestSignal(ReactiveUI.Primitives.Advanced.RangeSignal! left, ReactiveUI.Primitives.Advanced.RangeSignal! right, System.Func<int, int, TResult>! selector) -> void
 ReactiveUI.Primitives.Advanced.RangeWithLatestSignal<TResult>.Subscribe(System.IObserver<TResult>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Advanced.RepeatSourceCoordinator<T>
+ReactiveUI.Primitives.Advanced.RepeatSourceCoordinator<T>.Dispose() -> void
+ReactiveUI.Primitives.Advanced.RepeatSourceCoordinator<T>.RepeatSourceCoordinator(System.IObservable<T>! source, int? repeatCount, System.IObserver<T>! observer) -> void
+ReactiveUI.Primitives.Advanced.RepeatSourceCoordinator<T>.Run() -> ReactiveUI.Primitives.Advanced.RepeatSourceCoordinator<T>!
+ReactiveUI.Primitives.Advanced.RepeatSourceSignal<T>
+ReactiveUI.Primitives.Advanced.RepeatSourceSignal<T>.IsRequiredSubscribeOnCurrentThread() -> bool
+ReactiveUI.Primitives.Advanced.RepeatSourceSignal<T>.RepeatSourceSignal(System.IObservable<T>! source, int? repeatCount) -> void
+ReactiveUI.Primitives.Advanced.RepeatSourceSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Advanced.RepeatSourceWitness<T>
+ReactiveUI.Primitives.Advanced.RepeatSourceWitness<T>.OnCompleted() -> void
+ReactiveUI.Primitives.Advanced.RepeatSourceWitness<T>.OnError(System.Exception! error) -> void
+ReactiveUI.Primitives.Advanced.RepeatSourceWitness<T>.OnNext(T value) -> void
+ReactiveUI.Primitives.Advanced.RepeatSourceWitness<T>.RepeatSourceWitness(ReactiveUI.Primitives.Advanced.RepeatSourceCoordinator<T>! parent, int generation) -> void
 ReactiveUI.Primitives.Advanced.ReturnSignal<T>
 ReactiveUI.Primitives.Advanced.ReturnSignal<T>.IsRequiredSubscribeOnCurrentThread() -> bool
 ReactiveUI.Primitives.Advanced.ReturnSignal<T>.ReturnSignal(T value, ReactiveUI.Primitives.Concurrency.ISequencer! scheduler) -> void
@@ -842,6 +855,8 @@ ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<T>!).Probe(
 ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<T>!).Reattempt(int retryCount) -> System.IObservable<T>!
 ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<T>!).Recover(System.Func<System.Exception!, System.IObservable<T>!>! handler) -> System.IObservable<T>!
 ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<T>!).Reduce<TAccumulate>(TAccumulate seed, System.Func<TAccumulate, T, TAccumulate>! accumulator) -> System.IObservable<TAccumulate>!
+ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<T>!).Repeat() -> System.IObservable<T>!
+ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<T>!).Repeat(int repeatCount) -> System.IObservable<T>!
 ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<T>!).Rescue(System.Func<System.Exception!, System.IObservable<T>!>! handler) -> System.IObservable<T>!
 ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<T>!).Resume(System.IObservable<T>! fallback) -> System.IObservable<T>!
 ReactiveUI.Primitives.LinqExtensions.extension<T>(System.IObservable<T>!).Scan<TAccumulate>(TAccumulate seed, System.Func<TAccumulate, T, TAccumulate>! accumulator) -> System.IObservable<TAccumulate>!
@@ -1360,6 +1375,8 @@ static ReactiveUI.Primitives.LinqExtensions.Race<T>(this System.IObservable<Syst
 static ReactiveUI.Primitives.LinqExtensions.Reattempt<T>(this System.IObservable<T>! source, int retryCount) -> System.IObservable<T>!
 static ReactiveUI.Primitives.LinqExtensions.Recover<T>(this System.IObservable<T>! source, System.Func<System.Exception!, System.IObservable<T>!>! handler) -> System.IObservable<T>!
 static ReactiveUI.Primitives.LinqExtensions.Reduce<T, TAccumulate>(this System.IObservable<T>! source, TAccumulate seed, System.Func<TAccumulate, T, TAccumulate>! accumulator) -> System.IObservable<TAccumulate>!
+static ReactiveUI.Primitives.LinqExtensions.Repeat<T>(this System.IObservable<T>! source) -> System.IObservable<T>!
+static ReactiveUI.Primitives.LinqExtensions.Repeat<T>(this System.IObservable<T>! source, int repeatCount) -> System.IObservable<T>!
 static ReactiveUI.Primitives.LinqExtensions.Rescue<T>(this System.IObservable<T>! source, System.Func<System.Exception!, System.IObservable<T>!>! handler) -> System.IObservable<T>!
 static ReactiveUI.Primitives.LinqExtensions.Resume<T>(this System.IObservable<T>! source, System.IObservable<T>! fallback) -> System.IObservable<T>!
 static ReactiveUI.Primitives.LinqExtensions.Retry<TLeft>(this System.IObservable<TLeft>! left, int retryCount) -> System.IObservable<TLeft>!
