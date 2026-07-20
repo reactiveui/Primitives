@@ -1856,6 +1856,7 @@ dotnet_diagnostic.SES1104.severity = error # Certificate-chain validation must n
 dotnet_diagnostic.SES1105.severity = error # Bearer and OpenID Connect metadata must not be retrieved over plain HTTP outside development
 dotnet_diagnostic.SES1106.severity = error # Do not send HttpClient requests to a cleartext http URL
 dotnet_diagnostic.SES1107.severity = error # A SQL connection string weakens transport security via TrustServerCertificate or a disabled Encrypt
+dotnet_diagnostic.SES1108.severity = error # A custom server-certificate validation callback unconditionally returns true, so any certificate is trusted
 
 # Secrets
 dotnet_diagnostic.SES1201.severity = error # Do not hard-code secrets in source
