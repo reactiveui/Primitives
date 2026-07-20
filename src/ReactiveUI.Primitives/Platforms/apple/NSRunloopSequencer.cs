@@ -53,6 +53,15 @@ public sealed class NSRunloopSequencer : ISequencer
     /// <inheritdoc/>
     public void Schedule(IWorkItem item, long dueTimestamp) => _state.Schedule(item, dueTimestamp);
 
+    /// <summary>Runs delayed work through the main queue's native delayed dispatch.</summary>
+    /// <param name="item">Work item to execute at the due time.</param>
+    /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
+    private static void ScheduleDelayed(IWorkItem item, long dueTimestamp)
+    {
+        var nanoseconds = (long)DispatchSequencerState.DelayUntil(dueTimestamp).TotalMilliseconds * NanosecondsPerMillisecond;
+        DispatchQueue.MainQueue.DispatchAfter(new DispatchTime(DispatchTime.Now, nanoseconds), () => DispatchSequencerState.RunIfActive(item));
+    }
+
     /// <summary>Marshals the cached drain callback onto the main dispatch queue.</summary>
     /// <param name="drain">The drain callback.</param>
     /// <returns><see langword="true"/>, since the main queue always accepts the work.</returns>
@@ -61,15 +70,6 @@ public sealed class NSRunloopSequencer : ISequencer
         _drainBlock ??= new DispatchBlock(drain);
         DispatchQueue.MainQueue.DispatchAsync(_drainBlock);
         return true;
-    }
-
-    /// <summary>Runs delayed work through the main queue's native delayed dispatch.</summary>
-    /// <param name="item">Work item to execute at the due time.</param>
-    /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
-    private static void ScheduleDelayed(IWorkItem item, long dueTimestamp)
-    {
-        var nanoseconds = (long)DispatchSequencerState.DelayUntil(dueTimestamp).TotalMilliseconds * NanosecondsPerMillisecond;
-        DispatchQueue.MainQueue.DispatchAfter(new DispatchTime(DispatchTime.Now, nanoseconds), () => DispatchSequencerState.RunIfActive(item));
     }
 
     /// <summary>Forwards the cached drain callback to the engine.</summary>

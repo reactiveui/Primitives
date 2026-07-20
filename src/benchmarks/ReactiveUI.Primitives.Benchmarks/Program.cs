@@ -14,7 +14,7 @@ internal static class Program
     /// <summary>Executes benchmarks, or runs a deterministic smoke check with <c>--smoke</c>.</summary>
     /// <param name="args">BenchmarkDotNet command-line arguments.</param>
     /// <returns>A task that completes when execution is finished.</returns>
-    public static async Task Main(string[] args)
+    internal static async Task Main(string[] args)
     {
         if (args.Contains("--alloc", StringComparer.OrdinalIgnoreCase))
         {

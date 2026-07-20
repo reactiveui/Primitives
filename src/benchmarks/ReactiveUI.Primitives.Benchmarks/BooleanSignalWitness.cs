@@ -8,13 +8,13 @@ namespace ReactiveUI.Primitives.Benchmarks;
 internal sealed class BooleanSignalWitness : IObserver<bool>
 {
     /// <summary>Gets a value indicating whether the latest sequence value was <see langword="true" />.</summary>
-    public bool Value { get; private set; }
+    internal bool Value { get; private set; }
 
     /// <summary>Gets the number of terminal completions observed.</summary>
-    public int CompletionCount { get; private set; }
+    internal int CompletionCount { get; private set; }
 
     /// <summary>Gets the number of errors observed.</summary>
-    public int ErrorCount { get; private set; }
+    internal int ErrorCount { get; private set; }
 
     /// <summary>Called when a value is received.</summary>
     /// <param name="value">The value.</param>

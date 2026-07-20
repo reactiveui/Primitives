@@ -57,7 +57,7 @@ internal static class SmokeParityValidator
 
     /// <summary>Validates the captured smoke output for parity across the participating libraries.</summary>
     /// <param name="output">The captured smoke benchmark console output.</param>
-    public static void Validate(string output)
+    internal static void Validate(string output)
     {
         var results = output.Split([Environment.NewLine], StringSplitOptions.RemoveEmptyEntries);
         List<string> failures = [];
@@ -94,8 +94,7 @@ internal static class SmokeParityValidator
         if (failures.Count > 0)
         {
             throw new InvalidOperationException(
-                "Benchmark smoke parity validation failed:" + Environment.NewLine +
-                string.Join(Environment.NewLine, failures));
+                $"Benchmark smoke parity validation failed:{Environment.NewLine}{string.Join(Environment.NewLine, failures)}");
         }
 
         Console.WriteLine($"Smoke parity validation passed for {groupCount} benchmark groups.");

@@ -11,16 +11,16 @@ namespace ReactiveUI.Primitives.Reactive.Concurrency;
 internal static class Sequencer
 {
     /// <summary>Gets a scheduler that schedules work as soon as possible on the current thread.</summary>
-    public static IScheduler CurrentThread => CurrentThreadScheduler.Instance;
+    internal static IScheduler CurrentThread => CurrentThreadScheduler.Instance;
 
     /// <summary>Gets a scheduler that schedules work immediately on the current thread.</summary>
-    public static IScheduler Immediate => ImmediateScheduler.Instance;
+    internal static IScheduler Immediate => ImmediateScheduler.Instance;
 
     /// <summary>Gets the default queueing scheduler for background work.</summary>
-    public static IScheduler Default => TaskPoolScheduler.Default;
+    internal static IScheduler Default => TaskPoolScheduler.Default;
 
     /// <summary>Normalizes the specified <see cref="TimeSpan"/> value to a positive value.</summary>
     /// <param name="timeSpan">The value to normalize.</param>
     /// <returns><paramref name="timeSpan"/> when zero or positive; otherwise <see cref="TimeSpan.Zero"/>.</returns>
-    public static TimeSpan Normalize(TimeSpan timeSpan) => RxScheduler.Normalize(timeSpan);
+    internal static TimeSpan Normalize(TimeSpan timeSpan) => RxScheduler.Normalize(timeSpan);
 }

@@ -8,19 +8,19 @@ namespace ReactiveUI.Primitives.Benchmarks;
 internal sealed class BoolSignalWitness : IObserver<bool>
 {
     /// <summary>Gets the total of true values observed.</summary>
-    public int Total { get; private set; }
+    internal int Total { get; private set; }
 
     /// <summary>Gets the number of onNext calls.</summary>
-    public int NextCount { get; private set; }
+    internal int NextCount { get; private set; }
 
     /// <summary>Gets a value indicating whether the last observed value was true.</summary>
-    public bool LastValue { get; private set; }
+    internal bool LastValue { get; private set; }
 
     /// <summary>Gets the number of terminal completions observed.</summary>
-    public int CompletionCount { get; private set; }
+    internal int CompletionCount { get; private set; }
 
     /// <summary>Gets the number of errors observed.</summary>
-    public int ErrorCount { get; private set; }
+    internal int ErrorCount { get; private set; }
 
     /// <inheritdoc/>
     public void OnNext(bool value)

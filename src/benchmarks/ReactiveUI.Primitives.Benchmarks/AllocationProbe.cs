@@ -76,7 +76,7 @@ internal static class AllocationProbe
     private const int ValueColumnWidth = 6;
 
     /// <summary>Runs the probe and prints a per-operator allocation table.</summary>
-    public static void Run()
+    internal static void Run()
     {
         // Shared, reused observer: allocated once here, never inside a measured op, so its bytes
         // are excluded from every measurement.
