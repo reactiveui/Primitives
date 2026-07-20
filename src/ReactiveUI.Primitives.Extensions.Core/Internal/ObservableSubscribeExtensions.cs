@@ -22,7 +22,7 @@ internal static class ObservableSubscribeExtensions
         /// <param name="onError">Error callback.</param>
         /// <param name="onCompleted">Completion callback.</param>
         /// <returns>The subscription disposable.</returns>
-        public IDisposable SubscribeCallbacks(
+        internal IDisposable SubscribeCallbacks(
             Action<T> onNext,
             Action<Exception> onError,
             Action onCompleted) =>

@@ -58,10 +58,10 @@ public static partial class SignalAsyncExtensions
         }
 
         /// <summary>Gets the truthy-side observable; values for which the predicate returns <see langword="true"/>.</summary>
-        public IObservableAsync<T> TrueBranch { get; }
+        internal IObservableAsync<T> TrueBranch { get; }
 
         /// <summary>Gets the falsy-side observable; values for which the predicate returns <see langword="false"/>.</summary>
-        public IObservableAsync<T> FalseBranch { get; }
+        internal IObservableAsync<T> FalseBranch { get; }
 
         /// <summary>Subscribes a branch observer, lazily starting the shared upstream subscription on the first branch.</summary>
         /// <param name="isTrueBranch"><see langword="true"/> for the truthy branch; <see langword="false"/> for the falsy branch.</param>

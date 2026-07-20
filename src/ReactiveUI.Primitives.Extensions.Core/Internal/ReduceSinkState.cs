@@ -30,31 +30,31 @@ internal sealed class ReduceSinkState<TIn, TOut>
     }
 
     /// <summary>Gets the downstream observer that receives reduced values, error, and completion.</summary>
-    public IObserver<TOut> Downstream { get; }
+    internal IObserver<TOut> Downstream { get; }
 
     /// <summary>Gets the per-source latest values; index N is set on first OnNext from source N.</summary>
-    public TIn?[] Values { get; }
+    internal TIn?[] Values { get; }
 
     /// <summary>Gets the per-source completion bookkeeping.</summary>
-    public bool[] Completed { get; }
+    internal bool[] Completed { get; }
 
     /// <summary>Gets or sets the number of sources that have produced at least one value.</summary>
-    public int HasValueCount { get; set; }
+    internal int HasValueCount { get; set; }
 
     /// <summary>Gets or sets the number of sources that have completed.</summary>
-    public int CompletedCount { get; set; }
+    internal int CompletedCount { get; set; }
 
     /// <summary>Gets or sets a value indicating whether the sink has reached its terminal state.</summary>
-    public bool IsDone { get; set; }
+    internal bool IsDone { get; set; }
 
     /// <summary>Gets a value indicating whether every source has produced at least one value.</summary>
-    public bool AllValuesPresent => HasValueCount >= Values.Length;
+    internal bool AllValuesPresent => HasValueCount >= Values.Length;
 
     /// <summary>Records source <paramref name="index"/>'s latest value and emits the reduced result once every source has one. Runs under the gate.</summary>
     /// <param name="index">The 0-based source index that emitted.</param>
     /// <param name="value">The latest value from that source.</param>
     /// <param name="reduce">Projects the per-source latest values into the downstream result.</param>
-    public void HandleNext(int index, TIn value, Func<TIn?[], TOut> reduce)
+    internal void HandleNext(int index, TIn value, Func<TIn?[], TOut> reduce)
     {
         lock (_gate)
         {
@@ -81,7 +81,7 @@ internal sealed class ReduceSinkState<TIn, TOut>
 
     /// <summary>Forwards a terminal error to the downstream observer and marks the sink terminal. Idempotent.</summary>
     /// <param name="error">The error to forward.</param>
-    public void HandleError(Exception error)
+    internal void HandleError(Exception error)
     {
         lock (_gate)
         {
@@ -100,7 +100,7 @@ internal sealed class ReduceSinkState<TIn, TOut>
     /// once every source has completed OR a source completes without ever having emitted a value.
     /// </summary>
     /// <param name="index">The 0-based source index that just completed.</param>
-    public void HandleCompleted(int index)
+    internal void HandleCompleted(int index)
     {
         lock (_gate)
         {

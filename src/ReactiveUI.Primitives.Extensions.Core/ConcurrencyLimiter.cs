@@ -173,13 +173,13 @@ public sealed class ConcurrencyLimiter<T>(IEnumerable<Task<T>> taskFunctions, in
     internal sealed class Subscription(ConcurrencyLimiter<T> limiter, IObserver<T> observer) : IDisposable
     {
         /// <summary>Gets the owning limiter.</summary>
-        public ConcurrencyLimiter<T> Limiter { get; } = limiter;
+        internal ConcurrencyLimiter<T> Limiter { get; } = limiter;
 
         /// <summary>Gets the downstream observer.</summary>
-        public IObserver<T> Observer { get; } = observer;
+        internal IObserver<T> Observer { get; } = observer;
 
         /// <summary>Gets a value indicating whether the subscription has been disposed.</summary>
-        public bool Disposed => Limiter.Disposed;
+        internal bool Disposed => Limiter.Disposed;
 
         /// <inheritdoc/>
         public void Dispose() => Limiter.Disposed = true;

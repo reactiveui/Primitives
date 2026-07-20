@@ -20,7 +20,7 @@ namespace ReactiveUI.Primitives.Disposables;
 internal static class DisposableSlotHelper
 {
     /// <summary>Sentinel value indicating the holder has been disposed.</summary>
-    public const int DisposedSentinel = 1;
+    internal const int DisposedSentinel = 1;
 
     /// <summary>
     /// Reassigns an inner disposable slot WITHOUT disposing the previous value (mutable-assign
@@ -32,7 +32,7 @@ internal static class DisposableSlotHelper
     /// <param name="slot">The reference to the current-inner field.</param>
     /// <param name="disposed">The reference to the disposed-flag field.</param>
     /// <param name="value">The incoming value (or <see langword="null"/>).</param>
-    public static void AssignWithoutDisposingPrevious(
+    internal static void AssignWithoutDisposingPrevious(
         ref IDisposable? slot,
         ref int disposed,
         IDisposable? value)
@@ -56,7 +56,7 @@ internal static class DisposableSlotHelper
     /// <param name="slot">The reference to the current-inner field.</param>
     /// <param name="disposed">The reference to the disposed-flag field.</param>
     /// <param name="value">The incoming value (or <see langword="null"/>).</param>
-    public static void SwapAndDisposePrevious(
+    internal static void SwapAndDisposePrevious(
         ref IDisposable? slot,
         ref int disposed,
         IDisposable? value)
@@ -84,7 +84,7 @@ internal static class DisposableSlotHelper
     /// <see langword="true"/> if the current invocation latched the flag; otherwise
     /// <see langword="false"/>.
     /// </returns>
-    public static bool TryDispose(ref IDisposable? slot, ref int disposed)
+    internal static bool TryDispose(ref IDisposable? slot, ref int disposed)
     {
         if (Interlocked.Exchange(ref disposed, DisposedSentinel) == DisposedSentinel)
         {

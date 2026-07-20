@@ -17,7 +17,7 @@ internal static class GroupedAsyncSignalHelper
     /// <param name="observer">The observer that receives group values.</param>
     /// <param name="cancellationToken">A token that can cancel subscription establishment.</param>
     /// <returns>The subscription to the grouped value stream.</returns>
-    public static async ValueTask<IAsyncDisposable> SubscribeAsync<TKey, TValue>(
+    internal static async ValueTask<IAsyncDisposable> SubscribeAsync<TKey, TValue>(
         GroupedAsyncSignalState<TKey, TValue> state,
         IObserverAsync<TValue> observer,
         CancellationToken cancellationToken)

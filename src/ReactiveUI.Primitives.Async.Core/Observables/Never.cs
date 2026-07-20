@@ -30,7 +30,7 @@ public static partial class SignalAsync
     internal sealed class NeverSignalAsync<T> : IObservableAsync<T>
     {
         /// <summary>Gets the singleton instance of <see cref="NeverSignalAsync{T}"/>.</summary>
-        public static NeverSignalAsync<T> Instance { get; } = new();
+        internal static NeverSignalAsync<T> Instance { get; } = new();
 
         /// <inheritdoc/>
         ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(

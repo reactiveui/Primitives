@@ -14,7 +14,7 @@ internal static class SignalAsyncStateHelper
     /// <typeparam name="T">The observed value type.</typeparam>
     /// <param name="signal">The signal instance.</param>
     /// <returns>The signal as an observable sequence.</returns>
-    public static IObservableAsync<T> Values<T>(ISignalAsync<T> signal) => signal;
+    internal static IObservableAsync<T> Values<T>(ISignalAsync<T> signal) => signal;
 
     /// <summary>Asynchronously notifies subscribed observers of a new value.</summary>
     /// <typeparam name="T">The observed value type.</typeparam>
@@ -23,7 +23,7 @@ internal static class SignalAsyncStateHelper
     /// <param name="value">The value to publish.</param>
     /// <param name="cancellationToken">A token that can cancel the operation.</param>
     /// <returns>A task that represents the asynchronous notification.</returns>
-    public static ValueTask OnNextAsync<T>(
+    internal static ValueTask OnNextAsync<T>(
         SignalAsyncState<T> state,
         SignalBroadcastKind kind,
         T value,
@@ -39,7 +39,7 @@ internal static class SignalAsyncStateHelper
     /// <param name="error">The recoverable error to publish.</param>
     /// <param name="cancellationToken">A token that can cancel the operation.</param>
     /// <returns>A task that represents the asynchronous notification.</returns>
-    public static ValueTask OnErrorResumeAsync<T>(
+    internal static ValueTask OnErrorResumeAsync<T>(
         SignalAsyncState<T> state,
         SignalBroadcastKind kind,
         Exception error,
@@ -54,7 +54,7 @@ internal static class SignalAsyncStateHelper
     /// <param name="kind">The broadcast mode for observer notifications.</param>
     /// <param name="result">The completion result to publish.</param>
     /// <returns>A task that represents the asynchronous notification.</returns>
-    public static ValueTask OnCompletedAsync<T>(
+    internal static ValueTask OnCompletedAsync<T>(
         SignalAsyncState<T> state,
         SignalBroadcastKind kind,
         Result result) =>
@@ -62,7 +62,7 @@ internal static class SignalAsyncStateHelper
 
     /// <summary>Releases resources used by the signal.</summary>
     /// <returns>A completed task.</returns>
-    public static ValueTask DisposeAsync() => default;
+    internal static ValueTask DisposeAsync() => default;
 
     /// <summary>Subscribes an observer to a signal.</summary>
     /// <typeparam name="T">The observed value type.</typeparam>
@@ -70,7 +70,7 @@ internal static class SignalAsyncStateHelper
     /// <param name="observer">The observer to subscribe.</param>
     /// <param name="cancellationToken">A token that can cancel the operation.</param>
     /// <returns>The subscription handle for the observer.</returns>
-    public static async ValueTask<IAsyncDisposable> SubscribeAsync<T>(
+    internal static async ValueTask<IAsyncDisposable> SubscribeAsync<T>(
         SignalAsyncState<T> state,
         IObserverAsync<T> observer,
         CancellationToken cancellationToken)
@@ -96,7 +96,7 @@ internal static class SignalAsyncStateHelper
     /// <param name="value">The value to publish.</param>
     /// <param name="cancellationToken">A token that can cancel the operation.</param>
     /// <returns>A task that represents the asynchronous notification.</returns>
-    public static ValueTask BroadcastOnNextAsync<T>(
+    internal static ValueTask BroadcastOnNextAsync<T>(
         SignalBroadcastKind kind,
         ImmutableArray<IObserverAsync<T>> observers,
         T value,
@@ -121,7 +121,7 @@ internal static class SignalAsyncStateHelper
     /// <param name="error">The recoverable error to publish.</param>
     /// <param name="cancellationToken">A token that can cancel the operation.</param>
     /// <returns>A task that represents the asynchronous notification.</returns>
-    public static ValueTask BroadcastOnErrorResumeAsync<T>(
+    internal static ValueTask BroadcastOnErrorResumeAsync<T>(
         SignalBroadcastKind kind,
         ImmutableArray<IObserverAsync<T>> observers,
         Exception error,
@@ -136,7 +136,7 @@ internal static class SignalAsyncStateHelper
     /// <param name="observers">The observers to notify.</param>
     /// <param name="result">The completion result to publish.</param>
     /// <returns>A task that represents the asynchronous notification.</returns>
-    public static ValueTask BroadcastOnCompletedAsync<T>(
+    internal static ValueTask BroadcastOnCompletedAsync<T>(
         SignalBroadcastKind kind,
         ImmutableArray<IObserverAsync<T>> observers,
         Result result) =>

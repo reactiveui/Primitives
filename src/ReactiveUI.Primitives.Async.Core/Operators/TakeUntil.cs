@@ -364,16 +364,6 @@ public static partial class SignalAsyncExtensions
                 _lifecycle = new(observer);
             }
 
-            /// <summary>Subscribes to the source observable and registers the cancellation token callback.</summary>
-            /// <param name="cancellationToken">A token to cancel the subscription.</param>
-            /// <returns>A task representing the asynchronous subscribe operation.</returns>
-            public async ValueTask SubscribeSourcesAsync(CancellationToken cancellationToken)
-            {
-                _tokenRegistration = _parent._cancellationToken.Register(CompleteFromCancellation);
-                _subscription = await _parent._source
-                    .SubscribeAsync(new TakeUntilSourceWitness<T>(_lifecycle), cancellationToken).ConfigureAwait(false);
-            }
-
             /// <summary>Asynchronously releases resources used by this subscription.</summary>
             /// <returns>A task representing the asynchronous dispose operation.</returns>
             public async ValueTask DisposeAsync()
@@ -393,6 +383,16 @@ public static partial class SignalAsyncExtensions
                 }
 
                 await _lifecycle.DisposeAsync().ConfigureAwait(false);
+            }
+
+            /// <summary>Subscribes to the source observable and registers the cancellation token callback.</summary>
+            /// <param name="cancellationToken">A token to cancel the subscription.</param>
+            /// <returns>A task representing the asynchronous subscribe operation.</returns>
+            internal async ValueTask SubscribeSourcesAsync(CancellationToken cancellationToken)
+            {
+                _tokenRegistration = _parent._cancellationToken.Register(CompleteFromCancellation);
+                _subscription = await _parent._source
+                    .SubscribeAsync(new TakeUntilSourceWitness<T>(_lifecycle), cancellationToken).ConfigureAwait(false);
             }
 
             /// <summary>Forwards the original subscribe-time token into the shared lifecycle's dispose chain.</summary>
@@ -470,16 +470,6 @@ public static partial class SignalAsyncExtensions
                 _lifecycle = new(observer);
             }
 
-            /// <summary>Subscribes to the source observable and begins waiting for the stop signal.</summary>
-            /// <param name="cancellationToken">A token to cancel the subscription.</param>
-            /// <returns>A task representing the asynchronous subscribe operation.</returns>
-            public async ValueTask SubscribeSourcesAsync(CancellationToken cancellationToken)
-            {
-                AwaitStopThenComplete();
-                _subscription = await _parent._source
-                    .SubscribeAsync(new TakeUntilSourceWitness<T>(_lifecycle), cancellationToken).ConfigureAwait(false);
-            }
-
             /// <summary>Asynchronously releases resources used by this subscription.</summary>
             /// <returns>A task representing the asynchronous dispose operation.</returns>
             public async ValueTask DisposeAsync()
@@ -491,6 +481,16 @@ public static partial class SignalAsyncExtensions
 
                 await DisposeStopRegistrationAsync().ConfigureAwait(false);
                 await _lifecycle.DisposeAsync().ConfigureAwait(false);
+            }
+
+            /// <summary>Subscribes to the source observable and begins waiting for the stop signal.</summary>
+            /// <param name="cancellationToken">A token to cancel the subscription.</param>
+            /// <returns>A task representing the asynchronous subscribe operation.</returns>
+            internal async ValueTask SubscribeSourcesAsync(CancellationToken cancellationToken)
+            {
+                AwaitStopThenComplete();
+                _subscription = await _parent._source
+                    .SubscribeAsync(new TakeUntilSourceWitness<T>(_lifecycle), cancellationToken).ConfigureAwait(false);
             }
 
             /// <summary>Forwards the original subscribe-time token into the shared lifecycle's dispose chain.</summary>
@@ -629,17 +629,6 @@ public static partial class SignalAsyncExtensions
                 _lifecycle = new(observer);
             }
 
-            /// <summary>Subscribes to the source observable and begins waiting for the task to complete.</summary>
-            /// <param name="cancellationToken">A token to cancel the subscription.</param>
-            /// <returns>A task representing the asynchronous subscribe operation.</returns>
-            public async ValueTask SubscribeSourcesAsync(CancellationToken cancellationToken)
-            {
-                var task = _parent._task;
-                AwaitStopThenComplete(task);
-                _subscription = await _parent._source
-                    .SubscribeAsync(new TakeUntilSourceWitness<T>(_lifecycle), cancellationToken).ConfigureAwait(false);
-            }
-
             /// <summary>Asynchronously releases resources used by this subscription.</summary>
             /// <returns>A task representing the asynchronous dispose operation.</returns>
             public async ValueTask DisposeAsync()
@@ -650,6 +639,17 @@ public static partial class SignalAsyncExtensions
                 }
 
                 await _lifecycle.DisposeAsync().ConfigureAwait(false);
+            }
+
+            /// <summary>Subscribes to the source observable and begins waiting for the task to complete.</summary>
+            /// <param name="cancellationToken">A token to cancel the subscription.</param>
+            /// <returns>A task representing the asynchronous subscribe operation.</returns>
+            internal async ValueTask SubscribeSourcesAsync(CancellationToken cancellationToken)
+            {
+                var task = _parent._task;
+                AwaitStopThenComplete(task);
+                _subscription = await _parent._source
+                    .SubscribeAsync(new TakeUntilSourceWitness<T>(_lifecycle), cancellationToken).ConfigureAwait(false);
             }
 
             /// <summary>Forwards the original subscribe-time token into the shared lifecycle's dispose chain.</summary>
@@ -741,10 +741,19 @@ public static partial class SignalAsyncExtensions
                 _lifecycle = new(observer);
             }
 
+            /// <summary>Asynchronously releases resources used by this subscription.</summary>
+            /// <returns>A task representing the asynchronous dispose operation.</returns>
+            public async ValueTask DisposeAsync()
+            {
+                await _otherDisposable.DisposeAsync().ConfigureAwait(false);
+                await _disposable.DisposeAsync().ConfigureAwait(false);
+                await _lifecycle.DisposeAsync().ConfigureAwait(false);
+            }
+
             /// <summary>Subscribes to both the source and signal observables.</summary>
             /// <param name="cancellationToken">A token to cancel the subscription.</param>
             /// <returns>This subscription as an async disposable.</returns>
-            public async ValueTask<IAsyncDisposable> SubscribeSourcesAsync(CancellationToken cancellationToken)
+            internal async ValueTask<IAsyncDisposable> SubscribeSourcesAsync(CancellationToken cancellationToken)
             {
                 var otherSubscription = await _parent._other
                     .SubscribeAsync(new StopSignalWitness(this), cancellationToken).ConfigureAwait(false);
@@ -756,15 +765,6 @@ public static partial class SignalAsyncExtensions
                 await _disposable.SetDisposableAsync(sourceSubscription).ConfigureAwait(false);
 
                 return this;
-            }
-
-            /// <summary>Asynchronously releases resources used by this subscription.</summary>
-            /// <returns>A task representing the asynchronous dispose operation.</returns>
-            public async ValueTask DisposeAsync()
-            {
-                await _otherDisposable.DisposeAsync().ConfigureAwait(false);
-                await _disposable.DisposeAsync().ConfigureAwait(false);
-                await _lifecycle.DisposeAsync().ConfigureAwait(false);
             }
 
             /// <summary>Forwards the original subscribe-time token into the shared lifecycle's dispose chain.</summary>

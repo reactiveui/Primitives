@@ -13,11 +13,11 @@ internal sealed class SignalAsyncState<T>
     /// <summary>The lock used to synchronize mutable state.</summary>
     private readonly Lock _gate = new();
 
-    /// <summary>Gets the currently subscribed observers.</summary>
-    public ImmutableArray<IObserverAsync<T>> Observers { get; internal set; } = [];
+    /// <summary>Gets or sets the currently subscribed observers.</summary>
+    internal ImmutableArray<IObserverAsync<T>> Observers { get; set; } = [];
 
-    /// <summary>Gets the completion result, or null if the signal has not completed.</summary>
-    public Result? Result { get; internal set; }
+    /// <summary>Gets or sets the completion result, or null if the signal has not completed.</summary>
+    internal Result? Result { get; set; }
 
     /// <summary>Gets a stable observer snapshot when the signal is still active.</summary>
     /// <param name="observers">Receives the observers to notify when the signal is active.</param>

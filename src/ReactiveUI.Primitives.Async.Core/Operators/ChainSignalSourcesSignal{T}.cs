@@ -70,11 +70,26 @@ public sealed class ChainSignalSourcesSignal<T>(IObservableAsync<IObservableAsyn
             _disposedCancellationToken = _disposeCts.Token;
         }
 
+        /// <inheritdoc/>
+        public ValueTask DisposeAsync() => FinishAsync(null);
+
+        /// <summary>Handles a second call to <see cref="FinishAsync"/> when already disposed, routing any failure exception to the unhandled exception handler.</summary>
+        /// <param name="result">The completion result from the second call.</param>
+        internal static void HandleAlreadyDisposed(Result? result)
+        {
+            if (result?.Exception is not { } exception)
+            {
+                return;
+            }
+
+            UnhandledExceptionHandler.ReportUnhandledException(exception);
+        }
+
         /// <summary>Subscribes to the outer observable sequence.</summary>
         /// <param name="source">The outer observable that emits inner observable sequences.</param>
         /// <param name="subscriptionToken">A token to cancel the subscription.</param>
         /// <returns>A task representing the asynchronous subscribe operation.</returns>
-        public async ValueTask SubscribeAsync(
+        internal async ValueTask SubscribeAsync(
             IObservableAsync<IObservableAsync<T>> source,
             CancellationToken subscriptionToken)
         {
@@ -89,7 +104,7 @@ public sealed class ChainSignalSourcesSignal<T>(IObservableAsync<IObservableAsyn
         /// </summary>
         /// <param name="inner">The inner observable to enqueue.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        public ValueTask AcceptOuterValueAsync(IObservableAsync<T> inner)
+        internal ValueTask AcceptOuterValueAsync(IObservableAsync<T> inner)
         {
             var shouldSubscribe = false;
             lock (_buffer)
@@ -110,7 +125,7 @@ public sealed class ChainSignalSourcesSignal<T>(IObservableAsync<IObservableAsyn
         /// </summary>
         /// <param name="result">The completion result from the outer sequence.</param>
         /// <returns>A task representing the asynchronous completion operation.</returns>
-        public ValueTask AcceptOuterCompletionAsync(Result result)
+        internal ValueTask AcceptOuterCompletionAsync(Result result)
         {
             var shouldComplete = false;
             Result? completeResult = null;
@@ -133,7 +148,7 @@ public sealed class ChainSignalSourcesSignal<T>(IObservableAsync<IObservableAsyn
         /// </summary>
         /// <param name="result">The completion result from the inner sequence.</param>
         /// <returns>A task representing the asynchronous completion operation.</returns>
-        public ValueTask AcceptInnerCompletionAsync(Result result)
+        internal ValueTask AcceptInnerCompletionAsync(Result result)
         {
             if (result.IsFailure)
             {
@@ -155,21 +170,6 @@ public sealed class ChainSignalSourcesSignal<T>(IObservableAsync<IObservableAsyn
             }
 
             return SubscribeCurrentInnerAsync(nextInner);
-        }
-
-        /// <inheritdoc/>
-        public ValueTask DisposeAsync() => FinishAsync(null);
-
-        /// <summary>Handles a second call to <see cref="FinishAsync"/> when already disposed, routing any failure exception to the unhandled exception handler.</summary>
-        /// <param name="result">The completion result from the second call.</param>
-        internal static void HandleAlreadyDisposed(Result? result)
-        {
-            if (result?.Exception is not { } exception)
-            {
-                return;
-            }
-
-            UnhandledExceptionHandler.ReportUnhandledException(exception);
         }
 
         /// <summary>Subscribes to the specified inner observable, setting it as the current active inner subscription.</summary>

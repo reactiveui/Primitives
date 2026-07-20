@@ -16,7 +16,7 @@ internal sealed class ReplayLatestSignalAsyncState<T> : IDisposable
         "Style",
         "SST1401:Field should be private",
         Justification = "Gate fields are intentionally direct readonly state for helper access.")]
-    public readonly AsyncSerialGate Gate = new();
+    internal readonly AsyncSerialGate Gate = new();
 
     /// <summary>Initializes a new instance of the <see cref="ReplayLatestSignalAsyncState{T}"/> class.</summary>
     /// <param name="initialValue">The initial value to replay, if any.</param>
@@ -27,26 +27,26 @@ internal sealed class ReplayLatestSignalAsyncState<T> : IDisposable
     }
 
     /// <summary>Gets the cancellation token source that is cancelled when this instance is disposed.</summary>
-    public CancellationTokenSource DisposedCts { get; } = new();
+    internal CancellationTokenSource DisposedCts { get; } = new();
 
     /// <summary>Gets the token cancelled when this instance is disposed. Captured while the source is still
     /// alive because <see cref="Dispose"/> disposes that source, and reading
     /// <see cref="CancellationTokenSource.Token"/> from a disposed source throws
     /// <see cref="ObjectDisposedException"/>. Disposal always cancels before it disposes, so this token is
     /// already cancelled by the time anyone can observe it post-disposal.</summary>
-    public CancellationToken DisposedCancellationToken { get; }
+    internal CancellationToken DisposedCancellationToken { get; }
 
-    /// <summary>Gets the most recently published value, replayed to new subscribers upon subscription.</summary>
-    public Optional<T> LastValue { get; internal set; }
+    /// <summary>Gets or sets the most recently published value, replayed to new subscribers upon subscription.</summary>
+    internal Optional<T> LastValue { get; set; }
 
-    /// <summary>Gets the currently subscribed observers.</summary>
-    public ImmutableArray<IObserverAsync<T>> Observers { get; internal set; } = [];
+    /// <summary>Gets or sets the currently subscribed observers.</summary>
+    internal ImmutableArray<IObserverAsync<T>> Observers { get; set; } = [];
 
-    /// <summary>Gets the completion result, or null if the signal has not completed.</summary>
-    public Result? Result { get; internal set; }
+    /// <summary>Gets or sets the completion result, or null if the signal has not completed.</summary>
+    internal Result? Result { get; set; }
 
-    /// <summary>Gets a value indicating whether this instance has been disposed.</summary>
-    public bool IsDisposed { get; internal set; }
+    /// <summary>Gets or sets a value indicating whether this instance has been disposed.</summary>
+    internal bool IsDisposed { get; set; }
 
     /// <inheritdoc/>
     public void Dispose()

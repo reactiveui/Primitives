@@ -44,7 +44,7 @@ public static partial class SignalAsync
     internal sealed class EmptySignalAsync<T> : IObservableAsync<T>
     {
         /// <summary>The shared singleton instance for <typeparamref name="T"/>.</summary>
-        public static readonly EmptySignalAsync<T> Instance = new();
+        internal static readonly EmptySignalAsync<T> Instance = new();
 
         /// <summary>Initializes a new instance of the <see cref="EmptySignalAsync{T}"/> class.</summary>
         private EmptySignalAsync()
