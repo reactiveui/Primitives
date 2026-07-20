@@ -40,10 +40,6 @@ public sealed class PooledDelaySource : IValueTaskSource
     /// Concurrent delays from different threads each get their own cached slot.
     /// </summary>
     [ThreadStatic]
-    [SuppressMessage(
-        "Critical Code Smell",
-        "S2696:Instance members should not write to \"static\" fields",
-        Justification = "Thread-static slot is intentional — each thread caches its own instance.")]
     private static PooledDelaySource? _threadCached;
 
     /// <summary>Backing source. Continuations run asynchronously so awaiters never re-enter the timer / cancel path.</summary>
@@ -175,10 +171,6 @@ public sealed class PooledDelaySource : IValueTaskSource
     }
 
     /// <summary>Resets per-call state and caches the instance in the per-thread slot.</summary>
-    [SuppressMessage(
-        "Critical Code Smell",
-        "S2696:Instance members should not write to \"static\" fields",
-        Justification = "Thread-static slot is intentional — each thread caches its own instance.")]
     private void ReturnToPool()
     {
         _cancellationRegistration.Dispose();

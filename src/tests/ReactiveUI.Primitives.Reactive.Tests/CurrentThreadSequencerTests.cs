@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reactive.Disposables;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Reactive.Concurrency;
 
 namespace ReactiveUI.Primitives.Reactive.Tests;
@@ -35,10 +37,16 @@ public class CurrentThreadSequencerTests
     [Test]
     public async Task WhenInsideTrampoline_ThenScheduleIsNotRequired()
     {
-        var observedInsideTrampoline = true;
+        StrongBox<bool> observedInsideTrampoline = new(true);
 
-        CurrentThreadSequencer.Instance.Schedule(() => observedInsideTrampoline = CurrentThreadSequencer.IsScheduleRequired);
+        _ = CurrentThreadSequencer.Instance.Schedule(
+            observedInsideTrampoline,
+            static (_, state) =>
+            {
+                state.Value = CurrentThreadSequencer.IsScheduleRequired;
+                return Disposable.Empty;
+            });
 
-        await Assert.That(observedInsideTrampoline).IsFalse();
+        await Assert.That(observedInsideTrampoline.Value).IsFalse();
     }
 }
