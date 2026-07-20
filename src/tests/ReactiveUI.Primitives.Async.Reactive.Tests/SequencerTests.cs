@@ -6,7 +6,7 @@ using ReactiveUI.Primitives.Reactive.Concurrency;
 
 namespace ReactiveUI.Primitives.Async.Reactive.Tests;
 
-/// <summary>Verifies the async leaf's sequencers map onto the matching System.Reactive scheduler singletons.</summary>
+/// <summary>Verifies sequencers.</summary>
 public class SequencerTests
 {
     /// <summary>A negative interval, which normalization clamps to zero.</summary>
