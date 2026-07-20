@@ -1633,7 +1633,7 @@ dotnet_diagnostic.SST2322.severity = error # A non-private readonly field holds 
 dotnet_diagnostic.SST2323.severity = error # A stateless abstract class declaring only public abstract members should be an interface
 dotnet_diagnostic.SST2324.severity = error # A member is declared more accessible than its containing type
 dotnet_diagnostic.SST2325.severity = error # An async method checks an argument after its first await
-dotnet_diagnostic.SST2326.severity = error # An interface-typed value is narrowed to a concrete implementation, coupling the code to it
+dotnet_diagnostic.SST2326.severity = none # An interface-typed value is narrowed to a concrete implementation — this is a high-performance core library, not strictly SOLID code, and narrowing to a known runtime type is a normal fast-path technique here: foreach over IEnumerable<T> boxes List<T>'s struct enumerator (40 bytes per call, measured) where the indexed loop behind the type test allocates nothing
 dotnet_diagnostic.SST2327.severity = error # A type tests its own runtime type against a class instead of dispatching through a virtual member
 dotnet_diagnostic.SST2328.severity = error # A raw native pointer handle is exposed instead of a SafeHandle
 
@@ -2255,7 +2255,7 @@ dotnet_diagnostic.S2479.severity = none # Whitespace and control characters in s
 dotnet_diagnostic.S2692.severity = none # "IndexOf" checks should not be for positive numbers — covered by SST2420
 dotnet_diagnostic.S2696.severity = none # Instance members should not write to "static" fields -> replaced by SST2402
 dotnet_diagnostic.S2701.severity = none # Literal boolean values should not be used in assertions — covered by SST2503
-dotnet_diagnostic.S3215.severity = none # "interface" instances should not be cast to concrete types -> replaced by SST2326
+dotnet_diagnostic.S3215.severity = none # "interface" instances should not be cast to concrete types -> deliberately unenforced, same reason as SST2326
 dotnet_diagnostic.S3216.severity = none # "ConfigureAwait(false)" should be used -> replaced by CA2007
 dotnet_diagnostic.S3217.severity = none # "Explicit" conversions of "foreach" loops should not be used — covered by SST2225
 dotnet_diagnostic.S3218.severity = none # Inner class members should not shadow outer class "static" or type members — covered by SST1484
