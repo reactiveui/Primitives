@@ -31,11 +31,11 @@ internal sealed class TaskTerminalCompletion<T>
     private CancellationToken _cancellationToken;
 
     /// <summary>Gets the task completed by the terminal.</summary>
-    public Task<T> Task => _completion.Task;
+    internal Task<T> Task => _completion.Task;
 
     /// <summary>Completes the task with a value and releases the subscription and registration.</summary>
     /// <param name="value">The result value.</param>
-    public void Resolve(T value)
+    internal void Resolve(T value)
     {
         Release();
         _ = _completion.TrySetResult(value);
@@ -43,14 +43,14 @@ internal sealed class TaskTerminalCompletion<T>
 
     /// <summary>Faults the task and releases the subscription and registration.</summary>
     /// <param name="error">The error.</param>
-    public void Fail(Exception error)
+    internal void Fail(Exception error)
     {
         Release();
         _ = _completion.TrySetException(error);
     }
 
     /// <summary>Faults the task with the shared empty-source error and releases the subscription and registration.</summary>
-    public void FailEmpty() =>
+    internal void FailEmpty() =>
         Fail(new InvalidOperationException("The source completed without producing a value."));
 
     /// <summary>
@@ -60,7 +60,7 @@ internal sealed class TaskTerminalCompletion<T>
     /// <param name="subscription">The source subscription.</param>
     /// <param name="cancellationToken">The token that cancels the task and disposes the subscription.</param>
     /// <returns>The terminal task.</returns>
-    public Task<T> Attach(IDisposable subscription, CancellationToken cancellationToken)
+    internal Task<T> Attach(IDisposable subscription, CancellationToken cancellationToken)
     {
         _subscription = subscription;
         if (_completion.Task.IsCompleted)

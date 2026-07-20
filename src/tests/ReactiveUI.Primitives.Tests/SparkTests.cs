@@ -61,10 +61,10 @@ public class SparkTests
         next.Accept((IObserver<int>)observer);
         await Assert.That(next.Accept<string>(observer)).IsEqualTo("next:42");
         next.Accept(
-            value => observer.Events.Add("delegate-next:" + value),
+            value => observer.Events.Add($"delegate-next:{value}"),
             ex => observer.Events.Add(ex.Message),
             () => observer.Events.Add(DelegateCompletedText));
-        await Assert.That(next.Accept(static value => "fn-next:" + value, static ex => ex.Message, static () => FunctionCompletedText))
+        await Assert.That(next.Accept(static value => $"fn-next:{value}", static ex => ex.Message, static () => FunctionCompletedText))
             .IsEqualTo("fn-next:42");
         _ = Assert.Throws<ArgumentNullException>(() => next.Accept((IObserver<int>)null!));
         _ = Assert.Throws<ArgumentNullException>(() => next.Accept<string>(null!));
@@ -104,11 +104,11 @@ public class SparkTests
         await Assert.That(errorSpark.Accept<string>(observer)).IsEqualTo("error:spark-error");
         errorSpark.Accept(
             value => observer.Events.Add(value.ToString()),
-            ex => observer.Events.Add("delegate-error:" + ex.Message),
+            ex => observer.Events.Add($"delegate-error:{ex.Message}"),
             () => observer.Events.Add(DelegateCompletedText));
         var errorResult = errorSpark.Accept(
             static value => value.ToString(),
-            static ex => "fn-error:" + ex.Message,
+            static ex => $"fn-error:{ex.Message}",
             static () => FunctionCompletedText);
         await Assert.That(errorResult).IsEqualTo("fn-error:spark-error");
         _ = Assert.Throws<ArgumentNullException>(static () => Spark.CreateOnError<int>(null!));

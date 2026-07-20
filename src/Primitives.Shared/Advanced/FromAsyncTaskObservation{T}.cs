@@ -49,7 +49,7 @@ internal sealed class FromAsyncTaskObservation<T>
 
     /// <summary>Observes the completed task and forwards its terminal result unless the subscription was disposed.</summary>
     /// <param name="task">The task to observe.</param>
-    public void Observe(Task<T> task)
+    internal void Observe(Task<T> task)
     {
         try
         {

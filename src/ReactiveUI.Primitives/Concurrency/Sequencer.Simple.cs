@@ -174,7 +174,7 @@ public static partial class Sequencer
 
         /// <summary>Starts recursive scheduling.</summary>
         /// <returns>The disposable object used to cancel recursive work.</returns>
-        public RecursiveScheduleState Start()
+        internal RecursiveScheduleState Start()
         {
             Add(_scheduler.Schedule(_recursiveAction));
             return this;

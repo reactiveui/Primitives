@@ -16,7 +16,8 @@ public class DisposableTests
     public async Task WhenDisposableAsyncEmpty_ThenDisposeDoesNothing()
     {
         var empty = DisposableAsync.Empty;
-        await empty.DisposeAsync();
+
+        await Assert.That(async () => await empty.DisposeAsync()).ThrowsNothing();
     }
 
     /// <summary>Tests DisposableAsync.Create callback invoked on dispose.</summary>

@@ -509,7 +509,7 @@ public sealed class ConnectableSignalTests
 
         List<int> selectedValues = [];
         using var selectedSubscription = ConnectableSignalRxNameExtensions
-            .Publish<int, int>(cold, static shared => shared.Map(static value => value + SecondSharedValue))
+            .Publish(cold, static shared => shared.Map(static value => value + SecondSharedValue))
             .Subscribe(selectedValues.Add);
         source.OnNext(FirstSharedValue);
 

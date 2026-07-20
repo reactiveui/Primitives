@@ -8,7 +8,7 @@ namespace ReactiveUI.Primitives.Tests;
 internal sealed class RecordingDisposable : IDisposable
 {
     /// <summary>Gets the number of disposal calls.</summary>
-    public int DisposeCount { get; private set; }
+    internal int DisposeCount { get; private set; }
 
     /// <inheritdoc/>
     public void Dispose() => DisposeCount++;

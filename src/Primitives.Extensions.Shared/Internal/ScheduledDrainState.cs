@@ -43,22 +43,22 @@ internal sealed class ScheduledDrainState<T>(ISequencer scheduler, IDrainTarget 
 
     /// <summary>Gets a value indicating whether the sink has reached a terminal state. Read inside
     /// the sink's gate by callers that need to short-circuit once terminated.</summary>
-    public bool Done => _done;
+    internal bool Done => _done;
 
     /// <summary>Enqueues an OnNext notification and schedules a drain pass if one isn't already running.</summary>
     /// <param name="value">The value to forward downstream.</param>
-    public void EnqueueNext(T value) => Enqueue(new(DrainNotificationKind.Next, value, null));
+    internal void EnqueueNext(T value) => Enqueue(new(DrainNotificationKind.Next, value, null));
 
     /// <summary>Enqueues an OnError notification and schedules a drain pass if one isn't already running.</summary>
     /// <param name="error">The error to forward downstream.</param>
-    public void EnqueueError(Exception error) => Enqueue(new(DrainNotificationKind.Error, default!, error));
+    internal void EnqueueError(Exception error) => Enqueue(new(DrainNotificationKind.Error, default!, error));
 
     /// <summary>Enqueues an OnCompleted notification and schedules a drain pass if one isn't already running.</summary>
-    public void EnqueueCompleted() => Enqueue(new(DrainNotificationKind.Completed, default!, null));
+    internal void EnqueueCompleted() => Enqueue(new(DrainNotificationKind.Completed, default!, null));
 
     /// <summary>Records the upstream subscription, or disposes it immediately if the sink is already done.</summary>
     /// <param name="subscription">The upstream subscription handle.</param>
-    public void Attach(IDisposable subscription)
+    internal void Attach(IDisposable subscription)
     {
         lock (_gate)
         {
@@ -75,7 +75,7 @@ internal sealed class ScheduledDrainState<T>(ISequencer scheduler, IDrainTarget 
     /// <summary>Dequeues the next pending notification, clearing the drain flag when the queue empties or the sink has terminated.</summary>
     /// <param name="notification">The dequeued notification when this returns <see langword="true"/>.</param>
     /// <returns><see langword="true"/> if a notification was dequeued; otherwise <see langword="false"/>.</returns>
-    public bool TryDequeue(out Notification notification)
+    internal bool TryDequeue(out Notification notification)
     {
         lock (_gate)
         {
@@ -92,7 +92,7 @@ internal sealed class ScheduledDrainState<T>(ISequencer scheduler, IDrainTarget 
     }
 
     /// <summary>Marks the sink terminated and drops any still-queued notifications. Locks the gate.</summary>
-    public void Terminate()
+    internal void Terminate()
     {
         lock (_gate)
         {
@@ -103,13 +103,13 @@ internal sealed class ScheduledDrainState<T>(ISequencer scheduler, IDrainTarget 
 
     /// <summary>Marks the sink terminated without clearing the queue. Caller must hold the gate;
     /// the still-queued notifications are abandoned because <see cref="TryDequeue"/> checks the done flag first.</summary>
-    public void MarkDoneLocked() => _done = true;
+    internal void MarkDoneLocked() => _done = true;
 
     /// <summary>Begins disposal under the gate: marks the sink done, clears the queue, and detaches
     /// the upstream subscription — returned to the caller so it is disposed outside the gate. Returns
     /// <see langword="null"/> when already disposed.</summary>
     /// <returns>The upstream subscription to dispose outside the gate, or <see langword="null"/>.</returns>
-    public IDisposable? BeginDispose()
+    internal IDisposable? BeginDispose()
     {
         lock (_gate)
         {
@@ -122,7 +122,7 @@ internal sealed class ScheduledDrainState<T>(ISequencer scheduler, IDrainTarget 
     /// <see langword="false"/>. Lets a composing sink dispose its own scheduled-work slot atomically with the
     /// done transition under the same lock.</summary>
     /// <returns>The upstream subscription to dispose outside the gate, or <see langword="null"/>.</returns>
-    public IDisposable? BeginDisposeLocked()
+    internal IDisposable? BeginDisposeLocked()
     {
         _done = true;
         _queue.Clear();

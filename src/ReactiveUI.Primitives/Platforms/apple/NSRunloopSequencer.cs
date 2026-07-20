@@ -66,7 +66,7 @@ public sealed class NSRunloopSequencer : ISequencer
     /// <summary>Runs delayed work through the main queue's native delayed dispatch.</summary>
     /// <param name="item">Work item to execute at the due time.</param>
     /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
-    private void ScheduleDelayed(IWorkItem item, long dueTimestamp)
+    private static void ScheduleDelayed(IWorkItem item, long dueTimestamp)
     {
         var nanoseconds = (long)DispatchSequencerState.DelayUntil(dueTimestamp).TotalMilliseconds * NanosecondsPerMillisecond;
         DispatchQueue.MainQueue.DispatchAfter(new DispatchTime(DispatchTime.Now, nanoseconds), () => DispatchSequencerState.RunIfActive(item));

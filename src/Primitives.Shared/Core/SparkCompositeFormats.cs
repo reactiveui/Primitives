@@ -19,9 +19,9 @@ namespace ReactiveUI.Primitives.Core;
 internal static class SparkCompositeFormats
 {
     /// <summary>The format an <see cref="SparkKind.OnNext"/> spark renders with.</summary>
-    public static readonly CompositeFormat OnNext = CompositeFormat.Parse("OnNext({0})");
+    internal static readonly CompositeFormat OnNext = CompositeFormat.Parse("OnNext({0})");
 
     /// <summary>The format an <see cref="SparkKind.OnError"/> spark renders with.</summary>
-    public static readonly CompositeFormat OnError = CompositeFormat.Parse("OnError({0})");
+    internal static readonly CompositeFormat OnError = CompositeFormat.Parse("OnError({0})");
 }
 #endif

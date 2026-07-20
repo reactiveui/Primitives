@@ -8,7 +8,6 @@ using AsyncObs = ReactiveUI.Primitives.Async.SignalAsync;
 namespace ReactiveUI.Primitives.Async.Tests;
 
 /// <summary>Tests for async parity helpers that mirror the synchronous helper surface in the repository.</summary>
-[SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "TUnit requires instance methods")]
 public class ParityOperatorTests
 {
     /// <summary>Seconds a test waits for a notification before giving up.</summary>

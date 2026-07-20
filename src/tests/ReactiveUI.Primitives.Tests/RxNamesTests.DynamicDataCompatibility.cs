@@ -273,8 +273,8 @@ public partial class RxNamesTests
         var completed = 0;
         _ = Signal.FromEnumerable([One, Two])
             .Do(
-                value => sideEffects.Add("next:" + value),
-                error => sideEffects.Add("error:" + error.Message),
+                value => sideEffects.Add($"next:{value}"),
+                error => sideEffects.Add($"error:{error.Message}"),
                 () => completed++)
             .Subscribe(values.Add);
 

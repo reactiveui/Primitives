@@ -7,14 +7,14 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// <summary>Provides a sequencer test double that rejects scheduled work.</summary>
 internal sealed class EmptySequencer : ISequencer
 {
-    /// <summary>Gets the shared empty sequencer instance.</summary>
-    public static EmptySequencer Instance { get; } = new();
-
     /// <inheritdoc/>
     public DateTimeOffset Now => DateTimeOffset.UnixEpoch;
 
     /// <inheritdoc/>
     public long Timestamp => 0;
+
+    /// <summary>Gets the shared empty sequencer instance.</summary>
+    internal static EmptySequencer Instance { get; } = new();
 
     /// <inheritdoc/>
     public void Schedule(IWorkItem item) =>

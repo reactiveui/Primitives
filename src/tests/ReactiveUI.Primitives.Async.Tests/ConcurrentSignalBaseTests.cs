@@ -12,7 +12,6 @@ namespace ReactiveUI.Primitives.Async.Tests;
 /// <see cref="Concurrent"/> — exercises empty / single / multi-observer paths and the
 /// slow-path that uses <see cref="Task.WhenAll(Task[])"/> when at
 /// least one observer's <see cref="ValueTask"/> hasn't completed synchronously.</summary>
-[SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "TUnit requires instance methods")]
 public class ConcurrentSignalBaseTests
 {
     /// <summary>Value forwarded by the <c>OnNext</c> fan-out tests.</summary>

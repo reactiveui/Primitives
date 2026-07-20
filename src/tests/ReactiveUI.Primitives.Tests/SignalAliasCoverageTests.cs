@@ -42,7 +42,7 @@ public class SignalAliasCoverageTests
         await Assert.That(Signal.Timeout(Signal.Emit(One), TimeSpan.FromTicks(One), null)).IsNotNull();
 
         List<int> switchedRanges = [];
-        _ = Signal.Switch(Signal.FromEnumerable<IObservable<int>>([Signal.Range(One, Two), Signal.Range(Three, Two)]))
+        _ = Signal.Switch(Signal.FromEnumerable([Signal.Range(One, Two), Signal.Range(Three, Two)]))
             .Subscribe(switchedRanges.Add);
         await Assert.That(switchedRanges.SequenceEqual([One, Two, Three, Four])).IsTrue();
 
@@ -54,7 +54,7 @@ public class SignalAliasCoverageTests
         await Assert.That(emptySwitchCompleted).IsEqualTo(One);
 
         List<int> nonRangeSwitch = [];
-        _ = Signal.Switch(Signal.FromEnumerable<IObservable<int>>([Signal.Emit(Five)])).Subscribe(nonRangeSwitch.Add);
+        _ = Signal.Switch(Signal.FromEnumerable([Signal.Emit(Five)])).Subscribe(nonRangeSwitch.Add);
         await Assert.That(nonRangeSwitch.SequenceEqual([Five])).IsTrue();
     }
 

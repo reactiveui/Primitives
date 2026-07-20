@@ -159,28 +159,28 @@ public partial class SignalOperatorParityMixinsTests
         List<object> values = [];
         var badIntegers = CreateSourceThatKeepsSignallingAfterItsError();
         var lateCompletionIntegers = CreateSourceThatKeepsSignallingAfterItsCompletion();
-        _ = badIntegers.Count().Subscribe(value => values.Add(value), ex => errors.Add("count:" + ex.Message));
-        _ = badIntegers.LongCount().Subscribe(value => values.Add(value), ex => errors.Add("long-count:" + ex.Message));
+        _ = badIntegers.Count().Subscribe(value => values.Add(value), ex => errors.Add($"count:{ex.Message}"));
+        _ = badIntegers.LongCount().Subscribe(value => values.Add(value), ex => errors.Add($"long-count:{ex.Message}"));
         _ = badIntegers.Count(static value => value > 0)
-            .Subscribe(value => values.Add(value), ex => errors.Add("count-predicate:" + ex.Message));
+            .Subscribe(value => values.Add(value), ex => errors.Add($"count-predicate:{ex.Message}"));
         _ = badIntegers.LongCount(static value => value > 0)
-            .Subscribe(value => values.Add(value), ex => errors.Add("long-count-predicate:" + ex.Message));
-        _ = badIntegers.Any().Subscribe(value => values.Add(value), ex => errors.Add("any:" + ex.Message));
+            .Subscribe(value => values.Add(value), ex => errors.Add($"long-count-predicate:{ex.Message}"));
+        _ = badIntegers.Any().Subscribe(value => values.Add(value), ex => errors.Add($"any:{ex.Message}"));
         _ = badIntegers.Any(static value => value > 0)
-            .Subscribe(value => values.Add(value), ex => errors.Add("any-predicate:" + ex.Message));
+            .Subscribe(value => values.Add(value), ex => errors.Add($"any-predicate:{ex.Message}"));
         _ = badIntegers.All(static value => value > 0)
-            .Subscribe(value => values.Add(value), ex => errors.Add("all:" + ex.Message));
-        _ = badIntegers.Contains(Two).Subscribe(value => values.Add(value), ex => errors.Add("contains:" + ex.Message));
+            .Subscribe(value => values.Add(value), ex => errors.Add($"all:{ex.Message}"));
+        _ = badIntegers.Contains(Two).Subscribe(value => values.Add(value), ex => errors.Add($"contains:{ex.Message}"));
         _ = lateCompletionIntegers.Count()
-            .Subscribe(value => values.Add(value), ex => errors.Add("late-count:" + ex.Message));
+            .Subscribe(value => values.Add(value), ex => errors.Add($"late-count:{ex.Message}"));
         _ = lateCompletionIntegers.LongCount()
-            .Subscribe(value => values.Add(value), ex => errors.Add("late-long-count:" + ex.Message));
+            .Subscribe(value => values.Add(value), ex => errors.Add($"late-long-count:{ex.Message}"));
         _ = lateCompletionIntegers.Any(static value => value > 0)
-            .Subscribe(value => values.Add(value), ex => errors.Add("late-any:" + ex.Message));
+            .Subscribe(value => values.Add(value), ex => errors.Add($"late-any:{ex.Message}"));
         _ = lateCompletionIntegers.All(static value => value > 0)
-            .Subscribe(value => values.Add(value), ex => errors.Add("late-all:" + ex.Message));
+            .Subscribe(value => values.Add(value), ex => errors.Add($"late-all:{ex.Message}"));
         _ = lateCompletionIntegers.Contains(One)
-            .Subscribe(value => values.Add(value), ex => errors.Add("late-contains:" + ex.Message));
+            .Subscribe(value => values.Add(value), ex => errors.Add($"late-contains:{ex.Message}"));
         DriveTerminalOperatorsWhosePredicateOrComparerThrows(errors);
         await Assert.That(errors).Contains("count:first-terminal");
         await Assert.That(errors).Contains("long-count:first-terminal");

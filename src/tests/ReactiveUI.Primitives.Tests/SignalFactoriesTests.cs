@@ -245,7 +245,7 @@ public partial class SignalFactoriesTests
         TaskCompletionSource<CancellationToken> observedToken = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource canceled = new(TaskCreationOptions.RunContinuationsAsynchronously);
         RecordingWitness<int> observer = new();
-        var subscription = Signal.FromAsync<int>(async token =>
+        var subscription = Signal.FromAsync(async token =>
         {
             observedToken.SetResult(token);
             try
@@ -277,7 +277,7 @@ public partial class SignalFactoriesTests
         TaskCompletionSource subscribed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource<int> complete = new(TaskCreationOptions.RunContinuationsAsynchronously);
         RecordingWitness<int> observer = new();
-        var subscription = Signal.FromAsync<int>(token =>
+        var subscription = Signal.FromAsync(token =>
         {
             subscribed.SetResult();
             return complete.Task;
@@ -299,7 +299,7 @@ public partial class SignalFactoriesTests
         using CancellationTokenSource external = new();
         TaskCompletionSource<CancellationToken> observedToken = new(TaskCreationOptions.RunContinuationsAsynchronously);
         RecordingWitness<int> observer = new();
-        using var subscription = Signal.FromAsync<int>(
+        using var subscription = Signal.FromAsync(
             async token =>
             {
                 observedToken.SetResult(token);
@@ -324,7 +324,7 @@ public partial class SignalFactoriesTests
         TaskCompletionSource subscribed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource<int> complete = new(TaskCreationOptions.RunContinuationsAsynchronously);
         RecordingWitness<int> observer = new();
-        using var subscription = Signal.FromAsync<int>(
+        using var subscription = Signal.FromAsync(
             token =>
             {
                 subscribed.SetResult();
@@ -349,7 +349,7 @@ public partial class SignalFactoriesTests
     {
         var calls = 0;
         RecordingWitness<int> observer = new();
-        using var subscription = Signal.FromAsync<int>(token =>
+        using var subscription = Signal.FromAsync(token =>
         {
             calls++;
             return Task.FromResult(token.IsCancellationRequested ? NinetyNine : Seven);
@@ -367,7 +367,7 @@ public partial class SignalFactoriesTests
     {
         InvalidOperationException expected = new("from-async-fault");
         RecordingWitness<int> observer = new();
-        Signal.FromAsync<int>(_ => Task.FromException<int>(expected)).Subscribe(observer).Dispose();
+        Signal.FromAsync(_ => Task.FromException<int>(expected)).Subscribe(observer).Dispose();
         await Assert.That(observer.Errors[0]).IsSameReferenceAs(expected);
         await Assert.That(observer.Values.Count).IsEqualTo(0);
         await Assert.That(observer.Completed).IsEqualTo(0);
@@ -400,7 +400,7 @@ public partial class SignalFactoriesTests
         using CancellationTokenSource taskCancellation = new();
         await taskCancellation.CancelAsync();
         RecordingWitness<int> canceledTask = new();
-        Signal.FromAsync<int>(_ => Task.FromCanceled<int>(taskCancellation.Token))
+        Signal.FromAsync(_ => Task.FromCanceled<int>(taskCancellation.Token))
             .Subscribe(canceledTask).Dispose();
         await Assert.That(canceledTask.Errors[0]).IsTypeOf<TaskCanceledException>();
         await Assert.That(canceledTask.Values.Count).IsEqualTo(0);
@@ -410,7 +410,7 @@ public partial class SignalFactoriesTests
         await external.CancelAsync();
         var invoked = 0;
         RecordingWitness<int> externallyCanceled = new();
-        Signal.FromAsync<int>(
+        Signal.FromAsync(
             _ =>
             {
                 invoked++;
@@ -430,7 +430,7 @@ public partial class SignalFactoriesTests
     {
         TaskCompletionSource<int> successfulTask = new(TaskCreationOptions.RunContinuationsAsynchronously);
         RecordingWitness<int> successful = new();
-        using (Signal.FromAsync<int>(_ => successfulTask.Task).Subscribe(successful))
+        using (Signal.FromAsync(_ => successfulTask.Task).Subscribe(successful))
         {
             successfulTask.SetResult(Seven);
             await TestPolling.SpinUntil(
@@ -444,7 +444,7 @@ public partial class SignalFactoriesTests
         InvalidOperationException expected = new("from-async-pending-fault");
         TaskCompletionSource<int> faultedTask = new(TaskCreationOptions.RunContinuationsAsynchronously);
         RecordingWitness<int> faulted = new();
-        using (Signal.FromAsync<int>(_ => faultedTask.Task).Subscribe(faulted))
+        using (Signal.FromAsync(_ => faultedTask.Task).Subscribe(faulted))
         {
             faultedTask.SetException(expected);
             await TestPolling.SpinUntil(
@@ -460,7 +460,7 @@ public partial class SignalFactoriesTests
         await cancellation.CancelAsync();
         TaskCompletionSource<int> canceledTask = new(TaskCreationOptions.RunContinuationsAsynchronously);
         RecordingWitness<int> canceled = new();
-        using (Signal.FromAsync<int>(_ => canceledTask.Task).Subscribe(canceled))
+        using (Signal.FromAsync(_ => canceledTask.Task).Subscribe(canceled))
         {
             canceledTask.SetCanceled(cancellation.Token);
             await TestPolling.SpinUntil(
@@ -576,15 +576,15 @@ public partial class SignalFactoriesTests
     {
         _ = Assert.Throws<ArgumentOutOfRangeException>(static () => Signal.Repeat(One, -1));
         _ = Assert.Throws<ArgumentNullException>(static () =>
-            Signal.Generate<int, int>(One, null!, static value => value, static value => value));
+            Signal.Generate(One, null!, static value => value, static value => value));
         _ = Assert.Throws<ArgumentNullException>(static () =>
-            Signal.Generate<int, int>(One, static _ => true, null!, static value => value));
+            Signal.Generate(One, static _ => true, null!, static value => value));
         _ = Assert.Throws<ArgumentNullException>(static () =>
             Signal.Generate<int, int>(One, static _ => true, static value => value, null!));
-        _ = Assert.Throws<ArgumentNullException>(static () => Signal.If<int>(null!, Signal.Emit(One)));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.If(null!, Signal.Emit(One)));
         _ = Assert.Throws<ArgumentNullException>(static () => Signal.If(static () => true, null!, Signal.Emit(One)));
         _ = Assert.Throws<ArgumentNullException>(static () => Signal.If(static () => true, Signal.Emit(One), null!));
-        _ = Assert.Throws<ArgumentNullException>(() => Signal.Case<string, int>(null!, cases));
+        _ = Assert.Throws<ArgumentNullException>(() => Signal.Case(null!, cases));
         _ = Assert.Throws<ArgumentNullException>(static () => Signal.Case<string, int>(static () => "one", null!));
         _ = Assert.Throws<ArgumentNullException>(() => Signal.Case(static () => "one", cases, null!));
         _ = Assert.Throws<ArgumentNullException>(static () => Signal.Using<IDisposable, int>(null!, static _ => Signal.Emit(One)));

@@ -10,7 +10,6 @@ namespace ReactiveUI.Primitives.Async.Tests;
 /// async filter operators in <c>ParityHelpers.FilterFusions</c> —
 /// <c>SkipWhileNull</c>, <c>WhereIsNotNull</c>, <c>LatestOrDefault</c>,
 /// <c>WaitUntil</c>, <c>AsSignal</c>, <c>Not</c>, <c>WhereTrue</c>, <c>WhereFalse</c>.</summary>
-[SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "TUnit requires instance methods")]
 public class ParityHelpersFilterFusionsTests
 {
     /// <summary>Seconds a test waits for a notification before giving up.</summary>

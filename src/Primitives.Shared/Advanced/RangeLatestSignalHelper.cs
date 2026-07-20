@@ -18,7 +18,7 @@ internal static class RangeLatestSignalHelper
     /// <param name="right">The right range.</param>
     /// <param name="selector">The result projection.</param>
     /// <returns>The completed subscription disposable.</returns>
-    public static IDisposable Subscribe<TResult>(
+    internal static IDisposable Subscribe<TResult>(
         IObserver<TResult> observer,
         RangeSignal left,
         RangeSignal right,

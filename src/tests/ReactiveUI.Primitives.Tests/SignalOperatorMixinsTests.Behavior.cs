@@ -165,7 +165,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(longCount.SequenceEqual(ExpectedLongCount)).IsTrue();
         List<string> selectMany = [];
         _ = Signal.FromEnumerable([1, Two])
-            .FlatMap(static value => Signal.FromEnumerable([value, value + Ten]), static (outer, inner) => outer + ":" + inner)
+            .FlatMap(static value => Signal.FromEnumerable([value, value + Ten]), static (outer, inner) => $"{outer}:{inner}")
             .Subscribe(selectMany.Add);
         await Assert.That(selectMany.SequenceEqual(ExpectedSelectMany)).IsTrue();
         List<int> flatMapValues = [];

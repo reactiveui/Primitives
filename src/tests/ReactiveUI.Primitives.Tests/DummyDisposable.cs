@@ -8,7 +8,7 @@ namespace ReactiveUI.Primitives.Tests;
 internal sealed class DummyDisposable : IDisposable
 {
     /// <summary>Gets the shared disposable instance.</summary>
-    public static DummyDisposable Instance { get; } = new();
+    internal static DummyDisposable Instance { get; } = new();
 
     /// <inheritdoc/>
     public void Dispose()

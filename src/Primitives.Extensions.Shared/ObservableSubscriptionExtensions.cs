@@ -285,15 +285,8 @@ public static class ObservableSubscriptionExtensions
         /// <summary>Gets the captured value, or <see langword="default"/> if none.</summary>
         public T? Value { get; private set; }
 
-        /// <summary>Gets a value indicating whether at least one value was observed.</summary>
-        public bool HasValue { get; private set; }
-
         /// <inheritdoc/>
-        public void OnNext(T value)
-        {
-            Value = value;
-            HasValue = true;
-        }
+        public void OnNext(T value) => Value = value;
 
         /// <inheritdoc/>
         public void OnError(Exception error)

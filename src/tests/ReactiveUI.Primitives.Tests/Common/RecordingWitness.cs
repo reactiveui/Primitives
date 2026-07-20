@@ -9,13 +9,13 @@ namespace ReactiveUI.Primitives.Tests;
 internal sealed class RecordingWitness<T> : IObserver<T>
 {
     /// <summary>Gets the recorded values.</summary>
-    public List<T> Values { get; } = [];
+    internal List<T> Values { get; } = [];
 
     /// <summary>Gets the recorded errors.</summary>
-    public List<Exception> Errors { get; } = [];
+    internal List<Exception> Errors { get; } = [];
 
     /// <summary>Gets the number of completion callbacks observed.</summary>
-    public int Completed { get; private set; }
+    internal int Completed { get; private set; }
 
     /// <summary>Records a completion callback.</summary>
     public void OnCompleted() => Completed++;

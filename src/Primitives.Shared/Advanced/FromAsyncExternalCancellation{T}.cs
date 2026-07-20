@@ -31,7 +31,7 @@ internal sealed class FromAsyncExternalCancellation<T> : IDisposable
     }
 
     /// <summary>Gets a value indicating whether the external token can cancel.</summary>
-    public bool CanBeCanceled => CancellationToken.CanBeCanceled;
+    internal bool CanBeCanceled => CancellationToken.CanBeCanceled;
 
     /// <summary>Gets the downstream observer.</summary>
     private IObserver<T> Observer { get; }
@@ -51,12 +51,12 @@ internal sealed class FromAsyncExternalCancellation<T> : IDisposable
     /// <summary>Creates a linked source for subscription disposal and external cancellation.</summary>
     /// <param name="subscriptionToken">The subscription-owned cancellation token.</param>
     /// <returns>A linked cancellation token source.</returns>
-    public CancellationTokenSource CreateLinkedSource(CancellationToken subscriptionToken) =>
+    internal CancellationTokenSource CreateLinkedSource(CancellationToken subscriptionToken) =>
         CancellationTokenSource.CreateLinkedTokenSource(CancellationToken, subscriptionToken);
 
     /// <summary>Registers external cancellation.</summary>
     /// <returns><see langword="true"/> when the subscription should continue starting.</returns>
-    public bool Start()
+    internal bool Start()
     {
         if (!CancellationToken.CanBeCanceled)
         {
@@ -70,7 +70,7 @@ internal sealed class FromAsyncExternalCancellation<T> : IDisposable
 
     /// <summary>Attempts to forward external cancellation as a terminal error.</summary>
     /// <returns><see langword="true"/> when external cancellation was forwarded.</returns>
-    public bool TryForwardCancellation()
+    internal bool TryForwardCancellation()
     {
         if (!CancellationToken.IsCancellationRequested || Lifetime.IsCancellationRequested)
         {

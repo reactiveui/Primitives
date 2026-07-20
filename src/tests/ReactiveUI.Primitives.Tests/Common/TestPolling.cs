@@ -14,7 +14,7 @@ internal static class TestPolling
     /// <param name="condition">The condition to evaluate on each poll.</param>
     /// <param name="timeout">The maximum time to wait for the condition.</param>
     /// <returns>A task that completes when the condition is satisfied.</returns>
-    public static async Task SpinUntil(Func<bool> condition, TimeSpan timeout)
+    internal static async Task SpinUntil(Func<bool> condition, TimeSpan timeout)
     {
         var attempts = (int)(timeout.TotalMilliseconds / PollDelayMilliseconds);
         for (var attempt = 0; attempt < attempts; attempt++)

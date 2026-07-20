@@ -9,6 +9,9 @@ namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 /// <summary>Tests for the <see cref = "ScanWithInitialObservable{TSource, TAccumulate}"/> class.</summary>
 public partial class ScanWithInitialTests
 {
+    /// <summary>Spin iterations used to widen the interleaving window in contention tests.</summary>
+    private const int InterleavingSpinIterations = 100;
+
 #if NET9_0_OR_GREATER
 
     /// <summary>Synchronization gate used by tests.</summary>
@@ -106,7 +109,7 @@ public partial class ScanWithInitialTests
         const int Initial = 0;
         Func<int, int, int> accumulator = static (acc, x) =>
         {
-            Thread.Sleep(1); // Force potential race condition
+            Thread.SpinWait(InterleavingSpinIterations);
             return acc + x;
         };
         ScanWithInitialObservable<int, int> observable = new(source, Initial, accumulator);

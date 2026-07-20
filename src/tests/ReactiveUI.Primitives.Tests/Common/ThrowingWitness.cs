@@ -24,7 +24,7 @@ internal sealed class ThrowingWitness<T>(
     private readonly bool _throwOnCompleted = throwOnCompleted;
 
     /// <summary>Gets a value indicating whether an error callback has been observed.</summary>
-    public bool SeenError { get; private set; }
+    internal bool SeenError { get; private set; }
 
     /// <summary>Handles completion, throwing when configured to do so.</summary>
     public void OnCompleted()

@@ -66,7 +66,7 @@ public partial class SignalOperatorParityMixinsTests
         IObserver<int>? inner = null;
         RecordingWitness<int> witness = new();
         var subscription = new ScriptedObservable<int>(observer => outer = observer)
-            .FlatMap<int, int>(_ => new ScriptedObservable<int>(observer => inner = observer))
+            .FlatMap(_ => new ScriptedObservable<int>(observer => inner = observer))
             .Subscribe(witness);
         outer!.OnNext(First);
         inner!.OnNext(Second);

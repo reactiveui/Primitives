@@ -23,23 +23,23 @@ internal sealed class TaskCompletionSource
     public TaskCompletionSource() => _inner = new();
 
     /// <summary>Transitions the underlying task to the <see cref="TaskStatus.RanToCompletion"/> state.</summary>
-    public void SetResult() => _inner.SetResult(true);
+    internal void SetResult() => _inner.SetResult(true);
 
     /// <summary>Attempts to transition the underlying task to the <see cref="TaskStatus.RanToCompletion"/> state.</summary>
     /// <returns><see langword="true"/> if the operation was successful; otherwise <see langword="false"/>.</returns>
-    public bool TrySetResult() => _inner.TrySetResult(true);
+    internal bool TrySetResult() => _inner.TrySetResult(true);
 
     /// <summary>Transitions the underlying task to the <see cref="TaskStatus.Faulted"/> state with the specified exception.</summary>
     /// <param name="exception">The exception to bind to the task.</param>
-    public void SetException(Exception exception) => _inner.SetException(exception);
+    internal void SetException(Exception exception) => _inner.SetException(exception);
 
     /// <summary>Attempts to transition the underlying task to the <see cref="TaskStatus.Faulted"/> state with the specified exception.</summary>
     /// <param name="exception">The exception to bind to the task.</param>
     /// <returns><see langword="true"/> if the operation was successful; otherwise <see langword="false"/>.</returns>
-    public bool TrySetException(Exception exception) => _inner.TrySetException(exception);
+    internal bool TrySetException(Exception exception) => _inner.TrySetException(exception);
 
     /// <summary>Transitions the underlying task to the <see cref="TaskStatus.Canceled"/> state.</summary>
-    public void SetCanceled() => _inner.TrySetCanceled();
+    internal void SetCanceled() => _inner.TrySetCanceled();
 
     /// <summary>Attempts to transition the underlying task to the <see cref="TaskStatus.Canceled"/> state.</summary>
     /// <returns><see langword="true"/> if the operation was successful; otherwise <see langword="false"/>.</returns>
@@ -50,11 +50,11 @@ internal sealed class TaskCompletionSource
             "Distinct BCL-parity surface members with different contracts and return types: SetCanceled is void and "
             + "TrySetCanceled returns bool. They share the same backing call here but must track the framework surface "
             + "independently, so they are deliberately kept as separate members rather than one forwarding to the other.")]
-    public bool TrySetCanceled() => _inner.TrySetCanceled();
+    internal bool TrySetCanceled() => _inner.TrySetCanceled();
 
     /// <summary>Attempts to transition the underlying task to the <see cref="TaskStatus.Canceled"/> state for the specified token.</summary>
     /// <param name="cancellationToken">The token associated with the cancellation.</param>
     /// <returns><see langword="true"/> if the operation was successful; otherwise <see langword="false"/>.</returns>
-    public bool TrySetCanceled(CancellationToken cancellationToken) => _inner.TrySetCanceled(cancellationToken);
+    internal bool TrySetCanceled(CancellationToken cancellationToken) => _inner.TrySetCanceled(cancellationToken);
 }
 #endif

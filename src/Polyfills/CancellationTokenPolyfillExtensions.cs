@@ -18,14 +18,14 @@ internal static class CancellationTokenPolyfillExtensions
         /// <param name="callback">The delegate to invoke on cancellation.</param>
         /// <param name="state">The state passed to <paramref name="callback"/>.</param>
         /// <returns>A registration that can be disposed to remove the callback.</returns>
-        public CancellationTokenRegistration UnsafeRegister(Action<object?> callback, object? state) =>
+        internal CancellationTokenRegistration UnsafeRegister(Action<object?> callback, object? state) =>
             token.Register(callback, state, false);
 
         /// <summary>Registers a delegate that is invoked with the triggering token when the token is cancelled, without capturing the execution context.</summary>
         /// <param name="callback">The delegate to invoke on cancellation, receiving the state and the triggering token.</param>
         /// <param name="state">The state passed to <paramref name="callback"/>.</param>
         /// <returns>A registration that can be disposed to remove the callback.</returns>
-        public CancellationTokenRegistration
+        internal CancellationTokenRegistration
             UnsafeRegister(Action<object?, CancellationToken> callback, object? state) =>
             token.Register(
                 static boxed =>
@@ -44,7 +44,7 @@ internal static class CancellationTokenPolyfillExtensions
     {
         /// <summary>Removes the registered callback; on this framework the removal may wait for an in-flight callback.</summary>
         /// <returns><see langword="true"/> when the registration was released.</returns>
-        public bool Unregister()
+        internal bool Unregister()
         {
             registration.Dispose();
             return true;

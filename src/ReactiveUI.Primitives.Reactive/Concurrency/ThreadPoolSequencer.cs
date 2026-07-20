@@ -10,5 +10,5 @@ namespace ReactiveUI.Primitives.Reactive.Concurrency;
 internal static class ThreadPoolSequencer
 {
     /// <summary>Gets the shared thread-pool scheduler instance.</summary>
-    public static IScheduler Instance => ThreadPoolScheduler.Instance;
+    internal static IScheduler Instance => ThreadPoolScheduler.Instance;
 }

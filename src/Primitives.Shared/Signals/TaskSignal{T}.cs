@@ -52,28 +52,6 @@ internal sealed class TaskSignal<T> : ITaskSignal<T>
     /// <summary>Gets a value indicating whether gets a value that indicates whether the object is disposed.</summary>
     public bool IsDisposed => _cleanUp.IsDisposed;
 
-    /// <summary>Creates a task-backed signal whose source the supplied factory builds.</summary>
-    /// <param name="observableFactory">The observable factory.</param>
-    /// <param name="sequencer">The sequencer.</param>
-    /// <param name="cancellationTokenSource">The cancellation token source.</param>
-    /// <returns>The created signal.</returns>
-    /// <remarks>
-    /// The factory is handed the signal, so the signal has to be whole before it runs. A factory is
-    /// caller-supplied code that may subscribe to, dispose, or stash the signal the moment it receives
-    /// it; from a constructor it would be doing that to an object the runtime had not finished building.
-    /// </remarks>
-    public static TaskSignal<T> Create(
-        Func<ITaskSignal<T>, IObservable<T>> observableFactory,
-        ISequencer? sequencer = null,
-        CancellationTokenSource? cancellationTokenSource = null)
-    {
-        ArgumentExceptionHelper.ThrowIfNull(observableFactory);
-
-        TaskSignal<T> signal = new(sequencer, cancellationTokenSource);
-        signal.Source = observableFactory(signal);
-        return signal;
-    }
-
     /// <summary>Gets the operation canceled.</summary>
     /// <param name="observer">The observer.</param>
     public void GetOperationCanceled(IObserver<Exception> observer) =>
@@ -95,6 +73,28 @@ internal sealed class TaskSignal<T> : ITaskSignal<T>
 
     /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
     public void Dispose() => Dispose(true);
+
+    /// <summary>Creates a task-backed signal whose source the supplied factory builds.</summary>
+    /// <param name="observableFactory">The observable factory.</param>
+    /// <param name="sequencer">The sequencer.</param>
+    /// <param name="cancellationTokenSource">The cancellation token source.</param>
+    /// <returns>The created signal.</returns>
+    /// <remarks>
+    /// The factory is handed the signal, so the signal has to be whole before it runs. A factory is
+    /// caller-supplied code that may subscribe to, dispose, or stash the signal the moment it receives
+    /// it; from a constructor it would be doing that to an object the runtime had not finished building.
+    /// </remarks>
+    internal static TaskSignal<T> Create(
+        Func<ITaskSignal<T>, IObservable<T>> observableFactory,
+        ISequencer? sequencer = null,
+        CancellationTokenSource? cancellationTokenSource = null)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(observableFactory);
+
+        TaskSignal<T> signal = new(sequencer, cancellationTokenSource);
+        signal.Source = observableFactory(signal);
+        return signal;
+    }
 
     /// <summary>Releases unmanaged and - optionally - managed resources.</summary>
     /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>

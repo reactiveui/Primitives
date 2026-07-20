@@ -15,12 +15,12 @@ internal static class VirtualClockTestExtensions
     {
         /// <summary>Advances a virtual clock by ticks.</summary>
         /// <param name="ticks">The number of ticks to advance.</param>
-        public void AdvanceBy(long ticks) =>
+        internal void AdvanceBy(long ticks) =>
             clock.AdvanceBy(TimeSpan.FromTicks(ticks));
 
         /// <summary>Advances a virtual clock to an absolute tick value.</summary>
         /// <param name="ticks">The absolute tick value.</param>
-        public void AdvanceTo(long ticks) =>
+        internal void AdvanceTo(long ticks) =>
             clock.AdvanceTo(new(ticks, TimeSpan.Zero));
     }
 }

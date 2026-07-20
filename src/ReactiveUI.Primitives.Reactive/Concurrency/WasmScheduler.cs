@@ -313,7 +313,7 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
 
         /// <summary>Stores the one-shot timer so the caller's disposable cancels and releases it.</summary>
         /// <param name="timer">The armed timer.</param>
-        public void AttachTimer(Timer timer)
+        internal void AttachTimer(Timer timer)
         {
             Volatile.Write(ref _timer, timer);
             if (!IsDisposed)
@@ -379,7 +379,7 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
         /// <param name="period">Tick period.</param>
         /// <param name="action">Scheduled action.</param>
         /// <returns>The armed periodic work item, which cancels the ticks when disposed.</returns>
-        public static PeriodicWorkItem<TState> Start(TState state, TimeSpan period, Func<TState, TState> action)
+        internal static PeriodicWorkItem<TState> Start(TState state, TimeSpan period, Func<TState, TState> action)
         {
             PeriodicWorkItem<TState> item = new(state, action);
             Timer timer = new(

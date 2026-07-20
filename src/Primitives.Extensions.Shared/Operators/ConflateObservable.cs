@@ -83,10 +83,6 @@ internal sealed class ConflateObservable<T>(
             _state = new(scheduler, this, _gate);
         }
 
-        /// <summary>Records the upstream subscription so <see cref="Dispose"/> can tear it down.</summary>
-        /// <param name="subscription">The upstream subscription handle.</param>
-        public void AttachSourceSubscription(IDisposable subscription) => _state.Attach(subscription);
-
         /// <inheritdoc/>
         public void OnNext(T value) => _state.EnqueueNext(value);
 
@@ -143,6 +139,10 @@ internal sealed class ConflateObservable<T>(
                 }
             }
         }
+
+        /// <summary>Records the upstream subscription so <see cref="Dispose"/> can tear it down.</summary>
+        /// <param name="subscription">The upstream subscription handle.</param>
+        internal void AttachSourceSubscription(IDisposable subscription) => _state.Attach(subscription);
 
         /// <summary>Applies the throttle-window decision to a dequeued value and either emits inline or
         /// schedules a deferred emission. The emission bodies live in covered helpers; only this
