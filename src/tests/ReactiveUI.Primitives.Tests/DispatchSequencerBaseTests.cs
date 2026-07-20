@@ -53,6 +53,14 @@ public sealed class DispatchSequencerBaseTests
     /// <summary>How far ahead delayed work is scheduled.</summary>
     private static readonly TimeSpan DelayedDueTime = TimeSpan.FromMilliseconds(100);
 
+    /// <summary>
+    /// A due time far enough out that no scheduling pause between capturing the timestamp and reading the
+    /// remaining delay can elapse it. Asserting a still-pending delay against a short due time races the wall
+    /// clock: a loaded runner can spend longer than the due time inside the preceding assertion, leaving nothing
+    /// to wait for and clamping the result to zero.
+    /// </summary>
+    private static readonly TimeSpan UnreachableDueTime = TimeSpan.FromHours(1);
+
     /// <summary>How long a test watches for delayed work that must never reach the dispatcher.</summary>
     private static readonly TimeSpan CancelObservationWindow = TimeSpan.FromMilliseconds(400);
 
@@ -137,7 +145,7 @@ public sealed class DispatchSequencerBaseTests
         var now = DispatchSequencerState.Timestamp;
 
         await Assert.That(DispatchSequencerState.DelayUntil(now - ElapsedTimestampOffset)).IsEqualTo(TimeSpan.Zero);
-        await Assert.That(DispatchSequencerState.DelayUntil(Sequencer.AddTimestamp(now, DelayedDueTime)) > TimeSpan.Zero)
+        await Assert.That(DispatchSequencerState.DelayUntil(Sequencer.AddTimestamp(now, UnreachableDueTime)) > TimeSpan.Zero)
             .IsTrue();
     }
 

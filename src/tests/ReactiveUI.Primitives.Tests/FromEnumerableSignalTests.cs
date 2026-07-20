@@ -87,7 +87,7 @@ public class FromEnumerableSignalTests
         public int Completed { get; private set; }
 
         /// <summary>Gets the observed errors.</summary>
-        public List<Exception> Errors { get; } = [];
+        private List<Exception> Errors { get; } = [];
 
         /// <inheritdoc/>
         public void OnCompleted() => Completed++;

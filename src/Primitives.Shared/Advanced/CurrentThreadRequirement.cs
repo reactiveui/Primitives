@@ -15,7 +15,7 @@ internal static class CurrentThreadRequirement
     /// <typeparam name="T">The source value type.</typeparam>
     /// <param name="source">The source observable.</param>
     /// <returns><see langword="true"/> when the source requires current-thread subscription.</returns>
-    public static bool IsRequired<T>(IObservable<T> source) => source is not IRequireCurrentThread<T> currentThread
+    internal static bool IsRequired<T>(IObservable<T> source) => source is not IRequireCurrentThread<T> currentThread
         ? false
         : currentThread.IsRequiredSubscribeOnCurrentThread();
 }

@@ -44,7 +44,7 @@ internal sealed class SequencerWorkItem<TSequencer, TState>(TSequencer sequencer
     }
 
     /// <summary>Invokes the scheduled action if it has not been cancelled.</summary>
-    public void Invoke()
+    internal void Invoke()
     {
         if (Volatile.Read(ref _isDisposed) != 0)
         {

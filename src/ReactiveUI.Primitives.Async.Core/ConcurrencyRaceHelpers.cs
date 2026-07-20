@@ -26,7 +26,7 @@ internal static class ConcurrencyRaceHelpers
     /// <see langword="true"/> if the claim succeeded; <see langword="false"/> if another caller
     /// already claimed the state.
     /// </returns>
-    public static bool TryClaim(ref int state, int openSentinel, int claimedSentinel) =>
+    internal static bool TryClaim(ref int state, int openSentinel, int claimedSentinel) =>
         Interlocked.CompareExchange(ref state, claimedSentinel, openSentinel) == openSentinel;
 
     /// <summary>
@@ -41,7 +41,7 @@ internal static class ConcurrencyRaceHelpers
     /// <see langword="true"/> if the cancellation completed; <see langword="false"/> if the
     /// source was already disposed.
     /// </returns>
-    public static async ValueTask<bool> TryCancelAsync(CancellationTokenSource cts)
+    internal static async ValueTask<bool> TryCancelAsync(CancellationTokenSource cts)
     {
         try
         {

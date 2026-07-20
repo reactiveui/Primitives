@@ -23,7 +23,7 @@ internal static class SequencerPeriodicExtensions
         /// <param name="period">The period between ticks.</param>
         /// <param name="action">The tick action.</param>
         /// <returns>A disposable that cancels future ticks.</returns>
-        public IDisposable SchedulePeriodic<TState>(
+        internal IDisposable SchedulePeriodic<TState>(
             TState state,
             TimeSpan period,
             Action<TState> action) =>
@@ -34,7 +34,7 @@ internal static class SequencerPeriodicExtensions
         /// <param name="period">The period between ticks.</param>
         /// <param name="action">The tick action.</param>
         /// <returns>A disposable that cancels future ticks.</returns>
-        public IDisposable SchedulePeriodic(
+        internal IDisposable SchedulePeriodic(
             TimeSpan dueTime,
             TimeSpan period,
             Action action) =>
@@ -97,9 +97,20 @@ internal static class SequencerPeriodicExtensions
         /// <summary>0 = active, 1 = disposed.</summary>
         private int _disposed;
 
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            {
+                return;
+            }
+
+            _scheduled.Dispose();
+        }
+
         /// <summary>Schedules the next tick.</summary>
         /// <param name="dueTime">The delay before the tick.</param>
-        public void ScheduleNext(TimeSpan dueTime)
+        internal void ScheduleNext(TimeSpan dueTime)
         {
             if (Volatile.Read(ref _disposed) != 0)
             {
@@ -111,17 +122,6 @@ internal static class SequencerPeriodicExtensions
                 subscription.Tick();
                 return EmptyDisposable.Instance;
             });
-        }
-
-        /// <inheritdoc/>
-        public void Dispose()
-        {
-            if (Interlocked.Exchange(ref _disposed, 1) != 0)
-            {
-                return;
-            }
-
-            _scheduled.Dispose();
         }
 
         /// <summary>Runs a tick and schedules the next one when still active.</summary>

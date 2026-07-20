@@ -10,8 +10,8 @@ namespace ReactiveUI.Primitives.Reactive.Concurrency;
 internal static class CurrentThreadSequencer
 {
     /// <summary>Gets the singleton current-thread scheduler.</summary>
-    public static IScheduler Instance => CurrentThreadScheduler.Instance;
+    internal static IScheduler Instance => CurrentThreadScheduler.Instance;
 
     /// <summary>Gets a value indicating whether the caller must call a Schedule method.</summary>
-    public static bool IsScheduleRequired => CurrentThreadScheduler.IsScheduleRequired;
+    internal static bool IsScheduleRequired => CurrentThreadScheduler.IsScheduleRequired;
 }

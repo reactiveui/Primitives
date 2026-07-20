@@ -148,28 +148,28 @@ public partial class RxNamesTests
 
         void OnError(Exception error) => observed = error;
 
-        using var callbackSubscription = PrimitivesLinqExtensions.SubscribeSafe<Unit>(
+        using var callbackSubscription = PrimitivesLinqExtensions.SubscribeSafe(
             source,
             values.Add,
             OnError,
             (byte)0);
-        using var completionSubscription = PrimitivesLinqExtensions.SubscribeSafe<Unit>(
+        using var completionSubscription = PrimitivesLinqExtensions.SubscribeSafe(
             source,
             values.Add,
             OnError,
             () => completed++,
             (byte)0);
-        using var observerSubscription = PrimitivesLinqExtensions.SubscribeSafe<Unit>(
+        using var observerSubscription = PrimitivesLinqExtensions.SubscribeSafe(
             source,
             Observer.Create<Unit>(values.Add, OnError),
             (byte)0);
 
         InvalidOperationException expected = new("expected");
-        using var errorSubscription = PrimitivesLinqExtensions.SubscribeSafe<Unit>(
+        using var errorSubscription = PrimitivesLinqExtensions.SubscribeSafe(
             Observable.Throw<Unit>(expected),
             OnError,
             (byte)0);
-        using var terminalSubscription = PrimitivesLinqExtensions.SubscribeSafe<Unit>(
+        using var terminalSubscription = PrimitivesLinqExtensions.SubscribeSafe(
             source,
             OnError,
             () => completed++,

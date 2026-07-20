@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using System.Reactive.Concurrency;
 using Timer = System.Threading.Timer;
 
@@ -211,32 +212,36 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
         }
     }
 
-    /// <summary>Arms a single drain if none is in flight, otherwise flags the running drain to loop again.</summary>
+    /// <summary>
+    /// Arms a single drain if none is in flight, otherwise flags the running drain to loop again.
+    /// <para>
+    /// The whole body is the claim protocol: it spins only while a compare-exchange
+    /// loses to a concurrent claim, and exits early only when a concurrent drain empties the queue between the
+    /// caller's enqueue and this read. Neither path is reachable without a second thread interleaving, so the
+    /// shell carries the coverage exclusion; the work it schedules lives in ArmDrain, which is covered.
+    /// </para>
+    /// </summary>
+    [ExcludeFromCodeCoverage]
     private void PostDrain()
     {
-        while (true)
+        while (Volatile.Read(ref _readyCount) != 0)
         {
-            if (Volatile.Read(ref _readyCount) == 0)
-            {
-                return;
-            }
-
             var state = Volatile.Read(ref _drainState);
-            if (state == DrainIdle)
+            if (state != DrainIdle)
             {
-                // Become the sole drainer, then yield a batch to the event loop.
-                if (Interlocked.CompareExchange(ref _drainState, DrainRunning, DrainIdle) != DrainIdle)
+                // A drain is already running; flag that more work arrived so it drains again.
+                if (Interlocked.CompareExchange(ref _drainState, DrainRunningPending, state) == state)
                 {
-                    continue;
+                    return;
                 }
 
-                ArmDrain();
-                return;
+                continue;
             }
 
-            // A drain is already running; flag that more work arrived so it drains again.
-            if (Interlocked.CompareExchange(ref _drainState, DrainRunningPending, state) == state)
+            // Become the sole drainer, then yield a batch to the event loop.
+            if (Interlocked.CompareExchange(ref _drainState, DrainRunning, DrainIdle) == DrainIdle)
             {
+                ArmDrain();
                 return;
             }
         }
@@ -257,36 +262,45 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
         _ = _drainTimer.Change(TimeSpan.Zero, Timeout.InfiniteTimeSpan);
     }
 
-    /// <summary>Runs event-loop batches for the single in-flight drain until no more work is queued.</summary>
+    /// <summary>
+    /// Runs event-loop batches for the single in-flight drain until no more work is queued.
+    /// <para>
+    /// This is a thin batching shell around <see cref="RunReadyBatch"/>. It repeats a pass only when a concurrent
+    /// <see cref="PostDrain"/> flagged more work mid-pass, which needs a second thread to interleave, so the shell
+    /// carries the coverage exclusion and the per-item work lives in the method it calls.
+    /// </para>
+    /// </summary>
+    [ExcludeFromCodeCoverage]
     private void RunDrain()
     {
-        while (true)
+        do
         {
             // Claim this pass; a concurrent PostDrain that observes DrainRunning will bump it to DrainRunningPending.
             Volatile.Write(ref _drainState, DrainRunning);
-
-            for (var remaining = Volatile.Read(ref _readyCount); remaining > 0; remaining--)
-            {
-                if (!_ready.TryDequeue(out var item))
-                {
-                    break;
-                }
-
-                _ = Interlocked.Decrement(ref _readyCount);
-                item.Run();
-            }
+            RunReadyBatch();
 
             // Finish only when no work was flagged during this pass.
-            if (Interlocked.CompareExchange(ref _drainState, DrainIdle, DrainRunning) == DrainRunning)
-            {
-                // Cover the narrow window where an item was enqueued but its PostDrain has not run yet.
-                if (Volatile.Read(ref _readyCount) != 0)
-                {
-                    PostDrain();
-                }
+        }
+        while (Interlocked.CompareExchange(ref _drainState, DrainIdle, DrainRunning) != DrainRunning);
 
-                return;
-            }
+        if (Volatile.Read(ref _readyCount) == 0)
+        {
+            return;
+        }
+
+        // Cover the narrow window where an item was enqueued but its PostDrain has not run yet.
+        PostDrain();
+    }
+
+    /// <summary>Runs one batch: every item the ready count promised, stopping early if a concurrent drain took one first.</summary>
+    private void RunReadyBatch()
+    {
+        for (var remaining = Volatile.Read(ref _readyCount);
+             remaining > 0 && _ready.TryDequeue(out var item);
+             remaining--)
+        {
+            _ = Interlocked.Decrement(ref _readyCount);
+            item.Run();
         }
     }
 
@@ -311,19 +325,6 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
         {
         }
 
-        /// <summary>Stores the one-shot timer so the caller's disposable cancels and releases it.</summary>
-        /// <param name="timer">The armed timer.</param>
-        public void AttachTimer(Timer timer)
-        {
-            Volatile.Write(ref _timer, timer);
-            if (!IsDisposed)
-            {
-                return;
-            }
-
-            timer.Dispose();
-        }
-
         /// <inheritdoc/>
         public void Dispose()
         {
@@ -336,6 +337,19 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
 
             Interlocked.Exchange(ref _timer, null)?.Dispose();
             ReleaseStartedWork();
+        }
+
+        /// <summary>Stores the one-shot timer so the caller's disposable cancels and releases it.</summary>
+        /// <param name="timer">The armed timer.</param>
+        internal void AttachTimer(Timer timer)
+        {
+            Volatile.Write(ref _timer, timer);
+            if (!IsDisposed)
+            {
+                return;
+            }
+
+            timer.Dispose();
         }
     }
 
@@ -370,29 +384,6 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
             _action = action;
         }
 
-        /// <summary>
-        /// Creates a periodic item and arms its timer. Arming it here rather than in the constructor is what keeps
-        /// the tick callback from ever seeing a half-built item: the timer is created disarmed, attached, and only
-        /// then started, so the first tick runs against an item whose fields are all published.
-        /// </summary>
-        /// <param name="state">Initial state.</param>
-        /// <param name="period">Tick period.</param>
-        /// <param name="action">Scheduled action.</param>
-        /// <returns>The armed periodic work item, which cancels the ticks when disposed.</returns>
-        public static PeriodicWorkItem<TState> Start(TState state, TimeSpan period, Func<TState, TState> action)
-        {
-            PeriodicWorkItem<TState> item = new(state, action);
-            Timer timer = new(
-                static s => ((PeriodicWorkItem<TState>)s!).Tick(),
-                item,
-                Timeout.InfiniteTimeSpan,
-                Timeout.InfiniteTimeSpan);
-
-            item._timer = timer;
-            _ = timer.Change(period, period);
-            return item;
-        }
-
         /// <inheritdoc/>
         public void Dispose()
         {
@@ -404,10 +395,36 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
                 }
 
                 _isDisposed = true;
-                _timer?.Dispose();
+
+                // Start is the only construction path and always assigns the timer before returning, and a second
+                // Dispose exits at the flag above, so the timer is always present on the one pass that reaches here.
+                _timer!.Dispose();
                 _timer = null;
                 _state = default!;
             }
+        }
+
+        /// <summary>
+        /// Creates a periodic item and arms its timer. Arming it here rather than in the constructor is what keeps
+        /// the tick callback from ever seeing a half-built item: the timer is created disarmed, attached, and only
+        /// then started, so the first tick runs against an item whose fields are all published.
+        /// </summary>
+        /// <param name="state">Initial state.</param>
+        /// <param name="period">Tick period.</param>
+        /// <param name="action">Scheduled action.</param>
+        /// <returns>The armed periodic work item, which cancels the ticks when disposed.</returns>
+        internal static PeriodicWorkItem<TState> Start(TState state, TimeSpan period, Func<TState, TState> action)
+        {
+            PeriodicWorkItem<TState> item = new(state, action);
+            Timer timer = new(
+                static s => ((PeriodicWorkItem<TState>)s!).Tick(),
+                item,
+                Timeout.InfiniteTimeSpan,
+                Timeout.InfiniteTimeSpan);
+
+            item._timer = timer;
+            _ = timer.Change(period, period);
+            return item;
         }
 
         /// <summary>

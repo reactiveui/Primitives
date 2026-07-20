@@ -51,14 +51,14 @@ internal record struct BehaviorSignalState<T>
     }
 
     /// <summary>Gets a value indicating whether the signal has been disposed.</summary>
-    public readonly bool IsDisposed => _isDisposed;
+    internal readonly bool IsDisposed => _isDisposed;
 
     /// <summary>Gets a value indicating whether the signal currently has observers.</summary>
-    public bool HasObservers => _broadcaster.HasObservers && !_isStopped && !_isDisposed;
+    internal bool HasObservers => _broadcaster.HasObservers && !_isStopped && !_isDisposed;
 
     /// <summary>Gets the current value, throwing if disposed or faulted.</summary>
     /// <returns>The current value.</returns>
-    public readonly T GetValue()
+    internal readonly T GetValue()
     {
         ThrowIfDisposed();
         _lastError.Rethrow();
@@ -69,7 +69,7 @@ internal record struct BehaviorSignalState<T>
     /// <summary>Tries to read the current value without throwing when disposed.</summary>
     /// <param name="value">The current value, or <see langword="default"/> when disposed.</param>
     /// <returns><see langword="true"/> when a value is available.</returns>
-    public readonly bool TryGetValue(out T? value)
+    internal readonly bool TryGetValue(out T? value)
     {
         lock (_gate)
         {
@@ -92,7 +92,7 @@ internal record struct BehaviorSignalState<T>
     /// subscriber is either added before this completes (and is broadcast to here) or after (and replays the
     /// terminal state itself), never seeing an out-of-order or duplicated notification.
     /// </remarks>
-    public void OnCompleted()
+    internal void OnCompleted()
     {
         lock (_gate)
         {
@@ -110,7 +110,7 @@ internal record struct BehaviorSignalState<T>
 
     /// <summary>Notifies all observers about the exception.</summary>
     /// <param name="error">The exception to send to all observers.</param>
-    public void OnError(Exception error)
+    internal void OnError(Exception error)
     {
         ArgumentExceptionHelper.ThrowIfNull(error);
 
@@ -136,7 +136,7 @@ internal record struct BehaviorSignalState<T>
     /// with respect to <see cref="Subscribe"/>; a new subscriber never observes a live value before the initial
     /// value it was promised, and never observes the same value twice.
     /// </remarks>
-    public void OnNext(T value)
+    internal void OnNext(T value)
     {
         lock (_gate)
         {
@@ -154,7 +154,7 @@ internal record struct BehaviorSignalState<T>
     /// <param name="owner">The owning signal used to remove the observer on disposal.</param>
     /// <param name="observer">The observer to subscribe.</param>
     /// <returns>A handle that unsubscribes the observer when disposed.</returns>
-    public IDisposable Subscribe(IWitnessRemovable<T> owner, IObserver<T> observer)
+    internal IDisposable Subscribe(IWitnessRemovable<T> owner, IObserver<T> observer)
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
@@ -192,7 +192,7 @@ internal record struct BehaviorSignalState<T>
 
     /// <summary>Removes a previously subscribed observer.</summary>
     /// <param name="observer">The observer to remove.</param>
-    public void RemoveObserver(IObserver<T> observer)
+    internal void RemoveObserver(IObserver<T> observer)
     {
         lock (_gate)
         {
@@ -201,7 +201,7 @@ internal record struct BehaviorSignalState<T>
     }
 
     /// <summary>Releases the signal's observers and cached state.</summary>
-    public void Release()
+    internal void Release()
     {
         if (_isDisposed)
         {

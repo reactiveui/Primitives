@@ -110,7 +110,7 @@ public class DisposableAsyncSlotTests
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenDisposedSlotMarkerDisposed_ThenCompletesSilently() =>
-        await DisposableAsyncSlot.DisposedSentinel.DisposeAsync();
+        await Assert.That(static async () => await DisposableAsyncSlot.DisposedSentinel.DisposeAsync()).ThrowsNothing();
 
     /// <summary>Recording async disposable that counts disposals.</summary>
     private sealed class RecordingAsyncDisposable : IAsyncDisposable

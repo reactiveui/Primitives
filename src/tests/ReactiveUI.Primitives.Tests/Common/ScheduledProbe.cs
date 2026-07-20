@@ -13,6 +13,6 @@ internal static class ScheduledProbe
     /// <param name="dueTime">The due time for the scheduled item.</param>
     /// <param name="invoke">The factory invoked when the item runs.</param>
     /// <returns>The scheduled item.</returns>
-    public static ScheduledItem<int> Create(int dueTime, Func<IDisposable> invoke) =>
+    internal static ScheduledItem<int> Create(int dueTime, Func<IDisposable> invoke) =>
         new(dueTime, Comparer<int>.Default, _ => invoke());
 }

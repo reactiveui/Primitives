@@ -9,13 +9,13 @@ namespace ReactiveUI.Primitives.Benchmarks;
 internal sealed class CountingSignalWitness<T> : IObserver<T>
 {
     /// <summary>Gets the number of onNext calls.</summary>
-    public int Count { get; private set; }
+    internal int Count { get; private set; }
 
     /// <summary>Gets the number of terminal completions observed.</summary>
-    public int CompletionCount { get; private set; }
+    internal int CompletionCount { get; private set; }
 
     /// <summary>Gets the number of errors observed.</summary>
-    public int ErrorCount { get; private set; }
+    internal int ErrorCount { get; private set; }
 
     /// <inheritdoc/>
     public void OnNext(T value) => Count++;

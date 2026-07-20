@@ -43,10 +43,10 @@ internal sealed class ManualSequencer : ISequencer
 
     /// <summary>Moves the sequencer's clock forward without running any work.</summary>
     /// <param name="time">The amount of time to move forward by.</param>
-    public void Advance(TimeSpan time) => Now += time;
+    internal void Advance(TimeSpan time) => Now += time;
 
     /// <summary>Runs every work item queued so far.</summary>
-    public void RunPending()
+    internal void RunPending()
     {
         var items = _pending.ToArray();
         _pending.Clear();
@@ -58,5 +58,5 @@ internal sealed class ManualSequencer : ISequencer
     }
 
     /// <summary>Runs the most recently run work item again, modelling a stale timer tick.</summary>
-    public void RunStaleTick() => _lastRun?.Execute();
+    internal void RunStaleTick() => _lastRun?.Execute();
 }

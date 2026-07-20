@@ -153,7 +153,7 @@ public partial class SimpleSyncOperatorTests
         using var sub = subject.Filter(regex).Subscribe(
             static _ => { },
             ex => caught = ex);
-        subject.OnNext(new string('a', PathologicalInputLength) + "!");
+        subject.OnNext($"{new string('a', PathologicalInputLength)}!");
         await Assert.That(caught).IsNotNull();
     }
 

@@ -237,9 +237,9 @@ public partial class SignalOperatorMixinsTests
         _ = Assert.Throws<ArgumentNullException>(static () => LinqExtensions.Count<int>(null!, static value => value > 0));
         _ = Assert.Throws<ArgumentNullException>(static () => LinqExtensions.LongCount<int>(null!, static value => value > 0));
         _ = Assert.Throws<ArgumentNullException>(static () =>
-            LinqExtensions.Blend<int>((IObservable<IObservable<int>>)null!));
+            LinqExtensions.Blend((IObservable<IObservable<int>>)null!));
         _ = Assert.Throws<ArgumentNullException>(static () =>
-            LinqExtensions.Blend<int>((IEnumerable<IObservable<int>>)null!));
+            LinqExtensions.Blend((IEnumerable<IObservable<int>>)null!));
         _ = Assert.Throws<ArgumentNullException>(static () => LinqExtensions.Race<int>(null!));
         _ = Assert.Throws<ArgumentNullException>(static () => LinqExtensions.CollectArray<int>(null!));
         _ = Assert.Throws<ArgumentNullException>(static () => SubscribeExtensions.Subscribe<int>(null!, static _ => { }));

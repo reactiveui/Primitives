@@ -279,8 +279,8 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <summary>Provides the <c>DummyResource</c> benchmark helper type.</summary>
     private sealed class DummyResource : IDisposable
     {
-        /// <summary>Gets the <c>TouchCount</c> benchmark helper value.</summary>
-        public int TouchCount { get; private set; }
+        /// <summary>Gets or sets the <c>TouchCount</c> benchmark helper value.</summary>
+        private int TouchCount { get; set; }
 
         /// <inheritdoc/>
         public void Dispose()

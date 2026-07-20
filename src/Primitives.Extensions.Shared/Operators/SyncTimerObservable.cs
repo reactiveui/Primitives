@@ -31,7 +31,7 @@ internal static class SyncTimerObservable
     /// <param name="timeSpan">The period.</param>
     /// <param name="scheduler">The scheduler.</param>
     /// <returns>A shared observable sequence of timer ticks.</returns>
-    public static IObservable<DateTime> Get(TimeSpan timeSpan, ISequencer scheduler)
+    internal static IObservable<DateTime> Get(TimeSpan timeSpan, ISequencer scheduler)
     {
         ArgumentExceptionHelper.ThrowIfNull(scheduler);
 

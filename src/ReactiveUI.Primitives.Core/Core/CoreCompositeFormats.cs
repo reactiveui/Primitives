@@ -15,9 +15,9 @@ namespace ReactiveUI.Primitives.Core;
 internal static class CoreCompositeFormats
 {
     /// <summary>The format <see cref="Moment{T}"/> renders with.</summary>
-    public static readonly CompositeFormat Moment = CompositeFormat.Parse("{0}@{1:o}");
+    internal static readonly CompositeFormat Moment = CompositeFormat.Parse("{0}@{1:o}");
 
     /// <summary>The format <see cref="TimeInterval{T}"/> renders with.</summary>
-    public static readonly CompositeFormat TimeInterval = CompositeFormat.Parse("{0}@{1}");
+    internal static readonly CompositeFormat TimeInterval = CompositeFormat.Parse("{0}@{1}");
 }
 #endif

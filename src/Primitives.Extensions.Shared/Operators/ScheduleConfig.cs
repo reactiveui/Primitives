@@ -34,30 +34,30 @@ internal readonly record struct ScheduleConfig<T>(
     /// <summary>Creates a config with no delay, no transform, no action.</summary>
     /// <param name="scheduler">The scheduler used to dispatch emissions.</param>
     /// <returns>A new configuration.</returns>
-    public static ScheduleConfig<T> Immediate(ISequencer scheduler) =>
+    internal static ScheduleConfig<T> Immediate(ISequencer scheduler) =>
         new(scheduler, false, false, TimeSpan.Zero, default, null, null);
 
     /// <summary>Creates a config with a relative delay.</summary>
     /// <param name="scheduler">The scheduler used to dispatch emissions.</param>
     /// <param name="dueTime">The relative delay before each emission.</param>
     /// <returns>A new configuration.</returns>
-    public static ScheduleConfig<T> Delayed(ISequencer scheduler, TimeSpan dueTime) =>
+    internal static ScheduleConfig<T> Delayed(ISequencer scheduler, TimeSpan dueTime) =>
         new(scheduler, true, false, dueTime, default, null, null);
 
     /// <summary>Creates a config with an absolute due time.</summary>
     /// <param name="scheduler">The scheduler used to dispatch emissions.</param>
     /// <param name="absoluteDueTime">The absolute time at which each emission fires.</param>
     /// <returns>A new configuration.</returns>
-    public static ScheduleConfig<T> Absolute(ISequencer scheduler, DateTimeOffset absoluteDueTime) =>
+    internal static ScheduleConfig<T> Absolute(ISequencer scheduler, DateTimeOffset absoluteDueTime) =>
         new(scheduler, true, true, TimeSpan.Zero, absoluteDueTime, null, null);
 
     /// <summary>Returns a new config with the supplied transform applied to each value before emission.</summary>
     /// <param name="transform">The transform.</param>
     /// <returns>A new configuration.</returns>
-    public ScheduleConfig<T> WithTransform(Func<T, T> transform) => this with { Transform = transform };
+    internal ScheduleConfig<T> WithTransform(Func<T, T> transform) => this with { Transform = transform };
 
     /// <summary>Returns a new config with the supplied side-effect invoked with each value before emission.</summary>
     /// <param name="action">The action.</param>
     /// <returns>A new configuration.</returns>
-    public ScheduleConfig<T> WithAction(Action<T> action) => this with { Action = action };
+    internal ScheduleConfig<T> WithAction(Action<T> action) => this with { Action = action };
 }

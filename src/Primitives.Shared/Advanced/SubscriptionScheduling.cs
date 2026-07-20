@@ -24,7 +24,7 @@ internal static class SubscriptionScheduling
     /// <param name="state">The state carried to <paramref name="subscribe"/>.</param>
     /// <param name="subscribe">Performs the subscription and returns it.</param>
     /// <returns>The subscription, or a placeholder that receives it once the queued work runs.</returns>
-    public static IDisposable OnCurrentThread<TState>(TState state, Func<TState, IDisposable> subscribe)
+    internal static IDisposable OnCurrentThread<TState>(TState state, Func<TState, IDisposable> subscribe)
     {
         if (!CurrentThreadSequencer.IsScheduleRequired)
         {
@@ -51,7 +51,7 @@ internal static class SubscriptionScheduling
     /// <param name="state">The state carried to <paramref name="run"/>.</param>
     /// <param name="run">The work to run, which emits to the downstream observer.</param>
     /// <returns>The disposable used to cancel the scheduled work (best effort).</returns>
-    public static IDisposable RunOn<TState>(ISequencer sequencer, TState state, Action<TState> run)
+    internal static IDisposable RunOn<TState>(ISequencer sequencer, TState state, Action<TState> run)
     {
         if (sequencer == Sequencer.Immediate)
         {

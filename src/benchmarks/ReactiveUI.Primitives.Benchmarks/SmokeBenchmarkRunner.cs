@@ -13,7 +13,7 @@ internal static class SmokeBenchmarkRunner
 {
     /// <summary>Runs the deterministic smoke benchmark scenarios and writes their results to the console.</summary>
     /// <returns>A task that completes when all smoke benchmarks have run.</returns>
-    public static async Task RunAsync()
+    internal static async Task RunAsync()
     {
         RunSignalFactorySmoke();
         await RunOperatorSmokeAsync();

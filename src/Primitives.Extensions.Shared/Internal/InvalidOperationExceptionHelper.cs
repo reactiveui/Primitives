@@ -25,7 +25,7 @@ internal static class InvalidOperationExceptionHelper
     /// <param name="argument">The reference type field to validate as non-null.</param>
     /// <param name="memberName">The validated member's name, captured from the <paramref name="argument"/> expression via <see cref="CallerArgumentExpressionAttribute"/>.</param>
     /// <param name="operation">The void-throwing caller's name, captured via <see cref="CallerMemberNameAttribute"/>.</param>
-    public static void ThrowIfNull(
+    internal static void ThrowIfNull(
         [NotNull] object? argument,
         [CallerArgumentExpression(nameof(argument))]
         string? memberName = null,
@@ -49,7 +49,7 @@ internal static class InvalidOperationExceptionHelper
     /// <param name="memberName">The validated reference-type argument's name, captured from the <paramref name="argument"/> expression via <see cref="CallerArgumentExpressionAttribute"/>.</param>
     /// <param name="operation">The reference-type-checking caller's name, captured via <see cref="CallerMemberNameAttribute"/>.</param>
     /// <returns>The non-null argument.</returns>
-    public static T Check<T>(
+    internal static T Check<T>(
         [NotNull] T? argument,
         [CallerArgumentExpression(nameof(argument))]
         string? memberName = null,
@@ -73,7 +73,7 @@ internal static class InvalidOperationExceptionHelper
     /// <param name="memberName">The validated string argument's name, captured from the <paramref name="argument"/> expression via <see cref="CallerArgumentExpressionAttribute"/>.</param>
     /// <param name="operation">The string-checking caller's name, captured via <see cref="CallerMemberNameAttribute"/>.</param>
     /// <returns>The non-null, non-empty argument.</returns>
-    public static string Check(
+    internal static string Check(
         [NotNull] string? argument,
         [CallerArgumentExpression(nameof(argument))]
         string? memberName = null,

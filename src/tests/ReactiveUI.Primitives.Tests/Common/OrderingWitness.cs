@@ -20,7 +20,7 @@ internal sealed class OrderingWitness<T> : IObserver<T>
     private bool _hasPrevious;
 
     /// <summary>Gets the first delivery that broke ordering, or <see langword="null"/> when none did.</summary>
-    public OutOfOrderDelivery? OutOfOrder { get; private set; }
+    internal OutOfOrderDelivery? OutOfOrder { get; private set; }
 
     /// <summary>Records a completion callback.</summary>
     public void OnCompleted()

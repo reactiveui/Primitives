@@ -13,7 +13,7 @@ namespace ReactiveUI.Primitives.Async.Tests;
 internal sealed class NewThreadTaskScheduler : TaskScheduler
 {
     /// <summary>Singleton instance.</summary>
-    public static readonly NewThreadTaskScheduler Instance = new();
+    internal static readonly NewThreadTaskScheduler Instance = new();
 
     /// <summary>Initializes a new instance of the <see cref="NewThreadTaskScheduler"/> class.</summary>
     private NewThreadTaskScheduler()

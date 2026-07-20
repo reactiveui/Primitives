@@ -14,7 +14,7 @@ internal static class WitnessLifetime
     /// <summary>Disposes a sink and its upstream subscription.</summary>
     /// <param name="stopped">The stopped flag.</param>
     /// <param name="subscription">The upstream subscription slot.</param>
-    public static void Dispose(ref int stopped, SingleReplaceableDisposable subscription)
+    internal static void Dispose(ref int stopped, SingleReplaceableDisposable subscription)
     {
         _ = Interlocked.Exchange(ref stopped, 1);
         subscription.Dispose();
@@ -23,7 +23,7 @@ internal static class WitnessLifetime
     /// <summary>Releases the cancellation resource and marks the witness stopped.</summary>
     /// <param name="cancelSlot">The slot that owns the cancellation resource.</param>
     /// <param name="stopped">The stopped flag.</param>
-    public static void Dispose(ref IDisposable? cancelSlot, ref int stopped)
+    internal static void Dispose(ref IDisposable? cancelSlot, ref int stopped)
     {
         Interlocked.Exchange(ref cancelSlot, null)?.Dispose();
         Volatile.Write(ref stopped, 1);
@@ -32,13 +32,13 @@ internal static class WitnessLifetime
     /// <summary>Gets a value indicating whether the sink has stopped.</summary>
     /// <param name="stopped">The stopped flag.</param>
     /// <returns><see langword="true"/> when the sink has stopped.</returns>
-    public static bool IsStopped(ref int stopped) => Volatile.Read(ref stopped) != 0;
+    internal static bool IsStopped(ref int stopped) => Volatile.Read(ref stopped) != 0;
 
     /// <summary>Assigns the upstream subscription and disposes it when the sink has already stopped.</summary>
     /// <param name="stopped">The stopped flag.</param>
     /// <param name="slot">The upstream subscription slot.</param>
     /// <param name="subscription">The upstream subscription.</param>
-    public static void SetSubscription(ref int stopped, SingleReplaceableDisposable slot, IDisposable subscription)
+    internal static void SetSubscription(ref int stopped, SingleReplaceableDisposable slot, IDisposable subscription)
     {
         slot.Create(subscription);
         if (Volatile.Read(ref stopped) == 0)
@@ -54,7 +54,7 @@ internal static class WitnessLifetime
     /// <param name="stopped">The stopped flag.</param>
     /// <param name="subscription">The upstream subscription slot.</param>
     /// <param name="observer">The downstream observer.</param>
-    public static void Complete<T>(
+    internal static void Complete<T>(
         ref int stopped,
         SingleReplaceableDisposable subscription,
         IObserver<T> observer)
@@ -74,7 +74,7 @@ internal static class WitnessLifetime
     /// <param name="subscription">The upstream subscription slot.</param>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="terminalError">The terminal error.</param>
-    public static void Error<T>(
+    internal static void Error<T>(
         ref int stopped,
         SingleReplaceableDisposable subscription,
         IObserver<T> observer,
@@ -93,7 +93,7 @@ internal static class WitnessLifetime
     /// <param name="cancelSlot">The slot that owns the cancellation resource.</param>
     /// <param name="stopped">The stopped flag.</param>
     /// <param name="cancel">The cancellation resource to assign.</param>
-    public static void SetCancel(ref IDisposable? cancelSlot, ref int stopped, IDisposable cancel)
+    internal static void SetCancel(ref IDisposable? cancelSlot, ref int stopped, IDisposable cancel)
     {
         ArgumentExceptionHelper.ThrowIfNull(cancel);
 
@@ -118,7 +118,7 @@ internal static class WitnessLifetime
     /// <param name="owner">The witness owner.</param>
     /// <param name="value">The value to forward.</param>
     /// <param name="forward">The forwarding action.</param>
-    public static void OnNext<TOwner, T>(ref int stopped, TOwner owner, T value, Action<TOwner, T> forward)
+    internal static void OnNext<TOwner, T>(ref int stopped, TOwner owner, T value, Action<TOwner, T> forward)
         where TOwner : class
     {
         if (Volatile.Read(ref stopped) != 0)
@@ -136,7 +136,7 @@ internal static class WitnessLifetime
     /// <param name="error">The error to forward.</param>
     /// <param name="forward">The error forwarding action.</param>
     /// <param name="dispose">The owner disposal action.</param>
-    public static void OnError<TOwner>(
+    internal static void OnError<TOwner>(
         ref int stopped,
         TOwner owner,
         Exception error,
@@ -165,7 +165,7 @@ internal static class WitnessLifetime
     /// <param name="owner">The witness owner.</param>
     /// <param name="forward">The completion forwarding action.</param>
     /// <param name="dispose">The owner disposal action.</param>
-    public static void OnCompleted<TOwner>(
+    internal static void OnCompleted<TOwner>(
         ref int stopped,
         TOwner owner,
         Action<TOwner> forward,

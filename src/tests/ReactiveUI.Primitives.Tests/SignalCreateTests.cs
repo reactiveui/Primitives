@@ -288,9 +288,9 @@ public class SignalCreateTests
         nullSubscription.Dispose();
 
         _ = Assert.Throws<ArgumentNullException>(static () =>
-            Signal.Create<int>((Func<IObserver<int>, Task<IDisposable>>)null!));
+            Signal.Create((Func<IObserver<int>, Task<IDisposable>>)null!));
         _ = Assert.Throws<ArgumentNullException>(static () =>
-            Signal.Create<int>((Func<IObserver<int>, CancellationToken, Task<IDisposable>>)null!));
+            Signal.Create((Func<IObserver<int>, CancellationToken, Task<IDisposable>>)null!));
     }
 
     /// <summary>Verifies asynchronous defer overloads emit, fail, and skip subscription after cancellation.</summary>
@@ -299,15 +299,15 @@ public class SignalCreateTests
     public async Task AsyncDeferFactoriesEmitFailAndHonorCancellation()
     {
         List<int> values = [];
-        _ = Signal.Defer(static () => Task.FromResult<IObservable<int>>(Signal.Emit(CreatedValue))).Subscribe(values.Add);
-        _ = Signal.Defer(static _ => Task.FromResult<IObservable<int>>(Signal.Emit(First))).Subscribe(values.Add);
+        _ = Signal.Defer(static () => Task.FromResult(Signal.Emit(CreatedValue))).Subscribe(values.Add);
+        _ = Signal.Defer(static _ => Task.FromResult(Signal.Emit(First))).Subscribe(values.Add);
         await Task.Yield();
 
         await Assert.That(values.SequenceEqual([CreatedValue, First])).IsTrue();
 
         Exception? observed = null;
         InvalidOperationException expected = new("defer");
-        _ = Signal.Defer<int>(() => Task.FromException<IObservable<int>>(expected))
+        _ = Signal.Defer(() => Task.FromException<IObservable<int>>(expected))
             .Subscribe(static _ => { }, error => observed = error);
         await Task.Yield();
 
@@ -323,9 +323,9 @@ public class SignalCreateTests
 
         await Assert.That(canceledValues.Count).IsEqualTo(0);
 
-        _ = Assert.Throws<ArgumentNullException>(static () => Signal.Defer<int>((Func<Task<IObservable<int>>>)null!));
+        _ = Assert.Throws<ArgumentNullException>(static () => Signal.Defer((Func<Task<IObservable<int>>>)null!));
         _ = Assert.Throws<ArgumentNullException>(static () =>
-            Signal.Defer<int>((Func<CancellationToken, Task<IObservable<int>>>)null!));
+            Signal.Defer((Func<CancellationToken, Task<IObservable<int>>>)null!));
     }
 
     /// <summary>Verifies Rx-named signal factories route to the corresponding Primitives factories.</summary>

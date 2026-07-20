@@ -20,14 +20,14 @@ internal sealed class GroupedAsyncSignalState<TKey, TValue>(
     CancellationToken parentDisposedToken)
 {
     /// <summary>Gets the key associated with the grouped observable.</summary>
-    public TKey Key { get; } = key;
+    internal TKey Key { get; } = key;
 
     /// <summary>Gets the value stream backing the grouped observable.</summary>
-    public IObservableAsync<TValue> SignalValues { get; } = signalValues;
+    internal IObservableAsync<TValue> SignalValues { get; } = signalValues;
 
     /// <summary>Gets the parent-owned collection that tracks group subscriptions.</summary>
-    public MultipleDisposableAsync Disposables { get; } = disposables;
+    internal MultipleDisposableAsync Disposables { get; } = disposables;
 
     /// <summary>Gets the token canceled when the parent grouping coordinator is disposed.</summary>
-    public CancellationToken ParentDisposedToken { get; } = parentDisposedToken;
+    internal CancellationToken ParentDisposedToken { get; } = parentDisposedToken;
 }

@@ -149,7 +149,7 @@ public partial class ReactiveExtensionsTests
         List<string> results = [];
 
         using var subscription = keys.FirstMatchFromCandidates(
-                static key => Observable.Return(key + "-raw"),
+                static key => Observable.Return($"{key}-raw"),
                 static raw => raw.ToUpperInvariant(),
                 static transformed => transformed.StartsWith('B'),
                 CandidateFallback)
@@ -167,7 +167,7 @@ public partial class ReactiveExtensionsTests
         List<string> results = [];
 
         using var subscription = keys.FirstMatchFromCandidates(
-                static key => Observable.Return(key + "-raw"),
+                static key => Observable.Return($"{key}-raw"),
                 static raw => raw.ToUpperInvariant(),
                 static _ => false,
                 CandidateFallback)
@@ -187,7 +187,7 @@ public partial class ReactiveExtensionsTests
         using var subscription = keys.FirstMatchFromCandidates(
                 static key => key == "fail"
                     ? Observable.Throw<string>(new InvalidOperationException("ignored"))
-                    : Observable.Return(key + "-raw"),
+                    : Observable.Return($"{key}-raw"),
                 static raw => raw.ToUpperInvariant(),
                 static transformed => transformed.StartsWith('M'),
                 CandidateFallback)

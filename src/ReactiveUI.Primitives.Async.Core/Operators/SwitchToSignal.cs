@@ -73,11 +73,14 @@ public sealed class SwitchToSignal<T>(IObservableAsync<IObservableAsync<T>> sour
             _disposeCancellationToken = _disposeCts.Token;
         }
 
+        /// <inheritdoc/>
+        public ValueTask DisposeAsync() => FinishAsync(null);
+
         /// <summary>Subscribes to the outer observable sequence.</summary>
         /// <param name="source">The outer observable that emits inner observable sequences.</param>
         /// <param name="subscriptionToken">A token to cancel the subscription.</param>
         /// <returns>A task representing the asynchronous subscribe operation.</returns>
-        public async ValueTask SubscribeAsync(
+        internal async ValueTask SubscribeAsync(
             IObservableAsync<IObservableAsync<T>> source,
             CancellationToken subscriptionToken)
         {
@@ -92,7 +95,7 @@ public sealed class SwitchToSignal<T>(IObservableAsync<IObservableAsync<T>> sour
         /// </summary>
         /// <param name="inner">The new inner observable to switch to.</param>
         /// <returns>A task representing the asynchronous switch operation.</returns>
-        public ValueTask AcceptOuterValueAsync(IObservableAsync<T> inner)
+        internal ValueTask AcceptOuterValueAsync(IObservableAsync<T> inner)
         {
             IAsyncDisposable? previousSubscription;
             lock (_gate)
@@ -110,7 +113,7 @@ public sealed class SwitchToSignal<T>(IObservableAsync<IObservableAsync<T>> sour
         /// </summary>
         /// <param name="result">The completion result from the outer sequence.</param>
         /// <returns>A task representing the asynchronous completion operation.</returns>
-        public ValueTask AcceptOuterCompletionAsync(Result result)
+        internal ValueTask AcceptOuterCompletionAsync(Result result)
         {
             if (result.IsFailure)
             {
@@ -133,7 +136,7 @@ public sealed class SwitchToSignal<T>(IObservableAsync<IObservableAsync<T>> sour
         /// </summary>
         /// <param name="result">The completion result from the inner sequence.</param>
         /// <returns>A task representing the asynchronous completion operation.</returns>
-        public ValueTask AcceptInnerCompletionAsync(Result result)
+        internal ValueTask AcceptInnerCompletionAsync(Result result)
         {
             Result? actualResult = null;
             lock (_gate)
@@ -156,7 +159,7 @@ public sealed class SwitchToSignal<T>(IObservableAsync<IObservableAsync<T>> sour
         /// <param name="value">The element to forward.</param>
         /// <param name="cancellationToken">A token to cancel the operation.</param>
         /// <returns>A task representing the asynchronous forward operation.</returns>
-        public async ValueTask AcceptInnerValueAsync(T value, CancellationToken cancellationToken)
+        internal async ValueTask AcceptInnerValueAsync(T value, CancellationToken cancellationToken)
         {
             _ = cancellationToken;
             using (await _observerOnSomethingGate.EnterAsync(_disposeCancellationToken).ConfigureAwait(false))
@@ -169,7 +172,7 @@ public sealed class SwitchToSignal<T>(IObservableAsync<IObservableAsync<T>> sour
         /// <param name="error">The error to forward.</param>
         /// <param name="cancellationToken">A token to cancel the operation.</param>
         /// <returns>A task representing the asynchronous error forwarding operation.</returns>
-        public async ValueTask AcceptInnerErrorAsync(Exception error, CancellationToken cancellationToken)
+        internal async ValueTask AcceptInnerErrorAsync(Exception error, CancellationToken cancellationToken)
         {
             _ = cancellationToken;
             using (await _observerOnSomethingGate.EnterAsync(_disposeCancellationToken).ConfigureAwait(false))
@@ -177,9 +180,6 @@ public sealed class SwitchToSignal<T>(IObservableAsync<IObservableAsync<T>> sour
                 await _observer.OnErrorResumeAsync(error, _disposeCancellationToken).ConfigureAwait(false);
             }
         }
-
-        /// <inheritdoc/>
-        public ValueTask DisposeAsync() => FinishAsync(null);
 
         /// <summary>
         /// Links the original subscribe-time cancellation token into this subscription's dispose chain so

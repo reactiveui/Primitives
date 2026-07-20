@@ -16,7 +16,7 @@ internal static class StatelessSignalAsyncStateHelper
     /// <param name="value">The value to publish.</param>
     /// <param name="cancellationToken">A token that can cancel the operation.</param>
     /// <returns>A task that represents the asynchronous notification.</returns>
-    public static ValueTask OnNextAsync<T>(
+    internal static ValueTask OnNextAsync<T>(
         StatelessSignalAsyncState<T> state,
         SignalBroadcastKind kind,
         T value,
@@ -30,7 +30,7 @@ internal static class StatelessSignalAsyncStateHelper
     /// <param name="error">The recoverable error to publish.</param>
     /// <param name="cancellationToken">A token that can cancel the operation.</param>
     /// <returns>A task that represents the asynchronous notification.</returns>
-    public static ValueTask OnErrorResumeAsync<T>(
+    internal static ValueTask OnErrorResumeAsync<T>(
         StatelessSignalAsyncState<T> state,
         SignalBroadcastKind kind,
         Exception error,
@@ -43,7 +43,7 @@ internal static class StatelessSignalAsyncStateHelper
     /// <param name="kind">The broadcast mode for observer notifications.</param>
     /// <param name="result">The completion result to publish.</param>
     /// <returns>A task that represents the asynchronous notification.</returns>
-    public static ValueTask OnCompletedAsync<T>(
+    internal static ValueTask OnCompletedAsync<T>(
         StatelessSignalAsyncState<T> state,
         SignalBroadcastKind kind,
         Result result) =>
@@ -53,7 +53,7 @@ internal static class StatelessSignalAsyncStateHelper
     /// <typeparam name="T">The observed value type.</typeparam>
     /// <param name="state">The mutable signal state.</param>
     /// <returns>A task that represents the asynchronous disposal operation.</returns>
-    public static ValueTask DisposeAsync<T>(StatelessSignalAsyncState<T> state)
+    internal static ValueTask DisposeAsync<T>(StatelessSignalAsyncState<T> state)
     {
         state.Clear();
         return default;
@@ -65,7 +65,7 @@ internal static class StatelessSignalAsyncStateHelper
     /// <param name="observer">The observer to subscribe.</param>
     /// <param name="cancellationToken">A token that can cancel the operation.</param>
     /// <returns>The subscription handle for the observer.</returns>
-    public static ValueTask<IAsyncDisposable> SubscribeAsync<T>(
+    internal static ValueTask<IAsyncDisposable> SubscribeAsync<T>(
         StatelessSignalAsyncState<T> state,
         IObserverAsync<T> observer,
         CancellationToken cancellationToken)

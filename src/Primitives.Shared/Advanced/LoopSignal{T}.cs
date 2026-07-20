@@ -24,7 +24,7 @@ internal sealed class LoopSignal<T> : IRequireCurrentThread<T>
     }
 
     /// <summary>Gets the repeated value.</summary>
-    public T Value { get; }
+    internal T Value { get; }
 
     /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
     /// <returns>The result.</returns>

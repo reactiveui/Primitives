@@ -31,7 +31,7 @@ internal static class VirtualTimeMessages
     /// <summary>Builds the message thrown when a clock-advancing method runs against an already-running scheduler.</summary>
     /// <param name="methodName">The name of the clock-advancing method that was called.</param>
     /// <returns>The formatted message.</returns>
-    public static string SchedulerAlreadyRunning(string methodName) =>
+    internal static string SchedulerAlreadyRunning(string methodName) =>
 #if NET8_0_OR_GREATER
         string.Format(CultureInfo.CurrentCulture, SchedulerAlreadyRunningComposite, methodName);
 #else

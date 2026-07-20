@@ -11,13 +11,13 @@ namespace ReactiveUI.Primitives.Benchmarks;
 internal sealed class CountingR3Witness<T> : Observer<T>
 {
     /// <summary>Gets the number of onNext calls.</summary>
-    public int Count { get; private set; }
+    internal int Count { get; private set; }
 
     /// <summary>Gets the number of terminal completions observed.</summary>
-    public int CompletionCount { get; private set; }
+    internal int CompletionCount { get; private set; }
 
     /// <summary>Gets the number of errors observed.</summary>
-    public int ErrorCount { get; private set; }
+    internal int ErrorCount { get; private set; }
 
     /// <summary>Called for each emitted value.</summary>
     /// <param name="value">The emitted value.</param>

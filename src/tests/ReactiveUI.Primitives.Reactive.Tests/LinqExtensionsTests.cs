@@ -87,28 +87,28 @@ public class LinqExtensionsTests
 
         void OnError(Exception error) => observed = error;
 
-        using var callbackSubscription = ReactiveLinqExtensions.SubscribeSafe<Unit>(
+        using var callbackSubscription = ReactiveLinqExtensions.SubscribeSafe(
             source,
             values.Add,
             OnError,
             (byte)0);
-        using var completionSubscription = ReactiveLinqExtensions.SubscribeSafe<Unit>(
+        using var completionSubscription = ReactiveLinqExtensions.SubscribeSafe(
             source,
             values.Add,
             OnError,
             () => completed++,
             (byte)0);
-        using var observerSubscription = ReactiveLinqExtensions.SubscribeSafe<Unit>(
+        using var observerSubscription = ReactiveLinqExtensions.SubscribeSafe(
             source,
             Observer.Create<Unit>(values.Add, OnError),
             (byte)0);
 
         InvalidOperationException expected = new("expected");
-        using var errorSubscription = ReactiveLinqExtensions.SubscribeSafe<Unit>(
+        using var errorSubscription = ReactiveLinqExtensions.SubscribeSafe(
             Observable.Throw<Unit>(expected),
             OnError,
             (byte)0);
-        using var terminalSubscription = ReactiveLinqExtensions.SubscribeSafe<Unit>(
+        using var terminalSubscription = ReactiveLinqExtensions.SubscribeSafe(
             source,
             OnError,
             () => completed++,

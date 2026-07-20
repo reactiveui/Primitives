@@ -98,14 +98,14 @@ public class CombineLatestIndexedObserverTests
     /// <typeparam name="T">Element type captured.</typeparam>
     private sealed class CaptureObserverAsync<T> : IObserverAsync<T>
     {
-        /// <summary>Gets the captured OnNext values in order.</summary>
-        public List<T> Values { get; } = [];
-
         /// <summary>Gets the captured OnErrorResume exceptions in order.</summary>
         public List<Exception> Errors { get; } = [];
 
         /// <summary>Gets the captured OnCompleted results in order.</summary>
         public List<Result> Completions { get; } = [];
+
+        /// <summary>Gets the captured OnNext values in order.</summary>
+        private List<T> Values { get; } = [];
 
         /// <inheritdoc/>
         public ValueTask OnNextAsync(T value, CancellationToken cancellationToken)

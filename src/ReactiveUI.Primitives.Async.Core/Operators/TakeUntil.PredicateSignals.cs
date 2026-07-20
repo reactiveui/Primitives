@@ -47,7 +47,7 @@ public static partial class SignalAsyncExtensions
             /// <summary>Subscribes to the source observable.</summary>
             /// <param name="cancellationToken">A token to cancel the subscription.</param>
             /// <returns>A task representing the asynchronous subscribe operation.</returns>
-            public async ValueTask SubscribeSourcesAsync(CancellationToken cancellationToken) =>
+            internal async ValueTask SubscribeSourcesAsync(CancellationToken cancellationToken) =>
                 _subscription = await parent._source.SubscribeAsync(this, cancellationToken).ConfigureAwait(false);
 
             /// <inheritdoc/>
@@ -114,7 +114,7 @@ public static partial class SignalAsyncExtensions
             /// <summary>Subscribes to the source observable.</summary>
             /// <param name="cancellationToken">A token to cancel the subscription.</param>
             /// <returns>A task representing the asynchronous subscribe operation.</returns>
-            public async ValueTask SubscribeSourcesAsync(CancellationToken cancellationToken) =>
+            internal async ValueTask SubscribeSourcesAsync(CancellationToken cancellationToken) =>
                 _subscription = await parent._source.SubscribeAsync(this, cancellationToken).ConfigureAwait(false);
 
             /// <inheritdoc/>

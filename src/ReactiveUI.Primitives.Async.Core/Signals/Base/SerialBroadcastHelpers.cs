@@ -28,7 +28,7 @@ internal static class SerialBroadcastHelpers
     /// <param name="value">The value being broadcast.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the notification operation.</param>
     /// <returns>A task that represents the asynchronous notification operation.</returns>
-    public static ValueTask BroadcastOnNextAsync<T>(
+    internal static ValueTask BroadcastOnNextAsync<T>(
         ImmutableArray<IObserverAsync<T>> observers,
         T value,
         CancellationToken cancellationToken) =>
@@ -42,7 +42,7 @@ internal static class SerialBroadcastHelpers
     /// <param name="value">The value being broadcast.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the notification operation.</param>
     /// <returns>A task that represents the asynchronous notification operation.</returns>
-    public static ValueTask BroadcastOnNextAsyncMulti<T>(
+    internal static ValueTask BroadcastOnNextAsyncMulti<T>(
         ImmutableArray<IObserverAsync<T>> observers,
         T value,
         CancellationToken cancellationToken)
@@ -67,7 +67,7 @@ internal static class SerialBroadcastHelpers
     /// <param name="error">The error being broadcast.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the notification operation.</param>
     /// <returns>A task that represents the asynchronous notification operation.</returns>
-    public static ValueTask BroadcastOnErrorResumeAsync<T>(
+    internal static ValueTask BroadcastOnErrorResumeAsync<T>(
         ImmutableArray<IObserverAsync<T>> observers,
         Exception error,
         CancellationToken cancellationToken)
@@ -91,7 +91,7 @@ internal static class SerialBroadcastHelpers
     /// <param name="observers">The current observer snapshot.</param>
     /// <param name="result">The terminal result being broadcast.</param>
     /// <returns>A task that represents the asynchronous notification operation.</returns>
-    public static ValueTask BroadcastOnCompletedAsync<T>(
+    internal static ValueTask BroadcastOnCompletedAsync<T>(
         ImmutableArray<IObserverAsync<T>> observers,
         Result result)
     {

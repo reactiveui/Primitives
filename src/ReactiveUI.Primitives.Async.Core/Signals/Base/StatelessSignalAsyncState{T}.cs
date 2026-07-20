@@ -13,8 +13,8 @@ internal sealed class StatelessSignalAsyncState<T>
     /// <summary>The lock used to synchronize observer list updates.</summary>
     private readonly Lock _gate = new();
 
-    /// <summary>Gets the currently subscribed observers.</summary>
-    public ImmutableArray<IObserverAsync<T>> Observers { get; internal set; } = [];
+    /// <summary>Gets or sets the currently subscribed observers.</summary>
+    internal ImmutableArray<IObserverAsync<T>> Observers { get; set; } = [];
 
     /// <summary>Gets a stable snapshot of the current observers.</summary>
     /// <returns>The observers subscribed when the snapshot is taken.</returns>

@@ -32,7 +32,7 @@ public class SafeWitnessTests
     {
         RecordingWitness<int> observer = new();
         var cancelled = 0;
-        var safe = Witness.Safe<int>(observer, new ActionDisposable(() => cancelled++));
+        var safe = Witness.Safe(observer, new ActionDisposable(() => cancelled++));
         InvalidOperationException error = new("safe-fault");
 
         safe.OnError(error);
@@ -105,7 +105,7 @@ public class SafeWitnessTests
     public async Task CancelFreeSafeWitnessForwardsValuesThenCompletesExactlyOnce()
     {
         RecordingWitness<int> observer = new();
-        var safe = Witness.Safe<int>(observer);
+        var safe = Witness.Safe(observer);
 
         safe.OnNext(FirstValue);
         safe.OnCompleted();
@@ -124,7 +124,7 @@ public class SafeWitnessTests
     public async Task CancelFreeSafeWitnessForwardsTheFirstFaultThenGoesQuiet()
     {
         RecordingWitness<int> observer = new();
-        var safe = Witness.Safe<int>(observer);
+        var safe = Witness.Safe(observer);
         InvalidOperationException error = new("no-cancel-fault");
 
         safe.OnError(error);
@@ -146,7 +146,7 @@ public class SafeWitnessTests
     [Test]
     public async Task CancelFreeSafeWitnessStopsAfterTheObserverThrows()
     {
-        var safe = Witness.Safe<int>(new ThrowingWitness<int>(throwOnNext: true));
+        var safe = Witness.Safe(new ThrowingWitness<int>(throwOnNext: true));
 
         var thrown = Assert.Throws<InvalidOperationException>(() => safe.OnNext(FirstValue));
 

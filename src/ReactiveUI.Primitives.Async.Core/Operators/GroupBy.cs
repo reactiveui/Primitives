@@ -120,7 +120,7 @@ public static partial class SignalAsyncExtensions
             /// <summary>Subscribes this observer to the parent's source sequence.</summary>
             /// <param name="cancellationToken">A token to cancel the subscription.</param>
             /// <returns>An async disposable representing the source subscription.</returns>
-            public ValueTask<IAsyncDisposable> SubscribeSourcesAsync(CancellationToken cancellationToken) =>
+            internal ValueTask<IAsyncDisposable> SubscribeSourcesAsync(CancellationToken cancellationToken) =>
                 parent._source.SubscribeAsync(this, cancellationToken);
 
             /// <summary>Routes the element to the appropriate group signal, creating a new group if the key is new.</summary>

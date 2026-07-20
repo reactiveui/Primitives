@@ -17,7 +17,7 @@ internal static class StatelessReplayLatestSignalAsyncStateHelper
     /// <param name="cancellationToken">A token that can cancel the operation.</param>
     /// <returns>A task that represents the asynchronous notification.</returns>
     /// <exception cref="OperationCanceledException">The signal has been disposed.</exception>
-    public static async ValueTask OnNextAsync<T>(
+    internal static async ValueTask OnNextAsync<T>(
         StatelessReplayLatestSignalAsyncState<T> state,
         SignalBroadcastKind kind,
         T value,
@@ -52,7 +52,7 @@ internal static class StatelessReplayLatestSignalAsyncStateHelper
     /// <param name="cancellationToken">A token that can cancel the operation.</param>
     /// <returns>A task that represents the asynchronous notification.</returns>
     /// <exception cref="OperationCanceledException">The signal has been disposed.</exception>
-    public static async ValueTask OnErrorResumeAsync<T>(
+    internal static async ValueTask OnErrorResumeAsync<T>(
         StatelessReplayLatestSignalAsyncState<T> state,
         SignalBroadcastKind kind,
         Exception error,
@@ -85,7 +85,7 @@ internal static class StatelessReplayLatestSignalAsyncStateHelper
     /// <param name="result">The completion result to publish.</param>
     /// <returns>A task that represents the asynchronous notification.</returns>
     /// <exception cref="OperationCanceledException">The signal has been disposed.</exception>
-    public static async ValueTask OnCompletedAsync<T>(
+    internal static async ValueTask OnCompletedAsync<T>(
         StatelessReplayLatestSignalAsyncState<T> state,
         SignalBroadcastKind kind,
         Result result)
@@ -107,7 +107,7 @@ internal static class StatelessReplayLatestSignalAsyncStateHelper
     /// <typeparam name="T">The observed value type.</typeparam>
     /// <param name="state">The mutable signal state.</param>
     /// <returns>A task that represents the asynchronous disposal operation.</returns>
-    public static async ValueTask DisposeAsync<T>(StatelessReplayLatestSignalAsyncState<T> state)
+    internal static async ValueTask DisposeAsync<T>(StatelessReplayLatestSignalAsyncState<T> state)
     {
         if (state.IsDisposed)
         {
@@ -127,7 +127,7 @@ internal static class StatelessReplayLatestSignalAsyncStateHelper
     /// <returns>The subscription handle for the observer.</returns>
     /// <exception cref="OperationCanceledException">The signal has been disposed, or
     /// <paramref name="cancellationToken"/> was cancelled.</exception>
-    public static async ValueTask<IAsyncDisposable> SubscribeAsync<T>(
+    internal static async ValueTask<IAsyncDisposable> SubscribeAsync<T>(
         StatelessReplayLatestSignalAsyncState<T> state,
         IObserverAsync<T> observer,
         CancellationToken cancellationToken)

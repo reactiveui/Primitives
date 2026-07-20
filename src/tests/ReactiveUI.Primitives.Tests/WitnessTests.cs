@@ -63,13 +63,13 @@ public class WitnessTests
         List<string> calls = [];
         InvalidOperationException error = new("boom");
         var witness = Witness.Create<int>(
-            value => calls.Add("N" + value),
-            ex => calls.Add("E" + ex.Message),
+            value => calls.Add($"N{value}"),
+            ex => calls.Add($"E{ex.Message}"),
             () => calls.Add("C"));
         witness.OnNext(ObservedValue);
         witness.OnError(error);
         witness.OnCompleted();
-        string[] expected = ["N" + ObservedValue, "Eboom", "C"];
+        string[] expected = [$"N{ObservedValue}", "Eboom", "C"];
         await Assert.That(calls.SequenceEqual(expected)).IsTrue();
     }
 
@@ -84,8 +84,8 @@ public class WitnessTests
         var disposed = 0;
         var witness = Witness.Safe(
             Witness.Create<int>(
-                value => calls.Add("N" + value),
-                ex => calls.Add("E" + ex.Message),
+                value => calls.Add($"N{value}"),
+                ex => calls.Add($"E{ex.Message}"),
                 () => calls.Add("C")),
             new ActionDisposable(() => disposed++));
         witness.OnNext(FirstValue);
@@ -93,7 +93,7 @@ public class WitnessTests
         witness.OnNext(LateValue);
         witness.OnError(new InvalidOperationException("late"));
         witness.OnCompleted();
-        string[] expected = ["N" + FirstValue, "C"];
+        string[] expected = [$"N{FirstValue}", "C"];
         await Assert.That(calls.SequenceEqual(expected)).IsTrue();
         await Assert.That(disposed).IsEqualTo(1);
     }
@@ -135,8 +135,8 @@ public class WitnessTests
         var cancelDisposed = 0;
         var safe = Witness.Safe(
             Witness.Create<int>(
-                value => events.Add("next:" + value),
-                ex => events.Add("error:" + ex.Message),
+                value => events.Add($"next:{value}"),
+                ex => events.Add($"error:{ex.Message}"),
                 () => events.Add("completed")),
             new ActionDisposable(() => cancelDisposed++));
         safe.OnNext(Three);

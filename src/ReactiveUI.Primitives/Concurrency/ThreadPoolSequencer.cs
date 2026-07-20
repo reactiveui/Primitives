@@ -238,10 +238,10 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
         }
 
         /// <summary>Gets the scheduled item.</summary>
-        public IWorkItem Item { get; }
+        internal IWorkItem Item { get; }
 
         /// <summary>Gets the monotonic due timestamp.</summary>
-        public long DueTimestamp { get; }
+        internal long DueTimestamp { get; }
 
         /// <inheritdoc/>
         public int CompareTo(TimedWorkItem other) => DueTimestamp.CompareTo(other.DueTimestamp);

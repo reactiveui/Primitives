@@ -21,7 +21,7 @@ internal sealed class SynchronizedSequencerQueue<TAbsolute>
 
     /// <summary>Enqueues a scheduled item.</summary>
     /// <param name="item">The item to enqueue.</param>
-    public void Enqueue(ScheduledItem<TAbsolute> item)
+    internal void Enqueue(ScheduledItem<TAbsolute> item)
     {
         lock (_gate)
         {
@@ -31,7 +31,7 @@ internal sealed class SynchronizedSequencerQueue<TAbsolute>
 
     /// <summary>Removes a scheduled item.</summary>
     /// <param name="item">The item to remove.</param>
-    public void Remove(ScheduledItem<TAbsolute> item)
+    internal void Remove(ScheduledItem<TAbsolute> item)
     {
         lock (_gate)
         {
@@ -41,7 +41,7 @@ internal sealed class SynchronizedSequencerQueue<TAbsolute>
 
     /// <summary>Gets the next non-cancelled scheduled item, leaving it on the queue and discarding cancelled items it passes.</summary>
     /// <returns>The next live scheduled item, or <see langword="null"/> when none remain.</returns>
-    public IScheduledItem<TAbsolute>? GetNextLive()
+    internal IScheduledItem<TAbsolute>? GetNextLive()
     {
         lock (_gate)
         {

@@ -18,7 +18,7 @@ internal static class ConnectableSignalAsyncHelper
     /// <returns>The active connection handle.</returns>
     /// <exception cref="OperationCanceledException">The connectable signal has been disposed, or
     /// <paramref name="cancellationToken"/> was cancelled.</exception>
-    public static async ValueTask<IAsyncDisposable> ConnectAsync<T>(
+    internal static async ValueTask<IAsyncDisposable> ConnectAsync<T>(
         ConnectableSignalAsyncState<T> state,
         CancellationToken cancellationToken)
     {
@@ -87,7 +87,7 @@ internal static class ConnectableSignalAsyncHelper
         "PSH1315:A blocking wait on an awaitable that may not be done",
         Justification =
             "IDisposable.Dispose is intrinsically synchronous; this method must tear down async connection state on the sync dispose path.")]
-    public static void Dispose<T>(ConnectableSignalAsyncState<T> state)
+    internal static void Dispose<T>(ConnectableSignalAsyncState<T> state)
     {
         if (!state.TryMarkDisposed())
         {
@@ -105,7 +105,7 @@ internal static class ConnectableSignalAsyncHelper
     /// <param name="observer">The observer that receives multicasted values.</param>
     /// <param name="cancellationToken">A token that can cancel subscription establishment.</param>
     /// <returns>The subscription to the signal values.</returns>
-    public static ValueTask<IAsyncDisposable> SubscribeAsync<T>(
+    internal static ValueTask<IAsyncDisposable> SubscribeAsync<T>(
         ConnectableSignalAsyncState<T> state,
         IObserverAsync<T> observer,
         CancellationToken cancellationToken)

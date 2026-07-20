@@ -13,13 +13,13 @@ internal static class TaskTerminalWitnessHelper
 {
     /// <summary>Disposes the source subscription.</summary>
     /// <param name="subscription">The subscription slot.</param>
-    public static void DisposeSubscription(ref IDisposable? subscription) =>
+    internal static void DisposeSubscription(ref IDisposable? subscription) =>
         Interlocked.Exchange(ref subscription, null)?.Dispose();
 
     /// <summary>Gets a value indicating whether a witness has stopped.</summary>
     /// <param name="stopped">The stopped flag.</param>
     /// <returns><see langword="true"/> when the sink has stopped.</returns>
-    public static bool IsStopped(ref int stopped) => Volatile.Read(ref stopped) != 0;
+    internal static bool IsStopped(ref int stopped) => Volatile.Read(ref stopped) != 0;
 
     /// <summary>Registers cancellation for a witness after construction.</summary>
     /// <typeparam name="TState">The state type.</typeparam>
@@ -27,7 +27,7 @@ internal static class TaskTerminalWitnessHelper
     /// <param name="callback">The cancellation callback.</param>
     /// <param name="registration">The registration slot.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    public static void RegisterCancellation<TState>(
+    internal static void RegisterCancellation<TState>(
         TState state,
         Action<object?> callback,
         ref CancellationTokenRegistration registration,
@@ -46,7 +46,7 @@ internal static class TaskTerminalWitnessHelper
     /// <param name="subscription">The subscription slot.</param>
     /// <param name="stopped">The stopped flag.</param>
     /// <param name="value">The subscription to assign.</param>
-    public static void SetSubscription(ref IDisposable? subscription, ref int stopped, IDisposable value)
+    internal static void SetSubscription(ref IDisposable? subscription, ref int stopped, IDisposable value)
     {
         ArgumentExceptionHelper.ThrowIfNull(value);
 
@@ -67,5 +67,5 @@ internal static class TaskTerminalWitnessHelper
     /// <summary>Attempts to mark a witness stopped.</summary>
     /// <param name="stopped">The stopped flag.</param>
     /// <returns><see langword="true"/> when this caller won the stop race.</returns>
-    public static bool TryStop(ref int stopped) => Interlocked.Exchange(ref stopped, 1) == 0;
+    internal static bool TryStop(ref int stopped) => Interlocked.Exchange(ref stopped, 1) == 0;
 }

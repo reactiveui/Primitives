@@ -304,10 +304,10 @@ public sealed class PriorityQueue<T>
     internal readonly record struct IndexedItem : IComparable<IndexedItem>
     {
         /// <summary>Gets or sets the insertion order id.</summary>
-        public long Id { get; init; }
+        internal long Id { get; init; }
 
         /// <summary>Gets or sets the queued value.</summary>
-        public T Value { get; init; }
+        internal T Value { get; init; }
 
         /// <summary>Compares two indexed items.</summary>
         /// <param name="left">The left item.</param>

@@ -12,7 +12,6 @@ namespace ReactiveUI.Primitives.Async.Tests;
 /// <c>ThrottleDistinct</c> upstream/downstream filtering, <c>DebounceUntil</c>
 /// immediate-bypass branch, and the typed fast paths in <c>ForEach</c>
 /// (array / IReadOnlyList / general IEnumerable).</summary>
-[SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "TUnit requires instance methods")]
 public class ParityHelpersOperatorFusionsTests
 {
     /// <summary>Seconds a test waits for a notification before giving up.</summary>

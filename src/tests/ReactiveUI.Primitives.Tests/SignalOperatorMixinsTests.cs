@@ -126,14 +126,14 @@ public partial class SignalOperatorMixinsTests
         List<string> distinctKeys = [];
         List<bool> isEmptyValues = [];
         _ = source.Tap(
-                value => sideEffects.Add("next:" + value),
-                error => sideEffects.Add("error:" + error.Message),
+                value => sideEffects.Add($"next:{value}"),
+                error => sideEffects.Add($"error:{error.Message}"),
                 () => sideEffects.Add("completed"))
             .Subscribe(values.Add, static ex => throw ex, () => completed++);
         _ = Signal.Fail<int>(new InvalidOperationException("do-error"))
             .Tap(
                 value => sideEffects.Add(value.ToString()),
-                error => sideEffects.Add("error:" + error.Message),
+                error => sideEffects.Add($"error:{error.Message}"),
                 () => sideEffects.Add("unused"))
             .Subscribe(static _ => { }, static _ => { }, static () => { });
         _ = Signal.None<int?>().DefaultIfEmpty().Subscribe(defaultValue.Add);
@@ -240,7 +240,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(iteratorSwitch.SequenceEqual(ExpectedOneTwo)).IsTrue();
 
         List<string> stringSwitch = [];
-        _ = Signal.FromEnumerable<IObservable<string>>([Signal.Emit("value")]).SwitchTo().Subscribe(stringSwitch.Add);
+        _ = Signal.FromEnumerable([Signal.Emit("value")]).SwitchTo().Subscribe(stringSwitch.Add);
         await Assert.That(stringSwitch.SequenceEqual(ExpectedSingleValue)).IsTrue();
     }
 

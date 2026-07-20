@@ -10,19 +10,19 @@ namespace ReactiveUI.Primitives.Benchmarks;
 internal sealed class IntR3Witness : Observer<int>
 {
     /// <summary>Gets the total of received values.</summary>
-    public int Total { get; private set; }
+    internal int Total { get; private set; }
 
     /// <summary>Gets the number of onNext calls.</summary>
-    public int NextCount { get; private set; }
+    internal int NextCount { get; private set; }
 
     /// <summary>Gets the last value observed.</summary>
-    public int LastValue { get; private set; }
+    internal int LastValue { get; private set; }
 
     /// <summary>Gets the number of terminal completions observed.</summary>
-    public int CompletionCount { get; private set; }
+    internal int CompletionCount { get; private set; }
 
     /// <summary>Gets the number of errors observed.</summary>
-    public int ErrorCount { get; private set; }
+    internal int ErrorCount { get; private set; }
 
     /// <summary>Called for each emitted value.</summary>
     /// <param name="value">The emitted value.</param>

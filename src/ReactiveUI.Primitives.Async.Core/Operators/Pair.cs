@@ -132,7 +132,7 @@ public static partial class SignalAsyncExtensions
             /// <param name="value">The element from the first source.</param>
             /// <param name="token">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
-            public async ValueTask OnNext1Async(T1 value, CancellationToken token)
+            internal async ValueTask OnNext1Async(T1 value, CancellationToken token)
             {
                 _ = token;
                 T2 second;
@@ -162,7 +162,7 @@ public static partial class SignalAsyncExtensions
             /// <param name="value">The element from the second source.</param>
             /// <param name="token">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
-            public async ValueTask OnNext2Async(T2 value, CancellationToken token)
+            internal async ValueTask OnNext2Async(T2 value, CancellationToken token)
             {
                 _ = token;
                 T1 firstVal;
@@ -191,7 +191,7 @@ public static partial class SignalAsyncExtensions
             /// <summary>Handles the first source completing, propagating completion downstream when appropriate.</summary>
             /// <param name="result">The completion result from the first source.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
-            public async ValueTask OnCompleted1Async(Result result)
+            internal async ValueTask OnCompleted1Async(Result result)
             {
                 bool shouldComplete;
                 lock (_gate)
@@ -218,7 +218,7 @@ public static partial class SignalAsyncExtensions
             /// <summary>Handles the second source completing, propagating completion downstream when appropriate.</summary>
             /// <param name="result">The completion result from the second source.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
-            public async ValueTask OnCompleted2Async(Result result)
+            internal async ValueTask OnCompleted2Async(Result result)
             {
                 bool shouldComplete;
                 lock (_gate)
@@ -246,7 +246,7 @@ public static partial class SignalAsyncExtensions
             /// <param name="error">The error to forward.</param>
             /// <param name="cancellationToken">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
-            public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+            internal ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
                 observer.OnErrorResumeAsync(error, cancellationToken);
 
             /// <summary>

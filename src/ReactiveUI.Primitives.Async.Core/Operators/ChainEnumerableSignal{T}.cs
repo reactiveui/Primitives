@@ -70,9 +70,24 @@ public sealed class ChainEnumerableSignal<T>(IEnumerable<IObservableAsync<T>> si
             _disposedCancellationToken = _cts.Token;
         }
 
+        /// <inheritdoc/>
+        public ValueTask DisposeAsync() => FinishAsync(null);
+
+        /// <summary>Handles a second call to <see cref="FinishAsync"/> when already disposed, routing any failure exception to the unhandled exception handler.</summary>
+        /// <param name="result">The completion result from the second call.</param>
+        internal static void HandleAlreadyDisposed(Result? result)
+        {
+            if (result?.Exception is not { } exception)
+            {
+                return;
+            }
+
+            UnhandledExceptionHandler.ReportUnhandledException(exception);
+        }
+
         /// <summary>Advances to and subscribes to the next observable in the enumerable, or completes if no more observables are available.</summary>
         /// <returns>A task representing the asynchronous operation.</returns>
-        public async ValueTask SubscribeNextSignalAsync()
+        internal async ValueTask SubscribeNextSignalAsync()
         {
             try
             {
@@ -96,21 +111,6 @@ public sealed class ChainEnumerableSignal<T>(IEnumerable<IObservableAsync<T>> si
             {
                 await FinishAsync(Result.Failure(e)).ConfigureAwait(false);
             }
-        }
-
-        /// <inheritdoc/>
-        public ValueTask DisposeAsync() => FinishAsync(null);
-
-        /// <summary>Handles a second call to <see cref="FinishAsync"/> when already disposed, routing any failure exception to the unhandled exception handler.</summary>
-        /// <param name="result">The completion result from the second call.</param>
-        internal static void HandleAlreadyDisposed(Result? result)
-        {
-            if (result?.Exception is not { } exception)
-            {
-                return;
-            }
-
-            UnhandledExceptionHandler.ReportUnhandledException(exception);
         }
 
         /// <summary>Forwards a non-fatal error from the current inner sequence to the downstream observer.</summary>

@@ -92,6 +92,6 @@ public partial class SignalFactoriesTests
             return exception;
         }
 
-        throw new InvalidOperationException("Expected task fault " + expectedExceptionType.Name + ".");
+        throw new InvalidOperationException($"Expected task fault {expectedExceptionType.Name}.");
     }
 }

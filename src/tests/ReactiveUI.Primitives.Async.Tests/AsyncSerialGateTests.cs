@@ -5,7 +5,6 @@
 namespace ReactiveUI.Primitives.Async.Tests;
 
 /// <summary>Coverage for <see cref="AsyncSerialGate"/> — uncontended fast path, same-thread reentry, contended slow path, double-dispose idempotency.</summary>
-[SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "TUnit requires instance methods")]
 public class AsyncSerialGateTests
 {
     /// <summary>Verifies that the uncontended fast path acquires the gate via pure CAS.</summary>

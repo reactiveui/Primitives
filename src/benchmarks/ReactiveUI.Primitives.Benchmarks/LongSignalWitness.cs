@@ -8,19 +8,19 @@ namespace ReactiveUI.Primitives.Benchmarks;
 internal sealed class LongSignalWitness : IObserver<long>
 {
     /// <summary>Gets the total of received values.</summary>
-    public long Total { get; private set; }
+    internal long Total { get; private set; }
 
     /// <summary>Gets the number of onNext calls.</summary>
-    public int NextCount { get; private set; }
+    internal int NextCount { get; private set; }
 
     /// <summary>Gets the last value observed.</summary>
-    public long LastValue { get; private set; }
+    internal long LastValue { get; private set; }
 
     /// <summary>Gets the number of terminal completions observed.</summary>
-    public int CompletionCount { get; private set; }
+    internal int CompletionCount { get; private set; }
 
     /// <summary>Gets the number of errors observed.</summary>
-    public int ErrorCount { get; private set; }
+    internal int ErrorCount { get; private set; }
 
     /// <inheritdoc/>
     public void OnNext(long value)

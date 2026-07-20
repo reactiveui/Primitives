@@ -27,7 +27,7 @@ internal static class IndexedSubscribeHelper
     /// <param name="onError">Shared OnError hook (errors from any source forward unchanged).</param>
     /// <param name="onCompleted">Per-source OnCompleted hook: <c>(index)</c>.</param>
     /// <returns>A composite disposable that releases every per-source subscription on dispose.</returns>
-    public static IDisposable SubscribeIndexed<T>(
+    internal static IDisposable SubscribeIndexed<T>(
         IReadOnlyList<IObservable<T>> sources,
         Action<int, T> onNext,
         Action<Exception> onError,

@@ -10,5 +10,5 @@ internal static class IgnoredResult
     /// <summary>Consumes an ignored return value.</summary>
     /// <typeparam name="T">The ignored value type.</typeparam>
     /// <param name="value">The ignored value.</param>
-    public static void Of<T>(T value) => _ = value;
+    internal static void Of<T>(T value) => _ = value;
 }

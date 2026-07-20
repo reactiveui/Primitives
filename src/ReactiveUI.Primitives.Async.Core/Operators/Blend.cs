@@ -175,11 +175,15 @@ public static partial class SignalAsyncExtensions
         /// <summary>Gets a cancellation token that is canceled when this subscription is disposed.</summary>
         protected CancellationToken DisposedCancellationToken => _disposeCts.Token;
 
+        /// <summary>Asynchronously releases resources used by this subscription.</summary>
+        /// <returns>A task representing the asynchronous dispose operation.</returns>
+        public ValueTask DisposeAsync() => FinishAsync(null);
+
         /// <summary>Subscribes to the outer observable and begins merging inner observable sequences.</summary>
         /// <param name="this">The outer observable whose inner sequences will be merged.</param>
         /// <param name="cancellationToken">A token to cancel the subscription.</param>
         /// <returns>A task representing the asynchronous subscribe operation.</returns>
-        public async ValueTask SubscribeSourcesAsync(
+        internal async ValueTask SubscribeSourcesAsync(
             IObservableAsync<IObservableAsync<T>> @this,
             CancellationToken cancellationToken)
         {
@@ -202,10 +206,6 @@ public static partial class SignalAsyncExtensions
 
             await _outerDisposable.SetDisposableAsync(outerSubscription).ConfigureAwait(false);
         }
-
-        /// <summary>Asynchronously releases resources used by this subscription.</summary>
-        /// <returns>A task representing the asynchronous dispose operation.</returns>
-        public ValueTask DisposeAsync() => FinishAsync(null);
 
         /// <summary>
         /// Links the original subscribe-time cancellation token into this subscription's dispose chain so
@@ -257,7 +257,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="value">The value to forward.</param>
         /// <param name="cancellationToken">A token to cancel the operation.</param>
         /// <returns>A task representing the asynchronous forward operation.</returns>
-        protected internal async ValueTask RelayNextAsync(T value, CancellationToken cancellationToken)
+        internal async ValueTask RelayNextAsync(T value, CancellationToken cancellationToken)
         {
             _ = cancellationToken;
             if (DisposalHelper.HasDisposed(_disposed))
@@ -275,7 +275,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="exception">The error to forward.</param>
         /// <param name="cancellationToken">A token to cancel the operation.</param>
         /// <returns>A task representing the asynchronous forward operation.</returns>
-        protected internal async ValueTask RelayErrorAsync(
+        internal async ValueTask RelayErrorAsync(
             Exception exception,
             CancellationToken cancellationToken)
         {
@@ -294,7 +294,7 @@ public static partial class SignalAsyncExtensions
         /// <summary>Subscribes to an inner observable sequence and begins forwarding its items.</summary>
         /// <param name="inner">The inner observable to subscribe to.</param>
         /// <returns>A task representing the asynchronous subscribe operation.</returns>
-        protected internal virtual async ValueTask SubscribeBranchAsync(IObservableAsync<T> inner)
+        internal virtual async ValueTask SubscribeBranchAsync(IObservableAsync<T> inner)
         {
             try
             {
@@ -309,12 +309,12 @@ public static partial class SignalAsyncExtensions
 
         /// <summary>Creates a new inner observer for subscribing to an inner observable sequence.</summary>
         /// <returns>A new inner async observer instance.</returns>
-        protected internal virtual BlendBranchWitness CreateBranchObserver() => new(this);
+        internal virtual BlendBranchWitness CreateBranchObserver() => new(this);
 
         /// <summary>Completes the merged sequence, disposes all subscriptions, and optionally signals the downstream observer.</summary>
         /// <param name="result">The completion result to forward, or null if disposing without signaling completion.</param>
         /// <returns>A task representing the asynchronous completion operation.</returns>
-        protected internal async ValueTask FinishAsync(Result? result)
+        internal async ValueTask FinishAsync(Result? result)
         {
             if (DisposalHelper.TrySetDisposed(ref _disposed))
             {
@@ -346,7 +346,7 @@ public static partial class SignalAsyncExtensions
             /// <param name="inner">The inner observable to subscribe to.</param>
             /// <param name="cancellationToken">A token to cancel the subscription.</param>
             /// <returns>A task representing the asynchronous subscribe operation.</returns>
-            public async ValueTask SubscribeSourcesAsync(IObservableAsync<T> inner, CancellationToken cancellationToken)
+            internal async ValueTask SubscribeSourcesAsync(IObservableAsync<T> inner, CancellationToken cancellationToken)
             {
                 lock (parent._disposeCts)
                 {
@@ -403,7 +403,7 @@ public static partial class SignalAsyncExtensions
         private readonly SemaphoreSlim _semaphore = new(maxConcurrent, maxConcurrent);
 
         /// <inheritdoc/>
-        protected internal override async ValueTask SubscribeBranchAsync(IObservableAsync<T> inner)
+        internal override async ValueTask SubscribeBranchAsync(IObservableAsync<T> inner)
         {
             await _semaphore.WaitAsync(DisposedCancellationToken).ConfigureAwait(false);
             var innerObserver = (BlendBranchWitnessWithPermit)CreateBranchObserver();
@@ -431,7 +431,7 @@ public static partial class SignalAsyncExtensions
         }
 
         /// <inheritdoc/>
-        protected internal override BlendBranchWitness CreateBranchObserver() =>
+        internal override BlendBranchWitness CreateBranchObserver() =>
             new BlendBranchWitnessWithPermit(this);
 
         /// <summary>Inner witness that releases a semaphore slot on disposal.</summary>
@@ -527,12 +527,32 @@ public static partial class SignalAsyncExtensions
                 _disposedCancellationToken = _cts.Token;
             }
 
+            /// <summary>Asynchronously releases resources used by this subscription.</summary>
+            /// <returns>A task representing the asynchronous dispose operation.</returns>
+            public ValueTask DisposeAsync() => FinishAsync(null);
+
+            /// <summary>
+            /// Routes an exception from a post-disposal completion result to the unhandled exception handler.
+            /// Called when <see cref="DisposalHelper.TrySetDisposed"/> returns true (already disposed)
+            /// and the completion result carries an exception.
+            /// </summary>
+            /// <param name="result">The completion result, or null if disposing without signaling.</param>
+            internal static void RoutePostDisposalException(Result? result)
+            {
+                if (result?.Exception is not { } ex)
+                {
+                    return;
+                }
+
+                UnhandledExceptionHandler.ReportUnhandledException(ex);
+            }
+
             /// <summary>Begins subscribing to all source observables asynchronously.</summary>
             [SuppressMessage(
                 "Roslynator",
                 "RCS1047:Non-asynchronous method name should not end with \'Async\'",
                 Justification = "Method already named with Async")]
-            public void BeginSubscribing() => FireAndForgetHelper.Run(async () =>
+            internal void BeginSubscribing() => FireAndForgetHelper.Run(async () =>
             {
                 _reentrant.Value = true;
                 try
@@ -578,26 +598,6 @@ public static partial class SignalAsyncExtensions
                     _subscriptionFinished.SetResult(true);
                 }
             });
-
-            /// <summary>Asynchronously releases resources used by this subscription.</summary>
-            /// <returns>A task representing the asynchronous dispose operation.</returns>
-            public ValueTask DisposeAsync() => FinishAsync(null);
-
-            /// <summary>
-            /// Routes an exception from a post-disposal completion result to the unhandled exception handler.
-            /// Called when <see cref="DisposalHelper.TrySetDisposed"/> returns true (already disposed)
-            /// and the completion result carries an exception.
-            /// </summary>
-            /// <param name="result">The completion result, or null if disposing without signaling.</param>
-            internal static void RoutePostDisposalException(Result? result)
-            {
-                if (result?.Exception is not { } ex)
-                {
-                    return;
-                }
-
-                UnhandledExceptionHandler.ReportUnhandledException(ex);
-            }
 
             /// <summary>
             /// Links the original subscribe-time cancellation token into this subscription's dispose chain so
