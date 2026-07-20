@@ -1331,6 +1331,7 @@ dotnet_diagnostic.SST1316.severity = none # Tuple element names should use the c
 dotnet_diagnostic.SST1317.severity = none # Asynchronous method names should end with 'Async' — conflicts with this project's Rx-compatibility and naming mechanism
 dotnet_diagnostic.SST1318.severity = error # Overriding parameter names should match the base declaration
 dotnet_diagnostic.SST1319.severity = error # An enumeration's type name is not PascalCase
+dotnet_diagnostic.SST1320.severity = error # A parameter name matches its method's name
 
 # Maintainability
 dotnet_diagnostic.SST1400.severity = error # An element does not declare an access modifier
@@ -1602,6 +1603,7 @@ dotnet_diagnostic.SST2248.severity = error # Two constant comparisons of the sam
 dotnet_diagnostic.SST2249.severity = error # A literal-format string.Format or literal concatenation can be an interpolated string
 dotnet_diagnostic.SST2250.severity = error # A bare local assigned once by the next statement can be an initialized declaration
 dotnet_diagnostic.SST2251.severity = error # A method call names type arguments that inference would supply
+dotnet_diagnostic.SST2252.severity = error # A switch statement is nested inside another switch statement
 dotnet_diagnostic.RCS1040.severity = none # covered by SST1180
 
 # Design
@@ -1633,6 +1635,7 @@ dotnet_diagnostic.SST2324.severity = error # A member is declared more accessibl
 dotnet_diagnostic.SST2325.severity = error # An async method checks an argument after its first await
 dotnet_diagnostic.SST2326.severity = error # An interface-typed value is narrowed to a concrete implementation, coupling the code to it
 dotnet_diagnostic.SST2327.severity = error # A type tests its own runtime type against a class instead of dispatching through a virtual member
+dotnet_diagnostic.SST2328.severity = error # A raw native pointer handle is exposed instead of a SafeHandle
 
 # Correctness
 dotnet_diagnostic.SST2400.severity = error # Two arguments name each other's parameters and have been transposed
@@ -1705,6 +1708,13 @@ dotnet_diagnostic.SST2474.severity = error # A part-creation-policy attribute is
 dotnet_diagnostic.SST2475.severity = error # An entity's primary key is typed DateTime or DateTimeOffset
 dotnet_diagnostic.SST2479.severity = error # A loop variable captured by a callback stored beyond the iteration reads its final value
 dotnet_diagnostic.SST2481.severity = error # A GetHashCode override folds the base identity hash into a value hash
+dotnet_diagnostic.SST2484.severity = error # A handle read through DangerousGetHandle is not reference-counted
+dotnet_diagnostic.SST2485.severity = error # A NotImplementedException is left in shipped code
+dotnet_diagnostic.SST2486.severity = error # An assembly is loaded by path or partial name instead of Assembly.Load
+dotnet_diagnostic.SST2487.severity = error # A [ConstructorArgument] does not name a constructor parameter
+dotnet_diagnostic.SST2488.severity = error # An exception is logged and rethrown, duplicating the record
+dotnet_diagnostic.SST2489.severity = error # A relational comparison is decided by the operand's type rather than its value
+dotnet_diagnostic.SST2490.severity = error # Adjacent try statements with identical handling should be merged
 
 # Testing
 dotnet_diagnostic.SST2500.severity = error # A test method contains no assertion and no expected-exception check
@@ -1715,9 +1725,12 @@ dotnet_diagnostic.SST2504.severity = error # A test fixture declares and inherit
 dotnet_diagnostic.SST2505.severity = error # A test method declares parameters but no data source
 dotnet_diagnostic.SST2506.severity = error # A test method calls Thread.Sleep
 dotnet_diagnostic.SST2507.severity = error # A test method declares its expected failure with an expected-exception attribute
+dotnet_diagnostic.SST2508.severity = error # A fluent assertion is started but never completed
+dotnet_diagnostic.SST2509.severity = error # A test method has a shape the runner cannot execute
 
 # Logging
 dotnet_diagnostic.SST2600.severity = error # Application output is written through legacy Trace instead of a structured logger
+dotnet_diagnostic.SST2601.severity = error # A logger field or property does not follow the logger naming convention
 
 ###################
 # PerformanceSharp Analyzers (PSH) - severities staged ahead of package adoption;
@@ -1834,6 +1847,7 @@ dotnet_diagnostic.PSH1415.severity = error # Hold the concrete type when the con
 dotnet_diagnostic.PSH1416.severity = error # Cache the serializer options instead of building them per call
 dotnet_diagnostic.PSH1417.severity = error # Do not compute an expensive argument for an assertion
 dotnet_diagnostic.PSH1418.severity = error # An HttpClient is constructed on every call
+dotnet_diagnostic.PSH1419.severity = error # A time-zone is resolved with a platform-specific id instead of the cross-platform API
 
 # ASP.NET Core - inert in this repo (no route handlers or middleware), enabled so the set stays complete
 dotnet_diagnostic.PSH1500.severity = error # A minimal API handler returns Results instead of TypedResults, boxing the result
@@ -1860,6 +1874,7 @@ dotnet_diagnostic.SES1005.severity = error # Compare secret values in constant t
 dotnet_diagnostic.SES1006.severity = error # A Data Protection key ring is persisted without a ProtectKeysWith call, so keys sit unencrypted at rest
 dotnet_diagnostic.SES1007.severity = error # A cryptographic primitive is implemented by hand instead of using a vetted platform algorithm
 dotnet_diagnostic.SES1008.severity = error # An XML signature is verified with the no-key CheckSignature overload, trusting the document's own KeyInfo
+dotnet_diagnostic.SES1009.severity = error # A password is stored without a slow, salted key-derivation function
 
 # Transport
 dotnet_diagnostic.SES1102.severity = error # Do not accept any server certificate
@@ -1881,6 +1896,7 @@ dotnet_diagnostic.SES1303.severity = error # Regular-expression pattern must not
 dotnet_diagnostic.SES1304.severity = error # An archive entry name must not build a write path without a containment check
 dotnet_diagnostic.SES1305.severity = error # Do not build a storage path from an uploaded file name
 dotnet_diagnostic.SES1306.severity = error # Do not compile or execute non-constant C# via the scripting API
+dotnet_diagnostic.SES1310.severity = error # A directory bind is performed without authenticating
 dotnet_diagnostic.SES1307.severity = error # Path.GetTempFileName creates a predictable, world-readable temporary file
 dotnet_diagnostic.SES1308.severity = error # A file or directory is created group- or world-writable
 dotnet_diagnostic.SES1309.severity = error # An XSLT stylesheet is loaded with embedded script enabled
@@ -1907,6 +1923,7 @@ dotnet_diagnostic.SES1511.severity = error # The forwarded-headers trust boundar
 dotnet_diagnostic.SES1512.severity = error # Sensitive framework diagnostics are enabled without a development-environment guard
 dotnet_diagnostic.SES1513.severity = error # An AuthorizeAsync result is discarded, so the guarded operation runs regardless
 dotnet_diagnostic.SES1514.severity = error # OpenID Connect protections (PKCE, state, nonce) are disabled
+dotnet_diagnostic.SES1515.severity = error # A Content-Security-Policy value disables its own protection
 
 # AI trust boundaries
 dotnet_diagnostic.SES1601.severity = error # An LLM system prompt must be a constant, trusted template
@@ -2123,15 +2140,15 @@ dotnet_diagnostic.S3927.severity = none # Serialization event handlers should be
 dotnet_diagnostic.S3981.severity = none # Collection sizes and array length comparisons should make sense — covered by SST1479
 dotnet_diagnostic.S3984.severity = none # Exceptions should not be created without being thrown — covered by SST1480
 dotnet_diagnostic.S4143.severity = none # Collection elements should not be replaced unconditionally — covered by SST1487
-dotnet_diagnostic.S4210.severity = none # Windows Forms entry points should be marked with STAThread -> no equivalent - WinForms STAThread on Main (candidate to build)
+dotnet_diagnostic.S4210.severity = none # Windows Forms entry points should be marked with STAThread -> off: WinForms entry point; not applicable to this cross-platform library
 dotnet_diagnostic.S4260.severity = none # "ConstructorArgument" parameters should exist in constructors -> replaced by SST2487
 dotnet_diagnostic.S4428.severity = none # "PartCreationPolicyAttribute" should be used with "ExportAttribute" — covered by SST2474
 dotnet_diagnostic.S6507.severity = none # Blocks should not be synchronized on local variables — covered by SST1903
 dotnet_diagnostic.S6677.severity = none # Message template placeholders should be unique — covered by SST2442
-dotnet_diagnostic.S6797.severity = none # Blazor query parameter type should be supported -> no equivalent - Blazor (framework; N.A.)
-dotnet_diagnostic.S6798.severity = none # [JSInvokable] attribute should only be used on public methods -> no equivalent - Blazor (framework; N.A.)
-dotnet_diagnostic.S6800.severity = none # Component parameter type should match the route parameter type constraint -> no equivalent - Blazor (framework; N.A.)
-dotnet_diagnostic.S6930.severity = none # Backslash should be avoided in route templates -> no equivalent - ASP.NET MVC (framework; N.A.)
+dotnet_diagnostic.S6797.severity = none # Blazor query parameter type should be supported -> off: Blazor-specific; no Blazor surface in this library
+dotnet_diagnostic.S6798.severity = none # [JSInvokable] attribute should only be used on public methods -> off: Blazor-specific; no Blazor surface in this library
+dotnet_diagnostic.S6800.severity = none # Component parameter type should match the route parameter type constraint -> off: Blazor-specific; no Blazor surface in this library
+dotnet_diagnostic.S6930.severity = none # Backslash should be avoided in route templates -> off: ASP.NET MVC-specific; no controllers in this library
 
 ###################
 # SonarAnalyzer (Sxxxx) - Minor Bug
@@ -2204,7 +2221,7 @@ dotnet_diagnostic.S3875.severity = none # "operator==" should not be overloaded 
 dotnet_diagnostic.S3877.severity = none # Exceptions should not be thrown from unexpected methods — covered by SST1485
 dotnet_diagnostic.S4462.severity = none # Calls to "async" methods should not be blocking - covered by PSH1315
 dotnet_diagnostic.S6422.severity = none # Calls to "async" methods should not be blocking in Azure Functions — covered by PSH1315
-dotnet_diagnostic.S6424.severity = none # Interfaces for durable entities should satisfy the restrictions -> no equivalent - Durable Entity (framework; N.A.)
+dotnet_diagnostic.S6424.severity = none # Interfaces for durable entities should satisfy the restrictions -> off: Durable Entity-specific; not used in this library
 
 ###################
 # SonarAnalyzer (Sxxxx) - Critical Code Smell
@@ -2264,7 +2281,7 @@ dotnet_diagnostic.S4487.severity = none # Unread "private" fields should be remo
 dotnet_diagnostic.S4524.severity = none # "default" clauses should be first or last — covered by SST1219
 dotnet_diagnostic.S4635.severity = none # Start index should be used instead of calling Substring — covered by PSH1218
 dotnet_diagnostic.S5034.severity = none # "ValueTask" should be consumed correctly — covered by PSH1316
-dotnet_diagnostic.S6967.severity = none # ModelState.IsValid should be called in controller actions -> no equivalent - ASP.NET MVC (framework; N.A.)
+dotnet_diagnostic.S6967.severity = none # ModelState.IsValid should be called in controller actions -> off: ASP.NET MVC-specific; no controllers in this library
 dotnet_diagnostic.S8367.severity = none # Identifiers should not conflict with the C# 14 "field" contextual keyword - the C# 14 compiler reports this: CS9273 (error) for a local named field in an accessor, CS9258 (warning) for a rebinding read
 dotnet_diagnostic.S8368.severity = none # Identifiers should not conflict with the C# 14 "extension" contextual keyword - the C# 14 compiler reports this as CS9306, and SST1300 already flags the lowercase type name
 dotnet_diagnostic.S8380.severity = none # Return types named "partial" should be escaped with "@" - the compiler reports this as CS8981, and SST1300 already flags the lowercase type name
@@ -2288,7 +2305,7 @@ dotnet_diagnostic.S1118.severity = none # Utility classes should not have public
 dotnet_diagnostic.S112.severity = none # General or reserved exceptions should never be thrown — covered by SST2409
 dotnet_diagnostic.S1121.severity = none # Assignments should not be made from within sub-expressions — covered by SST1187
 dotnet_diagnostic.S1123.severity = none # "Obsolete" attributes should include explanations — covered by SST2308
-dotnet_diagnostic.S1134.severity = none # Track uses of "FIXME" tags -> no equivalent - TODO/FIXME tracker (low value)
+dotnet_diagnostic.S1134.severity = none # Track uses of "FIXME" tags -> off: TODO comment tracker; not enforced here
 dotnet_diagnostic.S1144.severity = none # Covered by SST1440 (canonical)
 dotnet_diagnostic.S1151.severity = none # "switch case" clauses should not have too many lines of code — covered by SST1524
 dotnet_diagnostic.S1168.severity = none # Empty arrays and collections should be returned instead of null — covered by SST2306
@@ -2299,7 +2316,7 @@ dotnet_diagnostic.S125.severity = none # Sections of code should not be commente
 dotnet_diagnostic.S127.severity = none # "for" loop stop conditions should be invariant — covered by SST2465
 dotnet_diagnostic.S138.severity = none # Functions should not have too many lines of code — covered by SST1523
 dotnet_diagnostic.S1479.severity = none # "switch" statements with many "case" clauses — covered by SST1423
-dotnet_diagnostic.S1607.severity = none # Tests should not be ignored -> no equivalent - ignored-test tracker (low value)
+dotnet_diagnostic.S1607.severity = none # Tests should not be ignored -> off: ignored-test tracker; not enforced here
 dotnet_diagnostic.S1696.severity = none # NullReferenceException should not be caught — covered by SST2401
 dotnet_diagnostic.S1854.severity = none # Unused assignments should be removed - DUPLICATE IDE0059
 dotnet_diagnostic.S1871.severity = none # Two branches in a conditional structure should not have exactly the same implementation — covered by SST2414
@@ -2318,11 +2335,11 @@ dotnet_diagnostic.S2925.severity = none # "Thread.Sleep" should not be used in t
 dotnet_diagnostic.S2933.severity = none # Fields that are only assigned in the constructor should be "readonly" - DUPLICATE IDE0044
 dotnet_diagnostic.S2971.severity = none # LINQ expressions should be simplified — covered by PSH1101/PSH1102
 dotnet_diagnostic.S3010.severity = none # Static fields should not be updated in constructors — covered by SST2402
-dotnet_diagnostic.S3011.severity = none # Reflection should not be used to increase accessibility of classes, methods, or fields -> no equivalent - NonPublic reflection (audit hotspot)
+dotnet_diagnostic.S3011.severity = none # Reflection should not be used to increase accessibility of classes, methods, or fields -> off: reflection-audit hotspot; not enforced here
 dotnet_diagnostic.S3059.severity = none # Types should not have members with visibility set higher than the type's visibility
 dotnet_diagnostic.S3063.severity = none # "StringBuilder" data should be used — covered by SST2408
 dotnet_diagnostic.S3169.severity = none # Multiple "OrderBy" calls should not be used — covered by PSH1108
-dotnet_diagnostic.S3246.severity = none # Generic type parameters should be co/contravariant when possible -> no equivalent - in/out variance suggestion (low precision)
+dotnet_diagnostic.S3246.severity = none # Generic type parameters should be co/contravariant when possible -> off: low-precision variance suggestion; not enforced
 dotnet_diagnostic.S3262.severity = none # "params" should be used on overrides — covered by SST2426
 dotnet_diagnostic.S3264.severity = none # Events should be invoked — covered by SST2407
 dotnet_diagnostic.S3358.severity = none # Ternary operators should not be nested — covered by SST1147
@@ -2372,10 +2389,10 @@ dotnet_diagnostic.S4457.severity = none # Parameter validation in "async"/"await
 dotnet_diagnostic.S4545.severity = none # "DebuggerDisplayAttribute" strings should reference existing members — covered by SST2405
 dotnet_diagnostic.S4581.severity = none # "new Guid()" should not be used — covered by SST2012
 dotnet_diagnostic.S6354.severity = none # Use a testable date/time provider — covered by SST2010
-dotnet_diagnostic.S6419.severity = none # Azure Functions should be stateless -> no equivalent - Azure Functions (framework; N.A. to this library)
+dotnet_diagnostic.S6419.severity = none # Azure Functions should be stateless -> off: Azure Functions-specific; not used in this library
 dotnet_diagnostic.S6420.severity = none # Client instances should not be recreated on each Azure Function invocation — covered by PSH1418
-dotnet_diagnostic.S6421.severity = none # Azure Functions should use Structured Error Handling -> no equivalent - Azure Functions (framework; N.A.)
-dotnet_diagnostic.S6423.severity = none # Azure Functions should log all failures -> no equivalent - Azure Functions (framework; N.A.)
+dotnet_diagnostic.S6421.severity = none # Azure Functions should use Structured Error Handling -> off: Azure Functions-specific; not used in this library
+dotnet_diagnostic.S6423.severity = none # Azure Functions should log all failures -> off: Azure Functions-specific; not used in this library
 dotnet_diagnostic.S6561.severity = none # Avoid using "DateTime.Now" for benchmarking or timing operations — covered by PSH1408
 dotnet_diagnostic.S6562.severity = none # Covered by SST1451 (canonical)
 dotnet_diagnostic.S6563.severity = none # Use UTC when recording DateTime instants — covered by SST2011
@@ -2383,18 +2400,18 @@ dotnet_diagnostic.S6566.severity = none # Use "DateTimeOffset" instead of "DateT
 dotnet_diagnostic.S6575.severity = none # Use "TimeZoneInfo.FindSystemTimeZoneById" without converting the timezones with "TimezoneConverter" -> replaced by PSH1419
 dotnet_diagnostic.S6580.severity = none # Use a format provider when parsing date and time - DUPLICATE CA1305
 dotnet_diagnostic.S6673.severity = none # Log message template placeholders should be in the right order — covered by SST2440
-dotnet_diagnostic.S6802.severity = none # Using lambda expressions in loops should be avoided in Blazor markup section -> no equivalent - Blazor render loop (framework; N.A.)
-dotnet_diagnostic.S6803.severity = none # Parameters with SupplyParameterFromQuery attribute should be used only in routable components -> no equivalent - Blazor (framework; N.A.)
-dotnet_diagnostic.S6931.severity = none # ASP.NET controller actions should not have a route template starting with "/" -> no equivalent - ASP.NET MVC (framework; N.A.)
-dotnet_diagnostic.S6932.severity = none # Use model binding instead of reading raw request data -> no equivalent - ASP.NET MVC (framework; N.A.)
-dotnet_diagnostic.S6934.severity = none # A Route attribute should be added to the controller when a route template is specified at the action level -> no equivalent - ASP.NET MVC (framework; N.A.)
-dotnet_diagnostic.S6960.severity = none # Controllers should not have mixed responsibilities -> no equivalent - ASP.NET MVC (framework; N.A.)
-dotnet_diagnostic.S6961.severity = none # API Controllers should derive from ControllerBase instead of Controller -> no equivalent - ASP.NET MVC (framework; N.A.)
+dotnet_diagnostic.S6802.severity = none # Using lambda expressions in loops should be avoided in Blazor markup section -> off: Blazor-specific; no Blazor surface in this library
+dotnet_diagnostic.S6803.severity = none # Parameters with SupplyParameterFromQuery attribute should be used only in routable components -> off: Blazor-specific; no Blazor surface in this library
+dotnet_diagnostic.S6931.severity = none # ASP.NET controller actions should not have a route template starting with "/" -> off: ASP.NET MVC-specific; no controllers in this library
+dotnet_diagnostic.S6932.severity = none # Use model binding instead of reading raw request data -> off: ASP.NET MVC-specific; no controllers in this library
+dotnet_diagnostic.S6934.severity = none # A Route attribute should be added to the controller when a route template is specified at the action level -> off: ASP.NET MVC-specific; no controllers in this library
+dotnet_diagnostic.S6960.severity = none # Controllers should not have mixed responsibilities -> off: ASP.NET MVC-specific; no controllers in this library
+dotnet_diagnostic.S6961.severity = none # API Controllers should derive from ControllerBase instead of Controller -> off: ASP.NET MVC-specific; no controllers in this library
 dotnet_diagnostic.S6962.severity = none # You should pool HTTP connections with HttpClientFactory — covered by PSH1418
-dotnet_diagnostic.S6964.severity = none # Value type property used as input in a controller action should be nullable, required or annotated with the JsonRequiredAttribute to avoid under-posting. -> no equivalent - ASP.NET MVC (framework; N.A.)
-dotnet_diagnostic.S6965.severity = none # REST API actions should be annotated with an HTTP verb attribute -> no equivalent - ASP.NET MVC (framework; N.A.)
+dotnet_diagnostic.S6964.severity = none # Value type property used as input in a controller action should be nullable, required or annotated with the JsonRequiredAttribute to avoid under-posting. -> off: ASP.NET MVC-specific; no controllers in this library
+dotnet_diagnostic.S6965.severity = none # REST API actions should be annotated with an HTTP verb attribute -> off: ASP.NET MVC-specific; no controllers in this library
 dotnet_diagnostic.S6966.severity = none # Awaitable method should be used — covered by PSH1313
-dotnet_diagnostic.S6968.severity = none # Actions that return a value should be annotated with ProducesResponseTypeAttribute containing the return type -> no equivalent - ASP.NET MVC (framework; N.A.)
+dotnet_diagnostic.S6968.severity = none # Actions that return a value should be annotated with ProducesResponseTypeAttribute containing the return type -> off: ASP.NET MVC-specific; no controllers in this library
 dotnet_diagnostic.S881.severity = none # Increment (++) and decrement (--) operators should not be used in a method call or mixed with other operators in an expression — covered by SST2015
 dotnet_diagnostic.S907.severity = none # "goto" statement should not be used — covered by SST2014
 
@@ -2450,7 +2467,7 @@ dotnet_diagnostic.S3234.severity = none # Covered by PSH1008 (canonical)
 dotnet_diagnostic.S3235.severity = none # Redundant parentheses should not be used — covered by SST1459
 dotnet_diagnostic.S3236.severity = none # Covered by SST1448 (canonical)
 dotnet_diagnostic.S3240.severity = none # The simplest possible condition syntax should be used - duplicate of SST1198
-dotnet_diagnostic.S3241.severity = none # Methods should not return values that are never used -> no equivalent - unused return value (needs whole-program)
+dotnet_diagnostic.S3241.severity = none # Methods should not return values that are never used -> off: needs whole-program analysis; not enforced here
 dotnet_diagnostic.S3242.severity = none # Method parameters should be declared with base types
 dotnet_diagnostic.S3247.severity = none # Duplicate casts should not be made — covered by SST1175
 dotnet_diagnostic.S3251.severity = none # Implementations should be provided for "partial" methods — covered by SST2468
@@ -2489,7 +2506,7 @@ dotnet_diagnostic.S4026.severity = none # Assemblies should be marked with "Neut
 dotnet_diagnostic.S4027.severity = none # Exceptions should provide standard constructors — covered by SST1488
 dotnet_diagnostic.S4040.severity = none # Strings should be normalized to uppercase - DUPLICATE CA1308
 dotnet_diagnostic.S4041.severity = none # Type names should not match namespaces - DUPLICATE CA1724
-dotnet_diagnostic.S4047.severity = none # Generics should be used when appropriate -> no equivalent - prefer generics (fuzzy)
+dotnet_diagnostic.S4047.severity = none # Generics should be used when appropriate -> off: fuzzy prefer-generics suggestion; not enforced
 dotnet_diagnostic.S4049.severity = none # Properties should be preferred - DUPLICATE CA1024
 dotnet_diagnostic.S4052.severity = none # Types should not extend outdated base types -> replaced by obsolete
 dotnet_diagnostic.S4056.severity = none # Overloads with a "CultureInfo" or an "IFormatProvider" parameter should be used - DUPLICATE CA1305
@@ -2518,13 +2535,13 @@ dotnet_diagnostic.S6612.severity = none # The lambda parameter should be used in
 dotnet_diagnostic.S6613.severity = none # "First" and "Last" properties of "LinkedList" should be used instead of the "First()" and "Last()" extension methods — covered by PSH1124
 dotnet_diagnostic.S6617.severity = none # Covered by PSH1111 (canonical)
 dotnet_diagnostic.S6618.severity = none # "string.Create" should be used instead of "FormattableString" — covered by PSH1209
-dotnet_diagnostic.S6664.severity = none # The code block contains too many logging calls -> no equivalent - too many logging calls (fuzzy)
+dotnet_diagnostic.S6664.severity = none # The code block contains too many logging calls -> off: fuzzy too-many-logging-calls metric; not enforced
 dotnet_diagnostic.S6667.severity = none # Logging in a catch clause should pass the caught exception as a parameter. — covered by SST2438
 dotnet_diagnostic.S6668.severity = none # Logging arguments should be passed to the correct parameter — covered by SST2439
 dotnet_diagnostic.S6669.severity = none # Logger field or property name should comply with a naming convention -> replaced by SST2601
 dotnet_diagnostic.S6670.severity = none # "Trace.Write" and "Trace.WriteLine" should not be used — covered by SST2600
 dotnet_diagnostic.S6672.severity = none # Generic logger injection should match enclosing type — covered by SST2443
-dotnet_diagnostic.S6675.severity = none # "Trace.WriteLineIf" should not be used with "TraceSwitch" levels -> no equivalent - TraceSwitch misuse (niche)
+dotnet_diagnostic.S6675.severity = none # "Trace.WriteLineIf" should not be used with "TraceSwitch" levels -> off: niche TraceSwitch misuse; not enforced here
 dotnet_diagnostic.S6678.severity = none # Use PascalCase for named placeholders -> replaced by CA1727
 dotnet_diagnostic.S818.severity = none # Literal suffixes should be upper case — covered by SST2244
 
@@ -2532,7 +2549,7 @@ dotnet_diagnostic.S818.severity = none # Literal suffixes should be upper case �
 # SonarAnalyzer (Sxxxx) - Info Code Smell
 ###################
 dotnet_diagnostic.S1133.severity = none # Deprecated code should be removed — covered by SST2310
-dotnet_diagnostic.S1135.severity = none # Track uses of "TODO" tags -> no equivalent - TODO/FIXME tracker (low value)
+dotnet_diagnostic.S1135.severity = none # Track uses of "TODO" tags -> off: FIXME comment tracker; not enforced here
 dotnet_diagnostic.S1309.severity = none # Track uses of in-source issue suppressions
 
 ###################
@@ -2555,28 +2572,28 @@ dotnet_diagnostic.S2245.severity = none # Using pseudorandom number generators (
 dotnet_diagnostic.S2257.severity = none # Using non-standard cryptographic algorithms is security-sensitive -> replaced by SES1007
 dotnet_diagnostic.S4502.severity = none # Disabling CSRF protections is security-sensitive -> replaced by in-box ASP.NET antiforgery analyzer
 dotnet_diagnostic.S4790.severity = none # Using weak hashing algorithms is security-sensitive -> replaced by CA5350/CA5351
-dotnet_diagnostic.S4792.severity = none # Configuring loggers is security-sensitive -> no equivalent - logger configuration hotspot (audit)
-dotnet_diagnostic.S5042.severity = none # Expanding archive files without controlling resource consumption is security-sensitive -> no equivalent - unbounded decompression (needs taint)
+dotnet_diagnostic.S4792.severity = none # Configuring loggers is security-sensitive -> off: logging-configuration audit hotspot; not enforced here
+dotnet_diagnostic.S5042.severity = none # Expanding archive files without controlling resource consumption is security-sensitive -> off: unbounded decompression; needs taint analysis, out of scope
 dotnet_diagnostic.S5332.severity = none # Using clear-text protocols is security-sensitive -> replaced by SES1106
 dotnet_diagnostic.S5443.severity = none # Using publicly writable directories is security-sensitive -> replaced by SES1308
 
 ###################
 # SonarAnalyzer (Sxxxx) - Major Security Hotspot
 ###################
-dotnet_diagnostic.S1313.severity = none # Using hardcoded IP addresses is security-sensitive -> no equivalent - hardcoded IP literal (noisy)
+dotnet_diagnostic.S1313.severity = none # Using hardcoded IP addresses is security-sensitive -> off: hardcoded-IP heuristic; too noisy to enforce
 dotnet_diagnostic.S2077.severity = none # Formatting SQL queries is security-sensitive -> replaced by CA2100
 dotnet_diagnostic.S5693.severity = none # Allowing requests with excessive content length is security-sensitive -> replaced by SES1505
 dotnet_diagnostic.S5753.severity = none # Disabling ASP.NET "Request Validation" feature is security-sensitive -> replaced by obsolete (legacy ASP.NET request validation)
-dotnet_diagnostic.S5766.severity = none # Creating Serializable objects without data validation checks is security-sensitive -> no equivalent - Serializable deserialization (obsolete BinaryFormatter)
+dotnet_diagnostic.S5766.severity = none # Creating Serializable objects without data validation checks is security-sensitive -> off: legacy BinaryFormatter deserialization; obsolete path, not used here
 dotnet_diagnostic.S6444.severity = none # Not specifying a timeout for regular expressions is security-sensitive -> replaced by SES1509
-dotnet_diagnostic.S6640.severity = none # Using unsafe code blocks is security-sensitive -> no equivalent - unsafe code blocks (audit hotspot)
+dotnet_diagnostic.S6640.severity = none # Using unsafe code blocks is security-sensitive -> off: unsafe-code audit; not enforced here
 
 ###################
 # SonarAnalyzer (Sxxxx) - Minor Security Hotspot
 ###################
 dotnet_diagnostic.S2092.severity = none # Creating cookies without the "secure" flag is security-sensitive -> replaced by CA5382
 dotnet_diagnostic.S3330.severity = none # Creating cookies without the "HttpOnly" flag is security-sensitive -> replaced by CA5383
-dotnet_diagnostic.S4507.severity = none # Delivering code in production with debug features activated is security-sensitive -> no equivalent - debug features in production (partial SES1506)
+dotnet_diagnostic.S4507.severity = none # Delivering code in production with debug features activated is security-sensitive -> off: debug features in production; partly covered by SES1506, rest not enforced
 dotnet_diagnostic.S5122.severity = none # Having a permissive Cross-Origin Resource Sharing policy is security-sensitive -> replaced by SES1501
 
 #############################################
