@@ -1631,6 +1631,8 @@ dotnet_diagnostic.SST2322.severity = error # A non-private readonly field holds 
 dotnet_diagnostic.SST2323.severity = error # A stateless abstract class declaring only public abstract members should be an interface
 dotnet_diagnostic.SST2324.severity = error # A member is declared more accessible than its containing type
 dotnet_diagnostic.SST2325.severity = error # An async method checks an argument after its first await
+dotnet_diagnostic.SST2326.severity = error # An interface-typed value is narrowed to a concrete implementation, coupling the code to it
+dotnet_diagnostic.SST2327.severity = error # A type tests its own runtime type against a class instead of dispatching through a virtual member
 
 # Correctness
 dotnet_diagnostic.SST2400.severity = error # Two arguments name each other's parameters and have been transposed
@@ -1833,6 +1835,13 @@ dotnet_diagnostic.PSH1416.severity = error # Cache the serializer options instea
 dotnet_diagnostic.PSH1417.severity = error # Do not compute an expensive argument for an assertion
 dotnet_diagnostic.PSH1418.severity = error # An HttpClient is constructed on every call
 
+# ASP.NET Core - inert in this repo (no route handlers or middleware), enabled so the set stays complete
+dotnet_diagnostic.PSH1500.severity = error # A minimal API handler returns Results instead of TypedResults, boxing the result
+dotnet_diagnostic.PSH1501.severity = error # Middleware uses the legacy nested-delegate Use overload, allocating a per-request closure
+dotnet_diagnostic.PSH1502.severity = error # A route handler returns a deferred sequence the serializer enumerates on the request thread
+dotnet_diagnostic.PSH1503.severity = error # Response caching is used where server-side output caching applies
+dotnet_diagnostic.PSH1505.severity = error # Exceptions are handled in an MVC exception filter instead of an IExceptionHandler
+
 ###################
 # SecuritySharp Analyzers (SES)
 ###################
@@ -1849,6 +1858,8 @@ dotnet_diagnostic.SES1003.severity = error # Password-based key derivation must 
 dotnet_diagnostic.SES1004.severity = error # A secret must not be produced from Guid.NewGuid()
 dotnet_diagnostic.SES1005.severity = error # Compare secret values in constant time
 dotnet_diagnostic.SES1006.severity = error # A Data Protection key ring is persisted without a ProtectKeysWith call, so keys sit unencrypted at rest
+dotnet_diagnostic.SES1007.severity = error # A cryptographic primitive is implemented by hand instead of using a vetted platform algorithm
+dotnet_diagnostic.SES1008.severity = error # An XML signature is verified with the no-key CheckSignature overload, trusting the document's own KeyInfo
 
 # Transport
 dotnet_diagnostic.SES1102.severity = error # Do not accept any server certificate
@@ -1861,6 +1872,7 @@ dotnet_diagnostic.SES1108.severity = error # A custom server-certificate validat
 # Secrets
 dotnet_diagnostic.SES1201.severity = error # Do not hard-code secrets in source
 dotnet_diagnostic.SES1202.severity = error # Do not hard-code a credential value
+dotnet_diagnostic.SES1203.severity = error # A connection string names a user but supplies an empty or missing password
 
 # Injection
 dotnet_diagnostic.SES1301.severity = error # Do not build a process command line from non-constant string parts
