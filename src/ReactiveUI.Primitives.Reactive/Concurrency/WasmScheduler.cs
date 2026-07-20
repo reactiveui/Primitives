@@ -311,19 +311,6 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
         {
         }
 
-        /// <summary>Stores the one-shot timer so the caller's disposable cancels and releases it.</summary>
-        /// <param name="timer">The armed timer.</param>
-        internal void AttachTimer(Timer timer)
-        {
-            Volatile.Write(ref _timer, timer);
-            if (!IsDisposed)
-            {
-                return;
-            }
-
-            timer.Dispose();
-        }
-
         /// <inheritdoc/>
         public void Dispose()
         {
@@ -336,6 +323,19 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
 
             Interlocked.Exchange(ref _timer, null)?.Dispose();
             ReleaseStartedWork();
+        }
+
+        /// <summary>Stores the one-shot timer so the caller's disposable cancels and releases it.</summary>
+        /// <param name="timer">The armed timer.</param>
+        internal void AttachTimer(Timer timer)
+        {
+            Volatile.Write(ref _timer, timer);
+            if (!IsDisposed)
+            {
+                return;
+            }
+
+            timer.Dispose();
         }
     }
 
@@ -370,6 +370,23 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
             _action = action;
         }
 
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            lock (_gate)
+            {
+                if (_isDisposed)
+                {
+                    return;
+                }
+
+                _isDisposed = true;
+                _timer?.Dispose();
+                _timer = null;
+                _state = default!;
+            }
+        }
+
         /// <summary>
         /// Creates a periodic item and arms its timer. Arming it here rather than in the constructor is what keeps
         /// the tick callback from ever seeing a half-built item: the timer is created disarmed, attached, and only
@@ -391,23 +408,6 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
             item._timer = timer;
             _ = timer.Change(period, period);
             return item;
-        }
-
-        /// <inheritdoc/>
-        public void Dispose()
-        {
-            lock (_gate)
-            {
-                if (_isDisposed)
-                {
-                    return;
-                }
-
-                _isDisposed = true;
-                _timer?.Dispose();
-                _timer = null;
-                _state = default!;
-            }
         }
 
         /// <summary>

@@ -54,7 +54,7 @@ internal class DispatchWorkItemBase<TState>
     internal bool IsDisposed => Volatile.Read(ref _isDisposed) != 0;
 
     /// <summary>Runs the scheduled action unless it has already been cancelled, disposing its result if a cancel races the start.</summary>
-    internal void Run()
+    public void Run()
     {
         if (IsDisposed)
         {
