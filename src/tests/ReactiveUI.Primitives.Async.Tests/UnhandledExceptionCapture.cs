@@ -61,8 +61,8 @@ internal sealed class UnhandledExceptionCapture : IDisposable
 
         using PeriodicTimer poll = new(PollInterval);
 
-        while (TimeProvider.System.GetUtcNow() < deadline &&
-               await poll.WaitForNextTickAsync(CancellationToken.None))
+        while (TimeProvider.System.GetUtcNow() < deadline
+               && await poll.WaitForNextTickAsync(CancellationToken.None))
         {
             match = Find(predicate);
 

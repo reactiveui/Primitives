@@ -23,8 +23,8 @@ public static partial class SignalAsyncExtensions
         /// token, and returns a ValueTask that completes when processing is finished.</param>
         /// <returns>A ValueTask that represents the asynchronous operation. The task completes when all elements have been
         /// processed or the operation is canceled.</returns>
-        public ValueTask ForEachAsync(Func<T, CancellationToken, ValueTask> onNextAsync)
-            => @this.ForEachAsync(onNextAsync, CancellationToken.None);
+        public ValueTask ForEachAsync(Func<T, CancellationToken, ValueTask> onNextAsync) =>
+            @this.ForEachAsync(onNextAsync, CancellationToken.None);
 
         /// <summary>Asynchronously invokes the specified action for each element in the sequence as elements are received.</summary>
         /// <remarks>If the sequence completes or is canceled, the method returns when all in-flight
@@ -53,8 +53,8 @@ public static partial class SignalAsyncExtensions
         /// <returns>A task that represents the asynchronous iteration operation. The task completes when the sequence has been
         /// fully processed or the operation is canceled.</returns>
         /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="onNext"/> is null.</exception>
-        public ValueTask ForEachAsync(Action<T> onNext)
-            => @this.ForEachAsync(onNext, CancellationToken.None);
+        public ValueTask ForEachAsync(Action<T> onNext) =>
+            @this.ForEachAsync(onNext, CancellationToken.None);
 
         /// <summary>Asynchronously invokes the specified action for each element in the sequence as elements are received.</summary>
         /// <param name="onNext">The action to invoke for each element in the sequence. Cannot be null.</param>
@@ -98,8 +98,7 @@ public static partial class SignalAsyncExtensions
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
     /// <param name="onNext">The synchronous callback to invoke for each element.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
-    internal sealed class ForEachSyncTaskWitness<T>(Action<T> onNext, CancellationToken cancellationToken)
-        : TaskResultWitnessAsyncBase<T, bool>(cancellationToken)
+    internal sealed class ForEachSyncTaskWitness<T>(Action<T> onNext, CancellationToken cancellationToken) : TaskResultWitnessAsyncBase<T, bool>(cancellationToken)
     {
         /// <summary>The synchronous callback invoked for each element in the sequence.</summary>
         private readonly Action<T> _onNext = onNext;

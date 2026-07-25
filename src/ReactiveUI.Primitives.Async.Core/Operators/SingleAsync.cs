@@ -30,8 +30,8 @@ public static partial class SignalAsyncExtensions
         /// returns <see langword="true"/>.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains the single element that matches
         /// the predicate.</returns>
-        public ValueTask<T> SingleAsync(Func<T, bool> predicate)
-            => @this.SingleAsync(predicate, CancellationToken.None);
+        public ValueTask<T> SingleAsync(Func<T, bool> predicate) =>
+            @this.SingleAsync(predicate, CancellationToken.None);
 
         /// <summary>
         /// Asynchronously returns the single element of a sequence that satisfies a specified condition, or throws an
@@ -45,8 +45,8 @@ public static partial class SignalAsyncExtensions
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains the single element that matches
         /// the predicate.</returns>
-        public ValueTask<T> SingleAsync(Func<T, bool> predicate, CancellationToken cancellationToken)
-            => SingleCoreAsync(@this, predicate, cancellationToken);
+        public ValueTask<T> SingleAsync(Func<T, bool> predicate, CancellationToken cancellationToken) =>
+            SingleCoreAsync(@this, predicate, cancellationToken);
 
         /// <summary>
         /// Asynchronously returns the single element of the sequence, and throws an exception if the sequence does not
@@ -56,8 +56,8 @@ public static partial class SignalAsyncExtensions
         /// sequence is empty or contains more than one element, an exception is thrown.</remarks>
         /// <returns>A task that represents the asynchronous operation. The task result contains the single element of the
         /// sequence.</returns>
-        public ValueTask<T> SingleAsync()
-            => @this.SingleAsync(CancellationToken.None);
+        public ValueTask<T> SingleAsync() =>
+            @this.SingleAsync(CancellationToken.None);
 
         /// <summary>
         /// Asynchronously returns the single element of the sequence, and throws an exception if the sequence does not
@@ -68,8 +68,8 @@ public static partial class SignalAsyncExtensions
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains the single element of the
         /// sequence.</returns>
-        public ValueTask<T> SingleAsync(CancellationToken cancellationToken)
-            => SingleCoreAsync(@this, null, cancellationToken);
+        public ValueTask<T> SingleAsync(CancellationToken cancellationToken) =>
+            SingleCoreAsync(@this, null, cancellationToken);
     }
 
     /// <summary>Shared body for the <c>SingleAsync</c> overloads; subscribes the shared observer and unwraps the result.</summary>

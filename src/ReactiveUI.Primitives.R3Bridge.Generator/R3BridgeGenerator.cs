@@ -280,8 +280,8 @@ public sealed class R3BridgeGenerator : IIncrementalGenerator
 
         context.RegisterSourceOutput(context.CompilationProvider, static (output, compilation) =>
         {
-            if (!HasR3ObservableShapes(compilation) ||
-                compilation.GetTypeByMetadataName("ReactiveUI.Primitives.Async.IObservableAsync`1") is null)
+            if (!HasR3ObservableShapes(compilation)
+                || compilation.GetTypeByMetadataName("ReactiveUI.Primitives.Async.IObservableAsync`1") is null)
             {
                 return;
             }
@@ -294,7 +294,7 @@ public sealed class R3BridgeGenerator : IIncrementalGenerator
     /// <param name="compilation">Consumer compilation inspected by the generator.</param>
     /// <returns><see langword="true"/> when the required R3 observable, observer, and result shapes exist.</returns>
     private static bool HasR3ObservableShapes(Compilation compilation) =>
-        compilation.GetTypeByMetadataName("R3.Observable`1") is not null &&
-        compilation.GetTypeByMetadataName("R3.Observer`1") is not null &&
-        compilation.GetTypeByMetadataName("R3.Result") is not null;
+        compilation.GetTypeByMetadataName("R3.Observable`1") is not null
+        && compilation.GetTypeByMetadataName("R3.Observer`1") is not null
+        && compilation.GetTypeByMetadataName("R3.Result") is not null;
 }

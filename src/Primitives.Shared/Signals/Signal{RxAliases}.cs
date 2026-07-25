@@ -476,8 +476,8 @@ public static partial class Signal
 
         ArgumentExceptionHelper.ThrowIfNull(selector);
 
-        return typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange &&
-               right is RangeSignal rightRange
+        return typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange
+               && right is RangeSignal rightRange
             ? new RangeSyncLatestSignal<TResult>(leftRange, rightRange, (Func<int, int, TResult>)(object)selector)
             : new SyncLatestSignal<TLeft, TRight, TResult>(left, right, selector);
     }

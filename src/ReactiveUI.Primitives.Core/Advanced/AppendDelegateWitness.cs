@@ -10,8 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <param name="onError">The error callback.</param>
 /// <param name="onCompleted">The completion callback.</param>
 /// <param name="value">The appended value.</param>
-public sealed class AppendDelegateWitness<T>(Action<T> onNext, Action<Exception> onError, Action onCompleted, T value)
-    : IObserver<T>, IDisposable
+public sealed class AppendDelegateWitness<T>(Action<T> onNext, Action<Exception> onError, Action onCompleted, T value) : IObserver<T>, IDisposable
 {
     /// <summary>The next callback.</summary>
     private readonly Action<T> _onNext = onNext;

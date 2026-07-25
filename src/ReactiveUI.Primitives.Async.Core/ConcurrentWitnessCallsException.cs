@@ -20,8 +20,8 @@ public class ConcurrentWitnessCallsException : Exception
 {
     /// <summary>The default error message describing the concurrent observer call violation.</summary>
     private const string DefaultMessage =
-        $"Concurrent calls of {nameof(WitnessAsync<>)}.OnNextAsync, {nameof(WitnessAsync<>)}.OnErrorResumeAsync," +
-        $" {nameof(WitnessAsync<>)}.OnCompletedAsync are not allowed. There is already a call pending";
+        $"Concurrent calls of {nameof(WitnessAsync<>)}.OnNextAsync, {nameof(WitnessAsync<>)}.OnErrorResumeAsync,"
+        + $" {nameof(WitnessAsync<>)}.OnCompletedAsync are not allowed. There is already a call pending";
 
     /// <summary>Initializes a new instance of the <see cref="ConcurrentWitnessCallsException"/> class.</summary>
     public ConcurrentWitnessCallsException()

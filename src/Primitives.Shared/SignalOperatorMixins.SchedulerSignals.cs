@@ -526,8 +526,8 @@ public static partial class LinqExtensions
 
         /// <inheritdoc/>
         public bool IsRequiredSubscribeOnCurrentThread() =>
-            _scheduler == Sequencer.CurrentThread ||
-            (_source is IRequireCurrentThread<T> currentThread && currentThread.IsRequiredSubscribeOnCurrentThread());
+            _scheduler == Sequencer.CurrentThread
+            || (_source is IRequireCurrentThread<T> currentThread && currentThread.IsRequiredSubscribeOnCurrentThread());
 
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<T> observer)

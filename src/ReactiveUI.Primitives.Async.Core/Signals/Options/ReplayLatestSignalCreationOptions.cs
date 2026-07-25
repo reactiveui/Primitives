@@ -18,11 +18,7 @@ public sealed record ReplayLatestSignalCreationOptions
     /// <summary>Gets the default configuration options for creating a ReplayLatestSignal instance.</summary>
     /// <remarks>The default options specify serial publishing and stateful behavior. Use this property to
     /// obtain a baseline configuration that can be modified as needed.</remarks>
-    public static ReplayLatestSignalCreationOptions Default { get; } = new()
-    {
-        PublishingOption = PublishingOption.Serial,
-        IsStateless = false
-    };
+    public static ReplayLatestSignalCreationOptions Default { get; } = new() { PublishingOption = PublishingOption.Serial, IsStateless = false };
 
     /// <summary>Gets the publishing option to use when processing this item.</summary>
     public required PublishingOption PublishingOption { get; init; }

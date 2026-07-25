@@ -15,8 +15,7 @@ namespace ReactiveUI.Primitives.Signals;
 /// <param name="source">The source sequence.</param>
 /// <param name="state">The state passed to the predicate.</param>
 /// <param name="predicate">The predicate applied to each source value and the state.</param>
-public sealed class KeepWithSignal<T, TState>(IObservable<T> source, TState state, Func<TState, T, bool> predicate)
-    : IRequireCurrentThread<T>
+public sealed class KeepWithSignal<T, TState>(IObservable<T> source, TState state, Func<TState, T, bool> predicate) : IRequireCurrentThread<T>
 {
     /// <summary>The source sequence.</summary>
     private readonly IObservable<T> _source = source;
@@ -46,8 +45,7 @@ public sealed class KeepWithSignal<T, TState>(IObservable<T> source, TState stat
     /// <param name="observer">The downstream observer.</param>
     /// <param name="state">The state passed to the predicate.</param>
     /// <param name="predicate">The predicate applied to each source value and the state.</param>
-    private sealed class KeepWithWitness(IObserver<T> observer, TState state, Func<TState, T, bool> predicate)
-        : IObserver<T>
+    private sealed class KeepWithWitness(IObserver<T> observer, TState state, Func<TState, T, bool> predicate) : IObserver<T>
     {
         /// <summary>The downstream observer.</summary>
         private readonly IObserver<T> _observer = observer;

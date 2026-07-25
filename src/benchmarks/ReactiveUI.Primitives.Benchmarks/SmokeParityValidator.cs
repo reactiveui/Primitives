@@ -137,9 +137,9 @@ internal static class SmokeParityValidator
     /// <param name="name">The benchmark result name.</param>
     /// <returns><see langword="true"/> when the name has a known library prefix.</returns>
     private static bool HasKnownLibraryPrefix(string name) =>
-        name.StartsWith(PrimitivesPrefix, StringComparison.Ordinal) ||
-        name.StartsWith(SystemReactivePrefix, StringComparison.Ordinal) ||
-        name.StartsWith(R3Prefix, StringComparison.Ordinal);
+        name.StartsWith(PrimitivesPrefix, StringComparison.Ordinal)
+        || name.StartsWith(SystemReactivePrefix, StringComparison.Ordinal)
+        || name.StartsWith(R3Prefix, StringComparison.Ordinal);
 
     /// <summary>Validates that every library row in the group matches the Primitives value.</summary>
     /// <param name="primitivesName">The Primitives result name.</param>
@@ -247,13 +247,13 @@ internal static class SmokeParityValidator
             return null;
         }
 
-        return primitivesValue == expected.Primitives &&
-               systemReactiveValue == expected.SystemReactive &&
-               r3Value == expected.R3
+        return primitivesValue == expected.Primitives
+               && systemReactiveValue == expected.SystemReactive
+               && r3Value == expected.R3
             ? null
-            : $"{primitivesName}: documented scheduling difference changed; expected " +
-              $"Primitives={expected.Primitives}, System.Reactive={expected.SystemReactive}, R3={expected.R3}, " +
-              $"but got Primitives={primitivesValue}, System.Reactive={systemReactiveValue}, R3={r3Value}.";
+            : $"{primitivesName}: documented scheduling difference changed; expected "
+              + $"Primitives={expected.Primitives}, System.Reactive={expected.SystemReactive}, R3={expected.R3}, "
+              + $"but got Primitives={primitivesValue}, System.Reactive={systemReactiveValue}, R3={r3Value}.";
     }
 
     /// <summary>Parses a single <c>key=value</c> smoke output row into its name and integer value.</summary>

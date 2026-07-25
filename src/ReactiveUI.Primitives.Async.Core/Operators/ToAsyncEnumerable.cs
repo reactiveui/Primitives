@@ -32,8 +32,8 @@ public static partial class SignalAsyncExtensions
         /// <exception cref="ArgumentExceptionHelper">Thrown when <paramref name="this"/> or <paramref name="channelFactory"/>
         /// is null.</exception>
         public IAsyncEnumerable<T> ToAsyncEnumerable(
-            Func<Channel<T>> channelFactory)
-            => @this.ToAsyncEnumerable(channelFactory, null);
+            Func<Channel<T>> channelFactory) =>
+            @this.ToAsyncEnumerable(channelFactory, null);
 
         /// <summary>
         /// Converts the specified observable sequence to an asynchronous enumerable sequence, enabling consumption using

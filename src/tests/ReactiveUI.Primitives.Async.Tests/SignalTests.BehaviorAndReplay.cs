@@ -39,11 +39,7 @@ public partial class SignalTests
     [Test]
     public async Task WhenBehaviorSignalConcurrent_ThenNewSubscriberReceivesLatest()
     {
-        BehaviorSignalCreationOptions options = new()
-        {
-            PublishingOption = PublishingOption.Concurrent,
-            IsStateless = false
-        };
+        BehaviorSignalCreationOptions options = new() { PublishingOption = PublishingOption.Concurrent, IsStateless = false };
         const int StartValue = 100;
         var signal = Signal.CreateBehavior(StartValue, options);
         List<int> items = [];
@@ -102,11 +98,7 @@ public partial class SignalTests
     [Test]
     public async Task WhenReplayLatestSignalConcurrent_ThenLateSubscriberGetsLatest()
     {
-        ReplayLatestSignalCreationOptions options = new()
-        {
-            PublishingOption = PublishingOption.Concurrent,
-            IsStateless = false
-        };
+        ReplayLatestSignalCreationOptions options = new() { PublishingOption = PublishingOption.Concurrent, IsStateless = false };
         var signal = Signal.CreateReplayLatest<int>(options);
 
         const int PushedValue = 5;
@@ -138,11 +130,7 @@ public partial class SignalTests
     [Test]
     public async Task WhenBehaviorSignalStateless_ThenEmitsStartValueToNewSubscriber()
     {
-        BehaviorSignalCreationOptions options = new()
-        {
-            PublishingOption = PublishingOption.Serial,
-            IsStateless = true
-        };
+        BehaviorSignalCreationOptions options = new() { PublishingOption = PublishingOption.Serial, IsStateless = true };
         var signal = Signal.CreateBehavior("initial", options);
         List<string> items = [];
         TaskCompletionSource firstReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -167,11 +155,7 @@ public partial class SignalTests
     [Test]
     public async Task WhenReplayLatestStateless_ThenEmitsLatestToNewSubscriber()
     {
-        ReplayLatestSignalCreationOptions options = new()
-        {
-            PublishingOption = PublishingOption.Serial,
-            IsStateless = true
-        };
+        ReplayLatestSignalCreationOptions options = new() { PublishingOption = PublishingOption.Serial, IsStateless = true };
         var signal = Signal.CreateReplayLatest<int>(options);
 
         const int PushedValue = 7;
@@ -199,11 +183,7 @@ public partial class SignalTests
     [Test]
     public async Task WhenConcurrentStatelessReplayLatest_ThenEmitsLatest()
     {
-        ReplayLatestSignalCreationOptions options = new()
-        {
-            PublishingOption = PublishingOption.Concurrent,
-            IsStateless = true
-        };
+        ReplayLatestSignalCreationOptions options = new() { PublishingOption = PublishingOption.Concurrent, IsStateless = true };
         var signal = Signal.CreateReplayLatest<int>(options);
 
         const int PushedValue = 77;
@@ -235,11 +215,7 @@ public partial class SignalTests
     [Test]
     public async Task WhenStatelessReplayLastOnNext_ThenLateSubscriberReceivesReplayedValue()
     {
-        ReplayLatestSignalCreationOptions options = new()
-        {
-            PublishingOption = PublishingOption.Serial,
-            IsStateless = true
-        };
+        ReplayLatestSignalCreationOptions options = new() { PublishingOption = PublishingOption.Serial, IsStateless = true };
         var signal = Signal.CreateReplayLatest<int>(options);
 
         const int FirstValue = 42;
@@ -266,11 +242,7 @@ public partial class SignalTests
     [Test]
     public async Task WhenStatelessReplayLastOnErrorResume_ThenObserverReceivesError()
     {
-        ReplayLatestSignalCreationOptions options = new()
-        {
-            PublishingOption = PublishingOption.Serial,
-            IsStateless = true
-        };
+        ReplayLatestSignalCreationOptions options = new() { PublishingOption = PublishingOption.Serial, IsStateless = true };
         var signal = Signal.CreateReplayLatest<int>(options);
         TaskCompletionSource<Exception> errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -294,11 +266,7 @@ public partial class SignalTests
     [Test]
     public async Task WhenConcurrentStatelessReplayLastOnErrorResume_ThenObserverReceivesError()
     {
-        ReplayLatestSignalCreationOptions options = new()
-        {
-            PublishingOption = PublishingOption.Concurrent,
-            IsStateless = true
-        };
+        ReplayLatestSignalCreationOptions options = new() { PublishingOption = PublishingOption.Concurrent, IsStateless = true };
         var signal = Signal.CreateReplayLatest<int>(options);
         TaskCompletionSource<Exception> errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -322,11 +290,7 @@ public partial class SignalTests
     [Test]
     public async Task WhenStatelessReplayLastOnCompleted_ThenObserverReceivesCompletionAndStateResets()
     {
-        ReplayLatestSignalCreationOptions options = new()
-        {
-            PublishingOption = PublishingOption.Serial,
-            IsStateless = true
-        };
+        ReplayLatestSignalCreationOptions options = new() { PublishingOption = PublishingOption.Serial, IsStateless = true };
         var signal = Signal.CreateReplayLatest<int>(options);
         TaskCompletionSource<Result> resultTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -364,11 +328,7 @@ public partial class SignalTests
     [Test]
     public async Task WhenConcurrentStatelessReplayLastOnCompleted_ThenObserverReceivesCompletion()
     {
-        ReplayLatestSignalCreationOptions options = new()
-        {
-            PublishingOption = PublishingOption.Concurrent,
-            IsStateless = true
-        };
+        ReplayLatestSignalCreationOptions options = new() { PublishingOption = PublishingOption.Concurrent, IsStateless = true };
         var signal = Signal.CreateReplayLatest<int>(options);
         TaskCompletionSource<Result> resultTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -392,11 +352,7 @@ public partial class SignalTests
     [Test]
     public async Task WhenStatelessReplayLastDispose_ThenCompletesSuccessfully()
     {
-        ReplayLatestSignalCreationOptions options = new()
-        {
-            PublishingOption = PublishingOption.Serial,
-            IsStateless = true
-        };
+        ReplayLatestSignalCreationOptions options = new() { PublishingOption = PublishingOption.Serial, IsStateless = true };
         var signal = Signal.CreateReplayLatest<int>(options);
 
         await signal.OnNextAsync(1, CancellationToken.None);
@@ -408,11 +364,7 @@ public partial class SignalTests
     [Test]
     public async Task WhenConcurrentStatelessReplayLastDispose_ThenCompletesSuccessfully()
     {
-        ReplayLatestSignalCreationOptions options = new()
-        {
-            PublishingOption = PublishingOption.Concurrent,
-            IsStateless = true
-        };
+        ReplayLatestSignalCreationOptions options = new() { PublishingOption = PublishingOption.Concurrent, IsStateless = true };
         var signal = Signal.CreateReplayLatest<int>(options);
 
         await signal.OnNextAsync(1, CancellationToken.None);
@@ -424,11 +376,7 @@ public partial class SignalTests
     [Test]
     public async Task WhenConcurrentStatelessBehavior_ThenEmitsStartValue()
     {
-        BehaviorSignalCreationOptions options = new()
-        {
-            PublishingOption = PublishingOption.Concurrent,
-            IsStateless = true
-        };
+        BehaviorSignalCreationOptions options = new() { PublishingOption = PublishingOption.Concurrent, IsStateless = true };
         const int StartValue = 55;
         var signal = Signal.CreateBehavior(StartValue, options);
         List<int> items = [];
@@ -606,11 +554,7 @@ public partial class SignalTests
     [Test]
     public async Task WhenConcurrentReplayLatestOnErrorResume_ThenObserverReceivesError()
     {
-        ReplayLatestSignalCreationOptions options = new()
-        {
-            PublishingOption = PublishingOption.Concurrent,
-            IsStateless = false
-        };
+        ReplayLatestSignalCreationOptions options = new() { PublishingOption = PublishingOption.Concurrent, IsStateless = false };
         var signal = Signal.CreateReplayLatest<int>(options);
         TaskCompletionSource<Exception> errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -634,11 +578,7 @@ public partial class SignalTests
     [Test]
     public async Task WhenConcurrentReplayLatestOnCompleted_ThenObserverReceivesCompletion()
     {
-        ReplayLatestSignalCreationOptions options = new()
-        {
-            PublishingOption = PublishingOption.Concurrent,
-            IsStateless = false
-        };
+        ReplayLatestSignalCreationOptions options = new() { PublishingOption = PublishingOption.Concurrent, IsStateless = false };
         var signal = Signal.CreateReplayLatest<int>(options);
         TaskCompletionSource<Result> resultTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -704,11 +644,7 @@ public partial class SignalTests
     [Test]
     public async Task WhenReplayLatestOnNextWithCustomToken_ThenForwardsValue()
     {
-        var signal = Signal.CreateReplayLatest<int>(new()
-        {
-            PublishingOption = PublishingOption.Concurrent,
-            IsStateless = false
-        });
+        var signal = Signal.CreateReplayLatest<int>(new() { PublishingOption = PublishingOption.Concurrent, IsStateless = false });
         TaskCompletionSource<int> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values.SubscribeAsync((v, _) =>
@@ -731,11 +667,7 @@ public partial class SignalTests
     [Test]
     public async Task WhenReplayLatestOnErrorResumeWithCustomToken_ThenForwardsError()
     {
-        var signal = Signal.CreateReplayLatest<int>(new()
-        {
-            PublishingOption = PublishingOption.Concurrent,
-            IsStateless = false
-        });
+        var signal = Signal.CreateReplayLatest<int>(new() { PublishingOption = PublishingOption.Concurrent, IsStateless = false });
         TaskCompletionSource<Exception> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values.SubscribeAsync(
@@ -760,11 +692,7 @@ public partial class SignalTests
     [Test]
     public async Task WhenStatelessReplayLatestOnNextWithCustomToken_ThenForwardsValue()
     {
-        var signal = Signal.CreateReplayLatest<int>(new()
-        {
-            PublishingOption = PublishingOption.Serial,
-            IsStateless = true
-        });
+        var signal = Signal.CreateReplayLatest<int>(new() { PublishingOption = PublishingOption.Serial, IsStateless = true });
         TaskCompletionSource<int> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values.SubscribeAsync((value, _) =>
@@ -787,11 +715,7 @@ public partial class SignalTests
     [Test]
     public async Task WhenStatelessReplayLatestOnErrorResumeWithCustomToken_ThenForwardsError()
     {
-        var signal = Signal.CreateReplayLatest<int>(new()
-        {
-            PublishingOption = PublishingOption.Serial,
-            IsStateless = true
-        });
+        var signal = Signal.CreateReplayLatest<int>(new() { PublishingOption = PublishingOption.Serial, IsStateless = true });
         TaskCompletionSource<Exception> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values.SubscribeAsync(
@@ -831,11 +755,7 @@ public partial class SignalTests
     [Test]
     public async Task WhenStatelessReplayLatestSubscribeWithCustomToken_ThenSubscriptionCompletes()
     {
-        var signal = Signal.CreateReplayLatest<int>(new()
-        {
-            PublishingOption = PublishingOption.Serial,
-            IsStateless = true
-        });
+        var signal = Signal.CreateReplayLatest<int>(new() { PublishingOption = PublishingOption.Serial, IsStateless = true });
         using CancellationTokenSource cts = new();
 
         var sub = await signal.Values.SubscribeAsync(static (_, _) => default, cts.Token);
@@ -866,11 +786,7 @@ public partial class SignalTests
     [Test]
     public async Task WhenStatelessReplayLatestSubscriptionDisposedAfterSignalDisposed_ThenDisposeIsIdempotent()
     {
-        var signal = Signal.CreateReplayLatest<int>(new()
-        {
-            PublishingOption = PublishingOption.Serial,
-            IsStateless = true
-        });
+        var signal = Signal.CreateReplayLatest<int>(new() { PublishingOption = PublishingOption.Serial, IsStateless = true });
         var sub = await signal.Values.SubscribeAsync(static (_, _) => default);
 
         await signal.DisposeAsync();
@@ -898,11 +814,7 @@ public partial class SignalTests
     [Test]
     public async Task WhenStatelessReplayLastSignalDisposedTwice_ThenIdempotent()
     {
-        var signal = Signal.CreateReplayLatest<int>(new()
-        {
-            PublishingOption = PublishingOption.Serial,
-            IsStateless = true
-        });
+        var signal = Signal.CreateReplayLatest<int>(new() { PublishingOption = PublishingOption.Serial, IsStateless = true });
 
         await signal.DisposeAsync();
         await signal.DisposeAsync();

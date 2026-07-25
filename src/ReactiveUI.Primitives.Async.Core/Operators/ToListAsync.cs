@@ -18,14 +18,14 @@ public static partial class SignalAsyncExtensions
         /// <summary>Asynchronously collects all elements from the source sequence into a list.</summary>
         /// <returns>A task that represents the asynchronous operation. The task result contains a list of all elements in the
         /// source sequence, in the order they were received.</returns>
-        public ValueTask<List<T>> CollectListAsync()
-            => @this.ToListAsync(CancellationToken.None);
+        public ValueTask<List<T>> CollectListAsync() =>
+            @this.ToListAsync(CancellationToken.None);
 
         /// <summary>Asynchronously collects all elements from the source sequence into a list.</summary>
         /// <returns>A task that represents the asynchronous operation. The task result contains a list of all elements in the
         /// source sequence, in the order they were received.</returns>
-        public ValueTask<List<T>> ToListAsync()
-            => @this.CollectListAsync();
+        public ValueTask<List<T>> ToListAsync() =>
+            @this.CollectListAsync();
 
         /// <summary>Asynchronously collects all elements from the source sequence into a list.</summary>
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
@@ -52,8 +52,7 @@ public static partial class SignalAsyncExtensions
     /// <summary>Witness that collects all elements from a sequence into a list.</summary>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
-    internal sealed class ToListTaskWitness<T>(CancellationToken cancellationToken)
-        : TaskResultWitnessAsyncBase<T, List<T>>(cancellationToken)
+    internal sealed class ToListTaskWitness<T>(CancellationToken cancellationToken) : TaskResultWitnessAsyncBase<T, List<T>>(cancellationToken)
     {
         /// <summary>The list that accumulates all elements received from the source sequence.</summary>
         private readonly List<T> _items = [];

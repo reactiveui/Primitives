@@ -75,8 +75,7 @@ public static partial class SignalAsyncExtensions
     internal sealed class GroupByAsyncSignal<TKey, TValue>(
         IObservableAsync<TValue> source,
         Func<TValue, TKey> keySelector,
-        Func<TKey, ISignalAsync<TValue>> groupSignalSelector)
-        : IObservableAsync<GroupedAsyncSignal<TKey, TValue>>
+        Func<TKey, ISignalAsync<TValue>> groupSignalSelector) : IObservableAsync<GroupedAsyncSignal<TKey, TValue>>
         where TKey : notnull
     {
         /// <summary>The source observable sequence whose elements are grouped by key.</summary>

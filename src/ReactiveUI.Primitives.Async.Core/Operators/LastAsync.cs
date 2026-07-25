@@ -20,8 +20,8 @@ public static partial class SignalAsyncExtensions
         /// predicate returns <see langword="true"/>.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains the last element that matches
         /// the predicate.</returns>
-        public ValueTask<T> LastAsync(Func<T, bool> predicate)
-            => @this.LastAsync(predicate, CancellationToken.None);
+        public ValueTask<T> LastAsync(Func<T, bool> predicate) =>
+            @this.LastAsync(predicate, CancellationToken.None);
 
         /// <summary>Asynchronously returns the last element in the sequence that satisfies the specified predicate.</summary>
         /// <param name="predicate">A function to test each element for a condition. The method returns the last element for which this
@@ -44,8 +44,8 @@ public static partial class SignalAsyncExtensions
         /// immediately.</remarks>
         /// <returns>A task that represents the asynchronous operation. The task result contains the last element of the
         /// sequence.</returns>
-        public ValueTask<T> LastAsync()
-            => @this.LastAsync(CancellationToken.None);
+        public ValueTask<T> LastAsync() =>
+            @this.LastAsync(CancellationToken.None);
 
         /// <summary>Asynchronously returns the last element of the sequence.</summary>
         /// <remarks>If the sequence is empty, the behavior depends on the implementation and may result
@@ -68,8 +68,7 @@ public static partial class SignalAsyncExtensions
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
     /// <param name="predicate">An optional predicate to filter elements.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
-    internal sealed class LastTaskWitness<T>(Func<T, bool>? predicate, CancellationToken cancellationToken)
-        : TaskResultWitnessAsyncBase<T, T>(cancellationToken)
+    internal sealed class LastTaskWitness<T>(Func<T, bool>? predicate, CancellationToken cancellationToken) : TaskResultWitnessAsyncBase<T, T>(cancellationToken)
     {
         /// <summary>A value indicating whether any matching element has been observed.</summary>
         private bool _hasValue;

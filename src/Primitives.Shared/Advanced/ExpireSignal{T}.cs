@@ -38,8 +38,8 @@ public sealed class ExpireSignal<T> : IRequireCurrentThread<T>
 
     /// <inheritdoc/>
     public bool IsRequiredSubscribeOnCurrentThread() =>
-        _sequencer == Sequencer.CurrentThread ||
-        (_source is IRequireCurrentThread<T> currentThread && currentThread.IsRequiredSubscribeOnCurrentThread());
+        _sequencer == Sequencer.CurrentThread
+        || (_source is IRequireCurrentThread<T> currentThread && currentThread.IsRequiredSubscribeOnCurrentThread());
 
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)

@@ -138,8 +138,7 @@ public static partial class SignalAsyncExtensions
         Func<TSource, TKey> keySelector,
         Func<TSource, TValue> elementSelector,
         IEqualityComparer<TKey>? comparer,
-        CancellationToken cancellationToken)
-        : TaskResultWitnessAsyncBase<TSource, Dictionary<TKey, TValue>>(cancellationToken)
+        CancellationToken cancellationToken) : TaskResultWitnessAsyncBase<TSource, Dictionary<TKey, TValue>>(cancellationToken)
         where TKey : notnull
     {
         /// <summary>The dictionary that accumulates key-value pairs from the source sequence.</summary>
@@ -154,11 +153,11 @@ public static partial class SignalAsyncExtensions
         }
 
         /// <inheritdoc/>
-        protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken)
-            => SetExceptionAndDisposeAsync(error);
+        protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            SetExceptionAndDisposeAsync(error);
 
         /// <inheritdoc/>
-        protected override ValueTask OnCompletedAsyncCore(Result result)
-            => !result.IsSuccess ? SetExceptionAndDisposeAsync(result.Exception) : SetResultAndDisposeAsync(_map);
+        protected override ValueTask OnCompletedAsyncCore(Result result) =>
+            !result.IsSuccess ? SetExceptionAndDisposeAsync(result.Exception) : SetResultAndDisposeAsync(_map);
     }
 }

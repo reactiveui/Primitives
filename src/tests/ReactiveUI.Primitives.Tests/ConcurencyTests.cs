@@ -126,8 +126,8 @@ public class ConcurencyTests
 
         /// <summary>Completes <see cref = "Completed"/> with whether this callback ran inline on the scheduling thread.</summary>
         public void RecordExecution() => _ = Completed.TrySetResult(
-            Environment.CurrentManagedThreadId == _schedulingThreadId &&
-            Volatile.Read(ref _scheduling) != 0);
+            Environment.CurrentManagedThreadId == _schedulingThreadId
+            && Volatile.Read(ref _scheduling) != 0);
     }
 
     /// <summary>Records whether a scheduled callback ran at all, so a cancellation can be shown to have suppressed it.</summary>

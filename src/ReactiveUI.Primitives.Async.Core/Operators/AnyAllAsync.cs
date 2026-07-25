@@ -40,8 +40,8 @@ public static partial class SignalAsyncExtensions
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains <see langword="true"/> if the
         /// source contains any elements; otherwise, <see langword="false"/>.</returns>
-        public ValueTask<bool> AnyAsync(CancellationToken cancellationToken)
-            => @this.AnyAsync(null, cancellationToken);
+        public ValueTask<bool> AnyAsync(CancellationToken cancellationToken) =>
+            @this.AnyAsync(null, cancellationToken);
 
         /// <summary>Asynchronously determines whether all elements in the sequence satisfy the specified predicate.</summary>
         /// <param name="predicate">A function to test each element for a condition. The method evaluates this predicate for each element in the
@@ -76,8 +76,7 @@ public static partial class SignalAsyncExtensions
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
     /// <param name="predicate">An optional predicate to test each element. If null, the sequence is checked for any elements.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
-    internal sealed class AnyTaskWitness<T>(Func<T, bool>? predicate, CancellationToken cancellationToken)
-        : TaskResultWitnessAsyncBase<T, bool>(cancellationToken)
+    internal sealed class AnyTaskWitness<T>(Func<T, bool>? predicate, CancellationToken cancellationToken) : TaskResultWitnessAsyncBase<T, bool>(cancellationToken)
     {
         /// <inheritdoc/>
         protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
@@ -99,8 +98,7 @@ public static partial class SignalAsyncExtensions
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
     /// <param name="predicate">The predicate to test each element against.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
-    internal sealed class AllTaskWitness<T>(Func<T, bool> predicate, CancellationToken cancellationToken)
-        : TaskResultWitnessAsyncBase<T, bool>(cancellationToken)
+    internal sealed class AllTaskWitness<T>(Func<T, bool> predicate, CancellationToken cancellationToken) : TaskResultWitnessAsyncBase<T, bool>(cancellationToken)
     {
         /// <summary>The predicate function used to test each element in the sequence.</summary>
         private readonly Func<T, bool> _predicate = predicate;

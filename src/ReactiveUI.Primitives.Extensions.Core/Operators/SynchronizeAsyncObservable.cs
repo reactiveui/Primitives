@@ -24,8 +24,7 @@ public sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IObse
 
     /// <summary>The sink for the <see cref="SynchronizeAsyncObservable{T}"/>.</summary>
     /// <param name="downstream">The downstream observer.</param>
-    private sealed class SynchronizeAsyncSink(IObserver<(T Value, IDisposable Sync)> downstream)
-        : IObserver<T>, IDisposable
+    private sealed class SynchronizeAsyncSink(IObserver<(T Value, IDisposable Sync)> downstream) : IObserver<T>, IDisposable
     {
         /// <summary>The gate for state access.</summary>
         private readonly Lock _gate = new();

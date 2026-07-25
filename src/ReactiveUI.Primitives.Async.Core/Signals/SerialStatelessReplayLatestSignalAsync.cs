@@ -15,8 +15,7 @@ namespace ReactiveUI.Primitives.Async.Signals;
 /// <typeparam name="T">The type of the elements processed by the Signal.</typeparam>
 /// <param name="startValue">An optional initial value to be replayed to new observers before any values are published. If not specified, no
 /// value is replayed until the first value is received.</param>
-public sealed class SerialStatelessReplayLatestSignalAsync<T>(Optional<T> startValue)
-    : ISignalAsync<T>
+public sealed class SerialStatelessReplayLatestSignalAsync<T>(Optional<T> startValue) : ISignalAsync<T>
 {
     /// <inheritdoc/>
     IObservableAsync<T> ISignalAsync<T>.Values => this;

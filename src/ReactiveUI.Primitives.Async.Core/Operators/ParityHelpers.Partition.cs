@@ -265,8 +265,7 @@ public static partial class SignalAsyncExtensions
         /// <summary>Branch subscription handle returned to the subscriber.</summary>
         /// <param name="coordinator">The owning coordinator.</param>
         /// <param name="isTrueBranch"><see langword="true"/> for the truthy branch.</param>
-        internal sealed class BranchSubscription(PartitionCoordinator<T> coordinator, bool isTrueBranch)
-            : IAsyncDisposable
+        internal sealed class BranchSubscription(PartitionCoordinator<T> coordinator, bool isTrueBranch) : IAsyncDisposable
         {
             /// <summary>Latches to <c>1</c> on the first <see cref="DisposeAsync"/> call so release is idempotent.</summary>
             private int _disposed;

@@ -19,8 +19,8 @@ public static partial class SignalAsyncExtensions
         /// <param name="predicate">A function to test each element for a condition. If null, all elements are counted.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains the number of elements that
         /// satisfy the predicate, or the total number of elements if the predicate is null.</returns>
-        public ValueTask<long> LongCountAsync(Func<T, bool>? predicate)
-            => @this.LongCountAsync(predicate, CancellationToken.None);
+        public ValueTask<long> LongCountAsync(Func<T, bool>? predicate) =>
+            @this.LongCountAsync(predicate, CancellationToken.None);
 
         /// <summary>Asynchronously returns the number of elements in the sequence that satisfy an optional predicate.</summary>
         /// <param name="predicate">A function to test each element for a condition. If null, all elements are counted.</param>
@@ -41,23 +41,22 @@ public static partial class SignalAsyncExtensions
         /// <summary>Asynchronously returns the total number of elements in the sequence as a 64-bit integer.</summary>
         /// <returns>A value task representing the asynchronous operation. The result contains the number of elements in the
         /// sequence as a 64-bit integer.</returns>
-        public ValueTask<long> LongCountAsync()
-            => @this.LongCountAsync(null, CancellationToken.None);
+        public ValueTask<long> LongCountAsync() =>
+            @this.LongCountAsync(null, CancellationToken.None);
 
         /// <summary>Asynchronously returns the total number of elements in the sequence as a 64-bit integer.</summary>
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
         /// <returns>A value task representing the asynchronous operation. The result contains the number of elements in the
         /// sequence as a 64-bit integer.</returns>
-        public ValueTask<long> LongCountAsync(CancellationToken cancellationToken)
-            => @this.LongCountAsync(null, cancellationToken);
+        public ValueTask<long> LongCountAsync(CancellationToken cancellationToken) =>
+            @this.LongCountAsync(null, cancellationToken);
     }
 
     /// <summary>Witness that counts elements in a sequence as a 64-bit integer, optionally filtered by a predicate.</summary>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
     /// <param name="predicate">An optional predicate to filter elements. If null, all elements are counted.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
-    internal sealed class LongCountTaskWitness<T>(Func<T, bool>? predicate, CancellationToken cancellationToken)
-        : TaskResultWitnessAsyncBase<T, long>(cancellationToken)
+    internal sealed class LongCountTaskWitness<T>(Func<T, bool>? predicate, CancellationToken cancellationToken) : TaskResultWitnessAsyncBase<T, long>(cancellationToken)
     {
         /// <summary>The running count of elements that satisfy the predicate.</summary>
         private long _count;

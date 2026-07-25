@@ -39,8 +39,7 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The source observable sequence.</param>
     /// <param name="dueTime">The maximum allowed inter-element interval.</param>
     /// <param name="timeProvider">The time provider used for scheduling the dueTime.</param>
-    internal sealed class TimeoutSignal<T>(IObservableAsync<T> source, TimeSpan dueTime, TimeProvider timeProvider)
-        : IObservableAsync<T>
+    internal sealed class TimeoutSignal<T>(IObservableAsync<T> source, TimeSpan dueTime, TimeProvider timeProvider) : IObservableAsync<T>
     {
         /// <summary>Subscribes the specified observer and starts the dueTime timer.</summary>
         /// <param name="observer">The observer to receive elements from the source.</param>
@@ -63,8 +62,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="observer">The downstream observer to forward elements to.</param>
         /// <param name="dueTime">The maximum allowed inter-element interval.</param>
         /// <param name="timeProvider">The time provider used for scheduling the dueTime.</param>
-        internal sealed class TimeoutWitness(IObserverAsync<T> observer, TimeSpan dueTime, TimeProvider timeProvider)
-            : WitnessAsync<T>
+        internal sealed class TimeoutWitness(IObserverAsync<T> observer, TimeSpan dueTime, TimeProvider timeProvider) : WitnessAsync<T>
         {
             /// <summary>Synchronization gate protecting timer state.</summary>
             private readonly Lock _gate = new();

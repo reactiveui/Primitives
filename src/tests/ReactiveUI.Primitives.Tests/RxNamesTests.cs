@@ -476,14 +476,14 @@ public partial class RxNamesTests
 
         await TestPolling.SpinUntil(
             () =>
-                delayedScalar.Count == One &&
-                delayedRange.Count == Two &&
-                delayedExplicitRange.Count == Two &&
-                delayedSubscriptionScalar.Count == One &&
-                delayedSubscriptionRange.Count == Two &&
-                delayedSubscriptionExplicitRange.Count == Two &&
-                timeout is not null &&
-                explicitTimeout is not null,
+                delayedScalar.Count == One
+                && delayedRange.Count == Two
+                && delayedExplicitRange.Count == Two
+                && delayedSubscriptionScalar.Count == One
+                && delayedSubscriptionRange.Count == Two
+                && delayedSubscriptionExplicitRange.Count == Two
+                && timeout is not null
+                && explicitTimeout is not null,
             TimeSpan.FromSeconds(PollTimeoutSeconds));
 
         await Assert.That(delayedScalar.SequenceEqual([One])).IsTrue();

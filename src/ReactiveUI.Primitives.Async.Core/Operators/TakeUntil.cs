@@ -315,8 +315,7 @@ public static partial class SignalAsyncExtensions
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
     /// <param name="source">The source observable sequence.</param>
     /// <param name="cancellationToken">The cancellation token that triggers completion.</param>
-    internal sealed class CancellationStopSignal<T>(IObservableAsync<T> source, CancellationToken cancellationToken)
-        : IObservableAsync<T>
+    internal sealed class CancellationStopSignal<T>(IObservableAsync<T> source, CancellationToken cancellationToken) : IObservableAsync<T>
     {
         /// <summary>The source observable sequence.</summary>
         private readonly IObservableAsync<T> _source = source;
@@ -584,8 +583,7 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The source observable sequence.</param>
     /// <param name="task">The task whose completion triggers the end of the sequence.</param>
     /// <param name="options">Options controlling the take-until behavior.</param>
-    internal sealed class TaskStopSignal<T>(IObservableAsync<T> source, Task task, TakeUntilOptions options)
-        : IObservableAsync<T>
+    internal sealed class TaskStopSignal<T>(IObservableAsync<T> source, Task task, TakeUntilOptions options) : IObservableAsync<T>
     {
         /// <summary>The source observable sequence.</summary>
         private readonly IObservableAsync<T> _source = source;

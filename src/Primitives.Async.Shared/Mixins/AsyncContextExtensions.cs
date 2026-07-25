@@ -32,8 +32,8 @@ public static class AsyncContextExtensions
 
             if (@this.Sequencer is not null)
             {
-                return TaskScheduler.Current is AsyncContext.SequencerTaskScheduler adapter &&
-                       ReferenceEquals(adapter.Sequencer, @this.Sequencer);
+                return TaskScheduler.Current is AsyncContext.SequencerTaskScheduler adapter
+                       && ReferenceEquals(adapter.Sequencer, @this.Sequencer);
             }
 
             return @this.TaskScheduler is not null

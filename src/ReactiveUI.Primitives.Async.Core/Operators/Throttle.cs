@@ -79,8 +79,7 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The source observable sequence to throttle.</param>
     /// <param name="dueTime">The quiet period that must elapse before an element is forwarded.</param>
     /// <param name="timeProvider">The time provider used for scheduling the debounce timer.</param>
-    internal sealed class ThrottleSignal<T>(IObservableAsync<T> source, TimeSpan dueTime, TimeProvider timeProvider)
-        : IObservableAsync<T>
+    internal sealed class ThrottleSignal<T>(IObservableAsync<T> source, TimeSpan dueTime, TimeProvider timeProvider) : IObservableAsync<T>
     {
         /// <summary>Subscribes the specified observer with throttle behavior applied.</summary>
         /// <param name="observer">The observer to receive throttled elements.</param>
@@ -101,8 +100,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="observer">The downstream observer to forward debounced elements to.</param>
         /// <param name="dueTime">The quiet period that must elapse before an element is forwarded.</param>
         /// <param name="timeProvider">The time provider used for scheduling the debounce timer.</param>
-        internal sealed class ThrottleWitness(IObserverAsync<T> observer, TimeSpan dueTime, TimeProvider timeProvider)
-            : WitnessAsync<T>
+        internal sealed class ThrottleWitness(IObserverAsync<T> observer, TimeSpan dueTime, TimeProvider timeProvider) : WitnessAsync<T>
         {
             /// <summary>The synchronization gate protecting shared throttle state.</summary>
             private readonly Lock _gate = new();

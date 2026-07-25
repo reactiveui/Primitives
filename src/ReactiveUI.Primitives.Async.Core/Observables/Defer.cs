@@ -61,8 +61,7 @@ public static partial class SignalAsync
     /// state-machine box per call to host the factory's <c>await</c>.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="factory">The deferred factory invoked once per subscribe.</param>
-    internal sealed class DeferAsyncSignalAsync<T>(Func<CancellationToken, ValueTask<IObservableAsync<T>>> factory)
-        : IObservableAsync<T>
+    internal sealed class DeferAsyncSignalAsync<T>(Func<CancellationToken, ValueTask<IObservableAsync<T>>> factory) : IObservableAsync<T>
     {
         /// <inheritdoc/>
         async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(

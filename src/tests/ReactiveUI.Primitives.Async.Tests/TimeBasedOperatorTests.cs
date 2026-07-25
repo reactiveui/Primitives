@@ -935,8 +935,8 @@ public class TimeBasedOperatorTests
             /// <summary>Invokes the callback once if the timer has not been disposed.</summary>
             internal void Fire()
             {
-                if (Volatile.Read(ref _disposed) != 0 ||
-                    Interlocked.Exchange(ref _fired, 1) != 0)
+                if (Volatile.Read(ref _disposed) != 0
+                    || Interlocked.Exchange(ref _fired, 1) != 0)
                 {
                     return;
                 }

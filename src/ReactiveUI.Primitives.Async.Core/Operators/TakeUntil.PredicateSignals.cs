@@ -15,8 +15,7 @@ public static partial class SignalAsyncExtensions
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
     /// <param name="source">The source observable sequence.</param>
     /// <param name="predicate">The predicate that signals when to stop emitting items.</param>
-    internal sealed class PredicateStopSignal<T>(IObservableAsync<T> source, Func<T, bool> predicate)
-        : IObservableAsync<T>
+    internal sealed class PredicateStopSignal<T>(IObservableAsync<T> source, Func<T, bool> predicate) : IObservableAsync<T>
     {
         /// <summary>The predicate that signals when to stop emitting items.</summary>
         private readonly Func<T, bool> _predicate = predicate;
@@ -38,8 +37,7 @@ public static partial class SignalAsyncExtensions
         /// <summary>Observer that forwards items from the source until the predicate returns true.</summary>
         /// <param name="parent">The parent observable that owns this subscription.</param>
         /// <param name="observer">The downstream observer to forward items to.</param>
-        internal sealed class PredicateStopCoordinator(PredicateStopSignal<T> parent, IObserverAsync<T> observer)
-            : WitnessAsync<T>
+        internal sealed class PredicateStopCoordinator(PredicateStopSignal<T> parent, IObserverAsync<T> observer) : WitnessAsync<T>
         {
             /// <summary>The inner subscription handle.</summary>
             private IAsyncDisposable? _subscription;
