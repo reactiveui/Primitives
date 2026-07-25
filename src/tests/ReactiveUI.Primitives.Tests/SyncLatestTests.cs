@@ -242,7 +242,7 @@ public partial class SyncLatestTests
             third,
             static (a, b, c) => a + b + c);
         var thrown = Assert.Throws<InvalidOperationException>(() => _ = combined.Subscribe(static _ => { }));
-        await Assert.That(thrown).IsSameReferenceAs(expected);
+        await Assert.That(thrown!).IsSameReferenceAs(expected);
         await Assert.That(first.HasObservers).IsFalse();
         await Assert.That(third.HasObservers).IsFalse();
     }

@@ -553,8 +553,7 @@ public class TransformationOperatorTests
                 received.Add(x);
                 if (received.Count == 3)
                 {
-                    await (subscription ?? throw new InvalidOperationException("The subscription is not ready."))
-                        .DisposeAsync();
+                    await subscription!.DisposeAsync();
                 }
             },
             null);

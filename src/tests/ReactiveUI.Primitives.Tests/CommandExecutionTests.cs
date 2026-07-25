@@ -46,7 +46,7 @@ public class CommandExecutionTests
 
         await Assert.That(execution.GetAwaiter().IsCompleted).IsTrue();
         var thrown = Assert.Throws<InvalidOperationException>(() => execution.GetAwaiter().GetResult());
-        await Assert.That(thrown).IsSameReferenceAs(fault);
+        await Assert.That(thrown!).IsSameReferenceAs(fault);
     }
 
     /// <summary>
@@ -72,7 +72,7 @@ public class CommandExecutionTests
         using CommandSignal<int> failing = new(() => throw fault);
         var configured = failing.ExecuteAsync().ConfigureAwait(false);
         var thrown = Assert.Throws<InvalidOperationException>(() => configured.GetAwaiter().GetResult());
-        await Assert.That(thrown).IsSameReferenceAs(fault);
+        await Assert.That(thrown!).IsSameReferenceAs(fault);
     }
 
     /// <summary>

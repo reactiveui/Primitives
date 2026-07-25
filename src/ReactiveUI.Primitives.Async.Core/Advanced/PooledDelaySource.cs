@@ -95,8 +95,7 @@ public sealed class PooledDelaySource : IValueTaskSource
         // some test / benchmark providers); in that case _completed flips to Claimed before this
         // call returns.
         _timer = timeProvider.CreateTimer(
-            static state => ((PooledDelaySource)(
-                state ?? throw new InvalidOperationException("The delay state is missing."))).OnTimerFired(),
+            static state => ((PooledDelaySource)state!).OnTimerFired(),
             this,
             delay,
             Timeout.InfiniteTimeSpan);

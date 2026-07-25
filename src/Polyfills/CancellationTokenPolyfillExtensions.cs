@@ -31,7 +31,7 @@ internal static class CancellationTokenPolyfillExtensions
                 static boxed =>
                 {
                     var (inner, innerState, innerToken) =
-                        ((Action<object?, CancellationToken> Callback, object? State, CancellationToken Token))boxed;
+                        ((Action<object?, CancellationToken> Callback, object? State, CancellationToken Token))boxed!;
                     inner(innerState, innerToken);
                 },
                 (callback, state, token),

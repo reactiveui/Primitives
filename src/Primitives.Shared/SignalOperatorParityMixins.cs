@@ -788,7 +788,7 @@ public static partial class LinqExtensions
             }
 
             return task.IsFaulted
-                ? new ImmediateThrowSignal<T>(task.Exception.InnerException ?? task.Exception)
+                ? new ImmediateThrowSignal<T>(task.Exception!.InnerException ?? task.Exception)
                 : new TaskInstanceSignal<T>(task);
         }
 

@@ -49,8 +49,7 @@ public sealed class StartSubscription : TaskSignalSubscription<RxVoid>
                 static s =>
                 {
                     var (self, observer, cancellationToken) =
-                        ((StartSubscription, IObserverAsync<RxVoid>, CancellationToken))(
-                            s ?? throw new InvalidOperationException("The start state is missing."));
+                        ((StartSubscription, IObserverAsync<RxVoid>, CancellationToken))s!;
                     return self.ExecuteActionAsync(observer, cancellationToken).AsTask();
                 },
                 (this, observer, cancellationToken),

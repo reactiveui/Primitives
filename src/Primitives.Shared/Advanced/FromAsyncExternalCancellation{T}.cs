@@ -64,10 +64,7 @@ internal sealed class FromAsyncExternalCancellation<T> : IDisposable
         }
 
         Registration =
-            CancellationToken.Register(
-                static state => ((FromAsyncExternalCancellation<T>)(
-                    state ?? throw new InvalidOperationException("The cancellation state is missing."))).Cancel(),
-                this);
+            CancellationToken.Register(static state => ((FromAsyncExternalCancellation<T>)state!).Cancel(), this);
         return !Lifetime.IsCompleted;
     }
 

@@ -909,7 +909,7 @@ public class SignalFromTaskTest
             ConcurrentQueue<int> values = new();
             ConcurrentQueue<Exception> errors = new();
             _ = taskSignal.Subscribe(values.Enqueue, errors.Enqueue, static () => { });
-            await taskSignal.CancellationTokenSource.CancelAsync();
+            await taskSignal.CancellationTokenSource!.CancelAsync();
             completion.SetResult(SuccessValue);
             await TestPolling.SpinUntil(() => !errors.IsEmpty, PollTimeout).ConfigureAwait(false);
             await Assert.That(errors.Count).IsEqualTo(1);

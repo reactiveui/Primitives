@@ -54,8 +54,7 @@ public sealed class IntervalSubscription : TaskSignalSubscription<long>
     {
         TaskCompletionSource<bool> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var tp = TimeProvider!.CreateTimer(
-            static state => ((TaskCompletionSource<bool>)(
-                state ?? throw new InvalidOperationException("The interval state is missing."))).TrySetResult(true),
+            static x => ((TaskCompletionSource<bool>)x!).TrySetResult(true),
             tcs,
             Period,
             Timeout.InfiniteTimeSpan);
@@ -65,8 +64,7 @@ public sealed class IntervalSubscription : TaskSignalSubscription<long>
             cancellationToken.Register(
                 static x =>
                 {
-                    var (tcs, ct) = ((TaskCompletionSource<bool>, CancellationToken))(
-                        x ?? throw new InvalidOperationException("The interval cancellation state is missing."));
+                    var (tcs, ct) = ((TaskCompletionSource<bool>, CancellationToken))x!;
                     _ = tcs.TrySetCanceled(ct);
                 },
                 (tcs, cancellationToken));
@@ -75,7 +73,7 @@ public sealed class IntervalSubscription : TaskSignalSubscription<long>
             cancellationToken.Register(
                 static x =>
                 {
-                    var (tcs, ct) = ((TaskCompletionSource<bool>, CancellationToken))x;
+                    var (tcs, ct) = ((TaskCompletionSource<bool>, CancellationToken))x!;
                     _ = tcs.TrySetCanceled(ct);
                 },
                 (tcs, cancellationToken));

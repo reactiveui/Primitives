@@ -29,7 +29,7 @@ public sealed class MauiDispatcherSequencerTests
     public async Task ToSequencerValidatesAndAdaptsDispatcher()
     {
         const IDispatcher nullDispatcher = null!;
-        await Assert.That(static () => nullDispatcher.ToSequencer()).ThrowsExactly<ArgumentNullException>();
+        await Assert.That(static () => nullDispatcher!.ToSequencer()).ThrowsExactly<ArgumentNullException>();
 
         FakeDispatcher dispatcher = new();
         var sequencer = dispatcher.ToSequencer();

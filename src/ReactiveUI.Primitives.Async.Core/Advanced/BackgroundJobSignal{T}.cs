@@ -76,8 +76,7 @@ public sealed class BackgroundJobSignal<T> : IObservableAsync<T>
                 static s =>
                 {
                     var (self, observer, cancellationToken) =
-                        ((BackgroundJobSignal<T>, IObserverAsync<T>, CancellationToken))(
-                            s ?? throw new InvalidOperationException("The background-job state is missing."));
+                        ((BackgroundJobSignal<T>, IObserverAsync<T>, CancellationToken))s!;
                     return self.Job(observer, cancellationToken).AsTask();
                 },
                 (this, observer, cancellationToken),

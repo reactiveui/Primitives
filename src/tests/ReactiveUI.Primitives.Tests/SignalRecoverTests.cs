@@ -88,7 +88,7 @@ public class SignalRecoverTests
         var caught = Assert.Throws<InvalidOperationException>(() =>
             failingSource.OnCleanup(() => cleanupRuns++).Subscribe(static _ => { }));
 
-        await Assert.That(caught).IsSameReferenceAs(expected);
+        await Assert.That(caught!).IsSameReferenceAs(expected);
         await Assert.That(cleanupRuns).IsEqualTo(1);
     }
 

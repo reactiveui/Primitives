@@ -725,7 +725,7 @@ public partial class TakeUntilOperatorTests
         notifyStop!(Result.Success);
         await firstCompletion.Task.WaitAsync(WaitTimeout);
 
-        notifyStop(Result.Failure(new InvalidOperationException("second stop")));
+        notifyStop!(Result.Failure(new InvalidOperationException("second stop")));
         var leaked = await AsyncTestHelpers.WaitForConditionAsync(
             () => errors.Count > 0 || completions.Count > 1,
             SecondNotificationSettleWindow);

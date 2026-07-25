@@ -183,7 +183,7 @@ public static partial class Signal
             return false;
         }
 
-        observer.OnError(task.Exception.InnerException ?? task.Exception);
+        observer.OnError(task.Exception!.InnerException ?? task.Exception);
         return true;
     }
 
@@ -288,9 +288,7 @@ public static partial class Signal
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
             _ = SourceCore.Token.Register(
-                static state => ((IObserver<Exception>)(
-                    state ?? throw new InvalidOperationException("The cancellation observer is missing."))).OnNext(
-                        new OperationCanceledException()),
+                static state => ((IObserver<Exception>)state!).OnNext(new OperationCanceledException()),
                 observer,
                 false);
         }

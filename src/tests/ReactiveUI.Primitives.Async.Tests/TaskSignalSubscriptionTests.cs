@@ -24,8 +24,7 @@ public sealed class TaskSignalSubscriptionTests
         {
             await subscriptionReady.Task.ConfigureAwait(false);
             await Task.Yield();
-            await (subscription ?? throw new InvalidOperationException("The subscription is not ready."))
-                .DisposeAsync().ConfigureAwait(false);
+            await subscription!.DisposeAsync().ConfigureAwait(false);
             disposed.SetResult();
         });
 

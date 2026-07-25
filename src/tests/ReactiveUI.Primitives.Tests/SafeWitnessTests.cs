@@ -92,7 +92,7 @@ public class SafeWitnessTests
         // A second push must not reach the callback, so it must not throw either.
         safe.OnNext(LateValue);
 
-        await Assert.That(thrown.Message).IsEqualTo("next-failed");
+        await Assert.That(thrown!.Message).IsEqualTo("next-failed");
         await Assert.That(calls).IsEqualTo(1);
     }
 
@@ -153,6 +153,6 @@ public class SafeWitnessTests
         // The witness has latched stopped, so this must be a silent no-op rather than a second throw.
         safe.OnNext(LateValue);
 
-        await Assert.That(thrown.Message).IsEqualTo("observer-next");
+        await Assert.That(thrown!.Message).IsEqualTo("observer-next");
     }
 }

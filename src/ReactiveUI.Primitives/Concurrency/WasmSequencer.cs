@@ -49,8 +49,7 @@ public sealed class WasmSequencer : ISequencer, IDisposable
     internal WasmSequencer()
     {
         _timer = new(
-            static state => ((WasmSequencer)(
-                state ?? throw new InvalidOperationException("The sequencer state is missing."))).RunDrain(),
+            static state => ((WasmSequencer)state!).RunDrain(),
             this,
             Timeout.InfiniteTimeSpan,
             Timeout.InfiniteTimeSpan);
