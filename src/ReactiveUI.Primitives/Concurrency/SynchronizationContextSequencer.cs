@@ -40,7 +40,10 @@ public sealed class SynchronizationContextSequencer : ISequencer
     {
         ArgumentExceptionHelper.ThrowIfNull(item);
 
-        Context.Post(static state => ExecutePosted((IWorkItem)state!), item);
+        Context.Post(
+            static state => ExecutePosted((IWorkItem)(
+                state ?? throw new InvalidOperationException("The posted work item is missing."))),
+            item);
     }
 
     /// <inheritdoc/>

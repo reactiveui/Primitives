@@ -86,11 +86,8 @@ public partial class CombiningOperatorTests
         await handle.DisposeAsync();
 
         // After the double-dispose the connectable must accept a new connection.
-        await using var sub = await connectable.SubscribeAsync(static (_, _) =>
-        {
-            // Signal is already completed from first connect, so no items arrive.
-            return ValueTask.CompletedTask;
-        });
+        // Signal is already completed from first connect, so no items arrive.
+        await using var sub = await connectable.SubscribeAsync(static (_, _) => ValueTask.CompletedTask);
 
         // A new ConnectAsync succeeds, proving internal state was not corrupted.
         await using var newHandle = await connectable.ConnectAsync(CancellationToken.None);

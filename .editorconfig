@@ -556,6 +556,7 @@ dotnet_diagnostic.CA5367.severity = error # Do not serialize types with pointer 
 dotnet_diagnostic.S1075.severity = none # Hardcoded URI — canonical SourceLink hosts are the point
 dotnet_diagnostic.S2436.severity = none # Too many generic parameters — needed for the projector overload
 dotnet_diagnostic.S4036.severity = none # PATH-relative process spawn — benchmark only, trusted env
+dotnet_diagnostic.S8969.severity = none # Nullability inference is inconsistent across the repository's target frameworks
 
 ###################
 # Microsoft .NET Runtime Obsoletions (SYSLIB0xxx)
@@ -1899,7 +1900,7 @@ dotnet_diagnostic.SES1710.severity = error # Antiforgery validation is disabled 
 dotnet_diagnostic.SST1101.severity = none # see docs/rules/SST1101.md
 dotnet_diagnostic.SST1220.severity = error # An all-named argument list is in a different order than the parameters. Code fix reorders it to declaration order. Info.
 dotnet_diagnostic.SST1221.severity = error # `where` constraint clauses are not ordered to match the type-parameter list. Code fix reorders them. Info.
-dotnet_diagnostic.SST1321.severity = error # A method whose name ends in `Async` returns nothing awaitable — the inverse of SST1317. Code fix (rename) drops the suffix.
+dotnet_diagnostic.SST1321.severity = none # Public APIs intentionally use Async to describe asynchronous observable behavior without returning an awaitable.
 dotnet_diagnostic.SST1434.severity = error # see docs/rules/SST1434.md
 dotnet_diagnostic.SST1525.severity = error # A multi-statement `switch` section has no braces; the braces-on policy extends to switch sections. Code fix wraps it.
 dotnet_diagnostic.SST1526.severity = none # A wrapped binary expression places the operator inconsistently. Configurable (`before`/`after`, default before). Opt-in.

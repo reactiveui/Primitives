@@ -115,7 +115,7 @@ public class UseSignalTests
         // The sink has stopped, so this must be a silent no-op rather than a second trip into the observer.
         sink.OnNext(LateValue);
 
-        await Assert.That(thrown!.Message).IsEqualTo("observer-next");
+        await Assert.That(thrown.Message).IsEqualTo("observer-next");
         await Assert.That(resource.DisposeCount).IsEqualTo(1);
         await Assert.That(source.DisposeCount).IsEqualTo(1);
     }

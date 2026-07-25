@@ -95,7 +95,7 @@ internal static class ConnectableSignalAsyncHelper
         }
 
         state.DisposedCts.Cancel();
-        state.Connection?.DisposeAsync().AsTask().Wait();
+        state.Connection?.DisposeAsync().AsTask().Wait(CancellationToken.None);
         state.Dispose();
     }
 

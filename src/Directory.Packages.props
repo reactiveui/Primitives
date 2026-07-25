@@ -18,7 +18,7 @@
     <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0"/>
     <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0"/>
     <PackageVersion Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="5.6.0"/>
-    <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.29.0.143774"/>
+    <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.30.0.144632"/>
   </ItemGroup>
   <!-- Benchmarks + tests -->
   <ItemGroup>
@@ -45,7 +45,7 @@
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="11.0.0-preview.6.26359.118" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="11.0.0-preview.6.26359.118" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="11.0.0-preview.6.26359.118" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
-    <PackageVersion Include="Microsoft.Maui.Core" Version="10.0.80" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0')) AND !$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
+    <PackageVersion Include="Microsoft.Maui.Core" Version="10.0.90" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0')) AND !$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
     <PackageVersion Include="Microsoft.Maui.Core" Version="11.0.0-preview.6.26360.8" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
     <PackageVersion Include="Microsoft.WindowsAppSDK" Version="2.3.1"/>
   </ItemGroup>
@@ -65,7 +65,7 @@
   <ItemGroup>
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0"/>
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1"/>
-    <PackageVersion Include="TUnit" Version="1.61.23"/>
+    <PackageVersion Include="TUnit" Version="1.61.38"/>
     <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.9.0"/>
   </ItemGroup>
   <Import Project="$(MSBuildThisFileDirectory)/directory.packages.support.props" Condition="Exists('$(MSBuildThisFileDirectory)/directory.packages.support.props')"/>

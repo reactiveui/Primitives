@@ -17,7 +17,8 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
     public static readonly ThreadPoolSequencer Instance = new();
 
     /// <summary>Cached queue callback for immediate work.</summary>
-    private static readonly WaitCallback ImmediateCallback = static state => ExecuteQueued((IWorkItem)state!);
+    private static readonly WaitCallback ImmediateCallback = static state => ExecuteQueued(
+        (IWorkItem)(state ?? throw new InvalidOperationException("The queued work item is missing.")));
 
     /// <summary>Guards access to delayed work.</summary>
     private readonly Lock _gate = new();
@@ -47,7 +48,8 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
             "The timer is created disarmed, so nothing can call back into it until Schedule arms it after construction.")]
     internal ThreadPoolSequencer() =>
         _timer = new(
-            static state => ((ThreadPoolSequencer)state!).RunDue(),
+            static state => ((ThreadPoolSequencer)(
+                state ?? throw new InvalidOperationException("The sequencer state is missing."))).RunDue(),
             this,
             Timeout.InfiniteTimeSpan,
             Timeout.InfiniteTimeSpan);

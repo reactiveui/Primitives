@@ -56,7 +56,11 @@ internal sealed class TaskSignal<T> : ITaskSignal<T>
     /// <param name="observer">The observer.</param>
     public void GetOperationCanceled(IObserver<Exception> observer) =>
         CancellationTokenSource?.Token
-            .Register(static o => ((IObserver<Exception>)o!).OnNext(new OperationCanceledException()), observer)
+            .Register(
+                static state => ((IObserver<Exception>)(
+                    state ?? throw new InvalidOperationException("The cancellation observer is missing."))).OnNext(
+                        new OperationCanceledException()),
+                observer)
             .DisposeWith(_cleanUp);
 
     /// <summary>Subscribes the specified observer.</summary>

@@ -580,10 +580,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
             return hasRemaining;
         }
 
-        void RecordIteration()
-        {
-            total++;
-        }
+        void RecordIteration() => total++;
 
         return library == ExtensionsLibrary.Primitives
             ? DrainPrimitiveUnit(PrimitivesExtensions.While(ShouldContinue, RecordIteration)) + total

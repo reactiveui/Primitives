@@ -155,7 +155,11 @@ public sealed class ConcurrencyLimiter<T>(IEnumerable<Task<T>> taskFunctions, in
             _rator.Current?.ContinueWith(
                 static (ant, state) =>
                 {
-                    var sub = (Subscription)state!;
+                    if (state is not Subscription sub)
+                    {
+                        throw new InvalidOperationException("The continuation state is not a subscription.");
+                    }
+
                     sub.Limiter.ProcessTaskCompletion(sub, ant);
                 },
                 subscription,

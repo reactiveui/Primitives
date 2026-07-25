@@ -111,7 +111,15 @@ public sealed class SelectLatestAsyncObservable<TSource, TResult>(
             }
 
             _ = toAwait.ContinueWith(
-                static (_, s) => ((SelectLatestAsyncSink)s!).SignalCompleted(),
+                static (_, state) =>
+                {
+                    if (state is not SelectLatestAsyncSink sink)
+                    {
+                        throw new InvalidOperationException("The continuation state is not a select-latest sink.");
+                    }
+
+                    sink.SignalCompleted();
+                },
                 this,
                 TaskScheduler.Default);
         }

@@ -101,7 +101,8 @@ public sealed class FromAsyncSubscription<T> : IDisposable
 
         FromAsyncTaskObservation<T> observation = new(Observer, Lifetime, ExternalCancellation, linkedSource);
         _ = task.ContinueWith(
-            static (completedTask, state) => ((FromAsyncTaskObservation<T>)state!).Observe(completedTask),
+            static (completedTask, state) => ((FromAsyncTaskObservation<T>)(
+                state ?? throw new InvalidOperationException("The observation state is missing."))).Observe(completedTask),
             observation,
             CancellationToken.None,
             TaskContinuationOptions.ExecuteSynchronously,

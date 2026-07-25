@@ -542,7 +542,7 @@ public class SignalFromTaskTest
             return Signal.Fail<RxVoid>(ex);
         }).OnCleanup(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
         var result = false;
-        using var subscription = fixture.Subscribe(_ => result = true);
+        var subscription = fixture.Subscribe(_ => result = true);
         await Task.Delay(InitialDelayMilliseconds).ConfigureAwait(true);
         await Assert.That(StatusMessages(statusTrail)).Contains(StartedCommand);
         await Task.Delay(CommandDelayMilliseconds).ConfigureAwait(true);
@@ -580,7 +580,7 @@ public class SignalFromTaskTest
             return Signal.Fail<RxVoid>(ex);
         }).OnCleanup(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
         var result = false;
-        using var subscription = fixture.Subscribe(_ => result = true);
+        var subscription = fixture.Subscribe(_ => result = true);
         await Task.Delay(InitialDelayMilliseconds).ConfigureAwait(true);
         await Assert.That(StatusMessages(statusTrail)).Contains(StartedCommand);
         subscription.Dispose();
@@ -661,7 +661,7 @@ public class SignalFromTaskTest
             RecordStatus(statusTrail, ref position, ExceptionShouldBeHere);
             return Signal.Fail<RxVoid>(ex);
         }).OnCleanup(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
-        using var subscription = fixture.Subscribe();
+        var subscription = fixture.Subscribe();
         await Task.Delay(InitialDelayMilliseconds).ConfigureAwait(true);
         await Assert.That(StatusMessages(statusTrail)).Contains(StartedCommand);
         subscription.Dispose();
@@ -729,7 +729,7 @@ public class SignalFromTaskTest
             return Signal.Fail<RxVoid>(ex);
         }).OnCleanup(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
         var result = false;
-        using var subscription = fixture.Subscribe(_ => result = true);
+        var subscription = fixture.Subscribe(_ => result = true);
         await Task.Delay(InitialDelayMilliseconds).ConfigureAwait(true);
         await Assert.That(StatusMessages(statusTrail)).Contains(StartedCommand);
         await Task.Delay(CommandDelayMilliseconds).ConfigureAwait(true);
@@ -767,7 +767,7 @@ public class SignalFromTaskTest
             return Signal.Fail<RxVoid>(ex);
         }).OnCleanup(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
         var result = false;
-        using var subscription = fixture.Subscribe(_ => result = true);
+        var subscription = fixture.Subscribe(_ => result = true);
         await Task.Delay(InitialDelayMilliseconds).ConfigureAwait(true);
         await Assert.That(StatusMessages(statusTrail)).Contains(StartedCommand);
         subscription.Dispose();
@@ -848,7 +848,7 @@ public class SignalFromTaskTest
             RecordStatus(statusTrail, ref position, ExceptionShouldBeHere);
             return Signal.Fail<RxVoid>(ex);
         }).OnCleanup(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
-        using var subscription = fixture.Subscribe();
+        var subscription = fixture.Subscribe();
         await Task.Delay(InitialDelayMilliseconds).ConfigureAwait(true);
         await Assert.That(StatusMessages(statusTrail)).Contains(StartedCommand);
         subscription.Dispose();
@@ -909,7 +909,7 @@ public class SignalFromTaskTest
             ConcurrentQueue<int> values = new();
             ConcurrentQueue<Exception> errors = new();
             _ = taskSignal.Subscribe(values.Enqueue, errors.Enqueue, static () => { });
-            await taskSignal.CancellationTokenSource!.CancelAsync();
+            await taskSignal.CancellationTokenSource.CancelAsync();
             completion.SetResult(SuccessValue);
             await TestPolling.SpinUntil(() => !errors.IsEmpty, PollTimeout).ConfigureAwait(false);
             await Assert.That(errors.Count).IsEqualTo(1);
@@ -1067,7 +1067,7 @@ public class SignalFromTaskTest
     /// <returns>A <see cref = "Task"/> representing the asynchronous operation.</returns>
     private static async Task CancelAfterDelayAsync(CancellationTokenSource cts)
     {
-        await Task.Delay(TokenCancellationDelayMilliseconds).ConfigureAwait(false);
+        await Task.Delay(TokenCancellationDelayMilliseconds, cts.Token).ConfigureAwait(false);
         await cts.CancelAsync().ConfigureAwait(false);
     }
 

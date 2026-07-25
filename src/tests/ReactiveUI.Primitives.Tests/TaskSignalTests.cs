@@ -38,7 +38,7 @@ public class TaskSignalTests
     [Test]
     public async Task TaskSignalCreateWithASchedulerBuildsASignalThatCancelsOnDisposal()
     {
-        using var taskSignal = TaskSignal.Create<int>(static _ => Signal.Silent<int>(), Sequencer.CurrentThread);
+        var taskSignal = TaskSignal.Create<int>(static _ => Signal.Silent<int>(), Sequencer.CurrentThread);
 
         await Assert.That(taskSignal.IsCancellationRequested).IsFalse();
         await Assert.That(taskSignal.IsDisposed).IsFalse();

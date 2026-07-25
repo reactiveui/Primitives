@@ -523,7 +523,7 @@ public class SinkObserverTests
 
         var thrown = Assert.Throws<InvalidOperationException>(() => sink.OnNext(Two));
 
-        await Assert.That(thrown!.Message).IsEqualTo(ObserverNextMessage);
+        await Assert.That(thrown.Message).IsEqualTo(ObserverNextMessage);
         await Assert.That(subscription.DisposeCount).IsEqualTo(1);
     }
 
@@ -545,7 +545,7 @@ public class SinkObserverTests
         source.Next(One);
         var thrown = Assert.Throws<InvalidOperationException>(() => source.Next(Two));
 
-        await Assert.That(thrown!.Message).IsEqualTo(ObserverNextMessage);
+        await Assert.That(thrown.Message).IsEqualTo(ObserverNextMessage);
         await Assert.That(observer.NextCount).IsEqualTo(One);
 
         // The sink disposed its upstream; this source ignores disposal and pushes on regardless.
@@ -683,7 +683,7 @@ public class SinkObserverTests
     {
         var thrown = Assert.Throws<InvalidOperationException>(() => sink.OnNext(1));
 
-        await Assert.That(thrown!.Message).IsEqualTo("observer-next");
+        await Assert.That(thrown.Message).IsEqualTo("observer-next");
         await Assert.That(subscription.DisposeCount).IsEqualTo(1);
     }
 

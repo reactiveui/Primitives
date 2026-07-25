@@ -80,7 +80,7 @@ public sealed class PrioritySemaphoreSignalTests
     {
         using var signal = new PrioritySemaphoreSignal<int>(0);
         var observer = new RecordingObserver<int>();
-        using var subscription = signal.Subscribe(observer);
+        var subscription = signal.Subscribe(observer);
         await Assert.That(signal.HasObservers).IsTrue();
 
         signal.OnNext(ThirdValue);
@@ -132,7 +132,7 @@ public sealed class PrioritySemaphoreSignalTests
     {
         using var signal = new PrioritySemaphoreSignal<int>(1);
         var observer = new RecordingObserver<int>();
-        using var subscription = signal.Subscribe(observer);
+        var subscription = signal.Subscribe(observer);
 
         signal.OnNext(FirstValue);
 
@@ -209,7 +209,7 @@ public sealed class PrioritySemaphoreSignalTests
     {
         using var signal = new PrioritySemaphoreSignal<int>(InitialDrainCapacity);
         var observer = new ConcurrencyProbe();
-        using var subscription = signal.Subscribe(observer);
+        var subscription = signal.Subscribe(observer);
         for (var i = 0; i < SeededValueCount; i++)
         {
             signal.OnNext(i);

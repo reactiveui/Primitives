@@ -102,10 +102,17 @@ public static partial class SignalExtensions
         internal async Task<(TResult Value, bool IsCanceled)> WhenCancelled(CancellationToken cancellationToken)
         {
             TaskCompletionSource<TResult> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
-            var registration = cancellationToken.Register(
-                static state => ((TaskCompletionSource<TResult>)state!).TrySetCanceled(),
-                tcs,
-                false);
+            var registration = cancellationToken.UnsafeRegister(
+                static (state, token) =>
+                {
+                    if (state is not TaskCompletionSource<TResult> source)
+                    {
+                        throw new InvalidOperationException("The cancellation state is not a completion source.");
+                    }
+
+                    _ = source.TrySetCanceled(token);
+                },
+                tcs);
             var cancellationTask = tcs.Task;
 
             try

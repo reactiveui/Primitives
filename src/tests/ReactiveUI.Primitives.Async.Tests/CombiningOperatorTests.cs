@@ -152,7 +152,7 @@ public partial class CombiningOperatorTests
             public IObservableAsync<T> Current => null!;
 
             /// <inheritdoc/>
-            object System.Collections.IEnumerator.Current => Current!;
+            object System.Collections.IEnumerator.Current => Current;
 
             /// <inheritdoc/>
             public bool MoveNext() => throw new InvalidOperationException("enumerator MoveNext boom");

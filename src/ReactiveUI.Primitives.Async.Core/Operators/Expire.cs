@@ -89,7 +89,8 @@ public static partial class SignalAsyncExtensions
                 try
                 {
                     _timer = timeProvider.CreateTimer(
-                        static state => ((TimeoutWitness)state!).OnTimerFired(),
+                        static state => ((TimeoutWitness)(
+                            state ?? throw new InvalidOperationException("The timeout state is missing."))).OnTimerFired(),
                         this,
                         dueTime,
                         System.Threading.Timeout.InfiniteTimeSpan);

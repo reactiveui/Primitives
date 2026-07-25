@@ -50,7 +50,8 @@ public sealed class TaskPoolSequencer : ISequencer
         ArgumentExceptionHelper.ThrowIfNull(item);
 
         _ = _taskFactory.StartNew(
-            static state => ((DispatchState)state!).Run(),
+            static state => ((DispatchState)(
+                state ?? throw new InvalidOperationException("The dispatch state is missing."))).Run(),
             new DispatchState(this, item),
             _taskFactory.CancellationToken,
             _taskFactory.CreationOptions,

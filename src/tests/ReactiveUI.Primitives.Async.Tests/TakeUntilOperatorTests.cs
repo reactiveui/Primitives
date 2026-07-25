@@ -204,7 +204,7 @@ public partial class TakeUntilOperatorTests
     public void WhenTaskStopSignalNullSource_ThenThrowsArgumentNull()
     {
         const IObservableAsync<int> Source = null!;
-        _ = Assert.Throws<ArgumentNullException>(static () => Source!.TakeUntil(Task.CompletedTask));
+        _ = Assert.Throws<ArgumentNullException>(static () => Source.TakeUntil(Task.CompletedTask));
     }
 
     /// <summary>Tests that task failure with SourceFailsWhenOtherFails=true completes with failure.</summary>

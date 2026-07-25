@@ -248,7 +248,7 @@ public class AsyncSignalTests
         RecordingWitness<int> asyncFirst = new();
         RecordingWitness<int> asyncSecond = new();
         using var asyncSubscription = asyncSignal.Subscribe(asyncFirst);
-        using var asyncSecondSubscription = asyncSignal.Subscribe(asyncSecond);
+        var asyncSecondSubscription = asyncSignal.Subscribe(asyncSecond);
         asyncSecondSubscription.Dispose();
         asyncSignal.OnNext(FirstEmittedValue);
         asyncSignal.OnCompleted(() => completionFaults++);

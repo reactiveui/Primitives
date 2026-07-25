@@ -37,7 +37,9 @@ public sealed class FlatMapWitness<TSource, TResult> : WitnessAsync<TSource>
     {
         var inner = SyncSelector is not null
             ? SyncSelector(value)
-            : await AsyncSelector!(value, cancellationToken).ConfigureAwait(false);
+            : await (AsyncSelector ?? throw new InvalidOperationException("The flat-map selector is missing."))(
+                value,
+                cancellationToken).ConfigureAwait(false);
 
         await Coordinator.SubscribeInnerAsync(inner).ConfigureAwait(false);
     }

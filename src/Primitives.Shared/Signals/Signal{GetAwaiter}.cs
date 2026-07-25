@@ -121,7 +121,8 @@ public static partial class Signal
         var ctr = token.Register(
             static state =>
             {
-                var (subscription, subject, token) = ((IDisposable, IAwaitSignal<T>, CancellationToken))state!;
+                var (subscription, subject, token) = ((IDisposable, IAwaitSignal<T>, CancellationToken))(
+                    state ?? throw new InvalidOperationException("The await cancellation state is missing."));
                 subscription.Dispose();
                 _ = Cancel(subject, token);
             },

@@ -169,7 +169,10 @@ public sealed record AsyncContext
             var sc = AsyncContext.SynchronizationContext;
             if (sc is not null)
             {
-                sc.Post(static c => ((Action)c!).Invoke(), continuation);
+                sc.Post(
+                    static state => ((Action)(
+                        state ?? throw new InvalidOperationException("The continuation is missing."))).Invoke(),
+                    continuation);
                 return;
             }
 
@@ -196,7 +199,10 @@ public sealed record AsyncContext
             // path Yield takes by default, so the saving lands on the operator's hot path.
             if (ts is null || ts == TaskScheduler.Default)
             {
-                _ = ThreadPool.UnsafeQueueUserWorkItem(static c => ((Action)c!).Invoke(), continuation);
+                _ = ThreadPool.UnsafeQueueUserWorkItem(
+                    static state => ((Action)(
+                        state ?? throw new InvalidOperationException("The continuation is missing."))).Invoke(),
+                    continuation);
             }
         }
 

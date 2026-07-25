@@ -235,7 +235,7 @@ public static partial class Signal
         }
 
         return task.IsFaulted
-            ? new ImmediateThrowSignal<T>(task.Exception!.InnerException ?? task.Exception)
+            ? new ImmediateThrowSignal<T>(task.Exception.InnerException ?? task.Exception)
             : new TaskInstanceSignal<T>(task);
     }
 

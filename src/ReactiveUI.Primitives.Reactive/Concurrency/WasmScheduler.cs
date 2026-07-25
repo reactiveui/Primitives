@@ -63,7 +63,8 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
             "The drain timer is created disarmed, so nothing can call back into it until Schedule arms it after construction.")]
     internal WasmScheduler() =>
         _drainTimer = new(
-            static state => ((WasmScheduler)state!).RunDrain(),
+            static state => ((WasmScheduler)(
+                state ?? throw new InvalidOperationException("The scheduler state is missing."))).RunDrain(),
             this,
             Timeout.InfiniteTimeSpan,
             Timeout.InfiniteTimeSpan);
@@ -124,7 +125,13 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
 
         // The timer roots itself while armed through the callback's target (the work item), which stores the
         // timer; the item's Dispose cancels and releases it.
-        item.AttachTimer(new(static s => ((IReadyWorkItem)s!).Run(), item, dt, Timeout.InfiniteTimeSpan));
+        item.AttachTimer(
+            new(
+                static state => ((IReadyWorkItem)(
+                    state ?? throw new InvalidOperationException("The work-item state is missing."))).Run(),
+                item,
+                dt,
+                Timeout.InfiniteTimeSpan));
         return item;
     }
 
@@ -417,7 +424,8 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
         {
             PeriodicWorkItem<TState> item = new(state, action);
             Timer timer = new(
-                static s => ((PeriodicWorkItem<TState>)s!).Tick(),
+                static state => ((PeriodicWorkItem<TState>)(
+                    state ?? throw new InvalidOperationException("The periodic state is missing."))).Tick(),
                 item,
                 Timeout.InfiniteTimeSpan,
                 Timeout.InfiniteTimeSpan);

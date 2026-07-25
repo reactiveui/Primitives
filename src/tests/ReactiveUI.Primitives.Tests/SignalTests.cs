@@ -477,9 +477,9 @@ public class SignalTests
         RecordingWitness<int> third = new();
         RecordingWitness<int> fourth = new();
         List<int> actionValues = [];
-        using var action = subject.Subscribe(actionValues.Add);
+        var action = subject.Subscribe(actionValues.Add);
         using var firstSubscription = subject.Subscribe(first);
-        using var secondSubscription = subject.Subscribe(second);
+        var secondSubscription = subject.Subscribe(second);
         using var thirdSubscription = subject.Subscribe(third);
         using var fourthSubscription = subject.Subscribe(fourth);
         secondSubscription.Dispose();

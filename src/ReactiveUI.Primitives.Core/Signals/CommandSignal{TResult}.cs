@@ -157,7 +157,10 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
 
             return _executeSync is not null
                 ? new(ExecuteSync(cancellationToken))
-                : new CommandExecution<TResult>(ExecuteAsyncCore(cancellationToken));
+                : new CommandExecution<TResult>(
+                    ExecuteAsyncCore(
+                        _executeAsync ?? throw new InvalidOperationException("The command has no execution delegate."),
+                        cancellationToken));
         }
         catch (Exception error)
         {
@@ -269,14 +272,17 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
     }
 
     /// <summary>Executes the asynchronous command path.</summary>
+    /// <param name="executeAsync">The constructor-selected delegate, guaranteed non-null for this path.</param>
     /// <param name="cancellationToken">Cancellation token for the operation.</param>
     /// <returns>The command result.</returns>
-    private async Task<TResult> ExecuteAsyncCore(CancellationToken cancellationToken)
+    private async Task<TResult> ExecuteAsyncCore(
+        Func<CancellationToken, Task<TResult>> executeAsync,
+        CancellationToken cancellationToken)
     {
         BeginExecution();
         try
         {
-            var result = await _executeAsync!(cancellationToken).ConfigureAwait(false);
+            var result = await executeAsync(cancellationToken).ConfigureAwait(false);
             PublishResult(result);
             return result;
         }

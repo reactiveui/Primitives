@@ -317,20 +317,17 @@ public static partial class LinqExtensions
 
         /// <summary>Creates the duplicate-tracking set, pre-sized when the source has a known element count.</summary>
         /// <returns>The set used to track already-observed values.</returns>
-        private HashSet<T> CreateSeen()
-        {
+        private HashSet<T> CreateSeen() =>
 #if NET8_0_OR_GREATER
-            var capacity = _source is RangeSignal range ? range.Count : 0;
-            return capacity switch
+            (_source is RangeSignal range ? range.Count : 0) switch
             {
-                > 0 => new(capacity, _comparer),
+                var capacity when capacity > 0 => new(capacity, _comparer),
                 _ when _comparer is null => [],
                 _ => new(_comparer),
             };
 #else
-            return new(_comparer);
+            new(_comparer);
 #endif
-        }
     }
 
     /// <summary>Dedicated signal for <c>Unique</c> (adjacent distinct).</summary>

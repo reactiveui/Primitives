@@ -121,7 +121,7 @@ public sealed class SyncLatestEnumerableCoordinator<TSource, TResult> : IAsyncDi
 
             for (var i = 0; i < Values.Length; i++)
             {
-                SnapshotBuffer[i] = Values[i].Value!;
+                SnapshotBuffer[i] = Values[i].Value;
             }
 
             TResult projected;

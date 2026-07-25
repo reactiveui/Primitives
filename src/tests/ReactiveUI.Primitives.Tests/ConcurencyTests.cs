@@ -91,7 +91,7 @@ public class ConcurencyTests
     {
         var nt = TaskPoolSequencer.Instance;
         var probe = new CancellationProbe();
-        using var scheduled = nt.Schedule(probe, CancelDueTime, static p => p.RecordExecution());
+        var scheduled = nt.Schedule(probe, CancelDueTime, static p => p.RecordExecution());
         scheduled.Dispose();
         var delay = Task.Delay(CancelObservationWindow);
         var observed = await Task.WhenAny(probe.Completed.Task, delay);

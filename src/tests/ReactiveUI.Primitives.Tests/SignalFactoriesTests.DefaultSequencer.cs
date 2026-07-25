@@ -78,10 +78,7 @@ public partial class SignalFactoriesTests
 
         // A void method group is what selects Start(Action); a lambda over 'actionRuns++' is a
         // Func<int> and would bind to the generic Start<T> overload instead.
-        void RunAction()
-        {
-            actionRuns++;
-        }
+        void RunAction() => actionRuns++;
 
         using var actionSubscription = Signal.Start(RunAction).Subscribe(actionValues.Add);
         await TestPolling.SpinUntil(() => actionValues.Count == 1, DefaultSequencerTimeout);

@@ -76,7 +76,8 @@ public sealed class TaskResultCompletionSource<T>(CancellationToken cancellation
         _cancellationToken.Register(
             static state =>
             {
-                var source = (TaskResultCompletionSource<T>)state!;
+                var source = (TaskResultCompletionSource<T>)(
+                    state ?? throw new InvalidOperationException("The task result state is missing."));
                 _ = source._taskSource.TrySetException(new OperationCanceledException(source._cancellationToken));
             },
             this);
