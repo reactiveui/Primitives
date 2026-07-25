@@ -40,8 +40,7 @@ public static partial class SignalAsyncExtensions
     /// <summary>Observer that waits for a sequence to complete, ignoring all emitted values.</summary>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
-    internal sealed class CompletionTaskWitness<T>(CancellationToken cancellationToken)
-        : TaskResultWitnessAsyncBase<T, object?>(cancellationToken)
+    internal sealed class CompletionTaskWitness<T>(CancellationToken cancellationToken) : TaskResultWitnessAsyncBase<T, object?>(cancellationToken)
     {
         /// <inheritdoc/>
         protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken) => default;

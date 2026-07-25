@@ -145,8 +145,7 @@ public class SyncLatestCoordinatorBaseTests
     /// <summary>Minimal concrete subclass exposing the base's protected surface for testing.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="sourceCount">The number of upstream sources.</param>
-    private sealed class TestSubscription(IObserverAsync<int> observer, int sourceCount)
-        : SyncLatestCoordinatorBase<int>(observer, sourceCount)
+    private sealed class TestSubscription(IObserverAsync<int> observer, int sourceCount) : SyncLatestCoordinatorBase<int>(observer, sourceCount)
     {
         /// <summary>Gets the indices passed to <see cref="SubscribeAtAsync"/> in order.</summary>
         public List<int> SubscribedIndices { get; } = [];

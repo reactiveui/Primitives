@@ -234,10 +234,7 @@ public sealed class ReactiveComponentBaseTests
         public async Task<HarnessComponent> AttachAsync()
         {
             HarnessComponent? captured = null;
-            var parameters = ParameterView.FromDictionary(new Dictionary<string, object?>
-            {
-                ["Captured"] = (Action<HarnessComponent>)(component => captured = component),
-            });
+            var parameters = ParameterView.FromDictionary(new Dictionary<string, object?> { ["Captured"] = (Action<HarnessComponent>)(component => captured = component), });
 
             await Dispatcher.InvokeAsync(() => _renderer.BeginRenderingComponent<HarnessComponent>(parameters));
 

@@ -152,8 +152,8 @@ internal sealed class OnErrorResumeNextSignal<T> : IRequireCurrentThread<T>
                     return;
                 }
 
-                source = enumerator.Current ??
-                         throw new InvalidOperationException("OnErrorResumeNext source contained null.");
+                source = enumerator.Current
+                         ?? throw new InvalidOperationException("OnErrorResumeNext source contained null.");
             }
             catch (Exception exception)
             {

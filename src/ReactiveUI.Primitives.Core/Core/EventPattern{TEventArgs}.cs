@@ -45,8 +45,8 @@ public readonly struct EventPattern<TEventArgs> : IEquatable<EventPattern<TEvent
 
     /// <inheritdoc/>
     public bool Equals(EventPattern<TEventArgs> other) =>
-        ReferenceEquals(Sender, other.Sender) &&
-        EqualityComparer<TEventArgs>.Default.Equals(EventArgs, other.EventArgs);
+        ReferenceEquals(Sender, other.Sender)
+        && EqualityComparer<TEventArgs>.Default.Equals(EventArgs, other.EventArgs);
 
     /// <inheritdoc/>
     public override bool Equals(object? obj) => obj is EventPattern<TEventArgs> other && Equals(other);

@@ -426,10 +426,7 @@ public sealed class SwitchWitnessTests
         private DeliveryThread(Action body)
         {
             _body = body;
-            _thread = new(Run)
-            {
-                IsBackground = true,
-            };
+            _thread = new(Run) { IsBackground = true, };
         }
 
         /// <summary>Starts a delivery body on a background thread of its own.</summary>

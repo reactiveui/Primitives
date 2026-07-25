@@ -25,8 +25,7 @@ public static class FirstAsTaskHelper
 
     /// <summary>Combined TaskCompletionSource + IObserver — one heap allocation per call instead of two.</summary>
     /// <typeparam name="T">The element type.</typeparam>
-    private sealed class FirstWitness<T>()
-        : TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously), IObserver<T>
+    private sealed class FirstWitness<T>() : TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously), IObserver<T>
     {
         /// <summary>Latches to <c>1</c> once the task has been settled so subsequent callbacks are no-ops.</summary>
         private int _settled;

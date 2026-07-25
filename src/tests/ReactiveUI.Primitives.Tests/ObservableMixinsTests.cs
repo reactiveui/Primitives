@@ -141,7 +141,7 @@ public class ObservableMixinsTests
         var otherDisposable = new RecordingDisposable();
         var source = new TrackingObservable<int>(sourceDisposable);
         var other = new TrackingObservable<string>(otherDisposable);
-        using var subscription = LinqExtensions.TakeUntil(source, other)
+        var subscription = LinqExtensions.TakeUntil(source, other)
             .Subscribe(static _ => { }, ThrowUnexpectedError, static () => { });
 
         subscription.Dispose();

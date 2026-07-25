@@ -32,8 +32,8 @@ public sealed class UseSignal<TResource, T>(
         try
         {
             resource = _resourceFactory();
-            source = _signalFactory(resource) ??
-                     throw new InvalidOperationException("The signal factory returned null.");
+            source = _signalFactory(resource)
+                     ?? throw new InvalidOperationException("The signal factory returned null.");
         }
         catch (Exception error)
         {

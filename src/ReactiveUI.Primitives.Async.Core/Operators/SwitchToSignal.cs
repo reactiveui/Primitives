@@ -306,8 +306,8 @@ public sealed class SwitchToSignal<T>(IObservableAsync<IObservableAsync<T>> sour
             /// <param name="value">The new inner observable.</param>
             /// <param name="cancellationToken">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
-            protected override ValueTask OnNextAsyncCore(IObservableAsync<T> value, CancellationToken cancellationToken)
-                => subscription.AcceptOuterValueAsync(value);
+            protected override ValueTask OnNextAsyncCore(IObservableAsync<T> value, CancellationToken cancellationToken) =>
+                subscription.AcceptOuterValueAsync(value);
 
             /// <summary>Forwards a non-fatal error from the outer sequence to the downstream observer.</summary>
             /// <param name="error">The error to forward.</param>
@@ -329,8 +329,8 @@ public sealed class SwitchToSignal<T>(IObservableAsync<IObservableAsync<T>> sour
             /// <summary>Handles the outer sequence completing.</summary>
             /// <param name="result">The completion result.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
-            protected override ValueTask OnCompletedAsyncCore(Result result)
-                => subscription.AcceptOuterCompletionAsync(result);
+            protected override ValueTask OnCompletedAsyncCore(Result result) =>
+                subscription.AcceptOuterCompletionAsync(result);
         }
 
         /// <summary>Witness for the currently active inner observable sequence that delegates to the parent <see cref="SwitchToCoordinator"/>.</summary>
@@ -341,21 +341,21 @@ public sealed class SwitchToSignal<T>(IObservableAsync<IObservableAsync<T>> sour
             /// <param name="value">The element to forward.</param>
             /// <param name="cancellationToken">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
-            protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
-                => subscription.AcceptInnerValueAsync(value, cancellationToken);
+            protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
+                subscription.AcceptInnerValueAsync(value, cancellationToken);
 
             /// <summary>Forwards a non-fatal error from the inner sequence to the downstream observer.</summary>
             /// <param name="error">The error to forward.</param>
             /// <param name="cancellationToken">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
-            protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken)
-                => subscription.AcceptInnerErrorAsync(error, cancellationToken);
+            protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+                subscription.AcceptInnerErrorAsync(error, cancellationToken);
 
             /// <summary>Handles the inner sequence completing.</summary>
             /// <param name="result">The completion result.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
-            protected override ValueTask OnCompletedAsyncCore(Result result)
-                => subscription.AcceptInnerCompletionAsync(result);
+            protected override ValueTask OnCompletedAsyncCore(Result result) =>
+                subscription.AcceptInnerCompletionAsync(result);
         }
     }
 }

@@ -8,8 +8,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="T">The source value type.</typeparam>
 /// <param name="observer">The downstream observer.</param>
 /// <param name="predicate">The predicate.</param>
-public sealed class AnyPredicateWitness<T>(IObserver<bool> observer, Func<T, bool> predicate)
-    : IObserver<T>, IDisposable
+public sealed class AnyPredicateWitness<T>(IObserver<bool> observer, Func<T, bool> predicate) : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>
     private readonly IObserver<bool> _observer = observer;

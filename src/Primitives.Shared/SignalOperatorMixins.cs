@@ -389,10 +389,10 @@ public static partial class LinqExtensions
 
             ArgumentExceptionHelper.ThrowIfNull(selector);
 
-            return typeof(T) == typeof(int) &&
-                   typeof(TRight) == typeof(int) &&
-                   source is RangeSignal leftRange &&
-                   right is RangeSignal rightRange
+            return typeof(T) == typeof(int)
+                   && typeof(TRight) == typeof(int)
+                   && source is RangeSignal leftRange
+                   && right is RangeSignal rightRange
                 ? new RangeZipSignal<TResult>(
                     leftRange,
                     rightRange,
@@ -417,10 +417,10 @@ public static partial class LinqExtensions
 
             ArgumentExceptionHelper.ThrowIfNull(selector);
 
-            return typeof(T) == typeof(int) &&
-                   typeof(TRight) == typeof(int) &&
-                   source is RangeSignal leftRange &&
-                   right is RangeSignal rightRange
+            return typeof(T) == typeof(int)
+                   && typeof(TRight) == typeof(int)
+                   && source is RangeSignal leftRange
+                   && right is RangeSignal rightRange
                 ? new RangeSyncLatestSignal<TResult>(
                     leftRange,
                     rightRange,
@@ -444,10 +444,10 @@ public static partial class LinqExtensions
 
             ArgumentExceptionHelper.ThrowIfNull(selector);
 
-            return typeof(T) == typeof(int) &&
-                   typeof(TRight) == typeof(int) &&
-                   source is RangeSignal leftRange &&
-                   right is RangeSignal rightRange
+            return typeof(T) == typeof(int)
+                   && typeof(TRight) == typeof(int)
+                   && source is RangeSignal leftRange
+                   && right is RangeSignal rightRange
                 ? new RangeWithLatestSignal<TResult>(
                     leftRange,
                     rightRange,

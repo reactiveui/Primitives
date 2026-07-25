@@ -90,8 +90,8 @@ public sealed class ScheduledSignalTests
 
         var firstObserver = new RecordingObserver<int>();
         var secondObserver = new RecordingObserver<int>();
-        using var firstSubscription = signal.Subscribe(firstObserver);
-        using var secondSubscription = signal.Subscribe(secondObserver);
+        var firstSubscription = signal.Subscribe(firstObserver);
+        var secondSubscription = signal.Subscribe(secondObserver);
 
         signal.OnNext(SecondValue);
         sequencer.DrainAll();

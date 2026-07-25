@@ -86,11 +86,7 @@ public partial class SignalTests
     [Test]
     public async Task WhenConcurrentReplayLatestSignalDisposed_ThenLaterSubscribeIsCancelled()
     {
-        BehaviorSignalCreationOptions options = new()
-        {
-            PublishingOption = PublishingOption.Concurrent,
-            IsStateless = false
-        };
+        BehaviorSignalCreationOptions options = new() { PublishingOption = PublishingOption.Concurrent, IsStateless = false };
         var signal = Signal.CreateBehavior(OptionsStartValue, options);
 
         await signal.DisposeAsync();

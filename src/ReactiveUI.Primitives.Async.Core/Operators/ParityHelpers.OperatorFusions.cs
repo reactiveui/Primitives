@@ -81,8 +81,7 @@ public static partial class SignalAsyncExtensions
     internal sealed class ScanWithInitialAsyncSignal<TSource, TAccumulate>(
         IObservableAsync<TSource> source,
         TAccumulate initial,
-        Func<TAccumulate, TSource, CancellationToken, ValueTask<TAccumulate>> accumulator)
-        : IObservableAsync<TAccumulate>
+        Func<TAccumulate, TSource, CancellationToken, ValueTask<TAccumulate>> accumulator) : IObservableAsync<TAccumulate>
     {
         /// <inheritdoc/>
         async ValueTask<IAsyncDisposable> IObservableAsync<TAccumulate>.SubscribeAsync(

@@ -32,6 +32,12 @@
     <PackageReference Include="System.Collections.Immutable"/>
   </ItemGroup>
 
+  <ItemGroup Condition="$(TargetFrameworkIdentifier) == '.NETFramework'">
+    <Compile Remove="Advanced\AsyncEnumerableSignal{T}.cs"/>
+    <Compile Remove="Advanced\IAsyncEnumerableBackedSignal{T}.cs"/>
+    <Compile Remove="Core\CoreCompositeFormats.cs"/>
+  </ItemGroup>
+
   <ItemGroup>
     <Compile Include="..\Primitives.Extensions.Shared\Internal\InvalidOperationExceptionHelper.cs" Link="Extensions\InvalidOperationExceptionHelper.cs"/>
     <Compile Include="..\ReactiveUI.Primitives.Extensions.Core\**\*.cs" Link="Extensions\%(RecursiveDir)%(Filename)%(Extension)"/>

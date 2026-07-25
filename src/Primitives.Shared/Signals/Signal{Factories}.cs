@@ -498,8 +498,8 @@ public static partial class Signal
 
         ArgumentExceptionHelper.ThrowIfNull(selector);
 
-        return typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange &&
-               right is RangeSignal rightRange
+        return typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange
+               && right is RangeSignal rightRange
             ? new RangeZipSignal<TResult>(leftRange, rightRange, (Func<int, int, TResult>)(object)selector)
             : new PairSignal<TLeft, TRight, TResult>(left, right, selector);
     }
@@ -523,8 +523,8 @@ public static partial class Signal
 
         ArgumentExceptionHelper.ThrowIfNull(selector);
 
-        return typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange &&
-               right is RangeSignal rightRange
+        return typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange
+               && right is RangeSignal rightRange
             ? new RangeSyncLatestSignal<TResult>(leftRange, rightRange, (Func<int, int, TResult>)(object)selector)
             : new SyncLatestSignal<TLeft, TRight, TResult>(left, right, selector);
     }
@@ -548,8 +548,8 @@ public static partial class Signal
 
         ArgumentExceptionHelper.ThrowIfNull(selector);
 
-        return typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange &&
-               right is RangeSignal rightRange
+        return typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange
+               && right is RangeSignal rightRange
             ? new RangeForkJoinSignal<TResult>(leftRange, rightRange, (Func<int, int, TResult>)(object)selector)
             : new ForkJoinSignal<TLeft, TRight, TResult>(left, right, selector);
     }

@@ -148,8 +148,8 @@ public partial class CombineLatestArityTests
             static (v1, v2, v3, v4, v5, v6, v7, v8, v9) => v1 + v2 + v3 + v4 + v5 + v6 + v7 + v8 + v9).SubscribeAsync(RecordAndSignalValues(results, emitted), null);
         await EmitSeedAndPlaceValuesAsync(s1, s2, s3, s4, s5, s6, s7, s8, s9);
         await emitted.Task.WaitAsync(TimeSpan.FromSeconds(EmissionTimeoutSeconds));
-        await Assert.That(results[0]).IsEqualTo(1 + PlaceValue1 + PlaceValue2 + PlaceValue3 + PlaceValue4 +
-                                                PlaceValue5 + PlaceValue6 + PlaceValue7 + PlaceValue8);
+        await Assert.That(results[0]).IsEqualTo(1 + PlaceValue1 + PlaceValue2 + PlaceValue3 + PlaceValue4
+                                                + PlaceValue5 + PlaceValue6 + PlaceValue7 + PlaceValue8);
         await CompleteAllAsync(s1, s2, s3, s4, s5, s6, s7, s8, s9);
     }
 

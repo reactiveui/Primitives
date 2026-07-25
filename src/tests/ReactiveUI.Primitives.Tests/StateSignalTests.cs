@@ -124,7 +124,7 @@ public class StateSignalTests
         await Assert.That(current).IsEqualTo(InitialStateValue);
 
         Recorder<int> observer = new();
-        using var subscription = state.Subscribe(observer);
+        var subscription = state.Subscribe(observer);
         await Assert.That(state.HasObservers).IsTrue();
         state.OnNext(UpdatedStateValue);
         await Assert.That(observer.Values.SequenceEqual([InitialStateValue, UpdatedStateValue])).IsTrue();

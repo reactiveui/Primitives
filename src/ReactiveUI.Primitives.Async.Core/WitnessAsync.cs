@@ -642,8 +642,7 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
     /// </summary>
     /// <param name="Cts">The linked CTS to dispose, or <see langword="null"/> if no allocation was needed.</param>
     /// <param name="Token">The effective cancellation token for the notification call.</param>
-    internal readonly record struct LinkedTokenScope(CancellationTokenSource? Cts, CancellationToken Token)
-        : IDisposable
+    internal readonly record struct LinkedTokenScope(CancellationTokenSource? Cts, CancellationToken Token) : IDisposable
     {
         /// <inheritdoc/>
         public void Dispose() => Cts?.Dispose();

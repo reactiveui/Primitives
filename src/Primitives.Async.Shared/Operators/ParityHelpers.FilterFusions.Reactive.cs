@@ -37,8 +37,7 @@ public static partial class SignalAsyncReactiveExtensions
         /// <summary>Forwards <see cref = "RxVoid.Default"/> for every upstream emission.</summary>
         /// <param name = "downstream">The downstream observer.</param>
         /// <param name = "subscribeToken">The subscribe-time cancellation token.</param>
-        internal sealed class AsSignalWitness(IObserverAsync<RxVoid> downstream, CancellationToken subscribeToken)
-            : WitnessAsync<T>(subscribeToken)
+        internal sealed class AsSignalWitness(IObserverAsync<RxVoid> downstream, CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
         {
             /// <inheritdoc/>
             protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken) =>

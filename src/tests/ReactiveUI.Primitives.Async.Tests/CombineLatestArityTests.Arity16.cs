@@ -48,8 +48,8 @@ public partial class CombineLatestArityTests
                 s14.Values,
                 s15.Values,
                 throwingSrc,
-                static (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16) => v1 + v2 + v3 + v4 + v5 + v6 +
-                    v7 + v8 + v9 + v10 + v11 + v12 + v13 + v14 + v15 + v16).SubscribeAsync(static (_, _) => default, null))
+                static (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16) => v1 + v2 + v3 + v4 + v5 + v6
+                    + v7 + v8 + v9 + v10 + v11 + v12 + v13 + v14 + v15 + v16).SubscribeAsync(static (_, _) => default, null))
             .ThrowsExactly<InvalidOperationException>();
     }
 
@@ -91,8 +91,8 @@ public partial class CombineLatestArityTests
             s14.Values,
             s15.Values,
             s16.Values,
-            static (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16) => v1 + v2 + v3 + v4 + v5 + v6 +
-                v7 + v8 + v9 + v10 + v11 + v12 + v13 + v14 + v15 + v16).SubscribeAsync(RecordValues(results), null);
+            static (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16) => v1 + v2 + v3 + v4 + v5 + v6
+                + v7 + v8 + v9 + v10 + v11 + v12 + v13 + v14 + v15 + v16).SubscribeAsync(RecordValues(results), null);
         await EmitSeedAndPlaceValuesAsync(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16);
         await sub.DisposeAsync();
         await s1.OnNextAsync(PostDisposeValue, CancellationToken.None);
@@ -138,8 +138,8 @@ public partial class CombineLatestArityTests
             s14.Values,
             s15.Values,
             s16.Values,
-            static (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16) => v1 + v2 + v3 + v4 + v5 + v6 +
-                v7 + v8 + v9 + v10 + v11 + v12 + v13 + v14 + v15 + v16).SubscribeAsync(static (_, _) => default, (ex, _) =>
+            static (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16) => v1 + v2 + v3 + v4 + v5 + v6
+                + v7 + v8 + v9 + v10 + v11 + v12 + v13 + v14 + v15 + v16).SubscribeAsync(static (_, _) => default, (ex, _) =>
         {
             receivedError = ex;
             IgnoredResult.Of(errorReceived.TrySetResult());
@@ -190,14 +190,14 @@ public partial class CombineLatestArityTests
             s14.Values,
             s15.Values,
             s16.Values,
-            static (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16) => v1 + v2 + v3 + v4 + v5 + v6 +
-                v7 + v8 + v9 + v10 + v11 + v12 + v13 + v14 + v15 + v16).SubscribeAsync(RecordAndSignalValues(results, emitted), null);
+            static (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16) => v1 + v2 + v3 + v4 + v5 + v6
+                + v7 + v8 + v9 + v10 + v11 + v12 + v13 + v14 + v15 + v16).SubscribeAsync(RecordAndSignalValues(results, emitted), null);
         await EmitSeedAndPlaceValuesAsync(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16);
         await emitted.Task.WaitAsync(TimeSpan.FromSeconds(EmissionTimeoutSeconds));
-        await Assert.That(results[0]).IsEqualTo(1 + PlaceValue1 + PlaceValue2 + PlaceValue3 + PlaceValue4 +
-                                                PlaceValue5 + PlaceValue6 + PlaceValue7 + PlaceValue8 + PlaceValue9 +
-                                                PlaceValue10 + PlaceValue11 + PlaceValue12 + PlaceValue13 +
-                                                PlaceValue14 + PlaceValue15);
+        await Assert.That(results[0]).IsEqualTo(1 + PlaceValue1 + PlaceValue2 + PlaceValue3 + PlaceValue4
+                                                + PlaceValue5 + PlaceValue6 + PlaceValue7 + PlaceValue8 + PlaceValue9
+                                                + PlaceValue10 + PlaceValue11 + PlaceValue12 + PlaceValue13
+                                                + PlaceValue14 + PlaceValue15);
         await CompleteAllAsync(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16);
     }
 
@@ -239,8 +239,8 @@ public partial class CombineLatestArityTests
             s14.Values,
             s15.Values,
             s16.Values,
-            static (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16) => v1 + v2 + v3 + v4 + v5 + v6 +
-                v7 + v8 + v9 + v10 + v11 + v12 + v13 + v14 + v15 + v16).SubscribeAsync(static (_, _) => default, null, r =>
+            static (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16) => v1 + v2 + v3 + v4 + v5 + v6
+                + v7 + v8 + v9 + v10 + v11 + v12 + v13 + v14 + v15 + v16).SubscribeAsync(static (_, _) => default, null, r =>
         {
             _ = completed.TrySetResult(r);
             return default;

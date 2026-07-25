@@ -196,8 +196,7 @@ public sealed class OnErrorResumeNextSignalTests
     /// <param name="first">The first source to return.</param>
     /// <param name="error">The error to throw on the second move.</param>
     /// <typeparam name="T">The source value type.</typeparam>
-    private sealed class ThrowingAfterFirstEnumerable<T>(IObservable<T> first, Exception error)
-        : IEnumerable<IObservable<T>>
+    private sealed class ThrowingAfterFirstEnumerable<T>(IObservable<T> first, Exception error) : IEnumerable<IObservable<T>>
     {
         /// <inheritdoc/>
         public IEnumerator<IObservable<T>> GetEnumerator()

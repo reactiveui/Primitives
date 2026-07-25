@@ -638,8 +638,8 @@ public static partial class LinqExtensions
 
             ArgumentExceptionHelper.ThrowIfNull(selector);
 
-            return typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange &&
-                   right is RangeSignal rightRange
+            return typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange
+                   && right is RangeSignal rightRange
                 ? new RangeZipSignal<TResult>(leftRange, rightRange, (Func<int, int, TResult>)(object)selector)
                 : new ZipSignal<TLeft, TRight, TResult>(left, right, selector);
         }
@@ -661,8 +661,8 @@ public static partial class LinqExtensions
 
             ArgumentExceptionHelper.ThrowIfNull(selector);
 
-            return typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange &&
-                   right is RangeSignal rightRange
+            return typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange
+                   && right is RangeSignal rightRange
                 ? new RangeCombineLatestSignal<TResult>(
                     leftRange,
                     rightRange,
@@ -687,8 +687,8 @@ public static partial class LinqExtensions
 
             ArgumentExceptionHelper.ThrowIfNull(selector);
 
-            return typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange &&
-                   right is RangeSignal rightRange
+            return typeof(TLeft) == typeof(int) && typeof(TRight) == typeof(int) && left is RangeSignal leftRange
+                   && right is RangeSignal rightRange
                 ? new RangeWithLatestSignal<TResult>(leftRange, rightRange, (Func<int, int, TResult>)(object)selector)
                 : new LatchSignal<TLeft, TRight, TResult>(left, right, selector);
         }

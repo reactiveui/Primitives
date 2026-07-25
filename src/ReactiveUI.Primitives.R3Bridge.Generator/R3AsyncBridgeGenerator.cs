@@ -138,10 +138,10 @@ public sealed class R3AsyncBridgeGenerator : IIncrementalGenerator
     public void Initialize(IncrementalGeneratorInitializationContext context) =>
         context.RegisterSourceOutput(context.CompilationProvider, static (output, compilation) =>
         {
-            if (compilation.GetTypeByMetadataName("R3Async.AsyncObservable`1") is null ||
-                compilation.GetTypeByMetadataName("R3Async.AsyncObserver`1") is null ||
-                compilation.GetTypeByMetadataName("R3Async.Result") is null ||
-                compilation.GetTypeByMetadataName("ReactiveUI.Primitives.Async.IObservableAsync`1") is null)
+            if (compilation.GetTypeByMetadataName("R3Async.AsyncObservable`1") is null
+                || compilation.GetTypeByMetadataName("R3Async.AsyncObserver`1") is null
+                || compilation.GetTypeByMetadataName("R3Async.Result") is null
+                || compilation.GetTypeByMetadataName("ReactiveUI.Primitives.Async.IObservableAsync`1") is null)
             {
                 return;
             }

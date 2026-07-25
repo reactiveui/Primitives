@@ -15,8 +15,7 @@ namespace ReactiveUI.Primitives.Async.Signals;
 /// or state broadcasts.</remarks>
 /// <typeparam name="T">The type of the elements processed by the Signal.</typeparam>
 /// <param name="startValue">An optional initial value to be emitted to new subscribers before any other values are published.</param>
-public sealed class SerialReplayLatestSignalAsync<T>(Optional<T> startValue)
-    : ISignalAsync<T>
+public sealed class SerialReplayLatestSignalAsync<T>(Optional<T> startValue) : ISignalAsync<T>
 {
     /// <inheritdoc/>
     IObservableAsync<T> ISignalAsync<T>.Values => this;

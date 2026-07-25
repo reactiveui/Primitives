@@ -222,8 +222,8 @@ public static partial class ReactiveExtensions
         /// <param name="retryCount">The retry count.</param>
         /// <param name="delay">The delay.</param>
         /// <returns>An IObservable of T.</returns>
-        public IObservable<T> RetryWithFixedDelay(int retryCount, TimeSpan delay)
-            => new RetryWithBackoffObservable<T>(
+        public IObservable<T> RetryWithFixedDelay(int retryCount, TimeSpan delay) =>
+            new RetryWithBackoffObservable<T>(
                 source,
                 new(
                     retryCount,

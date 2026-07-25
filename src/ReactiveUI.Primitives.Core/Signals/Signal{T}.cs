@@ -52,8 +52,8 @@ public class Signal<T> : ISignal<T>
 
     /// <summary>Gets a value indicating whether indicates whether the subject has observers subscribed to it.</summary>
     public virtual bool HasObservers =>
-        (_singleActionSubscription is not null || _singleObserverSubscription is not null || _subscriptionCount != 0) &&
-        !_isStopped;
+        (_singleActionSubscription is not null || _singleObserverSubscription is not null || _subscriptionCount != 0)
+        && !_isStopped;
 
     /// <summary>Gets a value indicating whether indicates whether the subject has been disposed.</summary>
     public virtual bool IsDisposed => _isDisposed;

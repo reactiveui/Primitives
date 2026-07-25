@@ -19,8 +19,8 @@ public static partial class SignalAsyncExtensions
         /// <param name="predicate">A function to test each element for a condition. If null, all elements are counted.</param>
         /// <returns>A task that represents the asynchronous count operation. The task result contains the number of elements
         /// that match the predicate.</returns>
-        public ValueTask<int> CountAsync(Func<T, bool>? predicate)
-            => @this.CountAsync(predicate, CancellationToken.None);
+        public ValueTask<int> CountAsync(Func<T, bool>? predicate) =>
+            @this.CountAsync(predicate, CancellationToken.None);
 
         /// <summary>Asynchronously counts the number of elements that satisfy a specified condition.</summary>
         /// <param name="predicate">A function to test each element for a condition. If null, all elements are counted.</param>
@@ -39,23 +39,22 @@ public static partial class SignalAsyncExtensions
         /// <summary>Asynchronously returns the total number of elements in the data source.</summary>
         /// <returns>A task that represents the asynchronous operation. The task result contains the number of elements in the
         /// data source.</returns>
-        public ValueTask<int> CountAsync()
-            => @this.CountAsync(null, CancellationToken.None);
+        public ValueTask<int> CountAsync() =>
+            @this.CountAsync(null, CancellationToken.None);
 
         /// <summary>Asynchronously returns the total number of elements in the data source.</summary>
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous count operation.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains the number of elements in the
         /// data source.</returns>
-        public ValueTask<int> CountAsync(CancellationToken cancellationToken)
-            => @this.CountAsync(null, cancellationToken);
+        public ValueTask<int> CountAsync(CancellationToken cancellationToken) =>
+            @this.CountAsync(null, cancellationToken);
     }
 
     /// <summary>A witness that counts elements in a sequence, optionally filtered by a predicate.</summary>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
     /// <param name="predicate">An optional predicate to filter elements. If null, all elements are counted.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
-    internal sealed class CountTaskWitness<T>(Func<T, bool>? predicate, CancellationToken cancellationToken)
-        : TaskResultWitnessAsyncBase<T, int>(cancellationToken)
+    internal sealed class CountTaskWitness<T>(Func<T, bool>? predicate, CancellationToken cancellationToken) : TaskResultWitnessAsyncBase<T, int>(cancellationToken)
     {
         /// <summary>The running count of elements that satisfy the predicate.</summary>
         private int _count;

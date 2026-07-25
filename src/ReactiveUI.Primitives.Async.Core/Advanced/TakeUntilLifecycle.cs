@@ -89,7 +89,7 @@ public sealed class TakeUntilLifecycle<T> : IAsyncDisposable
     /// <returns>A ValueTask representing the asynchronous forward.</returns>
     public async ValueTask RelayCompletionAsync(Result result)
     {
-        using (await _gate.EnterAsync().ConfigureAwait(false))
+        using (await _gate.EnterAsync(CancellationToken.None).ConfigureAwait(false))
         {
             await _observer.OnCompletedAsync(result).ConfigureAwait(false);
         }

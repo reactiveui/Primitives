@@ -432,8 +432,7 @@ public sealed class DispatchSequencerBaseTests
     /// <param name = "sequencer">Sequencer under test.</param>
     /// <param name = "values">Recorded values.</param>
     /// <param name = "value">Value to record.</param>
-    private sealed class DrainingWorkItem(ConfigurableDispatchSequencer sequencer, List<int> values, int value)
-        : IWorkItem
+    private sealed class DrainingWorkItem(ConfigurableDispatchSequencer sequencer, List<int> values, int value) : IWorkItem
     {
         /// <summary>Sequencer under test.</summary>
         private readonly ConfigurableDispatchSequencer _sequencer = sequencer;

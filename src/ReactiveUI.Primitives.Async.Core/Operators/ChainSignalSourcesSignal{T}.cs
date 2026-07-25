@@ -224,8 +224,8 @@ public sealed class ChainSignalSourcesSignal<T>(IObservableAsync<IObservableAsyn
             /// <param name="value">The new inner observable.</param>
             /// <param name="cancellationToken">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
-            protected override ValueTask OnNextAsyncCore(IObservableAsync<T> value, CancellationToken cancellationToken)
-                => subscription.AcceptOuterValueAsync(value);
+            protected override ValueTask OnNextAsyncCore(IObservableAsync<T> value, CancellationToken cancellationToken) =>
+                subscription.AcceptOuterValueAsync(value);
 
             /// <summary>Forwards a non-fatal error from the outer sequence to the downstream observer.</summary>
             /// <param name="error">The error to forward.</param>
@@ -250,8 +250,8 @@ public sealed class ChainSignalSourcesSignal<T>(IObservableAsync<IObservableAsyn
             /// <summary>Handles the outer sequence completing.</summary>
             /// <param name="result">The completion result.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
-            protected override ValueTask OnCompletedAsyncCore(Result result)
-                => subscription.AcceptOuterCompletionAsync(result);
+            protected override ValueTask OnCompletedAsyncCore(Result result) =>
+                subscription.AcceptOuterCompletionAsync(result);
         }
 
         /// <summary>A witness for the currently active inner observable sequence that delegates to the parent <see cref="ChainCoordinator"/>.</summary>
@@ -291,8 +291,8 @@ public sealed class ChainSignalSourcesSignal<T>(IObservableAsync<IObservableAsyn
             /// <summary>Handles the inner sequence completing, triggering subscription to the next buffered sequence.</summary>
             /// <param name="result">The completion result.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
-            protected override ValueTask OnCompletedAsyncCore(Result result)
-                => subscription.AcceptInnerCompletionAsync(result);
+            protected override ValueTask OnCompletedAsyncCore(Result result) =>
+                subscription.AcceptInnerCompletionAsync(result);
         }
     }
 }

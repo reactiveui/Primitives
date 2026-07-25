@@ -172,8 +172,7 @@ public static class Witness
     /// <param name="onNext">Callback invoked for each value.</param>
     /// <param name="onError">Callback invoked for an error.</param>
     /// <param name="onCompleted">Callback invoked for completion.</param>
-    private sealed class DelegateWitness<T>(Action<T> onNext, Action<Exception> onError, Action onCompleted)
-        : IObserver<T>
+    private sealed class DelegateWitness<T>(Action<T> onNext, Action<Exception> onError, Action onCompleted) : IObserver<T>
     {
         /// <summary>Callback invoked for each value.</summary>
         private readonly Action<T> _onNext = onNext;

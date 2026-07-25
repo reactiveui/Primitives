@@ -18,8 +18,8 @@ public sealed class SynchronizationContextSequencer : ISequencer
     /// <summary>Gets a sequencer for the current synchronization context.</summary>
     /// <exception cref="InvalidOperationException">There is no current synchronization context.</exception>
     public static SynchronizationContextSequencer Current =>
-        new(SynchronizationContext.Current ??
-            throw new InvalidOperationException("There is no current synchronization context."));
+        new(SynchronizationContext.Current
+            ?? throw new InvalidOperationException("There is no current synchronization context."));
 
     /// <summary>Gets the synchronization context used to schedule work.</summary>
     public SynchronizationContext Context { get; }

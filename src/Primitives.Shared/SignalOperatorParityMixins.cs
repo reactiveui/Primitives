@@ -708,8 +708,8 @@ public static partial class LinqExtensions
 
             ArgumentExceptionHelper.ThrowIfNull(selector);
 
-            return typeof(T) == typeof(int) && typeof(TRight) == typeof(int) && source is RangeSignal leftRange &&
-                   right is RangeSignal rightRange
+            return typeof(T) == typeof(int) && typeof(TRight) == typeof(int) && source is RangeSignal leftRange
+                   && right is RangeSignal rightRange
                 ? new RangeSyncLatestSignal<TResult>(leftRange, rightRange, (Func<int, int, TResult>)(object)selector)
                 : new CombineLatestSignal<T, TRight, TResult>(source, right, selector);
         }
@@ -731,8 +731,8 @@ public static partial class LinqExtensions
 
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return typeof(T) == typeof(int) && typeof(TRight) == typeof(int) && source is RangeSignal leftRange &&
-                   right is RangeSignal rightRange
+            return typeof(T) == typeof(int) && typeof(TRight) == typeof(int) && source is RangeSignal leftRange
+                   && right is RangeSignal rightRange
                 ? new RangeSyncLatestSignal<TResult>(leftRange, rightRange, (Func<int, int, TResult>)(object)selector)
                 : new CombineLatestSignal<T, TRight, TResult>(source, right, selector);
         }
@@ -754,8 +754,8 @@ public static partial class LinqExtensions
 
             ArgumentExceptionHelper.ThrowIfNull(selector);
 
-            return typeof(T) == typeof(int) && typeof(TRight) == typeof(int) && source is RangeSignal leftRange &&
-                   right is RangeSignal rightRange
+            return typeof(T) == typeof(int) && typeof(TRight) == typeof(int) && source is RangeSignal leftRange
+                   && right is RangeSignal rightRange
                 ? new RangeForkJoinSignal<TResult>(leftRange, rightRange, (Func<int, int, TResult>)(object)selector)
                 : new ForkJoinSignal<T, TRight, TResult>(source, right, selector);
         }

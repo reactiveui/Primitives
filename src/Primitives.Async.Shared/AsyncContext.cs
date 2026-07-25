@@ -49,9 +49,9 @@ public sealed record AsyncContext
     public ISequencer? Sequencer { get; init; }
 
     /// <summary>Gets a value indicating whether the current context uses the default task scheduler and no synchronization context.</summary>
-    internal bool UsesDefaultSequencer => SynchronizationContext is null &&
-                                          Sequencer is null &&
-                                          (TaskScheduler is null || TaskScheduler == TaskScheduler.Default);
+    internal bool UsesDefaultSequencer => SynchronizationContext is null
+                                          && Sequencer is null
+                                          && (TaskScheduler is null || TaskScheduler == TaskScheduler.Default);
 
     /// <summary>Creates a new AsyncContext that uses the specified SynchronizationContext for asynchronous operations.</summary>
     /// <remarks>The returned AsyncContext will have its TaskScheduler property set to null. Use this method

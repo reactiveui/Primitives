@@ -43,8 +43,7 @@ public sealed class DispatchWorkItemBaseTests
     /// <param name="scheduler">The scheduler passed back to the scheduled action.</param>
     /// <param name="state">The scheduled state.</param>
     /// <param name="action">The scheduled action.</param>
-    private sealed class ProbeWorkItem(IScheduler scheduler, int state, Func<IScheduler, int, IDisposable> action)
-        : DispatchWorkItemBase<int>(scheduler, state, action)
+    private sealed class ProbeWorkItem(IScheduler scheduler, int state, Func<IScheduler, int, IDisposable> action) : DispatchWorkItemBase<int>(scheduler, state, action)
     {
         /// <summary>Claims the single cancellation transition, as a concurrent dispose would.</summary>
         /// <returns><see langword="true"/> for the first caller.</returns>

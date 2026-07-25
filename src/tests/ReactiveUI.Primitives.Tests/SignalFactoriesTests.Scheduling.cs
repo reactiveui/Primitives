@@ -29,10 +29,7 @@ public partial class SignalFactoriesTests
         VirtualClock clock = new();
         RecordingWitness<RxVoid> witness = new();
         var runCount = 0;
-        void Run()
-        {
-            runCount++;
-        }
+        void Run() => runCount++;
 
         using var subscription = Signal.Start(Run, clock).Subscribe(witness);
 
@@ -78,10 +75,7 @@ public partial class SignalFactoriesTests
 
         RecordingWitness<RxVoid> witness = new();
         var runCount = 0;
-        void Run()
-        {
-            runCount++;
-        }
+        void Run() => runCount++;
 
         using var subscription = Signal.Start(Run, Sequencer.CurrentThread).Subscribe(witness);
 

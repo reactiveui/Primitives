@@ -17,11 +17,7 @@ public sealed record SignalCreationOptions
     /// <summary>Gets the default configuration for Signal creation options.</summary>
     /// <remarks>The default options use serial publishing and are not stateless. Use this property as a
     /// baseline when configuring new Signals if standard behavior is desired.</remarks>
-    public static SignalCreationOptions Default { get; } = new()
-    {
-        PublishingOption = PublishingOption.Serial,
-        IsStateless = false
-    };
+    public static SignalCreationOptions Default { get; } = new() { PublishingOption = PublishingOption.Serial, IsStateless = false };
 
     /// <summary>Gets the publishing option to use when processing the item.</summary>
     public required PublishingOption PublishingOption { get; init; }

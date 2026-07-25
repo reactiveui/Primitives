@@ -21,8 +21,8 @@ public static partial class SignalAsyncExtensions
         /// type.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains <see langword="true"/> if the
         /// value is found in the sequence; otherwise, <see langword="false"/>.</returns>
-        public ValueTask<bool> ContainsAsync(T value, IEqualityComparer<T>? comparer)
-            => @this.ContainsAsync(value, comparer, CancellationToken.None);
+        public ValueTask<bool> ContainsAsync(T value, IEqualityComparer<T>? comparer) =>
+            @this.ContainsAsync(value, comparer, CancellationToken.None);
 
         /// <summary>Asynchronously determines whether the sequence contains a specified value using the given equality comparer.</summary>
         /// <param name="value">The value to locate in the sequence.</param>
@@ -48,16 +48,16 @@ public static partial class SignalAsyncExtensions
         /// <param name="value">The value to locate in the collection.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains <see langword="true"/> if the
         /// value is found in the collection; otherwise, <see langword="false"/>.</returns>
-        public ValueTask<bool> ContainsAsync(T value)
-            => @this.ContainsAsync(value, null, CancellationToken.None);
+        public ValueTask<bool> ContainsAsync(T value) =>
+            @this.ContainsAsync(value, null, CancellationToken.None);
 
         /// <summary>Asynchronously determines whether the collection contains a specified value.</summary>
         /// <param name="value">The value to locate in the collection.</param>
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains <see langword="true"/> if the
         /// value is found in the collection; otherwise, <see langword="false"/>.</returns>
-        public ValueTask<bool> ContainsAsync(T value, CancellationToken cancellationToken)
-            => @this.ContainsAsync(value, null, cancellationToken);
+        public ValueTask<bool> ContainsAsync(T value, CancellationToken cancellationToken) =>
+            @this.ContainsAsync(value, null, cancellationToken);
     }
 
     /// <summary>A witness that determines whether a sequence contains a specified value.</summary>
@@ -78,11 +78,11 @@ public static partial class SignalAsyncExtensions
         }
 
         /// <inheritdoc/>
-        protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken)
-            => SetExceptionAndDisposeAsync(error);
+        protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            SetExceptionAndDisposeAsync(error);
 
         /// <inheritdoc/>
-        protected override ValueTask OnCompletedAsyncCore(Result result)
-            => result.IsSuccess ? SetResultAndDisposeAsync(false) : SetExceptionAndDisposeAsync(result.Exception);
+        protected override ValueTask OnCompletedAsyncCore(Result result) =>
+            result.IsSuccess ? SetResultAndDisposeAsync(false) : SetExceptionAndDisposeAsync(result.Exception);
     }
 }

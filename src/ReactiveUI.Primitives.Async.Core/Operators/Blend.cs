@@ -100,8 +100,7 @@ public static partial class SignalAsyncExtensions
     /// <summary>Async observable that merges items from an observable of observables into a single stream.</summary>
     /// <typeparam name="T">The type of the elements emitted by the inner observable sequences.</typeparam>
     /// <param name="sources">The source observable whose inner observable sequences will be merged.</param>
-    internal sealed class BlendSignalSourcesSignal<T>(IObservableAsync<IObservableAsync<T>> sources)
-        : IObservableAsync<T>
+    internal sealed class BlendSignalSourcesSignal<T>(IObservableAsync<IObservableAsync<T>> sources) : IObservableAsync<T>
     {
         /// <inheritdoc/>
         ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
@@ -396,8 +395,7 @@ public static partial class SignalAsyncExtensions
     /// <typeparam name="T">The type of the elements in the merged sequence.</typeparam>
     /// <param name="observer">The downstream observer to forward merged items to.</param>
     /// <param name="maxConcurrent">The maximum number of inner observable sequences to subscribe to concurrently.</param>
-    internal sealed class BoundedBlendCoordinator<T>(IObserverAsync<T> observer, int maxConcurrent)
-        : BlendCoordinator<T>(observer)
+    internal sealed class BoundedBlendCoordinator<T>(IObserverAsync<T> observer, int maxConcurrent) : BlendCoordinator<T>(observer)
     {
         /// <summary>Limits the number of concurrently subscribed inner observables.</summary>
         private readonly SemaphoreSlim _semaphore = new(maxConcurrent, maxConcurrent);
@@ -436,8 +434,7 @@ public static partial class SignalAsyncExtensions
 
         /// <summary>Inner witness that releases a semaphore slot on disposal.</summary>
         /// <param name="parent">The parent bounded merge coordinator whose semaphore slot is released on disposal.</param>
-        internal sealed class BlendBranchWitnessWithPermit(BoundedBlendCoordinator<T> parent)
-            : BlendBranchWitness(parent)
+        internal sealed class BlendBranchWitnessWithPermit(BoundedBlendCoordinator<T> parent) : BlendBranchWitness(parent)
         {
             /// <summary>Tracks whether the semaphore slot has already been released for this witness.</summary>
             /// <remarks>
@@ -731,18 +728,18 @@ public static partial class SignalAsyncExtensions
             internal sealed class BlendBranchWitness(BlendSequenceCoordinator parent) : WitnessAsync<T>
             {
                 /// <inheritdoc/>
-                protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
-                    => parent.RelayNextAsync(value, cancellationToken);
+                protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
+                    parent.RelayNextAsync(value, cancellationToken);
 
                 /// <inheritdoc/>
                 protected override ValueTask OnErrorResumeAsyncCore(
                     Exception error,
-                    CancellationToken cancellationToken)
-                    => parent.RelayErrorAsync(error, cancellationToken);
+                    CancellationToken cancellationToken) =>
+                    parent.RelayErrorAsync(error, cancellationToken);
 
                 /// <inheritdoc/>
-                protected override ValueTask OnCompletedAsyncCore(Result result)
-                    => parent.AcceptBranchCompletionAsync(result);
+                protected override ValueTask OnCompletedAsyncCore(Result result) =>
+                    parent.AcceptBranchCompletionAsync(result);
 
                 /// <inheritdoc/>
                 protected override async ValueTask DisposeAsyncCore()

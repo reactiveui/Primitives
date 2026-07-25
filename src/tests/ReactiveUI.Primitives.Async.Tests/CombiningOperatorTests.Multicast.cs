@@ -86,11 +86,8 @@ public partial class CombiningOperatorTests
         await handle.DisposeAsync();
 
         // After the double-dispose the connectable must accept a new connection.
-        await using var sub = await connectable.SubscribeAsync(static (_, _) =>
-        {
-            // Signal is already completed from first connect, so no items arrive.
-            return ValueTask.CompletedTask;
-        });
+        // Signal is already completed from first connect, so no items arrive.
+        await using var sub = await connectable.SubscribeAsync(static (_, _) => ValueTask.CompletedTask);
 
         // A new ConnectAsync succeeds, proving internal state was not corrupted.
         await using var newHandle = await connectable.ConnectAsync(CancellationToken.None);
@@ -448,11 +445,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenPublishWithConcurrentStatefulOptions_ThenEmitsToSubscribers()
     {
-        SignalCreationOptions options = new()
-        {
-            PublishingOption = PublishingOption.Concurrent,
-            IsStateless = false
-        };
+        SignalCreationOptions options = new() { PublishingOption = PublishingOption.Concurrent, IsStateless = false };
 
         var items = await ConnectAndCollectAsync(SignalAsync.Range(1, PublishedItemCount).Publish(options));
 
@@ -464,11 +457,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenPublishWithSerialStatelessOptions_ThenEmitsToSubscribers()
     {
-        SignalCreationOptions options = new()
-        {
-            PublishingOption = PublishingOption.Serial,
-            IsStateless = true
-        };
+        SignalCreationOptions options = new() { PublishingOption = PublishingOption.Serial, IsStateless = true };
 
         var items = await ConnectAndCollectAsync(SignalAsync.Range(1, PublishedItemCount).Publish(options));
 
@@ -480,11 +469,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenPublishWithConcurrentStatelessOptions_ThenEmitsToSubscribers()
     {
-        SignalCreationOptions options = new()
-        {
-            PublishingOption = PublishingOption.Concurrent,
-            IsStateless = true
-        };
+        SignalCreationOptions options = new() { PublishingOption = PublishingOption.Concurrent, IsStateless = true };
 
         var items = await ConnectAndCollectAsync(SignalAsync.Range(1, PublishedItemCount).Publish(options));
 
@@ -495,11 +480,7 @@ public partial class CombiningOperatorTests
     [Test]
     public void WhenPublishWithUnsupportedOptions_ThenThrowsArgumentOutOfRange()
     {
-        SignalCreationOptions options = new()
-        {
-            PublishingOption = UnsupportedPublishingOption,
-            IsStateless = false
-        };
+        SignalCreationOptions options = new() { PublishingOption = UnsupportedPublishingOption, IsStateless = false };
 
         _ = Assert.Throws<ArgumentOutOfRangeException>(
             () => SignalAsync.Range(1, PublishedItemCount).Publish(options));
@@ -510,11 +491,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenPublishWithInitialValueAndConcurrentStatefulOptions_ThenReplaysInitialValue()
     {
-        BehaviorSignalCreationOptions options = new()
-        {
-            PublishingOption = PublishingOption.Concurrent,
-            IsStateless = false
-        };
+        BehaviorSignalCreationOptions options = new() { PublishingOption = PublishingOption.Concurrent, IsStateless = false };
 
         var items = await ConnectAndCollectAsync(
             SignalAsync.Range(1, PublishedItemCount).Publish(PublishedInitialValue, options));
@@ -528,11 +505,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenPublishWithInitialValueAndSerialStatelessOptions_ThenReplaysInitialValue()
     {
-        BehaviorSignalCreationOptions options = new()
-        {
-            PublishingOption = PublishingOption.Serial,
-            IsStateless = true
-        };
+        BehaviorSignalCreationOptions options = new() { PublishingOption = PublishingOption.Serial, IsStateless = true };
 
         var items = await ConnectAndCollectAsync(
             SignalAsync.Range(1, PublishedItemCount).Publish(PublishedInitialValue, options));
@@ -546,11 +519,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenPublishWithInitialValueAndConcurrentStatelessOptions_ThenReplaysInitialValue()
     {
-        BehaviorSignalCreationOptions options = new()
-        {
-            PublishingOption = PublishingOption.Concurrent,
-            IsStateless = true
-        };
+        BehaviorSignalCreationOptions options = new() { PublishingOption = PublishingOption.Concurrent, IsStateless = true };
 
         var items = await ConnectAndCollectAsync(
             SignalAsync.Range(1, PublishedItemCount).Publish(PublishedInitialValue, options));
@@ -563,11 +532,7 @@ public partial class CombiningOperatorTests
     [Test]
     public void WhenPublishWithInitialValueAndUnsupportedOptions_ThenThrowsArgumentOutOfRange()
     {
-        BehaviorSignalCreationOptions options = new()
-        {
-            PublishingOption = UnsupportedPublishingOption,
-            IsStateless = false
-        };
+        BehaviorSignalCreationOptions options = new() { PublishingOption = UnsupportedPublishingOption, IsStateless = false };
 
         _ = Assert.Throws<ArgumentOutOfRangeException>(
             () => SignalAsync.Range(1, PublishedItemCount).Publish(PublishedInitialValue, options));
@@ -578,11 +543,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenReplayLatestPublishWithConcurrentStatefulOptions_ThenEmitsToSubscribers()
     {
-        ReplayLatestSignalCreationOptions options = new()
-        {
-            PublishingOption = PublishingOption.Concurrent,
-            IsStateless = false
-        };
+        ReplayLatestSignalCreationOptions options = new() { PublishingOption = PublishingOption.Concurrent, IsStateless = false };
 
         var items = await ConnectAndCollectAsync(
             SignalAsync.Range(1, PublishedItemCount).ReplayLatestPublish(options));
@@ -595,11 +556,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenReplayLatestPublishWithSerialStatelessOptions_ThenEmitsToSubscribers()
     {
-        ReplayLatestSignalCreationOptions options = new()
-        {
-            PublishingOption = PublishingOption.Serial,
-            IsStateless = true
-        };
+        ReplayLatestSignalCreationOptions options = new() { PublishingOption = PublishingOption.Serial, IsStateless = true };
 
         var items = await ConnectAndCollectAsync(
             SignalAsync.Range(1, PublishedItemCount).ReplayLatestPublish(options));
@@ -612,11 +569,7 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenReplayLatestPublishWithConcurrentStatelessOptions_ThenEmitsToSubscribers()
     {
-        ReplayLatestSignalCreationOptions options = new()
-        {
-            PublishingOption = PublishingOption.Concurrent,
-            IsStateless = true
-        };
+        ReplayLatestSignalCreationOptions options = new() { PublishingOption = PublishingOption.Concurrent, IsStateless = true };
 
         var items = await ConnectAndCollectAsync(
             SignalAsync.Range(1, PublishedItemCount).ReplayLatestPublish(options));
@@ -628,11 +581,7 @@ public partial class CombiningOperatorTests
     [Test]
     public void WhenReplayLatestPublishWithUnsupportedOptions_ThenThrowsArgumentOutOfRange()
     {
-        ReplayLatestSignalCreationOptions options = new()
-        {
-            PublishingOption = UnsupportedPublishingOption,
-            IsStateless = true
-        };
+        ReplayLatestSignalCreationOptions options = new() { PublishingOption = UnsupportedPublishingOption, IsStateless = true };
 
         _ = Assert.Throws<ArgumentOutOfRangeException>(
             () => SignalAsync.Range(1, PublishedItemCount).ReplayLatestPublish(options));

@@ -13,8 +13,7 @@ namespace ReactiveUI.Primitives.Async.Signals;
 /// and suitable for use in asynchronous and concurrent environments.</remarks>
 /// <typeparam name="T">The type of the elements processed by the Signal.</typeparam>
 /// <param name="startValue">An optional initial value to be emitted to observers upon subscription if no other value has been published.</param>
-public sealed class ConcurrentReplayLatestSignalAsync<T>(Optional<T> startValue)
-    : ISignalAsync<T>
+public sealed class ConcurrentReplayLatestSignalAsync<T>(Optional<T> startValue) : ISignalAsync<T>
 {
     /// <inheritdoc/>
     IObservableAsync<T> ISignalAsync<T>.Values => this;

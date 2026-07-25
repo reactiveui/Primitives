@@ -15,8 +15,7 @@ namespace ReactiveUI.Primitives.Signals;
 /// <param name="source">The source sequence.</param>
 /// <param name="state">The state passed to the action.</param>
 /// <param name="onNext">The action invoked for each value and the state.</param>
-public sealed class TapWithSignal<T, TState>(IObservable<T> source, TState state, Action<TState, T> onNext)
-    : IRequireCurrentThread<T>
+public sealed class TapWithSignal<T, TState>(IObservable<T> source, TState state, Action<TState, T> onNext) : IRequireCurrentThread<T>
 {
     /// <summary>The source sequence.</summary>
     private readonly IObservable<T> _source = source;

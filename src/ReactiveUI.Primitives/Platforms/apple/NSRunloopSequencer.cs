@@ -59,7 +59,7 @@ public sealed class NSRunloopSequencer : ISequencer
     private static void ScheduleDelayed(IWorkItem item, long dueTimestamp)
     {
         var nanoseconds = (long)DispatchSequencerState.DelayUntil(dueTimestamp).TotalMilliseconds * NanosecondsPerMillisecond;
-        DispatchQueue.MainQueue.DispatchAfter(new DispatchTime(DispatchTime.Now, nanoseconds), () => DispatchSequencerState.RunIfActive(item));
+        DispatchQueue.MainQueue.DispatchAfter(new(DispatchTime.Now, nanoseconds), () => DispatchSequencerState.RunIfActive(item));
     }
 
     /// <summary>Marshals the cached drain callback onto the main dispatch queue.</summary>

@@ -62,8 +62,7 @@ public static class DisposableAsync
     /// <typeparam name="TState">The type of the state passed to the dispose delegate.</typeparam>
     /// <param name="state">The state forwarded to the dispose delegate at dispose time.</param>
     /// <param name="disposeAsync">The delegate invoked to perform asynchronous disposal.</param>
-    internal sealed class DelegateAsyncDisposable<TState>(TState state, Func<TState, ValueTask> disposeAsync)
-        : IAsyncDisposable
+    internal sealed class DelegateAsyncDisposable<TState>(TState state, Func<TState, ValueTask> disposeAsync) : IAsyncDisposable
     {
         /// <summary>A flag indicating whether <see cref="DisposeAsync"/> has already been called (0 = not disposed, 1 = disposed).</summary>
         private int _disposed;

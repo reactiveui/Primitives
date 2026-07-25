@@ -71,8 +71,8 @@ internal sealed class RetryWithBackoffObservable<T>(
 
                 if (_retries < policy.MaxRetries)
                 {
-                    var delay = TimeSpan.FromTicks((long)(policy.InitialDelay.Ticks *
-                                                          Math.Pow(policy.BackoffFactor, _retries)));
+                    var delay = TimeSpan.FromTicks((long)(policy.InitialDelay.Ticks
+                                                          * Math.Pow(policy.BackoffFactor, _retries)));
                     if (policy.MaxDelay.HasValue && delay > policy.MaxDelay.Value)
                     {
                         delay = policy.MaxDelay.Value;

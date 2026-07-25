@@ -29,6 +29,11 @@
     <Compile Include="..\Primitives.Shared\**\*.cs" Link="Primitives.Shared\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
+  <ItemGroup Condition="$(TargetFrameworkIdentifier) == '.NETFramework'">
+    <Compile Remove="..\Primitives.Shared\Core\SparkCompositeFormats.cs" />
+    <Compile Remove="..\Primitives.Shared\SignalOperatorParityMixins.AsyncHelpers.cs" />
+  </ItemGroup>
+
   <!-- The RxVoid/ISequencer-aware shared source, compiled here under the lean namespace (no REACTIVE_SHIM). -->
   <ItemGroup>
     <Compile Include="..\Primitives.Extensions.Shared\**\*.cs" Link="Primitives.Extensions.Shared\%(RecursiveDir)%(Filename)%(Extension)" />

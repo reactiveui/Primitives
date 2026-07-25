@@ -282,8 +282,8 @@ public partial class RxNamesTests
             sources.Tenth,
             sources.Eleventh,
             static (value1, value2, value3, value4, value5, value6, value7, value8, value9, value10, value11) =>
-                value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9 + value10 +
-                value11);
+                value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9 + value10
+                + value11);
 
     /// <summary>Builds the twelve-source CombineLatest overload.</summary>
     /// <param name="sources">The named source signals.</param>
@@ -314,8 +314,8 @@ public partial class RxNamesTests
                     value10,
                     value11,
                     value12) =>
-                value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9 + value10 +
-                value11 + value12);
+                value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9 + value10
+                + value11 + value12);
 
     /// <summary>Builds the thirteen-source CombineLatest overload.</summary>
     /// <param name="sources">The named source signals.</param>
@@ -348,8 +348,8 @@ public partial class RxNamesTests
                     value11,
                     value12,
                     value13) =>
-                value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9 + value10 +
-                value11 + value12 + value13);
+                value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9 + value10
+                + value11 + value12 + value13);
 
     /// <summary>Builds the fourteen-source CombineLatest overload.</summary>
     /// <param name="sources">The named source signals.</param>
@@ -384,8 +384,8 @@ public partial class RxNamesTests
                     value12,
                     value13,
                     value14) =>
-                value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9 + value10 +
-                value11 + value12 + value13 + value14);
+                value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9 + value10
+                + value11 + value12 + value13 + value14);
 
     /// <summary>Builds the fifteen-source CombineLatest overload.</summary>
     /// <param name="sources">The named source signals.</param>
@@ -422,8 +422,8 @@ public partial class RxNamesTests
                     value13,
                     value14,
                     value15) =>
-                value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9 + value10 +
-                value11 + value12 + value13 + value14 + value15);
+                value1 + value2 + value3 + value4 + value5 + value6 + value7 + value8 + value9 + value10
+                + value11 + value12 + value13 + value14 + value15);
 
     /// <summary>Sums sixteen values for the widest CombineLatest overload.</summary>
     /// <param name="value1">Value 1.</param>
@@ -464,22 +464,22 @@ public partial class RxNamesTests
         int value14,
         int value15,
         int value16) =>
-        value1 +
-        value2 +
-        value3 +
-        value4 +
-        value5 +
-        value6 +
-        value7 +
-        value8 +
-        value9 +
-        value10 +
-        value11 +
-        value12 +
-        value13 +
-        value14 +
-        value15 +
-        value16;
+        value1
+        + value2
+        + value3
+        + value4
+        + value5
+        + value6
+        + value7
+        + value8
+        + value9
+        + value10
+        + value11
+        + value12
+        + value13
+        + value14
+        + value15
+        + value16;
 
     /// <summary>Subscribes to a source and collects its forwarded values.</summary>
     /// <param name = "source">The source sequence.</param>

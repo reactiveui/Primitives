@@ -61,14 +61,16 @@ public class TerminalCancellationBenchmarks : IDisposable
     [Benchmark]
     public Task<int> R3FirstAsyncWithToken() =>
         R3.ObservableExtensions.FirstAsync(
-            R3.ObservableExtensions.Select(R3.Observable.Range(Start, Count), static x => x),
+            R3.ObservableExtensions.Select(
+                R3.Observable.Range(Start, Count, _liveSource.Token),
+                static x => x),
             _liveSource.Token);
 
     /// <summary>Benchmarks the task-shim ToTask overload that wraps a token around an existing task.</summary>
     /// <returns>The first value.</returns>
     [Benchmark]
     public Task<int> PrimitivesTaskToTaskWithToken() =>
-        Signal.Sequence(Start, Count).Map(static x => x).FirstAsync().ToTask(_liveSource.Token);
+        Signal.Sequence(Start, Count).Map(static x => x).FirstAsync(CancellationToken.None).ToTask(_liveSource.Token);
 
     /// <summary>Benchmarks awaiting the last-or-default value with a live token.</summary>
     /// <returns>The last value or default.</returns>
@@ -87,7 +89,7 @@ public class TerminalCancellationBenchmarks : IDisposable
     [Benchmark]
     public Task<int> R3LastOrDefaultAsyncWithToken() =>
         R3.ObservableExtensions.LastOrDefaultAsync(
-            R3.Observable.Range(Start, Count),
+            R3.Observable.Range(Start, Count, _liveSource.Token),
             cancellationToken: _liveSource.Token);
 
     /// <summary>Benchmarks forwarding a completing range through TakeUntil with a live token.</summary>
@@ -116,7 +118,9 @@ public class TerminalCancellationBenchmarks : IDisposable
     public int R3TakeUntilToken()
     {
         IntR3Witness observer = new();
-        using var subscription = R3.ObservableExtensions.TakeUntil(R3.Observable.Range(Start, Count), _liveSource.Token)
+        using var subscription = R3.ObservableExtensions.TakeUntil(
+                R3.Observable.Range(Start, Count, _liveSource.Token),
+                _liveSource.Token)
             .Subscribe(observer);
         return observer.Total;
     }

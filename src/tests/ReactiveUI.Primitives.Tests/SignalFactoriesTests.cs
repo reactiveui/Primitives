@@ -142,7 +142,7 @@ public partial class SignalFactoriesTests
         await TestPolling.SpinUntil(
             () => taskValues.Count == One && taskErrors.Count == Two,
             TimeSpan.FromSeconds(TimeoutSeconds));
-        using var disposedTaskSubscription = Signal.FromTask(Task.FromResult(NinetyNine))
+        var disposedTaskSubscription = Signal.FromTask(Task.FromResult(NinetyNine))
             .Subscribe(_ => taskValues.Add(NinetyNine));
         disposedTaskSubscription.Dispose();
         _ = Signal.After(TimeSpan.FromTicks(Two), clock).Subscribe(afterValues.Add);

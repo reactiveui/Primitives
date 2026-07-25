@@ -50,8 +50,7 @@ public static partial class SignalAsyncExtensions
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     /// <param name="disposeAction">The async dispose action.</param>
-    internal sealed class OnDisposeSignal<T>(IObservableAsync<T> source, Func<ValueTask> disposeAction)
-        : IObservableAsync<T>
+    internal sealed class OnDisposeSignal<T>(IObservableAsync<T> source, Func<ValueTask> disposeAction) : IObservableAsync<T>
     {
         /// <inheritdoc/>
         ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
@@ -83,8 +82,7 @@ public static partial class SignalAsyncExtensions
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
     /// <param name="observer">The downstream observer to forward notifications to.</param>
     /// <param name="finallySync">The synchronous action to invoke when disposed.</param>
-    internal sealed class OnDisposeWitnessSync<T>(IObserverAsync<T> observer, Action finallySync)
-        : ForwardingWitnessAsync<T>(observer)
+    internal sealed class OnDisposeWitnessSync<T>(IObserverAsync<T> observer, Action finallySync) : ForwardingWitnessAsync<T>(observer)
     {
         /// <inheritdoc/>
         protected override async ValueTask DisposeAsyncCore()
@@ -104,8 +102,7 @@ public static partial class SignalAsyncExtensions
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
     /// <param name="observer">The downstream observer to forward notifications to.</param>
     /// <param name="finallyAsync">The asynchronous callback to invoke when disposed.</param>
-    internal sealed class OnDisposeWitness<T>(IObserverAsync<T> observer, Func<ValueTask> finallyAsync)
-        : ForwardingWitnessAsync<T>(observer)
+    internal sealed class OnDisposeWitness<T>(IObserverAsync<T> observer, Func<ValueTask> finallyAsync) : ForwardingWitnessAsync<T>(observer)
     {
         /// <inheritdoc/>
         protected override async ValueTask DisposeAsyncCore()

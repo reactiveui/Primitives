@@ -230,8 +230,7 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
     /// <summary>Projection subscription.</summary>
     /// <param name="parent">Parent projection.</param>
     /// <param name="observer">Observer to remove.</param>
-    private sealed class Subscription(ProjectedReadOnlyState<TSource, TResult> parent, IObserver<TResult> observer)
-        : IDisposable
+    private sealed class Subscription(ProjectedReadOnlyState<TSource, TResult> parent, IObserver<TResult> observer) : IDisposable
     {
         /// <summary>Parent projection.</summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "Back-reference to the parent projection; unsubscribed, not owned.")]

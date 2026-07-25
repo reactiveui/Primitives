@@ -566,8 +566,8 @@ public partial class SignalOperatorMixinsTests
         TaskCompletionSource<int> pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
         Signal<Task<int>> disposableSource = new();
         RecordingWitness<int> disposed = new();
-        using (var disposable = disposableSource.Chain().Subscribe(disposed))
         {
+            var disposable = disposableSource.Chain().Subscribe(disposed);
             disposableSource.OnNext(pending.Task);
             disposable.Dispose();
             pending.SetResult(Five);

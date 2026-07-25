@@ -56,8 +56,8 @@ public sealed class ConnectableSignalTests
         var shared = cold.ShareLatest();
         List<int> first = [];
         List<int> second = [];
-        using var firstSubscription = shared.Subscribe(first.Add);
-        using var secondSubscription = shared.Subscribe(second.Add);
+        var firstSubscription = shared.Subscribe(first.Add);
+        var secondSubscription = shared.Subscribe(second.Add);
         source.OnNext(FirstSharedValue);
         firstSubscription.Dispose();
         source.OnNext(SecondSharedValue);
@@ -263,7 +263,7 @@ public sealed class ConnectableSignalTests
         void OnNext(int _)
         {
             reentrantReleaseInvoked = true;
-            using AutoShareSubscription<int> reentrantRelease = new(shared, Scope.Empty);
+            AutoShareSubscription<int> reentrantRelease = new(shared, Scope.Empty);
             reentrantRelease.Dispose();
         }
 
