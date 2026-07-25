@@ -111,8 +111,9 @@ dotnet add package ReactiveUI.Primitives
 ```
 
 The library is split into a layered set of packages, so you can pull only the surface that matches your
-integration point. Every package below ships at the same version and targets the same `net8.0` to `net11.0` plus
-`net462` to `net481` matrix. The platform packages add their OS-specific TFMs.
+integration point. Every package below is produced by a packable project in the current solution and ships at the same
+version. Target frameworks vary by package; the exact matrices are documented under
+[Target frameworks and dependencies](#target-frameworks-and-dependencies).
 
 | Package                                               | NuGet                        | Use when                                                                                                          |
 |-------------------------------------------------------|------------------------------|-------------------------------------------------------------------------------------------------------------------|
@@ -124,7 +125,6 @@ integration point. Every package below ships at the same version and targets the
 | [ReactiveUI.Primitives.Async][Async]                  | [![AsyncB]][Async]           | Native `IObservableAsync<T>` / `IObserverAsync<T>` signals.                                                       |
 | [ReactiveUI.Primitives.R3Bridge.Generator][R3Bridge]  | [![R3BridgeB]][R3Bridge]     | Optional analyzer package that generates R3 and R3Async bridge adapters.                                          |
 | [ReactiveUI.Primitives.Async.Reactive][AsyncRx]       | [![AsyncRxB]][AsyncRx]       | Async Primitives compiled against System.Reactive `Unit` and `IScheduler`.                                        |
-| [ReactiveUI.Primitives.Extensions.Core][ExtCore]      | [![ExtCoreB]][ExtCore]       | The type-agnostic core for the migrated `ReactiveUI.Extensions` helpers.                                          |
 | [ReactiveUI.Primitives.Wpf][Wpf]                      | [![WpfB]][Wpf]               | WPF dispatcher sequencer integration.                                                                             |
 | [ReactiveUI.Primitives.Wpf.Reactive][WpfRx]           | [![WpfRxB]][WpfRx]           | WPF dispatcher scheduler integration for System.Reactive-first projects.                                          |
 | [ReactiveUI.Primitives.WinForms][WinForms]            | [![WinFormsB]][WinForms]     | Windows Forms control sequencer integration.                                                                      |
@@ -169,10 +169,6 @@ integration point. Every package below ships at the same version and targets the
 [AsyncRx]: https://www.nuget.org/packages/ReactiveUI.Primitives.Async.Reactive/
 
 [AsyncRxB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Async.Reactive.svg
-
-[ExtCore]: https://www.nuget.org/packages/ReactiveUI.Primitives.Extensions.Core/
-
-[ExtCoreB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Extensions.Core.svg
 
 [Wpf]: https://www.nuget.org/packages/ReactiveUI.Primitives.Wpf/
 
@@ -226,10 +222,11 @@ integration point. Every package below ships at the same version and targets the
 
 The base and async families use type-agnostic `.Core` projects, with a **lean** leaf binding the shared
 `RxVoid`/`ISequencer` source to lightweight implementations and a `.Reactive` leaf recompiling it against
-System.Reactive's `Unit`/`IScheduler`. `ReactiveUI.Primitives.Extensions.Core` remains the shared implementation layer
-for the migrated extension helpers, but those helpers now ship directly from `ReactiveUI.Primitives` and
-`ReactiveUI.Primitives.Reactive`. The platform packages also come in lean and `.Reactive` leaves. (Arrows point from a
-package to what it depends on.)
+System.Reactive's `Unit`/`IScheduler`. Type-agnostic extension-helper sources are compiled into
+`ReactiveUI.Primitives.Core`, while the lean and System.Reactive helper surfaces ship from `ReactiveUI.Primitives` and
+`ReactiveUI.Primitives.Reactive`. The `src/ReactiveUI.Primitives.Extensions.Core` directory is source only; it is not a
+project or NuGet package. The platform packages also come in lean and `.Reactive` leaves. (Arrows point from a package
+to what it depends on.)
 
 ```mermaid
 graph TD
@@ -241,23 +238,19 @@ graph TD
     AsyncCore["...Async.Core"]
     Async["...Async (lean)"]
     AsyncRx["...Async.Reactive"]
-    ExtCore["...Extensions.Core"]
     Plat["Wpf / WinForms / WinUI / Blazor<br/>Avalonia / Maui"]
     PlatRx["Wpf.Reactive / WinForms.Reactive / WinUI.Reactive<br/>Blazor.Reactive / Avalonia.Reactive / Maui.Reactive"]
 
     Core --> Disp
     Prim --> Core
     Prim --> Disp
-    Prim --> ExtCore
     Rx --> Core
-    Rx --> ExtCore
     Rx --> SR
     AsyncCore --> Core
     Async --> Prim
     Async --> AsyncCore
     AsyncRx --> Rx
     AsyncRx --> AsyncCore
-    ExtCore --> Core
     Plat --> Prim
     PlatRx --> Rx
 ```
@@ -348,11 +341,11 @@ Most shared library packages use `$(LibraryTargetFrameworks)` from `src/Director
 Package TFM groups are:
 
 - `ReactiveUI.Disposables`, `ReactiveUI.Primitives.Core`, `ReactiveUI.Primitives.Async.Core`,
-  `ReactiveUI.Primitives.Async`, `ReactiveUI.Primitives.Async.Reactive`, and
-  `ReactiveUI.Primitives.Extensions.Core`: `$(LibraryTargetFrameworks)`.
+  `ReactiveUI.Primitives.Async`, and `ReactiveUI.Primitives.Async.Reactive`: `$(LibraryTargetFrameworks)`.
+- `ReactiveUI.Primitives.R3Bridge.Generator`: `netstandard2.0`.
 - `ReactiveUI.Primitives`: `$(LibraryTargetFrameworks)` plus `net10.0-android`, `net11.0-android`, and Apple platform
   TFMs (`net10.0-ios`, `net11.0-ios`, `net10.0-tvos`, `net11.0-tvos`, `net10.0-macos`, `net11.0-macos`,
-  `net10.0-maccatalyst`, `net11.0-maccatalyst`) when the build OS supports restoring those workloads.
+  `net10.0-maccatalyst`, `net11.0-maccatalyst`) when building on Windows or macOS.
 - `ReactiveUI.Primitives.Reactive`: the same matrix as `ReactiveUI.Primitives`, compiled with System.Reactive `Unit` and
   `IScheduler` aliases.
 - `ReactiveUI.Primitives.Wpf` and `ReactiveUI.Primitives.Wpf.Reactive`: `net8.0-windows`, `net9.0-windows`,
@@ -365,20 +358,20 @@ Package TFM groups are:
   `net11.0`.
 - `ReactiveUI.Primitives.Avalonia` and `ReactiveUI.Primitives.Avalonia.Reactive`: `net8.0`, `net9.0`, `net10.0`,
   `net11.0`.
-- `ReactiveUI.Primitives.Maui` and `ReactiveUI.Primitives.Maui.Reactive`: `net9.0`, `net10.0`, `net11.0`.
+- `ReactiveUI.Primitives.Maui` and `ReactiveUI.Primitives.Maui.Reactive`: `net10.0`, `net11.0`.
 
 Runtime package dependencies are intentionally small. The default production packages do not depend on System.Reactive,
 R3, R3Async, or the optional R3 bridge generator. `ReactiveUI.Primitives` references `ReactiveUI.Disposables`,
-`ReactiveUI.Primitives.Core`, and `ReactiveUI.Primitives.Extensions.Core`. `ReactiveUI.Disposables` references
-`System.ValueTuple` only for `net462`.
+and `ReactiveUI.Primitives.Core`. `ReactiveUI.Primitives.Core` contains the type-agnostic implementation used by the
+extension-helper surfaces. `ReactiveUI.Disposables` references `System.ValueTuple` only for `net462`.
 
 The `.Reactive` leaf packages intentionally reference `System.Reactive` through `src/Directory.Build.props`. They
 recompile the shared Primitives source with `RxVoid` aliased to `System.Reactive.Unit`, `ISequencer` aliased to
 `System.Reactive.Concurrency.IScheduler`, and the shared source shifted into `.Reactive` namespaces.
 
 `ReactiveUI.Primitives`, `ReactiveUI.Primitives.Reactive`, `ReactiveUI.Primitives.Async.Core`,
-`ReactiveUI.Primitives.Async`, `ReactiveUI.Primitives.Async.Reactive`, and `ReactiveUI.Primitives.Extensions.Core` add
-.NET Framework compatibility/support packages where required, such as
+`ReactiveUI.Primitives.Async`, and `ReactiveUI.Primitives.Async.Reactive` add .NET Framework compatibility/support
+packages where required, such as
 `System.ValueTuple`, Microsoft.Bcl.TimeProvider, System.Threading.Channels, System.Runtime.CompilerServices.Unsafe,
 System.ComponentModel.Annotations, System.Buffers, System.Memory, and System.Collections.Immutable. Add the standalone
 `ReactiveUI.Primitives.R3Bridge.Generator` analyzer package to generate R3/R3Async bridge methods in consuming projects
@@ -1828,12 +1821,12 @@ duration is indistinguishable from empty method overhead; the benchmark run stil
 | `src/ReactiveUI.Primitives.slnx`                  | Current solution entrypoint.                                                                 |
 | `src/ReactiveUI.Disposables`                      | Disposable primitives shared by the package family.                                          |
 | `src/ReactiveUI.Primitives.Core`                  | Type-agnostic core shared by lean and System.Reactive-flavoured Primitives leaves.           |
-| `src/ReactiveUI.Primitives`                       | Default lean signal/operator/sequencer package, extension helpers, platform sequencers, and R3 analyzer. |
+| `src/ReactiveUI.Primitives`                       | Default lean signal/operator/sequencer package, extension helpers, and platform sequencers. |
 | `src/ReactiveUI.Primitives.Reactive`              | System.Reactive-flavoured Primitives leaf including the Reactive extension helpers.          |
 | `src/ReactiveUI.Primitives.Async.Core`            | Type-agnostic async core shared by async leaves.                                             |
 | `src/ReactiveUI.Primitives.Async`                 | Lean async observable/signal package built on `IObservableAsync<T>` and `IObserverAsync<T>`. |
 | `src/ReactiveUI.Primitives.Async.Reactive`        | System.Reactive-flavoured async Primitives leaf.                                             |
-| `src/ReactiveUI.Primitives.Extensions.Core`       | Type-agnostic core for migrated ReactiveUI.Extensions helpers.                               |
+| `src/ReactiveUI.Primitives.Extensions.Core`       | Source-only extension-helper implementation linked into `ReactiveUI.Primitives.Core`; not a project or package. |
 | `src/ReactiveUI.Primitives.Wpf`                   | Optional WPF dispatcher integration library.                                                 |
 | `src/ReactiveUI.Primitives.Wpf.Reactive`          | Optional WPF dispatcher scheduler integration library for System.Reactive consumers.         |
 | `src/ReactiveUI.Primitives.WinForms`              | Optional Windows Forms control integration library.                                          |
