@@ -45,6 +45,7 @@
     <LibraryTargetFrameworks>$(NetTargetFrameworks);$(NetFrameworkTargetFrameworks)</LibraryTargetFrameworks>
     <WindowsNetTargetFrameworks>net8.0-windows;net9.0-windows;net10.0-windows;net11.0-windows</WindowsNetTargetFrameworks>
     <WindowsLibraryTargetFrameworks>$(WindowsNetTargetFrameworks);$(NetFrameworkTargetFrameworks)</WindowsLibraryTargetFrameworks>
+    <AvaloniaTargetFrameworks>$(NetTargetFrameworks)</AvaloniaTargetFrameworks>
     <BlazorTargetFrameworks>$(NetTargetFrameworks)</BlazorTargetFrameworks>
     <!-- MAUI 9 left support May 2026; MAUI 10 is the only supported release until 11 GAs. -->
     <MauiTargetFrameworks>net10.0;net11.0</MauiTargetFrameworks>

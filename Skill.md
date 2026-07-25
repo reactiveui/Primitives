@@ -1,6 +1,6 @@
 ---
 name: reactiveui-primitives
-description: Use when working with ReactiveUI.Primitives NuGet packages in .NET projects, including ReactiveUI.Disposables, ReactiveUI.Primitives.Core, ReactiveUI.Primitives, ReactiveUI.Primitives.Reactive, ReactiveUI.Primitives.Async.Core, ReactiveUI.Primitives.Async, ReactiveUI.Primitives.Async.Reactive, ReactiveUI.Primitives.Extensions.Core, ReactiveUI.Primitives.Wpf, ReactiveUI.Primitives.Wpf.Reactive, ReactiveUI.Primitives.WinForms, ReactiveUI.Primitives.WinForms.Reactive, ReactiveUI.Primitives.WinUI, ReactiveUI.Primitives.WinUI.Reactive, ReactiveUI.Primitives.Blazor, ReactiveUI.Primitives.Blazor.Reactive, ReactiveUI.Primitives.Maui, or ReactiveUI.Primitives.Maui.Reactive; choosing Core vs lean vs System.Reactive package variants; using IObservable, IObservableAsync, signals, extension helpers, sequencers, disposable helpers, UI dispatch adapters, R3/R3Async generated bridges, or migration guidance from System.Reactive/R3/R3Async repositories to Primitives or .Reactive package variants.
+description: Use when working with ReactiveUI.Primitives NuGet packages in .NET projects, including ReactiveUI.Disposables, ReactiveUI.Primitives.Core, ReactiveUI.Primitives, ReactiveUI.Primitives.Reactive, ReactiveUI.Primitives.Async.Core, ReactiveUI.Primitives.Async, ReactiveUI.Primitives.Async.Reactive, ReactiveUI.Primitives.Extensions.Core, ReactiveUI.Primitives.Wpf, ReactiveUI.Primitives.Wpf.Reactive, ReactiveUI.Primitives.WinForms, ReactiveUI.Primitives.WinForms.Reactive, ReactiveUI.Primitives.WinUI, ReactiveUI.Primitives.WinUI.Reactive, ReactiveUI.Primitives.Blazor, ReactiveUI.Primitives.Blazor.Reactive, ReactiveUI.Primitives.Avalonia, ReactiveUI.Primitives.Avalonia.Reactive, ReactiveUI.Primitives.Maui, or ReactiveUI.Primitives.Maui.Reactive; choosing Core vs lean vs System.Reactive package variants; using IObservable, IObservableAsync, signals, extension helpers, sequencers, disposable helpers, UI dispatch adapters, R3/R3Async generated bridges, or migration guidance from System.Reactive/R3/R3Async repositories to Primitives or .Reactive package variants.
 ---
 
 # ReactiveUI.Primitives
@@ -31,6 +31,8 @@ composition work that needs the shared type layer without the full leaf surface.
 | `ReactiveUI.Primitives.WinUI.Reactive`      | WinUI code is System.Reactive-first and needs `DispatcherQueue` scheduling.                                                                            | `ReactiveUI.Primitives.Reactive.Concurrency.DispatcherQueueSequencer` and `DispatcherQueueSequencerExtensions.ToSequencer()`. Depends on `ReactiveUI.Primitives.Reactive` and `Microsoft.WindowsAppSDK`.                                                                                                                                                                         |
 | `ReactiveUI.Primitives.Blazor`              | Blazor components need render-thread sequencing and component-bound subscriptions.                                                                     | `ReactiveUI.Primitives.Blazor.Components.ReactiveComponentBase`, `Observe`, `Track`, `InvalidateAsync`, `ReactiveUI.Primitives.Blazor.Concurrency.BlazorRendererSequencer`. Depends on `ReactiveUI.Primitives` and `Microsoft.AspNetCore.Components`.                                                                                                                            |
 | `ReactiveUI.Primitives.Blazor.Reactive`     | Blazor components are System.Reactive-first and need render-thread scheduling.                                                                         | `ReactiveUI.Primitives.Blazor.Reactive.Components.ReactiveComponentBase` and `ReactiveUI.Primitives.Blazor.Reactive.Concurrency.BlazorRendererSequencer`. Depends on `ReactiveUI.Primitives.Reactive` and `Microsoft.AspNetCore.Components`.                                                                                                                                     |
+| `ReactiveUI.Primitives.Avalonia`            | Avalonia UI code needs dispatcher marshalling.                                                                                                         | `ReactiveUI.Primitives.Concurrency.AvaloniaScheduler`; `Instance` uses `Dispatcher.UIThread` at background priority, or construct with a `Dispatcher` and optional `DispatcherPriority`. Depends on `ReactiveUI.Primitives` and `Avalonia`.                                                                                                                                          |
+| `ReactiveUI.Primitives.Avalonia.Reactive`   | Avalonia UI code is System.Reactive-first and needs dispatcher scheduling.                                                                             | `ReactiveUI.Primitives.Reactive.Concurrency.AvaloniaScheduler`; `Instance` uses `Dispatcher.UIThread` at background priority, or construct with a `Dispatcher` and optional `DispatcherPriority`. Depends on `ReactiveUI.Primitives.Reactive` and `Avalonia`.                                                                                                                      |
 | `ReactiveUI.Primitives.Maui`                | .NET MAUI code needs dispatcher marshalling.                                                                                                           | `ReactiveUI.Primitives.Concurrency.MauiDispatcherSequencer` and `MauiDispatcherSequencerExtensions.ToSequencer()`. Depends on `ReactiveUI.Primitives` and `Microsoft.Maui.Core`.                                                                                                                                                                                                 |
 | `ReactiveUI.Primitives.Maui.Reactive`       | .NET MAUI code is System.Reactive-first and needs dispatcher scheduling.                                                                               | `ReactiveUI.Primitives.Reactive.Concurrency.MauiDispatcherSequencer` and `MauiDispatcherSequencerExtensions.ToSequencer()`. Depends on `ReactiveUI.Primitives.Reactive` and `Microsoft.Maui.Core`.                                                                                                                                                                               |
 
@@ -40,6 +42,7 @@ Install examples:
 dotnet add package ReactiveUI.Primitives
 dotnet add package ReactiveUI.Primitives.Async
 dotnet add package ReactiveUI.Primitives.Wpf
+dotnet add package ReactiveUI.Primitives.Avalonia
 ```
 
 Use `.Core` packages deliberately:
@@ -56,6 +59,7 @@ Use `.Reactive` packages when the project already uses System.Reactive idioms:
 dotnet add package ReactiveUI.Primitives.Reactive
 dotnet add package ReactiveUI.Primitives.Async.Reactive
 dotnet add package ReactiveUI.Primitives.Wpf.Reactive
+dotnet add package ReactiveUI.Primitives.Avalonia.Reactive
 ```
 
 Add `ReactiveUI.Primitives.R3Bridge.Generator` only when the project needs generated R3 or R3Async bridge methods. It is
@@ -73,6 +77,8 @@ dotnet add package ReactiveUI.Primitives.R3Bridge.Generator
   `ReactiveUI.Primitives.Extensions` namespace is retained.
 - Prefer UI packages only in the matching UI framework; use the lean UI package for `ISequencer` and the `.Reactive` UI
   package for `IScheduler`.
+- For Avalonia UI dispatch, choose `ReactiveUI.Primitives.Avalonia`; choose
+  `ReactiveUI.Primitives.Avalonia.Reactive` only when the project is System.Reactive-first.
 - Prefer `.Reactive` variants when public APIs should expose `System.Reactive.Unit`, `IScheduler`, `.Reactive`
   namespaces, or existing Rx source should compile with minimal code changes.
 - Prefer `.Core` variants only when composing packages or minimizing a library dependency layer. Most apps should
@@ -121,8 +127,10 @@ using ReactiveUI.Primitives.Reactive.Signals;
 using ReactiveUI.Primitives.Extensions.Reactive;
 ```
 
-Reactive UI packages mostly expose sequencers under `ReactiveUI.Primitives.Reactive.Concurrency`. Blazor also exposes
-component helpers under `ReactiveUI.Primitives.Blazor.Reactive.Components`.
+Reactive UI packages expose lean sequencers under `ReactiveUI.Primitives.Concurrency` and System.Reactive schedulers
+under `ReactiveUI.Primitives.Reactive.Concurrency`. Blazor also exposes component helpers under
+`ReactiveUI.Primitives.Blazor.Reactive.Components`. Avalonia exposes `AvaloniaScheduler` in both concurrency namespaces;
+its ready work is coalesced into one dispatcher drain and delayed work uses dispatcher-bound timers.
 
 R3 generated bridges:
 
@@ -184,6 +192,7 @@ dotnet add xyz/xyz.csproj package ReactiveUI.Primitives.Wpf
 dotnet add xyz/xyz.csproj package ReactiveUI.Primitives.WinForms
 dotnet add xyz/xyz.csproj package ReactiveUI.Primitives.WinUI
 dotnet add xyz/xyz.csproj package ReactiveUI.Primitives.Blazor
+dotnet add xyz/xyz.csproj package ReactiveUI.Primitives.Avalonia
 dotnet add xyz/xyz.csproj package ReactiveUI.Primitives.Maui
 ```
 
@@ -237,6 +246,7 @@ dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.Wpf.Re
 dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.WinForms.Reactive
 dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.WinUI.Reactive
 dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.Blazor.Reactive
+dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.Avalonia.Reactive
 dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.Maui.Reactive
 ```
 
@@ -291,6 +301,8 @@ Use bridge methods only at boundaries. Keep internal pipelines in one model afte
   sequencers in the base package family.
 - WPF and WinForms packages, including `.Reactive` variants, target Windows TFMs plus .NET Framework.
 - WinUI packages, including `.Reactive` variants, target `net*-windows10.0.19041.0`.
+- Avalonia packages, including `.Reactive` variants, target `net8.0`, `net9.0`, `net10.0`, and `net11.0` and reference
+  `Avalonia`.
 - MAUI packages, including `.Reactive` variants, target `net9.0`, `net10.0`, and `net11.0`.
 - Blazor packages, including `.Reactive` variants, target the modern .NET TFMs.
 

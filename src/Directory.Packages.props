@@ -6,6 +6,7 @@
     <!-- StyleSharp.Analyzers, PerformanceSharp.Analyzers and SecuritySharp.Analyzers ship from the
          same release pipeline and always share a version. -->
     <RoslynCommonAnalyzersVersion>3.38.1</RoslynCommonAnalyzersVersion>
+    <AvaloniaVersion>12.1.0</AvaloniaVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.301"/>
@@ -31,6 +32,8 @@
     <PackageVersion Include="ReactiveUI.Extensions" Version="4.0.0"/>
   </ItemGroup>
   <ItemGroup>
+    <PackageVersion Include="Avalonia" Version="$(AvaloniaVersion)"/>
+    <PackageVersion Include="Avalonia.Headless" Version="$(AvaloniaVersion)"/>
     <PackageVersion Include="Microsoft.AspNetCore.Components" Version="8.0.29" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0')) AND !$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0'))"/>
     <PackageVersion Include="Microsoft.AspNetCore.Components" Version="9.0.18" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0')) AND !$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0'))"/>
     <PackageVersion Include="Microsoft.AspNetCore.Components" Version="10.0.10" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0')) AND !$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>

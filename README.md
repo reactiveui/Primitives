@@ -133,6 +133,8 @@ integration point. Every package below ships at the same version and targets the
 | [ReactiveUI.Primitives.WinUI.Reactive][WinUIRx]       | [![WinUIRxB]][WinUIRx]       | WinUI dispatcher-queue scheduler integration for System.Reactive-first projects.                                  |
 | [ReactiveUI.Primitives.Blazor][Blazor]                | [![BlazorB]][Blazor]         | Blazor renderer sequencer integration.                                                                            |
 | [ReactiveUI.Primitives.Blazor.Reactive][BlazorRx]     | [![BlazorRxB]][BlazorRx]     | Blazor renderer scheduler integration for System.Reactive-first projects.                                         |
+| [ReactiveUI.Primitives.Avalonia][Avalonia]            | [![AvaloniaB]][Avalonia]     | Avalonia UI-thread sequencer integration.                                                                         |
+| [ReactiveUI.Primitives.Avalonia.Reactive][AvaloniaRx] | [![AvaloniaRxB]][AvaloniaRx] | Avalonia UI-thread scheduler integration for System.Reactive-first projects.                                      |
 | [ReactiveUI.Primitives.Maui][Maui]                    | [![MauiB]][Maui]             | MAUI dispatcher sequencer integration.                                                                            |
 | [ReactiveUI.Primitives.Maui.Reactive][MauiRx]         | [![MauiRxB]][MauiRx]         | MAUI dispatcher scheduler integration for System.Reactive-first projects.                                         |
 
@@ -204,6 +206,14 @@ integration point. Every package below ships at the same version and targets the
 
 [BlazorRxB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Blazor.Reactive.svg
 
+[Avalonia]: https://www.nuget.org/packages/ReactiveUI.Primitives.Avalonia/
+
+[AvaloniaB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Avalonia.svg
+
+[AvaloniaRx]: https://www.nuget.org/packages/ReactiveUI.Primitives.Avalonia.Reactive/
+
+[AvaloniaRxB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Avalonia.Reactive.svg
+
 [Maui]: https://www.nuget.org/packages/ReactiveUI.Primitives.Maui/
 
 [MauiB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Maui.svg
@@ -232,8 +242,8 @@ graph TD
     Async["...Async (lean)"]
     AsyncRx["...Async.Reactive"]
     ExtCore["...Extensions.Core"]
-    Plat["Wpf / WinForms / WinUI<br/>Blazor / Maui"]
-    PlatRx["Wpf.Reactive / WinForms.Reactive<br/>WinUI.Reactive / Blazor.Reactive / Maui.Reactive"]
+    Plat["Wpf / WinForms / WinUI / Blazor<br/>Avalonia / Maui"]
+    PlatRx["Wpf.Reactive / WinForms.Reactive / WinUI.Reactive<br/>Blazor.Reactive / Avalonia.Reactive / Maui.Reactive"]
 
     Core --> Disp
     Prim --> Core
@@ -353,6 +363,8 @@ Package TFM groups are:
   `net9.0-windows10.0.19041.0`, `net10.0-windows10.0.19041.0`, `net11.0-windows10.0.19041.0`.
 - `ReactiveUI.Primitives.Blazor` and `ReactiveUI.Primitives.Blazor.Reactive`: `net8.0`, `net9.0`, `net10.0`,
   `net11.0`.
+- `ReactiveUI.Primitives.Avalonia` and `ReactiveUI.Primitives.Avalonia.Reactive`: `net8.0`, `net9.0`, `net10.0`,
+  `net11.0`.
 - `ReactiveUI.Primitives.Maui` and `ReactiveUI.Primitives.Maui.Reactive`: `net9.0`, `net10.0`, `net11.0`.
 
 Runtime package dependencies are intentionally small. The default production packages do not depend on System.Reactive,
@@ -373,6 +385,7 @@ System.ComponentModel.Annotations, System.Buffers, System.Memory, and System.Col
 that already reference those external libraries.
 
 `ReactiveUI.Primitives.Blazor` and `ReactiveUI.Primitives.Blazor.Reactive` reference `Microsoft.AspNetCore.Components`.
+`ReactiveUI.Primitives.Avalonia` and `ReactiveUI.Primitives.Avalonia.Reactive` reference `Avalonia`.
 `ReactiveUI.Primitives.Maui` and `ReactiveUI.Primitives.Maui.Reactive` reference `Microsoft.Maui.Core` and
 Microsoft.Extensions infrastructure packages. `ReactiveUI.Primitives.WinUI` and `ReactiveUI.Primitives.WinUI.Reactive`
 reference `Microsoft.WindowsAppSDK`. The remaining shared package references are analyzer, SourceLink, versioning,
@@ -1049,7 +1062,7 @@ using var subscription = failed.Subscribe(
 
 A sequencer decides when and on which thread scheduled work runs. Rx calls this a scheduler. Sequencers live in
 `ReactiveUI.Primitives.Concurrency` and implement `ISequencer`. The core `ReactiveUI.Primitives` package does not
-reference WPF, Windows Forms, WinUI, Blazor, or MAUI. The optional integration packages supply the UI-thread
+reference WPF, Windows Forms, WinUI, Blazor, Avalonia, or MAUI. The optional integration packages supply the UI-thread
 sequencers.
 
 | Sequencer                                                     | Purpose                                                                                |
@@ -1063,13 +1076,23 @@ sequencers.
 | `ControlSequencer`                                            | Schedule onto a Windows Forms control from `ReactiveUI.Primitives.WinForms`.           |
 | `DispatcherQueueSequencer`                                    | Schedule onto a WinUI dispatcher queue from `ReactiveUI.Primitives.WinUI`.             |
 | `BlazorRendererSequencer`                                     | Schedule component work through Blazor's renderer from `ReactiveUI.Primitives.Blazor`. |
+| `AvaloniaScheduler`                                           | Schedule onto an Avalonia dispatcher from `ReactiveUI.Primitives.Avalonia`.             |
 | `MauiDispatcherSequencer`                                     | Schedule onto an MAUI dispatcher from `ReactiveUI.Primitives.Maui`.                    |
 | `VirtualClock`                                                | Virtual-time scheduling for deterministic tests.                                       |
 
 WPF, Windows Forms, WinUI, Blazor, and MAUI sequencers derive from `DispatchSequencerBase`. That shared base batches
 ready work into a single posted dispatcher drain, preserves FIFO order, skips cancelled work lazily, and routes delayed
 UI work through the shared `ThreadPoolSequencer` timing queue before marshaling back to the UI thread. Platform packages
-only provide the final dispatcher-specific post primitive.
+only provide the final dispatcher-specific post primitive. `AvaloniaScheduler` provides the same coalesced dispatcher
+drain behavior and uses dispatcher-bound timers for delayed work, so both posted and delayed callbacks stay associated
+with the selected Avalonia dispatcher and priority.
+
+`AvaloniaScheduler.Instance` uses `Dispatcher.UIThread` at `DispatcherPriority.Background`. To bind scheduling to a
+specific dispatcher or priority, construct `new AvaloniaScheduler(dispatcher)` or
+`new AvaloniaScheduler(dispatcher, priority)`. The lean type is
+`ReactiveUI.Primitives.Concurrency.AvaloniaScheduler`; the System.Reactive-compatible type is
+`ReactiveUI.Primitives.Reactive.Concurrency.AvaloniaScheduler` from
+`ReactiveUI.Primitives.Avalonia.Reactive`.
 
 Scheduling APIs include absolute, relative, recursive, and action-based overloads:
 
@@ -1263,6 +1286,7 @@ dotnet add xyz/xyz.csproj package ReactiveUI.Primitives.Wpf
 dotnet add xyz/xyz.csproj package ReactiveUI.Primitives.WinForms
 dotnet add xyz/xyz.csproj package ReactiveUI.Primitives.WinUI
 dotnet add xyz/xyz.csproj package ReactiveUI.Primitives.Blazor
+dotnet add xyz/xyz.csproj package ReactiveUI.Primitives.Avalonia
 dotnet add xyz/xyz.csproj package ReactiveUI.Primitives.Maui
 ```
 
@@ -1313,6 +1337,7 @@ dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.Wpf.Re
 dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.WinForms.Reactive
 dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.WinUI.Reactive
 dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.Blazor.Reactive
+dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.Avalonia.Reactive
 dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.Maui.Reactive
 ```
 
@@ -1433,6 +1458,7 @@ dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.Maui.R
 | Windows Forms control scheduling   | `ControlSequencer` from `ReactiveUI.Primitives.WinForms`       |
 | WinUI dispatcher queue scheduling  | `DispatcherQueueSequencer` from `ReactiveUI.Primitives.WinUI`  |
 | Blazor renderer scheduling         | `BlazorRendererSequencer` from `ReactiveUI.Primitives.Blazor`  |
+| Avalonia dispatcher scheduling     | `AvaloniaScheduler` from `ReactiveUI.Primitives.Avalonia`      |
 | MAUI dispatcher scheduling         | `MauiDispatcherSequencer` from `ReactiveUI.Primitives.Maui`    |
 | `TestScheduler` / virtual time     | `VirtualClock`                                                 |
 
@@ -1816,6 +1842,8 @@ duration is indistinguishable from empty method overhead; the benchmark run stil
 | `src/ReactiveUI.Primitives.WinUI.Reactive`        | Optional WinUI dispatcher queue scheduler integration library for System.Reactive consumers. |
 | `src/ReactiveUI.Primitives.Blazor`                | Optional Blazor renderer integration library.                                                |
 | `src/ReactiveUI.Primitives.Blazor.Reactive`       | Optional Blazor renderer scheduler integration library for System.Reactive consumers.        |
+| `src/ReactiveUI.Primitives.Avalonia`              | Optional Avalonia dispatcher sequencer integration library.                                   |
+| `src/ReactiveUI.Primitives.Avalonia.Reactive`     | Optional Avalonia dispatcher scheduler integration library for System.Reactive consumers.    |
 | `src/ReactiveUI.Primitives.Maui`                  | Optional MAUI dispatcher integration library.                                                |
 | `src/ReactiveUI.Primitives.Maui.Reactive`         | Optional MAUI dispatcher scheduler integration library for System.Reactive consumers.        |
 | `src/ReactiveUI.Primitives.R3Bridge.Generator`    | Standalone analyzer package for optional R3 and R3Async bridge generation.                   |
