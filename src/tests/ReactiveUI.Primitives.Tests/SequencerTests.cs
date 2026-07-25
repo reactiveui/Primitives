@@ -562,6 +562,8 @@ public partial class SequencerTests
         var previousContext = SynchronizationContext.Current;
         try
         {
+            SynchronizationContext.SetSynchronizationContext(null);
+            _ = Assert.Throws<InvalidOperationException>(static () => _ = SynchronizationContextSequencer.Current);
             SynchronizationContext.SetSynchronizationContext(synchronizationContext);
             await Assert.That(SynchronizationContextSequencer.Current.Context)
                 .IsSameReferenceAs(synchronizationContext);
