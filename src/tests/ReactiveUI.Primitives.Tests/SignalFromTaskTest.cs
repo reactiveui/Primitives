@@ -35,12 +35,6 @@ public class SignalFromTaskTest
     /// <summary>Delay used before checking that a task has started.</summary>
     private const int InitialDelayMilliseconds = 500;
 
-    /// <summary>Delay before token cancellation is requested.</summary>
-    private const int TokenCancellationDelayMilliseconds = 1000;
-
-    /// <summary>Delay used to simulate cancellation cleanup.</summary>
-    private const int CleanupDelayMilliseconds = 5000;
-
     /// <summary>
     /// Time spent performing synchronous cancellation cleanup work. Kept short so the
     /// blocking <see cref = "Thread.Sleep(int)"/> does not occupy a thread-pool thread long
@@ -712,11 +706,15 @@ public class SignalFromTaskTest
     public async Task SignalFromTask_T_HandlesUserExceptions()
     {
         StatusTrail statusTrail = new();
+        TaskCompletionSource executionStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource releaseExecution = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource finallyCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var position = 0;
         var fixture = Signal.FromTask<RxVoid>(async cts =>
         {
             RecordStatus(statusTrail, ref position, StartedCommand);
-            await Task.Delay(CommandDelayMilliseconds, cts.Token)
+            _ = executionStarted.TrySetResult();
+            await releaseExecution.Task.WaitAsync(cts.Token)
                 .HandleCancellation(() => RecordCancellationCleanup(statusTrail, ref position)).ConfigureAwait(true);
             if (!cts.IsCancellationRequested)
             {
@@ -728,14 +726,17 @@ public class SignalFromTaskTest
         {
             RecordStatus(statusTrail, ref position, ExceptionShouldBeHere);
             return Signal.Fail<RxVoid>(ex);
-        }).OnCleanup(() => RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere));
+        }).OnCleanup(() =>
+        {
+            RecordStatus(statusTrail, ref position, ShouldAlwaysComeHere);
+            _ = finallyCompleted.TrySetResult();
+        });
         var result = false;
-        var subscription = fixture.Subscribe(_ => result = true);
-        await Task.Delay(InitialDelayMilliseconds).ConfigureAwait(true);
+        using var subscription = fixture.Subscribe(_ => result = true);
+        await executionStarted.Task.WaitAsync(PollTimeout).ConfigureAwait(false);
         await Assert.That(StatusMessages(statusTrail)).Contains(StartedCommand);
-        await Task.Delay(CommandDelayMilliseconds).ConfigureAwait(true);
-        subscription.Dispose();
-        await Task.Delay(CancellationWaitDelayMilliseconds).ConfigureAwait(false);
+        _ = releaseExecution.TrySetResult();
+        await finallyCompleted.Task.WaitAsync(PollTimeout).ConfigureAwait(false);
         await Assert.That(StatusMessages(statusTrail)).DoesNotContain(StartingCancellingCommand);
         await Assert.That(StatusMessages(statusTrail)).Contains(ShouldAlwaysComeHere);
         await Assert.That(StatusMessages(statusTrail)).DoesNotContain(FinishedCancellingCommand);
@@ -786,20 +787,20 @@ public class SignalFromTaskTest
     public async Task SignalFromTask_T_HandlesTokenCancellation()
     {
         StatusTrail statusTrail = new();
+        TaskCompletionSource<CancellationTokenSource> cancellationReady =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource cleanupCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource finallyCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var position = 0;
         var fixture = Signal.FromTask<RxVoid>(async cts =>
         {
             RecordStatus(statusTrail, ref position, StartedCommand);
-            await Task.Delay(TokenCancellationDelayMilliseconds, cts.Token).HandleCancellation().ConfigureAwait(true);
-            var cancellationTask = CancelAfterDelayAsync(cts);
-            await Task.Delay(CleanupDelayMilliseconds, cts.Token).HandleCancellation(() =>
+            _ = cancellationReady.TrySetResult(cts);
+            await Task.Delay(Timeout.InfiniteTimeSpan, cts.Token).HandleCancellation(() =>
             {
                 RecordCancellationCleanup(statusTrail, ref position);
                 _ = cleanupCompleted.TrySetResult();
             }).ConfigureAwait(true);
-            await cancellationTask.ConfigureAwait(false);
             if (!cts.IsCancellationRequested)
             {
                 RecordStatus(statusTrail, ref position, FinishedCommandNormally);
@@ -817,8 +818,9 @@ public class SignalFromTaskTest
         });
         var result = false;
         using var subscription = fixture.Subscribe(_ => result = true);
-        await Task.Delay(InitialDelayMilliseconds).ConfigureAwait(true);
+        var cancellationSource = await cancellationReady.Task.WaitAsync(PollTimeout).ConfigureAwait(false);
         await Assert.That(StatusMessages(statusTrail)).Contains(StartedCommand);
+        await cancellationSource.CancelAsync().ConfigureAwait(false);
         await WaitForCancellationCallbacks(cleanupCompleted.Task, finallyCompleted.Task).ConfigureAwait(false);
         await Assert.That(StatusMessages(statusTrail)).Contains(StartingCancellingCommand);
         await Assert.That(StatusMessages(statusTrail)).Contains(ShouldAlwaysComeHere);
@@ -1061,15 +1063,6 @@ public class SignalFromTaskTest
         RecordStatus(statusTrail, ref position, StartingCancellingCommand);
         Thread.Sleep(CleanupWorkMilliseconds);
         RecordStatus(statusTrail, ref position, FinishedCancellingCommand);
-    }
-
-    /// <summary>Cancels the source after the token cancellation delay.</summary>
-    /// <param name = "cts">The cancellation source.</param>
-    /// <returns>A <see cref = "Task"/> representing the asynchronous operation.</returns>
-    private static async Task CancelAfterDelayAsync(CancellationTokenSource cts)
-    {
-        await Task.Delay(TokenCancellationDelayMilliseconds, cts.Token).ConfigureAwait(false);
-        await cts.CancelAsync().ConfigureAwait(false);
     }
 
     /// <summary>Observer that counts the notifications it received.</summary>
