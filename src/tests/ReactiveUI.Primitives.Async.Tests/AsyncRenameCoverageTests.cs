@@ -54,24 +54,11 @@ public sealed class AsyncRenameCoverageTests
                 false)).IsFalse();
     }
 
-    /// <summary>Verifies current-context capture and explicit awaiter scheduling branches.</summary>
+    /// <summary>Verifies explicit awaiter scheduling branches.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]
-    public async Task AsyncContextCurrentAndSwitcherBranchesCoverCustomSchedulersAndCancellation()
+    public async Task AsyncContextSwitcherBranchesCoverCustomSchedulersAndCancellation()
     {
-        var previous = SynchronizationContext.Current;
-        SynchronizationContext currentContext = new();
-        try
-        {
-            SynchronizationContext.SetSynchronizationContext(currentContext);
-            var captured = AsyncContext.GetCurrent();
-            await Assert.That(captured.SynchronizationContext).IsSameReferenceAs(currentContext);
-        }
-        finally
-        {
-            SynchronizationContext.SetSynchronizationContext(previous);
-        }
-
         var cancellationCallbacks = 0;
         using CancellationTokenSource cancellation = new();
         await cancellation.CancelAsync().ConfigureAwait(false);

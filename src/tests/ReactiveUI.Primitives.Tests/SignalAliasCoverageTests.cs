@@ -120,6 +120,14 @@ public class SignalAliasCoverageTests
         _ = Signal.PairLatest(Signal.Range(One, Two), Signal.Range(Three, Two), static (left, right) => left + right)
             .Subscribe(latestRanges.Add);
         await Assert.That(latestRanges.SequenceEqual([Two + Three, Two + Four])).IsTrue();
+
+        List<int> latestWithNonRangeRight = [];
+        _ = Signal.PairLatest(
+                Signal.Range(One, Two),
+                Signal.FromEnumerable([Three, Four]),
+                static (left, right) => left + right)
+            .Subscribe(latestWithNonRangeRight.Add);
+        await Assert.That(latestWithNonRangeRight.SequenceEqual([Two + Three, Two + Four])).IsTrue();
     }
 
     /// <summary>Verifies direct from-async subscriptions cover constructor and synchronous completion paths.</summary>

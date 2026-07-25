@@ -75,12 +75,6 @@ public partial class SignalFactoriesTests
     /// <summary>The divisor that selects the even values of a sequence.</summary>
     private const int EvenDivisor = 2;
 
-    /// <summary>Delay used by the async enumerable cancellation test.</summary>
-    private const int AsyncEnumeratorDelayMilliseconds = 5000;
-
-    /// <summary>Timeout used while waiting for async enumerable disposal.</summary>
-    private const int AsyncEnumeratorDisposeTimeoutSeconds = 5;
-
     /// <summary>Virtual clock due time for one-shot timers.</summary>
     private const int AfterTicks = 5;
 
@@ -291,12 +285,15 @@ public partial class SignalFactoriesTests
     }
 
     /// <summary>Verifies async enumerable subscriptions cancel and dispose the enumerator.</summary>
+    /// <param name="testToken">The test cancellation token.</param>
     /// <returns>A task that completes when the asynchronous assertions have run.</returns>
     [Test]
-    public async Task AsyncEnumerableFactoryCancelsEnumeratorOnDispose()
+    [Timeout(30_000)]
+    public async Task AsyncEnumerableFactoryCancelsEnumeratorOnDispose(CancellationToken testToken)
     {
         var disposed = false;
         List<int> values = [];
+        TaskCompletionSource firstValueObserved = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource disposedSignal = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         async IAsyncEnumerable<int> Values([EnumeratorCancellation] CancellationToken token = default)
@@ -304,7 +301,7 @@ public partial class SignalFactoriesTests
             try
             {
                 yield return FirstValue;
-                await Task.Delay(AsyncEnumeratorDelayMilliseconds, token);
+                await Task.Delay(Timeout.InfiniteTimeSpan, token);
                 yield return SecondValue;
             }
             finally
@@ -314,14 +311,17 @@ public partial class SignalFactoriesTests
             }
         }
 
-        var subscription = Signal.FromAsyncEnumerable(Values()).Subscribe(
-            values.Add,
+        var subscription = Signal.FromAsyncEnumerable(Values(testToken), testToken).Subscribe(
+            value =>
+            {
+                values.Add(value);
+                _ = firstValueObserved.TrySetResult();
+            },
             static _ => { },
             static () => { });
-        await Task.Yield();
+        await firstValueObserved.Task.WaitAsync(testToken).ConfigureAwait(false);
         subscription.Dispose();
-        await disposedSignal.Task.WaitAsync(TimeSpan.FromSeconds(AsyncEnumeratorDisposeTimeoutSeconds))
-            .ConfigureAwait(false);
+        await disposedSignal.Task.WaitAsync(testToken).ConfigureAwait(false);
         await Assert.That(values.SequenceEqual(AsyncEnumerableBeforeDisposeExpected)).IsTrue();
         await Assert.That(disposed).IsTrue();
     }
