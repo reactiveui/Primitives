@@ -97,9 +97,11 @@ public partial class SyncLatestOperatorTests
     [Test]
     public async Task WhenSyncLatestOverEnumerable_ThenEmitsSnapshotOfLatestValues()
     {
+        _ = Assert.Throws<ArgumentNullException>(static () =>
+            _ = new SyncLatestEnumerableSignal<int, int>(null!, static values => values[0]));
         var first = Signal.Create<int>();
         var second = Signal.Create<int>();
-        IObservableAsync<int>[] sources = [first.Values, second.Values];
+        List<IObservableAsync<int>> sources = [first.Values, second.Values];
 
         List<int[]> snapshots = [];
         await using var sub = await sources.SyncLatest().SubscribeAsync(

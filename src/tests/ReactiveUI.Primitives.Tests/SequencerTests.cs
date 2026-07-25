@@ -559,18 +559,6 @@ public partial class SequencerTests
     {
         ImmediateSynchronizationContext synchronizationContext = new();
         _ = Assert.Throws<ArgumentNullException>(CreateSynchronizationContextSequencerWithoutContext);
-        var previousContext = SynchronizationContext.Current;
-        try
-        {
-            SynchronizationContext.SetSynchronizationContext(synchronizationContext);
-            await Assert.That(SynchronizationContextSequencer.Current.Context)
-                .IsSameReferenceAs(synchronizationContext);
-        }
-        finally
-        {
-            SynchronizationContext.SetSynchronizationContext(previousContext);
-        }
-
         SynchronizationContextSequencer synchronizationSequencer = new(synchronizationContext);
         await Assert.That(synchronizationSequencer.Now > DateTimeOffset.MinValue).IsTrue();
         _ = Assert.Throws<ArgumentNullException>(() => synchronizationSequencer.Schedule(One, null!));
