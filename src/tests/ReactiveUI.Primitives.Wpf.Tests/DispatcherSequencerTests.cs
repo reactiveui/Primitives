@@ -88,11 +88,7 @@ public sealed class DispatcherSequencerTests
                 ThreadId = Environment.CurrentManagedThreadId;
                 ready.Set();
                 Dispatcher.Run();
-            })
-            {
-                IsBackground = true,
-                Name = "WpfDispatcherHarness",
-            };
+            }) { IsBackground = true, Name = "WpfDispatcherHarness" };
 
             _thread.SetApartmentState(ApartmentState.STA);
             _thread.Start();

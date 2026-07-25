@@ -55,11 +55,7 @@ public sealed class ControlSequencerTests
                 ThreadId = Environment.CurrentManagedThreadId;
                 ready.Set();
                 Application.Run();
-            })
-            {
-                IsBackground = true,
-                Name = "WinFormsControlHarness",
-            };
+            }) { IsBackground = true, Name = "WinFormsControlHarness" };
 
             _thread.SetApartmentState(ApartmentState.STA);
             _thread.Start();
