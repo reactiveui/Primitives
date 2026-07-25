@@ -55,7 +55,7 @@ public sealed class NSRunloopSequencer : CoalescingDispatchScheduler
     {
         var block = new DispatchBlock(work);
         var nanoseconds = (long)dueTime.TotalMilliseconds * NanosecondsPerMillisecond;
-        DispatchQueue.MainQueue.DispatchAfter(new DispatchTime(DispatchTime.Now, nanoseconds), block);
+        DispatchQueue.MainQueue.DispatchAfter(new(DispatchTime.Now, nanoseconds), block);
         return Disposable.Create(block, static b => b.Cancel());
     }
 }
