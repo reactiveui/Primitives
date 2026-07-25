@@ -16,10 +16,14 @@ public sealed class SynchronizationContextSequencer : ISequencer
         Context = context ?? throw new ArgumentNullException(nameof(context));
 
     /// <summary>Gets a sequencer for the current synchronization context.</summary>
+    /// <remarks>Coverage excludes the getter because the ambient context cannot be changed safely by parallel tests.</remarks>
     /// <exception cref="InvalidOperationException">There is no current synchronization context.</exception>
-    public static SynchronizationContextSequencer Current =>
-        new(SynchronizationContext.Current
+    public static SynchronizationContextSequencer Current
+    {
+        [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+        get => new(SynchronizationContext.Current
             ?? throw new InvalidOperationException("There is no current synchronization context."));
+    }
 
     /// <summary>Gets the synchronization context used to schedule work.</summary>
     public SynchronizationContext Context { get; }

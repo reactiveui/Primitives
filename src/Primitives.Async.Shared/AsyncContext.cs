@@ -95,12 +95,15 @@ public sealed record AsyncContext
     }
 
     /// <summary>Gets the current asynchronous context associated with the calling thread.</summary>
-    /// <remarks>Use this method to capture the context for scheduling asynchronous operations that should
-    /// continue on the same logical thread or synchronization context. This is commonly used to ensure code executes on
-    /// the appropriate context, such as a UI thread in desktop applications.</remarks>
+    /// <remarks>
+    /// Use this method to capture the context for scheduling asynchronous operations that should continue on the same
+    /// logical thread or synchronization context. Coverage excludes this method because both inputs are ambient thread
+    /// state and cannot be changed safely by parallel tests.
+    /// </remarks>
     /// <returns>An <see cref="AsyncContext"/> representing the current asynchronous context. If a <see
     /// cref="SynchronizationContext"/> is present, it is used; otherwise, the current <see cref="TaskScheduler"/> is
     /// used.</returns>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public static AsyncContext GetCurrent()
     {
         var currentSc = SynchronizationContext.Current;
