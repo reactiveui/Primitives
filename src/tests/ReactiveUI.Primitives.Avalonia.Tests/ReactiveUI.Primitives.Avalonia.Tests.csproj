@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(AvaloniaTargetFrameworks)</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Headless"/>
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.Avalonia\ReactiveUI.Primitives.Avalonia.csproj"/>
+  </ItemGroup>
+
+</Project>

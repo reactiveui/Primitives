@@ -1,0 +1,14 @@
+#nullable enable
+ReactiveUI.Primitives.Reactive.Concurrency.AvaloniaScheduler
+ReactiveUI.Primitives.Reactive.Concurrency.AvaloniaScheduler.AvaloniaScheduler(Avalonia.Threading.Dispatcher! dispatcher) -> void
+ReactiveUI.Primitives.Reactive.Concurrency.AvaloniaScheduler.AvaloniaScheduler(Avalonia.Threading.Dispatcher! dispatcher, Avalonia.Threading.DispatcherPriority priority) -> void
+ReactiveUI.Primitives.Reactive.Concurrency.AvaloniaScheduler.Dispatcher.get -> Avalonia.Threading.Dispatcher!
+ReactiveUI.Primitives.Reactive.Concurrency.AvaloniaScheduler.Priority.get -> Avalonia.Threading.DispatcherPriority
+ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler
+ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler.CoalescingDispatchScheduler() -> void
+ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler.RequestDrain() -> void
+abstract ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler.Post(System.Action! drain) -> bool
+override ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler.Schedule<TState>(TState state, System.Func<System.Reactive.Concurrency.IScheduler!, TState, System.IDisposable!>! action) -> System.IDisposable!
+override ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler.Schedule<TState>(TState state, System.TimeSpan dueTime, System.Func<System.Reactive.Concurrency.IScheduler!, TState, System.IDisposable!>! action) -> System.IDisposable!
+static readonly ReactiveUI.Primitives.Reactive.Concurrency.AvaloniaScheduler.Instance -> ReactiveUI.Primitives.Reactive.Concurrency.AvaloniaScheduler!
+virtual ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler.ScheduleOnDispatcher(System.Action! work, System.TimeSpan dueTime) -> System.IDisposable!

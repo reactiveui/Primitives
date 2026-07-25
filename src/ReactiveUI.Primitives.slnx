@@ -20,6 +20,7 @@
         <File Path="testconfig.json" />
     </Folder>
     <Folder Name="/Lean/">
+        <Project Path="ReactiveUI.Primitives.Avalonia/ReactiveUI.Primitives.Avalonia.csproj" />
         <Project Path="ReactiveUI.Primitives.Async/ReactiveUI.Primitives.Async.csproj" />
         <Project Path="ReactiveUI.Primitives.Blazor/ReactiveUI.Primitives.Blazor.csproj" />
         <Project Path="ReactiveUI.Primitives.Maui/ReactiveUI.Primitives.Maui.csproj" />
@@ -29,6 +30,7 @@
         <Project Path="ReactiveUI.Primitives/ReactiveUI.Primitives.csproj" />
     </Folder>
     <Folder Name="/Reactive/">
+        <Project Path="ReactiveUI.Primitives.Avalonia.Reactive/ReactiveUI.Primitives.Avalonia.Reactive.csproj" />
         <Project Path="ReactiveUI.Primitives.Async.Reactive/ReactiveUI.Primitives.Async.Reactive.csproj" />
         <Project Path="ReactiveUI.Primitives.Blazor.Reactive/ReactiveUI.Primitives.Blazor.Reactive.csproj" />
         <Project Path="ReactiveUI.Primitives.Maui.Reactive/ReactiveUI.Primitives.Maui.Reactive.csproj" />
@@ -41,6 +43,7 @@
         <Project Path="tests/ReactiveUI.Disposables.Tests/ReactiveUI.Disposables.Tests.csproj" />
     </Folder>
     <Folder Name="/tests/Lean/">
+        <Project Path="tests/ReactiveUI.Primitives.Avalonia.Tests/ReactiveUI.Primitives.Avalonia.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.Async.Tests/ReactiveUI.Primitives.Async.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.Blazor.Tests/ReactiveUI.Primitives.Blazor.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.Extensions.Tests/ReactiveUI.Primitives.Extensions.Tests.csproj" />
@@ -51,6 +54,7 @@
         <Project Path="tests/ReactiveUI.Primitives.Wpf.Tests/ReactiveUI.Primitives.Wpf.Tests.csproj" />
     </Folder>
     <Folder Name="/tests/Reactive/">
+        <Project Path="tests/ReactiveUI.Primitives.Avalonia.Reactive.Tests/ReactiveUI.Primitives.Avalonia.Reactive.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.Async.Reactive.Tests/ReactiveUI.Primitives.Async.Reactive.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.Blazor.Reactive.Tests/ReactiveUI.Primitives.Blazor.Reactive.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.Extensions.Reactive.Tests/ReactiveUI.Primitives.Extensions.Reactive.Tests.csproj" />
