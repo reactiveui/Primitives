@@ -123,6 +123,7 @@ version. Target frameworks vary by package; the exact matrices are documented un
 | [ReactiveUI.Primitives.Reactive][Rx]                  | [![RxB]][Rx]                 | The Primitives and extension-helper APIs compiled against System.Reactive `Unit` and `IScheduler`.                |
 | [ReactiveUI.Primitives.Async.Core][AsyncCore]         | [![AsyncCoreB]][AsyncCore]   | The type-agnostic async core shared by the async leaves.                                                          |
 | [ReactiveUI.Primitives.Async][Async]                  | [![AsyncB]][Async]           | Native `IObservableAsync<T>` / `IObserverAsync<T>` signals.                                                       |
+| [ReactiveUI.Primitives.ObservableEvents][Events]      | [![EventsB]][Events]         | Optional analyzer package that exposes .NET events as provider-native `IObservable<T>` properties.                |
 | [ReactiveUI.Primitives.R3Bridge.Generator][R3Bridge]  | [![R3BridgeB]][R3Bridge]     | Optional analyzer package that generates R3 and R3Async bridge adapters.                                          |
 | [ReactiveUI.Primitives.Async.Reactive][AsyncRx]       | [![AsyncRxB]][AsyncRx]       | Async Primitives compiled against System.Reactive `Unit` and `IScheduler`.                                        |
 | [ReactiveUI.Primitives.Wpf][Wpf]                      | [![WpfB]][Wpf]               | WPF dispatcher sequencer integration.                                                                             |
@@ -161,6 +162,10 @@ version. Target frameworks vary by package; the exact matrices are documented un
 [Async]: https://www.nuget.org/packages/ReactiveUI.Primitives.Async/
 
 [AsyncB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.Async.svg
+
+[Events]: https://www.nuget.org/packages/ReactiveUI.Primitives.ObservableEvents/
+
+[EventsB]: https://img.shields.io/nuget/v/ReactiveUI.Primitives.ObservableEvents.svg
 
 [R3Bridge]: https://www.nuget.org/packages/ReactiveUI.Primitives.R3Bridge.Generator/
 
@@ -342,7 +347,7 @@ Package TFM groups are:
 
 - `ReactiveUI.Disposables`, `ReactiveUI.Primitives.Core`, `ReactiveUI.Primitives.Async.Core`,
   `ReactiveUI.Primitives.Async`, and `ReactiveUI.Primitives.Async.Reactive`: `$(LibraryTargetFrameworks)`.
-- `ReactiveUI.Primitives.R3Bridge.Generator`: `netstandard2.0`.
+- `ReactiveUI.Primitives.ObservableEvents` and `ReactiveUI.Primitives.R3Bridge.Generator`: `netstandard2.0`.
 - `ReactiveUI.Primitives`: `$(LibraryTargetFrameworks)` plus `net10.0-android`, `net11.0-android`, and Apple platform
   TFMs (`net10.0-ios`, `net11.0-ios`, `net10.0-tvos`, `net11.0-tvos`, `net10.0-macos`, `net11.0-macos`,
   `net10.0-maccatalyst`, `net11.0-maccatalyst`) when building on Windows or macOS.
@@ -1128,6 +1133,47 @@ ReactiveUI.Primitives follows the BCL observer contract and keeps ownership expl
   intentionally reference System.Reactive, and bridge generators only emit R3/R3Async boundary adapters when a consuming
   project already references those packages.
 
+## Observable-event source generation
+
+`ReactiveUI.Primitives.ObservableEvents` is a standalone incremental source-generator package. It has no runtime
+dependency on a particular observable implementation; it inspects the consuming compilation and emits adapters for
+the first compatible provider it finds:
+
+- `ReactiveUI.Primitives.Signals.Signal` and `RxVoid` for lean Primitives projects.
+- `ReactiveUI.Primitives.Reactive.Signals.Signal` and `System.Reactive.Unit` for `.Reactive` projects.
+- `System.Reactive.Linq.Observable` and `System.Reactive.Unit` for standalone System.Reactive projects that do not
+  reference any ReactiveUI.Primitives package.
+
+Install it alongside the observable provider already used by the application:
+
+```bash
+dotnet add package ReactiveUI.Primitives.ObservableEvents
+```
+
+Instance generation is activated by calling `Events()` once for an event host. The generator replaces the marker
+result with a strongly typed wrapper whose properties subscribe and unsubscribe from the corresponding public events:
+
+```csharp
+using ReactiveUI.Primitives.ObservableEvents;
+
+IObservable<EventArgs> changes = viewModel.Events().Changed;
+```
+
+Request public static events with an assembly attribute. Static observable properties are generated on `RxEvents` in
+the event host's namespace. Their names use length-prefixed host and event identifiers so type, nesting, and event-name
+boundaries cannot collide:
+
+```csharp
+[assembly: ReactiveUI.Primitives.ObservableEvents.GenerateStaticEventObservables(typeof(AppEvents))]
+
+IObservable<string> messages = RxEvents.T9AppEvents7Message;
+```
+
+Delegate payloads use `RxVoid` or `Unit` for no parameters, the sole parameter for one parameter, the event-args
+parameter for conventional `(object sender, TEventArgs args)` events, and a named tuple for other multi-parameter
+delegates. Delegates returning `void`, `Task`, or `ValueTask` are supported. Unsupported signatures produce `RXOE003`;
+missing providers and empty requests produce `RXOE001` and `RXOE002` respectively.
+
 ## Source-generator bridge behavior
 
 A source generator is a compiler component that writes extra C# code into your project at build time. R3 and R3Async
@@ -1839,6 +1885,7 @@ duration is indistinguishable from empty method overhead; the benchmark run stil
 | `src/ReactiveUI.Primitives.Avalonia.Reactive`     | Optional Avalonia dispatcher scheduler integration library for System.Reactive consumers.    |
 | `src/ReactiveUI.Primitives.Maui`                  | Optional MAUI dispatcher integration library.                                                |
 | `src/ReactiveUI.Primitives.Maui.Reactive`         | Optional MAUI dispatcher scheduler integration library for System.Reactive consumers.        |
+| `src/ReactiveUI.Primitives.ObservableEvents`      | Standalone analyzer package for provider-aware observable event generation.                  |
 | `src/ReactiveUI.Primitives.R3Bridge.Generator`    | Standalone analyzer package for optional R3 and R3Async bridge generation.                   |
 | `src/Primitives.Shared`                           | Linked lean/Reactive synchronous source.                                                     |
 | `src/Primitives.Async.Shared`                     | Linked lean/Reactive async source.                                                           |
