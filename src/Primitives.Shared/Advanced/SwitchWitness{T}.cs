@@ -74,10 +74,36 @@ public sealed class SwitchWitness<T> : IDisposable
             IsInnerActive = true;
         }
 
-        InnerSlot.Create(source.Subscribe(
+        var subscription = source.Subscribe(
             value => OnNext(current, value),
             error => OnError(current, error),
-            () => OnCompleted(current)));
+            () => OnCompleted(current));
+
+        // Subscribing can push a value downstream synchronously, and a downstream handler is free to feed the
+        // outer source again. That re-enters OnSource, installs a newer generation, and only then returns here.
+        // Installing unconditionally at that point would replace the newer subscription with this stale one and
+        // dispose it, leaving a subscription whose notifications are all filtered out by version - the sequence
+        // would then never produce another value nor complete. Only the generation that is still current may
+        // occupy the slot; a superseded one disposes itself, outside the gate.
+        var superseded = false;
+        lock (_gate)
+        {
+            if (IsDone || current != _version)
+            {
+                superseded = true;
+            }
+            else
+            {
+                InnerSlot.Create(subscription);
+            }
+        }
+
+        if (!superseded)
+        {
+            return;
+        }
+
+        subscription.Dispose();
     }
 
     /// <summary>Marks the outer source complete.</summary>
