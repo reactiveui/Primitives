@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <IsPackable>true</IsPackable>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <DevelopmentDependency>true</DevelopmentDependency>
+    <PackageType>Analyzer</PackageType>
+    <TrackPublicApi>false</TrackPublicApi>
+    <PackageDescription>Incremental source generator that exposes .NET events as observables for ReactiveUI.Primitives, ReactiveUI.Primitives.Reactive, and standalone System.Reactive projects.</PackageDescription>
+    <PackageTags>reactiveui;primitives;system.reactive;source-generator;analyzer;observable;events</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all"/>
+    <!-- Keep the analyzer loadable in every supported compiler host. The repository-wide
+         transitive pin targets v10, while net9 compiler hosts provide v9. -->
+    <PackageReference Include="System.Collections.Immutable" VersionOverride="9.0.0" PrivateAssets="all"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="$(OutputPath)$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false"/>
+  </ItemGroup>
+
+  <!-- The shipped table is the release-tracking source of truth. Keep the requested nullable-only
+       unshipped marker out of Roslyn's markdown release parser, which otherwise reports RS2007. -->
+  <Target Name="RemoveNullableOnlyUnshippedReleaseMarker" BeforeTargets="CoreCompile">
+    <ItemGroup>
+      <AdditionalFiles Remove="AnalyzerReleases.Unshipped.md"/>
+    </ItemGroup>
+  </Target>
+
+</Project>

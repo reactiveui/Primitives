@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(TestTargetFrameworks)</TargetFrameworks>
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('Windows'))">$(WindowsNetTargetFrameworks)</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+    <UseWPF Condition="$(TargetFramework.EndsWith('-windows'))">true</UseWPF>
+    <UseWindowsForms Condition="$(TargetFramework.EndsWith('-windows'))">true</UseWindowsForms>
+    <DefineConstants Condition="$(TargetFramework.EndsWith('-windows'))">$(DefineConstants);WINDOWS</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia"/>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all"/>
+    <PackageReference Include="System.Reactive"/>
+  </ItemGroup>
+
+  <ItemGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0'))">
+    <PackageReference Include="Microsoft.Maui.Core"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.Async\ReactiveUI.Primitives.Async.csproj"/>
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.Async.Reactive\ReactiveUI.Primitives.Async.Reactive.csproj"/>
+    <ProjectReference Include="..\..\ReactiveUI.Primitives\ReactiveUI.Primitives.csproj"/>
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.Reactive\ReactiveUI.Primitives.Reactive.csproj"/>
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.ObservableEvents\ReactiveUI.Primitives.ObservableEvents.csproj"/>
+  </ItemGroup>
+
+</Project>

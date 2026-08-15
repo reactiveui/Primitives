@@ -1,6 +1,6 @@
 ---
 name: reactiveui-primitives
-description: Use when working with ReactiveUI.Primitives NuGet packages in .NET projects, including ReactiveUI.Disposables, ReactiveUI.Primitives.Core, ReactiveUI.Primitives, ReactiveUI.Primitives.Reactive, ReactiveUI.Primitives.Async.Core, ReactiveUI.Primitives.Async, ReactiveUI.Primitives.Async.Reactive, ReactiveUI.Primitives.R3Bridge.Generator, ReactiveUI.Primitives.Wpf, ReactiveUI.Primitives.Wpf.Reactive, ReactiveUI.Primitives.WinForms, ReactiveUI.Primitives.WinForms.Reactive, ReactiveUI.Primitives.WinUI, ReactiveUI.Primitives.WinUI.Reactive, ReactiveUI.Primitives.Blazor, ReactiveUI.Primitives.Blazor.Reactive, ReactiveUI.Primitives.Avalonia, ReactiveUI.Primitives.Avalonia.Reactive, ReactiveUI.Primitives.Maui, or ReactiveUI.Primitives.Maui.Reactive; choosing Core vs lean vs System.Reactive package variants; using IObservable, IObservableAsync, signals, extension helpers, sequencers, disposable helpers, UI dispatch adapters, R3/R3Async generated bridges, or migration guidance from System.Reactive/R3/R3Async repositories to Primitives or .Reactive package variants.
+description: Use when working with ReactiveUI.Primitives NuGet packages in .NET projects, including ReactiveUI.Disposables, ReactiveUI.Primitives.Core, ReactiveUI.Primitives, ReactiveUI.Primitives.Reactive, ReactiveUI.Primitives.Async.Core, ReactiveUI.Primitives.Async, ReactiveUI.Primitives.Async.Reactive, ReactiveUI.Primitives.ObservableEvents, ReactiveUI.Primitives.R3Bridge.Generator, ReactiveUI.Primitives.Wpf, ReactiveUI.Primitives.Wpf.Reactive, ReactiveUI.Primitives.WinForms, ReactiveUI.Primitives.WinForms.Reactive, ReactiveUI.Primitives.WinUI, ReactiveUI.Primitives.WinUI.Reactive, ReactiveUI.Primitives.Blazor, ReactiveUI.Primitives.Blazor.Reactive, ReactiveUI.Primitives.Avalonia, ReactiveUI.Primitives.Avalonia.Reactive, ReactiveUI.Primitives.Maui, or ReactiveUI.Primitives.Maui.Reactive; choosing Core vs lean vs System.Reactive package variants; using IObservable, IObservableAsync, signals, extension helpers, sequencers, disposable helpers, UI dispatch adapters, generated observable events, R3/R3Async generated bridges, or migration guidance from System.Reactive/R3/R3Async repositories to Primitives or .Reactive package variants.
 ---
 
 # ReactiveUI.Primitives
@@ -22,6 +22,7 @@ composition work that needs the shared type layer without the full leaf surface.
 | `ReactiveUI.Primitives.Async.Core`          | Building a low-level async library around Primitives async contracts.                                                                                  | `ReactiveUI.Primitives.Async`; `IObservableAsync<T>`, `IObserverAsync<T>`, `SignalAsync<T>`, `SignalAsync`, async signal factories, async operators, async disposables, helpers, and async signal implementations. Depends on `ReactiveUI.Primitives.Core`.                                                                                                                      |
 | `ReactiveUI.Primitives.Async`               | The app needs async-native observable pipelines where observer calls can await or observe cancellation.                                                | Lean async leaf using Primitives `RxVoid` and `ISequencer`. Adds `AsyncContext`, `ContextSwitchSignalAsync<T>`, `SignalAsyncReactiveExtensions`, `Yield`, `WitnessOn`, `ObserveOnSafe`, and `ObserveOnIf`. Depends on `ReactiveUI.Primitives` and `ReactiveUI.Primitives.Async.Core`.                                                                                            |
 | `ReactiveUI.Primitives.Async.Reactive`      | Async-native pipelines in a System.Reactive-first project.                                                                                             | System.Reactive-flavoured async leaf with `System.Reactive.Unit` and `IScheduler` conventions. Depends on `ReactiveUI.Primitives.Reactive` and `ReactiveUI.Primitives.Async.Core`.                                                                                                                                                                                               |
+| `ReactiveUI.Primitives.ObservableEvents`    | The project needs strongly typed `IObservable<T>` properties for .NET events.                                                                           | Standalone `netstandard2.0` analyzer package. Selects lean Primitives, `.Reactive`, or standalone System.Reactive APIs from consumer references and adds no runtime dependency of its own.                                                                                                                                                                                       |
 | `ReactiveUI.Primitives.R3Bridge.Generator`  | The project needs generated adapters at R3 or R3Async boundaries.                                                                                       | Standalone `netstandard2.0` analyzer package. It emits bridges only when the consuming compilation already references the required R3/R3Async symbols; it is not embedded in or required by the runtime packages.                                                                                                                                                              |
 | `ReactiveUI.Primitives.Wpf`                 | WPF UI code needs dispatcher marshalling.                                                                                                              | `ReactiveUI.Primitives.Concurrency.DispatcherSequencer`. Depends on `ReactiveUI.Primitives`.                                                                                                                                                                                                                                                                                     |
 | `ReactiveUI.Primitives.Wpf.Reactive`        | WPF UI code is System.Reactive-first and needs dispatcher scheduling.                                                                                  | `ReactiveUI.Primitives.Reactive.Concurrency.DispatcherSequencer` implements System.Reactive scheduling conventions. Depends on `ReactiveUI.Primitives.Reactive`.                                                                                                                                                                                                                 |
@@ -66,6 +67,13 @@ a standalone analyzer package and is not embedded in the runtime packages.
 
 ```bash
 dotnet add package ReactiveUI.Primitives.R3Bridge.Generator
+```
+
+Add `ReactiveUI.Primitives.ObservableEvents` when public .NET events should be exposed as observables. It uses the
+lean, `.Reactive`, or standalone System.Reactive provider already referenced by the consumer.
+
+```bash
+dotnet add package ReactiveUI.Primitives.ObservableEvents
 ```
 
 ## Selection Rules
@@ -293,12 +301,20 @@ the async bridge generator emits:
 
 Use bridge methods only at boundaries. Keep internal pipelines in one model after conversion.
 
+## Observable Events
+
+Reference `ReactiveUI.Primitives.ObservableEvents`, import `ReactiveUI.Primitives.ObservableEvents`, and call
+`source.Events()` once to activate generation for the source type. Generated properties use `RxVoid` for lean
+parameterless events and `System.Reactive.Unit` for `.Reactive` or standalone System.Reactive consumers. Use
+`[assembly: GenerateStaticEventObservables(typeof(EventHost))]` for static events; generated properties appear on
+`RxEvents` in the host namespace and use length-prefixed host/event identifiers to prevent naming collisions.
+
 ## Framework And Platform Notes
 
 - `ReactiveUI.Disposables`, `ReactiveUI.Primitives.Core`, `ReactiveUI.Primitives.Async.Core`,
   `ReactiveUI.Primitives.Async`, and `ReactiveUI.Primitives.Async.Reactive` target `net8.0`, `net9.0`, `net10.0`,
   `net11.0`, `net462`, `net472`, `net48`, and `net481`.
-- `ReactiveUI.Primitives.R3Bridge.Generator` targets `netstandard2.0`.
+- `ReactiveUI.Primitives.ObservableEvents` and `ReactiveUI.Primitives.R3Bridge.Generator` target `netstandard2.0`.
 - `ReactiveUI.Primitives` and `ReactiveUI.Primitives.Reactive` target the same eight general-library TFMs plus
   `net10.0-android` and `net11.0-android`; on Windows or macOS they also target net10/net11 iOS, tvOS, macOS, and Mac
   Catalyst for platform sequencers.
