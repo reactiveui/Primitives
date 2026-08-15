@@ -322,6 +322,9 @@ ReactiveUI.Primitives.Advanced.SubscribeSafeWitness<T>.OnError(System.Exception!
 ReactiveUI.Primitives.Advanced.SubscribeSafeWitness<T>.OnNext(T value) -> void
 ReactiveUI.Primitives.Advanced.SubscribeSafeWitness<T>.SetSubscription(System.IDisposable! subscription) -> void
 ReactiveUI.Primitives.Advanced.SubscribeSafeWitness<T>.SubscribeSafeWitness(System.IObserver<T>! observer) -> void
+ReactiveUI.Primitives.Advanced.SwitchMapSignal<TSource, TResult>
+ReactiveUI.Primitives.Advanced.SwitchMapSignal<TSource, TResult>.Subscribe(System.IObserver<TResult>! observer) -> System.IDisposable!
+ReactiveUI.Primitives.Advanced.SwitchMapSignal<TSource, TResult>.SwitchMapSignal(System.IObservable<TSource>! source, System.Func<TSource, System.IObservable<TResult>!>! selector) -> void
 ReactiveUI.Primitives.Advanced.SwitchSignal<T>
 ReactiveUI.Primitives.Advanced.SwitchSignal<T>.Subscribe(System.IObserver<T>! observer) -> System.IDisposable!
 ReactiveUI.Primitives.Advanced.SwitchSignal<T>.SwitchSignal(System.IObservable<System.IObservable<T>!>! sources) -> void
@@ -931,6 +934,7 @@ ReactiveUI.Primitives.LinqExtensions.extension<T>(System.Threading.Tasks.Task<T>
 ReactiveUI.Primitives.LinqExtensions.extension<T>(System.Threading.Tasks.Task<T>!).ToTask(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<T>!
 ReactiveUI.Primitives.LinqExtensions.extension<TIn>(System.IObservable<TIn>!)
 ReactiveUI.Primitives.LinqExtensions.extension<TIn>(System.IObservable<TIn>!).Choose<TOut>(System.Func<TIn, (bool HasValue, TOut Value)>! chooser) -> System.IObservable<TOut>!
+ReactiveUI.Primitives.LinqExtensions.extension<TIn>(System.IObservable<TIn>!).SwitchMap<TOut>(System.Func<TIn, System.IObservable<TOut>!>! selector) -> System.IObservable<TOut>!
 ReactiveUI.Primitives.LinqExtensions.extension<TLeft>(System.IObservable<TLeft>!)
 ReactiveUI.Primitives.LinqExtensions.extension<TLeft>(System.IObservable<TLeft>!).CombineLatest<TRight, TResult>(System.IObservable<TRight>! right, System.Func<TLeft, TRight, TResult>! selector) -> System.IObservable<TResult>!
 ReactiveUI.Primitives.LinqExtensions.extension<TLeft>(System.IObservable<TLeft>!).Delay(System.DateTimeOffset dueTime) -> System.IObservable<TLeft>!
@@ -1419,6 +1423,7 @@ static ReactiveUI.Primitives.LinqExtensions.SubscribeSafe<T>(this System.IObserv
 static ReactiveUI.Primitives.LinqExtensions.SubscribeSafe<T>(this System.IObservable<T>! source, System.Action<T>! onNext, System.Action<System.Exception!>! onError, System.Action! onCompleted) -> System.IDisposable!
 static ReactiveUI.Primitives.LinqExtensions.SubscribeSafe<T>(this System.IObservable<T>! source, System.IObserver<T>! observer) -> System.IDisposable!
 static ReactiveUI.Primitives.LinqExtensions.Switch<T>(this System.IObservable<System.IObservable<T>!>! sources) -> System.IObservable<T>!
+static ReactiveUI.Primitives.LinqExtensions.SwitchMap<TIn, TOut>(this System.IObservable<TIn>! source, System.Func<TIn, System.IObservable<TOut>!>! selector) -> System.IObservable<TOut>!
 static ReactiveUI.Primitives.LinqExtensions.SwitchSelect<TSource, TResult>(this System.IObservable<TSource?>! source, System.Func<TSource, System.IObservable<TResult>!>! selector) -> System.IObservable<TResult>!
 static ReactiveUI.Primitives.LinqExtensions.SwitchTo<T>(this System.IObservable<System.IObservable<T>!>! sources) -> System.IObservable<T>!
 static ReactiveUI.Primitives.LinqExtensions.SyncLatest<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult>(this System.IObservable<T>! source, System.IObservable<T2>! source2, System.IObservable<T3>! source3, System.IObservable<T4>! source4, System.IObservable<T5>! source5, System.IObservable<T6>! source6, System.IObservable<T7>! source7, System.IObservable<T8>! source8, System.IObservable<T9>! source9, System.IObservable<T10>! source10, System.IObservable<T11>! source11, System.IObservable<T12>! source12, System.IObservable<T13>! source13, System.IObservable<T14>! source14, System.IObservable<T15>! source15, System.IObservable<T16>! source16, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult>! selector) -> System.IObservable<TResult>!
