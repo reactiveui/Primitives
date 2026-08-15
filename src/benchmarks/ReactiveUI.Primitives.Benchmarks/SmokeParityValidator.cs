@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Collections.Frozen;
 using System.Globalization;
 
 namespace ReactiveUI.Primitives.Benchmarks;
@@ -42,8 +43,8 @@ internal static class SmokeParityValidator
     private const string R3Prefix = "R3";
 
     /// <summary>Maps comparator benchmark method suffixes onto the matching Primitives smoke scenario.</summary>
-    private static readonly Dictionary<string, string> SmokeScenarioAliases =
-        new(StringComparer.Ordinal)
+    private static readonly FrozenDictionary<string, string> SmokeScenarioAliases =
+        new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["ToObservableSubscribe"] = "FromEnumerableSubscribe",
             ["RangeSelectWhere"] = "RangeMapKeep",
@@ -52,11 +53,12 @@ internal static class SmokeParityValidator
             ["BehaviorSubject32"] = "StateSignal32",
             ["BehaviorSubject1024"] = "StateSignal1024",
             ["ReplaySubscribe"] = "HistorySubscribe",
-            ["CompositeDispose"] = "PocketDispose"
-        };
+            ["CompositeDispose"] = "PocketDispose",
+        }.ToFrozenDictionary(StringComparer.Ordinal);
 
     /// <summary>Validates the captured smoke output for parity across the participating libraries.</summary>
     /// <param name="output">The captured smoke benchmark console output.</param>
+    /// <exception cref="InvalidOperationException">One or more benchmark groups failed parity validation.</exception>
     internal static void Validate(string output)
     {
         var results = output.Split([Environment.NewLine], StringSplitOptions.RemoveEmptyEntries);
@@ -116,11 +118,13 @@ internal static class SmokeParityValidator
                 return $"Row {firstRowNumber} group contains an unrecognized library prefix: {name}.";
             }
 
-            if (primitivesName is null && name.StartsWith(PrimitivesPrefix, StringComparison.Ordinal))
+            if (primitivesName is not null || !name.StartsWith(PrimitivesPrefix, StringComparison.Ordinal))
             {
-                primitivesName = name;
-                primitivesValue = rows[i].Value;
+                continue;
             }
+
+            primitivesName = name;
+            primitivesValue = rows[i].Value;
         }
 
         if (primitivesName is null)
@@ -153,16 +157,18 @@ internal static class SmokeParityValidator
     {
         for (var i = 0; i < rows.Count; i++)
         {
-            if (rows[i].Value != primitivesValue)
+            if (rows[i].Value == primitivesValue)
             {
-                var parts = new string[rows.Count];
-                for (var j = 0; j < rows.Count; j++)
-                {
-                    parts[j] = $"{rows[j].Name}={rows[j].Value}";
-                }
-
-                return $"{primitivesName}: expected parity but got {string.Join(", ", parts)}.";
+                continue;
             }
+
+            var parts = new string[rows.Count];
+            for (var j = 0; j < rows.Count; j++)
+            {
+                parts[j] = $"{rows[j].Name}={rows[j].Value}";
+            }
+
+            return $"{primitivesName}: expected parity but got {string.Join(", ", parts)}.";
         }
 
         return null;
@@ -259,6 +265,7 @@ internal static class SmokeParityValidator
     /// <summary>Parses a single <c>key=value</c> smoke output row into its name and integer value.</summary>
     /// <param name="line">The smoke output row to parse.</param>
     /// <returns>A tuple containing the result name and its integer value.</returns>
+    /// <exception cref="InvalidOperationException"><paramref name="line"/> is not a <c>key=value</c> row.</exception>
     private static (string Name, int Value) ParseSmokeResult(string line)
     {
         var separator = line.IndexOf('=', StringComparison.Ordinal);

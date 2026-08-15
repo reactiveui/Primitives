@@ -244,6 +244,7 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
         internal long DueTimestamp { get; }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int CompareTo(TimedWorkItem other) => DueTimestamp.CompareTo(other.DueTimestamp);
 
         /// <inheritdoc/>
@@ -306,13 +307,16 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Execute() => Run();
 
         /// <summary>Queues the work item for immediate execution.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void Queue() => _owner.Schedule(this);
 
         /// <summary>Queues the work item for delayed execution.</summary>
         /// <param name="dueTime">The normalized due time.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void Queue(TimeSpan dueTime) =>
             _owner.Schedule(this, Sequencer.AddTimestamp(_owner.Timestamp, dueTime));
 

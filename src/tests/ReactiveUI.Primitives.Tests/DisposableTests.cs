@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
@@ -378,6 +379,7 @@ public class DisposableTests
         }
 
         /// <summary>Invokes the protected dispose path with <see langword="false"/>.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void DisposeFalse() => Dispose(false);
     }
 
@@ -392,6 +394,7 @@ public class DisposableTests
         }
 
         /// <summary>Invokes the protected dispose path with <see langword="false"/>.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void DisposeFalse() => Dispose(false);
     }
 
@@ -406,6 +409,7 @@ public class DisposableTests
         }
 
         /// <summary>Invokes the protected dispose path with <see langword="false"/>.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void DisposeFalse() => Dispose(false);
     }
 }

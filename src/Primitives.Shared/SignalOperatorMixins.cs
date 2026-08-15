@@ -12,8 +12,8 @@ namespace ReactiveUI.Primitives;
 public static partial class LinqExtensions
 {
     /// <summary>Signal-conversion operators for an enumerable source.</summary>
-    /// <param name="values">The values to enumerate.</param>
     /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="values">The values to enumerate.</param>
     extension<T>(IEnumerable<T> values)
     {
         /// <summary>Converts an enumerable sequence to a signal.</summary>
@@ -39,8 +39,8 @@ public static partial class LinqExtensions
     }
 
     /// <summary>Combining operators for an observable source of inner observable sequences.</summary>
-    /// <param name="sources">The outer sequence of inner sequences.</param>
     /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="sources">The outer sequence of inner sequences.</param>
     extension<T>(IObservable<IObservable<T>> sources)
     {
         /// <summary>Subscribes to all inner sequences and forwards their values as they arrive.</summary>
@@ -87,8 +87,8 @@ public static partial class LinqExtensions
     }
 
     /// <summary>Notification-materialization operator for an observable source of spark values.</summary>
-    /// <param name="source">The spark sequence.</param>
     /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The spark sequence.</param>
     extension<T>(IObservable<Spark<T>> source)
     {
         /// <summary>Converts <see cref="Spark{T}"/> values back into observer notifications.</summary>
@@ -103,8 +103,8 @@ public static partial class LinqExtensions
     }
 
     /// <summary>Projection, filtering, combination, and timing operators for an observable source sequence.</summary>
-    /// <param name="source">The source sequence.</param>
     /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
     extension<T>(IObservable<T> source)
     {
         /// <summary>Projects each element of an observable sequence into a new form.</summary>
@@ -434,8 +434,8 @@ public static partial class LinqExtensions
         /// <param name="right">The sequence that supplies the latest value.</param>
         /// <param name="selector">The function that combines the left value with the latest right value.</param>
         /// <returns>A sequence containing selected left/latest-right combinations.</returns>
-        /// <remarks>Left values produced before the first right value are ignored.</remarks>
         /// <exception cref="ArgumentNullException"><paramref name="source"/>, <paramref name="right"/>, or <paramref name="selector"/> is <see langword="null"/>.</exception>
+        /// <remarks>Left values produced before the first right value are ignored.</remarks>
         public IObservable<TResult> Latch<TRight, TResult>(IObservable<TRight> right, Func<T, TRight, TResult> selector)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -586,12 +586,13 @@ public static partial class LinqExtensions
 
         /// <summary>Returns an observable sequence as a signal-compatible observable.</summary>
         /// <returns>The supplied source sequence.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
         public IObservable<T> ToSignal() => source ?? throw new ArgumentNullException(nameof(source));
     }
 
     /// <summary>Null-filtering operator for an observable source of nullable reference values.</summary>
-    /// <param name="source">The source observable sequence to filter.</param>
     /// <typeparam name="T">The type of elements in the observable sequence.</typeparam>
+    /// <param name="source">The source observable sequence to filter.</param>
     extension<T>(IObservable<T?> source)
         where T : class
     {
@@ -607,8 +608,8 @@ public static partial class LinqExtensions
     }
 
     /// <summary>Combining operators for an observable source of tasks.</summary>
-    /// <param name="sources">The outer sequence of task sources.</param>
     /// <typeparam name="T">The task result type.</typeparam>
+    /// <param name="sources">The outer sequence of task sources.</param>
     extension<T>(IObservable<Task<T>> sources)
     {
         /// <summary>Subscribes to task results one at a time in source order.</summary>
@@ -660,8 +661,8 @@ public static partial class LinqExtensions
     }
 
     /// <summary>Signal-conversion operators for a task source.</summary>
-    /// <param name="task">The task to convert.</param>
     /// <typeparam name="T">The task result type.</typeparam>
+    /// <param name="task">The task to convert.</param>
     extension<T>(Task<T> task)
     {
         /// <summary>Converts a task to a signal that emits the task result.</summary>

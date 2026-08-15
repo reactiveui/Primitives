@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Sink that runs side-effects before forwarding each notification.</summary>
@@ -10,6 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <param name="onNext">The value side-effect.</param>
 /// <param name="onError">The error side-effect.</param>
 /// <param name="onCompleted">The completion side-effect.</param>
+[System.Diagnostics.DebuggerDisplay("Observer = {_observer}, Subscription = {_subscription}")]
 public sealed class TapWitness<T>(
     IObserver<T> observer,
     Action<T> onNext,
@@ -68,8 +71,10 @@ public sealed class TapWitness<T>(
 
     /// <summary>Assigns the upstream subscription, disposing it if one is already held.</summary>
     /// <param name="subscription">The upstream subscription.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetSubscription(IDisposable subscription) => SinkSubscription.Set(ref _subscription, subscription);
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose() => SinkSubscription.Dispose(ref _subscription);
 }

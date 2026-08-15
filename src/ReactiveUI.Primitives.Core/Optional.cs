@@ -3,16 +3,17 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives;
 
 /// <summary>Represents an optional value that may or may not be present.</summary>
+/// <typeparam name="T">The type of the value that may be contained by the optional.</typeparam>
 /// <remarks>Use this struct to indicate the presence or absence of a value without resorting to null references.
 /// When an instance has a value, the HasValue property is <see langword="true"/> and the Value property returns the
 /// contained value. If no value is present, HasValue is <see langword="false"/> and accessing Value throws an
 /// exception. This pattern is useful for APIs that need to distinguish between an explicit 'no value' state and a
 /// default value.</remarks>
-/// <typeparam name="T">The type of the value that may be contained by the optional.</typeparam>
 [System.Diagnostics.DebuggerDisplay("HasValue = {HasValue}, Value = {_value}")]
 public readonly record struct Optional<T>
 {
@@ -77,11 +78,13 @@ public readonly record struct Optional<T>
     /// <summary>Gets the value from the optional value.</summary>
     /// <param name="value">The optional value.</param>
     /// <returns>The value.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static T? FromOptional(in Optional<T> value) => value.Value;
 
     /// <summary>Gets the optional from a value.</summary>
     /// <param name="value">The value to get the optional for.</param>
     /// <returns>The optional.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Optional<T> ToOptional([AllowNull] T value) => Create(value);
 
     /// <inheritdoc />

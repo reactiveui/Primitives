@@ -9,6 +9,7 @@ namespace ReactiveUI.Primitives.Reactive.Concurrency;
 
 /// <summary>MAUI dispatcher scheduler that coalesces scheduled work through an <see cref="IDispatcher"/>.</summary>
 /// <seealso cref="System.Reactive.Concurrency.IScheduler" />
+[System.Diagnostics.DebuggerDisplay("Dispatcher = {Dispatcher}")]
 public sealed class MauiDispatcherSequencer : CoalescingDispatchScheduler
 {
     /// <summary>Initializes a new instance of the <see cref="MauiDispatcherSequencer"/> class.</summary>

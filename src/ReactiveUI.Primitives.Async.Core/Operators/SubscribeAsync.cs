@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for subscribing to asynchronous observable sequences using various delegate-based overloads.</summary>
@@ -14,17 +16,14 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Delegate-based subscription operators for an observable source sequence.</summary>
-    /// <param name="source">The source observable sequence.</param>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
+    /// <param name="source">The source observable sequence.</param>
     extension<T>(IObservableAsync<T> source)
     {
         /// <summary>
         /// Subscribes to the asynchronous data source and invokes the specified callbacks for each item, error, or
         /// completion notification.
         /// </summary>
-        /// <remarks>The returned <see cref="IAsyncDisposable"/> should be disposed when the subscription
-        /// is no longer needed to release resources and stop receiving notifications. Callbacks may be invoked
-        /// concurrently; implement thread safety in the provided delegates if required.</remarks>
         /// <param name="onNextAsync">A delegate that is invoked asynchronously for each item received from the data source. The delegate receives
         /// the item and a cancellation token.</param>
         /// <param name="onErrorResumeAsync">An optional delegate that is invoked asynchronously if an error occurs during data processing. The delegate
@@ -35,6 +34,9 @@ public static partial class SignalAsyncExtensions
         /// <returns>A value task that represents the asynchronous operation. The result is an <see cref="IAsyncDisposable"/>
         /// that can be disposed to unsubscribe from the data source.</returns>
         /// <exception cref="ArgumentExceptionHelper">Thrown if the underlying data source is null.</exception>
+        /// <remarks>The returned <see cref="IAsyncDisposable"/> should be disposed when the subscription
+        /// is no longer needed to release resources and stop receiving notifications. Callbacks may be invoked
+        /// concurrently; implement thread safety in the provided delegates if required.</remarks>
         public ValueTask<IAsyncDisposable> SubscribeAsync(
             Func<T, CancellationToken, ValueTask> onNextAsync,
             Func<Exception, CancellationToken, ValueTask>? onErrorResumeAsync,
@@ -54,6 +56,7 @@ public static partial class SignalAsyncExtensions
         /// <returns>A value task that represents the asynchronous operation. The result is an <see cref="IAsyncDisposable"/>
         /// that can be disposed to unsubscribe from the data source.</returns>
         /// <exception cref="ArgumentExceptionHelper">Thrown if the underlying data source is null.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<IAsyncDisposable> SubscribeAsync(
             Func<T, CancellationToken, ValueTask> onNextAsync,
             Func<Exception, CancellationToken, ValueTask>? onErrorResumeAsync) =>
@@ -69,6 +72,7 @@ public static partial class SignalAsyncExtensions
         /// <returns>A value task that represents the asynchronous operation. The result is an <see cref="IAsyncDisposable"/>
         /// that can be disposed to unsubscribe from the data source.</returns>
         /// <exception cref="ArgumentExceptionHelper">Thrown if the underlying data source is null.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<IAsyncDisposable> SubscribeAsync(
             Func<T, CancellationToken, ValueTask> onNextAsync,
             Func<Exception, CancellationToken, ValueTask>? onErrorResumeAsync,
@@ -101,6 +105,7 @@ public static partial class SignalAsyncExtensions
         /// <returns>A value task that represents the asynchronous subscription operation. The result contains an <see
         /// cref="IAsyncDisposable"/> that can be disposed to unsubscribe from the sequence.</returns>
         /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="onNext"/> is null.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<IAsyncDisposable> SubscribeAsync(Action<T> onNext) =>
             source.SubscribeAsync(onNext, CancellationToken.None);
 
@@ -108,9 +113,6 @@ public static partial class SignalAsyncExtensions
         /// Subscribes to the observable sequence asynchronously, invoking the specified callbacks for each element,
         /// error, or completion notification.
         /// </summary>
-        /// <remarks>The returned <see cref="IAsyncDisposable"/> should be disposed when the subscription
-        /// is no longer needed to release resources and stop receiving notifications. This method enables asynchronous,
-        /// push-based event handling for observable sequences.</remarks>
         /// <param name="onNext">An action to invoke for each element in the sequence. Cannot be null.</param>
         /// <param name="onErrorResume">An optional action to invoke if an error occurs during the sequence. If null, errors are not handled by the
         /// subscriber.</param>
@@ -120,6 +122,9 @@ public static partial class SignalAsyncExtensions
         /// <returns>A value task that represents the asynchronous subscription operation. The result is an <see
         /// cref="IAsyncDisposable"/> that can be disposed to unsubscribe from the sequence.</returns>
         /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="onNext"/> is null, or if the underlying source is null.</exception>
+        /// <remarks>The returned <see cref="IAsyncDisposable"/> should be disposed when the subscription
+        /// is no longer needed to release resources and stop receiving notifications. This method enables asynchronous,
+        /// push-based event handling for observable sequences.</remarks>
         public ValueTask<IAsyncDisposable> SubscribeAsync(
             Action<T> onNext,
             Action<Exception>? onErrorResume,
@@ -156,6 +161,7 @@ public static partial class SignalAsyncExtensions
         /// <summary>Subscribes to the source without handling any items asynchronously.</summary>
         /// <returns>A value task that represents the asynchronous subscription operation. The result is an <see
         /// cref="IAsyncDisposable"/> that can be disposed to unsubscribe.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<IAsyncDisposable> SubscribeAsync() =>
             source.SubscribeAsync(static (_, _) => default, CancellationToken.None);
 
@@ -164,6 +170,7 @@ public static partial class SignalAsyncExtensions
         /// cancellation token, and returns a ValueTask that completes when processing is finished. Cannot be null.</param>
         /// <returns>A ValueTask that represents the asynchronous subscription operation. The result contains an IAsyncDisposable
         /// that can be disposed to unsubscribe from the source.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<IAsyncDisposable> SubscribeAsync(Func<T, CancellationToken, ValueTask> onNextAsync) =>
             source.SubscribeAsync(onNextAsync, CancellationToken.None);
 

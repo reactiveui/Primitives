@@ -4,6 +4,7 @@
 
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Advanced;
@@ -18,6 +19,7 @@ namespace ReactiveUI.Primitives.Advanced;
     "SST1803:Make record struct readonly",
     Justification =
         "Mutable dispatch-coalescing engine: holds the ready queue plus drain/post latches that mutate in place.")]
+[System.Diagnostics.DebuggerDisplay("ReadyCount = {_readyCount}, DrainPosted = {_drainPosted}")]
 public record struct DispatchSequencerState
 {
     /// <summary>Ready work items awaiting a UI-thread drain.</summary>
@@ -77,6 +79,7 @@ public record struct DispatchSequencerState
     /// <summary>Gets the delay from the sequencer's current time until the given monotonic timestamp.</summary>
     /// <param name="dueTimestamp">The absolute monotonic due timestamp.</param>
     /// <returns>The remaining delay.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static TimeSpan DelayUntil(long dueTimestamp) => Sequencer.TimeUntil(dueTimestamp);
 
     /// <summary>Executes the work item on the current (dispatcher) thread unless it has already been cancelled.</summary>
@@ -212,6 +215,7 @@ public record struct DispatchSequencerState
     /// <summary>Parks delayed work on the shared thread-pool timer, which marshals it back to the dispatcher when due.</summary>
     /// <param name="item">Work item to execute once due.</param>
     /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [ExcludeFromCodeCoverage]
     private readonly void ScheduleOnSharedTimer(IWorkItem item, long dueTimestamp) =>
         ThreadPoolSequencer.Instance.Schedule(new MarshalOnDueWorkItem(_owner, item), dueTimestamp);

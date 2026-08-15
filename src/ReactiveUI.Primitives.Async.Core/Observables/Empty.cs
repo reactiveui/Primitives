@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async;
@@ -14,12 +15,13 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsync
 {
     /// <summary>Creates an observable sequence that completes immediately without emitting any items.</summary>
+    /// <typeparam name="T">The type of elements in the observable sequence.</typeparam>
+    /// <returns>An observable sequence of type <typeparamref name="T"/> that completes immediately without producing any values.</returns>
     /// <remarks>This method is useful for representing an empty sequence in asynchronous or reactive
     /// scenarios. The returned sequence signals completion to observers as soon as it is subscribed to.
     /// The returned instance is a process-wide singleton per element type — no allocation occurs after the
     /// first call for a given <typeparamref name="T"/>.</remarks>
-    /// <typeparam name="T">The type of elements in the observable sequence.</typeparam>
-    /// <returns>An observable sequence of type <typeparamref name="T"/> that completes immediately without producing any values.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
@@ -29,6 +31,7 @@ public static partial class SignalAsync
     /// <summary>Creates an observable sequence that completes immediately without emitting any items.</summary>
     /// <typeparam name="T">The type of elements in the observable sequence.</typeparam>
     /// <returns>An observable sequence of type <typeparamref name="T"/> that completes immediately without producing any values.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",

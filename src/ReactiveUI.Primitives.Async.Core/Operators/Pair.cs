@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async;
@@ -12,9 +13,9 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Pair/Zip operators for a first observable source sequence.</summary>
-    /// <param name="first">The first observable sequence.</param>
     /// <typeparam name="T1">The type of elements in the first source sequence.</typeparam>
-    extension<T1>(IObservableAsync<T1> first)
+    /// <param name="src1">The first observable sequence.</param>
+    extension<T1>(IObservableAsync<T1> src1)
     {
         /// <summary>Combines two observable sequences element-by-element using the specified result selector.</summary>
         /// <typeparam name="T2">The type of elements in the second source sequence.</typeparam>
@@ -28,11 +29,11 @@ public static partial class SignalAsyncExtensions
             IObservableAsync<T2> second,
             Func<T1, T2, TResult> resultSelector)
         {
-            ArgumentExceptionHelper.ThrowIfNull(first);
+            ArgumentExceptionHelper.ThrowIfNull(src1);
             ArgumentExceptionHelper.ThrowIfNull(second);
             ArgumentExceptionHelper.ThrowIfNull(resultSelector);
 
-            return new ZipSignal<T1, T2, TResult>(first, second, resultSelector);
+            return new ZipSignal<T1, T2, TResult>(src1, second, resultSelector);
         }
     }
 
@@ -40,16 +41,16 @@ public static partial class SignalAsyncExtensions
     /// Represents an observable sequence that combines the latest values from two asynchronous observable sequences
     /// into a single result sequence using a specified selector function.
     /// </summary>
-    /// <remarks>The resulting sequence produces a value each time both source sequences have produced an
-    /// element, pairing elements in the order they are received. The sequence completes when either source sequence
-    /// completes and there are no more pairs to combine. If either source sequence signals an error, the resulting
-    /// sequence will propagate that error.</remarks>
     /// <typeparam name="T1">The type of the elements in the first source sequence.</typeparam>
     /// <typeparam name="T2">The type of the elements in the second source sequence.</typeparam>
     /// <typeparam name="TResult">The type of the elements in the resulting sequence produced by the selector function.</typeparam>
     /// <param name="first">The first asynchronous observable sequence to combine.</param>
     /// <param name="second">The second asynchronous observable sequence to combine.</param>
     /// <param name="resultSelector">A function that specifies how to combine elements from the first and second sequences into a result element.</param>
+    /// <remarks>The resulting sequence produces a value each time both source sequences have produced an
+    /// element, pairing elements in the order they are received. The sequence completes when either source sequence
+    /// completes and there are no more pairs to combine. If either source sequence signals an error, the resulting
+    /// sequence will propagate that error.</remarks>
     internal sealed class ZipSignal<T1, T2, TResult>(
         IObservableAsync<T1> first,
         IObservableAsync<T2> second,
@@ -246,6 +247,7 @@ public static partial class SignalAsyncExtensions
             /// <param name="error">The error to forward.</param>
             /// <param name="cancellationToken">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             internal ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
                 observer.OnErrorResumeAsync(error, cancellationToken);
 

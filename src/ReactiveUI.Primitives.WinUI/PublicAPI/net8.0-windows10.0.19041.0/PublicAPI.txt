@@ -1,0 +1,24 @@
+[assembly: System.Runtime.Versioning.SupportedOSPlatform("Windows10.0.19041.0")]
+namespace ReactiveUI.Primitives.Concurrency;
+
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public sealed class DispatcherQueueSequencer : ReactiveUI.Primitives.Concurrency.ISequencer
+{
+    public DispatcherQueueSequencer(Microsoft.UI.Dispatching.DispatcherQueue dispatcherQueue) { }
+    public DispatcherQueueSequencer(Microsoft.UI.Dispatching.DispatcherQueue dispatcherQueue, Microsoft.UI.Dispatching.DispatcherQueuePriority priority) { }
+    public Microsoft.UI.Dispatching.DispatcherQueue DispatcherQueue { get; }
+    public System.DateTimeOffset Now { get; }
+    public Microsoft.UI.Dispatching.DispatcherQueuePriority Priority { get; }
+    public long Timestamp { get; }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item, long dueTimestamp) { }
+}
+public static class DispatcherQueueSequencerExtensions
+{
+    extension(Microsoft.UI.Dispatching.DispatcherQueue dispatcherQueue)
+    {
+        public ReactiveUI.Primitives.Concurrency.DispatcherQueueSequencer ToSequencer() { }
+    }
+}

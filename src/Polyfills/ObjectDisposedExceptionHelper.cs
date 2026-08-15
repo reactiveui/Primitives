@@ -17,6 +17,7 @@ internal static class ObjectDisposedExceptionHelper
     /// <summary>Throws an <see cref="ObjectDisposedException"/> if <paramref name="condition"/> is <see langword="true"/>.</summary>
     /// <param name="condition">The condition to evaluate for a disposed instance.</param>
     /// <param name="instance">The object whose type name is used to build the exception message.</param>
+    /// <exception cref="ObjectDisposedException"><paramref name="condition"/> is <see langword="true"/>.</exception>
     internal static void ThrowIf(bool condition, object instance)
     {
         if (!condition)

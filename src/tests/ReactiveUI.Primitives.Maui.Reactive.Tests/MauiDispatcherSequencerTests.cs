@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Concurrency;
+using System.Runtime.CompilerServices;
 using Microsoft.Maui.Dispatching;
 using ReactiveUI.Primitives.Reactive.Concurrency;
 
@@ -139,6 +140,7 @@ public sealed class MauiDispatcherSequencerTests
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IDispatcherTimer CreateTimer() => new FakeDispatcherTimer();
 
         /// <summary>Fake dispatcher timer that fires its tick immediately on start.</summary>

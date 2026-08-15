@@ -209,6 +209,7 @@ public class ObservableMixinsTests
 
     /// <summary>Throws when an unexpected error arrives.</summary>
     /// <param name = "exception">The unexpected exception.</param>
+    /// <exception cref="InvalidOperationException">Always, wrapping <paramref name="exception"/>.</exception>
     private static void ThrowUnexpectedError(Exception exception) =>
         throw new InvalidOperationException("Unexpected error.", exception);
 

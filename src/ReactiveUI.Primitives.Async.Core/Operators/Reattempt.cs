@@ -10,9 +10,9 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Retry operators for an observable source sequence.</summary>
-    /// <param name="this">The source observable sequence.</param>
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
-    extension<T>(IObservableAsync<T> @this)
+    /// <param name="source">The source observable sequence.</param>
+    extension<T>(IObservableAsync<T> source)
     {
         /// <summary>Repeats the source observable sequence on error up to the specified number of times.</summary>
         /// <param name="retryCount">The maximum number of times to re-subscribe to the source on error.
@@ -24,7 +24,7 @@ public static partial class SignalAsyncExtensions
         {
             ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(retryCount);
 
-            return new ReattemptSignal<T>(@this, retryCount);
+            return new ReattemptSignal<T>(source, retryCount);
         }
     }
 }

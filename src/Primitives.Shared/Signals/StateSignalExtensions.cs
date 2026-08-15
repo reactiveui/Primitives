@@ -12,8 +12,8 @@ namespace ReactiveUI.Primitives.Signals;
 public static class StateSignalExtensions
 {
     /// <summary>State projection operators for an observable source sequence.</summary>
-    /// <param name="source">The source sequence.</param>
     /// <typeparam name="TSource">The source value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
     extension<TSource>(IObservable<TSource> source)
     {
         /// <summary>Projects an observable sequence into a read-only state signal.</summary>

@@ -10,6 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Signal that emits one leading value before subscribing to the source.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Value = {Value}, Source = {Source}")]
 public sealed class LeadSignal<T> : IInlineSignal<T>
 {
     /// <summary>Initializes a new instance of the <see cref="LeadSignal{T}"/> class.</summary>

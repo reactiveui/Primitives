@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async.Tests;
@@ -21,6 +22,7 @@ internal sealed class DirectSource<T> : IObservableAsync<T>
     /// <param name="value">The value to emit.</param>
     /// <param name="cancellationToken">Optional cancellation token.</param>
     /// <returns>A <see cref="ValueTask"/> representing the asynchronous operation.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal ValueTask EmitNext(T value, CancellationToken cancellationToken = default) =>
         _observer!.OnNextAsync(value, cancellationToken);
 
@@ -28,12 +30,14 @@ internal sealed class DirectSource<T> : IObservableAsync<T>
     /// <param name="error">The exception to forward.</param>
     /// <param name="cancellationToken">Optional cancellation token.</param>
     /// <returns>A <see cref="ValueTask"/> representing the asynchronous operation.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal ValueTask EmitError(Exception error, CancellationToken cancellationToken = default) =>
         _observer!.OnErrorResumeAsync(error, cancellationToken);
 
     /// <summary>Signals completion to the stored observer.</summary>
     /// <param name="result">The completion result.</param>
     /// <returns>A <see cref="ValueTask"/> representing the asynchronous operation.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal ValueTask Complete(Result result) =>
         _observer!.OnCompletedAsync(result);
 

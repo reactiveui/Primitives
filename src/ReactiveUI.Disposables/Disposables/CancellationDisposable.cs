@@ -17,7 +17,7 @@ public sealed class CancellationDisposable : IsDisposed
 
     /// <summary>Initializes a new instance of the <see cref="CancellationDisposable"/> class.</summary>
     /// <param name="cts">The CTS.</param>
-    /// <exception cref="ArgumentExceptionHelper">cts.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="cts"/> is <see langword="null"/>.</exception>
     public CancellationDisposable(CancellationTokenSource cts) =>
         _cts = cts ?? throw new ArgumentNullException(nameof(cts));
 

@@ -10,6 +10,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// <typeparam name="T3">Element type of source 3.</typeparam>
 /// <typeparam name="T4">Element type of source 4.</typeparam>
 /// <typeparam name="TResult">The projected element type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Value1 = {Value1}, Value4 = {Value4}")]
 public sealed class SyncLatest4Coordinator<T1, T2, T3, T4, TResult> : SyncLatestCoordinatorBase<TResult>
 {
     /// <summary>Number of upstream sources this coordinator combines.</summary>

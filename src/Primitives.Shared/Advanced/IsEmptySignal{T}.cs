@@ -10,6 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Signal that emits whether the source completed without values.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Source = {Source}")]
 public sealed class IsEmptySignal<T> : IRequireCurrentThread<bool>
 {
     /// <summary>Initializes a new instance of the <see cref="IsEmptySignal{T}"/> class.</summary>
@@ -59,10 +60,10 @@ public sealed class IsEmptySignal<T> : IRequireCurrentThread<bool>
 
         SingleDisposable subscription = new();
         _ = Sequencer.CurrentThread.Schedule(
-            (self: this, subscription, observer),
+            (Self: this, subscription, observer),
             static (_, s) =>
             {
-                s.subscription.Create(s.self.SubscribeCore(s.observer));
+                s.subscription.Create(s.Self.SubscribeCore(s.observer));
                 return EmptyDisposable.Instance;
             });
         return subscription;

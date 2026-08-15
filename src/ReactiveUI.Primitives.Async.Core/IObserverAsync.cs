@@ -8,10 +8,10 @@ namespace ReactiveUI.Primitives.Async;
 /// Defines an asynchronous observer that receives notifications about a sequence of values, completion, or errors, and
 /// supports asynchronous resource cleanup.
 /// </summary>
+/// <typeparam name="T">The type of the elements received by the observer.</typeparam>
 /// <remarks>Implementations of this interface allow for non-blocking, asynchronous handling of data streams,
 /// including support for cancellation and proper disposal of resources. This is useful in scenarios where observers
 /// need to process events or data asynchronously, such as in reactive or event-driven programming models.</remarks>
-/// <typeparam name="T">The type of the elements received by the observer.</typeparam>
 public interface IObserverAsync<in T> : IAsyncDisposable
 {
     /// <summary>Performs asynchronous completion logic in response to the specified result.</summary>
@@ -20,11 +20,11 @@ public interface IObserverAsync<in T> : IAsyncDisposable
     ValueTask OnCompletedAsync(Result result);
 
     /// <summary>Handles the specified error and resumes asynchronous processing, if possible.</summary>
-    /// <remarks>Implementations may choose to suppress the error and continue processing, or perform cleanup
-    /// and terminate gracefully. The behavior depends on the specific implementation.</remarks>
     /// <param name="error">The exception that caused the error. Cannot be null.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the error handling operation.</param>
     /// <returns>A ValueTask that represents the asynchronous error handling operation.</returns>
+    /// <remarks>Implementations may choose to suppress the error and continue processing, or perform cleanup
+    /// and terminate gracefully. The behavior depends on the specific implementation.</remarks>
     ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken);
 
     /// <summary>Asynchronously processes the next value in the sequence.</summary>

@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for working with asynchronous observable sequences.</summary>
@@ -12,9 +14,9 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>First-or-default operators for an observable source sequence.</summary>
-    /// <param name="this">The source observable sequence.</param>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-    extension<T>(IObservableAsync<T> @this)
+    /// <param name="source">The source observable sequence.</param>
+    extension<T>(IObservableAsync<T> source)
     {
         /// <summary>
         /// Asynchronously returns the first element that matches the specified predicate, or a default value if no such
@@ -25,10 +27,11 @@ public static partial class SignalAsyncExtensions
         /// <param name="defaultValue">The value to return if no element satisfies the predicate.</param>
         /// <returns>A value task that represents the asynchronous operation. The result contains the first element that matches
         /// the predicate, or <paramref name="defaultValue"/> if no such element is found.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T?> FirstOrDefaultAsync(
             Func<T, bool> predicate,
             T? defaultValue) =>
-            @this.FirstOrDefaultAsync(predicate, defaultValue, CancellationToken.None);
+            source.FirstOrDefaultAsync(predicate, defaultValue, CancellationToken.None);
 
         /// <summary>
         /// Asynchronously returns the first element that matches the specified predicate, or a default value if no such
@@ -48,22 +51,24 @@ public static partial class SignalAsyncExtensions
             cancellationToken.ThrowIfCancellationRequested();
             FirstOrDefaultTaskWitness<T> observer = new(predicate, defaultValue, cancellationToken);
             await using var subscription =
-                await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
+                await source.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
             return await observer.AwaitResultAsync().ConfigureAwait(false);
         }
 
         /// <summary>Asynchronously returns the first element of the sequence, or a default value if the sequence contains no elements.</summary>
         /// <returns>A value task that represents the asynchronous operation. The task result contains the first element of the
         /// sequence, or the default value for type T if the sequence is empty.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T?> FirstOrDefaultAsync() =>
-            @this.FirstOrDefaultAsync(default, CancellationToken.None);
+            source.FirstOrDefaultAsync(default, CancellationToken.None);
 
         /// <summary>Asynchronously returns the first element of the sequence, or a default value if the sequence contains no elements.</summary>
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
         /// <returns>A value task that represents the asynchronous operation. The task result contains the first element of the
         /// sequence, or the default value for type T if the sequence is empty.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T?> FirstOrDefaultAsync(CancellationToken cancellationToken) =>
-            @this.FirstOrDefaultAsync(default, cancellationToken);
+            source.FirstOrDefaultAsync(default, cancellationToken);
 
         /// <summary>
         /// Asynchronously returns the first element of the sequence, or a specified default value if the sequence
@@ -72,8 +77,9 @@ public static partial class SignalAsyncExtensions
         /// <param name="defaultValue">The value to return if the sequence is empty.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains the first element of the
         /// sequence, or <paramref name="defaultValue"/> if the sequence is empty.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T?> FirstOrDefaultAsync(T? defaultValue) =>
-            @this.FirstOrDefaultAsync(defaultValue, CancellationToken.None);
+            source.FirstOrDefaultAsync(defaultValue, CancellationToken.None);
 
         /// <summary>
         /// Asynchronously returns the first element of the sequence, or a specified default value if the sequence
@@ -88,7 +94,7 @@ public static partial class SignalAsyncExtensions
             cancellationToken.ThrowIfCancellationRequested();
             FirstOrDefaultTaskWitness<T> observer = new(null, defaultValue, cancellationToken);
             await using var subscription =
-                await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
+                await source.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
             return await observer.AwaitResultAsync().ConfigureAwait(false);
         }
     }

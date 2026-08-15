@@ -10,6 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Per-subscription witness that suppresses duplicate terminal notifications.</summary>
 /// <typeparam name="T">The value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Generation = {_generation}, Terminated = {_terminated}")]
 public sealed class RepeatSourceWitness<T> : IObserver<T>
 {
     /// <summary>The owning repeat coordinator.</summary>

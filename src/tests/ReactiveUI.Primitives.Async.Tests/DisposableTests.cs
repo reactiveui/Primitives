@@ -99,6 +99,7 @@ public class DisposableTests
     }
 
     /// <summary>Tests CompositeDisposableAsync negative capacity throws.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void WhenCompositeDisposableAsyncNegativeCapacity_ThenThrowsArgumentOutOfRange() =>
         Assert.Throws<ArgumentOutOfRangeException>(static () => _ = CreateCompositeWithInvalidCapacity());
@@ -564,8 +565,7 @@ public class DisposableTests
     public async Task WhenSingleAssignmentDisposeSentinel_ThenDisposeAsyncReturnsDefault()
     {
         // Access the sentinel and verify it can be disposed
-        var sentinel = DisposableAsyncSlot.DisposedSentinel;
-        await sentinel.DisposeAsync();
+        await DisposableAsyncSlot.DisposedSentinel.DisposeAsync();
 
         // After dispose, getting the disposable should return the empty disposable
         SingleAssignmentDisposableAsync sad = new();
@@ -640,9 +640,7 @@ public class DisposableTests
     [Test]
     public async Task WhenCompositeDisposableAsyncCopyTo_ThenCopiesAllItems()
     {
-        var d1 = DisposableAsync.Empty;
-        var d2 = DisposableAsync.Empty;
-        MultipleDisposableAsync composite = new(d1, d2);
+        MultipleDisposableAsync composite = new(DisposableAsync.Empty, DisposableAsync.Empty);
         var array = new IAsyncDisposable[2];
         composite.CopyTo(array, 0);
         await Assert.That(array[0]).IsNotNull();
@@ -724,9 +722,7 @@ public class DisposableTests
     [Test]
     public async Task WhenCompositeDisposableAsyncEnumerate_ThenReturnsItems()
     {
-        var d1 = DisposableAsync.Empty;
-        var d2 = DisposableAsync.Empty;
-        MultipleDisposableAsync composite = new(d1, d2);
+        MultipleDisposableAsync composite = new(DisposableAsync.Empty, DisposableAsync.Empty);
         var count = 0;
         foreach (var item in composite)
         {
@@ -790,11 +786,13 @@ public class DisposableTests
     }
 
     /// <summary>Verifies that DisposableAsync.Create throws ArgumentNullException when given a null delegate.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void WhenDisposableAsyncCreateNull_ThenThrowsArgumentNull() =>
         Assert.Throws<ArgumentNullException>(static () => DisposableAsync.Create(null!));
 
     /// <summary>Verifies that DisposableAsyncExtensions.ToDisposableAsync throws ArgumentNullException for null input.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void WhenToDisposableAsyncNull_ThenThrowsArgumentNull() =>
         Assert.Throws<ArgumentNullException>(static () => ((IDisposable)null!).ToDisposableAsync());
@@ -845,10 +843,8 @@ public class DisposableTests
     [Test]
     public async Task WhenSerialDisposedSlotMarkerDisposeAsync_ThenReturnsCompletedValueTask()
     {
-        var sentinel = DisposableAsyncSlot.DisposedSentinel;
-
         // DisposeAsync should return default (no-op)
-        var task = sentinel.DisposeAsync();
+        var task = DisposableAsyncSlot.DisposedSentinel.DisposeAsync();
         await Assert.That(task.IsCompleted).IsTrue();
     }
 
@@ -1047,6 +1043,7 @@ public class DisposableTests
     private sealed class TestSyncDisposable(Action onDispose) : IDisposable
     {
         /// <summary>Disposes the resource and invokes the disposal callback.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose() => onDispose();
     }
 }

@@ -9,6 +9,7 @@ namespace ReactiveUI.Primitives.Advanced;
 #endif
 
 /// <summary>Runs an action on a scheduler and emits an <see cref="RxVoid"/> value when it completes.</summary>
+[System.Diagnostics.DebuggerDisplay("Action = {Action}, Scheduler = {Scheduler}")]
 public sealed class StartSignal : IRequireCurrentThread<RxVoid>
 {
     /// <summary>Initializes a new instance of the <see cref="StartSignal"/> class.</summary>
@@ -36,8 +37,8 @@ public sealed class StartSignal : IRequireCurrentThread<RxVoid>
 
         return SubscriptionScheduling.RunOn(
             Scheduler,
-            (self: this, observer),
-            static s => s.self.Run(s.observer));
+            (Self: this, observer),
+            static s => s.Self.Run(s.observer));
     }
 
     /// <summary>Runs the action and forwards its terminal notification.</summary>

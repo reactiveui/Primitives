@@ -5,6 +5,7 @@
 using System.Collections.Concurrent;
 using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
+using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Reactive.Concurrency;
 
@@ -13,6 +14,7 @@ namespace ReactiveUI.Primitives.Reactive.Concurrency;
 /// and drained one batch per post. A sealed platform scheduler supplies its dispatcher <see cref="Post"/> (and
 /// optionally a native delayed path via <see cref="ScheduleOnDispatcher"/>).
 /// </summary>
+[System.Diagnostics.DebuggerDisplay("ReadyCount = {_readyCount}, DrainPosted = {_drainPosted}")]
 public abstract class CoalescingDispatchScheduler : LocalScheduler
 {
     /// <summary>Ready work items awaiting a UI-thread drain.</summary>
@@ -84,9 +86,9 @@ public abstract class CoalescingDispatchScheduler : LocalScheduler
     /// <returns>The disposable used to cancel the delayed dispatch.</returns>
     protected virtual IDisposable ScheduleOnDispatcher(Action work, TimeSpan dueTime) =>
         DefaultScheduler.Instance.Schedule(
-            (owner: this, work),
+            (Owner: this, work),
             dueTime,
-            static (_, state) => state.owner.Schedule(
+            static (_, state) => state.Owner.Schedule(
                 state.work,
                 static (_, due) =>
                 {
@@ -95,6 +97,7 @@ public abstract class CoalescingDispatchScheduler : LocalScheduler
                 }));
 
     /// <summary>Re-posts a drain if work is still queued; platform adapters call this when the dispatcher becomes ready.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected void RequestDrain() => PostDrain();
 
     /// <summary>Enqueues immediate work and coalesces a single drain post.</summary>

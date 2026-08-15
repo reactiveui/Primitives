@@ -116,6 +116,7 @@ public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICompa
     /// Equality operators use reference equality. They do not compare <see cref="DueTime"/> values and are therefore
     /// intentionally different from the ordering behavior used by <see cref="CompareTo(ScheduledItem{TAbsolute}?)"/>.
     /// </remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool operator ==(ScheduledItem<TAbsolute>? left, ScheduledItem<TAbsolute>? right) =>
         ReferenceEquals(left, right);
 
@@ -150,6 +151,7 @@ public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICompa
     /// Canceling prevents work that has not started from running. If the work has already started and the invocation
     /// callback returned a disposable resource, that resource is disposed as soon as it is available.
     /// </remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Cancel() => Dispose();
 
     /// <summary>Compares this scheduled item with another scheduled item by due time.</summary>
@@ -164,7 +166,6 @@ public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICompa
     /// the equality operators use reference identity.
     /// </remarks>
     public int CompareTo(ScheduledItem<TAbsolute>? other) =>
-
         // MSDN: By definition, any object compares greater than null, and two null references compare equal to each other.
         other is null ? 1 : _comparer.Compare(DueTime, other.DueTime);
 

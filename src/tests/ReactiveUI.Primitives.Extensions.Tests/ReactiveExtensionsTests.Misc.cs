@@ -4,6 +4,7 @@
 
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Disposables;
 
@@ -265,8 +266,7 @@ public partial class ReactiveExtensionsTests
     public async Task Continuation_TracksCompletedPhases()
     {
         using Continuation continuation = new();
-        var phases = continuation.CompletedPhases;
-        await Assert.That(phases).IsGreaterThanOrEqualTo(0);
+        await Assert.That(continuation.CompletedPhases).IsGreaterThanOrEqualTo(0);
     }
 
     /// <summary>Tests Pairwise emits previous and current pairs.</summary>
@@ -631,6 +631,7 @@ public partial class ReactiveExtensionsTests
     }
 
     /// <summary>Verifies <c>ReplayLastOnSubscribe</c> throws when the source is null.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void WhenReplayLastOnSubscribeSourceNull_ThenThrows() =>
         Assert.Throws<ArgumentNullException>(static () => ReactiveExtensions.ReplayLastOnSubscribe(null!, 0));

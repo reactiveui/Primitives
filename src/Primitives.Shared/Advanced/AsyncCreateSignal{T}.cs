@@ -10,6 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Creates an observable from an asynchronous subscription function.</summary>
 /// <typeparam name="T">The value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("SubscribeAsync = {SubscribeAsync}")]
 public sealed class AsyncCreateSignal<T> : IObservable<T>
 {
     /// <summary>Initializes a new instance of the <see cref="AsyncCreateSignal{T}"/> class.</summary>
@@ -23,6 +24,7 @@ public sealed class AsyncCreateSignal<T> : IObservable<T>
 
     /// <summary>Initializes a new instance of the <see cref="AsyncCreateSignal{T}"/> class.</summary>
     /// <param name="subscribe">The asynchronous subscription function.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="subscribe"/> is <see langword="null"/>.</exception>
     public AsyncCreateSignal(Func<IObserver<T>, CancellationToken, Task<IDisposable>> subscribe) =>
         SubscribeAsync = subscribe ?? throw new ArgumentNullException(nameof(subscribe));
 

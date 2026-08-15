@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
+using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
@@ -203,6 +204,7 @@ public class BooleanReduceObservableTests
         public bool Contains(IObservable<bool> item) => Array.IndexOf(items, item) >= 0;
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void CopyTo(IObservable<bool>[] array, int arrayIndex) =>
             Array.Copy(items, 0, array, arrayIndex, items.Length);
 
@@ -210,10 +212,12 @@ public class BooleanReduceObservableTests
         public bool Remove(IObservable<bool> item) => throw new NotSupportedException();
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IEnumerator<IObservable<bool>> GetEnumerator() =>
             ((IEnumerable<IObservable<bool>>)items).GetEnumerator();
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }

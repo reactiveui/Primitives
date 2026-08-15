@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Extensions.Operators;
 
@@ -239,6 +240,7 @@ public class ConflateObservableTests
         public bool Completed { get; private set; }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnNext(T value) => Values.Add(value);
 
         /// <inheritdoc/>

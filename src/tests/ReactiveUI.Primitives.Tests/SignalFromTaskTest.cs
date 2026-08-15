@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Signals;
@@ -1020,12 +1021,14 @@ public class SignalFromTaskTest
     /// <summary>Gets the recorded status messages.</summary>
     /// <param name = "statusTrail">The status trail.</param>
     /// <returns>The recorded messages.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static string[] StatusMessages(StatusTrail statusTrail) => statusTrail.Messages();
 
     /// <summary>Awaits both timer-driven cancellation callbacks, or fails once the generous window closes.</summary>
     /// <param name = "cleanupCompleted">Completes when the cancellation cleanup callback has run.</param>
     /// <param name = "finallyCompleted">Completes when the terminal cleanup callback has run.</param>
     /// <returns>A <see cref = "Task"/> representing the asynchronous operation.</returns>
+    /// <exception cref = "TimeoutException">Neither callback had run once the generous wait window closed.</exception>
     /// <remarks>
     /// The callbacks are driven by timers and run on pool threads, so the wait must stay asynchronous: blocking a pool
     /// thread would starve the very chain it is waiting on. It also must not decide the outcome from which continuation
@@ -1052,6 +1055,7 @@ public class SignalFromTaskTest
     /// <param name = "statusTrail">The status trail.</param>
     /// <param name = "position">The current status position.</param>
     /// <param name = "message">The message to record.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void RecordStatus(StatusTrail statusTrail, ref int position, string message) =>
         statusTrail.Add(ref position, message);
 

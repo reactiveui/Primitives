@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Disposables;
@@ -62,6 +63,7 @@ public partial class RxNamesTests
     /// <summary>Wraps an inner value array in a cold source.</summary>
     /// <param name = "inner">The inner values.</param>
     /// <returns>A cold source over the inner values.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static IObservable<int> ToSource(int[] inner) => Signal.FromEnumerable(inner);
 
     /// <summary>Runs a binary operator over two manual subjects driven by a script and collects the forwarded values.</summary>
@@ -129,6 +131,7 @@ public partial class RxNamesTests
     /// <param name = "state">The unused state.</param>
     /// <param name = "value">The unused value.</param>
     /// <returns>Never returns; always throws.</returns>
+    /// <exception cref="InvalidOperationException">Always; the throw is the behaviour under test.</exception>
     [SuppressMessage("Maintainability", "SST1461:Remove unread private parameters", Justification = "The signature is fixed by the delegate this method is passed to as a method group.")]
     private static int ThrowProjection(int state, int value) => throw new InvalidOperationException(Boom);
 
@@ -136,6 +139,7 @@ public partial class RxNamesTests
     /// <param name = "state">The unused state.</param>
     /// <param name = "value">The unused value.</param>
     /// <returns>Never returns; always throws.</returns>
+    /// <exception cref="InvalidOperationException">Always; the throw is the behaviour under test.</exception>
     [SuppressMessage("Maintainability", "SST1461:Remove unread private parameters", Justification = "The signature is fixed by the delegate this method is passed to as a method group.")]
     private static bool ThrowPredicate(int state, int value) => throw new InvalidOperationException(Boom);
 
@@ -165,12 +169,14 @@ public partial class RxNamesTests
     /// <param name="arity">The arity to create, from <see cref="MinMultiSourceArity"/> upwards.</param>
     /// <param name="sources">The named source signals.</param>
     /// <returns>The combined observable.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static IObservable<int> CreateCombineLatest(int arity, CombineLatestSources sources) =>
         _combineLatestBuilders[arity - MinMultiSourceArity](sources);
 
     /// <summary>Builds the four-source CombineLatest overload.</summary>
     /// <param name="sources">The named source signals.</param>
     /// <returns>The combined observable.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static IObservable<int> CombineLatestOfFour(CombineLatestSources sources) =>
         sources.First.CombineLatest(
             sources.Second,
@@ -182,6 +188,7 @@ public partial class RxNamesTests
     /// <summary>Builds the five-source CombineLatest overload.</summary>
     /// <param name="sources">The named source signals.</param>
     /// <returns>The combined observable.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static IObservable<int> CombineLatestOfFive(CombineLatestSources sources) =>
         sources.First.CombineLatest(
             sources.Second,
@@ -194,6 +201,7 @@ public partial class RxNamesTests
     /// <summary>Builds the six-source CombineLatest overload.</summary>
     /// <param name="sources">The named source signals.</param>
     /// <returns>The combined observable.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static IObservable<int> CombineLatestOfSix(CombineLatestSources sources) =>
         sources.First.CombineLatest(
             sources.Second,
@@ -207,6 +215,7 @@ public partial class RxNamesTests
     /// <summary>Builds the seven-source CombineLatest overload.</summary>
     /// <param name="sources">The named source signals.</param>
     /// <returns>The combined observable.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static IObservable<int> CombineLatestOfSeven(CombineLatestSources sources) =>
         sources.First.CombineLatest(
             sources.Second,
@@ -221,6 +230,7 @@ public partial class RxNamesTests
     /// <summary>Builds the eight-source CombineLatest overload.</summary>
     /// <param name="sources">The named source signals.</param>
     /// <returns>The combined observable.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static IObservable<int> CombineLatestOfEight(CombineLatestSources sources) =>
         sources.First.CombineLatest(
             sources.Second,
@@ -236,6 +246,7 @@ public partial class RxNamesTests
     /// <summary>Builds the nine-source CombineLatest overload.</summary>
     /// <param name="sources">The named source signals.</param>
     /// <returns>The combined observable.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static IObservable<int> CombineLatestOfNine(CombineLatestSources sources) =>
         sources.First.CombineLatest(
             sources.Second,
@@ -252,6 +263,7 @@ public partial class RxNamesTests
     /// <summary>Builds the ten-source CombineLatest overload.</summary>
     /// <param name="sources">The named source signals.</param>
     /// <returns>The combined observable.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static IObservable<int> CombineLatestOfTen(CombineLatestSources sources) =>
         sources.First.CombineLatest(
             sources.Second,
@@ -269,6 +281,7 @@ public partial class RxNamesTests
     /// <summary>Builds the eleven-source CombineLatest overload.</summary>
     /// <param name="sources">The named source signals.</param>
     /// <returns>The combined observable.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static IObservable<int> CombineLatestOfEleven(CombineLatestSources sources) =>
         sources.First.CombineLatest(
             sources.Second,
@@ -288,6 +301,7 @@ public partial class RxNamesTests
     /// <summary>Builds the twelve-source CombineLatest overload.</summary>
     /// <param name="sources">The named source signals.</param>
     /// <returns>The combined observable.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static IObservable<int> CombineLatestOfTwelve(CombineLatestSources sources) =>
         sources.First.CombineLatest(
             sources.Second,
@@ -320,6 +334,7 @@ public partial class RxNamesTests
     /// <summary>Builds the thirteen-source CombineLatest overload.</summary>
     /// <param name="sources">The named source signals.</param>
     /// <returns>The combined observable.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static IObservable<int> CombineLatestOfThirteen(CombineLatestSources sources) =>
         sources.First.CombineLatest(
             sources.Second,
@@ -354,6 +369,7 @@ public partial class RxNamesTests
     /// <summary>Builds the fourteen-source CombineLatest overload.</summary>
     /// <param name="sources">The named source signals.</param>
     /// <returns>The combined observable.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static IObservable<int> CombineLatestOfFourteen(CombineLatestSources sources) =>
         sources.First.CombineLatest(
             sources.Second,
@@ -390,6 +406,7 @@ public partial class RxNamesTests
     /// <summary>Builds the fifteen-source CombineLatest overload.</summary>
     /// <param name="sources">The named source signals.</param>
     /// <returns>The combined observable.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static IObservable<int> CombineLatestOfFifteen(CombineLatestSources sources) =>
         sources.First.CombineLatest(
             sources.Second,
@@ -493,6 +510,7 @@ public partial class RxNamesTests
 
     /// <summary>Builds a source of two int-range inner sources (exercises the synchronous Switch range fast path).</summary>
     /// <returns>An outer source of two range inners.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static IObservable<IObservable<int>> RangeInners() =>
         Signal.FromEnumerable([Signal.Sequence(One, Two), Signal.Sequence(Three, Two)]);
 
@@ -624,13 +642,16 @@ public partial class RxNamesTests
 
         /// <summary>Pushes a value to the retained observer.</summary>
         /// <param name = "value">The value to push.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Next(T value) => _observer?.OnNext(value);
 
         /// <summary>Pushes an error to the retained observer.</summary>
         /// <param name = "exception">The error to push.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Error(Exception exception) => _observer?.OnError(exception);
 
         /// <summary>Pushes completion to the retained observer.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Complete() => _observer?.OnCompleted();
     }
 
@@ -639,9 +660,11 @@ public partial class RxNamesTests
     private sealed class CurrentThreadSource<T> : IRequireCurrentThread<T>
     {
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool IsRequiredSubscribeOnCurrentThread() => true;
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IDisposable Subscribe(IObserver<T> observer) => EmptyDisposable.Instance;
     }
 
@@ -651,6 +674,7 @@ public partial class RxNamesTests
     /// <param name = "Rx">The Rx/LINQ-named builder.</param>
     /// <param name = "Input">The source values.</param>
     /// <param name = "Expected">The expected forwarded values.</param>
+    [System.Diagnostics.DebuggerDisplay("Name = {Name}, Expected = {Expected}")]
     public sealed record UnaryCase(
         string Name,
         Func<IObservable<int>, IObservable<int>> Deviant,
@@ -668,6 +692,7 @@ public partial class RxNamesTests
     /// <param name = "Rx">The Rx/LINQ-named builder.</param>
     /// <param name = "Inners">The inner source values.</param>
     /// <param name = "Expected">The expected forwarded values.</param>
+    [System.Diagnostics.DebuggerDisplay("Name = {Name}, Expected = {Expected}")]
     public sealed record HigherOrderCase(
         string Name,
         Func<IObservable<IObservable<int>>, IObservable<int>> Deviant,
@@ -685,6 +710,7 @@ public partial class RxNamesTests
     /// <param name = "Rx">The Rx/LINQ-named builder.</param>
     /// <param name = "Drive">The script that pushes values into the left and right subjects.</param>
     /// <param name = "Expected">The expected forwarded values.</param>
+    [System.Diagnostics.DebuggerDisplay("Name = {Name}, Expected = {Expected}")]
     public sealed record BinaryCase(
         string Name,
         Func<IObservable<int>, IObservable<int>, IObservable<int>> Deviant,
@@ -703,6 +729,7 @@ public partial class RxNamesTests
     /// <param name = "Source">The source factory.</param>
     /// <param name = "Expected">The expected forwarded values.</param>
     /// <param name = "ExpectsTimeout">Whether a <see cref = "TimeoutException"/> is expected.</param>
+    [System.Diagnostics.DebuggerDisplay("Name = {Name}, ExpectsTimeout = {ExpectsTimeout}")]
     public sealed record TimeCase(
         string Name,
         Func<IObservable<int>, ISequencer, IObservable<int>> Deviant,

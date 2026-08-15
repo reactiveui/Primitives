@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Async.Reactive;
 #else
@@ -13,5 +15,6 @@ public static partial class SignalAsyncReactiveExtensions
 {
     /// <summary>Emits a single <see cref="RxVoid"/> value.</summary>
     /// <returns>An observable sequence that emits a single <see cref="RxVoid"/> value.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservableAsync<RxVoid> EmitRxVoid() => SignalAsync.Emit(RxVoid.Default);
 }

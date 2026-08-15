@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
@@ -1136,6 +1137,7 @@ public partial class SignalOperatorMixinsTests
     /// <summary>Executes the supplied thread pool scheduled work item.</summary>
     /// <typeparam name="TState">The type of the work item state.</typeparam>
     /// <param name="item">The work item to execute.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void InvokeThreadPoolWorkItem<TState>(ThreadPoolSequencer.ScheduledWorkItem<TState> item) =>
         item.Execute();
 
@@ -1143,6 +1145,7 @@ public partial class SignalOperatorMixinsTests
     /// <typeparam name="TState">The type of the work item state.</typeparam>
     /// <param name="item">The work item to queue.</param>
     /// <param name="dueTime">The delay before the work item runs.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void QueueThreadPoolWorkItem<TState>(
         ThreadPoolSequencer.ScheduledWorkItem<TState> item,
         TimeSpan dueTime) => item.Queue(dueTime);
@@ -1188,6 +1191,7 @@ public partial class SignalOperatorMixinsTests
         /// <summary>Returns the hash code for the supplied integer.</summary>
         /// <param name="obj">The integer to hash.</param>
         /// <returns>The integer value itself as the hash code.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetHashCode(int obj) => obj;
     }
 

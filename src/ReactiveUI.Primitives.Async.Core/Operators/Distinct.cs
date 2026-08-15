@@ -12,82 +12,82 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Distinctness operators for an observable source sequence.</summary>
-    /// <param name="this">The source observable sequence.</param>
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
-    extension<T>(IObservableAsync<T> @this)
+    /// <param name="source">The source observable sequence.</param>
+    extension<T>(IObservableAsync<T> source)
     {
         /// <summary>
         /// Returns a sequence that contains only distinct elements from the source sequence, using the default equality
         /// comparer for the element type.
         /// </summary>
+        /// <returns>An observable sequence that contains distinct elements from the source sequence.</returns>
         /// <remarks>Elements are considered distinct based on the default equality comparer for type T.
         /// The order of elements is preserved.</remarks>
-        /// <returns>An observable sequence that contains distinct elements from the source sequence.</returns>
         public IObservableAsync<T> Distinct()
         {
-            ArgumentExceptionHelper.ThrowIfNull(@this);
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return new DistinctSignal<T>(@this, EqualityComparer<T>.Default);
+            return new DistinctSignal<T>(source, EqualityComparer<T>.Default);
         }
 
         /// <summary>
         /// Returns an observable sequence that contains only distinct elements from the source sequence, using the
         /// specified equality comparer to determine uniqueness.
         /// </summary>
-        /// <remarks>Only the first occurrence of each element, as determined by the specified equality
-        /// comparer, is emitted to observers. Subsequent duplicate elements are ignored.</remarks>
         /// <param name="equalityComparer">An equality comparer to compare values for equality. If null, the default equality comparer for the type is
         /// used.</param>
         /// <returns>An observable sequence that emits each distinct element from the source sequence, in the order in which they
         /// are received.</returns>
+        /// <remarks>Only the first occurrence of each element, as determined by the specified equality
+        /// comparer, is emitted to observers. Subsequent duplicate elements are ignored.</remarks>
         public IObservableAsync<T> Distinct(IEqualityComparer<T> equalityComparer)
         {
-            ArgumentExceptionHelper.ThrowIfNull(@this);
+            ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(equalityComparer);
 
-            return new DistinctSignal<T>(@this, equalityComparer);
+            return new DistinctSignal<T>(source, equalityComparer);
         }
 
         /// <summary>
         /// Returns a sequence that contains distinct elements from the source sequence according to a specified key
         /// selector function.
         /// </summary>
-        /// <remarks>Elements are considered distinct based on the value returned by the key selector and
-        /// the default equality comparer for the key type.</remarks>
         /// <typeparam name="TKey">The type of the key returned by the key selector function.</typeparam>
         /// <param name="keySelector">A function to extract the key for each element. Cannot be null.</param>
         /// <returns>An observable sequence that contains only the first occurrence of each distinct key as determined by the key
         /// selector.</returns>
+        /// <remarks>Elements are considered distinct based on the value returned by the key selector and
+        /// the default equality comparer for the key type.</remarks>
         public IObservableAsync<T> DistinctBy<TKey>(Func<T, TKey> keySelector)
         {
-            ArgumentExceptionHelper.ThrowIfNull(@this);
+            ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(keySelector);
 
-            return new DistinctBySignal<T, TKey>(@this, keySelector, EqualityComparer<TKey>.Default);
+            return new DistinctBySignal<T, TKey>(source, keySelector, EqualityComparer<TKey>.Default);
         }
 
         /// <summary>
         /// Returns an observable sequence that contains only distinct elements from the source sequence, comparing
         /// values based on a specified key and equality comparer.
         /// </summary>
-        /// <remarks>Elements are considered distinct based on the value returned by the <paramref
-        /// name="keySelector"/> function and compared using the provided <paramref name="equalityComparer"/>. Only the
-        /// first occurrence of each key is included in the resulting sequence.</remarks>
         /// <typeparam name="TKey">The type of the key used to determine the distinctness of elements.</typeparam>
         /// <param name="keySelector">A function to extract the key for each element. Cannot be null.</param>
         /// <param name="equalityComparer">An equality comparer to compare keys for equality. Cannot be null.</param>
         /// <returns>An observable sequence that contains only the first occurrence of each distinct key as determined by the
         /// specified key selector and equality comparer.</returns>
         /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="keySelector"/> or <paramref name="equalityComparer"/> is null.</exception>
+        /// <remarks>Elements are considered distinct based on the value returned by the <paramref
+        /// name="keySelector"/> function and compared using the provided <paramref name="equalityComparer"/>. Only the
+        /// first occurrence of each key is included in the resulting sequence.</remarks>
         public IObservableAsync<T> DistinctBy<TKey>(
             Func<T, TKey> keySelector,
             IEqualityComparer<TKey> equalityComparer)
         {
-            ArgumentExceptionHelper.ThrowIfNull(@this);
+            ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(keySelector);
             ArgumentExceptionHelper.ThrowIfNull(equalityComparer);
 
-            return new DistinctBySignal<T, TKey>(@this, keySelector, equalityComparer);
+            return new DistinctBySignal<T, TKey>(source, keySelector, equalityComparer);
         }
     }
 

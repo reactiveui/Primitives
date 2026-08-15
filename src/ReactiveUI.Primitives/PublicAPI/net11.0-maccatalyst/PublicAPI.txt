@@ -1,0 +1,2065 @@
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.Async.Tests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.Blazor.Tests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.Extensions.Tests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.Tests")]
+[assembly: System.Runtime.Versioning.SupportedOSPlatform("MacCatalyst15.0")]
+namespace ReactiveUI.Primitives
+{
+    public static class ConnectableSignalExtensions
+    {
+        extension<T>(ReactiveUI.Primitives.ConnectableSignal<T> source)
+        {
+            public System.IObservable<T> AutoConnect() { }
+            public System.IObservable<T> AutoConnect(int subscriberCount) { }
+            public System.IObservable<T> AutoConnect(int subscriberCount, System.Action<System.IDisposable> onConnect) { }
+            public System.IObservable<T> AutoShare() { }
+        }
+        extension<T>(System.IObservable<T> source)
+        {
+            public ReactiveUI.Primitives.ConnectableSignal<T> Multicast(ReactiveUI.Primitives.Signals.ISignal<T> hub) { }
+            public ReactiveUI.Primitives.ConnectableSignal<T> ReplayLive() { }
+            public ReactiveUI.Primitives.ConnectableSignal<T> ReplayLive(int bufferSize) { }
+            public ReactiveUI.Primitives.ConnectableSignal<T> ReplayLive(int bufferSize, System.TimeSpan window) { }
+            public System.IObservable<T> ShareLatest() { }
+            public ReactiveUI.Primitives.ConnectableSignal<T> ShareLive() { }
+        }
+    }
+    public static class ConnectableSignalRxNameExtensions
+    {
+        extension<T>(ReactiveUI.Primitives.ConnectableSignal<T> source)
+        {
+            public System.IObservable<T> RefCount() { }
+        }
+        extension<T>(System.IObservable<T> source)
+        {
+            public ReactiveUI.Primitives.ConnectableSignal<T> Publish() { }
+            public System.IObservable<TResult> Publish<TResult>(System.Func<System.IObservable<T>, System.IObservable<TResult>> selector) { }
+            public ReactiveUI.Primitives.ConnectableSignal<T> Replay() { }
+            public ReactiveUI.Primitives.ConnectableSignal<T> Replay(int bufferSize) { }
+            public ReactiveUI.Primitives.ConnectableSignal<T> Replay(int bufferSize, System.TimeSpan window) { }
+            public ReactiveUI.Primitives.ConnectableSignal<T> Share() { }
+        }
+    }
+    public static class LinqExtensions
+    {
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<T> BlendUnique<T>(params System.IObservable<T>[] sources) { }
+        public static System.IObservable<T> BlendUnique<T>(System.IObservable<T>[] sources, System.Collections.Generic.IEqualityComparer<T>? comparer) { }
+        [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+        public static System.IDisposable SubscribeSafe<T>(System.IObservable<T> source, System.Action<System.Exception> onError, params byte[] allowValueType) where T : struct { }
+        [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+        public static System.IDisposable SubscribeSafe<T>(System.IObservable<T> source, System.IObserver<T> observer, params byte[] allowValueType) where T : struct { }
+        [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+        public static System.IDisposable SubscribeSafe<T>(System.IObservable<T?> source, System.Action<System.Exception> onError, params bool[] allowNullable) where T : struct { }
+        [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+        public static System.IDisposable SubscribeSafe<T>(System.IObservable<T?> source, System.Action<System.Exception> onError, params bool[] allowNullable) where T : class { }
+        [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+        public static System.IDisposable SubscribeSafe<T>(System.IObservable<T?> source, System.IObserver<T> observer, params bool[] allowNullable) where T : class { }
+        [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+        public static System.IDisposable SubscribeSafe<T>(System.IObservable<T?> source, System.IObserver<T?> observer, params bool[] allowNullable) where T : struct { }
+        [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+        public static System.IDisposable SubscribeSafe<T>(System.IObservable<T> source, System.Action<System.Exception> onError, System.Action onCompleted, params byte[] allowValueType) where T : struct { }
+        [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+        public static System.IDisposable SubscribeSafe<T>(System.IObservable<T> source, System.Action<T> onNext, System.Action<System.Exception> onError, params byte[] allowValueType) where T : struct { }
+        [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+        public static System.IDisposable SubscribeSafe<T>(System.IObservable<T?> source, System.Action<System.Exception> onError, System.Action onCompleted, params bool[] allowNullable) where T : class { }
+        [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+        public static System.IDisposable SubscribeSafe<T>(System.IObservable<T?> source, System.Action<System.Exception> onError, System.Action onCompleted, params bool[] allowNullable) where T : struct { }
+        [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+        public static System.IDisposable SubscribeSafe<T>(System.IObservable<T?> source, System.Action<T> onNext, System.Action<System.Exception> onError, params bool[] allowNullable) where T : class { }
+        [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+        public static System.IDisposable SubscribeSafe<T>(System.IObservable<T?> source, System.Action<T?> onNext, System.Action<System.Exception> onError, params bool[] allowNullable) where T : struct { }
+        [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+        public static System.IDisposable SubscribeSafe<T>(System.IObservable<T> source, System.Action<T> onNext, System.Action<System.Exception> onError, System.Action onCompleted, params byte[] allowValueType) where T : struct { }
+        [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+        public static System.IDisposable SubscribeSafe<T>(System.IObservable<T?> source, System.Action<T> onNext, System.Action<System.Exception> onError, System.Action onCompleted, params bool[] allowNullable) where T : class { }
+        [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+        public static System.IDisposable SubscribeSafe<T>(System.IObservable<T?> source, System.Action<T?> onNext, System.Action<System.Exception> onError, System.Action onCompleted, params bool[] allowNullable) where T : struct { }
+        extension(System.IDisposable disposable)
+        {
+            public ReactiveUI.Primitives.Disposables.SingleDisposable DisposeWith() { }
+            public System.IDisposable DisposeWith(ReactiveUI.Primitives.Disposables.MultipleDisposable disposables) { }
+            public ReactiveUI.Primitives.Disposables.SingleDisposable DisposeWith(System.Action? action) { }
+        }
+        extension(System.IObservable<object?> source)
+        {
+            public System.IObservable<TResult> CastTo<TResult>() { }
+            public System.IObservable<TResult> KeepType<TResult>() { }
+        }
+        extension(System.IObservable<object?> source)
+        {
+            public System.IObservable<TResult> Cast<TResult>() { }
+            public System.IObservable<TResult> OfType<TResult>() { }
+        }
+        extension<T>(System.Collections.Generic.IEnumerable<System.IObservable<T>> sources)
+        {
+            public System.IObservable<T> Blend() { }
+            public System.IObservable<T> Blend(int maxConcurrent) { }
+        }
+        extension<T>(System.Collections.Generic.IEnumerable<System.IObservable<T>> sources)
+        {
+            public System.IObservable<T> Merge() { }
+            public System.IObservable<T> Merge(int maxConcurrent) { }
+        }
+        extension<T>(System.Collections.Generic.IEnumerable<T> values)
+        {
+            public System.IObservable<T> ToObservable() { }
+            public System.IObservable<T> ToObservable(ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+            public System.IObservable<T> ToObservable(System.Threading.CancellationToken cancellationToken) { }
+        }
+        extension<T>(System.Collections.Generic.IEnumerable<T> values)
+        {
+            public System.IObservable<T> ToSignal() { }
+            public System.IObservable<T> ToSignal(System.Threading.CancellationToken cancellationToken) { }
+        }
+        extension<T>(System.IObservable<ReactiveUI.Primitives.Core.Spark<T>> source)
+        {
+            public System.IObservable<T> Unspark() { }
+        }
+        extension<T>(System.IObservable<ReactiveUI.Primitives.Core.Spark<T>> source)
+        {
+            public System.IObservable<T> Dematerialize() { }
+        }
+        extension<T>(System.IObservable<System.IObservable<T>> sources)
+        {
+            public System.IObservable<T> Blend() { }
+            public System.IObservable<T> Chain() { }
+            public System.IObservable<T> Race() { }
+            public System.IObservable<T> SwitchTo() { }
+        }
+        extension<T>(System.IObservable<System.IObservable<T>> sources)
+        {
+            public System.IObservable<T> Amb() { }
+            public System.IObservable<T> Concat() { }
+            public System.IObservable<T> Merge() { }
+            public System.IObservable<T> Switch() { }
+        }
+        extension<T>(System.IObservable<System.Threading.Tasks.Task<T>> sources)
+        {
+            public System.IObservable<T> Chain() { }
+        }
+        extension<T>(System.IObservable<System.Threading.Tasks.Task<T>> sources)
+        {
+            public System.IObservable<T> Concat() { }
+        }
+        extension<T>(System.IObservable<T> source)
+        {
+            public System.IObservable<TAccumulate> Aggregate<TAccumulate>(TAccumulate seed, System.Func<TAccumulate, T, TAccumulate> accumulator) { }
+            public System.IObservable<System.Collections.Generic.IList<T>> Buffer(System.TimeSpan timeSpan) { }
+            public System.IObservable<System.Collections.Generic.IList<T>> Buffer(System.TimeSpan timeSpan, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+            public System.IObservable<T> Catch<TException>(System.Func<TException, System.IObservable<T>> handler) where TException : System.Exception { }
+            public System.IObservable<T> Concat(System.IObservable<T> second) { }
+            public System.IObservable<T> DistinctUntilChanged() { }
+            public System.IObservable<T> DistinctUntilChanged(System.Collections.Generic.IEqualityComparer<T>? comparer) { }
+            public System.IObservable<T> DistinctUntilChangedBy<TKey>(System.Func<T, TKey> keySelector) { }
+            public System.IObservable<T> DistinctUntilChangedBy<TKey>(System.Func<T, TKey> keySelector, System.Collections.Generic.IEqualityComparer<TKey>? comparer) { }
+            public System.IObservable<T> Do(System.Action<T> onNext) { }
+            public System.IObservable<T> Do(System.Action<T> onNext, System.Action onCompleted) { }
+            public System.IObservable<T> Do(System.Action<T> onNext, System.Action<System.Exception> onError) { }
+            public System.IObservable<T> Do(System.Action<T> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
+            public System.IObservable<T> DoWith<TState>(TState state, System.Action<TState, T> onNext) { }
+            public System.IObservable<T> Finally(System.Action finallyAction) { }
+            public System.IObservable<T> IgnoreElements() { }
+            public System.IObservable<T> Merge(System.IObservable<T> second) { }
+            public System.IObservable<T> OnErrorResumeNext(System.IObservable<T> second) { }
+            public System.IObservable<TAccumulate> Scan<TAccumulate>(TAccumulate seed, System.Func<TAccumulate, T, TAccumulate> accumulator) { }
+            public System.IObservable<TResult> SelectMany<TResult>(System.Func<T, System.Collections.Generic.IEnumerable<TResult>> selector) { }
+            public System.IObservable<TResult> SelectMany<TResult>(System.Func<T, System.IObservable<TResult>> selector) { }
+            public System.IObservable<TResult> SelectMany<TResult>(System.IObservable<TResult> other) { }
+            public System.IObservable<TResult> SelectMany<TCollection, TResult>(System.Func<T, System.IObservable<TCollection>> collectionSelector, System.Func<T, TCollection, TResult> resultSelector) { }
+            public System.IObservable<T> StartWith(System.Collections.Generic.IEnumerable<T> values) { }
+            public System.IObservable<T> StartWith(params T[] values) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IDisposable SubscribeSafe(System.Action<System.Exception> onError) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IDisposable SubscribeSafe(System.IObserver<T> observer) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IDisposable SubscribeSafe(System.Action<System.Exception> onError, System.Action onCompleted) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IDisposable SubscribeSafe(System.Action<T> onNext, System.Action<System.Exception> onError) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IDisposable SubscribeSafe(System.Action<T> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
+            public System.IObservable<T> Synchronize() { }
+            public System.IObservable<T> Synchronize(System.Threading.Lock gate) { }
+            public System.IObservable<T> Synchronize(object gate) { }
+            public System.IObservable<T> Throttle(System.TimeSpan dueTime) { }
+            public System.IObservable<T> Throttle(System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+        }
+        extension<T>(System.IObservable<T> source)
+        {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult> selector) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult> selector) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.IObservable<T12> source12, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TResult> selector) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.IObservable<T12> source12, System.IObservable<T13> source13, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult> selector) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.IObservable<T12> source12, System.IObservable<T13> source13, System.IObservable<T14> source14, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult> selector) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.IObservable<T12> source12, System.IObservable<T13> source13, System.IObservable<T14> source14, System.IObservable<T15> source15, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult> selector) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.IObservable<T12> source12, System.IObservable<T13> source13, System.IObservable<T14> source14, System.IObservable<T15> source15, System.IObservable<T16> source16, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult> selector) { }
+        }
+        extension<T>(System.IObservable<T> source)
+        {
+            public System.IObservable<TResult> CombineLatest<T2, T3, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.Func<T, T2, T3, TResult> selector) { }
+            public System.IObservable<TResult> CombineLatest<T2, T3, T4, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.Func<T, T2, T3, T4, TResult> selector) { }
+            public System.IObservable<TResult> CombineLatest<T2, T3, T4, T5, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.Func<T, T2, T3, T4, T5, TResult> selector) { }
+            public System.IObservable<TResult> CombineLatest<T2, T3, T4, T5, T6, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.Func<T, T2, T3, T4, T5, T6, TResult> selector) { }
+            public System.IObservable<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.Func<T, T2, T3, T4, T5, T6, T7, TResult> selector) { }
+            public System.IObservable<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.Func<T, T2, T3, T4, T5, T6, T7, T8, TResult> selector) { }
+            public System.IObservable<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, TResult> selector) { }
+        }
+        extension<T>(System.IObservable<T> source)
+        {
+            public System.IObservable<bool> All(System.Func<T, bool> predicate) { }
+            public System.IObservable<bool> Any() { }
+            public System.IObservable<bool> Any(System.Func<T, bool> predicate) { }
+            public System.IObservable<T> Append(T value) { }
+            public System.IObservable<T> AsObservable() { }
+            public System.IObservable<TResult> Bind<TResult>(System.Func<T, System.IObservable<TResult>> selector) { }
+            public System.IObservable<T> Calm(System.TimeSpan dueTime) { }
+            public System.IObservable<T> Calm(System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+            public System.IObservable<bool> Contains(T value) { }
+            public System.IObservable<bool> Contains(T value, System.Collections.Generic.IEqualityComparer<T>? comparer) { }
+            public System.IObservable<int> Count() { }
+            public System.IObservable<int> Count(System.Func<T, bool> predicate) { }
+            public System.IObservable<T> DefaultIfEmpty() { }
+            public System.IObservable<T> DefaultIfEmpty(T defaultValue) { }
+            public System.IObservable<T> DelayStart(System.TimeSpan dueTime) { }
+            public System.IObservable<T> DelayStart(System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+            public System.IObservable<T> DelaySubscription(System.DateTimeOffset dueTime) { }
+            public System.IObservable<T> DelaySubscription(System.TimeSpan dueTime) { }
+            public System.IObservable<T> DelaySubscription(System.DateTimeOffset dueTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+            public System.IObservable<T> DelaySubscription(System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+            public System.IObservable<T> DistinctBy<TKey>(System.Func<T, TKey> keySelector) { }
+            public System.IObservable<T> DistinctBy<TKey>(System.Func<T, TKey> keySelector, System.Collections.Generic.IEqualityComparer<TKey>? comparer) { }
+            public System.IObservable<TResult> FlatMap<TResult>(System.Func<T, System.IObservable<TResult>> selector) { }
+            public System.IObservable<TResult> FlatMap<TCollection, TResult>(System.Func<T, System.IObservable<TCollection>> collectionSelector, System.Func<T, TCollection, TResult> resultSelector) { }
+            public System.IObservable<TResult> FlatMapValues<TResult>(System.Func<T, System.Collections.Generic.IEnumerable<TResult>> selector) { }
+            public System.IObservable<TResult> ForkJoin<TRight, TResult>(System.IObservable<TRight> right, System.Func<T, TRight, TResult> selector) { }
+            public System.IObservable<TResult> FuseLatest<TRight, TResult>(System.IObservable<TRight> right, System.Func<T, TRight, TResult> selector) { }
+            public System.IObservable<T> IgnoreValues() { }
+            public System.IObservable<bool> IsEmpty() { }
+            public System.IObservable<T> Lead(T value) { }
+            public System.IObservable<long> LongCount() { }
+            public System.IObservable<long> LongCount(System.Func<T, bool> predicate) { }
+            public System.IObservable<T> ObserveOn(ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+            public System.IObservable<TResult> PairLatest<TRight, TResult>(System.IObservable<TRight> right, System.Func<T, TRight, TResult> selector) { }
+            public System.IObservable<T> Prepend(System.Collections.Generic.IEnumerable<T> values) { }
+            public System.IObservable<T> Prepend(T value) { }
+            public System.IObservable<T> Prepend(params T[] values) { }
+            public System.IObservable<T> Probe(System.TimeSpan period) { }
+            public System.IObservable<T> Probe(System.TimeSpan period, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+            public System.IObservable<T> SkipWhile(System.Func<T, bool> predicate) { }
+            public System.IObservable<T> Stabilize(System.TimeSpan dueTime) { }
+            public System.IObservable<T> Stabilize(System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+            public System.IObservable<T> SubscribeOn(ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+            public System.IObservable<T> TakeWhile(System.Func<T, bool> predicate) { }
+            public System.IObservable<T> Tap(System.Action<T> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
+            public System.IObservable<ReactiveUI.Primitives.Core.TimeInterval<T>> TimeInterval() { }
+            public System.IObservable<ReactiveUI.Primitives.Core.TimeInterval<T>> TimeInterval(ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+            public System.IObservable<ReactiveUI.Primitives.Core.Moment<T>> Timestamp() { }
+            public System.IObservable<ReactiveUI.Primitives.Core.Moment<T>> Timestamp(ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+            public System.IObservable<T> UniqueBy<TKey>(System.Func<T, TKey> keySelector) { }
+            public System.IObservable<T> UniqueBy<TKey>(System.Func<T, TKey> keySelector, System.Collections.Generic.IEqualityComparer<TKey>? comparer) { }
+        }
+        extension<T>(System.IObservable<T> source)
+        {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.Task<bool> AnyAsync() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.Task<bool> AnyAsync(System.Func<T, bool> predicate) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.Task<bool> AnyAsync(System.Threading.CancellationToken cancellationToken) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.Task<bool> AnyAsync(System.Func<T, bool> predicate, System.Threading.CancellationToken cancellationToken) { }
+            public System.Threading.Tasks.Task<T[]> CollectArrayAsync() { }
+            public System.Threading.Tasks.Task<System.Collections.Generic.IList<T>> CollectListAsync() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.Task<int> CountAsync() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.Task<int> CountAsync(System.Func<T, bool> predicate) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.Task<int> CountAsync(System.Threading.CancellationToken cancellationToken) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.Task<int> CountAsync(System.Func<T, bool> predicate, System.Threading.CancellationToken cancellationToken) { }
+            public System.Threading.Tasks.Task<T> FirstAsync() { }
+            public System.Threading.Tasks.Task<T> FirstAsync(System.Threading.CancellationToken cancellationToken) { }
+            public System.Threading.Tasks.Task<T> FirstOrDefaultAsync() { }
+            [System.Runtime.CompilerServices.OverloadResolutionPriority(-1)]
+            public System.Threading.Tasks.Task<T> FirstOrDefaultAsync(System.Threading.CancellationToken cancellationToken) { }
+            public System.Threading.Tasks.Task<T> FirstOrDefaultAsync(T defaultValue) { }
+            public System.Threading.Tasks.Task<T> FirstOrDefaultAsync(T defaultValue, System.Threading.CancellationToken cancellationToken) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.Task<T> LastAsync() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.Task<T> LastAsync(System.Threading.CancellationToken cancellationToken) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.Task<T> LastOrDefaultAsync() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            [System.Runtime.CompilerServices.OverloadResolutionPriority(-1)]
+            public System.Threading.Tasks.Task<T> LastOrDefaultAsync(System.Threading.CancellationToken cancellationToken) { }
+            public System.Threading.Tasks.Task<T> LastOrDefaultAsync(T defaultValue) { }
+            public System.Threading.Tasks.Task<T> LastOrDefaultAsync(T defaultValue, System.Threading.CancellationToken cancellationToken) { }
+            public System.IObservable<T[]> ToArray() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.Task<T[]> ToArrayAsync() { }
+            public System.IObservable<System.Collections.Generic.IList<T>> ToList() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.Task<System.Collections.Generic.IList<T>> ToListAsync() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.Task<T> ToTask() { }
+            public System.Threading.Tasks.Task<T> ToTask(System.Threading.CancellationToken cancellationToken) { }
+        }
+        extension<T>(System.IObservable<T> source)
+        {
+            public System.IObservable<TResult> SyncLatest<T2, T3, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.Func<T, T2, T3, TResult> selector) { }
+            public System.IObservable<TResult> SyncLatest<T2, T3, T4, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.Func<T, T2, T3, T4, TResult> selector) { }
+            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.Func<T, T2, T3, T4, T5, TResult> selector) { }
+            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, T6, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.Func<T, T2, T3, T4, T5, T6, TResult> selector) { }
+            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.Func<T, T2, T3, T4, T5, T6, T7, TResult> selector) { }
+            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.Func<T, T2, T3, T4, T5, T6, T7, T8, TResult> selector) { }
+            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, TResult> selector) { }
+        }
+        extension<T>(System.IObservable<T> source)
+        {
+            public System.IObservable<T> Chain(System.IObservable<T> second) { }
+            public System.IObservable<T[]> CollectArray() { }
+            public System.IObservable<System.Collections.Generic.IList<T>> CollectList() { }
+            public System.IObservable<T> Distinct() { }
+            public System.IObservable<T> Distinct(System.Collections.Generic.IEqualityComparer<T>? comparer) { }
+            public System.IObservable<T> Expire(System.TimeSpan dueTime) { }
+            public System.IObservable<T> Expire(System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+            public System.IObservable<TAccumulate> Fold<TAccumulate>(TAccumulate seed, System.Func<TAccumulate, T, TAccumulate> accumulator) { }
+            public System.IObservable<T> Keep(System.Func<T, bool> predicate) { }
+            public System.IObservable<T> KeepWith<TState>(TState state, System.Func<TState, T, bool> predicate) { }
+            public System.IObservable<TResult> Latch<TRight, TResult>(System.IObservable<TRight> right, System.Func<T, TRight, TResult> selector) { }
+            public System.IObservable<TResult> Map<TResult>(System.Func<T, TResult> selector) { }
+            public System.IObservable<TResult> MapIndexed<TResult>(System.Func<T, int, TResult> selector) { }
+            public System.IObservable<TResult> MapWith<TState, TResult>(TState state, System.Func<TState, T, TResult> selector) { }
+            public System.IObservable<TResult> Pair<TRight, TResult>(System.IObservable<TRight> right, System.Func<T, TRight, TResult> selector) { }
+            public System.IObservable<T> Reattempt(int retryCount) { }
+            public System.IObservable<T> Recover(System.Func<System.Exception, System.IObservable<T>> handler) { }
+            public System.IObservable<TAccumulate> Reduce<TAccumulate>(TAccumulate seed, System.Func<TAccumulate, T, TAccumulate> accumulator) { }
+            public System.IObservable<T> Rescue(System.Func<System.Exception, System.IObservable<T>> handler) { }
+            public System.IObservable<T> Resume(System.IObservable<T> fallback) { }
+            public System.IObservable<T> Shift(System.TimeSpan dueTime) { }
+            public System.IObservable<T> Shift(System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+            public System.IObservable<T> Skip(int count) { }
+            public System.IObservable<ReactiveUI.Primitives.Core.Spark<T>> Spark() { }
+            public System.IObservable<TResult> SyncLatest<TRight, TResult>(System.IObservable<TRight> right, System.Func<T, TRight, TResult> selector) { }
+            public System.IObservable<T> Take(int count) { }
+            public System.IObservable<T> TakeUntil(System.Threading.CancellationToken cancellationToken) { }
+            public System.IObservable<T> TakeUntil<TOther>(System.IObservable<TOther> other) { }
+            public System.IObservable<T> Tap(System.Action<T> onNext) { }
+            public System.IObservable<T> TapWith<TState>(TState state, System.Action<TState, T> onNext) { }
+            public System.IObservable<T> ToSignal() { }
+            public System.IObservable<T> Unique() { }
+            public System.IObservable<T> Unique(System.Collections.Generic.IEqualityComparer<T>? comparer) { }
+        }
+        extension<T>(System.IObservable<T> source)
+        {
+            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult> selector) { }
+            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult> selector) { }
+            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.IObservable<T12> source12, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TResult> selector) { }
+            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.IObservable<T12> source12, System.IObservable<T13> source13, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult> selector) { }
+            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.IObservable<T12> source12, System.IObservable<T13> source13, System.IObservable<T14> source14, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult> selector) { }
+            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.IObservable<T12> source12, System.IObservable<T13> source13, System.IObservable<T14> source14, System.IObservable<T15> source15, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult> selector) { }
+            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.IObservable<T12> source12, System.IObservable<T13> source13, System.IObservable<T14> source14, System.IObservable<T15> source15, System.IObservable<T16> source16, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult> selector) { }
+        }
+        extension<T>(System.IObservable<T> source)
+        {
+            public System.IObservable<T> Repeat() { }
+            public System.IObservable<T> Repeat(int repeatCount) { }
+        }
+        extension<T>(System.IObservable<T?> source) where T : class
+        {
+            public System.IObservable<T> KeepNotNull() { }
+        }
+        extension<T>(System.IObservable<T?> source) where T : class
+        {
+            public System.IObservable<T> WhereNotNull() { }
+        }
+        extension<T>(System.Threading.Tasks.Task<T> task)
+        {
+            public System.IObservable<T> ToObservable() { }
+            public System.Threading.Tasks.Task<T> ToTask() { }
+            public System.Threading.Tasks.Task<T> ToTask(System.Threading.CancellationToken cancellationToken) { }
+        }
+        extension<T>(System.Threading.Tasks.Task<T> task)
+        {
+            public System.IObservable<T> ToSignal() { }
+        }
+        extension<TIn>(System.IObservable<TIn> source)
+        {
+            public System.IObservable<TOut> Choose<TOut>(System.Func<TIn, (bool HasValue, TOut Value)> chooser) { }
+            public System.IObservable<TOut> SwitchMap<TOut>(System.Func<TIn, System.IObservable<TOut>> selector) { }
+        }
+        extension<TLeft>(System.IObservable<TLeft> left)
+        {
+            public System.IObservable<TResult> CombineLatest<TRight, TResult>(System.IObservable<TRight> right, System.Func<TLeft, TRight, TResult> selector) { }
+            public System.IObservable<TLeft> Delay(System.DateTimeOffset dueTime) { }
+            public System.IObservable<TLeft> Delay(System.TimeSpan dueTime) { }
+            public System.IObservable<TLeft> Delay(System.DateTimeOffset dueTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+            public System.IObservable<TLeft> Delay(System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+            public System.IObservable<ReactiveUI.Primitives.Core.Spark<TLeft>> Materialize() { }
+            public System.IObservable<TLeft> Retry(int retryCount) { }
+            public System.IObservable<TLeft> Sample(System.TimeSpan interval) { }
+            public System.IObservable<TLeft> Sample(System.TimeSpan interval, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+            public System.IObservable<TLeft> Timeout(System.DateTimeOffset dueTime) { }
+            public System.IObservable<TLeft> Timeout(System.TimeSpan dueTime) { }
+            public System.IObservable<TLeft> Timeout(System.DateTimeOffset dueTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+            public System.IObservable<TLeft> Timeout(System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+            public System.IObservable<TResult> WithLatestFrom<TRight, TResult>(System.IObservable<TRight> right, System.Func<TLeft, TRight, TResult> selector) { }
+            public System.IObservable<TResult> Zip<TRight, TResult>(System.IObservable<TRight> right, System.Func<TLeft, TRight, TResult> selector) { }
+        }
+        extension<TSource>(System.IObservable<TSource> source)
+        {
+            public System.IObservable<TResult> Select<TResult>(System.Func<TSource, TResult> selector) { }
+            public System.IObservable<TResult> Select<TResult>(System.Func<TSource, int, TResult> selector) { }
+            public System.IObservable<TResult> SelectWith<TState, TResult>(TState state, System.Func<TState, TSource, TResult> selector) { }
+            public System.IObservable<TSource> Where(System.Func<TSource, bool> predicate) { }
+            public System.IObservable<TSource> WhereWith<TState>(TState state, System.Func<TState, TSource, bool> predicate) { }
+        }
+        extension<TSource>(System.IObservable<TSource> source)
+        {
+            public System.IObservable<System.Collections.Generic.IList<TSource>> Buffer(int count) { }
+            public System.IObservable<System.Collections.Generic.IList<TSource>> Buffer(int count, int skip) { }
+        }
+        extension<TSource>(System.IObservable<TSource?> source)
+        {
+            public System.IObservable<TResult> SwitchSelect<TResult>(System.Func<TSource, System.IObservable<TResult>> selector) { }
+        }
+    }
+    [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+    [System.Serializable]
+    public readonly struct RxVoid : System.IEquatable<ReactiveUI.Primitives.RxVoid>
+    {
+        public static ReactiveUI.Primitives.RxVoid Default { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public readonly bool Equals(ReactiveUI.Primitives.RxVoid other) { }
+        public override readonly bool Equals(object? obj) { }
+        public override readonly int GetHashCode() { }
+        public override readonly string ToString() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static bool operator ==(ReactiveUI.Primitives.RxVoid first, ReactiveUI.Primitives.RxVoid second) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static bool operator !=(ReactiveUI.Primitives.RxVoid first, ReactiveUI.Primitives.RxVoid second) { }
+    }
+}
+namespace ReactiveUI.Primitives.Advanced
+{
+    [System.Diagnostics.DebuggerDisplay("DueTime = {_dueTime}, Period = {_period}")]
+    public sealed class AfterSignal : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<long>
+    {
+        public AfterSignal(System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public AfterSignal(System.TimeSpan dueTime, System.TimeSpan period, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public bool IsRequiredSubscribeOnCurrentThread() { }
+        public System.IDisposable Subscribe(System.IObserver<long> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Current = {Current}, DueTime = {DueTime}, Period = {Period}")]
+    public sealed class AfterSubscription : System.IDisposable
+    {
+        public AfterSubscription(System.IObserver<long> observer, ReactiveUI.Primitives.Concurrency.ISequencer scheduler, System.TimeSpan dueTime, System.TimeSpan? period) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Dispose() { }
+        public ReactiveUI.Primitives.Advanced.AfterSubscription Run() { }
+    }
+    [System.Diagnostics.DebuggerDisplay("SubscribeAsync = {SubscribeAsync}")]
+    public sealed class AsyncCreateSignal<T> : System.IObservable<T>
+    {
+        public AsyncCreateSignal(System.Func<System.IObserver<T>, System.Threading.CancellationToken, System.Threading.Tasks.Task<System.IDisposable>> subscribe) { }
+        public AsyncCreateSignal(System.Func<System.IObserver<T>, System.Threading.Tasks.Task<System.IDisposable>> subscribe) { }
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("ObservableFactory = {ObservableFactory}")]
+    public sealed class AsyncDeferSignal<T> : System.IObservable<T>
+    {
+        public AsyncDeferSignal(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<System.IObservable<T>>> observableFactory) { }
+        public AsyncDeferSignal(System.Func<System.Threading.Tasks.Task<System.IObservable<T>>> observableFactory) { }
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Completed = {_completed}, Canceled = {_canceled}, Disposed = {_disposed}")]
+    public sealed class AsyncSubscriptionLifetime : System.IDisposable
+    {
+        public AsyncSubscriptionLifetime() { }
+        public bool IsCancellationRequested { get; }
+        public System.Threading.CancellationToken Token { get; }
+        public void Complete() { }
+        public void Dispose() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void SetSubscription(System.IDisposable? disposable) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Count = {_count}, Connected = {_connected}")]
+    public sealed class AutoConnectSignal<T> : System.IObservable<T>
+    {
+        public AutoConnectSignal(ReactiveUI.Primitives.ConnectableSignal<T> source, int subscriberCount) { }
+        public AutoConnectSignal(ReactiveUI.Primitives.ConnectableSignal<T> source, int subscriberCount, System.Action<System.IDisposable>? onConnect) { }
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Count = {_count}, Connection = {_connection}")]
+    public sealed class AutoShareSignal<T> : System.IObservable<T>
+    {
+        public AutoShareSignal(ReactiveUI.Primitives.ConnectableSignal<T> source) { }
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Owner = {_owner}, Subscription = {Subscription}")]
+    public sealed class AutoShareSubscription<T> : System.IDisposable
+    {
+        public AutoShareSubscription(ReactiveUI.Primitives.Advanced.AutoShareSignal<T> owner, System.IDisposable subscription) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Dispose() { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Sources = {Sources}")]
+    public sealed class BlendSignal<T> : System.IObservable<T>
+    {
+        public BlendSignal(System.IObservable<System.IObservable<T>> sources) { }
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("ActiveCount = {ActiveCount}, IsOuterCompleted = {IsOuterCompleted}, IsDone = {IsDone}")]
+    public sealed class BlendWitness<T> : System.IDisposable
+    {
+        public BlendWitness(System.IObserver<T> observer) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Dispose() { }
+        public ReactiveUI.Primitives.Advanced.BlendWitness<T> Run(System.Collections.Generic.IEnumerable<System.IObservable<T>> sources) { }
+        public ReactiveUI.Primitives.Advanced.BlendWitness<T> Run(System.IObservable<System.IObservable<T>> sources) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}, Observer = {Observer}")]
+    public sealed class BufferEachWitness<T> : System.IDisposable, System.IObserver<T>
+    {
+        public BufferEachWitness(System.IObserver<System.Collections.Generic.IList<T>> observer) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Dispose() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnCompleted() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnError(System.Exception error) { }
+        public void OnNext(T value) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void SetSubscription(System.IDisposable subscription) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Window = {Window}, Source = {Source}")]
+    public sealed class BufferSignal<T> : System.IObservable<System.Collections.Generic.IList<T>>
+    {
+        public BufferSignal(System.IObservable<T> source, System.TimeSpan timeSpan, ReactiveUI.Primitives.Concurrency.ISequencer sequencer) { }
+        public System.IDisposable Subscribe(System.IObserver<System.Collections.Generic.IList<T>> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Source = {Source}")]
+    public sealed class CastSignal<TResult> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<TResult>
+    {
+        public CastSignal(System.IObservable<object?> source) { }
+        public bool IsRequiredSubscribeOnCurrentThread() { }
+        public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}, Observer = {Observer}")]
+    public sealed class CastWitness<TResult> : System.IDisposable, System.IObserver<object?>
+    {
+        public CastWitness(System.IObserver<TResult> observer) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Dispose() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnCompleted() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnError(System.Exception error) { }
+        public void OnNext(object? value) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void SetSubscription(System.IDisposable subscription) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Sources = {Sources}, EnumerableSources = {EnumerableSources}, First = {First}, Second = {Second}")]
+    public sealed class ChainSignal<T> : System.IObservable<T>
+    {
+        public ChainSignal(System.Collections.Generic.IEnumerable<System.IObservable<T>> sources) { }
+        public ChainSignal(System.IObservable<System.IObservable<T>> sources) { }
+        public ChainSignal(System.IObservable<T> first, System.IObservable<T> second) { }
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("IsActive = {IsActive}, IsOuterCompleted = {IsOuterCompleted}")]
+    public sealed class ChainWitness<T> : System.IDisposable
+    {
+        public ChainWitness(System.IObserver<T> observer) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Dispose() { }
+        public ReactiveUI.Primitives.Advanced.ChainWitness<T> Run(System.Collections.Generic.IEnumerable<System.IObservable<T>> sources) { }
+        public ReactiveUI.Primitives.Advanced.ChainWitness<T> Run(System.IObservable<System.IObservable<T>> sources) { }
+        public ReactiveUI.Primitives.Advanced.ChainWitness<T> Run(System.IObservable<T> first, System.IObservable<T> second) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Source = {Source}, TimeSpan = {TimeSpan}")]
+    public sealed class CollectSignal<T> : System.IObservable<System.Collections.Generic.IList<T>>
+    {
+        public CollectSignal(System.IObservable<T> source, System.TimeSpan timeSpan, ReactiveUI.Primitives.Concurrency.ISequencer sequencer) { }
+        public System.IDisposable Subscribe(System.IObserver<System.Collections.Generic.IList<T>> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}, Buffered = {Values.Count}")]
+    public sealed class CollectWitness<T> : System.IDisposable, System.IObserver<T>
+    {
+        public CollectWitness(System.IObserver<System.Collections.Generic.IList<T>> observer) { }
+        public CollectWitness(System.IObserver<System.Collections.Generic.IList<T>> observer, System.TimeSpan timeSpan, ReactiveUI.Primitives.Concurrency.ISequencer sequencer) { }
+        public void Dispose() { }
+        public void OnCompleted() { }
+        public void OnError(System.Exception error) { }
+        public void OnNext(T value) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void SetSubscription(System.IDisposable subscription) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}, Observer = {_observer}")]
+    public sealed class CreateSink<T> : System.IDisposable, System.IObserver<T>
+    {
+        public CreateSink(System.IObserver<T> observer, bool disposeOnNextThrow) { }
+        public CreateSink(System.IObserver<T> observer, System.IDisposable cancel, bool disposeOnNextThrow) { }
+        public void Dispose() { }
+        public void OnCompleted() { }
+        public void OnError(System.Exception error) { }
+        public void OnNext(T value) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void SetCancel(System.IDisposable cancel) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}, Observer = {Observer}")]
+    public sealed class CreateWitness<T> : System.IDisposable, System.IObserver<T>
+    {
+        public CreateWitness(System.IObserver<T> observer) { }
+        public void Dispose() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnCompleted() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnError(System.Exception error) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnNext(T value) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void SetCancel(System.IDisposable cancel) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("ReadyCount = {_readyCount}, DrainPosted = {_drainPosted}")]
+    public record struct DispatchSequencerState : System.IEquatable<ReactiveUI.Primitives.Advanced.DispatchSequencerState>
+    {
+        public DispatchSequencerState(ReactiveUI.Primitives.Concurrency.ISequencer owner, System.Func<System.Action, bool> post, System.Action drain) { }
+        public DispatchSequencerState(ReactiveUI.Primitives.Concurrency.ISequencer owner, System.Func<System.Action, bool> post, System.Action drain, System.Action<ReactiveUI.Primitives.Concurrency.IWorkItem, long>? scheduleDelayed) { }
+        public static System.DateTimeOffset Now { get; }
+        public static long Timestamp { get; }
+        public void PostDrain() { }
+        public void RunDrain() { }
+        public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item) { }
+        public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item, long dueTimestamp) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.TimeSpan DelayUntil(long dueTimestamp) { }
+        public static void RunIfActive(ReactiveUI.Primitives.Concurrency.IWorkItem item) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("DueTime = {DueTime}, Source = {Source}")]
+    public sealed class EmitIfQuietSignal<T> : System.IObservable<T>
+    {
+        public EmitIfQuietSignal(System.IObservable<T> source, System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer sequencer) { }
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("HasValue = {_hasValue}, Stopped = {_stopped}, Version = {_version}")]
+    public sealed class EmitIfQuietWitness<T> : System.IDisposable, System.IObserver<T>
+    {
+        public EmitIfQuietWitness(System.IObserver<T> observer, System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer sequencer) { }
+        public void Dispose() { }
+        public void OnCompleted() { }
+        public void OnError(System.Exception error) { }
+        public void OnNext(T value) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void SetSubscription(System.IDisposable subscription) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Sources = {Sources}")]
+    public sealed class EnumerableBlendSignal<T> : System.IObservable<T>
+    {
+        public EnumerableBlendSignal(System.Collections.Generic.IEnumerable<System.IObservable<T>> sources) { }
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Done = {_done}, DueTime = {_dueTime}, Deadline = {_deadline}")]
+    public sealed class ExpireCoordinator<T> : System.IDisposable, System.IObserver<T>
+    {
+        public ExpireCoordinator(System.IObservable<T> source, System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer sequencer, System.IObserver<T> observer) { }
+        public void Dispose() { }
+        public void OnCompleted() { }
+        public void OnError(System.Exception error) { }
+        public void OnNext(T value) { }
+        public ReactiveUI.Primitives.Advanced.ExpireCoordinator<T> Run() { }
+    }
+    [System.Diagnostics.DebuggerDisplay("DueTime = {_dueTime}, Source = {_source}")]
+    public sealed class ExpireSignal<T> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<T>
+    {
+        public ExpireSignal(System.IObservable<T> source, System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer sequencer) { }
+        public bool IsRequiredSubscribeOnCurrentThread() { }
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Left = {Left}, Right = {Right}")]
+    public sealed class ForkJoinSignal<TLeft, TRight, TResult> : System.IObservable<TResult>
+    {
+        public ForkJoinSignal(System.IObservable<TLeft> left, System.IObservable<TRight> right, System.Func<TLeft, TRight, TResult> selector) { }
+        public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("HasLeft = {HasLeft}, HasRight = {HasRight}, IsDone = {IsDone}")]
+    public sealed class ForkJoinWitness<TLeft, TRight, TResult>
+    {
+        public ForkJoinWitness(System.IObserver<TResult> observer, System.Func<TLeft, TRight, TResult> selector) { }
+        public ReactiveUI.Primitives.Disposables.MultipleDisposable Run(System.IObservable<TLeft> left, System.IObservable<TRight> right) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("CancellationRequested = {CancellationToken.IsCancellationRequested}")]
+    public sealed class FromAsyncExternalCancellationSignal<T> : System.IObservable<T>
+    {
+        public FromAsyncExternalCancellationSignal(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<T>> taskFactory, System.Threading.CancellationToken cancellationToken) { }
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("TaskFactory = {TaskFactory}, CanBeCanceled = {CancellationToken.CanBeCanceled}")]
+    public sealed class FromAsyncSignal<T> : System.IObservable<T>
+    {
+        public FromAsyncSignal(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<T>> taskFactory) { }
+        public FromAsyncSignal(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<T>> taskFactory, System.Threading.CancellationToken cancellationToken) { }
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Completed = {Lifetime.IsCompleted}, CancellationRequested = {Lifetime.IsCancellationRequested}")]
+    public sealed class FromAsyncSubscription<T> : System.IDisposable
+    {
+        public FromAsyncSubscription(System.IObserver<T> observer, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<T>> taskFactory) { }
+        public FromAsyncSubscription(System.IObserver<T> observer, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<T>> taskFactory, System.Threading.CancellationToken externalCancellationToken) { }
+        public void Dispose() { }
+    }
+    [System.Diagnostics.DebuggerDisplay("AddHandler = {AddHandler}, RemoveHandler = {RemoveHandler}")]
+    public sealed class FromEventPatternSignal<TEventHandler, TEventArgs> : System.IObservable<ReactiveUI.Primitives.Core.EventPattern<TEventArgs>> where TEventHandler : System.Delegate where TEventArgs : System.EventArgs
+    {
+        public FromEventPatternSignal(System.Action<TEventHandler> addHandler, System.Action<TEventHandler> removeHandler) { }
+        public System.IDisposable Subscribe(System.IObserver<ReactiveUI.Primitives.Core.EventPattern<TEventArgs>> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Disposed = {_disposed}, Observer = {_observer}")]
+    public sealed class GuardedWitness<T> : System.IDisposable, System.IObserver<T>
+    {
+        public GuardedWitness(System.IObserver<T> observer, System.IDisposable cancel) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Dispose() { }
+        public void OnCompleted() { }
+        public void OnError(System.Exception error) { }
+        public void OnNext(T value) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Source = {Source}")]
+    public sealed class IgnoreValuesSignal<T> : System.IObservable<T>
+    {
+        public IgnoreValuesSignal(System.IObservable<T> source) { }
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    public sealed class ImmutableReturnRxVoidSignal : ReactiveUI.Primitives.Advanced.IInlineSignal<ReactiveUI.Primitives.RxVoid>, ReactiveUI.Primitives.Advanced.IRequireCurrentThread<ReactiveUI.Primitives.RxVoid>
+    {
+        public static readonly ReactiveUI.Primitives.Advanced.ImmutableReturnRxVoidSignal Instance;
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public bool IsRequiredSubscribeOnCurrentThread() { }
+        public System.IDisposable Subscribe(System.IObserver<ReactiveUI.Primitives.RxVoid> observer) { }
+        public System.IDisposable Subscribe(System.Action<ReactiveUI.Primitives.RxVoid> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Source = {Source}")]
+    public sealed class IsEmptySignal<T> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<bool>
+    {
+        public IsEmptySignal(System.IObservable<T> source) { }
+        public bool IsRequiredSubscribeOnCurrentThread() { }
+        public System.IDisposable Subscribe(System.IObserver<bool> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}, Subscription = {Subscription}")]
+    public sealed class IsEmptyWitness<T> : System.IDisposable, System.IObserver<T>
+    {
+        public IsEmptyWitness(System.IObserver<bool> observer) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Dispose() { }
+        public void OnCompleted() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnError(System.Exception error) { }
+        public void OnNext(T value) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void SetSubscription(System.IDisposable subscription) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Value = {Value}, Source = {Source}")]
+    public sealed class LeadSignal<T> : ReactiveUI.Primitives.Advanced.IInlineSignal<T>
+    {
+        public LeadSignal(System.IObservable<T> source, T value) { }
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+        public System.IDisposable Subscribe(System.Action<T> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Source = {_source}")]
+    public sealed class MapIndexedSignal<TSource, TResult> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<TResult>
+    {
+        public MapIndexedSignal(System.IObservable<TSource> source, System.Func<TSource, int, TResult> selector) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public bool IsRequiredSubscribeOnCurrentThread() { }
+        public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Index = {_index}, Stopped = {_stopped}")]
+    public sealed class MapIndexedWitness<TSource, TResult> : System.IObserver<TSource>
+    {
+        public MapIndexedWitness(System.IObserver<TResult> observer, System.Func<TSource, int, TResult> selector) { }
+        public void OnCompleted() { }
+        public void OnError(System.Exception error) { }
+        public void OnNext(TSource value) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Active = {_active}, EnumerationCompleted = {_enumerationCompleted}, Done = {_done}")]
+    public sealed class MaxConcurrentBlendCoordinator<T> : System.IDisposable
+    {
+        public MaxConcurrentBlendCoordinator(System.IObserver<T> observer) { }
+        public void Dispose() { }
+        public ReactiveUI.Primitives.Advanced.MaxConcurrentBlendCoordinator<T> Run(System.Collections.Generic.IEnumerable<System.IObservable<T>> sources, int maxConcurrent) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Sources = {_sources}, MaxConcurrent = {_maxConcurrent}")]
+    public sealed class MaxConcurrentEnumerableBlendSignal<T> : System.IObservable<T>
+    {
+        public MaxConcurrentEnumerableBlendSignal(System.Collections.Generic.IEnumerable<System.IObservable<T>> sources, int maxConcurrent) { }
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Active = {Active}, Done = {Done}")]
+    public sealed class MergeCoordinator<T> : System.IDisposable
+    {
+        public MergeCoordinator(System.IObserver<T> observer) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Dispose() { }
+        public void OnAnyError(System.Exception error) { }
+        public void OnSource(System.IObservable<T>? source) { }
+        public ReactiveUI.Primitives.Advanced.MergeCoordinator<T> Run(System.Collections.Generic.IEnumerable<System.IObservable<T>> sources) { }
+        public ReactiveUI.Primitives.Advanced.MergeCoordinator<T> Run(System.IObservable<T> first, System.IObservable<T> second) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Sources = {Sources}, MaxConcurrent = {MaxConcurrent}")]
+    public sealed class MergeSignal<T> : System.IObservable<T>
+    {
+        public MergeSignal(System.Collections.Generic.IEnumerable<System.IObservable<T>> sources) { }
+        public MergeSignal(System.Collections.Generic.IEnumerable<System.IObservable<T>> sources, int maxConcurrent) { }
+        public MergeSignal(System.IObservable<T> first, System.IObservable<T> second) { }
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Left = {Left}, Right = {Right}")]
+    public sealed class PairSignal<TLeft, TRight, TResult> : System.IObservable<TResult>
+    {
+        public PairSignal(System.IObservable<TLeft> left, System.IObservable<TRight> right, System.Func<TLeft, TRight, TResult> selector) { }
+        public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("IsCompleted = {IsCompleted}, LeftQueue = {LeftQueue.Count}, RightQueue = {RightQueue.Count}")]
+    public sealed class PairWitness<TLeft, TRight, TResult>
+    {
+        public PairWitness(System.IObserver<TResult> observer, System.Func<TLeft, TRight, TResult> selector) { }
+        public ReactiveUI.Primitives.Disposables.MultipleDisposable Run(System.IObservable<TLeft> left, System.IObservable<TRight> right) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Source = {Source}, Selector = {Selector}")]
+    public sealed class PublishSelectorSignal<TSource, TResult> : System.IObservable<TResult>
+    {
+        public PublishSelectorSignal(System.IObservable<TSource> source, System.Func<System.IObservable<TSource>, System.IObservable<TResult>> selector) { }
+        public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Sources = {Sources}, EnumerableSources = {EnumerableSources}")]
+    public sealed class RaceSignal<T> : System.IObservable<T>
+    {
+        public RaceSignal(System.Collections.Generic.IEnumerable<System.IObservable<T>> sources) { }
+        public RaceSignal(System.IObservable<System.IObservable<T>> sources) { }
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Arms = {_arms}")]
+    public sealed class RaceWitness<T> : System.IDisposable
+    {
+        public RaceWitness(System.IObserver<T> observer) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Dispose() { }
+        public ReactiveUI.Primitives.Advanced.RaceWitness<T> Run(System.Collections.Generic.IEnumerable<System.IObservable<T>> sources) { }
+        public ReactiveUI.Primitives.Advanced.RaceWitness<T> Run(System.IObservable<System.IObservable<T>> sources) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Left = {Left}, Right = {Right}")]
+    public sealed class RangeCombineLatestSignal<TResult> : System.IObservable<TResult>
+    {
+        public RangeCombineLatestSignal(ReactiveUI.Primitives.Advanced.RangeSignal left, ReactiveUI.Primitives.Advanced.RangeSignal right, System.Func<int, int, TResult> selector) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Left = {Left.Start}+{Left.Count}, Right = {Right.Start}+{Right.Count}")]
+    public sealed class RangeForkJoinSignal<TResult> : System.IObservable<TResult>
+    {
+        public RangeForkJoinSignal(ReactiveUI.Primitives.Advanced.RangeSignal left, ReactiveUI.Primitives.Advanced.RangeSignal right, System.Func<int, int, TResult> selector) { }
+        public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Left = {Left}, Right = {Right}")]
+    public sealed class RangeSyncLatestSignal<TResult> : System.IObservable<TResult>
+    {
+        public RangeSyncLatestSignal(ReactiveUI.Primitives.Advanced.RangeSignal left, ReactiveUI.Primitives.Advanced.RangeSignal right, System.Func<int, int, TResult> selector) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Left = {Left}, Right = {Right}")]
+    public sealed class RangeWithLatestSignal<TResult> : System.IObservable<TResult>
+    {
+        public RangeWithLatestSignal(ReactiveUI.Primitives.Advanced.RangeSignal left, ReactiveUI.Primitives.Advanced.RangeSignal right, System.Func<int, int, TResult> selector) { }
+        public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Remaining = {_remaining}, Disposed = {_disposed}")]
+    public sealed class RepeatSourceCoordinator<T> : System.IDisposable
+    {
+        public RepeatSourceCoordinator(System.IObservable<T> source, int? repeatCount, System.IObserver<T> observer) { }
+        public void Dispose() { }
+        public ReactiveUI.Primitives.Advanced.RepeatSourceCoordinator<T> Run() { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Source = {_source}, RepeatCount = {_repeatCount}")]
+    public sealed class RepeatSourceSignal<T> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<T>
+    {
+        public RepeatSourceSignal(System.IObservable<T> source, int? repeatCount) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public bool IsRequiredSubscribeOnCurrentThread() { }
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Generation = {_generation}, Terminated = {_terminated}")]
+    public sealed class RepeatSourceWitness<T> : System.IObserver<T>
+    {
+        public RepeatSourceWitness(ReactiveUI.Primitives.Advanced.RepeatSourceCoordinator<T> parent, int generation) { }
+        public void OnCompleted() { }
+        public void OnError(System.Exception error) { }
+        public void OnNext(T value) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Value = {_value}, Scheduler = {_scheduler}")]
+    public sealed class ReturnSignal<T> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<T>
+    {
+        public ReturnSignal(T value, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public bool IsRequiredSubscribeOnCurrentThread() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Values = {Values}, Scheduler = {Scheduler}")]
+    public sealed class ScheduledEnumerableSignal<T> : System.IObservable<T>
+    {
+        public ScheduledEnumerableSignal(System.Collections.Generic.IEnumerable<T> values, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Active = {Active}, OuterCompleted = {OuterCompleted}, Done = {Done}")]
+    public sealed class SelectManyCoordinator<TSource, TResult> : System.IDisposable, System.IObserver<TSource>
+    {
+        public SelectManyCoordinator(System.IObserver<TResult> observer, System.Func<TSource, System.IObservable<TResult>> selector) { }
+        public SelectManyCoordinator(System.IObserver<TResult> observer, System.IObservable<TResult> inner) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Dispose() { }
+        public void OnAnyError(System.Exception error) { }
+        public void OnCompleted() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnError(System.Exception error) { }
+        public void OnNext(TSource value) { }
+        public ReactiveUI.Primitives.Advanced.SelectManyCoordinator<TSource, TResult> Run(System.IObservable<TSource> source) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Source = {_source}")]
+    public sealed class SelectManyEnumerableSignal<TSource, TResult> : System.IObservable<TResult>
+    {
+        public SelectManyEnumerableSignal(System.IObservable<TSource> source, System.Func<TSource, System.Collections.Generic.IEnumerable<TResult>> selector) { }
+        public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}, Observer = {_observer}")]
+    public sealed class SelectManyEnumerableWitness<TSource, TResult> : System.IDisposable, System.IObserver<TSource>
+    {
+        public SelectManyEnumerableWitness(System.IObserver<TResult> observer, System.Func<TSource, System.Collections.Generic.IEnumerable<TResult>> selector) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Dispose() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnCompleted() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnError(System.Exception error) { }
+        public void OnNext(TSource value) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void SetSubscription(System.IDisposable subscription) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Active = {Active}, OuterCompleted = {OuterCompleted}, Done = {Done}")]
+    public sealed class SelectManyResultCoordinator<TSource, TCollection, TResult> : System.IDisposable, System.IObserver<TSource>
+    {
+        public SelectManyResultCoordinator(System.IObserver<TResult> observer, System.Func<TSource, System.IObservable<TCollection>> collectionSelector, System.Func<TSource, TCollection, TResult> resultSelector) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Dispose() { }
+        public void OnAnyError(System.Exception error) { }
+        public void OnCompleted() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnError(System.Exception error) { }
+        public void OnNext(TSource value) { }
+        public ReactiveUI.Primitives.Advanced.SelectManyResultCoordinator<TSource, TCollection, TResult> Run(System.IObservable<TSource> source) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Source = {Source}, CollectionSelector = {CollectionSelector}")]
+    public sealed class SelectManyResultSignal<TSource, TCollection, TResult> : System.IObservable<TResult>
+    {
+        public SelectManyResultSignal(System.IObservable<TSource> source, System.Func<TSource, System.IObservable<TCollection>> collectionSelector, System.Func<TSource, TCollection, TResult> resultSelector) { }
+        public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Source = {Source}, Selector = {Selector}, Inner = {Inner}")]
+    public sealed class SelectManySignal<TSource, TResult> : System.IObservable<TResult>
+    {
+        public SelectManySignal(System.IObservable<TSource> source, System.Func<TSource, System.IObservable<TResult>> selector) { }
+        public SelectManySignal(System.IObservable<TSource> source, System.IObservable<TResult> inner) { }
+        public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Start = {Start}, Count = {Count}")]
+    public sealed class SequenceSignal : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<int>
+    {
+        public SequenceSignal(int start, int count, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public bool IsRequiredSubscribeOnCurrentThread() { }
+        public System.IDisposable Subscribe(System.IObserver<int> observer) { }
+    }
+    public static class SignalSubscription
+    {
+        public static System.IDisposable Subscribe<T>(System.IObserver<T> observer, bool currentThreadRequired, System.Func<System.IObserver<T>, System.IDisposable, System.IDisposable> subscribeCore) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Source = {Source}")]
+    public sealed class SparkSignal<T> : System.IObservable<ReactiveUI.Primitives.Core.Spark<T>>
+    {
+        public SparkSignal(System.IObservable<T> source) { }
+        public System.IDisposable Subscribe(System.IObserver<ReactiveUI.Primitives.Core.Spark<T>> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Observer = {_observer}, Subscription = {_subscription}")]
+    public sealed class SparkWitness<T> : System.IDisposable, System.IObserver<T>
+    {
+        public SparkWitness(System.IObserver<ReactiveUI.Primitives.Core.Spark<T>> observer) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Dispose() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnCompleted() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnError(System.Exception error) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnNext(T value) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void SetSubscription(System.IDisposable subscription) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Action = {Action}, Scheduler = {Scheduler}")]
+    public sealed class StartSignal : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<ReactiveUI.Primitives.RxVoid>
+    {
+        public StartSignal(System.Action action, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public bool IsRequiredSubscribeOnCurrentThread() { }
+        public System.IDisposable Subscribe(System.IObserver<ReactiveUI.Primitives.RxVoid> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Function = {Function}, Scheduler = {Scheduler}")]
+    public sealed class StartSignal<T> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<T>
+    {
+        public StartSignal(System.Func<T> function, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public bool IsRequiredSubscribeOnCurrentThread() { }
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}, Observer = {_observer}")]
+    public sealed class SubscribeSafeWitness<T> : System.IDisposable, System.IObserver<T>
+    {
+        public SubscribeSafeWitness(System.IObserver<T> observer) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Dispose() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnCompleted() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnError(System.Exception error) { }
+        public void OnNext(T value) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void SetSubscription(System.IDisposable subscription) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Source = {_source}, SkipNullSources = {_skipNullSources}")]
+    public sealed class SwitchMapSignal<TSource, TResult> : System.IObservable<TResult>
+    {
+        public SwitchMapSignal(System.IObservable<TSource> source, System.Func<TSource, System.IObservable<TResult>> selector) { }
+        public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Sources = {Sources}")]
+    public sealed class SwitchSignal<T> : System.IObservable<T>
+    {
+        public SwitchSignal(System.IObservable<System.IObservable<T>> sources) { }
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Version = {_version}, IsDone = {IsDone}")]
+    public sealed class SwitchWitness<T> : System.IDisposable
+    {
+        public SwitchWitness(System.IObserver<T> observer) { }
+        public void Dispose() { }
+        public ReactiveUI.Primitives.Advanced.SwitchWitness<T> Run(System.IObservable<System.IObservable<T>> sources) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Left = {Left}, Right = {Right}")]
+    public sealed class SyncLatestSignal<TLeft, TRight, TResult> : System.IObservable<TResult>
+    {
+        public SyncLatestSignal(System.IObservable<TLeft> left, System.IObservable<TRight> right, System.Func<TLeft, TRight, TResult> selector) { }
+        public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("HasLeft = {HasLeft}, HasRight = {HasRight}, IsCompleted = {IsCompleted}")]
+    public sealed class SyncLatestWitness<TLeft, TRight, TResult>
+    {
+        public SyncLatestWitness(System.IObserver<TResult> observer, System.Func<TLeft, TRight, TResult> selector) { }
+        public ReactiveUI.Primitives.Disposables.MultipleDisposable Run(System.IObservable<TLeft> left, System.IObservable<TRight> right) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Source = {Source}, Gate = {Gate}")]
+    public sealed class SynchronizeGateSignal<T> : System.IObservable<T>
+    {
+        public SynchronizeGateSignal(System.IObservable<T> source, System.Threading.Lock gate) { }
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Source = {_source}, Gate = {_gate}")]
+    public sealed class SynchronizeObjectSignal<T> : System.IObservable<T>
+    {
+        public SynchronizeObjectSignal(System.IObservable<T> source, object gate) { }
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Observer = {_observer}, Subscription = {_subscription}")]
+    public sealed class SynchronizeObjectWitness<T> : System.IDisposable, System.IObserver<T>
+    {
+        public SynchronizeObjectWitness(System.IObserver<T> observer, object gate) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Dispose() { }
+        public void OnCompleted() { }
+        public void OnError(System.Exception error) { }
+        public void OnNext(T value) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void SetSubscription(System.IDisposable subscription) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Source = {Source}")]
+    public sealed class SynchronizeSignal<T> : System.IObservable<T>
+    {
+        public SynchronizeSignal(System.IObservable<T> source) { }
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Source = {Source}")]
+    public sealed class TapSignal<T> : System.IObservable<T>
+    {
+        public TapSignal(System.IObservable<T> source, System.Action<T> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}, Task = {Task}")]
+    public sealed class TaskAnyWitness<T> : System.IDisposable, System.IObserver<T>
+    {
+        public TaskAnyWitness(System.Threading.CancellationToken cancellationToken) { }
+        public TaskAnyWitness(System.Func<T, bool> predicate, System.Threading.CancellationToken cancellationToken) { }
+        public System.Threading.Tasks.Task<bool> Task { get; }
+        public void Dispose() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnCompleted() { }
+        public void OnError(System.Exception error) { }
+        public void OnNext(T value) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void RegisterCancellation() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void SetSubscription(System.IDisposable subscription) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Queued = {_queue.Count}, Active = {_active}, Done = {_done}")]
+    public sealed class TaskChainCoordinator<T> : System.IDisposable
+    {
+        public TaskChainCoordinator(System.IObserver<T> observer) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Dispose() { }
+        public ReactiveUI.Primitives.Advanced.TaskChainCoordinator<T> Run(System.IObservable<System.Threading.Tasks.Task<T>> sources) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Sources = {_sources}")]
+    public sealed class TaskChainSignal<T> : System.IObservable<T>
+    {
+        public TaskChainSignal(System.IObservable<System.Threading.Tasks.Task<T>> sources) { }
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Count = {_count}, Stopped = {_stopped}")]
+    public sealed class TaskCountWitness<T> : System.IDisposable, System.IObserver<T>
+    {
+        public TaskCountWitness(System.Threading.CancellationToken cancellationToken) { }
+        public TaskCountWitness(System.Func<T, bool> predicate, System.Threading.CancellationToken cancellationToken) { }
+        public System.Threading.Tasks.Task<int> Task { get; }
+        public void Dispose() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnCompleted() { }
+        public void OnError(System.Exception error) { }
+        public void OnNext(T value) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void RegisterCancellation() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void SetSubscription(System.IDisposable subscription) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Task = {Task}")]
+    public sealed class TaskInstanceSignal<T> : System.IObservable<T>
+    {
+        public TaskInstanceSignal(System.Threading.Tasks.Task<T> task) { }
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}")]
+    public sealed class TaskInstanceSubscription : System.IDisposable
+    {
+        public TaskInstanceSubscription() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Dispose() { }
+        public bool TryStop() { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Source = {Source}, Sequencer = {Sequencer}")]
+    public sealed class TimeIntervalSignal<T> : System.IObservable<ReactiveUI.Primitives.Core.TimeInterval<T>>
+    {
+        public TimeIntervalSignal(System.IObservable<T> source, ReactiveUI.Primitives.Concurrency.ISequencer sequencer) { }
+        public System.IDisposable Subscribe(System.IObserver<ReactiveUI.Primitives.Core.TimeInterval<T>> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("First = {_first}, Last = {_last}")]
+    public sealed class TimeIntervalWitness<T> : System.IDisposable, System.IObserver<T>
+    {
+        public TimeIntervalWitness(System.IObserver<ReactiveUI.Primitives.Core.TimeInterval<T>> observer, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Dispose() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnCompleted() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnError(System.Exception error) { }
+        public void OnNext(T value) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void SetSubscription(System.IDisposable subscription) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Source = {Source}")]
+    public sealed class UnsparkSignal<T> : System.IObservable<T>
+    {
+        public UnsparkSignal(System.IObservable<ReactiveUI.Primitives.Core.Spark<T>> source) { }
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Observer = {_observer}, Subscription = {_subscription}")]
+    public sealed class UnsparkWitness<T> : System.IDisposable, System.IObserver<ReactiveUI.Primitives.Core.Spark<T>>
+    {
+        public UnsparkWitness(System.IObserver<T> observer) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Dispose() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnCompleted() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnError(System.Exception error) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnNext(ReactiveUI.Primitives.Core.Spark<T> value) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void SetSubscription(System.IDisposable subscription) { }
+    }
+}
+namespace ReactiveUI.Primitives.Concurrency
+{
+    [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+    public sealed class CurrentThreadSequencer : ReactiveUI.Primitives.Concurrency.ISequencer
+    {
+        public System.DateTimeOffset Now { get; }
+        public long Timestamp { get; }
+        public static ReactiveUI.Primitives.Concurrency.CurrentThreadSequencer Instance { get; }
+        [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public static bool IsScheduleRequired { get; }
+        public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item) { }
+        public System.IDisposable Schedule(System.Action action) { }
+        public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item, long dueTimestamp) { }
+    }
+    public interface ISequencer
+    {
+        System.DateTimeOffset Now { get; }
+        long Timestamp { get; }
+        void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item) { }
+        void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item, long dueTimestamp) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+    public sealed class ImmediateSequencer : ReactiveUI.Primitives.Concurrency.ISequencer
+    {
+        public System.DateTimeOffset Now { get; }
+        public long Timestamp { get; }
+        public static ReactiveUI.Primitives.Concurrency.ImmediateSequencer Instance { get; }
+        public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item) { }
+        public System.IDisposable Schedule(System.Action action) { }
+        public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item, long dueTimestamp) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+    public sealed class NSRunloopSequencer : ReactiveUI.Primitives.Concurrency.ISequencer
+    {
+        public System.DateTimeOffset Now { get; }
+        public long Timestamp { get; }
+        public static ReactiveUI.Primitives.Concurrency.NSRunloopSequencer Main { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item, long dueTimestamp) { }
+        public override string ToString() { }
+    }
+    public static class ScheduledItem
+    {
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static ReactiveUI.Primitives.Concurrency.ScheduledItem<TAbsolute> Create<TAbsolute, TValue>(ReactiveUI.Primitives.Concurrency.ISequencer scheduler, TValue state, System.Func<ReactiveUI.Primitives.Concurrency.ISequencer, TValue, System.IDisposable> action, TAbsolute dueTime) where TAbsolute : System.IComparable<TAbsolute> { }
+        public static ReactiveUI.Primitives.Concurrency.ScheduledItem<TAbsolute> Create<TAbsolute, TValue>(ReactiveUI.Primitives.Concurrency.ISequencer scheduler, TValue state, System.Func<ReactiveUI.Primitives.Concurrency.ISequencer, TValue, System.IDisposable> action, TAbsolute dueTime, System.Collections.Generic.IComparer<TAbsolute> comparer) where TAbsolute : System.IComparable<TAbsolute> { }
+    }
+    public static class Sequencer
+    {
+        public static ReactiveUI.Primitives.Concurrency.CurrentThreadSequencer CurrentThread { get; }
+        public static ReactiveUI.Primitives.Concurrency.ISequencer Default { get; }
+        public static ReactiveUI.Primitives.Concurrency.ImmediateSequencer Immediate { get; }
+        public static System.TimeSpan Normalize(System.TimeSpan timeSpan) { }
+    }
+    public static class SequencerExtensions
+    {
+        extension(ReactiveUI.Primitives.Concurrency.ISequencer scheduler)
+        {
+            public System.IDisposable Schedule(System.Action action) { }
+            public System.IDisposable Schedule(System.Action<System.Action> action) { }
+            public System.IDisposable Schedule(System.DateTimeOffset dueTime, System.Action action) { }
+            public System.IDisposable Schedule(System.TimeSpan dueTime, System.Action action) { }
+            public System.IDisposable Schedule<TState>(TState state, System.Action<TState> action) { }
+            public System.IDisposable Schedule<TState>(TState state, System.Func<ReactiveUI.Primitives.Concurrency.ISequencer, TState, System.IDisposable> action) { }
+            public System.IDisposable Schedule<TState>(TState state, System.DateTimeOffset dueTime, System.Func<ReactiveUI.Primitives.Concurrency.ISequencer, TState, System.IDisposable> action) { }
+            public System.IDisposable Schedule<TState>(TState state, System.TimeSpan dueTime, System.Action<TState> action) { }
+            public System.IDisposable Schedule<TState>(TState state, System.TimeSpan dueTime, System.Func<ReactiveUI.Primitives.Concurrency.ISequencer, TState, System.IDisposable> action) { }
+            public System.IDisposable Schedule<TState>(TState state, long dueTimestamp, System.Action<TState> action) { }
+            public System.IDisposable ScheduleAction<TState>(TState state, System.Action<TState> action) { }
+        }
+    }
+    [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+    public sealed class SynchronizationContextSequencer : ReactiveUI.Primitives.Concurrency.ISequencer
+    {
+        public SynchronizationContextSequencer(System.Threading.SynchronizationContext context) { }
+        public System.Threading.SynchronizationContext Context { get; }
+        public System.DateTimeOffset Now { get; }
+        public long Timestamp { get; }
+        public static ReactiveUI.Primitives.Concurrency.SynchronizationContextSequencer Current { get; }
+        public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item) { }
+        public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item, long dueTimestamp) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+    public sealed class TaskPoolSequencer : ReactiveUI.Primitives.Concurrency.ISequencer
+    {
+        public TaskPoolSequencer(System.Threading.Tasks.TaskFactory taskFactory) { }
+        public System.DateTimeOffset Now { get; }
+        public long Timestamp { get; }
+        public System.Action<System.Exception>? UnhandledExceptionHandler { get; set; }
+        public static ReactiveUI.Primitives.Concurrency.TaskPoolSequencer Default { get; }
+        public static ReactiveUI.Primitives.Concurrency.TaskPoolSequencer Instance { get; }
+        public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item) { }
+        public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item, long dueTimestamp) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+    public sealed class ThreadPoolSequencer : ReactiveUI.Primitives.Concurrency.ISequencer, System.IDisposable
+    {
+        public static readonly ReactiveUI.Primitives.Concurrency.ThreadPoolSequencer Instance;
+        public System.DateTimeOffset Now { get; }
+        public long Timestamp { get; }
+        public void Dispose() { }
+        public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item) { }
+        public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item, long dueTimestamp) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+    public sealed class VirtualClock : ReactiveUI.Primitives.Concurrency.ISequencer, ReactiveUI.Primitives.Concurrency.IStopwatchProvider, System.IServiceProvider
+    {
+        public VirtualClock() { }
+        public VirtualClock(System.DateTimeOffset initialClock) { }
+        public System.DateTimeOffset Clock { get; }
+        public bool IsEnabled { get; }
+        public System.DateTimeOffset Now { get; }
+        public long Timestamp { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void AdvanceBy(System.TimeSpan time) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void AdvanceTo(System.DateTimeOffset time) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item, long dueTimestamp) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.IDisposable Schedule<TState>(TState state, System.Func<ReactiveUI.Primitives.Concurrency.ISequencer, TState, System.IDisposable> action) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.IDisposable Schedule<TState>(TState state, System.DateTimeOffset dueTime, System.Func<ReactiveUI.Primitives.Concurrency.ISequencer, TState, System.IDisposable> action) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.IDisposable Schedule<TState>(TState state, System.TimeSpan dueTime, System.Func<ReactiveUI.Primitives.Concurrency.ISequencer, TState, System.IDisposable> action) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.IDisposable ScheduleAbsolute<TState>(TState state, System.DateTimeOffset dueTime, System.Func<ReactiveUI.Primitives.Concurrency.ISequencer, TState, System.IDisposable> action) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.IDisposable ScheduleRelative<TState>(TState state, System.TimeSpan dueTime, System.Func<ReactiveUI.Primitives.Concurrency.ISequencer, TState, System.IDisposable> action) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Sleep(System.TimeSpan time) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Start() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public ReactiveUI.Primitives.Concurrency.IStopwatch StartStopwatch() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Stop() { }
+        object? System.IServiceProvider.GetService(System.Type serviceType) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+    public sealed class VirtualTimeSequencer<TAbsolute, TRelative> : ReactiveUI.Primitives.Concurrency.ISequencer, ReactiveUI.Primitives.Concurrency.IStopwatchProvider, System.IServiceProvider where TAbsolute : System.IComparable<TAbsolute>
+    {
+        public VirtualTimeSequencer(TAbsolute initialClock, System.Collections.Generic.IComparer<TAbsolute> comparer, System.Func<TAbsolute, TRelative, TAbsolute> add, System.Func<TAbsolute, System.DateTimeOffset> toDateTimeOffset, System.Func<System.TimeSpan, TRelative> toRelative) { }
+        public TAbsolute Clock { get; }
+        public bool IsEnabled { get; }
+        public System.DateTimeOffset Now { get; }
+        public long Timestamp { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void AdvanceBy(TRelative time) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void AdvanceTo(TAbsolute time) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item, long dueTimestamp) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.IDisposable Schedule<TState>(TState state, System.Func<ReactiveUI.Primitives.Concurrency.ISequencer, TState, System.IDisposable> action) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.IDisposable Schedule<TState>(TState state, System.DateTimeOffset dueTime, System.Func<ReactiveUI.Primitives.Concurrency.ISequencer, TState, System.IDisposable> action) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.IDisposable Schedule<TState>(TState state, System.TimeSpan dueTime, System.Func<ReactiveUI.Primitives.Concurrency.ISequencer, TState, System.IDisposable> action) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.IDisposable ScheduleAbsolute<TState>(TState state, TAbsolute dueTime, System.Func<ReactiveUI.Primitives.Concurrency.ISequencer, TState, System.IDisposable> action) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.IDisposable ScheduleRelative<TState>(TState state, TRelative dueTime, System.Func<ReactiveUI.Primitives.Concurrency.ISequencer, TState, System.IDisposable> action) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Sleep(TRelative time) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Start() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public ReactiveUI.Primitives.Concurrency.IStopwatch StartStopwatch() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Stop() { }
+        object? System.IServiceProvider.GetService(System.Type serviceType) { }
+    }
+    public static class VirtualTimeSequencerExtensions
+    {
+        extension(ReactiveUI.Primitives.Concurrency.VirtualClock scheduler)
+        {
+            public System.IDisposable ScheduleAbsolute(System.DateTimeOffset dueTime, System.Action action) { }
+            public System.IDisposable ScheduleRelative(System.TimeSpan dueTime, System.Action action) { }
+        }
+        extension<TAbsolute, TRelative>(ReactiveUI.Primitives.Concurrency.VirtualTimeSequencer<TAbsolute, TRelative> scheduler) where TAbsolute : System.IComparable<TAbsolute>
+        {
+            public System.IDisposable ScheduleAbsolute(TAbsolute dueTime, System.Action action) { }
+            public System.IDisposable ScheduleRelative(TRelative dueTime, System.Action action) { }
+        }
+    }
+    [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+    public sealed class WasmSequencer : ReactiveUI.Primitives.Concurrency.ISequencer, System.IDisposable
+    {
+        public System.DateTimeOffset Now { get; }
+        public long Timestamp { get; }
+        public static ReactiveUI.Primitives.Concurrency.WasmSequencer Default { get; }
+        public void Dispose() { }
+        public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item) { }
+        public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item, long dueTimestamp) { }
+    }
+}
+namespace ReactiveUI.Primitives.Core
+{
+    public static class Spark
+    {
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static ReactiveUI.Primitives.Core.Spark<T> CreateOnCompleted<T>() { }
+        public static ReactiveUI.Primitives.Core.Spark<T> CreateOnError<T>(System.Exception error) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static ReactiveUI.Primitives.Core.Spark<T> CreateOnNext<T>(T value) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+    [System.Serializable]
+    public readonly record struct Spark<T> : System.IEquatable<ReactiveUI.Primitives.Core.Spark<T>>
+    {
+        public System.Exception Exception { get; }
+        public bool HasValue { get; }
+        public ReactiveUI.Primitives.Core.SparkKind Kind { get; }
+        public T Value { get; }
+        public readonly void Accept(System.IObserver<T> observer) { }
+        public readonly void Accept(System.Action<T> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
+        public readonly TResult Accept<TResult>(ReactiveUI.Primitives.Core.IObserver<T, TResult> observer) { }
+        public readonly TResult Accept<TResult>(System.Func<T, TResult> onNext, System.Func<System.Exception, TResult> onError, System.Func<TResult> onCompleted) { }
+        public readonly bool Equals(ReactiveUI.Primitives.Core.Spark<T> other) { }
+        public override readonly int GetHashCode() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public readonly System.IObservable<T> ToObservable() { }
+        public readonly System.IObservable<T> ToObservable(ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public override readonly string ToString() { }
+    }
+}
+namespace ReactiveUI.Primitives.Extensions
+{
+    public static class ObservableSubscriptionExtensions
+    {
+        extension(System.IObservable<ReactiveUI.Primitives.RxVoid> source)
+        {
+            public void SubscribeAndComplete() { }
+            public System.Exception? SubscribeGetError() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public void WaitForCompletion() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public void WaitForCompletion(ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public void WaitForCompletion(System.TimeSpan timeout) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public void WaitForCompletion(ReactiveUI.Primitives.Concurrency.ISequencer scheduler, System.TimeSpan timeout) { }
+        }
+        extension<T>(System.IObservable<T> source)
+        {
+            public System.Exception? SubscribeGetError() { }
+            public T? SubscribeGetValue() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Exception? WaitForError() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Exception? WaitForError(ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Exception? WaitForError(System.TimeSpan timeout) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Exception? WaitForError(ReactiveUI.Primitives.Concurrency.ISequencer scheduler, System.TimeSpan timeout) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public T? WaitForValue() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public T? WaitForValue(ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public T? WaitForValue(System.TimeSpan timeout) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public T? WaitForValue(ReactiveUI.Primitives.Concurrency.ISequencer scheduler, System.TimeSpan timeout) { }
+        }
+    }
+    public static class ReactiveExtensions
+    {
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<TResult> Start<TResult>(System.Func<TResult> function, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+        public static (System.IObservable<T> Observable, System.IObserver<T> Observer) ToReadOnlyBehavior<T>(T initialValue) { }
+        extension(ReactiveUI.Primitives.Concurrency.ISequencer? scheduler)
+        {
+            public System.IDisposable ScheduleSafe(System.Action action) { }
+            public System.IDisposable ScheduleSafe(System.TimeSpan dueTime, System.Action action) { }
+        }
+        extension(System.Action action)
+        {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<ReactiveUI.Primitives.RxVoid> Start(ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+        }
+        extension(System.Collections.Generic.IEnumerable<System.IObservable<bool>> sources)
+        {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<bool> CombineLatestValuesAreAllFalse() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<bool> CombineLatestValuesAreAllTrue() { }
+        }
+        extension(System.Collections.Generic.IReadOnlyList<System.IObservable<ReactiveUI.Primitives.RxVoid>> sources)
+        {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<ReactiveUI.Primitives.RxVoid> RunAll() { }
+        }
+        extension(System.Func<bool> condition)
+        {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<ReactiveUI.Primitives.RxVoid> While(System.Action action) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<ReactiveUI.Primitives.RxVoid> While(System.Action action, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+        }
+        extension(System.IObservable<ReactiveUI.Primitives.RxVoid> source)
+        {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<ReactiveUI.Primitives.RxVoid> CatchReturnUnit() { }
+        }
+        extension(System.IObservable<bool> source)
+        {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<bool> Not() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<bool> WhereFalse() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<bool> WhereTrue() { }
+        }
+        extension(System.IObservable<char> source)
+        {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<string> BufferUntil(char startsWith, char endsWith) { }
+        }
+        extension(System.IObservable<string> source)
+        {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<string> Filter(System.Text.RegularExpressions.Regex regex) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<string> Filter(string regexPattern) { }
+        }
+        extension(System.TimeSpan timeSpan)
+        {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<System.DateTime> SyncTimer() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<System.DateTime> SyncTimer(ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        }
+        extension<T>(System.Collections.Generic.IEnumerable<System.Threading.Tasks.Task<T>> taskFunctions)
+        {
+            public System.IObservable<T> WithLimitedConcurrency(int maxConcurrency) { }
+        }
+        extension<T>(System.Collections.Generic.IEnumerable<T> source)
+        {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> FromArray() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> FromArray(ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+        }
+        extension<T>(System.IObservable<System.Collections.Generic.IEnumerable<T>> source)
+        {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> ForEach() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> ForEach(ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+        }
+        extension<T>(System.IObservable<T> source)
+        {
+            public System.IObservable<T> OnErrorRetry() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> OnErrorRetry<TException>(System.Action<TException> onError) where TException : System.Exception { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> OnErrorRetry<TException>(System.Action<TException> onError, System.TimeSpan delay) where TException : System.Exception { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> OnErrorRetry<TException>(System.Action<TException> onError, int retryCount) where TException : System.Exception { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> OnErrorRetry<TException>(System.Action<TException> onError, int retryCount, System.TimeSpan delay) where TException : System.Exception { }
+            public System.IObservable<T> OnErrorRetry<TException>(System.Action<TException> onError, int retryCount, System.TimeSpan delay, ReactiveUI.Primitives.Concurrency.ISequencer delayScheduler) where TException : System.Exception { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> RetryForeverWithDelay(System.TimeSpan delay) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> RetryWithBackoff(int maxRetries, System.TimeSpan initialDelay) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> RetryWithBackoff(int maxRetries, System.TimeSpan initialDelay, double backoffFactor, System.TimeSpan? maxDelay, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> RetryWithDelay(int retryCount, System.Func<int, System.TimeSpan> delaySelector) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> RetryWithFixedDelay(int retryCount, System.TimeSpan delay) { }
+        }
+        extension<T>(System.IObservable<T> source)
+        {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<ReactiveUI.Primitives.RxVoid> AsSignal() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<System.Collections.Generic.IList<T>> BufferUntilIdle(System.TimeSpan idleTime) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<System.Collections.Generic.IList<T>> BufferUntilIdle(System.TimeSpan idleTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<System.Collections.Generic.IList<T>> BufferUntilInactive(System.TimeSpan inactivityPeriod) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<System.Collections.Generic.IList<T>> BufferUntilInactive(System.TimeSpan inactivityPeriod, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> CatchAndReturn(T fallback) { }
+            public System.IObservable<T> CatchAndReturn<TException>(System.Func<TException, T> fallbackFactory) where TException : System.Exception { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> CatchIgnore<TException>(System.Action<TException> errorAction) where TException : System.Exception { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> CatchReturn(T fallback) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> Conflate(System.TimeSpan minimumUpdatePeriod, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> DebounceImmediate(System.TimeSpan dueTime) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> DebounceImmediate(System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> DebounceUntil(System.TimeSpan debounce, System.Func<T, bool> condition) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> DebounceUntil(System.TimeSpan debounce, System.Func<T, bool> condition, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<ReactiveUI.Primitives.Extensions.Stale<T>> DetectStale(System.TimeSpan stalenessPeriod, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> DoOnDispose(System.Action disposeAction) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> DoOnSubscribe(System.Action action) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> DropIfBusy(System.Func<T, System.Threading.Tasks.ValueTask> asyncAction) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<ReactiveUI.Primitives.Extensions.Heartbeat<T>> Heartbeat(System.TimeSpan heartbeatPeriod, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> LatestOrDefault(T defaultValue) { }
+            public System.IObservable<T> LogErrors(System.Action<System.Exception> logger) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> ObserveOnIf(System.IObservable<bool> condition, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+            public System.IObservable<T> ObserveOnIf(bool condition, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> ObserveOnIf(System.IObservable<bool> condition, ReactiveUI.Primitives.Concurrency.ISequencer trueScheduler, ReactiveUI.Primitives.Concurrency.ISequencer falseScheduler) { }
+            public System.IObservable<T> ObserveOnIf(bool condition, ReactiveUI.Primitives.Concurrency.ISequencer trueScheduler, ReactiveUI.Primitives.Concurrency.ISequencer falseScheduler) { }
+            public System.IObservable<T> ObserveOnSafe(ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<(T Previous, T Current)> Pairwise() { }
+            public (System.IObservable<T> True, System.IObservable<T> False) Partition(System.Func<T, bool> predicate) { }
+            public System.IObservable<T> ReplayLastOnSubscribe(T initialValue) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> SampleLatest(System.IObservable<object> trigger) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<TAccumulate> ScanWithInitial<TAccumulate>(TAccumulate initial, System.Func<TAccumulate, T, TAccumulate> accumulator) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> Schedule(ReactiveUI.Primitives.Concurrency.ISequencer scheduler, System.Func<T, T> function) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> Schedule(System.DateTimeOffset dueTime, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> Schedule(System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> Schedule(System.DateTimeOffset dueTime, ReactiveUI.Primitives.Concurrency.ISequencer scheduler, System.Action<T> action) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> Schedule(System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer scheduler, System.Action<T> action) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> Schedule(System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer scheduler, System.Func<T, T> function) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<TResult> SelectAsync<TResult>(System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.Task<TResult>> asyncSelector) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<TResult> SelectAsync<TResult>(System.Func<T, System.Threading.Tasks.Task<TResult>> asyncSelector) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<TResult> SelectAsyncConcurrent<TResult>(System.Func<T, System.Threading.Tasks.Task<TResult>> selector, int maxConcurrency) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<TResult> SelectAsyncSequential<TResult>(System.Func<T, System.Threading.Tasks.Task<TResult>> selector) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<TResult> SelectConstant<TResult>(TResult constant) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<TResult> SelectLatestAsync<TResult>(System.Func<T, System.Threading.Tasks.Task<TResult>> selector) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<TResult> SelectManyThen<TMid, TResult>(System.Func<T, System.IObservable<TMid>> first, System.Func<TMid, System.IObservable<TResult>> second) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IDisposable SubscribeAsync(System.Func<T, System.Threading.Tasks.ValueTask> onNext) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IDisposable SubscribeAsync(System.Func<T, System.Threading.Tasks.ValueTask> onNext, System.Action onCompleted) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IDisposable SubscribeAsync(System.Func<T, System.Threading.Tasks.ValueTask> onNext, System.Action<System.Exception> onError) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IDisposable SubscribeAsync(System.Func<T, System.Threading.Tasks.ValueTask> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IDisposable SubscribeSynchronous(System.Func<T, System.Threading.Tasks.ValueTask> onNext) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IDisposable SubscribeSynchronous(System.Func<T, System.Threading.Tasks.ValueTask> onNext, System.Action onCompleted) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IDisposable SubscribeSynchronous(System.Func<T, System.Threading.Tasks.ValueTask> onNext, System.Action<System.Exception> onError) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IDisposable SubscribeSynchronous(System.Func<T, System.Threading.Tasks.ValueTask> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> SwitchIfEmpty(System.IObservable<T> fallback) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<(T Value, System.IDisposable Sync)> SynchronizeAsync() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<(T Value, System.IDisposable Sync)> SynchronizeSynchronous() { }
+            public System.IObservable<T> TakeUntil(System.Func<T, bool> predicate) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> ThrottleDistinct(System.TimeSpan throttle) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> ThrottleDistinct(System.TimeSpan throttle, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> ThrottleFirst(System.TimeSpan window) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> ThrottleFirst(System.TimeSpan window, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+            public System.IObservable<T> ThrottleOnScheduler(System.TimeSpan timeSpan, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> ThrottleUntilTrue(System.TimeSpan throttle, System.Func<T, bool> predicate) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.Task<T> ToHotTask() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.ValueTask<T> ToHotValueTask() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<TOut> TrySelect<TOut>(System.Func<T, TOut?> selector) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> WaitUntil(System.Func<T, bool> predicate) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> WhereIsNotNull() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<TOut> WhereSelect<TOut>(System.Func<T, bool> predicate, System.Func<T, TOut> selector) { }
+        }
+        extension<T>(System.IObservable<T> source) where T : class
+        {
+            public System.IObservable<T> SkipWhileNull() { }
+        }
+        extension<T>(System.IObservable<T> source) where T : struct, System.IComparable<T>
+        {
+            public System.IObservable<T> GetMax(params System.IObservable<T>[] sources) { }
+            public System.IObservable<T> GetMin(params System.IObservable<T>[] sources) { }
+        }
+        extension<T>(System.IObservable<T[]> source)
+        {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T[]> Shuffle() { }
+        }
+        extension<T>(System.IObserver<T> observer)
+        {
+            public void OnNext(params T[] events) { }
+        }
+        extension<T>(T obj) where T : System.IDisposable
+        {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<ReactiveUI.Primitives.RxVoid> Using(System.Action<T>? action) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<ReactiveUI.Primitives.RxVoid> Using(System.Action<T>? action, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<TResult> Using<TResult>(System.Func<T, TResult> function) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<TResult> Using<TResult>(System.Func<T, TResult> function, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+        }
+        extension<T>(T source) where T : System.ComponentModel.INotifyPropertyChanged
+        {
+            public System.IObservable<TProperty> ToPropertyObservable<TProperty>(System.Linq.Expressions.Expression<System.Func<T, TProperty>> propertyExpression) { }
+        }
+        extension<T>(T value)
+        {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> Schedule(ReactiveUI.Primitives.Concurrency.ISequencer scheduler, System.Func<T, T> function) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> Schedule(System.DateTimeOffset dueTime, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> Schedule(System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> Schedule(System.DateTimeOffset dueTime, ReactiveUI.Primitives.Concurrency.ISequencer scheduler, System.Action<T> action) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> Schedule(System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer scheduler, System.Action<T> action) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> Schedule(System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer scheduler, System.Func<T, T> function) { }
+        }
+        extension<TKey>(System.Collections.Generic.IReadOnlyList<TKey> candidates)
+        {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<TResult> FirstMatchFromCandidates<TRaw, TResult>(System.Func<TKey, System.IObservable<TRaw>> project, System.Func<TRaw, TResult> transform, System.Func<TResult, bool> predicate, TResult fallback) { }
+        }
+        extension<TSource>(System.IObservable<TSource?> source)
+        {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<TSource?> CatchIgnore() { }
+        }
+    }
+}
+namespace ReactiveUI.Primitives.Extensions.Operators
+{
+    public static class CachedObservables
+    {
+        public static System.IObservable<ReactiveUI.Primitives.RxVoid> UnitDefault { get; }
+    }
+}
+namespace ReactiveUI.Primitives.Signals
+{
+    [System.Diagnostics.DebuggerDisplay("Count = {_count}, MaximumCount = {_maximumCount}, IsDraining = {_isDraining}")]
+    public sealed class PrioritySemaphoreSignal<T> : ReactiveUI.Primitives.Signals.ISignal<T> where T : System.IComparable<T>
+    {
+        public PrioritySemaphoreSignal(int maxCount) { }
+        public PrioritySemaphoreSignal(int maxCount, ReactiveUI.Primitives.Concurrency.ISequencer? sched) { }
+        public bool HasObservers { get; }
+        public bool IsDisposed { get; }
+        public int MaximumCount { get; set; }
+        public void Dispose() { }
+        public void OnCompleted() { }
+        public void OnError(System.Exception error) { }
+        public void OnNext(T value) { }
+        public void Release() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+    public sealed class ReplaySignal<T> : ReactiveUI.Primitives.Signals.ISignal<T>
+    {
+        public ReplaySignal() { }
+        public ReplaySignal(ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public ReplaySignal(System.TimeSpan window) { }
+        public ReplaySignal(int bufferSize) { }
+        public ReplaySignal(System.TimeSpan window, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public ReplaySignal(int bufferSize, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public ReplaySignal(int bufferSize, System.TimeSpan window) { }
+        public ReplaySignal(int bufferSize, System.TimeSpan window, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public bool HasObservers { get; }
+        public bool IsDisposed { get; }
+        public void Dispose() { }
+        public void OnCompleted() { }
+        public void OnError(System.Exception error) { }
+        public void OnNext(T value) { }
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("Observers = {_observerRefCount}, Disposed = {_isDisposed}")]
+    public class ScheduledSignal<T> : ReactiveUI.Primitives.Signals.ISignal<T>
+    {
+        public ScheduledSignal(ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public ScheduledSignal(ReactiveUI.Primitives.Concurrency.ISequencer scheduler, System.IObserver<T>? defaultObserver) { }
+        public ScheduledSignal(ReactiveUI.Primitives.Concurrency.ISequencer scheduler, System.IObserver<T>? defaultObserver, ReactiveUI.Primitives.Signals.ISignal<T>? defaultSubject) { }
+        public bool HasObservers { get; }
+        public bool IsDisposed { get; }
+        public void Dispose() { }
+        protected virtual void Dispose(bool disposing) { }
+        public void OnCompleted() { }
+        public void OnError(System.Exception error) { }
+        public void OnNext(T value) { }
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    public static class Signal
+    {
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<long> After(System.DateTimeOffset dueTime) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<long> After(System.TimeSpan dueTime) { }
+        public static System.IObservable<long> After(System.DateTimeOffset dueTime, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public static System.IObservable<long> After(System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<long> After(System.TimeSpan dueTime, System.TimeSpan period) { }
+        public static System.IObservable<long> After(System.TimeSpan dueTime, System.TimeSpan period, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public static System.IObservable<T> Blend<T>(params System.IObservable<T>[] sources) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<T> Case<TKey, T>(System.Func<TKey> selector, System.Collections.Generic.IDictionary<TKey, System.IObservable<T>> sources) where TKey : notnull { }
+        public static System.IObservable<T> Case<TKey, T>(System.Func<TKey> selector, System.Collections.Generic.IDictionary<TKey, System.IObservable<T>> sources, System.IObservable<T> defaultSource) where TKey : notnull { }
+        public static System.IObservable<T> Chain<T>(params System.IObservable<T>[] sources) { }
+        public static System.IObservable<T> Concat<T>(System.Collections.Generic.IEnumerable<System.IObservable<T>> sources) { }
+        public static System.IObservable<T> Concat<T>(params System.IObservable<T>[] sources) { }
+        public static System.IObservable<T> Create<T>(System.Func<System.IObserver<T>, System.IDisposable> subscribe) { }
+        public static System.IObservable<T> Create<T>(System.Func<System.IObserver<T>, System.Threading.CancellationToken, System.Threading.Tasks.Task<System.IDisposable>> subscribe) { }
+        public static System.IObservable<T> Create<T>(System.Func<System.IObserver<T>, System.Threading.Tasks.Task<System.IDisposable>> subscribe) { }
+        public static System.IObservable<T> Create<T>(System.Func<System.IObserver<T>, System.IDisposable> subscribe, bool isRequiredSubscribeOnCurrentThread) { }
+        public static System.IObservable<T> CreateSafe<T>(System.Func<System.IObserver<T>, System.IDisposable> subscribe) { }
+        public static System.IObservable<T> CreateSafe<T>(System.Func<System.IObserver<T>, System.IDisposable> subscribe, bool isRequiredSubscribeOnCurrentThread) { }
+        public static System.IObservable<T> CreateWithState<T, TState>(TState state, System.Func<TState, System.IObserver<T>, System.IDisposable> subscribe) { }
+        public static System.IObservable<T> CreateWithState<T, TState>(TState state, System.Func<TState, System.IObserver<T>, System.IDisposable> subscribe, bool isRequiredSubscribeOnCurrentThread) { }
+        public static System.IObservable<T> Defer<T>(System.Func<System.IObservable<T>> observableFactory) { }
+        public static System.IObservable<T> Defer<T>(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<System.IObservable<T>>> observableFactory) { }
+        public static System.IObservable<T> Defer<T>(System.Func<System.Threading.Tasks.Task<System.IObservable<T>>> observableFactory) { }
+        public static ReactiveUI.Primitives.Signals.DelayableNotificationSignal<T> Delayable<T>(System.Func<bool> isDelayed, System.Func<System.Collections.Generic.IList<T>, System.Collections.Generic.IEnumerable<T>> flushDistinct) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<ReactiveUI.Primitives.RxVoid> Emit(ReactiveUI.Primitives.RxVoid value) { }
+        public static System.IObservable<bool> Emit(bool value) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<int> Emit(int value) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<T> Emit<T>(T value) { }
+        public static System.IObservable<T> Emit<T>(T value, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<ReactiveUI.Primitives.RxVoid> EmitRxVoid() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<T> Empty<T>() { }
+        public static System.IObservable<T> Empty<T>(ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public static System.IObservable<long> Every(System.TimeSpan period) { }
+        public static System.IObservable<long> Every(System.TimeSpan period, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public static System.IObservable<T> Expire<T>(System.IObservable<T> source, System.TimeSpan dueTime) { }
+        public static System.IObservable<T> Expire<T>(System.IObservable<T> source, System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<T> Fail<T>(System.Exception error) { }
+        public static System.IObservable<T> Fail<T>(System.Exception error, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<T> Fail<T>(System.Exception error, T witness) { }
+        public static System.IObservable<T> Fail<T>(System.Exception error, ReactiveUI.Primitives.Concurrency.ISequencer scheduler, T witness) { }
+        public static System.IObservable<TResult> ForkJoin<TLeft, TRight, TResult>(System.IObservable<TLeft> left, System.IObservable<TRight> right, System.Func<TLeft, TRight, TResult> selector) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<T> FromAsync<T>(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<T>> taskFactory) { }
+        public static System.IObservable<T> FromAsync<T>(System.Func<System.Threading.Tasks.Task<T>> taskFactory) { }
+        public static System.IObservable<T> FromAsync<T>(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<T>> taskFactory, System.Threading.CancellationToken cancellationToken) { }
+        public static System.IObservable<T> FromAsyncEnumerable<T>(System.Collections.Generic.IAsyncEnumerable<T> values) { }
+        public static System.IObservable<T> FromAsyncEnumerable<T>(System.Collections.Generic.IAsyncEnumerable<T> values, System.Threading.CancellationToken cancellationToken) { }
+        public static System.IObservable<T> FromEnumerable<T>(System.Collections.Generic.IEnumerable<T> values) { }
+        public static System.IObservable<T> FromEnumerable<T>(System.Collections.Generic.IEnumerable<T> values, System.Threading.CancellationToken cancellationToken) { }
+        public static System.IObservable<ReactiveUI.Primitives.Core.EventPattern<System.EventArgs>> FromEventPattern(System.Action<System.EventHandler> addHandler, System.Action<System.EventHandler> removeHandler) { }
+        public static System.IObservable<ReactiveUI.Primitives.Core.EventPattern<TEventArgs>> FromEventPattern<TEventArgs>(System.Action<System.EventHandler<TEventArgs>> addHandler, System.Action<System.EventHandler<TEventArgs>> removeHandler) where TEventArgs : System.EventArgs { }
+        public static System.IObservable<ReactiveUI.Primitives.Core.EventPattern<TEventArgs>> FromEventPattern<TEventHandler, TEventArgs>(System.Action<TEventHandler> addHandler, System.Action<TEventHandler> removeHandler) where TEventHandler : System.Delegate where TEventArgs : System.EventArgs { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static ReactiveUI.Primitives.Signals.ITaskSignal<ReactiveUI.Primitives.RxVoid> FromTask(System.Func<System.Threading.CancellationTokenSource, System.Threading.Tasks.Task<ReactiveUI.Primitives.RxVoid>> execution) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static ReactiveUI.Primitives.Signals.ITaskSignal<ReactiveUI.Primitives.RxVoid> FromTask(System.Func<System.Threading.CancellationTokenSource, System.Threading.Tasks.Task<ReactiveUI.Primitives.RxVoid>> execution, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static ReactiveUI.Primitives.Signals.ITaskSignal<ReactiveUI.Primitives.RxVoid> FromTask(System.Func<System.Threading.CancellationTokenSource, System.Threading.Tasks.Task<ReactiveUI.Primitives.RxVoid>> execution, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler, System.Threading.CancellationTokenSource? cancellationTokenSource) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static ReactiveUI.Primitives.Signals.ITaskSignal<TResult> FromTask<TResult>(System.Func<System.Threading.CancellationTokenSource, System.Threading.Tasks.Task<TResult>> actionAsync) { }
+        public static System.IObservable<T> FromTask<T>(System.Threading.Tasks.Task<T> task) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static ReactiveUI.Primitives.Signals.ITaskSignal<TResult> FromTask<TResult>(System.Func<System.Threading.CancellationTokenSource, System.Threading.Tasks.Task<TResult>> actionAsync, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static ReactiveUI.Primitives.Signals.ITaskSignal<TResult> FromTask<TResult>(System.Func<System.Threading.CancellationTokenSource, System.Threading.Tasks.Task<TResult>> actionAsync, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler, System.Threading.CancellationTokenSource? cancellationTokenSource) { }
+        public static System.IObservable<T> Generate<TState, T>(TState initialState, System.Func<TState, bool> condition, System.Func<TState, TState> iterate, System.Func<TState, T> resultSelector) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<T> If<T>(System.Func<bool> condition, System.IObservable<T> thenSource) { }
+        public static System.IObservable<T> If<T>(System.Func<bool> condition, System.IObservable<T> thenSource, System.IObservable<T> elseSource) { }
+        public static System.IObservable<long> Interval(System.TimeSpan period) { }
+        public static System.IObservable<long> Interval(System.TimeSpan period, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public static System.IObservable<TResult> Iterate<TState, TResult>(TState initialState, System.Func<TState, bool> condition, System.Func<TState, TState> iterator, System.Func<TState, TResult> resultSelector) { }
+        public static System.IObservable<T> Lazy<T>(System.Func<System.IObservable<T>> observableFactory) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<T> Loop<T>(T value) { }
+        public static System.IObservable<T> Loop<T>(T value, int count) { }
+        public static System.IObservable<T> Merge<T>(System.Collections.Generic.IEnumerable<System.IObservable<T>> sources) { }
+        public static System.IObservable<T> Merge<T>(params System.IObservable<T>[] sources) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<T> Never<T>() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<T> None<T>() { }
+        public static System.IObservable<T> None<T>(ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<T> None<T>(T witness) { }
+        public static System.IObservable<T> None<T>(ReactiveUI.Primitives.Concurrency.ISequencer scheduler, T witness) { }
+        public static System.IObservable<T> OnErrorResumeNext<T>(System.Collections.Generic.IEnumerable<System.IObservable<T>> sources) { }
+        public static System.IObservable<T> OnErrorResumeNext<T>(params System.IObservable<T>[] sources) { }
+        public static System.IObservable<T> OnErrorResumeNext<T>(System.IObservable<T> first, System.IObservable<T> second) { }
+        public static System.IObservable<TResult> Pair<TLeft, TRight, TResult>(System.IObservable<TLeft> left, System.IObservable<TRight> right, System.Func<TLeft, TRight, TResult> selector) { }
+        public static System.IObservable<TResult> PairLatest<TLeft, TRight, TResult>(System.IObservable<TLeft> left, System.IObservable<TRight> right, System.Func<TLeft, TRight, TResult> selector) { }
+        public static System.IObservable<long> Pulse(System.TimeSpan period) { }
+        public static System.IObservable<long> Pulse(System.TimeSpan period, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public static System.IObservable<T> Race<T>(params System.IObservable<T>[] sources) { }
+        public static System.IObservable<int> Range(int start, int count) { }
+        public static System.IObservable<int> Range(int start, int count, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public static System.IObservable<TSource> Recover<TSource>(params System.IObservable<TSource>[] sources) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<T> Repeat<T>(T value) { }
+        public static System.IObservable<T> Repeat<T>(T value, int repeatCount) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<T> Return<T>(T value) { }
+        public static System.IObservable<T> Return<T>(T value, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static ReactiveUI.Primitives.Signals.IAwaitSignal<TSource> RunAsync<TSource>(System.IObservable<TSource> source) { }
+        public static ReactiveUI.Primitives.Signals.IAwaitSignal<TSource> RunAsync<TSource>(System.IObservable<TSource> source, System.Threading.CancellationToken cancellationToken) { }
+        public static ReactiveUI.Primitives.Signals.ScheduledSignal<T> Scheduled<T>(ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public static ReactiveUI.Primitives.Signals.ScheduledSignal<T> Scheduled<T>(ReactiveUI.Primitives.Concurrency.ISequencer scheduler, System.IObserver<T>? defaultObserver) { }
+        public static System.IObservable<int> Sequence(int start, int count) { }
+        public static System.IObservable<int> Sequence(int start, int count, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<T> Silent<T>() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<T> Silent<T>(T witness) { }
+        public static System.IObservable<ReactiveUI.Primitives.RxVoid> Start(System.Action action) { }
+        public static System.IObservable<ReactiveUI.Primitives.RxVoid> Start(System.Action action, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public static System.IObservable<T> Start<T>(System.Func<T> function) { }
+        public static System.IObservable<T> Start<T>(System.Func<T> function, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public static System.IObservable<T> Switch<T>(System.IObservable<System.IObservable<T>> sources) { }
+        public static System.IObservable<TResult> SyncLatest<TLeft, TRight, TResult>(System.IObservable<TLeft> left, System.IObservable<TRight> right, System.Func<TLeft, TRight, TResult> selector) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<T> Throw<T>(System.Exception error) { }
+        public static System.IObservable<T> Throw<T>(System.Exception error, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public static System.IObservable<T> Timeout<T>(System.IObservable<T> source, System.TimeSpan dueTime) { }
+        public static System.IObservable<T> Timeout<T>(System.IObservable<T> source, System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<long> Timer(System.DateTimeOffset dueTime) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<long> Timer(System.TimeSpan dueTime) { }
+        public static System.IObservable<long> Timer(System.DateTimeOffset dueTime, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        public static System.IObservable<long> Timer(System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<long> Timer(System.TimeSpan dueTime, System.TimeSpan period) { }
+        public static System.IObservable<long> Timer(System.TimeSpan dueTime, System.TimeSpan period, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.Threading.Tasks.Task<TSource> ToTask<TSource>(System.IObservable<TSource> source) { }
+        public static System.Threading.Tasks.Task<TSource> ToTask<TSource>(System.IObservable<TSource> source, System.Threading.CancellationToken cancellationToken) { }
+        public static System.IObservable<TResult> Unfold<TState, TResult>(TState initialState, System.Func<TState, bool> condition, System.Func<TState, TState> iterate, System.Func<TState, TResult> resultSelector) { }
+        public static System.IObservable<T> Use<TResource, T>(System.Func<TResource> resourceFactory, System.Func<TResource, System.IObservable<T>> signalFactory) where TResource : System.IDisposable { }
+        public static System.IObservable<T> Using<TResource, T>(System.Func<TResource> resourceFactory, System.Func<TResource, System.IObservable<T>> observableFactory) where TResource : System.IDisposable { }
+    }
+    public static class SignalExtensions
+    {
+        extension(System.Threading.Tasks.Task asyncTask)
+        {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.Task HandleCancellation() { }
+            public System.Threading.Tasks.Task HandleCancellation(System.Action? action) { }
+        }
+        extension<T>(System.IObservable<T> source)
+        {
+            public System.Collections.Generic.IEnumerable<T> ToEnumerable() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<T> WitnessOn(ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+        }
+        extension<TResult>(System.IObservable<TResult> asyncTask)
+        {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.Task<TResult?> HandleCancellation(System.Threading.CancellationToken token) { }
+            public System.Threading.Tasks.Task<TResult?> HandleCancellation(System.Action? action, System.Threading.CancellationToken token) { }
+        }
+        extension<TResult>(System.Threading.Tasks.Task<TResult> asyncTask)
+        {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.Task<TResult?> HandleCancellation() { }
+            public System.Threading.Tasks.Task<TResult?> HandleCancellation(System.Action? action) { }
+        }
+        extension<TSource>(System.Collections.Generic.IEnumerable<System.IObservable<TSource>> sources)
+        {
+            public System.IObservable<TSource> Recover() { }
+        }
+        extension<TSource>(System.IObservable<TSource> source)
+        {
+            public System.IObservable<System.Collections.Generic.IList<TSource>> Collect(System.TimeSpan timeSpan) { }
+            public System.IObservable<System.Collections.Generic.IList<TSource>> Collect(System.TimeSpan timeSpan, ReactiveUI.Primitives.Concurrency.ISequencer sequencer) { }
+        }
+        extension<TSource>(System.IObservable<TSource> source)
+        {
+            public System.IObservable<TSource> EmitIfQuiet(System.TimeSpan dueTime) { }
+            public System.IObservable<TSource> EmitIfQuiet(System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer sequencer) { }
+        }
+        extension<TSource>(System.IObservable<TSource> source)
+        {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public ReactiveUI.Primitives.Signals.IAwaitSignal<TSource> GetAwaiter() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public ReactiveUI.Primitives.Signals.IAwaitSignal<TSource> GetAwaiter(System.Threading.CancellationToken cancellationToken) { }
+        }
+        extension<TSource>(System.IObservable<TSource> source)
+        {
+            public System.IObservable<TSource> OnCleanup(System.Action finallyAction) { }
+            public System.IObservable<TSource> Recover<TException>(System.Func<TException, System.IObservable<TSource>> handler) where TException : System.Exception { }
+        }
+    }
+    public static class StateSignalExtensions
+    {
+        extension<TSource>(System.IObservable<TSource> source)
+        {
+            public ReactiveUI.Primitives.Signals.ReadOnlyState<TResult> ToReadOnlyState<TResult>(TResult initialValue, System.Func<TSource, TResult> selector) { }
+        }
+    }
+    public static class TaskSignal
+    {
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static ReactiveUI.Primitives.Signals.ITaskSignal<TResult> Create<TResult>(System.Func<ReactiveUI.Primitives.Signals.ITaskSignal<TResult>, System.IObservable<TResult>> observableFactory) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static ReactiveUI.Primitives.Signals.ITaskSignal<TResult> Create<TResult>(System.Func<ReactiveUI.Primitives.Signals.ITaskSignal<TResult>, System.IObservable<TResult>> observableFactory, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static ReactiveUI.Primitives.Signals.ITaskSignal<TResult> Create<TResult>(System.Func<ReactiveUI.Primitives.Signals.ITaskSignal<TResult>, System.IObservable<TResult>> observableFactory, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler, System.Threading.CancellationTokenSource? cancellationTokenSource) { }
+    }
+}

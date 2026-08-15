@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>
@@ -15,14 +17,15 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsync
 {
     /// <summary>Creates a new observable sequence for each subscription by invoking the specified asynchronous factory function.</summary>
-    /// <remarks>Use this method to defer the creation of the observable sequence until an observer
-    /// subscribes. This is useful when the observable sequence depends on per-subscription state or resources, or when
-    /// you want to ensure a fresh sequence for each subscriber.</remarks>
     /// <typeparam name="T">The type of the elements produced by the observable sequence.</typeparam>
     /// <param name="factory">A function that receives a cancellation token and returns a task that produces an observable sequence to
     /// subscribe to.</param>
     /// <returns>An observable sequence that, upon each subscription, invokes the factory function to obtain the actual
     /// observable sequence to subscribe to.</returns>
+    /// <remarks>Use this method to defer the creation of the observable sequence until an observer
+    /// subscribes. This is useful when the observable sequence depends on per-subscription state or resources, or when
+    /// you want to ensure a fresh sequence for each subscriber.</remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservableAsync<T> Defer<T>(Func<CancellationToken, ValueTask<IObservableAsync<T>>> factory) =>
         new DeferAsyncSignalAsync<T>(factory);
 
@@ -30,12 +33,13 @@ public static partial class SignalAsync
     /// Returns an observable sequence that is created by invoking the specified factory function each time a new
     /// observer subscribes.
     /// </summary>
-    /// <remarks>Use this method to defer the creation of the observable sequence until an observer
-    /// subscribes, ensuring that each subscription receives a fresh instance. This is useful when the observable
-    /// sequence has side effects or depends on external state at the time of subscription.</remarks>
     /// <typeparam name="T">The type of the elements produced by the observable sequence.</typeparam>
     /// <param name="factory">A function that returns a new instance of an observable sequence to be subscribed to for each observer.</param>
     /// <returns>An observable sequence whose observers trigger the invocation of the factory function upon subscription.</returns>
+    /// <remarks>Use this method to defer the creation of the observable sequence until an observer
+    /// subscribes, ensuring that each subscription receives a fresh instance. This is useful when the observable
+    /// sequence has side effects or depends on external state at the time of subscription.</remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservableAsync<T> Defer<T>(Func<IObservableAsync<T>> factory) =>
         new DeferSyncSignalAsync<T>(factory);
 
@@ -49,6 +53,7 @@ public static partial class SignalAsync
     internal sealed class DeferSyncSignalAsync<T>(Func<IObservableAsync<T>> factory) : IObservableAsync<T>
     {
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken) =>

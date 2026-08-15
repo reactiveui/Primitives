@@ -2,11 +2,14 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Observer for distinct-by.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
 /// <typeparam name="TKey">The key type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Done = {_done}, SeenKeys = {_seen.Count}")]
 public sealed class DistinctByWitness<T, TKey> : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>
@@ -55,15 +58,19 @@ public sealed class DistinctByWitness<T, TKey> : IObserver<T>, IDisposable
     }
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnError(Exception error) => SinkTerminal.Fault(_observer, error, this, ref _done);
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnCompleted() => SinkTerminal.Complete(_observer, this, ref _done);
 
     /// <summary>Assigns the upstream subscription, disposing it if one is already held.</summary>
     /// <param name="subscription">The upstream subscription.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetSubscription(IDisposable subscription) => SinkSubscription.Set(ref _subscription, subscription);
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose() => SinkSubscription.Dispose(ref _subscription);
 }

@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async;
@@ -14,11 +15,12 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsync
 {
     /// <summary>Creates an observable sequence that never produces any values and never completes.</summary>
+    /// <typeparam name="T">The type of elements in the observable sequence.</typeparam>
+    /// <returns>An observable sequence of type <typeparamref name="T"/> that never emits any items and never terminates.</returns>
     /// <remarks>This method is useful for testing or composing observables where a sequence that remains idle
     /// is required. The returned observable will not invoke any callbacks and will not signal completion or
     /// error.</remarks>
-    /// <typeparam name="T">The type of elements in the observable sequence.</typeparam>
-    /// <returns>An observable sequence of type <typeparamref name="T"/> that never emits any items and never terminates.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",

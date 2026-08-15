@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 
 namespace ReactiveUI.Primitives.Advanced;
@@ -9,6 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <summary>Observer that forwards notifications to stateful delegates.</summary>
 /// <typeparam name="T">The observed value type.</typeparam>
 /// <typeparam name="TState">The state type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("State = {_state}, OnError = {_onError}")]
 public sealed class StatefulWitness<T, TState> : IObserver<T>
 {
     /// <summary>Callback state.</summary>
@@ -28,6 +30,7 @@ public sealed class StatefulWitness<T, TState> : IObserver<T>
     /// <param name="onNext">Next notification callback.</param>
     /// <param name="onError">Error notification callback.</param>
     /// <param name="onCompleted">Completion notification callback.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="onNext"/> is <see langword="null"/>.</exception>
     public StatefulWitness(
         TState state,
         Action<T, TState> onNext,
@@ -41,12 +44,15 @@ public sealed class StatefulWitness<T, TState> : IObserver<T>
     }
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnCompleted() => _onCompleted?.Invoke(Result.Success, _state);
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnError(Exception error) => (_onError ?? Rethrow)(error, _state);
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnNext(T value) => _onNext(value, _state);
 
     /// <summary>Rethrows the supplied exception without losing its stack information.</summary>

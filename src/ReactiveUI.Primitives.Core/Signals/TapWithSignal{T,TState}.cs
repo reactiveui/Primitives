@@ -15,6 +15,7 @@ namespace ReactiveUI.Primitives.Signals;
 /// <param name="source">The source sequence.</param>
 /// <param name="state">The state passed to the action.</param>
 /// <param name="onNext">The action invoked for each value and the state.</param>
+[System.Diagnostics.DebuggerDisplay("Source = {_source}, State = {_state}")]
 public sealed class TapWithSignal<T, TState>(IObservable<T> source, TState state, Action<TState, T> onNext) : IRequireCurrentThread<T>
 {
     /// <summary>The source sequence.</summary>
@@ -56,18 +57,17 @@ public sealed class TapWithSignal<T, TState>(IObservable<T> source, TState state
         /// <summary>The action invoked for each value and the state.</summary>
         private readonly Action<TState, T> _onNext = onNext;
 
-        /// <summary>Whether a terminal notification has been forwarded.</summary>
-        private bool _stopped;
+        /// <summary>Non-zero once a terminal notification has been forwarded.</summary>
+        private int _stopped;
 
         /// <summary>Forwards completion downstream.</summary>
         public void OnCompleted()
         {
-            if (_stopped)
+            if (Interlocked.Exchange(ref _stopped, 1) != 0)
             {
                 return;
             }
 
-            _stopped = true;
             _observer.OnCompleted();
         }
 
@@ -75,12 +75,11 @@ public sealed class TapWithSignal<T, TState>(IObservable<T> source, TState state
         /// <param name="error">The error value.</param>
         public void OnError(Exception error)
         {
-            if (_stopped)
+            if (Interlocked.Exchange(ref _stopped, 1) != 0)
             {
                 return;
             }
 
-            _stopped = true;
             _observer.OnError(error);
         }
 
@@ -88,7 +87,7 @@ public sealed class TapWithSignal<T, TState>(IObservable<T> source, TState state
         /// <param name="value">The source value.</param>
         public void OnNext(T value)
         {
-            if (_stopped)
+            if (Volatile.Read(ref _stopped) != 0)
             {
                 return;
             }

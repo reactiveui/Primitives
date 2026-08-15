@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -10,6 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Repeats a source observable by resubscribing after each successful completion.</summary>
 /// <typeparam name="T">The value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Source = {_source}, RepeatCount = {_repeatCount}")]
 public sealed class RepeatSourceSignal<T> : IRequireCurrentThread<T>
 {
     /// <summary>The source sequence.</summary>
@@ -37,6 +40,7 @@ public sealed class RepeatSourceSignal<T> : IRequireCurrentThread<T>
     }
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() => true;
 
     /// <inheritdoc/>

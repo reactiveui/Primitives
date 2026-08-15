@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
@@ -168,20 +169,21 @@ public sealed class OnErrorResumeNextSignalTests
     }
 
     /// <summary>Enumerable that throws when asked for an enumerator.</summary>
-    /// <param name="error">The error to throw.</param>
     /// <typeparam name="T">The source value type.</typeparam>
+    /// <param name="error">The error to throw.</param>
     private sealed class ThrowingEnumerable<T>(Exception error) : IEnumerable<IObservable<T>>
     {
         /// <inheritdoc/>
         public IEnumerator<IObservable<T>> GetEnumerator() => throw error;
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
 
     /// <summary>Enumerable that returns a null enumerator to cover the defensive null path.</summary>
-    /// <param name="returnsNull">Whether <see cref="IEnumerable{T}.GetEnumerator"/> returns null.</param>
     /// <typeparam name="T">The source value type.</typeparam>
+    /// <param name="returnsNull">Whether <see cref="IEnumerable{T}.GetEnumerator"/> returns null.</param>
     private sealed class NullEnumeratorEnumerable<T>(bool returnsNull) : IEnumerable<IObservable<T>>
     {
         /// <inheritdoc/>
@@ -189,13 +191,14 @@ public sealed class OnErrorResumeNextSignalTests
             returnsNull ? null! : throw new InvalidOperationException();
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
 
     /// <summary>Enumerable that returns one source and then throws when asked for the next source.</summary>
+    /// <typeparam name="T">The source value type.</typeparam>
     /// <param name="first">The first source to return.</param>
     /// <param name="error">The error to throw on the second move.</param>
-    /// <typeparam name="T">The source value type.</typeparam>
     private sealed class ThrowingAfterFirstEnumerable<T>(IObservable<T> first, Exception error) : IEnumerable<IObservable<T>>
     {
         /// <inheritdoc/>
@@ -206,6 +209,7 @@ public sealed class OnErrorResumeNextSignalTests
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
 
@@ -230,8 +234,8 @@ public sealed class OnErrorResumeNextSignalTests
     }
 
     /// <summary>Observable that completes synchronously while recording subscription nesting.</summary>
-    /// <param name="depth">The shared depth tracker.</param>
     /// <typeparam name="T">The source value type.</typeparam>
+    /// <param name="depth">The shared depth tracker.</param>
     private sealed class DepthTrackingSource<T>(SubscriptionDepth depth) : IObservable<T>
     {
         /// <inheritdoc/>
@@ -300,9 +304,11 @@ public sealed class OnErrorResumeNextSignalTests
 
         /// <summary>Manually raises an error.</summary>
         /// <param name="error">The error to raise.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void Fail(Exception error) => _observer?.OnError(error);
 
         /// <summary>Manually completes the source.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void Complete() => _observer?.OnCompleted();
     }
 }

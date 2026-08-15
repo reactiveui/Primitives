@@ -239,6 +239,7 @@ public class TransformationOperatorTests
     }
 
     /// <summary>Tests SelectMany null selector throws.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void WhenSelectManyNullSelector_ThenThrowsArgumentNull() =>
         Assert.Throws<ArgumentNullException>(static () =>
@@ -276,6 +277,7 @@ public class TransformationOperatorTests
     }
 
     /// <summary>Tests Scan null accumulator throws.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void WhenScanNullAccumulator_ThenThrowsArgumentNull() =>
         Assert.Throws<ArgumentNullException>(static () => SignalAsync.Return(1).Scan(0, (Func<int, int, int>)null!));
@@ -824,6 +826,7 @@ public class TransformationOperatorTests
     }
 
     /// <summary>Verifies that Yield with a null source throws <see cref = "ArgumentNullException"/>.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void WhenYieldNullSource_ThenThrowsArgumentNull() =>
         Assert.Throws<ArgumentNullException>(static () => SignalAsyncReactiveExtensions.Yield<int>(null!));
@@ -888,12 +891,14 @@ public class TransformationOperatorTests
     }
 
     /// <summary>Verifies that the three-argument GroupBy overload throws <see cref = "ArgumentNullException"/> when the source parameter is null.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void WhenGroupByWithSignalSelectorNullSource_ThenThrowsArgumentNull() =>
         Assert.Throws<ArgumentNullException>(static () =>
             SignalAsyncExtensions.GroupBy<int, int>(null!, static x => x, static _ => Signal.Create<int>()));
 
     /// <summary>Verifies that the three-argument GroupBy overload throws <see cref = "ArgumentNullException"/> when the keySelector parameter is null.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void WhenGroupByWithSignalSelectorNullKeySelector_ThenThrowsArgumentNull() =>
         Assert.Throws<ArgumentNullException>(static () =>
@@ -1133,10 +1138,12 @@ public class TransformationOperatorTests
     {
         /// <inheritdoc/>
         /// <returns>A task representing the asynchronous operation.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) => default;
 
         /// <inheritdoc/>
         /// <returns>A task representing the asynchronous operation.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) => default;
 
         /// <inheritdoc/>
@@ -1145,6 +1152,7 @@ public class TransformationOperatorTests
 
         /// <inheritdoc/>
         /// <returns>A task representing the asynchronous operation.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask DisposeAsync() => default;
     }
 }

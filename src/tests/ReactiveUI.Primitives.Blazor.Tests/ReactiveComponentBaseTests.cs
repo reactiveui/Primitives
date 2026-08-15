@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -27,7 +28,7 @@ public sealed class ReactiveComponentBaseTests
     public async Task ObservedValueReachesTheCallbackAndRefreshes()
     {
         await using ComponentHarness harness = new();
-        HarnessComponent component = await harness.AttachAsync();
+        var component = await harness.AttachAsync();
         List<int> received = [];
         ManualSource<int> source = new();
 
@@ -46,7 +47,7 @@ public sealed class ReactiveComponentBaseTests
     public async Task ProvidedErrorCallbackReceivesTheSourceError()
     {
         await using ComponentHarness harness = new();
-        HarnessComponent component = await harness.AttachAsync();
+        var component = await harness.AttachAsync();
         List<Exception> errors = [];
         ManualSource<int> source = new();
         InvalidOperationException failure = new("observed failure");
@@ -66,7 +67,7 @@ public sealed class ReactiveComponentBaseTests
     public async Task ErrorWithNoCallbackRunsTheDefaultObservedErrorHandler()
     {
         await using ComponentHarness harness = new();
-        HarnessComponent component = await harness.AttachAsync();
+        var component = await harness.AttachAsync();
         ManualSource<int> source = new();
         InvalidOperationException failure = new("unhandled");
 
@@ -85,7 +86,7 @@ public sealed class ReactiveComponentBaseTests
     public async Task CompletionCallbackRunsWhenTheSourceCompletes()
     {
         await using ComponentHarness harness = new();
-        HarnessComponent component = await harness.AttachAsync();
+        var component = await harness.AttachAsync();
         var completed = false;
         ManualSource<int> source = new();
 
@@ -104,7 +105,7 @@ public sealed class ReactiveComponentBaseTests
     public async Task ObservationWithoutRefreshStillDeliversTheValue()
     {
         await using ComponentHarness harness = new();
-        HarnessComponent component = await harness.AttachAsync();
+        var component = await harness.AttachAsync();
         List<int> received = [];
         ManualSource<int> source = new();
 
@@ -123,7 +124,7 @@ public sealed class ReactiveComponentBaseTests
     public async Task InvalidationMarshalsAStateChange()
     {
         await using ComponentHarness harness = new();
-        HarnessComponent component = await harness.AttachAsync();
+        var component = await harness.AttachAsync();
 
         await harness.Dispatcher.InvokeAsync(() => component.InvalidateComponentAsync());
 
@@ -159,13 +160,16 @@ public sealed class ReactiveComponentBaseTests
 
         /// <summary>Pushes a value to the observer.</summary>
         /// <param name="value">The value to push.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Push(T value) => _observer?.OnNext(value);
 
         /// <summary>Fails the observer with an error.</summary>
         /// <param name="error">The error to raise.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Fail(Exception error) => _observer?.OnError(error);
 
         /// <summary>Completes the observer.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Complete() => _observer?.OnCompleted();
     }
 
@@ -187,6 +191,7 @@ public sealed class ReactiveComponentBaseTests
         /// <param name="source">The source sequence.</param>
         /// <param name="onNext">The value callback.</param>
         /// <returns>The tracked subscription.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IDisposable ObserveValues<T>(IObservable<T> source, Action<T> onNext) => Observe(source, onNext);
 
         /// <summary>Observes a source with value, error, and completion callbacks.</summary>
@@ -197,6 +202,7 @@ public sealed class ReactiveComponentBaseTests
         /// <param name="onCompleted">The completion callback.</param>
         /// <param name="refreshAfterCallbacks">Whether to refresh after callbacks.</param>
         /// <returns>The tracked subscription.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IDisposable ObserveSignals<T>(
             IObservable<T> source,
             Action<T> onNext,
@@ -207,6 +213,7 @@ public sealed class ReactiveComponentBaseTests
 
         /// <summary>Invalidates the component through the renderer.</summary>
         /// <returns>A task that completes when the invalidation is accepted.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Task InvalidateComponentAsync() => InvalidateAsync();
 
         /// <inheritdoc/>
@@ -242,6 +249,7 @@ public sealed class ReactiveComponentBaseTests
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask DisposeAsync() => _renderer.DisposeAsync();
     }
 
@@ -252,6 +260,7 @@ public sealed class ReactiveComponentBaseTests
         public static EmptyServiceProvider Instance { get; } = new();
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public object? GetService(Type serviceType) => null;
     }
 }

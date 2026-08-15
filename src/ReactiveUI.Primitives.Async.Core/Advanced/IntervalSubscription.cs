@@ -5,6 +5,7 @@
 namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>A subscription that emits incrementing ticks at a fixed interval.</summary>
+[System.Diagnostics.DebuggerDisplay("Period = {Period}, TimeProvider = {TimeProvider}")]
 public sealed class IntervalSubscription : TaskSignalSubscription<long>
 {
     /// <summary>Initializes a new instance of the <see cref="IntervalSubscription"/> class.</summary>
@@ -61,7 +62,7 @@ public sealed class IntervalSubscription : TaskSignalSubscription<long>
 
 #if NET8_0_OR_GREATER
         await using var ct =
-            cancellationToken.Register(
+            cancellationToken.UnsafeRegister(
                 static x =>
                 {
                     var (tcs, ct) = ((TaskCompletionSource<bool>, CancellationToken))x!;

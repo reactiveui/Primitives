@@ -10,6 +10,7 @@ namespace ReactiveUI.Primitives.Blazor.Reactive.Concurrency;
 
 /// <summary>Scheduler that coalesces scheduled work through a Blazor renderer dispatcher delegate.</summary>
 /// <seealso cref="System.Reactive.Concurrency.IScheduler" />
+[System.Diagnostics.DebuggerDisplay("InvokeAsync = {_invokeAsync}, UnhandledExceptionHandler = {UnhandledExceptionHandler}")]
 public sealed class BlazorRendererSequencer : CoalescingDispatchScheduler
 {
     /// <summary>Delegate used to marshal work through Blazor's renderer.</summary>

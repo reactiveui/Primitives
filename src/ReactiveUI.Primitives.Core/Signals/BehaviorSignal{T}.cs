@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Signals;
 
 /// <summary>A signal that replays its most recent value to new subscribers.</summary>
@@ -56,29 +58,36 @@ public sealed class BehaviorSignal<T> : ISignal<T>, IWitnessRemovable<T>
     /// In some cases, it may be necessary for a caller to use external synchronization to avoid race conditions.
     /// </alert>
     /// </remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryGetValue(out T? value) => _state.TryGetValue(out value);
 
     /// <summary>Notifies all subscribed observers about the end of the sequence.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnCompleted() => _state.OnCompleted();
 
     /// <summary>Notifies all subscribed observers about the exception.</summary>
     /// <param name="error">The exception to send to all observers.</param>
     /// <exception cref="ArgumentNullException"><paramref name="error"/> is <c>null</c>.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnError(Exception error) => _state.OnError(error);
 
     /// <summary>Notifies all subscribed observers about the arrival of the specified element in the sequence.</summary>
     /// <param name="value">The value to send to all observers.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnNext(T value) => _state.OnNext(value);
 
     /// <summary>Subscribes an observer to the subject.</summary>
     /// <param name="observer">Observer to subscribe to the subject.</param>
     /// <returns>Disposable object that can be used to unsubscribe the observer from the subject.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="observer"/> is <c>null</c>.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IDisposable Subscribe(IObserver<T> observer) => _state.Subscribe(this, observer);
 
     /// <summary>Releases unmanaged and - optionally - managed resources.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose() => _state.Release();
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     void IWitnessRemovable<T>.RemoveObserver(IObserver<T> observer) => _state.RemoveObserver(observer);
 }

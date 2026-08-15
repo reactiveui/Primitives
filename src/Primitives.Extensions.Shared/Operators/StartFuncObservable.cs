@@ -33,11 +33,9 @@ internal sealed class StartFuncObservable<TResult>(
             return EmptyDisposable.Instance;
         }
 
-        var capturedObserver = observer;
-        var capturedFunction = function;
-        return scheduler.Schedule((capturedObserver, capturedFunction), static (_, state) =>
+        return scheduler.Schedule((observer, function), static (_, state) =>
         {
-            Run(state.capturedObserver, state.capturedFunction);
+            Run(state.observer, state.function);
             return EmptyDisposable.Instance;
         });
     }

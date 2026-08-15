@@ -10,6 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Signal that measures elapsed time between source values.</summary>
 /// <typeparam name="T">The value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Source = {Source}, Sequencer = {Sequencer}")]
 public sealed class TimeIntervalSignal<T> : IObservable<TimeInterval<T>>
 {
     /// <summary>Initializes a new instance of the <see cref="TimeIntervalSignal{T}"/> class.</summary>

@@ -2,37 +2,40 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for working with asynchronous observable sequences.</summary>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Asynchronous completion-await operators for an observable source sequence.</summary>
-    /// <param name="this">The observable sequence to wait for completion.</param>
     /// <typeparam name="T">The type of the elements in the observable sequence.</typeparam>
-    extension<T>(IObservableAsync<T> @this)
+    /// <param name="source">The observable sequence to wait for completion.</param>
+    extension<T>(IObservableAsync<T> source)
     {
         /// <summary>Asynchronously waits for the observable sequence to complete without retrieving any values.</summary>
+        /// <returns>A ValueTask that represents the asynchronous wait operation.</returns>
         /// <remarks>This method subscribes to the observable sequence and completes when the sequence signals
         /// completion or when the operation is canceled. Any values produced by the sequence are ignored.</remarks>
-        /// <returns>A ValueTask that represents the asynchronous wait operation.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask WaitCompletionAsync() =>
-            @this.WaitCompletionAsync(CancellationToken.None);
+            source.WaitCompletionAsync(CancellationToken.None);
 
         /// <summary>Asynchronously waits for the observable sequence to complete without retrieving any values.</summary>
-        /// <remarks>This method subscribes to the observable sequence and completes when the sequence signals
-        /// completion or when the operation is canceled. Any values produced by the sequence are ignored.</remarks>
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the wait operation.</param>
         /// <returns>A ValueTask that represents the asynchronous wait operation.</returns>
+        /// <remarks>This method subscribes to the observable sequence and completes when the sequence signals
+        /// completion or when the operation is canceled. Any values produced by the sequence are ignored.</remarks>
         public async ValueTask WaitCompletionAsync(
             CancellationToken cancellationToken)
         {
-            ArgumentExceptionHelper.ThrowIfNull(@this);
+            ArgumentExceptionHelper.ThrowIfNull(source);
             cancellationToken.ThrowIfCancellationRequested();
 
             CompletionTaskWitness<T> observer = new(cancellationToken);
             await using var subscription =
-                await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
+                await source.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
             await observer.AwaitResultAsync().ConfigureAwait(false);
         }
     }

@@ -31,6 +31,7 @@ public sealed class ConnectableSignal<T> : IObservable<T>
     /// <summary>Initializes a new instance of the <see cref="ConnectableSignal{T}"/> class.</summary>
     /// <param name="source">The cold or hot source sequence.</param>
     /// <param name="hub">The multicast hub.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="hub"/> is <see langword="null"/>.</exception>
     public ConnectableSignal(IObservable<T> source, ISignal<T> hub)
     {
         _source = source ?? throw new ArgumentNullException(nameof(source));
@@ -75,6 +76,7 @@ public sealed class ConnectableSignal<T> : IObservable<T>
     }
 
     /// <inheritdoc />
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IDisposable Subscribe(IObserver<T> observer) => _hub.Subscribe(observer);
 
     /// <summary>Forwards source notifications to the hub and latches terminal state.</summary>
@@ -102,6 +104,7 @@ public sealed class ConnectableSignal<T> : IObservable<T>
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnNext(T value) => _parent._hub.OnNext(value);
     }
 

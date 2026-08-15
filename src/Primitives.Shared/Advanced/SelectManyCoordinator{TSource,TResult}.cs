@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -11,6 +13,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <summary>Coordinates concurrent observable <c>SelectMany</c> subscriptions.</summary>
 /// <typeparam name="TSource">The source value type.</typeparam>
 /// <typeparam name="TResult">The result value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Active = {Active}, OuterCompleted = {OuterCompleted}, Done = {Done}")]
 public sealed class SelectManyCoordinator<TSource, TResult> : IObserver<TSource>, IDisposable
 {
     /// <summary>Serializes downstream callbacks and counters.</summary>
@@ -19,6 +22,7 @@ public sealed class SelectManyCoordinator<TSource, TResult> : IObserver<TSource>
     /// <summary>Initializes a new instance of the <see cref="SelectManyCoordinator{TSource, TResult}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="selector">The selector that creates an inner observable for each source value.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="observer"/> or <paramref name="selector"/> is <see langword="null"/>.</exception>
     public SelectManyCoordinator(IObserver<TResult> observer, Func<TSource, IObservable<TResult>> selector)
     {
         Observer = observer ?? throw new ArgumentNullException(nameof(observer));
@@ -28,6 +32,7 @@ public sealed class SelectManyCoordinator<TSource, TResult> : IObserver<TSource>
     /// <summary>Initializes a new instance of the <see cref="SelectManyCoordinator{TSource, TResult}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="inner">The inner observable used for each source value.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="observer"/> or <paramref name="inner"/> is <see langword="null"/>.</exception>
     public SelectManyCoordinator(IObserver<TResult> observer, IObservable<TResult> inner)
     {
         Observer = observer ?? throw new ArgumentNullException(nameof(observer));
@@ -56,6 +61,7 @@ public sealed class SelectManyCoordinator<TSource, TResult> : IObserver<TSource>
     private bool Done { get; set; }
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose() => Subscriptions.Dispose();
 
     /// <inheritdoc/>
@@ -70,6 +76,7 @@ public sealed class SelectManyCoordinator<TSource, TResult> : IObserver<TSource>
     }
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnError(Exception error) => OnAnyError(error);
 
     /// <inheritdoc/>

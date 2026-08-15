@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Concurrency;
@@ -27,9 +28,9 @@ public static partial class Sequencer
     /// <typeparam name="TState">The type of the state.</typeparam>
     /// <param name="tuple">Tuple containing the state and action.</param>
     /// <returns>An empty disposable.</returns>
-    internal static EmptyDisposable Invoke<TState>((TState state, Action<TState> action) tuple)
+    internal static EmptyDisposable Invoke<TState>((TState State, Action<TState> Action) tuple)
     {
-        tuple.action(tuple.state);
+        tuple.Action(tuple.State);
         return EmptyDisposable.Instance;
     }
 
@@ -37,8 +38,9 @@ public static partial class Sequencer
     /// <typeparam name="TState">The type of the state.</typeparam>
     /// <param name="tuple">Tuple containing the state and action.</param>
     /// <returns>The disposable returned by the action.</returns>
-    internal static IDisposable Invoke<TState>((TState state, Func<TState, IDisposable> action) tuple) =>
-        tuple.action(tuple.state);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static IDisposable Invoke<TState>((TState State, Func<TState, IDisposable> Action) tuple) =>
+        tuple.Action(tuple.State);
 
     /// <summary>Disposable work item used by closure-free stateful scheduler overloads.</summary>
     /// <typeparam name="TState">The scheduled state type.</typeparam>
@@ -181,6 +183,7 @@ public static partial class Sequencer
         }
 
         /// <summary>Invokes the caller-provided recursive action.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void RunRecursiveAction() => _action(Reschedule);
 
         /// <summary>Schedules the next recursive action invocation.</summary>
@@ -188,8 +191,8 @@ public static partial class Sequencer
         {
             RescheduleHandoff handoff = new();
             handoff.Disposable = _scheduler.Schedule(
-                (self: this, handoff),
-                static (_, s) => s.self.RunRescheduledWork(s.handoff));
+                (Self: this, handoff),
+                static (_, s) => s.Self.RunRescheduledWork(s.handoff));
 
             lock (_gate)
             {

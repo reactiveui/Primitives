@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Disposables;
@@ -625,6 +626,7 @@ public partial class SequencerTests
     /// <summary>Waits for a task with a bounded timeout.</summary>
     /// <param name="task">The task to wait for.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
+    /// <exception cref="TimeoutException"><paramref name="task"/> did not complete within the bounded timeout.</exception>
     private static async Task WaitForAsync(Task task)
     {
         var timeout = Task.Delay(TimeSpan.FromSeconds(TimeoutSeconds));
@@ -671,6 +673,7 @@ public partial class SequencerTests
     /// <summary>Completes a task completion source or throws when it was already completed.</summary>
     /// <param name="completion">The completion source to update.</param>
     /// <param name="state">The value to set.</param>
+    /// <exception cref="InvalidOperationException"><paramref name="completion"/> was already completed.</exception>
     private static void SetCompletion(TaskCompletionSource<int> completion, int state)
     {
         if (completion.TrySetResult(state))
@@ -683,6 +686,7 @@ public partial class SequencerTests
 
     /// <summary>Compares a scheduled item through the non-generic comparable interface.</summary>
     /// <param name="item">The scheduled item.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void CompareScheduledItemWithInvalidObject(ScheduledItem<int> item) =>
         item.CompareTo("bad");
 
@@ -714,6 +718,7 @@ public partial class SequencerTests
         public CallbackWorkItem(Action callback) => _callback = callback;
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Execute() => _callback();
     }
 }

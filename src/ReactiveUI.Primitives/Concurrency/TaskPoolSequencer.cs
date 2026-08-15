@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 
 namespace ReactiveUI.Primitives.Concurrency;
@@ -16,6 +17,7 @@ public sealed class TaskPoolSequencer : ISequencer
 
     /// <summary>Initializes a new instance of the <see cref="TaskPoolSequencer"/> class.</summary>
     /// <param name="taskFactory">The task factory.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="taskFactory"/> is <see langword="null"/>.</exception>
     public TaskPoolSequencer(TaskFactory taskFactory) =>
         _taskFactory = taskFactory ?? throw new ArgumentNullException(nameof(taskFactory));
 
@@ -112,6 +114,7 @@ public sealed class TaskPoolSequencer : ISequencer
         private readonly IWorkItem _item = item;
 
         /// <summary>Runs the work item.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Run() => _owner.Execute(_item);
     }
 

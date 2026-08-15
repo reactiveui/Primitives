@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>
@@ -15,61 +17,65 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Single-element operators for an observable source sequence.</summary>
-    /// <param name="this">The source observable sequence.</param>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-    extension<T>(IObservableAsync<T> @this)
+    /// <param name="source">The source observable sequence.</param>
+    extension<T>(IObservableAsync<T> source)
     {
         /// <summary>
         /// Asynchronously returns the single element of a sequence that satisfies a specified condition, or throws an
         /// exception if more than one such element exists.
         /// </summary>
-        /// <remarks>If no element satisfies the condition, or if more than one element satisfies the
-        /// condition, an exception is thrown. Use this method when exactly one element is expected to match the
-        /// predicate.</remarks>
         /// <param name="predicate">A function to test each element for a condition. The method returns the element for which this predicate
         /// returns <see langword="true"/>.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains the single element that matches
         /// the predicate.</returns>
+        /// <remarks>If no element satisfies the condition, or if more than one element satisfies the
+        /// condition, an exception is thrown. Use this method when exactly one element is expected to match the
+        /// predicate.</remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T> SingleAsync(Func<T, bool> predicate) =>
-            @this.SingleAsync(predicate, CancellationToken.None);
+            source.SingleAsync(predicate, CancellationToken.None);
 
         /// <summary>
         /// Asynchronously returns the single element of a sequence that satisfies a specified condition, or throws an
         /// exception if more than one such element exists.
         /// </summary>
-        /// <remarks>If no element satisfies the condition, or if more than one element satisfies the
-        /// condition, an exception is thrown. Use this method when exactly one element is expected to match the
-        /// predicate.</remarks>
         /// <param name="predicate">A function to test each element for a condition. The method returns the element for which this predicate
         /// returns <see langword="true"/>.</param>
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains the single element that matches
         /// the predicate.</returns>
+        /// <remarks>If no element satisfies the condition, or if more than one element satisfies the
+        /// condition, an exception is thrown. Use this method when exactly one element is expected to match the
+        /// predicate.</remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T> SingleAsync(Func<T, bool> predicate, CancellationToken cancellationToken) =>
-            SingleCoreAsync(@this, predicate, cancellationToken);
+            SingleCoreAsync(source, predicate, cancellationToken);
 
         /// <summary>
         /// Asynchronously returns the single element of the sequence, and throws an exception if the sequence does not
         /// contain exactly one element.
         /// </summary>
-        /// <remarks>Use this method when you expect the sequence to contain exactly one element. If the
-        /// sequence is empty or contains more than one element, an exception is thrown.</remarks>
         /// <returns>A task that represents the asynchronous operation. The task result contains the single element of the
         /// sequence.</returns>
+        /// <remarks>Use this method when you expect the sequence to contain exactly one element. If the
+        /// sequence is empty or contains more than one element, an exception is thrown.</remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T> SingleAsync() =>
-            @this.SingleAsync(CancellationToken.None);
+            source.SingleAsync(CancellationToken.None);
 
         /// <summary>
         /// Asynchronously returns the single element of the sequence, and throws an exception if the sequence does not
         /// contain exactly one element.
         /// </summary>
-        /// <remarks>Use this method when you expect the sequence to contain exactly one element. If the
-        /// sequence is empty or contains more than one element, an exception is thrown.</remarks>
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains the single element of the
         /// sequence.</returns>
+        /// <remarks>Use this method when you expect the sequence to contain exactly one element. If the
+        /// sequence is empty or contains more than one element, an exception is thrown.</remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T> SingleAsync(CancellationToken cancellationToken) =>
-            SingleCoreAsync(@this, null, cancellationToken);
+            SingleCoreAsync(source, null, cancellationToken);
     }
 
     /// <summary>Shared body for the <c>SingleAsync</c> overloads; subscribes the shared observer and unwraps the result.</summary>

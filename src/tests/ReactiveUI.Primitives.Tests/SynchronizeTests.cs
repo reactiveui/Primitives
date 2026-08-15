@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Signals;
 
@@ -57,11 +58,13 @@ public class SynchronizeTests
     }
 
     /// <summary>The operator validates its source argument.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void SynchronizeOnNullSourceThrows() =>
         Assert.Throws<ArgumentNullException>(static () => ((IObservable<int>)null!).Synchronize());
 
     /// <summary>The shared-gate operator validates its gate argument.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void SynchronizeOnNullGateThrows() =>
         Assert.Throws<ArgumentNullException>(static () => new ImmediateSource<int>(1).Synchronize(null!));
@@ -232,10 +235,12 @@ public class SynchronizeTests
 
         /// <inheritdoc/>
         /// <param name = "error">The error to record.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnError(Exception error) => Errors.Add(error);
 
         /// <inheritdoc/>
         /// <param name = "value">The value to record.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnNext(T value) => Values.Add(value);
     }
 

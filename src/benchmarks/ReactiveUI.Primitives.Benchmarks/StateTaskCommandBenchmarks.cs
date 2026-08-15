@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Concurrency;
+using System.Runtime.CompilerServices;
 using BenchmarkDotNet.Attributes;
 using R3;
 using ReactiveUI.Primitives.Concurrency;
@@ -150,6 +151,7 @@ public class StateTaskCommandBenchmarks
 
     /// <summary>Benchmarks command-like execution using System.Reactive async factory semantics.</summary>
     /// <returns>The command result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public Task<int> SystemReactiveCommandExecuteAsync() =>
         System.Reactive.Linq.Observable.Start(static () => Value, ImmediateScheduler.Instance).FirstAsync().ToTask();

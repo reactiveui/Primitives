@@ -11,11 +11,13 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <summary>Concrete signal for concurrent observable <c>SelectMany</c>.</summary>
 /// <typeparam name="TSource">The source value type.</typeparam>
 /// <typeparam name="TResult">The result value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Source = {Source}, Selector = {Selector}, Inner = {Inner}")]
 public sealed class SelectManySignal<TSource, TResult> : IObservable<TResult>
 {
     /// <summary>Initializes a new instance of the <see cref="SelectManySignal{TSource, TResult}"/> class.</summary>
     /// <param name="source">The source observable.</param>
     /// <param name="selector">The selector that creates an inner observable for each source value.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="selector"/> is <see langword="null"/>.</exception>
     public SelectManySignal(IObservable<TSource> source, Func<TSource, IObservable<TResult>> selector)
     {
         Source = source ?? throw new ArgumentNullException(nameof(source));
@@ -25,6 +27,7 @@ public sealed class SelectManySignal<TSource, TResult> : IObservable<TResult>
     /// <summary>Initializes a new instance of the <see cref="SelectManySignal{TSource, TResult}"/> class.</summary>
     /// <param name="source">The source observable.</param>
     /// <param name="inner">The inner observable used for each source value.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="inner"/> is <see langword="null"/>.</exception>
     public SelectManySignal(IObservable<TSource> source, IObservable<TResult> inner)
     {
         Source = source ?? throw new ArgumentNullException(nameof(source));

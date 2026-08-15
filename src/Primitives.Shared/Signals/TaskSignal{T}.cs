@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Signals;
 #else
@@ -54,9 +56,10 @@ internal sealed class TaskSignal<T> : ITaskSignal<T>
 
     /// <summary>Gets the operation canceled.</summary>
     /// <param name="observer">The observer.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void GetOperationCanceled(IObserver<Exception> observer) =>
         CancellationTokenSource?.Token
-            .Register(static o => ((IObserver<Exception>)o!).OnNext(new OperationCanceledException()), observer)
+            .UnsafeRegister(static o => ((IObserver<Exception>)o!).OnNext(new OperationCanceledException()), observer)
             .DisposeWith(_cleanUp);
 
     /// <summary>Subscribes the specified observer.</summary>
@@ -72,6 +75,7 @@ internal sealed class TaskSignal<T> : ITaskSignal<T>
     }
 
     /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose() => Dispose(true);
 
     /// <summary>Creates a task-backed signal whose source the supplied factory builds.</summary>

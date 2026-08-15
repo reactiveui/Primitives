@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Concurrency;
 using AsyncObs = ReactiveUI.Primitives.Async.SignalAsync;
@@ -543,6 +544,7 @@ public sealed class AsyncPrimitiveContractTests
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Schedule(IWorkItem item, long dueTimestamp) => Schedule(item);
 
         /// <summary>Executes all queued work items.</summary>

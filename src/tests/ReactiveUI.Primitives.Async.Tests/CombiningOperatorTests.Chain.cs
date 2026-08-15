@@ -41,7 +41,7 @@ public partial class CombiningOperatorTests
         const int ItemsPerRange = 2;
         var sources = new[]
         {
-            SignalAsync.Range(SampleValue1, ItemsPerRange), SignalAsync.Range(SampleValue3, ItemsPerRange)
+            SignalAsync.Range(SampleValue1, ItemsPerRange), SignalAsync.Range(SampleValue3, ItemsPerRange),
         }.ToAsyncSignal();
         var result = await sources.Concat().ToListAsync();
         await Assert.That(result).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3, SampleValue4]);
@@ -491,7 +491,7 @@ public partial class CombiningOperatorTests
         const int ItemsPerRange = 2;
         var source = new[]
         {
-            SignalAsync.Range(SampleValue1, ItemsPerRange), SignalAsync.Range(SampleValue3, ItemsPerRange)
+            SignalAsync.Range(SampleValue1, ItemsPerRange), SignalAsync.Range(SampleValue3, ItemsPerRange),
         }.ToAsyncSignal();
         var result = await source.Concat().ToListAsync();
         await Assert.That(result).IsCollectionEqualTo([SampleValue1, SampleValue2, SampleValue3, SampleValue4]);

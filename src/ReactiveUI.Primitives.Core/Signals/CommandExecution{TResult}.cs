@@ -9,6 +9,7 @@ namespace ReactiveUI.Primitives.Signals;
 
 /// <summary>Awaitable command execution result that avoids allocating a completed task for synchronous commands.</summary>
 /// <typeparam name="TResult">The command result type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Task = {_task}, Result = {_result}, Exception = {_exception}")]
 public readonly record struct CommandExecution<TResult>
 {
     /// <summary>Asynchronous execution task, when execution did not complete synchronously.</summary>
@@ -35,6 +36,7 @@ public readonly record struct CommandExecution<TResult>
 
     /// <summary>Initializes a new instance of the <see cref="CommandExecution{TResult}"/> struct.</summary>
     /// <param name="task">Asynchronous execution task.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="task"/> is <see langword="null"/>.</exception>
     public CommandExecution(Task<TResult> task)
     {
         _task = task ?? throw new ArgumentNullException(nameof(task));
@@ -45,6 +47,7 @@ public readonly record struct CommandExecution<TResult>
 
     /// <summary>Initializes a new instance of the <see cref="CommandExecution{TResult}"/> struct.</summary>
     /// <param name="exception">Synchronous exception.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="exception"/> is <see langword="null"/>.</exception>
     public CommandExecution(Exception exception)
     {
         _task = null;
@@ -77,6 +80,7 @@ public readonly record struct CommandExecution<TResult>
     public Awaiter GetAwaiter() => new(_task, _result, _exception, _continueOnCapturedContext);
 
     /// <summary>Awaiter for command execution.</summary>
+    [System.Diagnostics.DebuggerDisplay("IsCompleted = {IsCompleted}, Result = {_result}, Exception = {_exception}")]
     public readonly record struct Awaiter : ICriticalNotifyCompletion
     {
         /// <summary>Asynchronous execution task.</summary>
@@ -130,10 +134,12 @@ public readonly record struct CommandExecution<TResult>
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnCompleted(Action continuation) =>
             _task!.ConfigureAwait(_continueOnCapturedContext).GetAwaiter().OnCompleted(continuation);
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void UnsafeOnCompleted(Action continuation) =>
             _task!.ConfigureAwait(_continueOnCapturedContext).GetAwaiter().UnsafeOnCompleted(continuation);
     }

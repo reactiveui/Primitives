@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Tests;
@@ -20,6 +21,7 @@ internal static class MinimalVirtualClock
 
     /// <summary>Creates a tick-based virtual sequencer ordered by the default comparer.</summary>
     /// <returns>The virtual sequencer.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static VirtualTimeSequencer<long, long> Create() => Create(Comparer<long>.Default);
 
     /// <summary>Creates a tick-based virtual sequencer ordered by the supplied comparer.</summary>

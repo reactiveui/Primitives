@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Delegate-backed observer for fused prepend/append inline subscriptions.</summary>
@@ -10,6 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <param name="onError">The error callback.</param>
 /// <param name="onCompleted">The completion callback.</param>
 /// <param name="value">The appended value.</param>
+[System.Diagnostics.DebuggerDisplay("Value = {_value}, Subscription = {_subscription}")]
 public sealed class AppendDelegateWitness<T>(Action<T> onNext, Action<Exception> onError, Action onCompleted, T value) : IObserver<T>, IDisposable
 {
     /// <summary>The next callback.</summary>
@@ -70,8 +73,10 @@ public sealed class AppendDelegateWitness<T>(Action<T> onNext, Action<Exception>
 
     /// <summary>Assigns the upstream subscription, disposing it if one is already held.</summary>
     /// <param name="subscription">The upstream subscription.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetSubscription(IDisposable subscription) => SinkSubscription.Set(ref _subscription, subscription);
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose() => SinkSubscription.Dispose(ref _subscription);
 }

@@ -4,6 +4,7 @@
 
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Concurrency;
@@ -178,6 +179,7 @@ public sealed class CurrentThreadSequencer : ISequencer
 
     /// <summary>Gets the queued recursive work for the current thread.</summary>
     /// <returns>The current thread queue, if one exists.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static SequencerQueue<long>? GetQueue() => _threadLocalQueue;
 
     /// <summary>Sets the queued recursive work for the current thread.</summary>
@@ -198,18 +200,20 @@ public sealed class CurrentThreadSequencer : ISequencer
             while (queue.Count > 0)
             {
                 var item = queue.Dequeue();
+                if (item.IsDisposed)
+                {
+                    continue;
+                }
+
+                var wait = Sequencer.TimeUntil(item.DueTime);
+                if (wait > TimeSpan.Zero)
+                {
+                    Thread.Sleep(wait);
+                }
+
                 if (!item.IsDisposed)
                 {
-                    var wait = Sequencer.TimeUntil(item.DueTime);
-                    if (wait > TimeSpan.Zero)
-                    {
-                        Thread.Sleep(wait);
-                    }
-
-                    if (!item.IsDisposed)
-                    {
-                        item.Invoke();
-                    }
+                    item.Invoke();
                 }
             }
         }
@@ -232,6 +236,7 @@ public sealed class CurrentThreadSequencer : ISequencer
         public bool IsDisposed => Volatile.Read(ref _isDisposed) != 0;
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose() => Interlocked.Exchange(ref _isDisposed, 1);
 
         /// <inheritdoc/>

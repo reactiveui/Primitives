@@ -4,6 +4,7 @@
 
 using System.Collections.Immutable;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -97,13 +98,13 @@ public sealed class EventGenerator : IIncrementalGenerator
     private enum Provider
     {
         /// <summary>ReactiveUI.Primitives lean implementation.</summary>
-        Lean,
+        Lean = 0,
 
         /// <summary>ReactiveUI.Primitives.Reactive implementation.</summary>
-        Reactive,
+        Reactive = 1,
 
         /// <summary>Standalone System.Reactive implementation.</summary>
-        SystemReactive,
+        SystemReactive = 2,
     }
 
     /// <inheritdoc />
@@ -261,11 +262,13 @@ public sealed class EventGenerator : IIncrementalGenerator
             }
 
             target = target.OriginalDefinition;
-            if (seen.Add(target))
+            if (!seen.Add(target))
             {
-                var location = attribute.ApplicationSyntaxReference!.GetSyntax().GetLocation();
-                result.Add(new(target, location));
+                continue;
             }
+
+            var location = attribute.ApplicationSyntaxReference!.GetSyntax().GetLocation();
+            result.Add(new(target, location));
         }
 
         return result;
@@ -979,6 +982,7 @@ public sealed class EventGenerator : IIncrementalGenerator
     /// <summary>Escapes text inserted into generated XML documentation.</summary>
     /// <param name="value">The documentation text.</param>
     /// <returns>The XML-escaped text.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static string EscapeXml(string value) => value.Replace("&", "&amp;").Replace("<", "&lt;")
         .Replace(">", "&gt;").Replace("\"", "&quot;").Replace("'", "&apos;");
 

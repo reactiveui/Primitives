@@ -10,6 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Combines each left range value with the final value from the right range.</summary>
 /// <typeparam name="TResult">The result value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Left = {Left}, Right = {Right}")]
 public sealed class RangeWithLatestSignal<TResult> : IObservable<TResult>
 {
     /// <summary>Initializes a new instance of the <see cref="RangeWithLatestSignal{TResult}"/> class.</summary>

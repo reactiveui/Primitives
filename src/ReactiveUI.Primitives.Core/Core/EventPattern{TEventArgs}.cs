@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Core;
 
 /// <summary>Represents a .NET event notification as a value.</summary>
@@ -13,6 +15,7 @@ public readonly struct EventPattern<TEventArgs> : IEquatable<EventPattern<TEvent
     /// <summary>Initializes a new instance of the <see cref="EventPattern{TEventArgs}"/> struct.</summary>
     /// <param name="sender">The event sender.</param>
     /// <param name="eventArgs">The event arguments.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="eventArgs"/> is <see langword="null"/>.</exception>
     public EventPattern(object? sender, TEventArgs eventArgs)
     {
         Sender = sender;
@@ -34,6 +37,7 @@ public readonly struct EventPattern<TEventArgs> : IEquatable<EventPattern<TEvent
     /// <param name="left">The first value.</param>
     /// <param name="right">The second value.</param>
     /// <returns><see langword="true"/> when the values are equal; otherwise, <see langword="false"/>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool operator ==(EventPattern<TEventArgs> left, EventPattern<TEventArgs> right) => left.Equals(right);
 
     /// <summary>Compares two event pattern values for inequality.</summary>

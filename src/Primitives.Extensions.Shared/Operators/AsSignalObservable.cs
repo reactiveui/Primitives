@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 #else
@@ -31,12 +33,15 @@ internal sealed class AsSignalObservable<T>(IObservable<T> source) : IObservable
     private sealed class AsSignalWitness(IObserver<RxVoid> downstream) : IObserver<T>
     {
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnNext(T value) => downstream.OnNext(RxVoid.Default);
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnError(Exception error) => downstream.OnError(error);
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnCompleted() => downstream.OnCompleted();
     }
 }

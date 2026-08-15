@@ -81,6 +81,7 @@ public partial class SignalFactoriesTests
     /// <param name="taskFactory">The task factory.</param>
     /// <param name="expectedExceptionType">The expected exception type.</param>
     /// <returns>The captured exception.</returns>
+    /// <exception cref="InvalidOperationException"><paramref name="taskFactory"/> did not fault with <paramref name="expectedExceptionType"/>.</exception>
     private static async Task<Exception> AssertTaskFault(Func<Task> taskFactory, Type expectedExceptionType)
     {
         try

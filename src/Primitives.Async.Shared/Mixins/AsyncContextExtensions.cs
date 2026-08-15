@@ -12,32 +12,32 @@ namespace ReactiveUI.Primitives.Async;
 public static class AsyncContextExtensions
 {
     /// <summary>Current-context comparison operators for an <see cref="AsyncContext"/> instance.</summary>
-    /// <param name="this">The <see cref="AsyncContext"/> instance to compare with the current context.</param>
-    extension(AsyncContext @this)
+    /// <param name="context">The <see cref="AsyncContext"/> instance to compare with the current context.</param>
+    extension(AsyncContext context)
     {
         /// <summary>Determines whether the specified <see cref="AsyncContext"/> represents the current asynchronous context.</summary>
+        /// <returns><see langword="true"/> if the specified <see cref="AsyncContext"/> matches the current <see
+        /// cref="SynchronizationContext"/> or <see cref="TaskScheduler"/>; otherwise, <see langword="false"/>.</returns>
         /// <remarks>This method compares the <see cref="SynchronizationContext"/>, <see cref="TaskScheduler"/>, or sequencer adapter
         /// of the provided <see cref="AsyncContext"/> with the current context to determine equivalence. Use this method to
         /// check if code is executing within the intended asynchronous environment.</remarks>
-        /// <returns><see langword="true"/> if the specified <see cref="AsyncContext"/> matches the current <see
-        /// cref="SynchronizationContext"/> or <see cref="TaskScheduler"/>; otherwise, <see langword="false"/>.</returns>
         public bool IsSameAsCurrentAsyncContext()
         {
-            ArgumentExceptionHelper.ThrowIfNull(@this);
+            ArgumentExceptionHelper.ThrowIfNull(context);
 
-            if (@this.SynchronizationContext is not null)
+            if (context.SynchronizationContext is not null)
             {
-                return @this.SynchronizationContext == SynchronizationContext.Current;
+                return context.SynchronizationContext == SynchronizationContext.Current;
             }
 
-            if (@this.Sequencer is not null)
+            if (context.Sequencer is not null)
             {
                 return TaskScheduler.Current is AsyncContext.SequencerTaskScheduler adapter
-                       && ReferenceEquals(adapter.Sequencer, @this.Sequencer);
+                       && ReferenceEquals(adapter.Sequencer, context.Sequencer);
             }
 
-            return @this.TaskScheduler is not null
-                ? @this.TaskScheduler == TaskScheduler.Current
+            return context.TaskScheduler is not null
+                ? context.TaskScheduler == TaskScheduler.Current
                 : TaskScheduler.Current == TaskScheduler.Default;
         }
     }

@@ -2,12 +2,15 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Observer for default-if-empty.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
 /// <param name="observer">The downstream observer.</param>
 /// <param name="defaultValue">Value emitted for an empty source.</param>
+[System.Diagnostics.DebuggerDisplay("Seen = {_seen}, DefaultValue = {_defaultValue}")]
 public sealed class DefaultIfEmptyWitness<T>(IObserver<T> observer, T defaultValue) : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>
@@ -38,6 +41,7 @@ public sealed class DefaultIfEmptyWitness<T>(IObserver<T> observer, T defaultVal
     }
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnError(Exception error) => SinkTerminal.Fault(_observer, error, this);
 
     /// <inheritdoc/>
@@ -60,8 +64,10 @@ public sealed class DefaultIfEmptyWitness<T>(IObserver<T> observer, T defaultVal
 
     /// <summary>Assigns the upstream subscription, disposing it if one is already held.</summary>
     /// <param name="subscription">The upstream subscription.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetSubscription(IDisposable subscription) => SinkSubscription.Set(ref _subscription, subscription);
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose() => SinkSubscription.Dispose(ref _subscription);
 }

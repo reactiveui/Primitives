@@ -6,6 +6,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>Observer for a single retry attempt.</summary>
 /// <typeparam name="T">The element type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Subscription = {Subscription}")]
 public sealed class ReattemptWitness<T> : WitnessAsync<T>
 {
     /// <summary>Initializes a new instance of the <see cref="ReattemptWitness{T}"/> class.</summary>

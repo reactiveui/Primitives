@@ -9,6 +9,7 @@ namespace ReactiveUI.Primitives.Reactive.Concurrency;
 
 /// <summary>Avalonia UI-thread scheduler that coalesces scheduled work onto a dispatcher drain.</summary>
 /// <seealso cref="System.Reactive.Concurrency.IScheduler" />
+[System.Diagnostics.DebuggerDisplay("Dispatcher = {Dispatcher}, Priority = {Priority}")]
 public sealed class AvaloniaScheduler : CoalescingDispatchScheduler
 {
     /// <summary>Gets the shared scheduler for <see cref="Dispatcher.UIThread"/>.</summary>

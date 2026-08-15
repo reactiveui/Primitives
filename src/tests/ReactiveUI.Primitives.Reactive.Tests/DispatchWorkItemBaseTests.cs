@@ -4,6 +4,7 @@
 
 using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Reactive.Concurrency;
 
 namespace ReactiveUI.Primitives.Reactive.Tests;
@@ -47,6 +48,7 @@ public sealed class DispatchWorkItemBaseTests
     {
         /// <summary>Claims the single cancellation transition, as a concurrent dispose would.</summary>
         /// <returns><see langword="true"/> for the first caller.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool ClaimCancellation() => TryClaimDispose();
     }
 }

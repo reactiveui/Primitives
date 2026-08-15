@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async;
 
@@ -17,75 +18,79 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Observable-conversion operators for an asynchronous enumerable source.</summary>
-    /// <param name="this">The asynchronous enumerable sequence to convert. Cannot be null.</param>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-    extension<T>(IAsyncEnumerable<T> @this)
+    /// <param name="source">The asynchronous enumerable sequence to convert. Cannot be null.</param>
+    extension<T>(IAsyncEnumerable<T> source)
     {
         /// <summary>Converts an asynchronous enumerable sequence to an asynchronous observable sequence.</summary>
+        /// <returns>An asynchronous observable sequence that emits the elements of the source sequence.</returns>
         /// <remarks>The returned observable emits each element from the source sequence as it is produced and
         /// signals completion when the source sequence ends. Cancellation is supported via the observer's cancellation
         /// token.</remarks>
-        /// <returns>An asynchronous observable sequence that emits the elements of the source sequence.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [SuppressMessage(
             "Roslynator",
             "RCS1047:Non-asynchronous method name should not end with \'Async\'",
             Justification = "This is an existing method")]
-        public IObservableAsync<T> ToAsyncSignal() => new AsyncEnumerableSignal<T>(@this);
+        public IObservableAsync<T> ToAsyncSignal() => new AsyncEnumerableSignal<T>(source);
     }
 
     /// <summary>Observable-conversion operators for an enumerable source.</summary>
-    /// <param name="this">The enumerable sequence to convert to an asynchronous observable. Cannot be null.</param>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-    extension<T>(IEnumerable<T> @this)
+    /// <param name="source">The enumerable sequence to convert to an asynchronous observable. Cannot be null.</param>
+    extension<T>(IEnumerable<T> source)
     {
         /// <summary>
         /// Converts the specified enumerable sequence to an asynchronous observable sequence, emitting each element in the
         /// background.
         /// </summary>
-        /// <remarks>The returned observable emits items on a background thread. Cancellation is supported via the
-        /// observer's cancellation token. If the source sequence is empty, the observable completes immediately.</remarks>
         /// <returns>An asynchronous observable sequence that emits each element from the source enumerable and completes when all
         /// elements have been emitted.</returns>
+        /// <remarks>The returned observable emits items on a background thread. Cancellation is supported via the
+        /// observer's cancellation token. If the source sequence is empty, the observable completes immediately.</remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [SuppressMessage(
             "Roslynator",
             "RCS1047:Non-asynchronous method name should not end with \'Async\'",
             Justification = "This is an existing method")]
-        public IObservableAsync<T> ToAsyncSignal() => new EnumerableSignal<T>(@this);
+        public IObservableAsync<T> ToAsyncSignal() => new EnumerableSignal<T>(source);
     }
 
     /// <summary>Observable-conversion operators for an asynchronous observable source.</summary>
-    /// <param name="this">The source sequence.</param>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-    extension<T>(IObservableAsync<T> @this)
+    /// <param name="source">The source sequence.</param>
+    extension<T>(IObservableAsync<T> source)
     {
         /// <summary>Returns an async observable as an async signal.</summary>
         /// <returns>An observable sequence validated.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
         [SuppressMessage(
             "Roslynator",
             "RCS1047:Non-asynchronous method name should not end with \'Async\'",
             Justification = "This is an existing method")]
         public IObservableAsync<T> ToAsyncSignal() =>
-            @this ?? throw new ArgumentNullException(nameof(@this));
+            source ?? throw new ArgumentNullException(nameof(source));
     }
 
     /// <summary>Observable-conversion operators for a task that produces a single value.</summary>
-    /// <param name="this">The task to convert to an asynchronous observable sequence. Cannot be null.</param>
     /// <typeparam name="T">The type of the value produced by the task and emitted by the observable sequence.</typeparam>
-    extension<T>(Task<T> @this)
+    /// <param name="task">The task to convert to an asynchronous observable sequence. Cannot be null.</param>
+    extension<T>(Task<T> task)
     {
         /// <summary>
         /// Converts a task representing a single asynchronous value into an observable sequence that emits the result when
         /// the task completes.
         /// </summary>
+        /// <returns>An asynchronous observable sequence that emits the result of the task when it completes, followed by a
+        /// completion notification.</returns>
         /// <remarks>The returned observable will emit the task's result and then complete. If the task is
         /// canceled or fails, the observable will propagate the corresponding error. The task is awaited in the background,
         /// and cancellation is supported via the observable's subscription.</remarks>
-        /// <returns>An asynchronous observable sequence that emits the result of the task when it completes, followed by a
-        /// completion notification.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [SuppressMessage(
             "Roslynator",
             "RCS1047:Non-asynchronous method name should not end with \'Async\'",
             Justification = "This is an existing method")]
-        public IObservableAsync<T> ToAsyncSignal() => new TaskResultSignal<T>(@this);
+        public IObservableAsync<T> ToAsyncSignal() => new TaskResultSignal<T>(task);
     }
 }

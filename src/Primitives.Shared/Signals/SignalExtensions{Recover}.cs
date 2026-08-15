@@ -12,8 +12,8 @@ namespace ReactiveUI.Primitives.Signals;
 public static partial class SignalExtensions
 {
     /// <summary>Error-handling operators for a sequence of observable source sequences.</summary>
-    /// <param name="sources">Observable sequences to catch exceptions for.</param>
     /// <typeparam name="TSource">The value type.</typeparam>
+    /// <param name="sources">Observable sequences to catch exceptions for.</param>
     extension<TSource>(IEnumerable<IObservable<TSource>> sources)
     {
         /// <summary>Continues an observable sequence that is terminated by an exception with the next observable sequence.</summary>
@@ -28,8 +28,8 @@ public static partial class SignalExtensions
     }
 
     /// <summary>Error-handling and cleanup operators for an observable source sequence.</summary>
-    /// <param name="source">Source sequence to recover or clean up.</param>
     /// <typeparam name="TSource">The value type.</typeparam>
+    /// <param name="source">Source sequence to recover or clean up.</param>
     extension<TSource>(IObservable<TSource> source)
     {
         /// <summary>

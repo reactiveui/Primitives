@@ -1,0 +1,44 @@
+namespace ReactiveUI.Primitives.Blazor.Components
+{
+    [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+    public class ReactiveComponentBase : Microsoft.AspNetCore.Components.ComponentBase, System.IDisposable
+    {
+        protected ReactiveComponentBase() { }
+        protected bool IsDisposed { get; }
+        protected ReactiveUI.Primitives.Concurrency.ISequencer RendererSequencer { get; }
+        public void Dispose() { }
+        protected virtual void Dispose(bool disposing) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        protected System.Threading.Tasks.Task InvalidateAsync() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        protected System.IDisposable Observe<T>(System.IObservable<T> source, System.Action<T> onNext) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        protected System.IDisposable Observe<T>(System.IObservable<T> source, System.Action<T> onNext, System.Action<System.Exception>? onError, System.Action? onCompleted) { }
+        protected System.IDisposable Observe<T>(System.IObservable<T> source, System.Action<T> onNext, System.Action<System.Exception>? onError, System.Action? onCompleted, bool refreshAfterCallbacks) { }
+        protected virtual void OnObservedError(System.Exception error) { }
+        protected System.IDisposable Track(System.IDisposable subscription) { }
+    }
+}
+namespace ReactiveUI.Primitives.Blazor.Concurrency
+{
+    [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+    public sealed class BlazorRendererSequencer : ReactiveUI.Primitives.Concurrency.ISequencer
+    {
+        public BlazorRendererSequencer(Microsoft.AspNetCore.Components.Dispatcher dispatcher) { }
+        public BlazorRendererSequencer(System.Func<System.Action, System.Threading.Tasks.Task> invokeAsync) { }
+        public System.DateTimeOffset Now { get; }
+        public long Timestamp { get; }
+        public System.Action<System.Exception>? UnhandledExceptionHandler { get; set; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item, long dueTimestamp) { }
+    }
+    public static class BlazorRendererSequencerExtensions
+    {
+        extension(Microsoft.AspNetCore.Components.Dispatcher dispatcher)
+        {
+            public ReactiveUI.Primitives.Blazor.Concurrency.BlazorRendererSequencer ToSequencer() { }
+        }
+    }
+}

@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Advanced;
@@ -13,6 +14,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <param name="condition">Loop condition.</param>
 /// <param name="iterate">State iterator.</param>
 /// <param name="resultSelector">Result selector.</param>
+[System.Diagnostics.DebuggerDisplay("InitialState = {_initialState}, Condition = {_condition}")]
 public sealed class UnfoldSignal<TState, TResult>(
     TState initialState,
     Func<TState, bool> condition,
@@ -32,6 +34,7 @@ public sealed class UnfoldSignal<TState, TResult>(
     private readonly Func<TState, TResult> _resultSelector = resultSelector;
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() => false;
 
     /// <inheritdoc/>

@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Signals;
 #else
@@ -15,6 +17,7 @@ public static partial class Signal
     /// <typeparam name="TSource">The TSource type.</typeparam>
     /// <param name="source">The source value.</param>
     /// <returns>The result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IAwaitSignal<TSource> RunAsync<TSource>(IObservable<TSource> source) =>
         RunAsync(source, CancellationToken.None);
 
@@ -50,6 +53,7 @@ public static partial class Signal
     /// <typeparam name="TSource">The source value type.</typeparam>
     /// <param name="source">The source sequence.</param>
     /// <returns>A task that completes with the final source value.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task<TSource> ToTask<TSource>(IObservable<TSource> source) =>
         ToTask(source, CancellationToken.None);
 
@@ -118,7 +122,7 @@ public static partial class Signal
         IDisposable subscription,
         CancellationToken token)
     {
-        var ctr = token.Register(
+        var ctr = token.UnsafeRegister(
             static state =>
             {
                 var (subscription, subject, token) = ((IDisposable, IAwaitSignal<T>, CancellationToken))state!;

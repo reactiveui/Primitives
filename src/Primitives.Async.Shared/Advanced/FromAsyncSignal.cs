@@ -9,6 +9,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 #endif
 
 /// <summary>Invokes a task-like operation for each subscription and emits <see cref="RxVoid.Default"/> after it completes.</summary>
+[System.Diagnostics.DebuggerDisplay("Factory = {Factory}")]
 public sealed class FromAsyncSignal : IObservableAsync<RxVoid>
 {
     /// <summary>Initializes a new instance of the <see cref="FromAsyncSignal"/> class.</summary>

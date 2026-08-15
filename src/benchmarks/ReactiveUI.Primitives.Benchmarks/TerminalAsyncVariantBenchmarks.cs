@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using BenchmarkDotNet.Attributes;
 using ReactiveUI.Primitives.Signals;
 using RxObservable = System.Reactive.Linq.Observable;
@@ -42,18 +43,21 @@ public class TerminalAsyncVariantBenchmarks
 
     /// <summary>Benchmarks the first-or-default async terminal.</summary>
     /// <returns>The first value or default.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public Task<int> PrimitivesFirstOrDefaultAsync() =>
         Signal.Sequence(Start, Count).FirstOrDefaultAsync();
 
     /// <summary>Benchmarks the first-or-default async terminal using System.Reactive.</summary>
     /// <returns>The first value or default.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public Task<int> SystemReactiveFirstOrDefaultAsync() =>
         RxObservable.Range(Start, Count).FirstOrDefaultAsync().ToTask();
 
     /// <summary>Benchmarks the first-or-default async terminal using R3.</summary>
     /// <returns>The first value or default.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public Task<int> R3FirstOrDefaultAsync() =>
         R3.ObservableExtensions.FirstOrDefaultAsync(
@@ -62,18 +66,21 @@ public class TerminalAsyncVariantBenchmarks
 
     /// <summary>Benchmarks the last-or-default async terminal.</summary>
     /// <returns>The last value or default.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public Task<int> PrimitivesLastOrDefaultAsync() =>
         Signal.Sequence(Start, Count).LastOrDefaultAsync();
 
     /// <summary>Benchmarks the last-or-default async terminal using System.Reactive.</summary>
     /// <returns>The last value or default.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public Task<int> SystemReactiveLastOrDefaultAsync() =>
         RxObservable.Range(Start, Count).LastOrDefaultAsync().ToTask();
 
     /// <summary>Benchmarks the last-or-default async terminal using R3.</summary>
     /// <returns>The last value or default.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public Task<int> R3LastOrDefaultAsync() =>
         R3.ObservableExtensions.LastOrDefaultAsync(

@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Linq;
+using System.Runtime.CompilerServices;
 using BenchmarkDotNet.Attributes;
 using ReactiveUI.Primitives.Signals;
 using RxObservable = System.Reactive.Linq.Observable;
@@ -16,6 +17,7 @@ namespace ReactiveUI.Primitives.Benchmarks;
 /// covering the live-token pass-through cost, the task-shim wrapper, and the cancel path.
 /// </summary>
 [MemoryDiagnoser]
+[System.Diagnostics.DebuggerDisplay("Canceled = {_liveSource.IsCancellationRequested}")]
 public class TerminalCancellationBenchmarks : IDisposable
 {
     /// <summary>The inclusive start value of the range used by each benchmark.</summary>
@@ -32,6 +34,7 @@ public class TerminalCancellationBenchmarks : IDisposable
     public void Setup() => _liveSource = new();
 
     /// <summary>Disposes the live cancellation source.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [GlobalCleanup]
     public void Cleanup() => Dispose();
 
@@ -44,12 +47,14 @@ public class TerminalCancellationBenchmarks : IDisposable
 
     /// <summary>Benchmarks awaiting the first value of a synchronous pipeline with a live token.</summary>
     /// <returns>The first value.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark(Baseline = true)]
     public Task<int> PrimitivesFirstAsyncWithToken() =>
         Signal.Sequence(Start, Count).Map(static x => x).FirstAsync(_liveSource.Token);
 
     /// <summary>Benchmarks awaiting the first value with a live token using System.Reactive.</summary>
     /// <returns>The first value.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public Task<int> SystemReactiveFirstAsyncWithToken() =>
         RxTask.ToTask(
@@ -58,6 +63,7 @@ public class TerminalCancellationBenchmarks : IDisposable
 
     /// <summary>Benchmarks awaiting the first value with a live token using R3.</summary>
     /// <returns>The first value.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public Task<int> R3FirstAsyncWithToken() =>
         R3.ObservableExtensions.FirstAsync(
@@ -68,24 +74,28 @@ public class TerminalCancellationBenchmarks : IDisposable
 
     /// <summary>Benchmarks the task-shim ToTask overload that wraps a token around an existing task.</summary>
     /// <returns>The first value.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public Task<int> PrimitivesTaskToTaskWithToken() =>
         Signal.Sequence(Start, Count).Map(static x => x).FirstAsync(CancellationToken.None).ToTask(_liveSource.Token);
 
     /// <summary>Benchmarks awaiting the last-or-default value with a live token.</summary>
     /// <returns>The last value or default.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public Task<int> PrimitivesLastOrDefaultAsyncWithToken() =>
         Signal.Sequence(Start, Count).LastOrDefaultAsync(_liveSource.Token);
 
     /// <summary>Benchmarks awaiting the last-or-default value with a live token using System.Reactive.</summary>
     /// <returns>The last value or default.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public Task<int> SystemReactiveLastOrDefaultAsyncWithToken() =>
         RxTask.ToTask(RxObservable.LastOrDefaultAsync(RxObservable.Range(Start, Count)), _liveSource.Token);
 
     /// <summary>Benchmarks awaiting the last-or-default value with a live token using R3.</summary>
     /// <returns>The last value or default.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public Task<int> R3LastOrDefaultAsyncWithToken() =>
         R3.ObservableExtensions.LastOrDefaultAsync(

@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
 /// <summary>Emits the latest value from the source sequence or a default value if no value has been emitted.</summary>
@@ -55,9 +57,11 @@ public sealed class LatestOrDefaultObservable<T>(
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnError(Exception error) => downstream.OnError(error);
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnCompleted() => downstream.OnCompleted();
     }
 }

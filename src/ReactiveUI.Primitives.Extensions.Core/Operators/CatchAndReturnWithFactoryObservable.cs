@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
 /// <summary>
@@ -38,6 +40,7 @@ public sealed class CatchAndReturnWithFactoryObservable<T, TException>(
         Func<TException, T> fallbackFactory) : IObserver<T>
     {
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnNext(T value) => downstream.OnNext(value);
 
         /// <inheritdoc/>
@@ -65,6 +68,7 @@ public sealed class CatchAndReturnWithFactoryObservable<T, TException>(
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnCompleted() => downstream.OnCompleted();
     }
 }

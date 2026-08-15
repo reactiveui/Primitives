@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides factory methods for creating and composing asynchronous observable sequences.</summary>
@@ -23,6 +25,7 @@ public static partial class SignalAsync
     /// signal sequence that uses the resource.</param>
     /// <returns>An observable that uses the specified resource and ensures the resource is disposed
     /// asynchronously when the sequence completes or an error occurs.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservableAsync<T> Use<TResource, T>(
         Func<CancellationToken, ValueTask<TResource>> resourceFactory,
         Func<TResource, IObservableAsync<T>> signalFactory)
@@ -45,6 +48,7 @@ public static partial class SignalAsync
     /// the resource is disposed before the exception is propagated. This method is useful for managing resources that
     /// must be disposed when no longer needed, such as streams or database connections, in conjunction with
     /// asynchronous observable sequences.</remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2318:Members should not have identical bodies",

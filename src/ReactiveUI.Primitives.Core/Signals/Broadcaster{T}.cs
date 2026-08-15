@@ -9,6 +9,7 @@ namespace ReactiveUI.Primitives.Signals;
 
 /// <summary>Copy-on-write observer broadcaster optimized for zero-allocation single-subscriber delivery.</summary>
 /// <typeparam name="T">The value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Observers = {_observers}")]
 public struct Broadcaster<T> : IEquatable<Broadcaster<T>>
 {
     /// <summary>The starting value the observer hashes are folded into.</summary>
@@ -27,6 +28,7 @@ public struct Broadcaster<T> : IEquatable<Broadcaster<T>>
     /// <param name="left">The left broadcaster.</param>
     /// <param name="right">The right broadcaster.</param>
     /// <returns><see langword="true"/> when both reference the same observer set; otherwise, <see langword="false"/>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool operator ==(Broadcaster<T> left, Broadcaster<T> right) => left.Equals(right);
 
     /// <summary>Determines whether two broadcasters reference different observer sets.</summary>
@@ -74,6 +76,7 @@ public struct Broadcaster<T> : IEquatable<Broadcaster<T>>
     }
 
     /// <summary>Removes all observers from the broadcaster.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Clear() => Volatile.Write(ref _observers, null);
 
     /// <summary>Removes an observer from the broadcaster using a lock-free compare-and-swap.</summary>
@@ -161,6 +164,7 @@ public struct Broadcaster<T> : IEquatable<Broadcaster<T>>
     }
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public readonly bool Equals(Broadcaster<T> other) =>
         ReferenceEquals(_observers, other._observers);
 

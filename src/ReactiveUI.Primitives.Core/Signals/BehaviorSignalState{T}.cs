@@ -38,8 +38,8 @@ internal record struct BehaviorSignalState<T>
     /// <summary>Whether the sequence has terminated.</summary>
     private bool _isStopped;
 
-    /// <summary>Whether the signal has been disposed.</summary>
-    private bool _isDisposed;
+    /// <summary>Disposal latch; non-zero once the signal has been disposed.</summary>
+    private int _isDisposed;
 
     /// <summary>Initializes a new instance of the <see cref="BehaviorSignalState{T}"/> struct.</summary>
     /// <param name="defaultValue">The initial current value.</param>
@@ -51,10 +51,10 @@ internal record struct BehaviorSignalState<T>
     }
 
     /// <summary>Gets a value indicating whether the signal has been disposed.</summary>
-    internal readonly bool IsDisposed => _isDisposed;
+    internal readonly bool IsDisposed => _isDisposed != 0;
 
     /// <summary>Gets a value indicating whether the signal currently has observers.</summary>
-    internal bool HasObservers => _broadcaster.HasObservers && !_isStopped && !_isDisposed;
+    internal bool HasObservers => _broadcaster.HasObservers && !_isStopped && Volatile.Read(ref _isDisposed) == 0;
 
     /// <summary>Gets the current value, throwing if disposed or faulted.</summary>
     /// <returns>The current value.</returns>
@@ -73,7 +73,7 @@ internal record struct BehaviorSignalState<T>
     {
         lock (_gate)
         {
-            if (_isDisposed)
+            if (_isDisposed != 0)
             {
                 value = default;
                 return false;
@@ -203,7 +203,7 @@ internal record struct BehaviorSignalState<T>
     /// <summary>Releases the signal's observers and cached state.</summary>
     internal void Release()
     {
-        if (_isDisposed)
+        if (Interlocked.Exchange(ref _isDisposed, 1) != 0)
         {
             return;
         }
@@ -214,14 +214,13 @@ internal record struct BehaviorSignalState<T>
             _lastError = null;
             _lastValue = default;
         }
-
-        _isDisposed = true;
     }
 
     /// <summary>Throws when the signal has been disposed.</summary>
+    /// <exception cref="ObjectDisposedException">The signal has already been released.</exception>
     private readonly void ThrowIfDisposed()
     {
-        if (!_isDisposed)
+        if (_isDisposed == 0)
         {
             return;
         }

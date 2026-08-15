@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Sink that batches source values into fixed-size windows.</summary>
@@ -9,6 +11,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <param name="observer">The downstream observer.</param>
 /// <param name="count">The window size.</param>
 /// <param name="skip">The number of elements skipped between windows.</param>
+[System.Diagnostics.DebuggerDisplay("Count = {_count}, Skip = {_skip}, Index = {_index}, Done = {_done}")]
 public sealed class BufferWitness<T>(IObserver<IList<T>> observer, int count, int skip) : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>
@@ -26,8 +29,8 @@ public sealed class BufferWitness<T>(IObserver<IList<T>> observer, int count, in
     /// <summary>The window index, which doubles as the array slot while non-negative.</summary>
     private int _index;
 
-    /// <summary>A value indicating whether the sink has terminated and must ignore further notifications.</summary>
-    private bool _done;
+    /// <summary>The terminal latch; non-zero once the sink has terminated and must ignore further notifications.</summary>
+    private int _done;
 
     /// <summary>The upstream subscription.</summary>
     private IDisposable? _subscription;
@@ -35,7 +38,7 @@ public sealed class BufferWitness<T>(IObserver<IList<T>> observer, int count, in
     /// <inheritdoc/>
     public void OnNext(T value)
     {
-        if (_done)
+        if (Volatile.Read(ref _done) != 0)
         {
             return;
         }
@@ -76,18 +79,21 @@ public sealed class BufferWitness<T>(IObserver<IList<T>> observer, int count, in
     public void OnError(Exception error)
     {
         _buffer = null;
-        SinkTerminal.Fault(_observer, error, this, ref _done);
+        if (Interlocked.Exchange(ref _done, 1) != 0)
+        {
+            return;
+        }
+
+        SinkTerminal.Fault(_observer, error, this);
     }
 
     /// <inheritdoc/>
     public void OnCompleted()
     {
-        if (_done)
+        if (Interlocked.Exchange(ref _done, 1) != 0)
         {
             return;
         }
-
-        _done = true;
 
         var buffer = _buffer;
         var length = _index;
@@ -110,6 +116,7 @@ public sealed class BufferWitness<T>(IObserver<IList<T>> observer, int count, in
 
     /// <summary>Assigns the upstream subscription, disposing it if one is already held.</summary>
     /// <param name="subscription">The upstream subscription.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetSubscription(IDisposable subscription) => SinkSubscription.Set(ref _subscription, subscription);
 
     /// <inheritdoc/>
@@ -117,7 +124,7 @@ public sealed class BufferWitness<T>(IObserver<IList<T>> observer, int count, in
     {
         // Latching here is what makes the sink terminal on every teardown path, including the one taken
         // when the downstream observer throws out of Emit: a source that ignores disposal is then a no-op.
-        _done = true;
+        Volatile.Write(ref _done, 1);
         SinkSubscription.Dispose(ref _subscription);
     }
 

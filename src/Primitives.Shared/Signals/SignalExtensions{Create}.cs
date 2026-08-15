@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 
 #if REACTIVE_SHIM
@@ -14,13 +15,14 @@ namespace ReactiveUI.Primitives.Signals;
 public static partial class SignalExtensions
 {
     /// <summary>Scheduling and materialization operators for an observable source sequence.</summary>
-    /// <param name="source">The source signal.</param>
     /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source signal.</param>
     extension<T>(IObservable<T> source)
     {
         /// <summary>Witnesses the on.</summary>
         /// <param name="scheduler">The scheduler.</param>
         /// <returns>An Observable.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> WitnessOn(ISequencer scheduler) =>
             new WitnessOnSignal<T>(source, scheduler);
 

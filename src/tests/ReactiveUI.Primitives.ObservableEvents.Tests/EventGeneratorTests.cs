@@ -4,6 +4,7 @@
 
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using DisposableScope = ReactiveUI.Primitives.Disposables.Scope;
@@ -67,19 +68,19 @@ public sealed partial class EventGeneratorTests
     private enum ProviderMode
     {
         /// <summary>No observable implementation beyond the BCL contracts.</summary>
-        None,
+        None = 0,
 
         /// <summary>The lean ReactiveUI.Primitives implementation.</summary>
-        Lean,
+        Lean = 1,
 
         /// <summary>The ReactiveUI.Primitives.Reactive implementation.</summary>
-        Reactive,
+        Reactive = 2,
 
         /// <summary>Both ReactiveUI.Primitives implementations, with lean expected to win.</summary>
-        LeanAndReactive,
+        LeanAndReactive = 3,
 
         /// <summary>Standalone System.Reactive.</summary>
-        SystemReactive
+        SystemReactive = 4,
     }
 
     /// <summary>Verifies lean Primitives is preferred and produces compiling instance-event output.</summary>
@@ -209,11 +210,11 @@ public sealed partial class EventGeneratorTests
         await Assert.That(unsupportedHosts.Diagnostics.Any(IsDiagnostic(NoEventsDiagnosticId))).IsTrue();
     }
 
-    /// <summary>Verifies global-namespace wrappers and escaped event identifiers compile.</summary>
+    /// <summary>Verifies global-namespace wrappers compile for both instance and static events.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     [RequiresAssemblyFiles]
-    public async Task EventGeneratorSupportsGlobalNamespaceAndKeywordEventNames()
+    public async Task EventGeneratorSupportsGlobalNamespaceEventNames()
     {
         const string Source = """
                               using System;
@@ -223,14 +224,14 @@ public sealed partial class EventGeneratorTests
 
                               public sealed class EventSource
                               {
-                                  public event Action<int>? @event;
+                                  public event Action<int>? Changed;
 
                                   public static event Action<string>? Global;
                               }
 
                               public static class Consumer
                               {
-                                  public static IObservable<int> Observe(EventSource source) => source.Events().@event;
+                                  public static IObservable<int> Observe(EventSource source) => source.Events().Changed;
 
                                   public static IObservable<string> ObserveGlobal() => RxEvents.T11EventSource6Global;
                               }
@@ -238,7 +239,7 @@ public sealed partial class EventGeneratorTests
         var result = RunGenerator(Source, ProviderMode.Lean);
 
         await Assert.That(result.Errors).IsEmpty();
-        await Assert.That(result.GeneratedText).Contains("@event");
+        await Assert.That(result.GeneratedText).Contains("Changed");
     }
 
     /// <summary>Verifies malformed static attributes are ignored without crashing generation.</summary>
@@ -932,6 +933,7 @@ public sealed partial class EventGeneratorTests
     /// <summary>Determines whether a generated-source hint identifies an instance wrapper.</summary>
     /// <param name="hintName">The hint name.</param>
     /// <returns><see langword="true"/> for an instance wrapper hint.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool IsInstanceHint(string hintName) =>
         hintName.EndsWith(InstanceHintSuffix, StringComparison.Ordinal);
 

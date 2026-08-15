@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Signals;
 
@@ -17,6 +18,7 @@ public class UnfoldSignalTests
     private const int Second = 2;
 
     /// <summary>Covers unfold subscribe argument validation.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void UnfoldValidatesObserver() => Assert.Throws<ArgumentNullException>(static () => Signal.Unfold(
             First,

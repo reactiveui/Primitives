@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Collections;
+using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Disposables;
 
@@ -124,6 +125,7 @@ public class MultipleDisposable : IsDisposed, ICollection<IDisposable>
     /// <summary>Creates a new group of disposable resources that are disposed together.</summary>
     /// <param name="disposables">Disposable resources to add to the group.</param>
     /// <returns>Group of disposable resources that are disposed together.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IDisposable Create(params IDisposable[] disposables) => new MultipleDisposableBase(disposables);
 
     /// <summary>Adds a disposable to the <see cref="MultipleDisposable"/> or disposes it immediately if the pocket is already disposed.</summary>
@@ -275,6 +277,7 @@ public class MultipleDisposable : IsDisposed, ICollection<IDisposable>
 
     /// <summary>Returns an enumerator over a snapshot of the disposables currently held.</summary>
     /// <returns>An enumerator over the held disposables.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IEnumerator<IDisposable> GetEnumerator() => Snapshot().GetEnumerator();
 
     /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
@@ -331,6 +334,7 @@ public class MultipleDisposable : IsDisposed, ICollection<IDisposable>
     }
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
     /// <summary>Captures the disposables currently held into a list under the gate.</summary>
@@ -450,6 +454,7 @@ public class MultipleDisposable : IsDisposed, ICollection<IDisposable>
 
         /// <summary>Initializes a new instance of the <see cref="MultipleDisposableBase"/> class.</summary>
         /// <param name="disposables">Disposables owned by the group.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="disposables"/> is <see langword="null"/>.</exception>
         public MultipleDisposableBase(IDisposable[] disposables) =>
             Volatile.Write(ref _disposables, disposables ?? throw new ArgumentNullException(nameof(disposables)));
 

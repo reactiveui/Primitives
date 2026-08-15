@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive;
 #else
@@ -74,10 +76,12 @@ public static partial class LinqExtensions
 
         /// <summary>Gets the source observable for operator fusion.</summary>
         /// <returns>The source observable.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal IObservable<T> GetSource() => _source;
 
         /// <summary>Gets the prepended value for operator fusion.</summary>
         /// <returns>The prepended value.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal T GetValue() => _value;
     }
 
@@ -457,13 +461,13 @@ public static partial class LinqExtensions
         private enum TimerAction
         {
             /// <summary>No value is available.</summary>
-            None,
+            None = 0,
 
             /// <summary>Emit the captured value.</summary>
-            Emit,
+            Emit = 1,
 
             /// <summary>Reschedule for the remaining quiet period.</summary>
-            Reschedule
+            Reschedule = 2,
         }
 
         /// <inheritdoc/>
@@ -556,6 +560,7 @@ public static partial class LinqExtensions
 
         /// <summary>Schedules the active timer.</summary>
         /// <param name="delay">The timer delay.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void Schedule(TimeSpan delay) => _timer.Create(_sequencer.Schedule(delay, Tick));
 
         /// <summary>Handles a timer tick.</summary>

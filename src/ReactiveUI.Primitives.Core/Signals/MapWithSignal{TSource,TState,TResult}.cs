@@ -16,6 +16,7 @@ namespace ReactiveUI.Primitives.Signals;
 /// <param name="source">The source sequence.</param>
 /// <param name="state">The state passed to the selector.</param>
 /// <param name="selector">The transform applied to each source value and the state.</param>
+[System.Diagnostics.DebuggerDisplay("Source = {_source}, State = {_state}")]
 public sealed class MapWithSignal<TSource, TState, TResult>(
     IObservable<TSource> source,
     TState state,
@@ -63,18 +64,17 @@ public sealed class MapWithSignal<TSource, TState, TResult>(
         /// <summary>The transform applied to each source value and the state.</summary>
         private readonly Func<TState, TSource, TResult> _selector = selector;
 
-        /// <summary>Whether a terminal notification has been forwarded.</summary>
-        private bool _stopped;
+        /// <summary>Non-zero once a terminal notification has been forwarded.</summary>
+        private int _stopped;
 
         /// <summary>Forwards completion downstream.</summary>
         public void OnCompleted()
         {
-            if (_stopped)
+            if (Interlocked.Exchange(ref _stopped, 1) != 0)
             {
                 return;
             }
 
-            _stopped = true;
             _observer.OnCompleted();
         }
 
@@ -82,12 +82,11 @@ public sealed class MapWithSignal<TSource, TState, TResult>(
         /// <param name="error">The error value.</param>
         public void OnError(Exception error)
         {
-            if (_stopped)
+            if (Interlocked.Exchange(ref _stopped, 1) != 0)
             {
                 return;
             }
 
-            _stopped = true;
             _observer.OnError(error);
         }
 
@@ -95,7 +94,7 @@ public sealed class MapWithSignal<TSource, TState, TResult>(
         /// <param name="value">The source value.</param>
         public void OnNext(TSource value)
         {
-            if (_stopped)
+            if (Volatile.Read(ref _stopped) != 0)
             {
                 return;
             }

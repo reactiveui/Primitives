@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using BenchmarkDotNet.Attributes;
 using R3;
 using ReactiveUI.Primitives.Signals;
@@ -21,31 +22,37 @@ public class SubjectSubscriptionBenchmarks
 
     /// <summary>Subscribes and disposes 8 observers from primitives <see cref="Signal{T}"/>.</summary>
     /// <returns>A lifecycle marker confirming the benchmark created subscriptions and ran the disposal path.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark(Baseline = true)]
     public int PrimitivesSubjectSubscribeDispose8() => SubscribeDisposeCountSignal(SubscriberCount8);
 
     /// <summary>Subscribes and disposes 8 observers from System.Reactive Subject.</summary>
     /// <returns>A lifecycle marker confirming the benchmark created subscriptions and ran the disposal path.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public int SystemReactiveSubjectSubscribeDispose8() => SubscribeDisposeCountSystemSubject(SubscriberCount8);
 
     /// <summary>Subscribes and disposes 8 observers from <see cref="R3.Subject{T}"/>.</summary>
     /// <returns>A lifecycle marker confirming the benchmark created subscriptions and ran the disposal path.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public int R3SubjectSubscribeDispose8() => SubscribeDisposeCountR3Subject(SubscriberCount8);
 
     /// <summary>Subscribes and disposes 64 observers from primitives <see cref="Signal{T}"/>.</summary>
     /// <returns>A lifecycle marker confirming the benchmark created subscriptions and ran the disposal path.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public int PrimitivesSubjectSubscribeDispose64() => SubscribeDisposeCountSignal(SubscriberCount64);
 
     /// <summary>Subscribes and disposes 64 observers from System.Reactive Subject.</summary>
     /// <returns>A lifecycle marker confirming the benchmark created subscriptions and ran the disposal path.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public int SystemReactiveSubjectSubscribeDispose64() => SubscribeDisposeCountSystemSubject(SubscriberCount64);
 
     /// <summary>Subscribes and disposes 64 observers from <see cref="R3.Subject{T}"/>.</summary>
     /// <returns>A lifecycle marker confirming the benchmark created subscriptions and ran the disposal path.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public int R3SubjectSubscribeDispose64() => SubscribeDisposeCountR3Subject(SubscriberCount64);
 

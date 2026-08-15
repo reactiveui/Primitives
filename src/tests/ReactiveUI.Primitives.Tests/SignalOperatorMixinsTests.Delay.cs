@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Signals;
@@ -211,9 +212,11 @@ public partial class SignalOperatorMixinsTests
         public int ScheduledCount => _items.Count;
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Schedule(IWorkItem item) => _items.Enqueue(item);
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
             "Design",
             "SST2318:Members should not have identical bodies",
@@ -228,6 +231,7 @@ public partial class SignalOperatorMixinsTests
         public void AdvanceBy(TimeSpan time) => Now += time;
 
         /// <summary>Runs the next scheduled work item.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void RunNext() => _items.Dequeue().Execute();
     }
 }

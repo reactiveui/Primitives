@@ -12,6 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="TLeft">The left value type.</typeparam>
 /// <typeparam name="TRight">The right value type.</typeparam>
 /// <typeparam name="TResult">The result value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("IsCompleted = {IsCompleted}, LeftQueue = {LeftQueue.Count}, RightQueue = {RightQueue.Count}")]
 public sealed class PairWitness<TLeft, TRight, TResult>
 {
     /// <summary>The synchronization gate.</summary>

@@ -8,6 +8,7 @@ namespace ReactiveUI.Primitives;
 
 /// <summary>Observable backed by a subscription delegate.</summary>
 /// <typeparam name="T">The observed value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Subscribe = {_subscribe}")]
 public sealed class AnonymousSignal<T> : IObservable<T>
 {
     /// <summary>Subscription delegate.</summary>
@@ -15,6 +16,7 @@ public sealed class AnonymousSignal<T> : IObservable<T>
 
     /// <summary>Initializes a new instance of the <see cref="AnonymousSignal{T}"/> class.</summary>
     /// <param name="subscribe">Subscription delegate.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="subscribe"/> is <see langword="null"/>.</exception>
     public AnonymousSignal(Func<IObserver<T>, IDisposable> subscribe) =>
         _subscribe = subscribe ?? throw new ArgumentNullException(nameof(subscribe));
 

@@ -5,6 +5,7 @@
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
@@ -15,6 +16,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <summary>Converts an event add/remove pair into event-pattern notifications.</summary>
 /// <typeparam name="TEventHandler">The event delegate type.</typeparam>
 /// <typeparam name="TEventArgs">The event argument type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("AddHandler = {AddHandler}, RemoveHandler = {RemoveHandler}")]
 public sealed class FromEventPatternSignal<TEventHandler, TEventArgs> : IObservable<EventPattern<TEventArgs>>
     where TEventHandler : Delegate
     where TEventArgs : EventArgs
@@ -44,7 +46,7 @@ public sealed class FromEventPatternSignal<TEventHandler, TEventArgs> : IObserva
 
         var handler = CreateHandler(observer);
         AddHandler(handler);
-        return Scope.Create((self: this, handler), static s => s.self.RemoveHandler(s.handler));
+        return Scope.Create((Self: this, handler), static s => s.Self.RemoveHandler(s.handler));
     }
 
     /// <summary>Creates a supported event delegate for the observer.</summary>
@@ -90,6 +92,8 @@ public sealed class FromEventPatternSignal<TEventHandler, TEventArgs> : IObserva
     /// <summary>Creates a delegate for event handler shapes compatible with <c>void Handler(object, TEventArgs)</c>.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <returns>The generated event handler.</returns>
+    /// <exception cref="NotSupportedException"><typeparamref name="TEventHandler"/> is not compatible with the
+    /// <c>void Handler(object, TEventArgs)</c> shape.</exception>
     private static TEventHandler CreateCompatibleHandler(IObserver<EventPattern<TEventArgs>> observer)
     {
         var forwarder = new Forwarder(observer);
@@ -115,6 +119,7 @@ public sealed class FromEventPatternSignal<TEventHandler, TEventArgs> : IObserva
         /// <summary>Forwards event arguments to the observer.</summary>
         /// <param name="sender">The event sender.</param>
         /// <param name="args">The event arguments.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnEvent(object? sender, TEventArgs args) => observer.OnNext(new(sender, args));
     }
 }

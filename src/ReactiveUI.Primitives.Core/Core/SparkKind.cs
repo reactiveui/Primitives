@@ -8,11 +8,11 @@ namespace ReactiveUI.Primitives.Core;
 public enum SparkKind
 {
     /// <summary>Represents an OnNext spark.</summary>
-    OnNext,
+    OnNext = 0,
 
     /// <summary>Represents an OnError spark.</summary>
-    OnError,
+    OnError = 1,
 
     /// <summary>Represents an OnCompleted spark.</summary>
-    OnCompleted
+    OnCompleted = 2,
 }

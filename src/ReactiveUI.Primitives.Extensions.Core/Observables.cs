@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Extensions;
 
 /// <summary>
@@ -15,5 +17,6 @@ public static class Observables
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="value">The value emitted to every subscriber.</param>
     /// <returns>An observable that emits <paramref name="value"/> and completes on subscribe.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservable<T> Return<T>(T value) => new SingleValueSignal<T>(value);
 }

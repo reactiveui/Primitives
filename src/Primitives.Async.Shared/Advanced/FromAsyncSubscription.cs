@@ -9,6 +9,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 #endif
 
 /// <summary>Invokes an asynchronous operation and forwards the signal notification for one subscription.</summary>
+[System.Diagnostics.DebuggerDisplay("Factory = {Factory}")]
 public sealed class FromAsyncSubscription : TaskSignalSubscription<RxVoid>
 {
     /// <summary>Initializes a new instance of the <see cref="FromAsyncSubscription"/> class.</summary>

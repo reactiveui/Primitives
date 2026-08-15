@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
 
@@ -302,13 +303,16 @@ public class ChooseSwitchSelectTests
 
         /// <summary>Pushes a value to the retained observer.</summary>
         /// <param name = "value">The value to push.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Next(T value) => _observer?.OnNext(value);
 
         /// <summary>Pushes an error to the retained observer.</summary>
         /// <param name = "exception">The error to push.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Error(Exception exception) => _observer?.OnError(exception);
 
         /// <summary>Pushes completion to the retained observer.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Complete() => _observer?.OnCompleted();
     }
 }

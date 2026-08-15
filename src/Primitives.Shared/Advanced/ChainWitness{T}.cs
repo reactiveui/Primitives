@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -10,6 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Mediates sequential concatenation for <see cref="ChainSignal{T}"/>.</summary>
 /// <typeparam name="T">The value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("IsActive = {IsActive}, IsOuterCompleted = {IsOuterCompleted}")]
 public sealed class ChainWitness<T> : IDisposable
 {
     /// <summary>Guards the queue and active/completed flags.</summary>
@@ -35,6 +38,7 @@ public sealed class ChainWitness<T> : IDisposable
     private bool IsOuterCompleted { get; set; }
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose() => Subscriptions.Dispose();
 
     /// <summary>Starts concatenating an outer observable of sources.</summary>

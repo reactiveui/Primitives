@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives;
 
@@ -13,5 +14,6 @@ public static class Optional
     /// <typeparam name="T">The type of the optional value.</typeparam>
     /// <param name="value">The value to wrap.</param>
     /// <returns>The optional value.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Optional<T> Some<T>([AllowNull] T value) => Optional<T>.Some(value);
 }

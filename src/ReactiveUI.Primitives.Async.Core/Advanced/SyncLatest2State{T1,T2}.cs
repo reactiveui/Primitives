@@ -9,6 +9,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// <typeparam name="T2">Element type of source 2.</typeparam>
 /// <param name="Source1">Source observable 1.</param>
 /// <param name="Source2">Source observable 2.</param>
+[System.Diagnostics.DebuggerDisplay("Source1 = {Source1}, Source2 = {Source2}")]
 public readonly record struct SyncLatest2State<T1, T2>(
     IObservableAsync<T1> Source1,
     IObservableAsync<T2> Source2);

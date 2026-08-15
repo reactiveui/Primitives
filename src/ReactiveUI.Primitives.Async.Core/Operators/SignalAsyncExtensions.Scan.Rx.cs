@@ -8,9 +8,9 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Scan operators for an observable source sequence.</summary>
-    /// <param name="this">The source observable sequence.</param>
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
-    extension<T>(IObservableAsync<T> @this)
+    /// <param name="source">The source observable sequence.</param>
+    extension<T>(IObservableAsync<T> source)
     {
         /// <summary>
         /// Applies an accumulator function over the observable sequence and returns each intermediate result
@@ -26,8 +26,7 @@ public static partial class SignalAsyncExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(accumulator);
 
-            var scanAccumulator = accumulator;
-            return new FoldAsyncSignal<T, TAcc>(@this, seed, scanAccumulator);
+            return new FoldAsyncSignal<T, TAcc>(source, seed, accumulator);
         }
 
         /// <summary>Applies an accumulator function over the observable sequence and returns each intermediate result.</summary>
@@ -39,8 +38,7 @@ public static partial class SignalAsyncExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(accumulator);
 
-            var scanAccumulator = accumulator;
-            return new FoldSyncSignal<T, TAcc>(@this, seed, scanAccumulator);
+            return new FoldSyncSignal<T, TAcc>(source, seed, accumulator);
         }
     }
 }

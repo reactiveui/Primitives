@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -13,6 +15,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="TResult">The result value type.</typeparam>
 /// <param name="observer">The downstream observer.</param>
 /// <param name="selector">The enumerable projection.</param>
+[System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}, Observer = {_observer}")]
 public sealed class SelectManyEnumerableWitness<TSource, TResult>(IObserver<TResult> observer, Func<TSource, IEnumerable<TResult>> selector) : IObserver<TSource>, IDisposable
 {
     /// <summary>The downstream observer.</summary>
@@ -28,12 +31,15 @@ public sealed class SelectManyEnumerableWitness<TSource, TResult>(IObserver<TRes
     private int _stopped;
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose() => WitnessLifetime.Dispose(ref _stopped, _subscription);
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnCompleted() => WitnessLifetime.Complete(ref _stopped, _subscription, _observer);
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnError(Exception error) => WitnessLifetime.Error(ref _stopped, _subscription, _observer, error);
 
     /// <inheritdoc/>
@@ -75,6 +81,7 @@ public sealed class SelectManyEnumerableWitness<TSource, TResult>(IObserver<TRes
 
     /// <summary>Assigns the upstream subscription.</summary>
     /// <param name="subscription">The upstream subscription.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetSubscription(IDisposable subscription) =>
         WitnessLifetime.SetSubscription(ref _stopped, _subscription, subscription);
 }

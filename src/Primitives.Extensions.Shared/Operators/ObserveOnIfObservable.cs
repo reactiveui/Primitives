@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 
 #if REACTIVE_SHIM
@@ -176,6 +177,7 @@ internal sealed class ObserveOnIfObservable<T>(
         private sealed class ConditionObserverImpl(ObserveOnIfSink sink) : IObserver<bool>
         {
             /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void OnNext(bool value) => sink.UpdateCondition(value);
 
             /// <inheritdoc/>

@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -10,6 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Observer wrapper for detecting whether a source completes without values.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}, Subscription = {Subscription}")]
 public sealed class IsEmptyWitness<T> : IObserver<T>, IDisposable
 {
     /// <summary>Stores the stopped flag for interlocked/ref helper calls.</summary>
@@ -31,6 +34,7 @@ public sealed class IsEmptyWitness<T> : IObserver<T>, IDisposable
     private SingleReplaceableDisposable Subscription { get; } = new();
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose() => WitnessLifetime.Dispose(ref _stopped, Subscription);
 
     /// <inheritdoc/>
@@ -47,6 +51,7 @@ public sealed class IsEmptyWitness<T> : IObserver<T>, IDisposable
     }
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnError(Exception error) => WitnessLifetime.Error(ref _stopped, Subscription, Observer, error);
 
     /// <inheritdoc/>
@@ -64,6 +69,7 @@ public sealed class IsEmptyWitness<T> : IObserver<T>, IDisposable
 
     /// <summary>Assigns the upstream subscription.</summary>
     /// <param name="subscription">The upstream subscription.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetSubscription(IDisposable subscription) =>
         WitnessLifetime.SetSubscription(ref _stopped, Subscription, subscription);
 }

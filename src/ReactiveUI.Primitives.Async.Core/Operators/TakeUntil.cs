@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async;
@@ -17,8 +18,8 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Take-until operators that emit items from an observable source until a stop condition is met.</summary>
-    /// <param name="source">The source observable sequence.</param>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
+    /// <param name="source">The source observable sequence.</param>
     extension<T>(IObservableAsync<T> source)
     {
         /// <summary>
@@ -169,22 +170,23 @@ public static partial class SignalAsyncExtensions
         /// Returns an observable sequence that emits items from the source sequence until the specified cancellation
         /// token is canceled.
         /// </summary>
-        /// <remarks>If the cancellation token is already canceled when the method is called, the
-        /// resulting observable sequence will complete immediately.</remarks>
         /// <param name="cancellationToken">A cancellation token that, when canceled, will terminate the resulting observable sequence.</param>
         /// <returns>An observable sequence that completes when the provided cancellation token is canceled or when the source
         /// sequence completes.</returns>
+        /// <remarks>If the cancellation token is already canceled when the method is called, the
+        /// resulting observable sequence will complete immediately.</remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> TakeUntil(CancellationToken cancellationToken) =>
             new CancellationStopSignal<T>(source, cancellationToken);
 
         /// <summary>Returns a sequence that emits elements from the source until the specified predicate returns true for an element.</summary>
-        /// <remarks>The element that causes the predicate to return true is not included in the resulting
-        /// sequence. Subsequent elements from the source are not emitted.</remarks>
         /// <param name="predicate">A function to test each element for a condition. The sequence will stop emitting elements when this function
         /// returns true.</param>
         /// <returns>An observable sequence that contains the elements from the source sequence up to, but not including, the
         /// first element for which the predicate returns true.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="predicate"/> is null.</exception>
+        /// <remarks>The element that causes the predicate to return true is not included in the resulting
+        /// sequence. Subsequent elements from the source are not emitted.</remarks>
         public IObservableAsync<T> TakeUntil(Func<T, bool> predicate)
         {
             ArgumentExceptionHelper.ThrowIfNull(predicate);
@@ -396,10 +398,12 @@ public static partial class SignalAsyncExtensions
 
             /// <summary>Forwards the original subscribe-time token into the shared lifecycle's dispose chain.</summary>
             /// <param name="external">The subscribe-time token.</param>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             internal void LinkExternalCancellation(CancellationToken external) =>
                 _lifecycle.LinkExternalCancellation(external);
 
             /// <summary>Callback invoked when the external cancellation token is canceled; forwards completion to the observer.</summary>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             internal void CompleteFromCancellation() => FireAndForgetHelper.Run(async () =>
             {
                 await Task.Yield();
@@ -494,6 +498,7 @@ public static partial class SignalAsyncExtensions
 
             /// <summary>Forwards the original subscribe-time token into the shared lifecycle's dispose chain.</summary>
             /// <param name="external">The subscribe-time token.</param>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             internal void LinkExternalCancellation(CancellationToken external) =>
                 _lifecycle.LinkExternalCancellation(external);
 
@@ -644,19 +649,20 @@ public static partial class SignalAsyncExtensions
             /// <returns>A task representing the asynchronous subscribe operation.</returns>
             internal async ValueTask SubscribeSourcesAsync(CancellationToken cancellationToken)
             {
-                var task = _parent._task;
-                AwaitStopThenComplete(task);
+                AwaitStopThenComplete(_parent._task);
                 _subscription = await _parent._source
                     .SubscribeAsync(new TakeUntilSourceWitness<T>(_lifecycle), cancellationToken).ConfigureAwait(false);
             }
 
             /// <summary>Forwards the original subscribe-time token into the shared lifecycle's dispose chain.</summary>
             /// <param name="external">The subscribe-time token.</param>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             internal void LinkExternalCancellation(CancellationToken external) =>
                 _lifecycle.LinkExternalCancellation(external);
 
             /// <summary>Waits for the task to complete, then forwards completion or error to the downstream observer.</summary>
             /// <param name="task">The task to await.</param>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             internal void AwaitStopThenComplete(Task task) => FireAndForgetHelper.Run(async () =>
             {
                 try
@@ -767,6 +773,7 @@ public static partial class SignalAsyncExtensions
 
             /// <summary>Forwards the original subscribe-time token into the shared lifecycle's dispose chain.</summary>
             /// <param name="external">The subscribe-time token.</param>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             internal void LinkExternalCancellation(CancellationToken external) =>
                 _lifecycle.LinkExternalCancellation(external);
 

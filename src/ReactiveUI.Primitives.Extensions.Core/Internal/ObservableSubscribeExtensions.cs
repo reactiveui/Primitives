@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Extensions.Internal;
 
 /// <summary>Internal subscribe helpers that adapt delegate triples to a proper observer.</summary>
@@ -22,6 +24,7 @@ internal static class ObservableSubscribeExtensions
         /// <param name="onError">Error callback.</param>
         /// <param name="onCompleted">Completion callback.</param>
         /// <returns>The subscription disposable.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal IDisposable SubscribeCallbacks(
             Action<T> onNext,
             Action<Exception> onError,

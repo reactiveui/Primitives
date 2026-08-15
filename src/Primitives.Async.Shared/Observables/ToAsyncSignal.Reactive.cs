@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 #if REACTIVE_SHIM
 using TaskToAsyncSignal = ReactiveUI.Primitives.Async.Reactive.Advanced.TaskToAsyncSignal;
@@ -20,19 +21,20 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncReactiveExtensions
 {
     /// <summary>Observable-conversion operators for a task that signals completion only.</summary>
-    /// <param name="this">The task to be observed. Cannot be null.</param>
-    extension(Task @this)
+    /// <param name="task">The task to be observed. Cannot be null.</param>
+    extension(Task task)
     {
         /// <summary>Converts the specified task into an asynchronous observable sequence that signals completion when the task finishes.</summary>
+        /// <returns>An asynchronous observable sequence that emits a single value when the task completes successfully, followed by
+        /// a completion notification.</returns>
         /// <remarks>The returned observable emits a single unit value upon task completion and then signals
         /// completion. If the task is canceled or fails, the observable will propagate the corresponding error. This method
         /// is useful for integrating task-based operations into observable workflows.</remarks>
-        /// <returns>An asynchronous observable sequence that emits a single value when the task completes successfully, followed by
-        /// a completion notification.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [SuppressMessage(
             "Roslynator",
             "RCS1047:Non-asynchronous method name should not end with \'Async\'",
             Justification = "This is an existing method")]
-        public IObservableAsync<RxVoid> ToAsyncSignal() => new TaskToAsyncSignal(@this);
+        public IObservableAsync<RxVoid> ToAsyncSignal() => new TaskToAsyncSignal(task);
     }
 }

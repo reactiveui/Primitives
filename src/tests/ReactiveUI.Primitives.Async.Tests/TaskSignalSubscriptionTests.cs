@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async.Tests;
 
 /// <summary>Tests for <see cref="TaskSignalSubscription{T}"/> lifecycle and disposal behavior.</summary>
@@ -41,15 +43,19 @@ public sealed class TaskSignalSubscriptionTests
     private sealed class ReentrantDisposingObserver(Func<ValueTask> onNext) : IObserverAsync<int>
     {
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask OnNextAsync(int value, CancellationToken cancellationToken) => onNext();
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) => default;
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask OnCompletedAsync(Result result) => default;
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask DisposeAsync() => default;
     }
 }

@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Async.Tests;
@@ -219,6 +220,7 @@ public sealed class AsyncRenameCoverageTests
     {
         /// <inheritdoc/>
         /// <returns>A task representing the asynchronous operation.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask DisposeAsync() => default;
 
         /// <inheritdoc/>
@@ -227,10 +229,12 @@ public sealed class AsyncRenameCoverageTests
 
         /// <inheritdoc/>
         /// <returns>A task representing the asynchronous operation.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) => default;
 
         /// <inheritdoc/>
         /// <returns>A task representing the asynchronous operation.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask OnNextAsync(int value, CancellationToken cancellationToken) => default;
     }
 
@@ -244,9 +248,11 @@ public sealed class AsyncRenameCoverageTests
         public long Timestamp => 0;
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Schedule(IWorkItem item) => item.Execute();
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Schedule(IWorkItem item, long dueTimestamp) => Schedule(item);
     }
 
@@ -266,9 +272,11 @@ public sealed class AsyncRenameCoverageTests
         public long Timestamp => FixedNow.Ticks;
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Schedule(IWorkItem item) => _items.Enqueue(item);
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Schedule(IWorkItem item, long dueTimestamp) => Schedule(item);
 
         /// <summary>Executes all queued work items.</summary>

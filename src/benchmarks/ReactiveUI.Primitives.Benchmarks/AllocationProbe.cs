@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Disposables;
@@ -301,6 +302,7 @@ internal static class AllocationProbe
     /// <summary>Probes subscribe/dispose churn allocation.</summary>
     /// <param name="observer">The reused observer.</param>
     /// <param name="handles">The reused subscription-handle buffer.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void ProbeChurn(IntSignalWitness observer, IDisposable[] handles) =>
         Row("Signal fan-out churn", () =>
         {

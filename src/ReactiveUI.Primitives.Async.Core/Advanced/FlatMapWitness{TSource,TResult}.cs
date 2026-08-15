@@ -7,6 +7,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// <summary>Outer observer that projects source values to inner observables.</summary>
 /// <typeparam name="TSource">The source element type.</typeparam>
 /// <typeparam name="TResult">The result element type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Coordinator = {Coordinator}, SyncSelector = {SyncSelector}, AsyncSelector = {AsyncSelector}")]
 public sealed class FlatMapWitness<TSource, TResult> : WitnessAsync<TSource>
 {
     /// <summary>Initializes a new instance of the <see cref="FlatMapWitness{TSource,TResult}"/> class.</summary>

@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Concurrency;
@@ -39,8 +40,8 @@ internal record struct VirtualTimeState<TAbsolute, TRelative>
     /// <summary>The current absolute clock value.</summary>
     private TAbsolute _clock;
 
-    /// <summary>Whether the scheduler is running work.</summary>
-    private bool _isEnabled;
+    /// <summary>Running latch; 0 while idle, 1 while the scheduler is running work.</summary>
+    private int _isEnabled;
 
     /// <summary>Initializes a new instance of the <see cref="VirtualTimeState{TAbsolute, TRelative}"/> struct.</summary>
     /// <param name="initialClock">Initial value for the clock.</param>
@@ -68,7 +69,7 @@ internal record struct VirtualTimeState<TAbsolute, TRelative>
     internal readonly TAbsolute Clock => _clock;
 
     /// <summary>Gets a value indicating whether the scheduler is enabled to run work.</summary>
-    internal readonly bool IsEnabled => _isEnabled;
+    internal readonly bool IsEnabled => _isEnabled != 0;
 
     /// <summary>Gets the scheduler's notion of current time.</summary>
     internal readonly DateTimeOffset Now => _toDateTimeOffset(_clock);
@@ -95,7 +96,7 @@ internal record struct VirtualTimeState<TAbsolute, TRelative>
             return;
         }
 
-        if (_isEnabled)
+        if (Volatile.Read(ref _isEnabled) != 0)
         {
             throw new InvalidOperationException(VirtualTimeMessages.SchedulerAlreadyRunning(nameof(AdvanceBy)));
         }
@@ -120,12 +121,12 @@ internal record struct VirtualTimeState<TAbsolute, TRelative>
             return;
         }
 
-        if (_isEnabled)
+        if (Volatile.Read(ref _isEnabled) != 0)
         {
             throw new InvalidOperationException(VirtualTimeMessages.SchedulerAlreadyRunning(nameof(AdvanceTo)));
         }
 
-        _isEnabled = true;
+        Volatile.Write(ref _isEnabled, 1);
         do
         {
             var next = GetNext();
@@ -140,9 +141,9 @@ internal record struct VirtualTimeState<TAbsolute, TRelative>
             }
             else
             {
-                _isEnabled = false;
+                Volatile.Write(ref _isEnabled, 0);
             }
-        } while (_isEnabled);
+        } while (Volatile.Read(ref _isEnabled) != 0);
 
         _clock = time;
     }
@@ -166,12 +167,11 @@ internal record struct VirtualTimeState<TAbsolute, TRelative>
     /// <summary>Starts the virtual time scheduler, running all scheduled work.</summary>
     internal void Start()
     {
-        if (_isEnabled)
+        if (Interlocked.Exchange(ref _isEnabled, 1) != 0)
         {
             return;
         }
 
-        _isEnabled = true;
         do
         {
             var next = GetNext();
@@ -186,13 +186,14 @@ internal record struct VirtualTimeState<TAbsolute, TRelative>
             }
             else
             {
-                _isEnabled = false;
+                Volatile.Write(ref _isEnabled, 0);
             }
-        } while (_isEnabled);
+        } while (Volatile.Read(ref _isEnabled) != 0);
     }
 
     /// <summary>Stops the virtual time scheduler.</summary>
-    internal void Stop() => _isEnabled = false;
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void Stop() => Volatile.Write(ref _isEnabled, 0);
 
     /// <summary>Schedules an action to be executed at the current clock.</summary>
     /// <typeparam name="TState">The type of the state passed to the scheduled action.</typeparam>
@@ -343,5 +344,6 @@ internal record struct VirtualTimeState<TAbsolute, TRelative>
 
     /// <summary>Gets the next non-cancelled scheduled item to be executed, leaving it on the queue.</summary>
     /// <returns>The next scheduled item, or <see langword="null"/> when none remain.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal readonly IScheduledItem<TAbsolute>? GetNext() => _queue.GetNextLive();
 }

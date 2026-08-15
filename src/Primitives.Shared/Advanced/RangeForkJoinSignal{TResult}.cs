@@ -10,6 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Fork-joins two synchronous integer ranges by projecting their final values.</summary>
 /// <typeparam name="TResult">The result value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Left = {Left.Start}+{Left.Count}, Right = {Right.Start}+{Right.Count}")]
 public sealed class RangeForkJoinSignal<TResult> : IObservable<TResult>
 {
     /// <summary>Initializes a new instance of the <see cref="RangeForkJoinSignal{TResult}"/> class.</summary>

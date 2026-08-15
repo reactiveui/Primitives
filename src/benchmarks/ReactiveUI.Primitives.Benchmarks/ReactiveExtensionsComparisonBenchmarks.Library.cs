@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Concurrency;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Extensions;
 using ReactiveUI.Primitives.Signals;
@@ -63,6 +64,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <summary>Executes the <c>RunCatchAndReturn</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>
     /// <returns>The <c>RunCatchAndReturn</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunCatchAndReturn(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
             ? PrimitivesExtensions.CatchAndReturn<int, InvalidOperationException>(
@@ -75,6 +77,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <summary>Executes the <c>RunCatchIgnore</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>
     /// <returns>The <c>RunCatchIgnore</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunCatchIgnore(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
             ? PrimitivesExtensions.CatchIgnore<int, InvalidOperationException>(ThrowInt(library), static _ => { })
@@ -83,6 +86,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <summary>Executes the <c>RunCatchReturn</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>
     /// <returns>The <c>RunCatchReturn</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunCatchReturn(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
             ? PrimitivesExtensions.CatchReturn(ThrowInt(library), Fallback)
@@ -99,6 +103,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <summary>Executes the <c>RunCombineLatestValuesAreAllFalse</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>
     /// <returns>The <c>RunCombineLatestValuesAreAllFalse</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunCombineLatestValuesAreAllFalse(ExtensionsLibrary library) =>
         DrainBool(library == ExtensionsLibrary.Primitives
             ? PrimitivesExtensions.CombineLatestValuesAreAllFalse(BoolSources(library, false))
@@ -107,6 +112,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <summary>Executes the <c>RunCombineLatestValuesAreAllTrue</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>
     /// <returns>The <c>RunCombineLatestValuesAreAllTrue</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunCombineLatestValuesAreAllTrue(ExtensionsLibrary library) =>
         DrainBool(library == ExtensionsLibrary.Primitives
             ? PrimitivesExtensions.CombineLatestValuesAreAllTrue(BoolSources(library, true))
@@ -115,6 +121,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <summary>Executes the <c>RunConflate</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>
     /// <returns>The <c>RunConflate</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunConflate(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
             ? PrimitivesExtensions.Conflate(ArraySource(library), TimeSpan.Zero, Sequencer.Immediate)
@@ -178,6 +185,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <summary>Executes the <c>RunDebounceImmediate</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>
     /// <returns>The <c>RunDebounceImmediate</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunDebounceImmediate(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
             ? PrimitivesExtensions.DebounceImmediate(ArraySource(library), TimeSpan.Zero, Sequencer.Immediate)
@@ -186,6 +194,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <summary>Executes the <c>RunDebounceUntil</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>
     /// <returns>The <c>RunDebounceUntil</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunDebounceUntil(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
             ? PrimitivesExtensions.DebounceUntil(
@@ -251,6 +260,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <summary>Executes the <c>RunDropIfBusy</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>
     /// <returns>The <c>RunDropIfBusy</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunDropIfBusy(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
             ? PrimitivesExtensions.DropIfBusy(ArraySource(library), static _ => default)
@@ -277,6 +287,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <summary>Executes the <c>RunFilter</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>
     /// <returns>The <c>RunFilter</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunFilter(ExtensionsLibrary library) =>
         DrainString(library == ExtensionsLibrary.Primitives
             ? PrimitivesExtensions.Filter(PrimitivesExtensions.FromArray(StringValues), EvenRegex())
@@ -317,11 +328,13 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <summary>Executes the <c>RunFromArray</c> benchmark helper.</summary>
     /// <param name="library)">The <c>library)</c> value.</param>
     /// <returns>The <c>RunFromArray</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunFromArray(ExtensionsLibrary library) => DrainInt(ArraySource(library));
 
     /// <summary>Executes the <c>RunGetMax</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>
     /// <returns>The <c>RunGetMax</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunGetMax(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
             ? PrimitivesExtensions.GetMax(
@@ -334,6 +347,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <summary>Executes the <c>RunGetMin</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>
     /// <returns>The <c>RunGetMin</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunGetMin(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
             ? PrimitivesExtensions.GetMin(
@@ -369,6 +383,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <summary>Executes the <c>RunLatestOrDefault</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>
     /// <returns>The <c>RunLatestOrDefault</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunLatestOrDefault(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
             ? PrimitivesExtensions.LatestOrDefault(ArraySource(library), Fallback)
@@ -389,6 +404,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <summary>Executes the <c>RunNot</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>
     /// <returns>The <c>RunNot</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunNot(ExtensionsLibrary library) =>
         DrainBool(library == ExtensionsLibrary.Primitives
             ? PrimitivesExtensions.Not(BoolSource(library))
@@ -397,6 +413,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <summary>Executes the <c>RunObserveOnIf</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>
     /// <returns>The <c>RunObserveOnIf</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunObserveOnIf(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
             ? PrimitivesExtensions.ObserveOnIf(ArraySource(library), true, Sequencer.Immediate)
@@ -405,6 +422,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <summary>Executes the <c>RunObserveOnSafe</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>
     /// <returns>The <c>RunObserveOnSafe</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunObserveOnSafe(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
             ? PrimitivesExtensions.ObserveOnSafe(ArraySource(library), Sequencer.Immediate)
@@ -413,6 +431,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <summary>Executes the <c>RunOnErrorRetry</c> benchmark helper.</summary>
     /// <param name="library">The <c>library</c> value.</param>
     /// <returns>The <c>RunOnErrorRetry</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunOnErrorRetry(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
             ? PrimitivesExtensions.OnErrorRetry<int, InvalidOperationException>(

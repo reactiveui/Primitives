@@ -56,7 +56,7 @@ public static partial class SignalAsyncExtensions
                     return default;
                 }
 
-                (T, T value) pair = (_previous!, value);
+                var pair = (Previous: _previous!, Current: value);
                 _previous = value;
                 return downstream.OnNextAsync(pair, cancellationToken);
             }

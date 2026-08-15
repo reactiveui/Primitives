@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
@@ -900,6 +901,7 @@ public partial class RxNamesTests
     }
 
     /// <summary>Verifies Resume rejects a null observer.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void ResumeThrowsOnNullObserver() =>
         Assert.Throws<ArgumentNullException>(static () => Signal.FromEnumerable(_oneToFive)
@@ -938,6 +940,7 @@ public partial class RxNamesTests
     /// <summary>Returns the value unchanged (key selector).</summary>
     /// <param name = "value">The source value.</param>
     /// <returns>The value.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int Identity(int value) => value;
 
     /// <summary>Adds the state value to a source value.</summary>
@@ -971,14 +974,17 @@ public partial class RxNamesTests
     /// <summary>Projects a value to an inner sequence that emits it twice.</summary>
     /// <param name = "value">The source value.</param>
     /// <returns>An inner sequence of two copies of the value.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static IObservable<int> Fan(int value) => Signal.FromEnumerable([value, value]);
 
     /// <summary>Builds the 1..3 source used by the delay case.</summary>
     /// <returns>A source emitting 1..3.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static IObservable<int> FromOneToThree() => Signal.FromEnumerable(_oneToThree);
 
     /// <summary>Builds a non-terminating source used by the timeout case.</summary>
     /// <returns>A source that never emits or completes.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static IObservable<int> Silent() => Signal.Silent<int>();
 
     /// <summary>Pushes index-paired values so Zip/Pair emits 11, 22, 33.</summary>

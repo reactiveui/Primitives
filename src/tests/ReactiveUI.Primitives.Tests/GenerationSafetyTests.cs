@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Signals;
 
@@ -156,18 +157,17 @@ public sealed class GenerationSafetyTests
     private sealed class ReenteringObserver<T>(Signal<IObservable<T>> outer, IObservable<T> replacement) : RecordingObserver<T>
     {
         /// <summary>Whether the re-entrant push has already happened.</summary>
-        private bool _pushed;
+        private int _pushed;
 
         /// <inheritdoc/>
         public override void OnNext(T value)
         {
             base.OnNext(value);
-            if (_pushed)
+            if (Interlocked.Exchange(ref _pushed, 1) != 0)
             {
                 return;
             }
 
-            _pushed = true;
             outer.OnNext(replacement);
         }
     }
@@ -177,6 +177,7 @@ public sealed class GenerationSafetyTests
     private sealed class Tracker(Action onDispose) : IDisposable
     {
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose() => onDispose();
     }
 }

@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -47,11 +49,13 @@ internal sealed class CreateSignal<T, TState> : IRequireCurrentThread<T>
 
     /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
     /// <returns>The result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() => _currentThreadRequired;
 
     /// <summary>Executes the Subscribe operation.</summary>
     /// <param name="observer">The observer value.</param>
     /// <returns>The result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IDisposable Subscribe(IObserver<T> observer) =>
         SignalSubscription.Subscribe(observer, _currentThreadRequired, SubscribeCore);
 
@@ -80,6 +84,7 @@ internal sealed class CreateSignal<T, TState> : IRequireCurrentThread<T>
         /// <summary>Initializes a new instance of the <see cref="Create"/> class.</summary>
         /// <param name="observer">The observer value.</param>
         /// <param name="cancel">The cancel value.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="cancel"/> is <see langword="null"/>.</exception>
         public Create(IObserver<T> observer, IDisposable cancel)
         {
             _cancel = cancel ?? throw new ArgumentNullException(nameof(cancel));
@@ -88,6 +93,7 @@ internal sealed class CreateSignal<T, TState> : IRequireCurrentThread<T>
 
         /// <summary>Executes the OnNext operation.</summary>
         /// <param name="value">The value.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnNext(T value) => _observer.OnNext(value);
 
         /// <summary>Executes the OnError operation.</summary>
@@ -118,6 +124,7 @@ internal sealed class CreateSignal<T, TState> : IRequireCurrentThread<T>
         }
 
         /// <summary>Executes the Dispose operation.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose() => WitnessTeardown.Dispose(ref _disposed, ref _cancel);
     }
 }

@@ -8,11 +8,14 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>SyncLatest/CombineLatest operators for an enumerable collection of observable source sequences.</summary>
-    /// <param name="sources">The source sequences to combine.</param>
     /// <typeparam name="TSource">The element type produced by the source sequences.</typeparam>
+    /// <param name="sources">The source sequences to combine.</param>
     extension<TSource>(IEnumerable<IObservableAsync<TSource>> sources)
     {
         /// <summary>Combines the latest value from each asynchronous observable sequence in the supplied collection.</summary>
+        /// <returns>An observable sequence that emits a snapshot of the latest values whenever any source produces a new value,
+        /// after all sources have produced at least one value.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="sources"/> is <see langword="null"/>.</exception>
         /// <remarks>
         /// <para>For perf reasons each emitted <see cref="IReadOnlyList{T}"/> is a reference to a single shared buffer
         /// owned by the subscription, not a fresh allocation. Downstream observers MUST consume the snapshot synchronously
@@ -21,9 +24,6 @@ public static partial class SignalAsyncExtensions
         /// If you need a stable copy, project to one via the projecting <c>CombineLatest</c> overload or
         /// <c>.Select(static s =&gt; s.ToArray())</c>.</para>
         /// </remarks>
-        /// <returns>An observable sequence that emits a snapshot of the latest values whenever any source produces a new value,
-        /// after all sources have produced at least one value.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="sources"/> is <see langword="null"/>.</exception>
         public IObservableAsync<IReadOnlyList<TSource>> SyncLatest()
         {
             ArgumentExceptionHelper.ThrowIfNull(sources);

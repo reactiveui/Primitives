@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
 /// <summary>Operator that catches exceptions of a specific type and completes.</summary>
@@ -9,6 +11,7 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <typeparam name="TException">The type of the exception to catch.</typeparam>
 /// <param name="source">The source observable sequence.</param>
 /// <param name="errorAction">Action to invoke when an exception of type <typeparamref name="TException"/> occurs.</param>
+[System.Diagnostics.DebuggerDisplay("Source = {_source}, ErrorAction = {_errorAction}")]
 public sealed class CatchIgnoreObservable<TSource, TException>(
     IObservable<TSource> source,
     Action<TException> errorAction) : IObservable<TSource>
@@ -35,6 +38,7 @@ public sealed class CatchIgnoreObservable<TSource, TException>(
         Action<TException> errorAction) : IObserver<TSource>
     {
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnNext(TSource value) => downstream.OnNext(value);
 
         /// <inheritdoc/>
@@ -61,6 +65,7 @@ public sealed class CatchIgnoreObservable<TSource, TException>(
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnCompleted() => downstream.OnCompleted();
     }
 }

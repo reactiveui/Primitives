@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
 /// <summary>Forwards source values; on any source error, swallows it and completes silently.</summary>
@@ -22,12 +24,15 @@ public sealed class CatchIgnoreEmptyObservable<T>(IObservable<T> source) : IObse
     private sealed class CatchIgnoreEmptyWitness(IObserver<T> downstream) : IObserver<T>
     {
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnNext(T value) => downstream.OnNext(value);
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnError(Exception error) => downstream.OnCompleted();
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
             "Design",
             "SST2318:Members should not have identical bodies",

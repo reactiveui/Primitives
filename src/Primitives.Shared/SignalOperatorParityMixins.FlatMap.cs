@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive;
@@ -186,6 +187,7 @@ public static partial class LinqExtensions
 
         /// <summary>Handles a source value.</summary>
         /// <param name="value">The source value.</param>
+        /// <exception cref="InvalidOperationException">The selector returned a <see langword="null"/> inner observable.</exception>
         private void OnOuterNext(TSource value)
         {
             IObservable<TResult> inner;
@@ -433,12 +435,15 @@ public static partial class LinqExtensions
             internal OuterWitness(FlatMapCoordinator<TSource, TResult> parent) => _parent = parent;
 
             /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void OnCompleted() => _parent.OnOuterCompleted();
 
             /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void OnError(Exception error) => _parent.OnError(error);
 
             /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void OnNext(TSource value) => _parent.OnOuterNext(value);
         }
 
@@ -453,12 +458,15 @@ public static partial class LinqExtensions
             internal InnerWitness(FlatMapCoordinator<TSource, TResult> parent) => _parent = parent;
 
             /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void OnCompleted() => _parent.OnInnerCompleted();
 
             /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void OnError(Exception error) => _parent.OnError(error);
 
             /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void OnNext(TResult value) => _parent.OnInnerNext(value);
         }
     }
@@ -482,6 +490,7 @@ public static partial class LinqExtensions
         /// <param name="sourceValue">Captured outer value.</param>
         /// <param name="source">Inner observable.</param>
         /// <param name="selector">Projects outer and inner values to result values.</param>
+        /// <exception cref="InvalidOperationException"><paramref name="source"/> is <see langword="null"/>.</exception>
         internal FlatMapResultInnerSignal(
             TSource sourceValue,
             IObservable<TCollection> source,
@@ -519,12 +528,15 @@ public static partial class LinqExtensions
             private readonly IObserver<TResult> _observer = observer;
 
             /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void OnCompleted() => _observer.OnCompleted();
 
             /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void OnError(Exception error) => _observer.OnError(error);
 
             /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void OnNext(TCollection value) => _observer.OnNext(_selector(_sourceValue, value));
         }
     }

@@ -10,6 +10,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>Switches each notification onto the configured async context before forwarding it.</summary>
 /// <typeparam name="T">The observed element type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("AsyncContext = {AsyncContext}, ForceYielding = {ForceYielding}")]
 public sealed class WitnessOnWitness<T> : WitnessAsync<T>
 {
     /// <summary>Initializes a new instance of the <see cref="WitnessOnWitness{T}"/> class.</summary>

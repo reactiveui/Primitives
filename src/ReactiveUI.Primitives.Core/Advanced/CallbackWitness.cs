@@ -2,12 +2,14 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 
 namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Observer that forwards notifications to delegates.</summary>
 /// <typeparam name="T">The observed value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("OnNext = {_onNext}, OnError = {_onError}, OnCompleted = {_onCompleted}")]
 public sealed class CallbackWitness<T> : IObserver<T>
 {
     /// <summary>Next notification callback.</summary>
@@ -23,6 +25,7 @@ public sealed class CallbackWitness<T> : IObserver<T>
     /// <param name="onNext">Next notification callback.</param>
     /// <param name="onError">Error notification callback.</param>
     /// <param name="onCompleted">Completion notification callback.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="onNext"/> is <see langword="null"/>.</exception>
     public CallbackWitness(Action<T> onNext, Action<Exception>? onError, Action<Result>? onCompleted)
     {
         _onNext = onNext ?? throw new ArgumentNullException(nameof(onNext));
@@ -31,17 +34,21 @@ public sealed class CallbackWitness<T> : IObserver<T>
     }
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnCompleted() => _onCompleted?.Invoke(Result.Success);
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnError(Exception error) => (_onError ?? Rethrow)(error);
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnNext(T value) => _onNext(value);
 
     /// <summary>Rethrows the supplied exception without losing its stack information.</summary>
     /// <param name="error">The exception to rethrow.</param>
     /// <remarks>Excluded from coverage: the unreachable sequence point after <see cref="ExceptionDispatchInfo"/> rethrow cannot be credited by cobertura.</remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     private static void Rethrow(Exception error) => ExceptionDispatchInfo.Capture(error).Throw();
 }

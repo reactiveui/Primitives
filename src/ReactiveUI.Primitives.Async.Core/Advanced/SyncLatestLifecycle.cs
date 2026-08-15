@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>
@@ -12,6 +14,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// fan-out, completion-bitmask handling) lives in one place.
 /// </summary>
 /// <typeparam name="TResult">The downstream element type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("SourceCount = {Subscriptions.Length}, HasDisposed = {HasDisposed}")]
 public sealed class SyncLatestLifecycle<TResult> : IAsyncDisposable
 {
     /// <summary>Serializes downstream notifications so OnNext / OnError / OnCompleted never overlap.</summary>
@@ -141,6 +144,7 @@ public sealed class SyncLatestLifecycle<TResult> : IAsyncDisposable
 
     /// <summary>Disposes the lifecycle without signalling a terminal notification.</summary>
     /// <returns>A ValueTask representing the asynchronous teardown.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask DisposeAsync() => FinishAsync(null);
 
     /// <summary>Completes the combined sequence and disposes every source subscription.</summary>

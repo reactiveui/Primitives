@@ -2,11 +2,13 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Concatenates synchronous integer ranges without outer observable/coordinator overhead.</summary>
+[System.Diagnostics.DebuggerDisplay("Ranges = {_ranges.Length}")]
 public sealed class RangeConcatSignal : IRequireCurrentThread<int>, IInlineSignal<int>
 {
     /// <summary>Source ranges to emit in order.</summary>
@@ -17,6 +19,7 @@ public sealed class RangeConcatSignal : IRequireCurrentThread<int>, IInlineSigna
     public RangeConcatSignal(RangeSignal[] ranges) => _ranges = ranges;
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() => false;
 
     /// <inheritdoc/>

@@ -2,12 +2,14 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>Coordinates retry subscriptions for <see cref="ReattemptSignal{T}"/>.</summary>
 /// <typeparam name="T">The element type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Source = {Source}, Remaining = {Remaining}")]
 public sealed class ReattemptSubscription<T> : IAsyncDisposable
 {
     /// <summary>Initializes a new instance of the <see cref="ReattemptSubscription{T}"/> class.</summary>
@@ -43,6 +45,7 @@ public sealed class ReattemptSubscription<T> : IAsyncDisposable
     private int Remaining { get; set; }
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask DisposeAsync() => CurrentSubscription.DisposeAsync();
 
     /// <summary>Subscribes to the source once.</summary>
@@ -70,6 +73,7 @@ public sealed class ReattemptSubscription<T> : IAsyncDisposable
     /// <param name="value">The value to relay.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A task representing the asynchronous notification.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask RelayNextAsync(T value, CancellationToken cancellationToken) =>
         Observer.OnNextAsync(value, cancellationToken);
 
@@ -77,6 +81,7 @@ public sealed class ReattemptSubscription<T> : IAsyncDisposable
     /// <param name="error">The error to relay.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A task representing the asynchronous notification.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask RelayErrorAsync(Exception error, CancellationToken cancellationToken) =>
         Observer.OnErrorResumeAsync(error, cancellationToken);
 

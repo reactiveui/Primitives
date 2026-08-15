@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive;
 #else
@@ -12,8 +14,8 @@ namespace ReactiveUI.Primitives;
 public static partial class LinqExtensions
 {
     /// <summary>Terminal operators that reduce a source to one awaited result.</summary>
-    /// <param name="source">The source observable.</param>
     /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source observable.</param>
     extension<T>(IObservable<T> source)
     {
         /// <summary>Awaits the first source value.</summary>
@@ -66,7 +68,7 @@ public static partial class LinqExtensions
         /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
         /// <remarks>Deprioritized so calls like <c>FirstOrDefaultAsync(default!)</c> keep binding to the
         /// <c>FirstOrDefaultAsync(T)</c> overload they compiled against before this overload existed.</remarks>
-        [System.Runtime.CompilerServices.OverloadResolutionPriority(-1)]
+        [OverloadResolutionPriority(-1)]
         public Task<T> FirstOrDefaultAsync(CancellationToken cancellationToken)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -90,6 +92,7 @@ public static partial class LinqExtensions
         /// <returns>A task that completes with the final source value.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
         /// <exception cref="InvalidOperationException">The source completes without producing a value.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Task<T> ToTask() => Signal.ToTask(source);
 
         /// <summary>Awaits source completion and returns the last value produced by the source.</summary>
@@ -106,6 +109,7 @@ public static partial class LinqExtensions
 
         /// <summary>Awaits source completion and returns the last value produced by the source.</summary>
         /// <returns>A task that completes with the final source value.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Task<T> LastAsync() => Signal.ToTask(source);
 
         /// <summary>Awaits source completion and returns the last value produced by the source.</summary>
@@ -113,11 +117,13 @@ public static partial class LinqExtensions
         /// <returns>A task that completes with the final source value.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
         /// <exception cref="InvalidOperationException">The source completes without producing a value.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Task<T> LastAsync(CancellationToken cancellationToken) =>
             source.ToTask(cancellationToken);
 
         /// <summary>Awaits source completion and returns the last value produced by the source, or <see langword="default"/> when the source is empty.</summary>
         /// <returns>A task that completes with the final source value, or <see langword="default"/> when the source is empty.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Task<T> LastOrDefaultAsync() =>
             source.LastOrDefaultAsync(default!);
 
@@ -137,7 +143,8 @@ public static partial class LinqExtensions
         /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
         /// <remarks>Deprioritized so calls like <c>LastOrDefaultAsync(default!)</c> keep binding to the
         /// <c>LastOrDefaultAsync(T)</c> overload they compiled against before this overload existed.</remarks>
-        [System.Runtime.CompilerServices.OverloadResolutionPriority(-1)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [OverloadResolutionPriority(-1)]
         public Task<T> LastOrDefaultAsync(CancellationToken cancellationToken) =>
             source.LastOrDefaultAsync(default!, cancellationToken);
 
@@ -156,18 +163,21 @@ public static partial class LinqExtensions
         /// <summary>Awaits the source count as a task.</summary>
         /// <returns>A task that completes with the number of source values.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Task<int> CountAsync() => CountTaskAsync(source, CancellationToken.None);
 
         /// <summary>Awaits the source count as a task.</summary>
         /// <param name="cancellationToken">The token used to cancel the task.</param>
         /// <returns>A task that completes with the number of source values.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Task<int> CountAsync(CancellationToken cancellationToken) => CountTaskAsync(source, cancellationToken);
 
         /// <summary>Awaits the source predicate count as a task.</summary>
         /// <param name="predicate">The function that identifies values to count.</param>
         /// <returns>A task that completes with the matching value count.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence or <paramref name="predicate"/> is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Task<int> CountAsync(Func<T, bool> predicate) =>
             CountTaskAsync(source, predicate, CancellationToken.None);
 
@@ -176,24 +186,28 @@ public static partial class LinqExtensions
         /// <param name="cancellationToken">The token used to cancel the task.</param>
         /// <returns>A task that completes with the matching value count.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence or <paramref name="predicate"/> is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Task<int> CountAsync(Func<T, bool> predicate, CancellationToken cancellationToken) =>
             CountTaskAsync(source, predicate, cancellationToken);
 
         /// <summary>Awaits whether any value is present.</summary>
         /// <returns>A task that completes with whether the source produced any values.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Task<bool> AnyAsync() => AnyTaskAsync(source, CancellationToken.None);
 
         /// <summary>Awaits whether any value is present.</summary>
         /// <param name="cancellationToken">The token used to cancel the task.</param>
         /// <returns>A task that completes with whether the source produced any values.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Task<bool> AnyAsync(CancellationToken cancellationToken) => AnyTaskAsync(source, cancellationToken);
 
         /// <summary>Awaits whether any value matches a predicate.</summary>
         /// <param name="predicate">The function that tests each value.</param>
         /// <returns>A task that completes with whether any source value satisfies <paramref name="predicate"/>.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence or <paramref name="predicate"/> is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Task<bool> AnyAsync(Func<T, bool> predicate) => AnyTaskAsync(source, predicate, CancellationToken.None);
 
         /// <summary>Awaits whether any value matches a predicate.</summary>
@@ -201,6 +215,7 @@ public static partial class LinqExtensions
         /// <param name="cancellationToken">The token used to cancel the task.</param>
         /// <returns>A task that completes with whether any source value satisfies <paramref name="predicate"/>.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence or <paramref name="predicate"/> is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Task<bool> AnyAsync(Func<T, bool> predicate, CancellationToken cancellationToken) =>
             AnyTaskAsync(source, predicate, cancellationToken);
 
@@ -251,6 +266,7 @@ public static partial class LinqExtensions
 
         /// <summary>Collects all values into an array task.</summary>
         /// <returns>A task that completes with all source values in an array.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Task<T[]> ToArrayAsync() => source.CollectArrayAsync();
 
         /// <summary>Collects all values into a list task.</summary>
@@ -293,6 +309,7 @@ public static partial class LinqExtensions
 
         /// <summary>Collects all values into a list task.</summary>
         /// <returns>A task that completes with all source values in a list.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Task<IList<T>> ToListAsync() => source.CollectListAsync();
 
         /// <summary>Awaits the first source value, applying the configured empty-source behavior and optional cancellation.</summary>

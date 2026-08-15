@@ -9,6 +9,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 #endif
 
 /// <summary>Runs an action for each subscription and emits <see cref="RxVoid.Default"/> after it completes.</summary>
+[System.Diagnostics.DebuggerDisplay("Action = {Action}, TaskScheduler = {TaskScheduler}")]
 public sealed class StartSignal : IObservableAsync<RxVoid>
 {
     /// <summary>Initializes a new instance of the <see cref="StartSignal"/> class.</summary>

@@ -2,10 +2,13 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Observer that forwards notifications to a standard observer.</summary>
 /// <typeparam name="T">The observed value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Observer = {_observer}")]
 public sealed class ForwardingWitness<T> : IObserver<T>
 {
     /// <summary>Wrapped observer.</summary>
@@ -13,15 +16,19 @@ public sealed class ForwardingWitness<T> : IObserver<T>
 
     /// <summary>Initializes a new instance of the <see cref="ForwardingWitness{T}"/> class.</summary>
     /// <param name="observer">Wrapped observer.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="observer"/> is <see langword="null"/>.</exception>
     public ForwardingWitness(IObserver<T> observer) =>
         _observer = observer ?? throw new ArgumentNullException(nameof(observer));
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnCompleted() => _observer.OnCompleted();
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnError(Exception error) => _observer.OnError(error);
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnNext(T value) => _observer.OnNext(value);
 }

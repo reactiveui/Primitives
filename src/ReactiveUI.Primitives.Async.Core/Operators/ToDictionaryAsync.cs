@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for asynchronously converting an observable sequence to a dictionary.</summary>
@@ -12,9 +14,9 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Asynchronous dictionary-materialization operators for an observable source sequence.</summary>
-    /// <param name="this">The source observable sequence.</param>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-    extension<T>(IObservableAsync<T> @this)
+    /// <param name="source">The source observable sequence.</param>
+    extension<T>(IObservableAsync<T> source)
     {
         /// <summary>Asynchronously creates a dictionary from the elements of the sequence, using the specified key selector function.</summary>
         /// <typeparam name="TKey">The type of the keys in the resulting dictionary. Must be non-nullable.</typeparam>
@@ -25,12 +27,13 @@ public static partial class SignalAsyncExtensions
         /// <returns>A task that represents the asynchronous operation. The task result contains a dictionary mapping keys to
         /// elements from the sequence.</returns>
         /// <exception cref="ArgumentExceptionHelper">Thrown if the keySelector parameter is null.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<Dictionary<TKey, T>> ToDictionaryAsync<TKey>(
             Func<T, TKey> keySelector,
             IEqualityComparer<TKey>? comparer,
             CancellationToken cancellationToken)
             where TKey : notnull =>
-            ToDictionaryCore(@this, keySelector, DictionaryIdentity<T>.Instance, comparer, cancellationToken);
+            ToDictionaryCore(source, keySelector, DictionaryIdentity<T>.Instance, comparer, cancellationToken);
 
         /// <summary>
         /// Asynchronously creates a dictionary from the elements of the sequence, using the specified key selector
@@ -41,16 +44,15 @@ public static partial class SignalAsyncExtensions
         /// <returns>A task that represents the asynchronous operation. The task result contains a dictionary mapping keys to
         /// elements from the sequence.</returns>
         /// <exception cref="ArgumentExceptionHelper">Thrown if the keySelector parameter is null.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<Dictionary<TKey, T>> ToDictionaryAsync<TKey>(Func<T, TKey> keySelector)
             where TKey : notnull =>
-            @this.ToDictionaryAsync(keySelector, null, CancellationToken.None);
+            source.ToDictionaryAsync(keySelector, null, CancellationToken.None);
 
         /// <summary>
         /// Asynchronously creates a dictionary from the elements of the sequence using the specified key and element
         /// selector functions.
         /// </summary>
-        /// <remarks>If multiple elements produce the same key, an exception may be thrown. The operation
-        /// is performed asynchronously and can be cancelled using the provided cancellation token.</remarks>
         /// <typeparam name="TKey">The type of the keys in the resulting dictionary. Must be non-nullable.</typeparam>
         /// <typeparam name="TValue">The type of the values in the resulting dictionary.</typeparam>
         /// <param name="keySelector">A function to extract a key from each element in the sequence.</param>
@@ -61,13 +63,16 @@ public static partial class SignalAsyncExtensions
         /// <returns>A task that represents the asynchronous operation. The task result contains a dictionary mapping keys to
         /// values as defined by the selector functions.</returns>
         /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="keySelector"/> or <paramref name="elementSelector"/> is null.</exception>
+        /// <remarks>If multiple elements produce the same key, an exception may be thrown. The operation
+        /// is performed asynchronously and can be cancelled using the provided cancellation token.</remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<Dictionary<TKey, TValue>> ToDictionaryAsync<TKey, TValue>(
             Func<T, TKey> keySelector,
             Func<T, TValue> elementSelector,
             IEqualityComparer<TKey>? comparer,
             CancellationToken cancellationToken)
             where TKey : notnull =>
-            ToDictionaryCore(@this, keySelector, elementSelector, comparer, cancellationToken);
+            ToDictionaryCore(source, keySelector, elementSelector, comparer, cancellationToken);
 
         /// <summary>
         /// Asynchronously creates a dictionary from the elements of the sequence using the specified key and element
@@ -80,11 +85,12 @@ public static partial class SignalAsyncExtensions
         /// <returns>A task that represents the asynchronous operation. The task result contains a dictionary mapping keys to
         /// values as defined by the selector functions.</returns>
         /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="keySelector"/> or <paramref name="elementSelector"/> is null.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<Dictionary<TKey, TValue>> ToDictionaryAsync<TKey, TValue>(
             Func<T, TKey> keySelector,
             Func<T, TValue> elementSelector)
             where TKey : notnull =>
-            @this.ToDictionaryAsync(keySelector, elementSelector, null, CancellationToken.None);
+            source.ToDictionaryAsync(keySelector, elementSelector, null, CancellationToken.None);
     }
 
     /// <summary>Runs dictionary materialization through the shared subscription path.</summary>

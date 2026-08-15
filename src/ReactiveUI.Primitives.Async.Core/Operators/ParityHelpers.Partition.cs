@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async;
@@ -253,10 +254,10 @@ public static partial class SignalAsyncExtensions
             internal PartitionCoordinator<T> Coordinator { get; set; } = null!;
 
             /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
                 IObserverAsync<T> observer,
                 CancellationToken cancellationToken) =>
-
                 // The PartitionBranchSignal is created by the coordinator's constructor; the
                 // coordinator field is filled in below.
                 Coordinator.SubscribeBranchAsync(isTrueBranch, observer, cancellationToken);

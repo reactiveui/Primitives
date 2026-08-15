@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 
 #if REACTIVE_SHIM
@@ -47,13 +48,16 @@ internal sealed class ScheduledDrainState<T>(ISequencer scheduler, IDrainTarget 
 
     /// <summary>Enqueues an OnNext notification and schedules a drain pass if one isn't already running.</summary>
     /// <param name="value">The value to forward downstream.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void EnqueueNext(T value) => Enqueue(new(DrainNotificationKind.Next, value, null));
 
     /// <summary>Enqueues an OnError notification and schedules a drain pass if one isn't already running.</summary>
     /// <param name="error">The error to forward downstream.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void EnqueueError(Exception error) => Enqueue(new(DrainNotificationKind.Error, default!, error));
 
     /// <summary>Enqueues an OnCompleted notification and schedules a drain pass if one isn't already running.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void EnqueueCompleted() => Enqueue(new(DrainNotificationKind.Completed, default!, null));
 
     /// <summary>Records the upstream subscription, or disposes it immediately if the sink is already done.</summary>

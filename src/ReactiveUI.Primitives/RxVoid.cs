@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives;
 
 /// <summary>A Reactive Void.</summary>
@@ -20,17 +22,20 @@ public readonly struct RxVoid : IEquatable<RxVoid>
     /// <param name="first">The first <see cref="RxVoid"/> value to compare.</param>
     /// <param name="second">The second <see cref="RxVoid"/> value to compare.</param>
     /// <returns>Because <see cref="RxVoid"/> has a single value, this always returns <c>false</c>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool operator !=(RxVoid first, RxVoid second) => false;
 
     /// <summary>Determines whether the two specified <see cref="RxVoid"/> values are equal. Because <see cref="RxVoid"/> has a single value, this always returns <c>true</c>.</summary>
     /// <param name="first">The first <see cref="RxVoid"/> value to compare.</param>
     /// <param name="second">The second <see cref="RxVoid"/> value to compare.</param>
     /// <returns>Because <see cref="RxVoid"/> has a single value, this always returns <c>true</c>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool operator ==(RxVoid first, RxVoid second) => true;
 
     /// <summary>Determines whether the specified <see cref="RxVoid"/> value is equal to the current <see cref="RxVoid"/>.</summary>
     /// <param name="other">An object to compare to the current <see cref="RxVoid"/> value.</param>
     /// <returns>Because <see cref="RxVoid"/> has a single value, this always returns <c>true</c>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Equals(RxVoid other) => true;
 
     /// <summary>Determines whether the specified System.Object is equal to the current <see cref="RxVoid"/>.</summary>

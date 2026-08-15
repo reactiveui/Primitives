@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for creating and transforming asynchronous observable sequences.</summary>
@@ -11,34 +13,36 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Projection (Map/Select) operators for an observable source sequence.</summary>
-    /// <param name="this">The source observable sequence.</param>
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
-    extension<T>(IObservableAsync<T> @this)
+    /// <param name="source">The source observable sequence.</param>
+    extension<T>(IObservableAsync<T> source)
     {
         /// <summary>Projects each element of the observable sequence into a new form using the specified asynchronous selector function.</summary>
-        /// <remarks>The selector function is invoked for each element as it is observed. If the selector
-        /// function throws an exception or returns a faulted task, the error is propagated to the observer. The
-        /// operation supports cancellation via the provided cancellation token.</remarks>
         /// <typeparam name="TDest">The type of the value returned by the selector function and produced by the resulting observable sequence.</typeparam>
         /// <param name="selector">A function that transforms each element of the source sequence into a value of type <typeparamref
         /// name="TDest"/> asynchronously. The function receives the source element and a cancellation token.</param>
         /// <returns>An observable sequence of type <typeparamref name="TDest"/> containing the results of applying the selector
         /// function to each element of the source sequence.</returns>
+        /// <remarks>The selector function is invoked for each element as it is observed. If the selector
+        /// function throws an exception or returns a faulted task, the error is propagated to the observer. The
+        /// operation supports cancellation via the provided cancellation token.</remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<TDest> Map<TDest>(
             Func<T, CancellationToken, ValueTask<TDest>> selector) =>
-            new MapAsyncSignal<T, TDest>(@this, selector);
+            new MapAsyncSignal<T, TDest>(source, selector);
 
         /// <summary>Projects each element of the observable sequence into a new form using the specified selector function.</summary>
-        /// <remarks>The selector function is applied to each element as it is observed. If the selector
-        /// throws an exception, the error is propagated to the observer. This method does not modify the source
-        /// sequence; it produces a new sequence with transformed elements.</remarks>
         /// <typeparam name="TDest">The type of the value returned by the selector function.</typeparam>
         /// <param name="selector">A function that transforms each element of the source sequence into a new value. Cannot be null.</param>
         /// <returns>An observable sequence whose elements are the result of invoking the selector function on each element of
         /// the source sequence.</returns>
+        /// <remarks>The selector function is applied to each element as it is observed. If the selector
+        /// throws an exception, the error is propagated to the observer. This method does not modify the source
+        /// sequence; it produces a new sequence with transformed elements.</remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<TDest> Map<TDest>(
             Func<T, TDest> selector) =>
-            new MapSyncSignal<T, TDest>(@this, selector);
+            new MapSyncSignal<T, TDest>(source, selector);
 
         /// <summary>Projects each value using caller-supplied state.</summary>
         /// <typeparam name="TState">The caller-supplied state type.</typeparam>
@@ -52,24 +56,26 @@ public static partial class SignalAsyncExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(selector);
 
-            return new MapSyncSignal<T, TDest>(@this, value => selector(state, value));
+            return new MapSyncSignal<T, TDest>(source, value => selector(state, value));
         }
 
         /// <summary>Projects each element of the observable sequence into a new form using the specified asynchronous selector function.</summary>
         /// <typeparam name="TDest">The type of the value returned by the selector function and produced by the resulting observable sequence.</typeparam>
         /// <param name="selector">A function that transforms each element of the source sequence into a value.</param>
         /// <returns>An observable sequence containing the results of applying the selector function to each source element.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<TDest> Select<TDest>(
             Func<T, CancellationToken, ValueTask<TDest>> selector) =>
-            new MapAsyncSignal<T, TDest>(@this, selector);
+            new MapAsyncSignal<T, TDest>(source, selector);
 
         /// <summary>Projects each element of the observable sequence into a new form using the specified selector function.</summary>
         /// <typeparam name="TDest">The type of the value returned by the selector function.</typeparam>
         /// <param name="selector">A function that transforms each element of the source sequence into a new value.</param>
         /// <returns>An observable sequence whose elements are the result of invoking the selector function.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<TDest> Select<TDest>(
             Func<T, TDest> selector) =>
-            new MapSyncSignal<T, TDest>(@this, selector);
+            new MapSyncSignal<T, TDest>(source, selector);
     }
 
     /// <summary>

@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive;
@@ -101,6 +102,7 @@ public static partial class LinqExtensions
         /// <param name="source3">The third source observable.</param>
         /// <param name="selector">The selector that combines latest values from all sources.</param>
         /// <returns>The combine-latest signal.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static CombineLatestSignal<TResult> Create<T1, T2, T3>(
             IObservable<T1> source,
             IObservable<T2> source2,
@@ -126,6 +128,7 @@ public static partial class LinqExtensions
         /// <param name="source4">The fourth source observable.</param>
         /// <param name="selector">The selector that combines latest values from all sources.</param>
         /// <returns>The combine-latest signal.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static CombineLatestSignal<TResult> Create<T1, T2, T3, T4>(
             IObservable<T1> source,
             IObservable<T2> source2,
@@ -156,6 +159,7 @@ public static partial class LinqExtensions
         /// <param name="source5">The fifth source observable.</param>
         /// <param name="selector">The selector that combines latest values from all sources.</param>
         /// <returns>The combine-latest signal.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static CombineLatestSignal<TResult> Create<T1, T2, T3, T4, T5>(
             IObservable<T1> source,
             IObservable<T2> source2,
@@ -191,6 +195,7 @@ public static partial class LinqExtensions
         /// <param name="source6">The sixth source observable.</param>
         /// <param name="selector">The selector that combines latest values from all sources.</param>
         /// <returns>The combine-latest signal.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static CombineLatestSignal<TResult> Create<T1, T2, T3, T4, T5, T6>(
             IObservable<T1> source,
             IObservable<T2> source2,
@@ -231,6 +236,7 @@ public static partial class LinqExtensions
         /// <param name="source7">The seventh source observable.</param>
         /// <param name="selector">The selector that combines latest values from all sources.</param>
         /// <returns>The combine-latest signal.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [SuppressMessage(
             "Maintainability",
             "SST1472:Signatures should not declare too many parameters",
@@ -280,6 +286,7 @@ public static partial class LinqExtensions
         /// <param name="source8">The eighth source observable.</param>
         /// <param name="selector">The selector that combines latest values from all sources.</param>
         /// <returns>The combine-latest signal.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [SuppressMessage(
             "Maintainability",
             "SST1472:Signatures should not declare too many parameters",
@@ -334,6 +341,7 @@ public static partial class LinqExtensions
         /// <param name="source9">The ninth source observable.</param>
         /// <param name="selector">The selector that combines latest values from all sources.</param>
         /// <returns>The combine-latest signal.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [SuppressMessage(
             "Maintainability",
             "SST1472:Signatures should not declare too many parameters",
@@ -406,6 +414,7 @@ public static partial class LinqExtensions
     private sealed class CombineLatestSource<TResult, T>(IObservable<T> source) : ICombineLatestSource<TResult>
     {
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IDisposable Subscribe(CombineLatestCoordinator<TResult> coordinator, int index) =>
             source.Subscribe(
                 value => coordinator.OnNext(index, value),
@@ -466,6 +475,7 @@ public static partial class LinqExtensions
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose() => _subscriptions.Dispose();
 
         /// <summary>Subscribes to every source and returns this coordinator as the subscription.</summary>

@@ -14,25 +14,25 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Element-limiting operators for an observable source sequence.</summary>
-    /// <param name="this">The source observable sequence.</param>
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
-    extension<T>(IObservableAsync<T> @this)
+    /// <param name="source">The source observable sequence.</param>
+    extension<T>(IObservableAsync<T> source)
     {
         /// <summary>Returns a new observable sequence that emits only the first specified number of elements from the source sequence.</summary>
-        /// <remarks>If the source sequence contains fewer elements than <paramref name="count"/>, all
-        /// available elements are emitted and the sequence completes. This method does not modify the source sequence;
-        /// it returns a new sequence with the specified behavior.</remarks>
         /// <param name="count">The maximum number of elements to emit from the source sequence. Must be greater than or equal to zero.</param>
         /// <returns>An observable sequence that contains at most the first <paramref name="count"/> elements from the source
         /// sequence. If <paramref name="count"/> is zero, the resulting sequence completes immediately without emitting
         /// any elements.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="count"/> is less than zero.</exception>
+        /// <remarks>If the source sequence contains fewer elements than <paramref name="count"/>, all
+        /// available elements are emitted and the sequence completes. This method does not modify the source sequence;
+        /// it returns a new sequence with the specified behavior.</remarks>
         public IObservableAsync<T> Take(int count)
         {
-            ArgumentExceptionHelper.ThrowIfNull(@this);
+            ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(count);
 
-            return count == 0 ? new TakeZeroSignal<T>() : new TakeSignal<T>(@this, count);
+            return count == 0 ? new TakeZeroSignal<T>() : new TakeSignal<T>(source, count);
         }
     }
 

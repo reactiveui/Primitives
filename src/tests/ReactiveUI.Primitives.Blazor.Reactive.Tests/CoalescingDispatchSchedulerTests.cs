@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Disposables;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Reactive.Concurrency;
 
 namespace ReactiveUI.Primitives.Blazor.Reactive.Tests;
@@ -183,6 +184,7 @@ public sealed class CoalescingDispatchSchedulerTests
         public bool RunDrainInline { get; set; }
 
         /// <summary>Exposes the protected re-drain request for the test.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void RequestDrainForTest() => RequestDrain();
 
         /// <summary>Runs every drain the dispatcher has accepted so far.</summary>

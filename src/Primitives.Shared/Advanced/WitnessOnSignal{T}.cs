@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -22,11 +24,13 @@ internal sealed class WitnessOnSignal<T>(IObservable<T> source, ISequencer sched
 
     /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
     /// <returns>The result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() => true;
 
     /// <summary>Executes the Subscribe operation.</summary>
     /// <param name="observer">The observer value.</param>
     /// <returns>The result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IDisposable Subscribe(IObserver<T> observer) =>
         SignalSubscription.Subscribe(observer, true, SubscribeCore);
 
@@ -34,6 +38,7 @@ internal sealed class WitnessOnSignal<T>(IObservable<T> source, ISequencer sched
     /// <param name="observer">The observer value.</param>
     /// <param name="cancel">The cancel value.</param>
     /// <returns>The result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel) =>
         new WitnessOn(this, observer, cancel).Run();
 
@@ -92,13 +97,16 @@ internal sealed class WitnessOnSignal<T>(IObservable<T> source, ISequencer sched
 
         /// <summary>Executes the OnNext operation.</summary>
         /// <param name="value">The value.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnNext(T value) => QueueAction(Notification.OnNext(value));
 
         /// <summary>Executes the OnError operation.</summary>
         /// <param name="error">The error value.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnError(Exception error) => QueueAction(Notification.OnError(error));
 
         /// <summary>Executes the OnCompleted operation.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnCompleted() => QueueAction(Notification.OnCompleted());
 
         /// <summary>Executes the scheduled queue drain.</summary>

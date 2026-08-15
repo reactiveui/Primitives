@@ -8,9 +8,9 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>DistinctUntilChanged operators for an observable source sequence.</summary>
-    /// <param name="this">The source observable sequence.</param>
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
-    extension<T>(IObservableAsync<T> @this)
+    /// <param name="source">The source observable sequence.</param>
+    extension<T>(IObservableAsync<T> source)
     {
         /// <summary>
         /// Returns an observable sequence that emits only distinct consecutive elements, suppressing duplicates that
@@ -20,10 +20,10 @@ public static partial class SignalAsyncExtensions
         /// immediate predecessor.</returns>
         public IObservableAsync<T> DistinctUntilChanged()
         {
-            ArgumentExceptionHelper.ThrowIfNull(@this);
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
             var equalityComparer = EqualityComparer<T>.Default;
-            return new UniqueSignal<T>(@this, equalityComparer);
+            return new UniqueSignal<T>(source, equalityComparer);
         }
 
         /// <summary>
@@ -36,10 +36,10 @@ public static partial class SignalAsyncExtensions
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="equalityComparer"/> is <see langword="null"/>.</exception>
         public IObservableAsync<T> DistinctUntilChanged(IEqualityComparer<T> equalityComparer)
         {
-            ArgumentExceptionHelper.ThrowIfNull(@this);
+            ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(equalityComparer);
 
-            return new UniqueSignal<T>(@this, equalityComparer);
+            return new UniqueSignal<T>(source, equalityComparer);
         }
 
         /// <summary>
@@ -52,11 +52,11 @@ public static partial class SignalAsyncExtensions
         /// duplicates according to the specified key.</returns>
         public IObservableAsync<T> DistinctUntilChangedBy<TKey>(Func<T, TKey> keySelector)
         {
-            ArgumentExceptionHelper.ThrowIfNull(@this);
+            ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(keySelector);
 
             var equalityComparer = EqualityComparer<TKey>.Default;
-            return new UniqueBySignal<T, TKey>(@this, keySelector, equalityComparer);
+            return new UniqueBySignal<T, TKey>(source, keySelector, equalityComparer);
         }
 
         /// <summary>
@@ -73,11 +73,11 @@ public static partial class SignalAsyncExtensions
             Func<T, TKey> keySelector,
             IEqualityComparer<TKey> equalityComparer)
         {
-            ArgumentExceptionHelper.ThrowIfNull(@this);
+            ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(keySelector);
             ArgumentExceptionHelper.ThrowIfNull(equalityComparer);
 
-            return new UniqueBySignal<T, TKey>(@this, keySelector, equalityComparer);
+            return new UniqueBySignal<T, TKey>(source, keySelector, equalityComparer);
         }
     }
 }

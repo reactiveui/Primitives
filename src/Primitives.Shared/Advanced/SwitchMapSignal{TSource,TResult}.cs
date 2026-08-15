@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -15,6 +17,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// Fuses the projection into the switch: one object and one observer hop, where a projection followed by a
 /// separate switch costs two of each and an intermediate sequence of observables.
 /// </remarks>
+[System.Diagnostics.DebuggerDisplay("Source = {_source}, SkipNullSources = {_skipNullSources}")]
 public sealed class SwitchMapSignal<TSource, TResult> : IObservable<TResult>
 {
     /// <summary>The source whose values are projected to inner observables.</summary>
@@ -252,12 +255,15 @@ public sealed class SwitchMapSignal<TSource, TResult> : IObservable<TResult>
         private sealed class InnerWitness(Sink parent, ulong id) : IObserver<TResult>
         {
             /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void OnNext(TResult value) => parent.InnerOnNext(id, value);
 
             /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void OnError(Exception error) => parent.InnerOnError(id, error);
 
             /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void OnCompleted() => parent.InnerOnCompleted(id);
         }
     }

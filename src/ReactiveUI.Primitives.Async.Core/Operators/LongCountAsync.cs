@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for working with asynchronous observable sequences.</summary>
@@ -11,16 +13,17 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Asynchronous 64-bit element-counting operators for an observable source sequence.</summary>
-    /// <param name="this">The source observable sequence.</param>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-    extension<T>(IObservableAsync<T> @this)
+    /// <param name="source">The source observable sequence.</param>
+    extension<T>(IObservableAsync<T> source)
     {
         /// <summary>Asynchronously returns the number of elements in the sequence that satisfy an optional predicate.</summary>
         /// <param name="predicate">A function to test each element for a condition. If null, all elements are counted.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains the number of elements that
         /// satisfy the predicate, or the total number of elements if the predicate is null.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<long> LongCountAsync(Func<T, bool>? predicate) =>
-            @this.LongCountAsync(predicate, CancellationToken.None);
+            source.LongCountAsync(predicate, CancellationToken.None);
 
         /// <summary>Asynchronously returns the number of elements in the sequence that satisfy an optional predicate.</summary>
         /// <param name="predicate">A function to test each element for a condition. If null, all elements are counted.</param>
@@ -34,22 +37,24 @@ public static partial class SignalAsyncExtensions
             cancellationToken.ThrowIfCancellationRequested();
             LongCountTaskWitness<T> observer = new(predicate, cancellationToken);
             await using var subscription =
-                await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
+                await source.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
             return await observer.AwaitResultAsync().ConfigureAwait(false);
         }
 
         /// <summary>Asynchronously returns the total number of elements in the sequence as a 64-bit integer.</summary>
         /// <returns>A value task representing the asynchronous operation. The result contains the number of elements in the
         /// sequence as a 64-bit integer.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<long> LongCountAsync() =>
-            @this.LongCountAsync(null, CancellationToken.None);
+            source.LongCountAsync(null, CancellationToken.None);
 
         /// <summary>Asynchronously returns the total number of elements in the sequence as a 64-bit integer.</summary>
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
         /// <returns>A value task representing the asynchronous operation. The result contains the number of elements in the
         /// sequence as a 64-bit integer.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<long> LongCountAsync(CancellationToken cancellationToken) =>
-            @this.LongCountAsync(null, cancellationToken);
+            source.LongCountAsync(null, cancellationToken);
     }
 
     /// <summary>Witness that counts elements in a sequence as a 64-bit integer, optionally filtered by a predicate.</summary>

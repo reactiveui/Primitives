@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks.Sources;
 using ReactiveUI.Primitives.Async.Signals;
 
@@ -331,6 +332,7 @@ public class ConcurrentSignalBaseTests
         Func<ValueTask>? onCompleted = null) : IObserverAsync<int>
     {
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask DisposeAsync() => default;
 
         /// <inheritdoc/>
@@ -371,6 +373,7 @@ public class ConcurrentSignalBaseTests
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTaskSourceStatus GetStatus(short token) =>
             ValueTaskSourceStatus.Succeeded;
 

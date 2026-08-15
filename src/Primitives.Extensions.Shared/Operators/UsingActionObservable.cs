@@ -38,14 +38,11 @@ internal sealed class UsingActionObservable<T>(
             return EmptyDisposable.Instance;
         }
 
-        var capturedObserver = observer;
-        var capturedResource = resource;
-        var capturedAction = action;
         return scheduler.Schedule(
-            (capturedObserver, capturedResource, capturedAction),
+            (observer, resource, action),
             static (_, state) =>
             {
-                Run(state.capturedObserver, state.capturedResource, state.capturedAction);
+                Run(state.observer, state.resource, state.action);
                 return EmptyDisposable.Instance;
             });
     }

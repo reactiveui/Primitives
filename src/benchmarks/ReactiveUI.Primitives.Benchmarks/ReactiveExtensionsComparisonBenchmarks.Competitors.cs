@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Linq;
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using R3;
 using RxObservable = System.Reactive.Linq.Observable;
@@ -14,26 +15,31 @@ public partial class ReactiveExtensionsComparisonBenchmarks
 {
     /// <summary>Executes the <c>SystemReactiveAsSignal</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveAsSignal</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveAsSignal() =>
         DrainPrimitiveUnit(RxObservable.Select(RxObservable.Range(0, Count), static _ => RxVoid.Default));
 
     /// <summary>Executes the <c>SystemReactiveCatchAndReturn</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveCatchAndReturn</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveCatchAndReturn() =>
         DrainInt(RxObservable.Throw<int>(Boom).Catch(RxObservable.Return(Fallback)));
 
     /// <summary>Executes the <c>SystemReactiveCatchIgnore</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveCatchIgnore</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveCatchIgnore() =>
         DrainInt(RxObservable.Throw<int>(Boom).Catch(RxObservable.Empty<int>()));
 
     /// <summary>Executes the <c>SystemReactiveCombineLatestValuesAreAllFalse</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveCombineLatestValuesAreAllFalse</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveCombineLatestValuesAreAllFalse() =>
         DrainBool(BoolSources(ExtensionsLibrary.ReactiveUIExtensions, false).CombineLatest(ValuesAreAllFalse));
 
     /// <summary>Executes the <c>SystemReactiveCombineLatestValuesAreAllTrue</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveCombineLatestValuesAreAllTrue</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveCombineLatestValuesAreAllTrue() =>
         DrainBool(BoolSources(ExtensionsLibrary.ReactiveUIExtensions, true).CombineLatest(ValuesAreAllTrue));
 
@@ -79,16 +85,19 @@ public partial class ReactiveExtensionsComparisonBenchmarks
 
     /// <summary>Executes the <c>SystemReactiveForEach</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveForEach</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveForEach() =>
         DrainInt(RxObservable.Return(Values.AsEnumerable()).SelectMany(static values => values));
 
     /// <summary>Executes the <c>SystemReactiveFromArray</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveFromArray</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveFromArray() =>
         DrainInt(RxObservable.ToObservable(Values));
 
     /// <summary>Executes the <c>SystemReactiveGetMax</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveGetMax</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveGetMax() =>
         DrainInt(RxObservable.CombineLatest(
             RxObservable.Return(FirstValue),
@@ -97,6 +106,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
 
     /// <summary>Executes the <c>SystemReactiveGetMin</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveGetMin</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveGetMin() =>
         DrainInt(RxObservable.CombineLatest(
             RxObservable.Return(FirstValue),
@@ -105,6 +115,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
 
     /// <summary>Executes the <c>SystemReactiveNot</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveNot</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveNot() =>
         DrainBool(RxObservable.Select(RxObservable.ToObservable(BooleanValues), static value => !value));
 
@@ -124,16 +135,19 @@ public partial class ReactiveExtensionsComparisonBenchmarks
 
     /// <summary>Executes the <c>SystemReactiveReturn</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveReturn</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveReturn() =>
         DrainInt(RxObservable.Return(Value));
 
     /// <summary>Executes the <c>SystemReactiveScanWithInitial</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveScanWithInitial</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveScanWithInitial() =>
         DrainInt(RxObservable.Scan(RxObservable.Range(0, Count), 0, static (acc, value) => acc + value));
 
     /// <summary>Executes the <c>SystemReactiveSelectAsyncScenario</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveSelectAsyncScenario</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveSelectAsyncScenario() =>
         DrainInt(RxObservable.SelectMany(
             RxObservable.Range(0, Count),
@@ -141,11 +155,13 @@ public partial class ReactiveExtensionsComparisonBenchmarks
 
     /// <summary>Executes the <c>SystemReactiveSelectConstant</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveSelectConstant</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveSelectConstant() =>
         DrainInt(RxObservable.Select(RxObservable.Range(0, Count), static _ => Value));
 
     /// <summary>Executes the <c>SystemReactiveSelectManyThen</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveSelectManyThen</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveSelectManyThen() =>
         DrainInt(RxObservable.SelectMany(
             RxObservable.SelectMany(RxObservable.Return(Value), static value => RxObservable.Return(value + 1)),
@@ -153,6 +169,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
 
     /// <summary>Executes the <c>SystemReactiveSkipWhileNull</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveSkipWhileNull</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveSkipWhileNull() =>
         DrainString(RxObservable.Select(
             RxObservable.ToObservable(NullableStrings).SkipWhile(static value => value is null),
@@ -160,26 +177,31 @@ public partial class ReactiveExtensionsComparisonBenchmarks
 
     /// <summary>Executes the <c>SystemReactiveTakeUntil</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveTakeUntil</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveTakeUntil() =>
         DrainInt(RxObservable.Range(0, Count).TakeWhile(static value => value <= Match));
 
     /// <summary>Executes the <c>SystemReactiveToHotTask</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveToHotTask</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveToHotTask() =>
         GetCompletedResult(System.Reactive.Threading.Tasks.TaskObservableExtensions.ToTask(RxObservable.Return(Value)));
 
     /// <summary>Executes the <c>SystemReactiveWaitUntil</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveWaitUntil</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveWaitUntil() =>
         DrainInt(RxObservable.Range(0, Count).FirstAsync(static value => value == Match));
 
     /// <summary>Executes the <c>SystemReactiveWhereFalse</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveWhereFalse</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveWhereFalse() =>
         DrainBool(RxObservable.Where(RxObservable.ToObservable(BooleanValues), static value => !value));
 
     /// <summary>Executes the <c>SystemReactiveWhereIsNotNull</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveWhereIsNotNull</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveWhereIsNotNull() =>
         DrainString(RxObservable.Select(
             RxObservable.Where(RxObservable.ToObservable(NullableStrings), static value => value is not null),
@@ -187,6 +209,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
 
     /// <summary>Executes the <c>SystemReactiveWhereSelect</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveWhereSelect</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveWhereSelect() =>
         DrainInt(RxObservable.Select(
             RxObservable.Where(RxObservable.Range(0, Count), static value => (value & 1) == 0),
@@ -194,6 +217,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
 
     /// <summary>Executes the <c>SystemReactiveWhereTrue</c> benchmark helper.</summary>
     /// <returns>The <c>SystemReactiveWhereTrue</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveWhereTrue() =>
         DrainBool(RxObservable.Where(RxObservable.ToObservable(BooleanValues), static value => value));
 

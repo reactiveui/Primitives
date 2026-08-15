@@ -71,8 +71,8 @@ public static partial class SignalAsyncExtensions
     }
 
     /// <summary>Flattening parity helper operators for an observable source sequence of enumerables.</summary>
-    /// <param name="source">The source sequence of enumerables.</param>
     /// <typeparam name="T">The flattened element type.</typeparam>
+    /// <param name="source">The source sequence of enumerables.</param>
     extension<T>(IObservableAsync<IEnumerable<T>> source)
     {
         /// <summary>Flattens each enumerable element emitted by the source into individual values.</summary>
@@ -86,8 +86,8 @@ public static partial class SignalAsyncExtensions
     }
 
     /// <summary>Async-native parity helper operators for an observable source sequence.</summary>
-    /// <param name="source">The source observable sequence.</param>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
+    /// <param name="source">The source observable sequence.</param>
     extension<T>(IObservableAsync<T> source)
     {
         /// <summary>Continues with an empty sequence when the source completes with a failure result.</summary>
@@ -346,8 +346,8 @@ public static partial class SignalAsyncExtensions
     }
 
     /// <summary>Aggregation parity helper operators for a struct-valued observable source sequence.</summary>
-    /// <param name="source">The first source sequence.</param>
     /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The first source sequence.</param>
     extension<T>(IObservableAsync<T> source)
         where T : struct
     {
@@ -405,8 +405,8 @@ public static partial class SignalAsyncExtensions
     }
 
     /// <summary>Null-filtering parity helper operators for a nullable reference-type observable source sequence.</summary>
-    /// <param name="source">The source sequence.</param>
     /// <typeparam name="T">The reference type element.</typeparam>
+    /// <param name="source">The source sequence.</param>
     extension<T>(IObservableAsync<T?> source)
         where T : class
     {

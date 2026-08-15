@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides factory methods for creating asynchronous observable sequences.</summary>
@@ -11,18 +13,20 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsync
 {
     /// <summary>Creates an observable sequence that emits a single value and then completes.</summary>
-    /// <remarks>The returned observable sequence emits the value asynchronously and completes immediately
-    /// after. Subscribe returns before the value is observed — emit + complete are scheduled onto the
-    /// threadpool, preserving the deferred semantic the surrounding pipeline expects.</remarks>
     /// <typeparam name="T">The type of the value to be emitted by the observable sequence.</typeparam>
     /// <param name="value">The value to be emitted by the observable sequence.</param>
     /// <returns>An observable sequence that emits the specified value and then signals completion.</returns>
+    /// <remarks>The returned observable sequence emits the value asynchronously and completes immediately
+    /// after. Subscribe returns before the value is observed — emit + complete are scheduled onto the
+    /// threadpool, preserving the deferred semantic the surrounding pipeline expects.</remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservableAsync<T> Emit<T>(T value) => new ReturnSignalAsync<T>(value);
 
     /// <summary>Creates an observable sequence that emits a single value and then completes.</summary>
     /// <typeparam name="T">The type of the value to be emitted by the observable sequence.</typeparam>
     /// <param name="value">The value to be emitted by the observable sequence.</param>
     /// <returns>An observable sequence that emits the specified value and then signals completion.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2318:Members should not have identical bodies",

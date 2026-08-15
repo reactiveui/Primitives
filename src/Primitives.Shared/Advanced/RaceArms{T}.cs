@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -46,10 +48,12 @@ internal sealed class RaceArms<T> : IDisposable
 
     /// <summary>Adds a disposable that should be released with the arms.</summary>
     /// <param name="disposable">The disposable to track.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void Add(IDisposable disposable) => _subscriptions.Add(disposable);
 
     /// <summary>Forwards a terminal error from the outer source to the downstream observer.</summary>
     /// <param name="error">The error to forward.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void OnOuterError(Exception error) => _observer.OnError(error);
 
     /// <summary>Subscribes to a candidate source and registers it for winner bookkeeping.</summary>

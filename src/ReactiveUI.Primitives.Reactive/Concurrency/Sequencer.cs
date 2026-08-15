@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Concurrency;
+using System.Runtime.CompilerServices;
 using RxScheduler = System.Reactive.Concurrency.Scheduler;
 
 namespace ReactiveUI.Primitives.Reactive.Concurrency;
@@ -22,5 +23,6 @@ internal static class Sequencer
     /// <summary>Normalizes the specified <see cref="TimeSpan"/> value to a positive value.</summary>
     /// <param name="timeSpan">The value to normalize.</param>
     /// <returns><paramref name="timeSpan"/> when zero or positive; otherwise <see cref="TimeSpan.Zero"/>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static TimeSpan Normalize(TimeSpan timeSpan) => RxScheduler.Normalize(timeSpan);
 }

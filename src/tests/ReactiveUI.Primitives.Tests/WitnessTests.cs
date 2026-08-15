@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Disposables;
@@ -1036,6 +1037,7 @@ public class WitnessTests
     /// <summary>Waits for a task with a bounded timeout.</summary>
     /// <param name="task">The task to wait for.</param>
     /// <returns>A task that completes when the supplied task completes.</returns>
+    /// <exception cref="TimeoutException">The supplied task did not complete within the bounded timeout.</exception>
     private static async Task WaitForAsync(Task task)
     {
         var timeout = Task.Delay(TimeSpan.FromSeconds(TimeoutSeconds));
@@ -1075,9 +1077,11 @@ public class WitnessTests
         public void OnCompleted() => Completed++;
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnError(Exception error) => Errors.Add(error);
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnNext(T value) => Values.Add(value);
     }
 

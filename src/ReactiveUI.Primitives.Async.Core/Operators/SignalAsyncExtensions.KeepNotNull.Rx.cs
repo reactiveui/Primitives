@@ -8,8 +8,8 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Null-filtering parity helper operators for a nullable reference-type observable source sequence.</summary>
-    /// <param name="source">The source sequence.</param>
     /// <typeparam name="T">The reference type element.</typeparam>
+    /// <param name="source">The source sequence.</param>
     extension<T>(IObservableAsync<T?> source)
         where T : class
     {

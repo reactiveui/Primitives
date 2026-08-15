@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
 /// <summary>Forwards source values; on any source error, emits the stored fallback then completes.</summary>
@@ -28,6 +30,7 @@ public sealed class CatchReturnObservable<T>(IObservable<T> source, T fallback) 
     private sealed class CatchReturnWitness(IObserver<T> downstream, T fallback) : IObserver<T>
     {
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnNext(T value) => downstream.OnNext(value);
 
         /// <inheritdoc/>
@@ -38,6 +41,7 @@ public sealed class CatchReturnObservable<T>(IObservable<T> source, T fallback) 
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnCompleted() => downstream.OnCompleted();
     }
 }

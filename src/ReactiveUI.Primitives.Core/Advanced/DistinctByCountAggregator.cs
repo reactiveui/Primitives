@@ -7,6 +7,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <summary>Immutable accumulator that counts distinct selected keys as an <see cref="int"/>.</summary>
 /// <typeparam name="T">The observed value type.</typeparam>
 /// <typeparam name="TKey">The key type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Result = {Result}, Seen = {_seen}")]
 public readonly record struct
     DistinctByCountAggregator<T, TKey> : IAggregator<T, int, DistinctByCountAggregator<T, TKey>>
 {

@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -20,6 +22,7 @@ internal sealed class OnErrorResumeNextSignal<T> : IRequireCurrentThread<T>
     internal OnErrorResumeNextSignal(IEnumerable<IObservable<T>> sources) => _sources = sources;
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() => true;
 
     /// <inheritdoc/>
@@ -137,6 +140,7 @@ internal sealed class OnErrorResumeNextSignal<T> : IRequireCurrentThread<T>
         /// <param name="source">The next source when available.</param>
         /// <param name="error">The enumeration error when reading fails.</param>
         /// <param name="completed">Whether enumeration has completed.</param>
+        /// <exception cref="InvalidOperationException">The enumerator yielded a <see langword="null"/> source.</exception>
         private void ReadNextSource(out IObservable<T>? source, out Exception? error, out bool completed)
         {
             source = null;

@@ -201,12 +201,12 @@ public static class SequencerExtensions
         }
 
         /// <summary>Schedules an action to be executed.</summary>
-        /// <remarks>The naming of this method differs from <c>Schedule</c> because otherwise the signature would cause ambiguities.</remarks>
         /// <typeparam name="TState">The type of the state.</typeparam>
         /// <param name="state">A state object to be passed to <paramref name="action" />.</param>
         /// <param name="action">Action to execute.</param>
         /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
         /// <exception cref="ArgumentNullException"><paramref name="scheduler" /> or <paramref name="action" /> is <c>null</c>.</exception>
+        /// <remarks>The naming of this method differs from <c>Schedule</c> because otherwise the signature would cause ambiguities.</remarks>
         public IDisposable ScheduleAction<TState>(TState state, Action<TState> action)
         {
             ArgumentExceptionHelper.ThrowIfNull(scheduler);
@@ -223,12 +223,12 @@ public static class SequencerExtensions
         }
 
         /// <summary>Schedules an action to be executed.</summary>
-        /// <remarks>The naming of this method differs from <c>Schedule</c> because otherwise the signature would cause ambiguities.</remarks>
         /// <typeparam name="TState">The type of the state.</typeparam>
         /// <param name="state">A state object to be passed to <paramref name="action"/>.</param>
         /// <param name="action">Action to execute.</param>
         /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
         /// <exception cref="ArgumentNullException"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
+        /// <remarks>The naming of this method differs from <c>Schedule</c> because otherwise the signature would cause ambiguities.</remarks>
         internal IDisposable ScheduleAction<TState>(TState state, Func<TState, IDisposable> action)
         {
             ArgumentExceptionHelper.ThrowIfNull(scheduler);

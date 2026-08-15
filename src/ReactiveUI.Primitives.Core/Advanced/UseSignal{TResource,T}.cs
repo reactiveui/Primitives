@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Advanced;
@@ -11,6 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="T">Value type.</typeparam>
 /// <param name="resourceFactory">Resource factory.</param>
 /// <param name="signalFactory">Signal factory.</param>
+[System.Diagnostics.DebuggerDisplay("ResourceFactory = {_resourceFactory}, SignalFactory = {_signalFactory}")]
 public sealed class UseSignal<TResource, T>(
     Func<TResource> resourceFactory,
     Func<TResource, IObservable<T>> signalFactory) : IObservable<T>
@@ -150,6 +152,7 @@ public sealed class UseSignal<TResource, T>(
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose() => Stop();
 
         /// <summary>Stops and releases owned resources.</summary>

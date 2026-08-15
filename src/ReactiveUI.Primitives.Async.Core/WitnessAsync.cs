@@ -3,18 +3,20 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Disposables;
 using ReactiveUI.Primitives.Internal;
 
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Represents an asynchronous observer that processes notifications of type <typeparamref name="T"/> using asynchronous methods.</summary>
+/// <typeparam name="T">The type of the elements received by the observer.</typeparam>
 /// <remarks>Implement this abstract class to handle asynchronous event streams or push-based data sources, where
 /// notifications may arrive concurrently or in rapid succession. The observer provides asynchronous methods for
 /// handling new data, errors, and completion signals, and supports proper resource cleanup via asynchronous disposal.
 /// Instances are not thread-safe for concurrent notification handling; notifications are processed sequentially, and
 /// reentrant calls are detected and reported as unhandled exceptions.</remarks>
-/// <typeparam name="T">The type of the elements received by the observer.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Disposed = {_disposed}, CallState = {_callState}")]
 public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDisposable
 {
     /// <summary>Lazily-created CTS that signals disposal to in-flight operations. Stays
@@ -149,10 +151,10 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
     /// Asynchronously performs completion logic when the operation has finished, handling any finalization or cleanup
     /// tasks required.
     /// </summary>
-    /// <remarks>If an unhandled exception occurs during completion, it is passed to the unhandled exception
-    /// handler. This method ensures that necessary resources are released after completion.</remarks>
     /// <param name="result">The result of the completed operation, containing information about its outcome.</param>
     /// <returns>A task that represents the asynchronous completion operation.</returns>
+    /// <remarks>If an unhandled exception occurs during completion, it is passed to the unhandled exception
+    /// handler. This method ensures that necessary resources are released after completion.</remarks>
     [DebuggerStepThrough]
     public ValueTask OnCompletedAsync(Result result)
     {
@@ -183,11 +185,11 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
     }
 
     /// <summary>Asynchronously releases the resources used by the object.</summary>
+    /// <returns>A task that represents the asynchronous dispose operation.</returns>
     /// <remarks>Call this method to clean up resources when the object is no longer needed. This method is
     /// safe to call multiple times; subsequent calls after disposal will have no effect. Any unhandled exceptions that
     /// occur during disposal are captured and reported but do not prevent the completion of the dispose
     /// operation.</remarks>
-    /// <returns>A task that represents the asynchronous dispose operation.</returns>
     [DebuggerStepThrough]
     public async ValueTask DisposeAsync()
     {
@@ -209,6 +211,7 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
     /// <summary>Sets the source subscription disposable for this observer.</summary>
     /// <param name="value">The source subscription to track, or <see langword="null"/> to clear it.</param>
     /// <returns>A <see cref="ValueTask"/> representing the asynchronous operation.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask AssignSourceSubscriptionAsync(IAsyncDisposable? value) =>
         SingleAssignmentDisposableAsync.AssignDisposableAsync(ref _sourceSubscription, value);
 
@@ -220,6 +223,7 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
     /// operator pipelines into per-emission allocation-free flows.
     /// </summary>
     /// <param name="upstream">The upstream observer's dispose token.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void LinkUpstreamCancellation(CancellationToken upstream) =>
         LinkExternalCancellation(upstream);
 
@@ -281,8 +285,7 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
             Debug.Assert(oldCount > 0, "Calls count should be positive when exiting.");
 
             var newCount = oldCount - 1;
-            var newThreadId = newCount == 0 ? 0 : oldThreadId;
-            var newState = ((long)newThreadId << 32) | (uint)newCount;
+            var newState = ((long)(newCount == 0 ? 0 : oldThreadId) << 32) | (uint)newCount;
 
             if (Interlocked.CompareExchange(ref _callState, newState, oldState) != oldState)
             {
@@ -381,9 +384,9 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
     }
 
     /// <summary>Performs application-defined tasks associated with asynchronously releasing unmanaged resources.</summary>
+    /// <returns>A task that represents the asynchronous dispose operation.</returns>
     /// <remarks>Override this method to provide custom asynchronous resource cleanup logic in a derived
     /// class. This method is called by DisposeAsync to perform the actual resource release.</remarks>
-    /// <returns>A task that represents the asynchronous dispose operation.</returns>
     [DebuggerStepThrough]
     protected virtual async ValueTask DisposeAsyncCore()
     {
@@ -397,11 +400,9 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
 
         Task? allOnSomethingCallsCompleted = null;
         var initialState = Volatile.Read(ref _callState);
-        var initialCount = (int)initialState;
-        var initialThreadId = (int)(initialState >> 32);
 
-        if (initialCount > 0
-            && initialThreadId != Environment.CurrentManagedThreadId
+        if ((int)initialState > 0
+            && (int)(initialState >> 32) != Environment.CurrentManagedThreadId
             && Volatile.Read(ref _disposeFromNotification) == 0)
         {
             TaskCompletionSource<object?> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -440,12 +441,12 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
     }
 
     /// <summary>Handles an error by providing an asynchronous mechanism to resume execution after an exception occurs.</summary>
-    /// <remarks>Override this method to implement custom error recovery or resumption logic in derived
-    /// classes. The method is called when an error occurs and allows the operation to continue or perform cleanup
-    /// asynchronously.</remarks>
     /// <param name="error">The exception that triggered the error handling logic. Cannot be null.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous error handling operation.</param>
     /// <returns>A ValueTask that represents the asynchronous operation of resuming execution after the error.</returns>
+    /// <remarks>Override this method to implement custom error recovery or resumption logic in derived
+    /// classes. The method is called when an error occurs and allows the operation to continue or perform cleanup
+    /// asynchronously.</remarks>
     protected abstract ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken);
 
     /// <summary>Processes the next value in the asynchronous sequence.</summary>
@@ -645,6 +646,7 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
     internal readonly record struct LinkedTokenScope(CancellationTokenSource? Cts, CancellationToken Token) : IDisposable
     {
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose() => Cts?.Dispose();
     }
 }

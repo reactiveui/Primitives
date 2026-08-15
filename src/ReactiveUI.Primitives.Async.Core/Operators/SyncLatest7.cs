@@ -2,14 +2,16 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides the arity-7 (<c>seven</c>-source) <c>CombineLatest</c> extension methods.</summary>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Combines the latest values from multiple asynchronous observable sources.</summary>
-    /// <param name="src1">Source observable 1 whose latest value is combined.</param>
     /// <typeparam name="T1">The element type of source 1.</typeparam>
+    /// <param name="src1">Source observable 1 whose latest value is combined.</param>
     extension<T1>(IObservableAsync<T1> src1)
     {
         /// <summary>
@@ -31,6 +33,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="src7">Source observable 7 whose latest value is combined.</param>
         /// <param name="selector">Projects the latest value of every source into a result.</param>
         /// <returns>An observable sequence of projected results.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, TResult>(
             IObservableAsync<T2> src2,
             IObservableAsync<T3> src3,
@@ -62,6 +65,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="src7">Source observable 7 whose latest value is combined.</param>
         /// <param name="selector">Projects the latest value of every source into a result.</param>
         /// <returns>An observable sequence of projected results.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, TResult>(
             IObservableAsync<T2> src2,
             IObservableAsync<T3> src3,

@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -10,6 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Combines two synchronous integer ranges using System.Reactive <c>CombineLatest</c> semantics.</summary>
 /// <typeparam name="TResult">The result value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Left = {Left}, Right = {Right}")]
 public sealed class RangeCombineLatestSignal<TResult> : IObservable<TResult>
 {
     /// <summary>Initializes a new instance of the <see cref="RangeCombineLatestSignal{TResult}"/> class.</summary>
@@ -33,6 +36,7 @@ public sealed class RangeCombineLatestSignal<TResult> : IObservable<TResult>
     private Func<int, int, TResult> Selector { get; }
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IDisposable Subscribe(IObserver<TResult> observer) =>
         RangeLatestSignalHelper.Subscribe(observer, Left, Right, Selector);
 }

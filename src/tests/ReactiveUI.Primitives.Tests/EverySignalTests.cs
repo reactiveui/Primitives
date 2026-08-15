@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Signals;
@@ -160,6 +161,7 @@ public sealed class EverySignalTests
 
     /// <summary>Verifies <c>Any</c> stops the current-thread ticks on the first one it sees.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public Task EveryOnTheCurrentThreadSequencerStopsWhenAnySeesItsFirstTick() =>
         AssertBoundedByFirstMatchingTick(
@@ -168,6 +170,7 @@ public sealed class EverySignalTests
 
     /// <summary>Verifies a predicated <c>Any</c> stops the current-thread ticks on the first tick that matches.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public Task EveryOnTheCurrentThreadSequencerStopsWhenAnyMatchesATick() =>
         AssertBoundedByFirstMatchingTick(
@@ -176,6 +179,7 @@ public sealed class EverySignalTests
 
     /// <summary>Verifies <c>All</c> stops the current-thread ticks on the first tick its predicate rejects.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public Task EveryOnTheCurrentThreadSequencerStopsWhenAllRejectsATick() =>
         AssertBoundedByFirstMatchingTick(
@@ -184,6 +188,7 @@ public sealed class EverySignalTests
 
     /// <summary>Verifies <c>Contains</c> stops the current-thread ticks on the tick it was looking for.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public Task EveryOnTheCurrentThreadSequencerStopsWhenContainsFindsATick() =>
         AssertBoundedByFirstMatchingTick(
@@ -192,6 +197,7 @@ public sealed class EverySignalTests
 
     /// <summary>Verifies <c>IsEmpty</c> stops the current-thread ticks on the first one it sees.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public Task EveryOnTheCurrentThreadSequencerStopsWhenIsEmptySeesItsFirstTick() =>
         AssertBoundedByFirstMatchingTick(
@@ -263,11 +269,13 @@ public sealed class EverySignalTests
     /// <summary>Runs the subscription body on its own background thread so a livelock cannot hang the test host.</summary>
     /// <param name="body">The subscription body to run.</param>
     /// <returns>The subscribing thread, already running the body.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static SubscribingThread RunOnDedicatedThread(Action body) => SubscribingThread.Start(body);
 
     /// <summary>Waits for the subscribing thread to finish within the livelock timeout.</summary>
     /// <param name="subscriber">The subscribing thread to wait on.</param>
     /// <returns><see langword="true"/> when the subscribing thread finished in time.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool CompletedWithinTimeout(SubscribingThread subscriber) =>
         subscriber.ReturnedWithin(LivelockTimeout);
 

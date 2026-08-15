@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
@@ -158,6 +159,7 @@ public class ExpireOperatorTests
             }
 
             /// <summary>Marks the timer as disposed.</summary>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Dispose() => Interlocked.Exchange(ref _disposed, 1);
 
             /// <summary>Marks the timer as disposed.</summary>

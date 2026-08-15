@@ -36,13 +36,11 @@ internal sealed class FromArrayObservable<T>(
             return EmptyDisposable.Instance;
         }
 
-        var capturedObserver = observer;
-        var capturedSource = source;
         return scheduler.Schedule(
-            (capturedObserver, capturedSource),
+            (observer, source),
             static (_, state) =>
             {
-                Pump(state.capturedObserver, state.capturedSource);
+                Pump(state.observer, state.source);
                 return EmptyDisposable.Instance;
             });
     }

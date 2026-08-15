@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive;
 #else
@@ -97,10 +99,10 @@ public static partial class LinqExtensions
 
             SingleDisposable subscription = new();
             _ = Sequencer.CurrentThread.Schedule(
-                (self: this, subscription, observer),
+                (Self: this, subscription, observer),
                 static (_, s) =>
                 {
-                    s.subscription.Create(s.self.RunCore(s.observer));
+                    s.subscription.Create(s.Self.RunCore(s.observer));
                     return EmptyDisposable.Instance;
                 });
             return subscription;
@@ -164,13 +166,13 @@ public static partial class LinqExtensions
         private enum NotificationKind
         {
             /// <summary>A value notification.</summary>
-            Next,
+            Next = 0,
 
             /// <summary>An error notification.</summary>
-            Error,
+            Error = 1,
 
             /// <summary>A completion notification.</summary>
-            Completed
+            Completed = 2,
         }
 
         /// <summary>Gets a value indicating whether the coordinator is disposed.</summary>
@@ -202,13 +204,16 @@ public static partial class LinqExtensions
 
         /// <summary>Queues a source value for delayed delivery.</summary>
         /// <param name="value">The source value.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void OnNext(T value) => Enqueue(DelayedNotification.Next(value, DueAt()), false);
 
         /// <summary>Queues a source error for delayed delivery behind earlier values.</summary>
         /// <param name="error">The source error.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void OnError(Exception error) => Enqueue(DelayedNotification.Failure(error, DueAt()), true);
 
         /// <summary>Queues source completion for delayed delivery behind earlier values.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void OnCompleted() => Enqueue(DelayedNotification.Completed(DueAt()), true);
 
         /// <summary>Computes the due time for the current source notification.</summary>
@@ -253,6 +258,7 @@ public static partial class LinqExtensions
 
         /// <summary>Schedules the single active drain timer.</summary>
         /// <param name="delay">The delay before the drain should run.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void Schedule(TimeSpan delay) => _timer.Create(_sequencer.Schedule(delay, Tick));
 
         /// <summary>Drains all due notifications in FIFO order.</summary>
@@ -294,11 +300,13 @@ public static partial class LinqExtensions
                     return;
                 }
 
-                if (terminal)
+                if (!terminal)
                 {
-                    Dispose();
-                    return;
+                    continue;
                 }
+
+                Dispose();
+                return;
             }
         }
 
@@ -334,6 +342,7 @@ public static partial class LinqExtensions
         /// <summary>Computes the remaining delay for an absolute due time.</summary>
         /// <param name="dueAt">The absolute due time.</param>
         /// <returns>The remaining non-negative delay.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private TimeSpan DelayUntil(DateTimeOffset dueAt) => Sequencer.Normalize(dueAt - _sequencer.Now);
 
         /// <summary>A delayed source notification.</summary>
@@ -436,10 +445,10 @@ public static partial class LinqExtensions
 
             SingleReplaceableDisposable subscription = new();
             var scheduled = _scheduler.Schedule(
-                (self: this, subscription, observer),
+                (Self: this, subscription, observer),
                 static (_, s) =>
                 {
-                    s.subscription.Create(s.self._source.Subscribe(s.observer));
+                    s.subscription.Create(s.Self._source.Subscribe(s.observer));
                     return EmptyDisposable.Instance;
                 });
             return new MultipleDisposable(scheduled, subscription);
@@ -469,11 +478,11 @@ public static partial class LinqExtensions
 
             MultipleDisposable pocket = [];
             pocket.Add(_scheduler.Schedule(
-                (self: this, pocket, observer),
+                (Self: this, pocket, observer),
                 Sequencer.Normalize(_dueTime),
                 static (_, s) =>
                 {
-                    s.pocket.Add(s.self._source.Subscribe(s.observer));
+                    s.pocket.Add(s.Self._source.Subscribe(s.observer));
                     return EmptyDisposable.Instance;
                 }));
             return pocket;
@@ -583,6 +592,7 @@ public static partial class LinqExtensions
         private int _attempts;
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose() => _pocket.Dispose();
 
         /// <summary>Starts the first subscription attempt.</summary>
@@ -594,6 +604,7 @@ public static partial class LinqExtensions
         }
 
         /// <summary>Subscribes to the source for the current attempt.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void SubscribeNext() =>
             _pocket.Add(_source.Subscribe(_observer.OnNext, OnError, _observer.OnCompleted));
 

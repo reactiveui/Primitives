@@ -10,6 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Timeout signal with a direct subscription path.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("DueTime = {_dueTime}, Source = {_source}")]
 public sealed class ExpireSignal<T> : IRequireCurrentThread<T>
 {
     /// <summary>The source observable.</summary>

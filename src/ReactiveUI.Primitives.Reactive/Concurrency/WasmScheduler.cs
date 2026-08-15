@@ -17,6 +17,7 @@ namespace ReactiveUI.Primitives.Reactive.Concurrency;
 /// backs with the JS event loop. Successor to the retired <c>Reactive.Wasm</c> package's scheduler, whose runtime
 /// reflection no longer exists on modern .NET.
 /// </summary>
+[System.Diagnostics.DebuggerDisplay("ReadyCount = {_readyCount}, DrainState = {_drainState}, Disposed = {_isDisposed}")]
 public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposable
 {
     /// <summary>Drain state indicating no drain is in flight.</summary>
@@ -144,11 +145,7 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
     public IDisposable SchedulePeriodic<TState>(TState state, TimeSpan period, Func<TState, TState> action)
     {
         ArgumentExceptionHelper.ThrowIfNull(action);
-        if (period < TimeSpan.Zero)
-        {
-            throw new ArgumentOutOfRangeException(nameof(period));
-        }
-
+        ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(period, TimeSpan.Zero);
         ObjectDisposedExceptionHelper.ThrowIf(IsDisposed, this);
 
         if (period < OneMillisecond)
@@ -239,11 +236,13 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
             }
 
             // Become the sole drainer, then yield a batch to the event loop.
-            if (Interlocked.CompareExchange(ref _drainState, DrainRunning, DrainIdle) == DrainIdle)
+            if (Interlocked.CompareExchange(ref _drainState, DrainRunning, DrainIdle) != DrainIdle)
             {
-                ArmDrain();
-                return;
+                continue;
             }
+
+            ArmDrain();
+            return;
         }
     }
 

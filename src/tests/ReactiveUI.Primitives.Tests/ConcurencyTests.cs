@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Disposables;
 
@@ -30,8 +31,7 @@ public class ConcurencyTests
     [Test]
     public async Task TestCreate()
     {
-        var scheduler = TaskPoolSequencer.Instance;
-        var disposable = scheduler.Schedule(0, static (_, _) => EmptyDisposable.Instance);
+        var disposable = TaskPoolSequencer.Instance.Schedule(0, static (_, _) => EmptyDisposable.Instance);
         await Assert.That(disposable).IsNotNull();
         disposable.Dispose();
     }
@@ -122,6 +122,7 @@ public class ConcurencyTests
         public TaskCompletionSource<bool> Completed { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         /// <summary>Signals that the scheduling call has returned, so any later callback cannot have run inline.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void MarkSchedulingFinished() => Volatile.Write(ref _scheduling, 0);
 
         /// <summary>Completes <see cref = "Completed"/> with whether this callback ran inline on the scheduling thread.</summary>

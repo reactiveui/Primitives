@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Disposables;
@@ -116,8 +117,8 @@ public sealed class DispatchSequencerBaseTests
     {
         List<int> values = [];
         _ = Sequencer.Immediate.Schedule(
-            (values, value: StatefulScheduleValue),
-            static state => state.values.Add(state.value));
+            (values, Value: StatefulScheduleValue),
+            static state => state.values.Add(state.Value));
         await Assert.That(values[0]).IsEqualTo(StatefulScheduleValue);
     }
 
@@ -288,12 +289,15 @@ public sealed class DispatchSequencerBaseTests
         }
 
         /// <summary>Runs the next posted drain.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void RunNextDrain() => _drains.Dequeue()();
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Schedule(IWorkItem item) => _state.Schedule(item);
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Schedule(IWorkItem item, long dueTimestamp) => _state.Schedule(item, dueTimestamp);
 
         /// <summary>Records and stores a posted drain.</summary>
@@ -307,6 +311,7 @@ public sealed class DispatchSequencerBaseTests
         }
 
         /// <summary>Forwards the cached drain callback to the engine.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void RunDrain() => _state.RunDrain();
     }
 
@@ -328,6 +333,7 @@ public sealed class DispatchSequencerBaseTests
         public void Dispose() => IsDisposed = true;
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Execute() => _values.Add(_value);
     }
 
@@ -388,18 +394,23 @@ public sealed class DispatchSequencerBaseTests
         }
 
         /// <summary>Runs the next posted drain.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void RunNextDrain() => _drains.Dequeue()();
 
         /// <summary>Runs a drain batch on the calling thread.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void RunDrain() => _state.RunDrain();
 
         /// <summary>Asks the engine to post a drain.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void PostDrain() => _state.PostDrain();
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Schedule(IWorkItem item) => _state.Schedule(item);
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Schedule(IWorkItem item, long dueTimestamp) => _state.Schedule(item, dueTimestamp);
 
         /// <summary>Records the posted drain, or rejects it, according to the configured behaviour.</summary>
@@ -425,6 +436,7 @@ public sealed class DispatchSequencerBaseTests
         /// <summary>Captures delayed work instead of handing it to the shared timer.</summary>
         /// <param name="item">The scheduled item.</param>
         /// <param name="dueTimestamp">The absolute monotonic due timestamp.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void CaptureDelayed(IWorkItem item, long dueTimestamp) => _delayedWork.Add(new(item, dueTimestamp));
     }
 

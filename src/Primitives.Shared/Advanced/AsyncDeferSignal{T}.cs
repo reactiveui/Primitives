@@ -10,6 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Creates a signal whose source is produced asynchronously for each subscription.</summary>
 /// <typeparam name="T">The value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("ObservableFactory = {ObservableFactory}")]
 public sealed class AsyncDeferSignal<T> : IObservable<T>
 {
     /// <summary>Initializes a new instance of the <see cref="AsyncDeferSignal{T}"/> class.</summary>
@@ -23,6 +24,7 @@ public sealed class AsyncDeferSignal<T> : IObservable<T>
 
     /// <summary>Initializes a new instance of the <see cref="AsyncDeferSignal{T}"/> class.</summary>
     /// <param name="observableFactory">The asynchronous factory that creates the source signal for a subscription.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="observableFactory"/> is <see langword="null"/>.</exception>
     public AsyncDeferSignal(Func<CancellationToken, Task<IObservable<T>>> observableFactory) =>
         ObservableFactory = observableFactory ?? throw new ArgumentNullException(nameof(observableFactory));
 

@@ -7,6 +7,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// <summary>Observer that disposes a resource with the source subscription.</summary>
 /// <typeparam name="TResource">The resource type.</typeparam>
 /// <typeparam name="T">The element type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Resource = {Resource}")]
 public sealed class UsingWitness<TResource, T> : ForwardingWitnessAsync<T>
     where TResource : IAsyncDisposable
 {

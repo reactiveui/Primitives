@@ -1,0 +1,161 @@
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Disposables.Tests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.Async.Tests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.Blazor.Tests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.Extensions.Tests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.Tests")]
+namespace ReactiveUI.Primitives.Disposables;
+
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public sealed class ActionDisposable : ReactiveUI.Primitives.Disposables.IsDisposed
+{
+    public ActionDisposable(System.Action action) { }
+    public bool IsDisposed { get; }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public void Dispose() { }
+}
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public sealed class AssignmentSlot : ReactiveUI.Primitives.Disposables.SingleDisposable
+{
+    public AssignmentSlot() { }
+    public AssignmentSlot(System.Action? action) { }
+    public AssignmentSlot(System.IDisposable disposable) { }
+    public AssignmentSlot(System.IDisposable disposable, System.Action? action) { }
+}
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public sealed class BooleanDisposable : ReactiveUI.Primitives.Disposables.IsDisposed
+{
+    public BooleanDisposable() { }
+    public bool IsDisposed { get; }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public void Dispose() { }
+}
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public sealed class CancellationDisposable : ReactiveUI.Primitives.Disposables.IsDisposed
+{
+    public CancellationDisposable() { }
+    public CancellationDisposable(System.Threading.CancellationTokenSource cts) { }
+    public bool IsDisposed { get; }
+    public System.Threading.CancellationToken Token { get; }
+    public void Dispose() { }
+}
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public sealed class DisposableBag : ReactiveUI.Primitives.Disposables.IsDisposed
+{
+    public DisposableBag() { }
+    public DisposableBag(System.IDisposable first, System.IDisposable second) { }
+    public DisposableBag(System.IDisposable first, System.IDisposable second, System.IDisposable third) { }
+    public bool IsDisposed { get; }
+    public void Add(System.IDisposable disposable) { }
+    public void Dispose() { }
+}
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public sealed class EmptyDisposable : System.IDisposable
+{
+    public static ReactiveUI.Primitives.Disposables.EmptyDisposable Instance { get; }
+    public void Dispose() { }
+}
+public interface IsDisposed : System.IDisposable
+{
+    bool IsDisposed { get; }
+}
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public class MultipleDisposable : ReactiveUI.Primitives.Disposables.IsDisposed, System.Collections.Generic.ICollection<System.IDisposable>
+{
+    public MultipleDisposable() { }
+    public MultipleDisposable(params System.IDisposable[] disposables) { }
+    public MultipleDisposable(System.IDisposable first, System.IDisposable second) { }
+    public MultipleDisposable(System.IDisposable first, System.IDisposable second, System.IDisposable third) { }
+    public int Count { get; }
+    public bool IsDisposed { get; }
+    public bool IsReadOnly { get; }
+    public void Add(System.IDisposable item) { }
+    public void Clear() { }
+    public bool Contains(System.IDisposable item) { }
+    public void CopyTo(System.IDisposable[] array, int arrayIndex) { }
+    public void Dispose() { }
+    protected virtual void Dispose(bool disposing) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public System.Collections.Generic.IEnumerator<System.IDisposable> GetEnumerator() { }
+    public bool Remove(System.IDisposable? item) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static System.IDisposable Create(params System.IDisposable[] disposables) { }
+}
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public sealed class MutableDisposable : ReactiveUI.Primitives.Disposables.IsDisposed
+{
+    public MutableDisposable() { }
+    public System.IDisposable? Disposable { get; set; }
+    public bool IsDisposed { get; }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public void Dispose() { }
+}
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public sealed class OnceDisposable : ReactiveUI.Primitives.Disposables.IsDisposed
+{
+    public OnceDisposable() { }
+    public System.IDisposable? Disposable { get; set; }
+    public bool IsAssigned { get; }
+    public bool IsDisposed { get; }
+    public void Dispose() { }
+}
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public sealed class Pocket : ReactiveUI.Primitives.Disposables.MultipleDisposable
+{
+    public Pocket() { }
+    public Pocket(params System.IDisposable[] disposables) { }
+    public Pocket(System.IDisposable first, System.IDisposable second) { }
+    public Pocket(System.IDisposable first, System.IDisposable second, System.IDisposable third) { }
+}
+public static class Scope
+{
+    public static System.IDisposable Empty { get; }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static System.IDisposable Combine(params System.IDisposable[] disposables) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static System.IDisposable Combine(System.IDisposable first, System.IDisposable second) { }
+    public static System.IDisposable Create(System.Action dispose) { }
+    public static System.IDisposable Create<TState>(TState state, System.Action<TState> dispose) { }
+}
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public class SingleDisposable : ReactiveUI.Primitives.Disposables.IsDisposed
+{
+    public SingleDisposable() { }
+    public SingleDisposable(System.Action? action) { }
+    public SingleDisposable(System.IDisposable disposable) { }
+    public SingleDisposable(System.IDisposable disposable, System.Action? action) { }
+    public bool IsDisposed { get; }
+    public void Create(System.IDisposable disposable) { }
+    public void Dispose() { }
+    protected virtual void Dispose(bool disposing) { }
+}
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public class SingleReplaceableDisposable : ReactiveUI.Primitives.Disposables.IsDisposed
+{
+    public SingleReplaceableDisposable() { }
+    public SingleReplaceableDisposable(System.Action? action) { }
+    public SingleReplaceableDisposable(System.IDisposable disposable) { }
+    public SingleReplaceableDisposable(System.IDisposable disposable, System.Action? action) { }
+    public bool IsDisposed { get; }
+    public void Create(System.IDisposable disposable) { }
+    public void Dispose() { }
+    protected virtual void Dispose(bool disposing) { }
+}
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public sealed class Slot : ReactiveUI.Primitives.Disposables.SingleReplaceableDisposable
+{
+    public Slot() { }
+    public Slot(System.Action? action) { }
+    public Slot(System.IDisposable disposable) { }
+    public Slot(System.IDisposable disposable, System.Action? action) { }
+}
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public sealed class SwapDisposable : ReactiveUI.Primitives.Disposables.IsDisposed
+{
+    public SwapDisposable() { }
+    public System.IDisposable? Disposable { get; set; }
+    public bool IsDisposed { get; }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public void Dispose() { }
+}

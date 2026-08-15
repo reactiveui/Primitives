@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Components;
 
 #if REACTIVE_SHIM
@@ -65,6 +66,7 @@ public class ReactiveComponentBase : ComponentBase, IDisposable
     /// <param name="onNext">Action invoked for each value on the Blazor renderer dispatcher.</param>
     /// <returns>A tracked subscription.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="onNext"/> is <see langword="null"/>.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected IDisposable Observe<T>(IObservable<T> source, Action<T> onNext) =>
         Observe(source, onNext, null, null);
 
@@ -76,6 +78,7 @@ public class ReactiveComponentBase : ComponentBase, IDisposable
     /// <param name="onCompleted">Optional action invoked when the source completes.</param>
     /// <returns>A tracked subscription.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="onNext"/> is <see langword="null"/>.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected IDisposable Observe<T>(
         IObservable<T> source,
         Action<T> onNext,
@@ -130,6 +133,7 @@ public class ReactiveComponentBase : ComponentBase, IDisposable
 
     /// <summary>Invalidates the component through Blazor's renderer dispatcher.</summary>
     /// <returns>A task that completes when the renderer has accepted the invalidation callback.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected Task InvalidateAsync() => InvokeAsync(StateHasChanged);
 
     /// <summary>Handles an unhandled subscription error.</summary>

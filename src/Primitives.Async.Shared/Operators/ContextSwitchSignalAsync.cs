@@ -69,7 +69,6 @@ public sealed class ContextSwitchSignalAsync<T>(
 
         /// <inheritdoc/>
         protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
-
             // Fast path: already on the target context and no forced yield — skip the awaitable
             // dance entirely and forward synchronously.
             !forceYielding && asyncContext.IsSameAsCurrentAsyncContext()

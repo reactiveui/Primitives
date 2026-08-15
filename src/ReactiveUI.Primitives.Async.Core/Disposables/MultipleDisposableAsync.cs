@@ -13,6 +13,7 @@ namespace ReactiveUI.Primitives.Async.Disposables;
 /// <remarks>Use this class to manage the lifetime of multiple <see cref="IAsyncDisposable"/> resources, ensuring
 /// that all are disposed when the collection is disposed. Once disposed, the collection cannot be used to add or remove
 /// items. This class is not read-only and is safe for concurrent access from multiple threads.</remarks>
+[System.Diagnostics.DebuggerDisplay("Count = {_count}, IsDisposed = {_isDisposed}")]
 public sealed class MultipleDisposableAsync : IAsyncDisposable
 {
     /// <summary>Capacity allocated on first <see cref="AddAsync"/>. Chosen as the typical upper bound
@@ -175,11 +176,11 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
     }
 
     /// <summary>Removes the specified item from the collection and disposes it asynchronously.</summary>
-    /// <remarks>If the item is not found in the collection, it is not disposed. This method is
-    /// thread-safe.</remarks>
     /// <param name="item">The item to remove and dispose. Cannot be null.</param>
     /// <returns>A task that represents the asynchronous remove operation. The task result is <see langword="true"/> if the item
     /// was found and removed; otherwise, <see langword="false"/>.</returns>
+    /// <remarks>If the item is not found in the collection, it is not disposed. This method is
+    /// thread-safe.</remarks>
     public async ValueTask<bool> Remove(IAsyncDisposable item)
     {
         ArgumentExceptionHelper.ThrowIfNull(item);
@@ -216,9 +217,9 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
     }
 
     /// <summary>Asynchronously disposes all items in the collection and removes them.</summary>
+    /// <returns>A task that represents the asynchronous clear operation.</returns>
     /// <remarks>If the collection is already empty or has been disposed, this method performs no action. Each
     /// item is disposed asynchronously before being removed from the collection. This method is thread-safe.</remarks>
-    /// <returns>A task that represents the asynchronous clear operation.</returns>
     public async ValueTask Clear()
     {
         IAsyncDisposable?[] rented;
@@ -255,17 +256,15 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
     }
 
     /// <summary>Determines whether the collection contains the specified asynchronous disposable item.</summary>
-    /// <remarks>If the collection has been disposed, this method always returns false.</remarks>
     /// <param name="item">The asynchronous disposable item to locate in the collection. Can be null.</param>
     /// <returns>true if the specified item is found in the collection and the collection has not been disposed; otherwise,
     /// false.</returns>
+    /// <remarks>If the collection has been disposed, this method always returns false.</remarks>
     public bool Contains(IAsyncDisposable item)
     {
         lock (_gate)
         {
-            return _isDisposed || _items is null
-                ? false
-                : Array.IndexOf(_items, item, 0, _length) >= 0;
+            return !_isDisposed && _items is not null && Array.IndexOf(_items, item, 0, _length) >= 0;
         }
     }
 
@@ -308,10 +307,10 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
     /// Asynchronously releases all resources used by the collection and disposes of each contained asynchronous
     /// disposable object.
     /// </summary>
+    /// <returns>A task that represents the asynchronous dispose operation.</returns>
     /// <remarks>After calling this method, the collection is considered disposed and cannot be used. This
     /// method is thread-safe and can be called multiple times; subsequent calls after the first have no
     /// effect.</remarks>
-    /// <returns>A task that represents the asynchronous dispose operation.</returns>
     public async ValueTask DisposeAsync()
     {
         IAsyncDisposable?[]? snapshot;
@@ -365,11 +364,14 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
             var dst = 0;
             for (var src = 0; src < _length; src++)
             {
-                if (_items[src] is { } item)
+                var item = _items[src];
+                if (item is null)
                 {
-                    snapshot[dst] = item;
-                    dst++;
+                    continue;
                 }
+
+                snapshot[dst] = item;
+                dst++;
             }
         }
 
@@ -392,11 +394,14 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
         var src = _items!;
         for (var i = 0; i < _length; i++)
         {
-            if (src[i] is { } item)
+            var item = src[i];
+            if (item is null)
             {
-                array[dst] = item;
-                dst++;
+                continue;
             }
+
+            array[dst] = item;
+            dst++;
         }
     }
 
@@ -428,11 +433,14 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
         var dst = 0;
         for (var i = 0; i < _length; i++)
         {
-            if (src[i] is { } item)
+            var item = src[i];
+            if (item is null)
             {
-                fresh[dst] = item;
-                dst++;
+                continue;
             }
+
+            fresh[dst] = item;
+            dst++;
         }
 
         _items = fresh;

@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
@@ -139,6 +140,7 @@ public class TimeBasedOperatorTests
     }
 
     /// <summary>Tests Throttle negative due time throws.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void WhenThrottleNegativeDueTime_ThenThrowsArgumentOutOfRange() =>
         Assert.Throws<ArgumentOutOfRangeException>(
@@ -166,6 +168,7 @@ public class TimeBasedOperatorTests
     }
 
     /// <summary>Tests Delay negative throws.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void WhenDelayNegative_ThenThrowsArgumentOutOfRange() =>
         Assert.Throws<ArgumentOutOfRangeException>(static () => SignalAsync.Return(1).Delay(TimeSpan.FromMilliseconds(-1)));
@@ -212,17 +215,20 @@ public class TimeBasedOperatorTests
     }
 
     /// <summary>Tests Timeout zero duration throws.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void WhenTimeoutZeroDuration_ThenThrowsArgumentOutOfRange() =>
         Assert.Throws<ArgumentOutOfRangeException>(static () => SignalAsync.Return(1).Timeout(TimeSpan.Zero));
 
     /// <summary>Tests Timeout negative duration throws.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void WhenTimeoutNegativeDuration_ThenThrowsArgumentOutOfRange() =>
         Assert.Throws<ArgumentOutOfRangeException>(
             static () => SignalAsync.Return(1).Timeout(TimeSpan.FromMilliseconds(-1)));
 
     /// <summary>Tests Timeout with null fallback throws.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void WhenTimeoutWithFallbackNull_ThenThrowsArgumentNull() => Assert.Throws<ArgumentNullException>(
         static () => SignalAsync.Return(1).Timeout(TimeSpan.FromSeconds(1), (IObservableAsync<int>)null!));
@@ -922,6 +928,7 @@ public class TimeBasedOperatorTests
             }
 
             /// <summary>Marks the timer as disposed.</summary>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Dispose() => Interlocked.Exchange(ref _disposed, 1);
 
             /// <summary>Marks the timer as disposed.</summary>
@@ -972,6 +979,7 @@ public class TimeBasedOperatorTests
             /// <param name = "dueTime">The due time (ignored).</param>
             /// <param name = "period">The period (ignored).</param>
             /// <returns>Always returns true.</returns>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool Change(TimeSpan dueTime, TimeSpan period) => true;
 
             /// <summary>No-op dispose.</summary>
@@ -981,6 +989,7 @@ public class TimeBasedOperatorTests
 
             /// <summary>No-op async dispose.</summary>
             /// <returns>A completed <see cref = "ValueTask"/>.</returns>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public ValueTask DisposeAsync() => default;
         }
     }
@@ -993,10 +1002,12 @@ public class TimeBasedOperatorTests
     {
         /// <inheritdoc/>
         /// <returns>A task representing the asynchronous operation.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) => default;
 
         /// <inheritdoc/>
         /// <returns>A task representing the asynchronous operation.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) => default;
 
         /// <inheritdoc/>
@@ -1005,6 +1016,7 @@ public class TimeBasedOperatorTests
 
         /// <inheritdoc/>
         /// <returns>A task representing the asynchronous operation.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask DisposeAsync() => default;
     }
 }

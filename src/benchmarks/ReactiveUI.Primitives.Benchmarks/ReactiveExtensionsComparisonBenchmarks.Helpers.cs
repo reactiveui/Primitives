@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using ReactiveUI.Primitives.Signals;
 using PackageExtensions = ReactiveUI.Extensions.ReactiveExtensions;
@@ -35,6 +36,8 @@ public partial class ReactiveExtensionsComparisonBenchmarks
 
     /// <summary>Executes the <c>EnsureCompleted</c> benchmark helper.</summary>
     /// <param name="task">The <c>task</c> value.</param>
+    /// <exception cref="TaskCanceledException"><paramref name="task"/> completed in the canceled state.</exception>
+    /// <exception cref="InvalidOperationException"><paramref name="task"/> completed in the faulted state.</exception>
     private static void EnsureCompleted(Task task)
     {
         while (!task.IsCompleted)
@@ -224,10 +227,12 @@ public partial class ReactiveExtensionsComparisonBenchmarks
 
     /// <summary>Executes the <c>ThrowPackageUnit</c> benchmark helper.</summary>
     /// <returns>The <c>ThrowPackageUnit</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static IObservable<RxUnit> ThrowPackageUnit() => RxObservable.Throw<RxUnit>(Boom);
 
     /// <summary>Executes the <c>ThrowPrimitiveUnit</c> benchmark helper.</summary>
     /// <returns>The <c>ThrowPrimitiveUnit</c> result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static IObservable<RxVoid> ThrowPrimitiveUnit() => Signal.Fail<RxVoid>(Boom);
 
     /// <summary>
@@ -240,6 +245,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <summary>Provides a named benchmark scenario.</summary>
     /// <param name="name">The scenario name.</param>
     /// <param name="run">The delegate that runs the scenario.</param>
+    [System.Diagnostics.DebuggerDisplay("Name = {_name}")]
     public sealed class ExtensionScenario(string name, Func<int> run)
     {
         /// <summary>Stores the scenario name.</summary>
@@ -250,6 +256,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
 
         /// <summary>Runs the scenario delegate.</summary>
         /// <returns>The benchmark checksum.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Run() => _run();
 
         /// <inheritdoc/>

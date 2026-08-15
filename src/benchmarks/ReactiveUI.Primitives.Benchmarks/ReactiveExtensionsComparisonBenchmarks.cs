@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using BenchmarkDotNet.Attributes;
 
 namespace ReactiveUI.Primitives.Benchmarks;
@@ -130,10 +131,10 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     private enum ExtensionsLibrary
     {
         /// <summary>The ReactiveUI.Primitives.Extensions implementation.</summary>
-        Primitives,
+        Primitives = 0,
 
         /// <summary>The ReactiveUI.Extensions implementation.</summary>
-        ReactiveUIExtensions
+        ReactiveUIExtensions = 1,
     }
 
     /// <summary>Gets the ReactiveUI.Primitives scenarios.</summary>
@@ -151,6 +152,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <summary>Runs a ReactiveUI.Primitives scenario.</summary>
     /// <param name="scenario">The scenario to run.</param>
     /// <returns>The benchmark checksum.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     [ArgumentsSource(nameof(PrimitivesScenarios))]
     public int Primitives(ExtensionScenario scenario) => scenario.Run();
@@ -158,6 +160,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <summary>Runs a ReactiveUI.Extensions scenario.</summary>
     /// <param name="scenario">The scenario to run.</param>
     /// <returns>The benchmark checksum.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     [ArgumentsSource(nameof(ReactiveUIExtensionsScenarios))]
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
@@ -172,6 +175,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <summary>Runs a System.Reactive comparison scenario.</summary>
     /// <param name="scenario">The scenario to run.</param>
     /// <returns>The benchmark checksum.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     [ArgumentsSource(nameof(SystemReactiveScenarios))]
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
@@ -186,6 +190,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <summary>Runs an R3 comparison scenario.</summary>
     /// <param name="scenario">The scenario to run.</param>
     /// <returns>The benchmark checksum.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     [ArgumentsSource(nameof(R3Scenarios))]
     [System.Diagnostics.CodeAnalysis.SuppressMessage(

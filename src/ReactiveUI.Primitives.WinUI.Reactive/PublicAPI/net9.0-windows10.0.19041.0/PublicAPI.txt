@@ -1,0 +1,32 @@
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.WinUI.Reactive.Tests")]
+[assembly: System.Runtime.Versioning.SupportedOSPlatform("Windows10.0.19041.0")]
+namespace ReactiveUI.Primitives.Reactive.Concurrency;
+
+[System.Diagnostics.DebuggerDisplay("ReadyCount = {_readyCount}, DrainPosted = {_drainPosted}")]
+public abstract class CoalescingDispatchScheduler : System.Reactive.Concurrency.LocalScheduler
+{
+    protected CoalescingDispatchScheduler() { }
+    protected abstract bool Post(System.Action drain) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    protected void RequestDrain() { }
+    public override System.IDisposable Schedule<TState>(TState state, System.Func<System.Reactive.Concurrency.IScheduler, TState, System.IDisposable> action) { }
+    public override System.IDisposable Schedule<TState>(TState state, System.TimeSpan dueTime, System.Func<System.Reactive.Concurrency.IScheduler, TState, System.IDisposable> action) { }
+    protected virtual System.IDisposable ScheduleOnDispatcher(System.Action work, System.TimeSpan dueTime) { }
+}
+[System.Diagnostics.DebuggerDisplay("DispatcherQueue = {DispatcherQueue}, Priority = {Priority}")]
+public sealed class DispatcherQueueSequencer : ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler
+{
+    public DispatcherQueueSequencer(Microsoft.UI.Dispatching.DispatcherQueue dispatcherQueue) { }
+    public DispatcherQueueSequencer(Microsoft.UI.Dispatching.DispatcherQueue dispatcherQueue, Microsoft.UI.Dispatching.DispatcherQueuePriority priority) { }
+    public Microsoft.UI.Dispatching.DispatcherQueue DispatcherQueue { get; }
+    public Microsoft.UI.Dispatching.DispatcherQueuePriority Priority { get; }
+    protected override bool Post(System.Action drain) { }
+    protected override System.IDisposable ScheduleOnDispatcher(System.Action work, System.TimeSpan dueTime) { }
+}
+public static class DispatcherQueueSequencerExtensions
+{
+    extension(Microsoft.UI.Dispatching.DispatcherQueue dispatcherQueue)
+    {
+        public ReactiveUI.Primitives.Reactive.Concurrency.DispatcherQueueSequencer ToSequencer() { }
+    }
+}

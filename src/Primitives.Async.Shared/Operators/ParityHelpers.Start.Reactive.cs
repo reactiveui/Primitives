@@ -18,24 +18,27 @@ namespace ReactiveUI.Primitives.Async;
 /// <summary>Provides shim-typed factory methods that execute actions and emit <see cref="RxVoid"/>.</summary>
 public static partial class SignalAsyncReactiveExtensions
 {
-    /// <summary>Creates an observable sequence that executes the supplied action and emits <see cref="RxVoid.Default"/>.</summary>
+    /// <summary>Factory operators that execute an action and emit <see cref="RxVoid"/>.</summary>
     /// <param name="action">The action to execute.</param>
-    /// <returns>An observable sequence that completes after the action has run.</returns>
-    public static IObservableAsync<RxVoid> Start(Action action)
+    extension(Action action)
     {
-        ArgumentExceptionHelper.ThrowIfNull(action);
+        /// <summary>Creates an observable sequence that executes the supplied action and emits <see cref="RxVoid.Default"/>.</summary>
+        /// <returns>An observable sequence that completes after the action has run.</returns>
+        public IObservableAsync<RxVoid> Start()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(action);
 
-        return new StartSignal(action, null);
-    }
+            return new StartSignal(action, null);
+        }
 
-    /// <summary>Creates an observable sequence that executes the supplied action and emits <see cref="RxVoid.Default"/>.</summary>
-    /// <param name="action">The action to execute.</param>
-    /// <param name="taskScheduler">An optional scheduler used to start the action.</param>
-    /// <returns>An observable sequence that completes after the action has run.</returns>
-    public static IObservableAsync<RxVoid> Start(Action action, TaskScheduler? taskScheduler)
-    {
-        ArgumentExceptionHelper.ThrowIfNull(action);
+        /// <summary>Creates an observable sequence that executes the supplied action and emits <see cref="RxVoid.Default"/>.</summary>
+        /// <param name="taskScheduler">An optional scheduler used to start the action.</param>
+        /// <returns>An observable sequence that completes after the action has run.</returns>
+        public IObservableAsync<RxVoid> Start(TaskScheduler? taskScheduler)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(action);
 
-        return new StartSignal(action, taskScheduler);
+            return new StartSignal(action, taskScheduler);
+        }
     }
 }

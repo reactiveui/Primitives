@@ -8,8 +8,8 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Rescue operators for an observable source sequence.</summary>
-    /// <param name="source">The source observable sequence.</param>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
+    /// <param name="source">The source observable sequence.</param>
     extension<T>(IObservableAsync<T> source)
     {
         /// <summary>Recovers from a terminal failure with a replacement sequence.</summary>
@@ -20,8 +20,7 @@ public static partial class SignalAsyncExtensions
             ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(handler);
 
-            var rescueHandler = handler;
-            return new CatchSignal<T>(source, rescueHandler, null);
+            return new CatchSignal<T>(source, handler, null);
         }
     }
 }

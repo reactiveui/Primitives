@@ -338,14 +338,37 @@ public partial class SignalOperatorParityMixinsTests
     private static void DriveTerminalOperatorsWhosePredicateOrComparerThrows(List<string> errors)
     {
         _ = Assert.Throws<InvalidOperationException>(() => Signal.FromEnumerable([One, Two])
-            .Count(static value => value == One ? true : throw new InvalidOperationException("count-predicate-fault"))
+            .Count(static value =>
+            {
+                if (value == One)
+                {
+                    return true;
+                }
+
+                throw new InvalidOperationException("count-predicate-fault");
+            })
             .Subscribe(static _ => { }, ex => errors.Add(ex.Message)).Dispose());
         _ = Assert.Throws<InvalidOperationException>(() => Signal.FromEnumerable([One, Two])
             .LongCount(static value =>
-                value == One ? true : throw new InvalidOperationException("long-count-predicate-fault"))
+            {
+                if (value == One)
+                {
+                    return true;
+                }
+
+                throw new InvalidOperationException("long-count-predicate-fault");
+            })
             .Subscribe(static _ => { }, ex => errors.Add(ex.Message)).Dispose());
         _ = Assert.Throws<InvalidOperationException>(() => Signal.FromEnumerable([One, Two])
-            .Any(static value => value == One ? false : throw new InvalidOperationException("any-predicate-fault"))
+            .Any(static value =>
+            {
+                if (value == One)
+                {
+                    return false;
+                }
+
+                throw new InvalidOperationException("any-predicate-fault");
+            })
             .Subscribe(static _ => { }, ex => errors.Add(ex.Message)).Dispose());
         _ = Signal.FromEnumerable([One, Two]).Contains(Two, new ThrowingComparer())
             .Subscribe(static _ => { }, ex => errors.Add(ex.Message));

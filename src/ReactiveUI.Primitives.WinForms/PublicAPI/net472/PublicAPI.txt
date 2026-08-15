@@ -1,0 +1,14 @@
+namespace ReactiveUI.Primitives.Concurrency;
+
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public sealed class ControlSequencer : ReactiveUI.Primitives.Concurrency.ISequencer
+{
+    public ControlSequencer(System.Windows.Forms.Control control) { }
+    public System.Windows.Forms.Control Control { get; }
+    public System.DateTimeOffset Now { get; }
+    public long Timestamp { get; }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item, long dueTimestamp) { }
+}

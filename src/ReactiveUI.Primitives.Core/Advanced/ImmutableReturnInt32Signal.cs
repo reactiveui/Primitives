@@ -2,11 +2,13 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Represents the ImmutableReturnInt32Signal class.</summary>
+[System.Diagnostics.DebuggerDisplay("Value = {_x}")]
 public sealed class ImmutableReturnInt32Signal : IRequireCurrentThread<int>, IInlineSignal<int>
 {
     /// <summary>Stores state for the signal implementation.</summary>
@@ -49,6 +51,7 @@ public sealed class ImmutableReturnInt32Signal : IRequireCurrentThread<int>, IIn
 
     /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
     /// <returns>The result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() => false;
 
     /// <summary>Executes the Subscribe operation.</summary>

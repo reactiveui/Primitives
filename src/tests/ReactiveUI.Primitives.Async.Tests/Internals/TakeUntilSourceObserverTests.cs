@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async.Tests.Internals;
 
 /// <summary>Tests for <see cref="TakeUntilSourceWitness{T}"/>, the shared async observer that forwards every source notification into a <see cref="TakeUntilLifecycle{T}"/>.</summary>
@@ -146,6 +148,7 @@ public class TakeUntilSourceObserverTests
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask DisposeAsync() => default;
     }
 }

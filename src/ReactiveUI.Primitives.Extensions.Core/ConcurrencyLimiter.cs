@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions;
 
@@ -16,6 +17,7 @@ namespace ReactiveUI.Primitives.Extensions;
 /// <typeparam name="T">The type of the task results.</typeparam>
 /// <param name="taskFunctions">The task functions to drain.</param>
 /// <param name="maxConcurrency">The maximum concurrency.</param>
+[System.Diagnostics.DebuggerDisplay("Outstanding = {_outstanding}, Disposed = {_disposed}")]
 public sealed class ConcurrencyLimiter<T>(IEnumerable<Task<T>> taskFunctions, int maxConcurrency) : IObservable<T>
 {
     /// <summary>The synchronization gate protecting task scheduling and completion state.</summary>
@@ -78,6 +80,7 @@ public sealed class ConcurrencyLimiter<T>(IEnumerable<Task<T>> taskFunctions, in
     /// <see cref="Subscription"/> and pulls the next task. Production paths go through
     /// <see cref="Subscribe"/> which creates the subscription once.</summary>
     /// <param name="observer">The observer that will receive notifications.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void PullNextTask(IObserver<T> observer) =>
         PullNextTask(new Subscription(this, observer));
 

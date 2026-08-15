@@ -1,0 +1,16 @@
+namespace ReactiveUI.Primitives.Concurrency;
+
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public sealed class DispatcherSequencer : ReactiveUI.Primitives.Concurrency.ISequencer
+{
+    public DispatcherSequencer(System.Windows.Threading.Dispatcher dispatcher) { }
+    public DispatcherSequencer(System.Windows.Threading.Dispatcher dispatcher, System.Windows.Threading.DispatcherPriority priority) { }
+    public System.Windows.Threading.Dispatcher Dispatcher { get; }
+    public System.DateTimeOffset Now { get; }
+    public System.Windows.Threading.DispatcherPriority Priority { get; }
+    public long Timestamp { get; }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item, long dueTimestamp) { }
+}

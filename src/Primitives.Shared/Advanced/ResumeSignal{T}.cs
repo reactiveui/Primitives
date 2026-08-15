@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -25,6 +27,7 @@ internal sealed class ResumeSignal<T>(IObservable<T> source, IObservable<T> fall
     private readonly IObservable<T> _fallback = fallback;
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() => true;
 
     /// <inheritdoc/>
@@ -33,13 +36,14 @@ internal sealed class ResumeSignal<T>(IObservable<T> source, IObservable<T> fall
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
         return SubscriptionScheduling.OnCurrentThread(
-            (self: this, observer),
-            static s => s.self.Run(s.observer));
+            (Self: this, observer),
+            static s => s.Self.Run(s.observer));
     }
 
     /// <summary>Builds the sink and subscribes it to the source.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <returns>The sink, which is the subscription.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private ResumeWitness Run(IObserver<T> observer) => new ResumeWitness(observer, _fallback).Run(_source);
 
     /// <summary>Forwards source values and, on any error, switches to the fallback sequence.</summary>
@@ -60,9 +64,11 @@ internal sealed class ResumeSignal<T>(IObservable<T> source, IObservable<T> fall
         private IDisposable? _fallbackSubscription;
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnNext(T value) => _observer.OnNext(value);
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnError(Exception error) => SetFallback(_fallback.Subscribe(_observer));
 
         /// <inheritdoc/>
@@ -96,6 +102,7 @@ internal sealed class ResumeSignal<T>(IObservable<T> source, IObservable<T> fall
 
         /// <summary>Stores the fallback subscription.</summary>
         /// <param name="subscription">The fallback subscription.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void SetFallback(IDisposable subscription) =>
             SubscriptionSlots.Assign(ref _fallbackSubscription, subscription);
     }

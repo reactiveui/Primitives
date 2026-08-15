@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -27,6 +29,7 @@ internal sealed class RecoverSignal<T, TException>(IObservable<T> source, Func<T
     private readonly Func<TException, IObservable<T>> _handler = handler;
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() => true;
 
     /// <inheritdoc/>
@@ -35,13 +38,14 @@ internal sealed class RecoverSignal<T, TException>(IObservable<T> source, Func<T
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
         return SubscriptionScheduling.OnCurrentThread(
-            (self: this, observer),
-            static s => s.self.Run(s.observer));
+            (Self: this, observer),
+            static s => s.Self.Run(s.observer));
     }
 
     /// <summary>Builds the sink and subscribes it to the source.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <returns>The sink, which is the subscription.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private RecoverWitness Run(IObserver<T> observer) => new RecoverWitness(observer, _handler).Run(_source);
 
     /// <summary>Forwards source values and, on a caught error, switches to the fallback sequence.</summary>
@@ -62,6 +66,7 @@ internal sealed class RecoverSignal<T, TException>(IObservable<T> source, Func<T
         private IDisposable? _fallbackSubscription;
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnNext(T value) => _observer.OnNext(value);
 
         /// <inheritdoc/>
@@ -134,6 +139,7 @@ internal sealed class RecoverSignal<T, TException>(IObservable<T> source, Func<T
 
         /// <summary>Stores the fallback subscription.</summary>
         /// <param name="subscription">The fallback subscription.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void SetFallback(IDisposable subscription) =>
             SubscriptionSlots.Assign(ref _fallbackSubscription, subscription);
     }

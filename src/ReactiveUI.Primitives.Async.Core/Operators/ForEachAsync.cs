@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for working with asynchronous observable sequences.</summary>
@@ -11,31 +13,32 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Asynchronous per-element iteration operators for an observable source sequence.</summary>
-    /// <param name="this">The source observable sequence.</param>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
-    extension<T>(IObservableAsync<T> @this)
+    /// <param name="source">The source observable sequence.</param>
+    extension<T>(IObservableAsync<T> source)
     {
         /// <summary>Asynchronously invokes the specified action for each element in the sequence as elements are received.</summary>
-        /// <remarks>If the sequence completes or is canceled, the method returns when all in-flight
-        /// actions have finished. Exceptions thrown by the action or during enumeration will propagate to the returned
-        /// task.</remarks>
         /// <param name="onNextAsync">A function to invoke for each element in the sequence. The function receives the element and a cancellation
         /// token, and returns a ValueTask that completes when processing is finished.</param>
         /// <returns>A ValueTask that represents the asynchronous operation. The task completes when all elements have been
         /// processed or the operation is canceled.</returns>
-        public ValueTask ForEachAsync(Func<T, CancellationToken, ValueTask> onNextAsync) =>
-            @this.ForEachAsync(onNextAsync, CancellationToken.None);
-
-        /// <summary>Asynchronously invokes the specified action for each element in the sequence as elements are received.</summary>
         /// <remarks>If the sequence completes or is canceled, the method returns when all in-flight
         /// actions have finished. Exceptions thrown by the action or during enumeration will propagate to the returned
         /// task.</remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask ForEachAsync(Func<T, CancellationToken, ValueTask> onNextAsync) =>
+            source.ForEachAsync(onNextAsync, CancellationToken.None);
+
+        /// <summary>Asynchronously invokes the specified action for each element in the sequence as elements are received.</summary>
         /// <param name="onNextAsync">A function to invoke for each element in the sequence. The function receives the element and a cancellation
         /// token, and returns a ValueTask that completes when processing is finished.</param>
         /// <param name="cancellationToken">A token to observe while waiting for the sequence to complete. The operation is canceled if the token is
         /// signaled.</param>
         /// <returns>A ValueTask that represents the asynchronous operation. The task completes when all elements have been
         /// processed or the operation is canceled.</returns>
+        /// <remarks>If the sequence completes or is canceled, the method returns when all in-flight
+        /// actions have finished. Exceptions thrown by the action or during enumeration will propagate to the returned
+        /// task.</remarks>
         public async ValueTask ForEachAsync(
             Func<T, CancellationToken, ValueTask> onNextAsync,
             CancellationToken cancellationToken)
@@ -44,7 +47,7 @@ public static partial class SignalAsyncExtensions
 
             cancellationToken.ThrowIfCancellationRequested();
             ForEachAsyncTaskWitness<T> observer = new(onNextAsync, cancellationToken);
-            await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
+            await source.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
             await observer.AwaitResultAsync().ConfigureAwait(false);
         }
 
@@ -53,8 +56,9 @@ public static partial class SignalAsyncExtensions
         /// <returns>A task that represents the asynchronous iteration operation. The task completes when the sequence has been
         /// fully processed or the operation is canceled.</returns>
         /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="onNext"/> is null.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask ForEachAsync(Action<T> onNext) =>
-            @this.ForEachAsync(onNext, CancellationToken.None);
+            source.ForEachAsync(onNext, CancellationToken.None);
 
         /// <summary>Asynchronously invokes the specified action for each element in the sequence as elements are received.</summary>
         /// <param name="onNext">The action to invoke for each element in the sequence. Cannot be null.</param>
@@ -68,7 +72,7 @@ public static partial class SignalAsyncExtensions
             cancellationToken.ThrowIfCancellationRequested();
 
             ForEachSyncTaskWitness<T> observer = new(onNext, cancellationToken);
-            await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
+            await source.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
             await observer.AwaitResultAsync().ConfigureAwait(false);
         }
     }

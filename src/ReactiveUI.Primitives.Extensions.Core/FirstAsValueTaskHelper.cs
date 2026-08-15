@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks.Sources;
 
 namespace ReactiveUI.Primitives.Extensions;
@@ -86,9 +87,11 @@ public static class FirstAsValueTaskHelper<T>
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         ValueTaskSourceStatus IValueTaskSource<T>.GetStatus(short token) => _core.GetStatus(token);
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void IValueTaskSource<T>.OnCompleted(
             Action<object?> continuation,
             object? state,

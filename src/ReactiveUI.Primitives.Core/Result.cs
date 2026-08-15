@@ -64,9 +64,9 @@ public readonly record struct Result
     }
 
     /// <summary>Returns a string that represents the result status of the operation.</summary>
-    /// <remarks>This method provides a concise textual representation of the operation's outcome, which can
-    /// be useful for logging or debugging purposes.</remarks>
     /// <returns>A string indicating "Success" if the operation was successful; otherwise, a string in the format
     /// "Failure{exception message}" containing the associated exception message.</returns>
+    /// <remarks>This method provides a concise textual representation of the operation's outcome, which can
+    /// be useful for logging or debugging purposes.</remarks>
     public override string ToString() => IsSuccess ? "Success" : $"Failure{{{Exception.Message}}}";
 }

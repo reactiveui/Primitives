@@ -18,11 +18,11 @@ public enum PublishingOption
     /// <remarks>Use this type to interact with devices that communicate via serial protocols, such as RS-232
     /// or UART. Serial communication is commonly used for connecting to hardware peripherals, embedded systems, or
     /// legacy equipment. Thread safety and supported features may vary depending on the implementation.</remarks>
-    Serial,
+    Serial = 0,
 
     /// <summary>Provides thread-safe operations for managing shared resources in concurrent programming scenarios.</summary>
     /// <remarks>Use this type to coordinate access to data or resources that may be accessed by multiple
     /// threads simultaneously. Thread safety is ensured for all public members, allowing safe usage in multi-threaded
     /// environments without additional synchronization.</remarks>
-    Concurrent
+    Concurrent = 1,
 }

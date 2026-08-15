@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
@@ -124,12 +125,15 @@ public sealed class SampleLatestObservable<T>(
         private sealed class SourceSampleWitness(SampleLatestSink sink) : IObserver<T>
         {
             /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void OnNext(T value) => sink.OnSourceNext(value);
 
             /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void OnError(Exception error) => sink.OnAnyError(error);
 
             /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void OnCompleted() => sink.OnSourceCompleted();
         }
 
@@ -138,9 +142,11 @@ public sealed class SampleLatestObservable<T>(
         private sealed class TriggerSampleWitness(SampleLatestSink sink) : IObserver<object>
         {
             /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void OnNext(object value) => sink.OnTriggerNext();
 
             /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void OnError(Exception error) => sink.OnAnyError(error);
 
             /// <inheritdoc/>

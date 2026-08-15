@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Core;
 
 namespace ReactiveUI.Primitives.Tests;
@@ -185,14 +186,17 @@ public class SparkTests
         public List<string> Events { get; } = [];
 
         /// <summary>Records completion.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnCompleted() => Events.Add(CompletedText);
 
         /// <summary>Records an error.</summary>
         /// <param name="error">The observed error.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnError(Exception error) => Events.Add(ErrorPrefix + error.Message);
 
         /// <summary>Records a next value.</summary>
         /// <param name="value">The observed value.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnNext(T value) => Events.Add(NextPrefix + value);
 
         /// <summary>Records completion and returns a result.</summary>

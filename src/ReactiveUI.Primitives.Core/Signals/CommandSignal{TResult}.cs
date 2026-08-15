@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Signals;
 
 /// <summary>Minimal reactive command that gates execution and publishes result, fault, and running state streams.</summary>
@@ -52,6 +54,7 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
     /// <summary>Initializes a new instance of the <see cref="CommandSignal{TResult}"/> class.</summary>
     /// <param name="execute">The async operation to execute.</param>
     /// <param name="canRun">Gating signal. When null, execution is always allowed.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="execute"/> is <see langword="null"/>.</exception>
     public CommandSignal(Func<CancellationToken, Task<TResult>> execute, IObservable<bool>? canRun)
     {
         _executeAsync = execute ?? throw new ArgumentNullException(nameof(execute));
@@ -68,6 +71,7 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
     /// <summary>Initializes a new instance of the <see cref="CommandSignal{TResult}"/> class.</summary>
     /// <param name="execute">The synchronous operation to execute.</param>
     /// <param name="canRun">Gating signal. When null, execution is always allowed.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="execute"/> is <see langword="null"/>.</exception>
     public CommandSignal(Func<TResult> execute, IObservable<bool>? canRun)
     {
         _executeSync = execute ?? throw new ArgumentNullException(nameof(execute));
@@ -144,6 +148,7 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
 
     /// <summary>Executes the command if allowed and publishes the result or fault.</summary>
     /// <returns>The command result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public CommandExecution<TResult> ExecuteAsync() => ExecuteAsync(CancellationToken.None);
 
     /// <summary>Executes the command if allowed and publishes the result or fault.</summary>
@@ -292,6 +297,7 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
     }
 
     /// <summary>Enters the running state after validating gate state.</summary>
+    /// <exception cref="InvalidOperationException">The command is gated off or an execution is already in flight.</exception>
     private void BeginExecution()
     {
         if (!CanRun || Interlocked.CompareExchange(ref _running, 1, 0) != 0)
@@ -334,6 +340,7 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
     }
 
     /// <summary>Pushes the authoritative running flag onto the stream when one is installed. Caller holds the gate.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void PublishRunningState() => Volatile.Read(ref _isRunningState)?.OnNext(_isRunning);
 
     /// <summary>Publishes a successful result when the results surface has been requested.</summary>
@@ -360,9 +367,11 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
 
     /// <summary>Publishes a fault when the faults surface has been requested.</summary>
     /// <param name="error">The command error.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void PublishFault(Exception error) => Volatile.Read(ref _faults)?.OnNext(error);
 
     /// <summary>Executes the ThrowIfDisposed operation.</summary>
+    /// <exception cref="ObjectDisposedException">The command has been disposed.</exception>
     private void ThrowIfDisposed()
     {
         if (Volatile.Read(ref _disposed) == 0)
@@ -409,6 +418,7 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
     }
 
     /// <summary>Clears result subscribers.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void ClearResults() => Volatile.Write(ref _resultObservers, null);
 
     /// <summary>Removes a result subscriber.</summary>

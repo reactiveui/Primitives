@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async.Tests;
 
 /// <summary>Tests for combining operators: Merge, Concat, CombineLatest, Zip, Prepend, StartWith.</summary>
@@ -115,6 +117,7 @@ public partial class CombiningOperatorTests
     {
         /// <summary>Throws an <see cref="InvalidOperationException"/> when disposal is attempted.</summary>
         /// <returns>Never returns normally.</returns>
+        /// <exception cref="InvalidOperationException">Always, because the throwing disposal is the behaviour under test.</exception>
         [SuppressMessage("Maintainability", "SST1485:Members that must not throw should not throw", Justification = "The throwing disposal is the behaviour under test.")]
         public ValueTask DisposeAsync() => throw new InvalidOperationException("dispose boom");
     }
@@ -128,6 +131,7 @@ public partial class CombiningOperatorTests
             throw new InvalidOperationException("enumerable boom");
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
 
@@ -140,9 +144,11 @@ public partial class CombiningOperatorTests
     private sealed class MoveNextAndDisposeThrowingEnumerable<T> : IEnumerable<IObservableAsync<T>>
     {
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IEnumerator<IObservableAsync<T>> GetEnumerator() => new ThrowingEnumerator();
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
 
         /// <summary>An enumerator that throws on both <see cref="MoveNext"/> and <see cref="Dispose"/>.</summary>
@@ -161,9 +167,11 @@ public partial class CombiningOperatorTests
             public void Reset() => throw new NotSupportedException();
 
             /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Dispose() => ThrowDisposeBoom();
 
             /// <summary>Throws an <see cref="ObjectDisposedException"/>; extracted so the analyzer doesn't flag Dispose itself.</summary>
+            /// <exception cref="ObjectDisposedException">Always, so disposal failure can be exercised.</exception>
             private static void ThrowDisposeBoom() => throw new ObjectDisposedException("enumerator Dispose boom");
         }
     }

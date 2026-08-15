@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides a set of extension methods for working with asynchronous observable sequences.</summary>
@@ -11,9 +13,9 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Asynchronous quantifier operators that evaluate elements of an observable source sequence.</summary>
-    /// <param name="this">The source observable sequence.</param>
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
-    extension<T>(IObservableAsync<T> @this)
+    /// <param name="source">The source observable sequence.</param>
+    extension<T>(IObservableAsync<T> source)
     {
         /// <summary>Asynchronously determines whether any element in the sequence satisfies the specified predicate.</summary>
         /// <param name="predicate">A function to test each element for a condition. If null, the method checks whether the sequence contains
@@ -27,21 +29,23 @@ public static partial class SignalAsyncExtensions
             cancellationToken.ThrowIfCancellationRequested();
             AnyTaskWitness<T> observer = new(predicate, cancellationToken);
             await using var subscription =
-                await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
+                await source.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
             return await observer.AwaitResultAsync().ConfigureAwait(false);
         }
 
         /// <summary>Asynchronously determines whether the source contains any elements.</summary>
         /// <returns>A task that represents the asynchronous operation. The task result contains <see langword="true"/> if the
         /// source contains any elements; otherwise, <see langword="false"/>.</returns>
-        public ValueTask<bool> AnyAsync() => @this.AnyAsync(CancellationToken.None);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask<bool> AnyAsync() => source.AnyAsync(CancellationToken.None);
 
         /// <summary>Asynchronously determines whether the source contains any elements.</summary>
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains <see langword="true"/> if the
         /// source contains any elements; otherwise, <see langword="false"/>.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<bool> AnyAsync(CancellationToken cancellationToken) =>
-            @this.AnyAsync(null, cancellationToken);
+            source.AnyAsync(null, cancellationToken);
 
         /// <summary>Asynchronously determines whether all elements in the sequence satisfy the specified predicate.</summary>
         /// <param name="predicate">A function to test each element for a condition. The method evaluates this predicate for each element in the
@@ -50,7 +54,8 @@ public static partial class SignalAsyncExtensions
         /// element of the sequence passes the test in the specified predicate, or if the sequence is empty; otherwise,
         /// <see langword="false"/>.</returns>
         /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="predicate"/> is <see langword="null"/>.</exception>
-        public ValueTask<bool> AllAsync(Func<T, bool> predicate) => @this.AllAsync(predicate, CancellationToken.None);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask<bool> AllAsync(Func<T, bool> predicate) => source.AllAsync(predicate, CancellationToken.None);
 
         /// <summary>Asynchronously determines whether all elements in the sequence satisfy the specified predicate.</summary>
         /// <param name="predicate">A function to test each element for a condition. The method evaluates this predicate for each element in the
@@ -67,7 +72,7 @@ public static partial class SignalAsyncExtensions
 
             AllTaskWitness<T> observer = new(predicate, cancellationToken);
             await using var subscription =
-                await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
+                await source.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
             return await observer.AwaitResultAsync().ConfigureAwait(false);
         }
     }

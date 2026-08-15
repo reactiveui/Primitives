@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -10,6 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Observer that collects source values into batches.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}, Buffered = {Values.Count}")]
 public sealed class CollectWitness<T> : IObserver<T>, IDisposable
 {
     /// <summary>Serializes access to buffered values and terminal state.</summary>
@@ -23,6 +26,7 @@ public sealed class CollectWitness<T> : IObserver<T>, IDisposable
 
     /// <summary>Initializes a new instance of the <see cref="CollectWitness{T}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="observer"/> is <see langword="null"/>.</exception>
     public CollectWitness(IObserver<IList<T>> observer) =>
         Observer = observer ?? throw new ArgumentNullException(nameof(observer));
 
@@ -30,6 +34,7 @@ public sealed class CollectWitness<T> : IObserver<T>, IDisposable
     /// <param name="observer">The downstream observer.</param>
     /// <param name="timeSpan">The buffer window duration.</param>
     /// <param name="sequencer">The sequencer used to schedule flushes.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="observer"/> or <paramref name="sequencer"/> is <see langword="null"/>.</exception>
     public CollectWitness(IObserver<IList<T>> observer, TimeSpan timeSpan, ISequencer sequencer)
     {
         Observer = observer ?? throw new ArgumentNullException(nameof(observer));
@@ -124,6 +129,7 @@ public sealed class CollectWitness<T> : IObserver<T>, IDisposable
 
     /// <summary>Assigns the upstream subscription.</summary>
     /// <param name="subscription">The upstream subscription.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetSubscription(IDisposable subscription) => Disposables.Add(subscription);
 
     /// <summary>Flushes the current window if it still has buffered values.</summary>

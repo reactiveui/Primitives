@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async.Signals;
 
@@ -17,10 +18,11 @@ namespace ReactiveUI.Primitives.Async.Signals;
 public static class Signal
 {
     /// <summary>Creates a new asynchronous Signal instance for the specified type.</summary>
-    /// <remarks>The created Signal uses the default Signal creation options. Use the overload that accepts
-    /// <see cref="SignalCreationOptions"/> to customize Signal behavior.</remarks>
     /// <typeparam name="T">The type of elements processed by the Signal.</typeparam>
     /// <returns>An <see cref="ISignalAsync{T}"/> that represents the newly created asynchronous Signal.</returns>
+    /// <remarks>The created Signal uses the default Signal creation options. Use the overload that accepts
+    /// <see cref="SignalCreationOptions"/> to customize Signal behavior.</remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
@@ -28,14 +30,14 @@ public static class Signal
     public static ISignalAsync<T> Create<T>() => new SerialSignalAsync<T>();
 
     /// <summary>Creates a new asynchronous Signal instance with the specified publishing and state options.</summary>
-    /// <remarks>Use this method to create an ISignalAsync{T} with the desired concurrency and state
-    /// management characteristics. The returned Signal type depends on the values provided in the options
-    /// parameter.</remarks>
     /// <typeparam name="T">The type of elements processed by the Signal.</typeparam>
     /// <param name="options">The options that configure the publishing behavior and statefulness of the Signal. Must specify valid values
     /// for publishing and statelessness.</param>
     /// <returns>An asynchronous Signal instance configured according to the specified options.</returns>
     /// <exception cref="ArgumentOutOfRangeException">Thrown if the specified combination of publishing and statelessness options is not supported.</exception>
+    /// <remarks>Use this method to create an ISignalAsync{T} with the desired concurrency and state
+    /// management characteristics. The returned Signal type depends on the values provided in the options
+    /// parameter.</remarks>
     [SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
@@ -54,6 +56,7 @@ public static class Signal
     /// <typeparam name="T">The type of the elements processed by the Signal.</typeparam>
     /// <param name="startValue">The initial value to be emitted to new subscribers and stored as the current value of the Signal.</param>
     /// <returns>An asynchronous behavior Signal that holds the specified starting value and emits it to new subscribers.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ISignalAsync<T> CreateBehavior<T>(T startValue) =>
         new SerialReplayLatestSignalAsync<T>(new(startValue));
 
@@ -81,11 +84,12 @@ public static class Signal
         };
 
     /// <summary>Creates a new asynchronous Signal that replays only the most recent value to new subscribers.</summary>
+    /// <typeparam name="T">The type of the elements processed by the Signal.</typeparam>
+    /// <returns>An asynchronous Signal that stores and replays the latest value to each new subscriber.</returns>
     /// <remarks>The returned Signal will only retain the most recent value published. When a new subscriber
     /// subscribes, it immediately receives the latest value, if any, followed by subsequent values. This is useful for
     /// scenarios where only the most recent state is relevant to new observers.</remarks>
-    /// <typeparam name="T">The type of the elements processed by the Signal.</typeparam>
-    /// <returns>An asynchronous Signal that stores and replays the latest value to each new subscriber.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",

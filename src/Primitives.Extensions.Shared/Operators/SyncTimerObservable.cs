@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 
 #if REACTIVE_SHIM
@@ -89,6 +90,7 @@ internal static class SyncTimerObservable
         /// <summary>Ticks every currently-subscribed observer with the scheduler's current time.
         /// The empty-array short-circuit lives in <see cref="ObserverArrayHelpers.Broadcast{T}"/>
         /// (excluded from coverage) so this hot path stays branchless on the steady state.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void Tick() =>
             ObserverArrayHelpers.Broadcast(Volatile.Read(ref _observers), scheduler.Now.DateTime);
 

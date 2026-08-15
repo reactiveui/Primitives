@@ -8,11 +8,11 @@ namespace ReactiveUI.Primitives.Async.Signals;
 /// Represents an asynchronous Signal that allows observers to receive values, errors, or completion notifications
 /// asynchronously.
 /// </summary>
+/// <typeparam name="T">The type of the values observed and published by the Signal.</typeparam>
 /// <remarks>An asynchronous Signal enables push-based notification of values, errors, or completion events to
 /// multiple observers. Observers can subscribe to the Signal's values stream and receive notifications as they are
 /// published. This interface is typically used in scenarios where asynchronous event propagation and coordination are
 /// required, such as reactive programming or event-driven architectures.</remarks>
-/// <typeparam name="T">The type of the values observed and published by the Signal.</typeparam>
 public interface ISignalAsync<T> : IObserverAsync<T>, IObservableAsync<T>
 {
     /// <summary>Gets an observable sequence that asynchronously provides the current values of the collection.</summary>

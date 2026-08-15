@@ -14,26 +14,26 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Type-casting operators for an observable source sequence.</summary>
-    /// <param name="this">The source observable sequence.</param>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-    extension<T>(IObservableAsync<T> @this)
+    /// <param name="source">The source observable sequence.</param>
+    extension<T>(IObservableAsync<T> source)
     {
         /// <summary>Projects each element of the observable sequence to the specified result type by performing a runtime cast.</summary>
-        /// <remarks>If an element in the source sequence cannot be cast to <typeparamref
-        /// name="TResult"/>, the sequence completes with a failure containing the exception. This method is useful for
-        /// working with sequences of objects when the actual element type is known at runtime.</remarks>
         /// <typeparam name="TResult">The type to which the elements of the sequence are cast.</typeparam>
         /// <returns>An observable sequence whose elements are the result of casting each element of the source sequence to
         /// <typeparamref name="TResult"/>.</returns>
+        /// <remarks>If an element in the source sequence cannot be cast to <typeparamref
+        /// name="TResult"/>, the sequence completes with a failure containing the exception. This method is useful for
+        /// working with sequences of objects when the actual element type is known at runtime.</remarks>
         [SuppressMessage(
             "Design",
             "SST2307:Generic method type parameters should be inferable from the parameters",
             Justification = "Public extension API — caller specifies TResult explicitly: source.Cast<Derived>().")]
         public IObservableAsync<TResult> Cast<TResult>()
         {
-            ArgumentExceptionHelper.ThrowIfNull(@this);
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return new CastSignal<T, TResult>(@this);
+            return new CastSignal<T, TResult>(source);
         }
     }
 

@@ -27,6 +27,7 @@ internal sealed class ThrowingWitness<T>(
     internal bool SeenError { get; private set; }
 
     /// <summary>Handles completion, throwing when configured to do so.</summary>
+    /// <exception cref="InvalidOperationException">The witness is configured to throw on completion.</exception>
     public void OnCompleted()
     {
         if (!_throwOnCompleted)
@@ -39,6 +40,7 @@ internal sealed class ThrowingWitness<T>(
 
     /// <summary>Handles an error, throwing when configured to do so.</summary>
     /// <param name="error">The error to handle.</param>
+    /// <exception cref="InvalidOperationException">The witness is configured to throw on errors.</exception>
     public void OnError(Exception error)
     {
         SeenError = true;
@@ -52,6 +54,7 @@ internal sealed class ThrowingWitness<T>(
 
     /// <summary>Handles a value, throwing when configured to do so.</summary>
     /// <param name="value">The value to handle.</param>
+    /// <exception cref="InvalidOperationException">The witness is configured to throw on values.</exception>
     public void OnNext(T value)
     {
         if (!_throwOnNext)

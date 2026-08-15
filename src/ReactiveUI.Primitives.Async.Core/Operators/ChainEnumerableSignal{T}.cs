@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async;
@@ -10,13 +11,14 @@ namespace ReactiveUI.Primitives.Async;
 /// Represents an asynchronous observable sequence that concatenates multiple asynchronous observables, emitting their
 /// elements in order as each completes.
 /// </summary>
+/// <typeparam name="T">The type of elements produced by the concatenated observable sequences.</typeparam>
+/// <param name="signals">A collection of asynchronous signals to be concatenated. Each signal is subscribed to sequentially; the next
+/// begins only after the previous completes.</param>
 /// <remarks>This class enables sequential composition of multiple asynchronous observables, ensuring that items
 /// from each source are emitted in order and that subsequent observables are not subscribed to until the preceding one
 /// has completed. If any observable in the sequence signals an error, the concatenation terminates and the error is
 /// propagated to the observer.</remarks>
-/// <typeparam name="T">The type of elements produced by the concatenated observable sequences.</typeparam>
-/// <param name="signals">A collection of asynchronous signals to be concatenated. Each signal is subscribed to sequentially; the next
-/// begins only after the previous completes.</param>
+[System.Diagnostics.DebuggerDisplay("Signals = {_signals}")]
 public sealed class ChainEnumerableSignal<T>(IEnumerable<IObservableAsync<T>> signals) : IObservableAsync<T>
 {
     /// <summary>The enumerable collection of signal sequences to concatenate.</summary>
@@ -71,6 +73,7 @@ public sealed class ChainEnumerableSignal<T>(IEnumerable<IObservableAsync<T>> si
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask DisposeAsync() => FinishAsync(null);
 
         /// <summary>Handles a second call to <see cref="FinishAsync"/> when already disposed, routing any failure exception to the unhandled exception handler.</summary>
@@ -93,8 +96,7 @@ public sealed class ChainEnumerableSignal<T>(IEnumerable<IObservableAsync<T>> si
             {
                 if (_enumerator.MoveNext())
                 {
-                    var current = _enumerator.Current;
-                    var subscription = await current.SubscribeAsync(
+                    var subscription = await _enumerator.Current.SubscribeAsync(
                         RelayInnerValueAsync,
                         RelayInnerErrorAsync,
                         result => result.IsFailure ? FinishAsync(result) : SubscribeNextSignalAsync(),

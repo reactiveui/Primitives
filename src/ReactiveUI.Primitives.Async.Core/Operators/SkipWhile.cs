@@ -10,9 +10,9 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>SkipWhile operators for an observable source sequence.</summary>
-    /// <param name="this">The source observable sequence.</param>
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
-    extension<T>(IObservableAsync<T> @this)
+    /// <param name="source">The source observable sequence.</param>
+    extension<T>(IObservableAsync<T> source)
     {
         /// <summary>
         /// Bypasses elements in the observable sequence as long as the specified asynchronous condition is true,
@@ -25,10 +25,10 @@ public static partial class SignalAsyncExtensions
         /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="predicate"/> is null.</exception>
         public IObservableAsync<T> SkipWhile(Func<T, CancellationToken, ValueTask<bool>> predicate)
         {
-            ArgumentExceptionHelper.ThrowIfNull(@this);
+            ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(predicate);
 
-            return new SkipWhileAsyncSignal<T>(@this, predicate);
+            return new SkipWhileAsyncSignal<T>(source, predicate);
         }
 
         /// <summary>
@@ -41,10 +41,10 @@ public static partial class SignalAsyncExtensions
         /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="predicate"/> is null.</exception>
         public IObservableAsync<T> SkipWhile(Func<T, bool> predicate)
         {
-            ArgumentExceptionHelper.ThrowIfNull(@this);
+            ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(predicate);
 
-            return new SkipWhileSyncSignal<T>(@this, predicate);
+            return new SkipWhileSyncSignal<T>(source, predicate);
         }
     }
 

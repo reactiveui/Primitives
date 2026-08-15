@@ -10,12 +10,14 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Emits only the latest value after a quiet period.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("DueTime = {DueTime}, Source = {Source}")]
 public sealed class EmitIfQuietSignal<T> : IObservable<T>
 {
     /// <summary>Initializes a new instance of the <see cref="EmitIfQuietSignal{T}"/> class.</summary>
     /// <param name="source">The source observable.</param>
     /// <param name="dueTime">The quiet period before emitting the latest value.</param>
     /// <param name="sequencer">The sequencer used to schedule delayed emissions.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="sequencer"/> is <see langword="null"/>.</exception>
     public EmitIfQuietSignal(IObservable<T> source, TimeSpan dueTime, ISequencer sequencer)
     {
         Source = source ?? throw new ArgumentNullException(nameof(source));

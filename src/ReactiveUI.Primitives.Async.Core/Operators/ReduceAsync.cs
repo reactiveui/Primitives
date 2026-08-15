@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides Aggregate (fold/reduce) extension methods for asynchronous observable sequences.</summary>
@@ -11,9 +13,9 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Aggregate (fold/reduce) operators for an observable source sequence.</summary>
-    /// <param name="this">The source observable sequence.</param>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-    extension<T>(IObservableAsync<T> @this)
+    /// <param name="source">The source observable sequence.</param>
+    extension<T>(IObservableAsync<T> source)
     {
         /// <summary>
         /// Applies an asynchronous accumulator function over the observable sequence, returning the
@@ -25,10 +27,11 @@ public static partial class SignalAsyncExtensions
         /// current accumulated value, the current element, and a cancellation token.</param>
         /// <returns>A task representing the asynchronous operation, containing the final accumulated value.</returns>
         /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="accumulator"/> is null.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<TAcc> AggregateAsync<TAcc>(
             TAcc seed,
             Func<TAcc, T, CancellationToken, ValueTask<TAcc>> accumulator) =>
-            @this.ReduceAsync(seed, accumulator);
+            source.ReduceAsync(seed, accumulator);
 
         /// <summary>
         /// Applies an asynchronous accumulator function over the observable sequence, returning the
@@ -41,11 +44,12 @@ public static partial class SignalAsyncExtensions
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
         /// <returns>A task representing the asynchronous operation, containing the final accumulated value.</returns>
         /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="accumulator"/> is null.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<TAcc> AggregateAsync<TAcc>(
             TAcc seed,
             Func<TAcc, T, CancellationToken, ValueTask<TAcc>> accumulator,
             CancellationToken cancellationToken) =>
-            @this.ReduceAsync(seed, accumulator, cancellationToken);
+            source.ReduceAsync(seed, accumulator, cancellationToken);
 
         /// <summary>
         /// Applies an accumulator function over the observable sequence, returning the final accumulated
@@ -57,10 +61,11 @@ public static partial class SignalAsyncExtensions
         /// accumulated value and the current element.</param>
         /// <returns>A task representing the asynchronous operation, containing the final accumulated value.</returns>
         /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="accumulator"/> is null.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<TAcc> AggregateAsync<TAcc>(
             TAcc seed,
             Func<TAcc, T, TAcc> accumulator) =>
-            @this.ReduceAsync(seed, accumulator);
+            source.ReduceAsync(seed, accumulator);
 
         /// <summary>
         /// Applies an accumulator function over the observable sequence, returning the final accumulated
@@ -73,11 +78,12 @@ public static partial class SignalAsyncExtensions
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
         /// <returns>A task representing the asynchronous operation, containing the final accumulated value.</returns>
         /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="accumulator"/> is null.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<TAcc> AggregateAsync<TAcc>(
             TAcc seed,
             Func<TAcc, T, TAcc> accumulator,
             CancellationToken cancellationToken) =>
-            @this.ReduceAsync(seed, accumulator, cancellationToken);
+            source.ReduceAsync(seed, accumulator, cancellationToken);
 
         /// <summary>
         /// Applies an accumulator function over the observable sequence with a seed value, then applies
@@ -91,11 +97,12 @@ public static partial class SignalAsyncExtensions
         /// <returns>A task representing the asynchronous operation, containing the transformed result.</returns>
         /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="accumulator"/> or
         /// <paramref name="resultSelector"/> is null.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<TResult> AggregateAsync<TAcc, TResult>(
             TAcc seed,
             Func<TAcc, T, TAcc> accumulator,
             Func<TAcc, TResult> resultSelector) =>
-            @this.ReduceAsync(seed, accumulator, resultSelector);
+            source.ReduceAsync(seed, accumulator, resultSelector);
 
         /// <summary>
         /// Applies an accumulator function over the observable sequence with a seed value, then applies
@@ -110,12 +117,13 @@ public static partial class SignalAsyncExtensions
         /// <returns>A task representing the asynchronous operation, containing the transformed result.</returns>
         /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="accumulator"/> or
         /// <paramref name="resultSelector"/> is null.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<TResult> AggregateAsync<TAcc, TResult>(
             TAcc seed,
             Func<TAcc, T, TAcc> accumulator,
             Func<TAcc, TResult> resultSelector,
             CancellationToken cancellationToken) =>
-            @this.ReduceAsync(seed, accumulator, resultSelector, cancellationToken);
+            source.ReduceAsync(seed, accumulator, resultSelector, cancellationToken);
 
         /// <summary>
         /// Applies an asynchronous accumulator function over the observable sequence, returning the
@@ -127,10 +135,11 @@ public static partial class SignalAsyncExtensions
         /// current accumulated value, the current element, and a cancellation token.</param>
         /// <returns>A task representing the asynchronous operation, containing the final accumulated value.</returns>
         /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="accumulator"/> is null.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<TAcc> ReduceAsync<TAcc>(
             TAcc seed,
             Func<TAcc, T, CancellationToken, ValueTask<TAcc>> accumulator) =>
-            @this.ReduceAsync(seed, accumulator, CancellationToken.None);
+            source.ReduceAsync(seed, accumulator, CancellationToken.None);
 
         /// <summary>
         /// Applies an asynchronous accumulator function over the observable sequence, returning the
@@ -153,7 +162,7 @@ public static partial class SignalAsyncExtensions
 
             ReduceAsyncTaskWitness<T, TAcc> observer = new(seed, accumulator, cancellationToken);
             await using var subscription =
-                await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
+                await source.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
             return await observer.AwaitResultAsync().ConfigureAwait(false);
         }
 
@@ -167,10 +176,11 @@ public static partial class SignalAsyncExtensions
         /// accumulated value and the current element.</param>
         /// <returns>A task representing the asynchronous operation, containing the final accumulated value.</returns>
         /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="accumulator"/> is null.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<TAccumulate> ReduceAsync<TAccumulate>(
             TAccumulate seed,
             Func<TAccumulate, T, TAccumulate> accumulator) =>
-            @this.ReduceAsync(seed, accumulator, CancellationToken.None);
+            source.ReduceAsync(seed, accumulator, CancellationToken.None);
 
         /// <summary>
         /// Applies an accumulator function over the observable sequence, returning the final accumulated
@@ -193,7 +203,7 @@ public static partial class SignalAsyncExtensions
 
             ReduceSyncTaskWitness<T, TAcc> observer = new(seed, accumulator, cancellationToken);
             await using var subscription =
-                await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
+                await source.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
             return await observer.AwaitResultAsync().ConfigureAwait(false);
         }
 
@@ -209,11 +219,12 @@ public static partial class SignalAsyncExtensions
         /// <returns>A task representing the asynchronous operation, containing the transformed result.</returns>
         /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="accumulator"/> or
         /// <paramref name="resultSelector"/> is null.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<TResult> ReduceAsync<TAcc, TResult>(
             TAcc seed,
             Func<TAcc, T, TAcc> accumulator,
             Func<TAcc, TResult> resultSelector) =>
-            @this.ReduceAsync(seed, accumulator, resultSelector, CancellationToken.None);
+            source.ReduceAsync(seed, accumulator, resultSelector, CancellationToken.None);
 
         /// <summary>
         /// Applies an accumulator function over the observable sequence with a seed value, then applies
@@ -236,7 +247,7 @@ public static partial class SignalAsyncExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(resultSelector);
 
-            var acc = await @this.ReduceAsync(seed, accumulator, cancellationToken).ConfigureAwait(false);
+            var acc = await source.ReduceAsync(seed, accumulator, cancellationToken).ConfigureAwait(false);
             return resultSelector(acc);
         }
     }

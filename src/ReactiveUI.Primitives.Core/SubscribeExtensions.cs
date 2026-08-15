@@ -33,8 +33,8 @@ public static class SubscribeExtensions
     }
 
     /// <summary>Subscription operators for an observable source sequence.</summary>
-    /// <param name="source">Signals sequence to subscribe to.</param>
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
+    /// <param name="source">Signals sequence to subscribe to.</param>
     extension<T>(IObservable<T> source)
     {
         /// <summary>
