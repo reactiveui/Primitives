@@ -9,6 +9,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// <param name="onNextAsync">The asynchronous function invoked for each element.</param>
 /// <param name="onErrorResumeAsync">An optional asynchronous function invoked when a resumable error occurs.</param>
 /// <param name="onCompletedAsync">An optional asynchronous function invoked when the sequence completes.</param>
+[System.Diagnostics.DebuggerDisplay("HasDisposed = {HasDisposed}")]
 public sealed class CallbackWitnessAsync<T>(
     Func<T, CancellationToken, ValueTask> onNextAsync,
     Func<Exception, CancellationToken, ValueTask>? onErrorResumeAsync = null,

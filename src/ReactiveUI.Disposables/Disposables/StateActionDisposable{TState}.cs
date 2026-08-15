@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Disposables;
 
 /// <summary>Disposable that invokes a stateful action once.</summary>
@@ -17,6 +19,7 @@ internal sealed class StateActionDisposable<TState>(TState state, Action<TState>
     private Action<TState>? _dispose = dispose;
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose() =>
         Interlocked.Exchange(ref _dispose, null)?.Invoke(_state);
 }

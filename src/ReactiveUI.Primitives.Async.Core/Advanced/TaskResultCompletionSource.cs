@@ -2,11 +2,14 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>Coordinates task completion for terminal observers and disposes the owning subscription when complete.</summary>
 /// <typeparam name="T">The result value type.</typeparam>
 /// <param name="cancellationToken">The cancellation token that can cancel the pending result.</param>
+[System.Diagnostics.DebuggerDisplay("IsCompleted = {_taskSource.Task.IsCompleted}")]
 public sealed class TaskResultCompletionSource<T>(CancellationToken cancellationToken)
 {
     /// <summary>The task completion source used to publish the terminal result.</summary>
@@ -72,8 +75,9 @@ public sealed class TaskResultCompletionSource<T>(CancellationToken cancellation
 
     /// <summary>Registers cancellation for the pending result task.</summary>
     /// <returns>The cancellation registration.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private CancellationTokenRegistration RegisterCancellation() =>
-        _cancellationToken.Register(
+        _cancellationToken.UnsafeRegister(
             static state =>
             {
                 var source = (TaskResultCompletionSource<T>)state!;

@@ -2,10 +2,13 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Core;
 
 /// <summary>Binary heap priority queue that preserves insertion order for equal-priority items.</summary>
 /// <typeparam name="T">The queued item type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Count = {Count}, Capacity = {_items.Length}")]
 public sealed class PriorityQueue<T>
     where T : IComparable<T>
 {
@@ -23,6 +26,9 @@ public sealed class PriorityQueue<T>
 
     /// <summary>Capacity divisor used to shrink sparse queues.</summary>
     private const int ShrinkDivisor = 4;
+
+    /// <summary>Offset from <see cref="Count"/> to the last index that can still have a child.</summary>
+    private const int LastParentCountOffset = 2;
 
     /// <summary>Monotonic tie-breaker for equal-priority items.</summary>
     private long _count = long.MinValue;
@@ -76,6 +82,7 @@ public sealed class PriorityQueue<T>
 
     /// <summary>Removes and returns all queued items in priority order.</summary>
     /// <returns>The queued items in dequeue order.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public T[] DequeueAll() => DequeueSome(Count);
 
     /// <summary>Dequeues items into a caller-provided buffer.</summary>
@@ -126,6 +133,7 @@ public sealed class PriorityQueue<T>
 
     /// <summary>Returns the highest-priority item without removing it.</summary>
     /// <returns>The highest-priority item.</returns>
+    /// <exception cref="InvalidOperationException">The queue is empty.</exception>
     public T Peek()
     {
         if (Count == 0)
@@ -173,11 +181,13 @@ public sealed class PriorityQueue<T>
     {
         for (var i = 0; i < Count; ++i)
         {
-            if (EqualityComparer<T>.Default.Equals(_items[i].Value, item))
+            if (!EqualityComparer<T>.Default.Equals(_items[i].Value, item))
             {
-                RemoveAt(i);
-                return true;
+                continue;
             }
+
+            RemoveAt(i);
+            return true;
         }
 
         return false;
@@ -192,9 +202,7 @@ public sealed class PriorityQueue<T>
             return true;
         }
 
-        var lastIndex = Count - 1;
-        var lastParentIndex = (lastIndex - 1) / HeapBranchingFactor;
-        for (var i = 0; i <= lastParentIndex; i++)
+        for (var i = 0; i <= (Count - LastParentCountOffset) / HeapBranchingFactor; i++)
         {
             var left = (HeapBranchingFactor * i) + LeftChildOffset;
             var right = (HeapBranchingFactor * i) + RightChildOffset;

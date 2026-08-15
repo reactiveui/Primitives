@@ -4,6 +4,7 @@
 
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async.Disposables;
 
@@ -76,6 +77,7 @@ public static class DisposableAsyncSlot
     /// value rather than store it. Idempotent.</summary>
     /// <param name="slot">Reference to the caller-owned <see cref="IAsyncDisposable"/> field.</param>
     /// <returns>A <see cref="ValueTask"/> that completes once the prior occupant has been disposed.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerStepThrough]
     public static ValueTask DisposeAsync(ref IAsyncDisposable? slot)
     {
@@ -86,6 +88,7 @@ public static class DisposableAsyncSlot
     /// <summary>Returns <see langword="true"/> if the slot has been disposed via <see cref="DisposeAsync"/>.</summary>
     /// <param name="slot">The slot field to inspect.</param>
     /// <returns><see langword="true"/> if the slot currently holds the disposed sentinel.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsDisposed(IAsyncDisposable? slot) =>
         ReferenceEquals(slot, DisposedSentinel);
 
@@ -98,6 +101,7 @@ public static class DisposableAsyncSlot
     private sealed class DisposedAsyncDisposable : IAsyncDisposable
     {
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         ValueTask IAsyncDisposable.DisposeAsync() => default;
     }
 }

@@ -6,6 +6,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>A subscription that invokes an asynchronous value factory and emits its result.</summary>
 /// <typeparam name="T">The value type emitted by the factory.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Factory = {Factory}")]
 public sealed class FromAsyncSubscription<T> : TaskSignalSubscription<T>
 {
     /// <summary>Initializes a new instance of the <see cref="FromAsyncSubscription{T}"/> class.</summary>

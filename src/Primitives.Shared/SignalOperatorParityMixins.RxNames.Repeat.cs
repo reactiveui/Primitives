@@ -12,8 +12,8 @@ namespace ReactiveUI.Primitives;
 public static partial class LinqExtensions
 {
     /// <summary>System.Reactive-named repetition operators for an observable source sequence.</summary>
-    /// <param name="source">The source sequence.</param>
     /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
     extension<T>(IObservable<T> source)
     {
         /// <summary>Repeats the source sequence indefinitely.</summary>

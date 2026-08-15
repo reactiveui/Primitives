@@ -4,6 +4,7 @@
 
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Internal;
@@ -54,6 +55,7 @@ public class FirstAsTaskHelperTests
     }
 
     /// <summary>Verifies the helper throws when the source argument is null.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void WhenSourceNull_ThenThrowsArgumentNullException() =>
         Assert.Throws<ArgumentNullException>(static () => FirstAsTaskHelper.FirstAsTask<int>(null!));

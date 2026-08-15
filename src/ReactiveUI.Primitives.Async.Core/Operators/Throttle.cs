@@ -12,9 +12,9 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Throttle (debounce) operators for an observable source sequence.</summary>
-    /// <param name="this">The source observable sequence.</param>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-    extension<T>(IObservableAsync<T> @this)
+    /// <param name="source">The source observable sequence.</param>
+    extension<T>(IObservableAsync<T> source)
     {
         /// <summary>
         /// Ignores elements from the source sequence that are followed by another element within
@@ -29,7 +29,7 @@ public static partial class SignalAsyncExtensions
         {
             ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(dueTime, TimeSpan.Zero);
 
-            return new ThrottleSignal<T>(@this, dueTime, TimeProvider.System);
+            return new ThrottleSignal<T>(source, dueTime, TimeProvider.System);
         }
 
         /// <summary>
@@ -47,29 +47,32 @@ public static partial class SignalAsyncExtensions
         {
             ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(dueTime, TimeSpan.Zero);
 
-            return new ThrottleSignal<T>(@this, dueTime, timeProvider ?? TimeProvider.System);
+            return new ThrottleSignal<T>(source, dueTime, timeProvider ?? TimeProvider.System);
         }
     }
 
-    /// <summary>Asynchronously delays for the specified duration using the provided time provider.</summary>
+    /// <summary>Delay operators for a relative duration.</summary>
     /// <param name="delay">The duration to delay.</param>
-    /// <param name="timeProvider">The time provider to use for the delay.</param>
-    /// <param name="cancellationToken">A token to cancel the delay.</param>
-    /// <returns>A <see cref="ValueTask"/> that completes after the specified delay.</returns>
-    /// <remarks>
-    /// For <see cref="TimeProvider.System"/> the result is a wrapper around
-    /// <see cref="Task.Delay(TimeSpan, CancellationToken)"/>; for custom providers the call rents a
-    /// pooled <see cref="PooledDelaySource"/> so the per-call <see cref="TaskCompletionSource{TResult}"/>
-    /// + <see cref="Task{TResult}"/> + <see cref="CancellationTokenRegistration"/> allocation chain
-    /// from the legacy implementation collapses to zero on the steady path.
-    /// </remarks>
-    internal static ValueTask DelayAsync(
-        TimeSpan delay,
-        TimeProvider timeProvider,
-        CancellationToken cancellationToken) =>
-        timeProvider == TimeProvider.System
-            ? new(Task.Delay(delay, cancellationToken))
-            : PooledDelaySource.Rent().BeginAsync(delay, timeProvider, cancellationToken);
+    extension(TimeSpan delay)
+    {
+        /// <summary>Asynchronously delays for the specified duration using the provided time provider.</summary>
+        /// <param name="timeProvider">The time provider to use for the delay.</param>
+        /// <param name="cancellationToken">A token to cancel the delay.</param>
+        /// <returns>A <see cref="ValueTask"/> that completes after the specified delay.</returns>
+        /// <remarks>
+        /// For <see cref="TimeProvider.System"/> the result is a wrapper around
+        /// <see cref="Task.Delay(TimeSpan, CancellationToken)"/>; for custom providers the call rents a
+        /// pooled <see cref="PooledDelaySource"/> so the per-call <see cref="TaskCompletionSource{TResult}"/>
+        /// + <see cref="Task{TResult}"/> + <see cref="CancellationTokenRegistration"/> allocation chain
+        /// from the legacy implementation collapses to zero on the steady path.
+        /// </remarks>
+        internal ValueTask DelayAsync(
+            TimeProvider timeProvider,
+            CancellationToken cancellationToken) =>
+            timeProvider == TimeProvider.System
+                ? new(Task.Delay(delay, cancellationToken))
+                : PooledDelaySource.Rent().BeginAsync(delay, timeProvider, cancellationToken);
+    }
 
     /// <summary>
     /// Async observable that debounces the source sequence, only forwarding elements that are not

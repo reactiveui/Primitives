@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
@@ -72,9 +73,11 @@ public sealed class ShuffleObservable<T>(IObservable<T[]> source) : IObservable<
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnError(Exception error) => downstream.OnError(error);
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnCompleted() => downstream.OnCompleted();
 
 #if !NET8_0_OR_GREATER

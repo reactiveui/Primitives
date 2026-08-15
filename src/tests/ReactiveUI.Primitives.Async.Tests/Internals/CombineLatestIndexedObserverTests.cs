@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async.Tests.Internals;
 
 /// <summary>Tests for <see cref="SyncLatestIndexedWitness{TSource, TResult}"/>, the shared per-source observer that backs every per-arity CombineLatest subscription.</summary>
@@ -130,6 +132,7 @@ public class CombineLatestIndexedObserverTests
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask DisposeAsync() => default;
     }
 
@@ -140,6 +143,7 @@ public class CombineLatestIndexedObserverTests
         public static IAsyncDisposable Instance { get; } = new NoopDisposable();
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask DisposeAsync() => default;
     }
 }

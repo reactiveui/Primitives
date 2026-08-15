@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Signals;
 #else
@@ -14,6 +16,7 @@ public static partial class Signal
     /// <summary>Non-Terminating Signals. It's no returns, never finish.</summary>
     /// <typeparam name="T">The type.</typeparam>
     /// <returns>An Signals.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
@@ -25,5 +28,6 @@ public static partial class Signal
     /// <typeparam name="T">The type.</typeparam>
     /// <param name="witness">The witness.</param>
     /// <returns>An Signals.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservable<T> Silent<T>(T witness) => ImmutableNeverSignal<T>.Instance;
 }

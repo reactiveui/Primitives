@@ -12,10 +12,10 @@ namespace ReactiveUI.Primitives;
 public static partial class LinqExtensions
 {
     /// <summary>Subscribes a nullable reference observer with downstream exception protection from static-call syntax.</summary>
+    /// <typeparam name="T">The non-nullable reference value type.</typeparam>
     /// <param name="source">The source sequence.</param>
     /// <param name="observer">The observer to subscribe.</param>
     /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
-    /// <typeparam name="T">The non-nullable reference value type.</typeparam>
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="observer"/> is <see langword="null"/>.</exception>
     [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
@@ -30,10 +30,10 @@ public static partial class LinqExtensions
     }
 
     /// <summary>Subscribes a nullable value observer with downstream exception protection from static-call syntax.</summary>
+    /// <typeparam name="T">The non-nullable value type.</typeparam>
     /// <param name="source">The source sequence.</param>
     /// <param name="observer">The observer to subscribe.</param>
     /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
-    /// <typeparam name="T">The non-nullable value type.</typeparam>
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="observer"/> is <see langword="null"/>.</exception>
     [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
@@ -48,11 +48,11 @@ public static partial class LinqExtensions
     }
 
     /// <summary>Subscribes nullable reference callbacks with downstream exception protection from static-call syntax.</summary>
+    /// <typeparam name="T">The non-nullable reference value type.</typeparam>
     /// <param name="source">The source sequence.</param>
     /// <param name="onNext">The action to invoke for each value.</param>
     /// <param name="onError">The action to invoke for an error.</param>
     /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
-    /// <typeparam name="T">The non-nullable reference value type.</typeparam>
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
     [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
@@ -68,11 +68,11 @@ public static partial class LinqExtensions
     }
 
     /// <summary>Subscribes nullable value callbacks with downstream exception protection from static-call syntax.</summary>
+    /// <typeparam name="T">The non-nullable value type.</typeparam>
     /// <param name="source">The source sequence.</param>
     /// <param name="onNext">The action to invoke for each value.</param>
     /// <param name="onError">The action to invoke for an error.</param>
     /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
-    /// <typeparam name="T">The non-nullable value type.</typeparam>
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
     [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
@@ -88,12 +88,12 @@ public static partial class LinqExtensions
     }
 
     /// <summary>Subscribes nullable reference callbacks with downstream exception protection from static-call syntax.</summary>
+    /// <typeparam name="T">The non-nullable reference value type.</typeparam>
     /// <param name="source">The source sequence.</param>
     /// <param name="onNext">The action to invoke for each value.</param>
     /// <param name="onError">The action to invoke for an error.</param>
     /// <param name="onCompleted">The action to invoke when the sequence completes.</param>
     /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
-    /// <typeparam name="T">The non-nullable reference value type.</typeparam>
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
     [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
@@ -110,12 +110,12 @@ public static partial class LinqExtensions
     }
 
     /// <summary>Subscribes nullable value callbacks with downstream exception protection from static-call syntax.</summary>
+    /// <typeparam name="T">The non-nullable value type.</typeparam>
     /// <param name="source">The source sequence.</param>
     /// <param name="onNext">The action to invoke for each value.</param>
     /// <param name="onError">The action to invoke for an error.</param>
     /// <param name="onCompleted">The action to invoke when the sequence completes.</param>
     /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
-    /// <typeparam name="T">The non-nullable value type.</typeparam>
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
     [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
@@ -132,13 +132,20 @@ public static partial class LinqExtensions
     }
 
     /// <summary>Subscribes nullable reference terminal callbacks with downstream exception protection from static-call syntax.</summary>
+    /// <typeparam name="T">The non-nullable reference value type.</typeparam>
     /// <param name="source">The source sequence.</param>
     /// <param name="onError">The action to invoke for an error.</param>
     /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
-    /// <typeparam name="T">The non-nullable reference value type.</typeparam>
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
     [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "PublicApi",
+        "PAS0003:Public API differs from the baseline",
+        Justification =
+            "This overload and its 'where T : struct' twin have identical signatures apart from the generic "
+            + "constraint. The baseline records both, but an entry is resolved by the constraint-erased signature "
+            + "and compared against the first match, so only one of the pair can ever be matched.")]
     public static IDisposable SubscribeSafe<T>(
         IObservable<T?> source,
         Action<Exception> onError,
@@ -150,10 +157,10 @@ public static partial class LinqExtensions
     }
 
     /// <summary>Subscribes nullable value terminal callbacks with downstream exception protection from static-call syntax.</summary>
+    /// <typeparam name="T">The non-nullable value type.</typeparam>
     /// <param name="source">The source sequence.</param>
     /// <param name="onError">The action to invoke for an error.</param>
     /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
-    /// <typeparam name="T">The non-nullable value type.</typeparam>
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
     [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
@@ -175,11 +182,11 @@ public static partial class LinqExtensions
     }
 
     /// <summary>Subscribes nullable reference terminal callbacks with downstream exception protection from static-call syntax.</summary>
+    /// <typeparam name="T">The non-nullable reference value type.</typeparam>
     /// <param name="source">The source sequence.</param>
     /// <param name="onError">The action to invoke for an error.</param>
     /// <param name="onCompleted">The action to invoke when the sequence completes.</param>
     /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
-    /// <typeparam name="T">The non-nullable reference value type.</typeparam>
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
     [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
@@ -195,11 +202,11 @@ public static partial class LinqExtensions
     }
 
     /// <summary>Subscribes nullable value terminal callbacks with downstream exception protection from static-call syntax.</summary>
+    /// <typeparam name="T">The non-nullable value type.</typeparam>
     /// <param name="source">The source sequence.</param>
     /// <param name="onError">The action to invoke for an error.</param>
     /// <param name="onCompleted">The action to invoke when the sequence completes.</param>
     /// <param name="allowNullable">Reserved for nullable overload resolution.</param>
-    /// <typeparam name="T">The non-nullable value type.</typeparam>
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
     [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
@@ -210,6 +217,13 @@ public static partial class LinqExtensions
             "Reference-type and value-type constraint overloads (where T : class / where T : struct) of the same "
             + "operator. The bodies are necessarily identical, and the two cannot forward to one another because their "
             + "generic constraints differ; both must exist so nullable T? resolves for either kind of T.")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "PublicApi",
+        "PAS0003:Public API differs from the baseline",
+        Justification =
+            "This overload and its 'where T : class' twin have identical signatures apart from the generic "
+            + "constraint. The baseline records both, but an entry is resolved by the constraint-erased signature "
+            + "and compared against the first match, so only one of the pair can ever be matched.")]
     public static IDisposable SubscribeSafe<T>(
         IObservable<T?> source,
         Action<Exception> onError,
@@ -222,10 +236,10 @@ public static partial class LinqExtensions
     }
 
     /// <summary>Subscribes a non-nullable value observer with downstream exception protection from static-call syntax.</summary>
+    /// <typeparam name="T">The non-nullable value type.</typeparam>
     /// <param name="source">The source sequence.</param>
     /// <param name="observer">The observer to subscribe.</param>
     /// <param name="allowValueType">Reserved for value-type overload resolution.</param>
-    /// <typeparam name="T">The non-nullable value type.</typeparam>
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="observer"/> is <see langword="null"/>.</exception>
     [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
@@ -240,11 +254,11 @@ public static partial class LinqExtensions
     }
 
     /// <summary>Subscribes non-nullable value callbacks with downstream exception protection from static-call syntax.</summary>
+    /// <typeparam name="T">The non-nullable value type.</typeparam>
     /// <param name="source">The source sequence.</param>
     /// <param name="onNext">The action to invoke for each value.</param>
     /// <param name="onError">The action to invoke for an error.</param>
     /// <param name="allowValueType">Reserved for value-type overload resolution.</param>
-    /// <typeparam name="T">The non-nullable value type.</typeparam>
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
     [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
@@ -260,12 +274,12 @@ public static partial class LinqExtensions
     }
 
     /// <summary>Subscribes non-nullable value callbacks with downstream exception protection from static-call syntax.</summary>
+    /// <typeparam name="T">The non-nullable value type.</typeparam>
     /// <param name="source">The source sequence.</param>
     /// <param name="onNext">The action to invoke for each value.</param>
     /// <param name="onError">The action to invoke for an error.</param>
     /// <param name="onCompleted">The action to invoke when the sequence completes.</param>
     /// <param name="allowValueType">Reserved for value-type overload resolution.</param>
-    /// <typeparam name="T">The non-nullable value type.</typeparam>
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
     [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
@@ -282,10 +296,10 @@ public static partial class LinqExtensions
     }
 
     /// <summary>Subscribes non-nullable value terminal callbacks with downstream exception protection from static-call syntax.</summary>
+    /// <typeparam name="T">The non-nullable value type.</typeparam>
     /// <param name="source">The source sequence.</param>
     /// <param name="onError">The action to invoke for an error.</param>
     /// <param name="allowValueType">Reserved for value-type overload resolution.</param>
-    /// <typeparam name="T">The non-nullable value type.</typeparam>
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
     [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
@@ -300,11 +314,11 @@ public static partial class LinqExtensions
     }
 
     /// <summary>Subscribes non-nullable value terminal callbacks with downstream exception protection from static-call syntax.</summary>
+    /// <typeparam name="T">The non-nullable value type.</typeparam>
     /// <param name="source">The source sequence.</param>
     /// <param name="onError">The action to invoke for an error.</param>
     /// <param name="onCompleted">The action to invoke when the sequence completes.</param>
     /// <param name="allowValueType">Reserved for value-type overload resolution.</param>
-    /// <typeparam name="T">The non-nullable value type.</typeparam>
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
     [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
@@ -320,9 +334,9 @@ public static partial class LinqExtensions
     }
 
     /// <summary>Subscribes an observer with downstream exception protection.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
     /// <param name="source">The source sequence.</param>
     /// <param name="observer">The observer to subscribe.</param>
-    /// <typeparam name="T">The value type.</typeparam>
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="observer"/> is <see langword="null"/>.</exception>
     private static SubscribeSafeWitness<T> SubscribeSafeCore<T>(IObservable<T> source, IObserver<T> observer)

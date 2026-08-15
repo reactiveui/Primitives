@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
@@ -124,6 +125,7 @@ public class FilteringOperatorTests
     }
 
     /// <summary>Tests Take negative throws.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void WhenTakeNegative_ThenThrowsArgumentOutOfRange() =>
         Assert.Throws<ArgumentOutOfRangeException>(static () => SignalAsync.Return(1).Take(-1));
@@ -164,6 +166,7 @@ public class FilteringOperatorTests
     }
 
     /// <summary>Tests Skip negative throws.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void WhenSkipNegative_ThenThrowsArgumentOutOfRange() =>
         Assert.Throws<ArgumentOutOfRangeException>(static () => SignalAsync.Return(1).Skip(-1));
@@ -219,6 +222,7 @@ public class FilteringOperatorTests
     }
 
     /// <summary>Tests TakeWhile null predicate throws.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void WhenTakeWhileNullPredicate_ThenThrowsArgumentNull() =>
         Assert.Throws<ArgumentNullException>(static () => SignalAsync.Return(1).TakeWhile((Func<int, bool>)null!));
@@ -274,6 +278,7 @@ public class FilteringOperatorTests
     }
 
     /// <summary>Tests SkipWhile null predicate throws.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void WhenSkipWhileNullPredicate_ThenThrowsArgumentNull() =>
         Assert.Throws<ArgumentNullException>(static () => SignalAsync.Return(1).SkipWhile((Func<int, bool>)null!));

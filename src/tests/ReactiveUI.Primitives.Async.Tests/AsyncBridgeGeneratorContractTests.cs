@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using ReactiveUI.Primitives.Async;
@@ -205,6 +206,7 @@ public sealed class AsyncBridgeGeneratorContractTests
     /// <param name = "generatedSources">The generated source texts.</param>
     /// <param name = "typeName">The bridge type name.</param>
     /// <returns><see langword="true"/> when the bridge type is emitted.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool GeneratedBridgeTypeExists(string[] generatedSources, string typeName) => Array.Exists(
         generatedSources,
         text => text.Contains($"internal static class {typeName}", StringComparison.Ordinal));

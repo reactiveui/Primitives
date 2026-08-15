@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Signals;
 #else
@@ -16,6 +18,7 @@ public static partial class Signal
     /// <returns>
     /// An ITaskSignal of T.
     /// </returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ITaskSignal<RxVoid> FromTask(Func<CancellationTokenSource, Task<RxVoid>> execution) =>
         FromTask(execution, null, null);
 
@@ -25,6 +28,7 @@ public static partial class Signal
     /// <returns>
     /// An ITaskSignal of T.
     /// </returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ITaskSignal<RxVoid> FromTask(
         Func<CancellationTokenSource, Task<RxVoid>> execution,
         ISequencer? scheduler) =>
@@ -37,6 +41,7 @@ public static partial class Signal
     /// <returns>
     /// An ITaskSignal of T.
     /// </returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ITaskSignal<RxVoid> FromTask(
         Func<CancellationTokenSource, Task<RxVoid>> execution,
         ISequencer? scheduler,
@@ -49,6 +54,7 @@ public static partial class Signal
     /// <returns>
     /// An TaskSignal of T.
     /// </returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ITaskSignal<TResult> FromTask<TResult>(Func<CancellationTokenSource, Task<TResult>> actionAsync) =>
         FromTask(actionAsync, null, null);
 
@@ -59,6 +65,7 @@ public static partial class Signal
     /// <returns>
     /// An TaskSignal of T.
     /// </returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ITaskSignal<TResult> FromTask<TResult>(
         Func<CancellationTokenSource, Task<TResult>> actionAsync,
         ISequencer? scheduler) =>
@@ -72,6 +79,7 @@ public static partial class Signal
     /// <returns>
     /// An TaskSignal of T.
     /// </returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ITaskSignal<TResult> FromTask<TResult>(
         Func<CancellationTokenSource, Task<TResult>> actionAsync,
         ISequencer? scheduler,
@@ -101,6 +109,7 @@ public static partial class Signal
     /// <param name="execution">The execution value.</param>
     /// <param name="observer">The observer value.</param>
     /// <returns>The result.</returns>
+    /// <exception cref="InvalidOperationException"><paramref name="execution"/> returned <see langword="null"/>.</exception>
     private static IDisposable SubscribeTask<TResult>(
         ITaskSignal<TResult> signal,
         Func<CancellationTokenSource, Task<TResult>> execution,
@@ -259,6 +268,7 @@ public static partial class Signal
         /// <summary>Initializes a new instance of the <see cref="ImmediateTaskSignal{TResult}"/> class.</summary>
         /// <param name="execution">Task factory.</param>
         /// <param name="cancellationTokenSource">Optional cancellation source.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="execution"/> is <see langword="null"/>.</exception>
         public ImmediateTaskSignal(
             Func<CancellationTokenSource, Task<TResult>> execution,
             CancellationTokenSource? cancellationTokenSource)
@@ -337,6 +347,7 @@ public static partial class Signal
         }
 
         /// <summary>Throws when disposed.</summary>
+        /// <exception cref="ObjectDisposedException">The signal has already been disposed.</exception>
         private void ThrowIfDisposed()
         {
             if (!IsDisposed)

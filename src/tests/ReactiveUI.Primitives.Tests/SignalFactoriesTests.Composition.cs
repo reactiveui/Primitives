@@ -739,6 +739,7 @@ public partial class SignalFactoriesTests
         public event EventHandler? Raised;
 
         /// <summary>Raises the event.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Raise() => Raised?.Invoke(this, EventArgs.Empty);
     }
 }

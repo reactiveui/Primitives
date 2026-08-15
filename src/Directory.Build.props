@@ -148,18 +148,18 @@
     <PackageReference Include="SonarAnalyzer.CSharp" PrivateAssets="all"/>
   </ItemGroup>
 
-  <!-- Per-TFM public-API tracking via Roslyn PublicApiAnalyzers (RS0016/RS0017); baselines in
-       PublicAPI/<tfm>/. Tests, benchmarks, and source generators are exempt. -->
+  <!-- Public API baselines live in <Project>/PublicAPI/<tfm>/PublicAPI.txt; the analyzer resolves the
+       per-TFM path itself, so no AdditionalFiles wiring is needed. Tests, benchmarks, and source
+       generators are exempt. -->
   <PropertyGroup>
     <TrackPublicApi Condition="'$(TrackPublicApi)' == ''">true</TrackPublicApi>
     <TrackPublicApi Condition="$(MSBuildProjectDirectory.Contains('tests'))">false</TrackPublicApi>
     <TrackPublicApi Condition="$(MSBuildProjectDirectory.Contains('benchmarks'))">false</TrackPublicApi>
     <TrackPublicApi Condition="$(MSBuildProjectName.EndsWith('.Generator'))">false</TrackPublicApi>
+    <EnablePublicApiBaseline>$(TrackPublicApi)</EnablePublicApiBaseline>
   </PropertyGroup>
   <ItemGroup Condition="'$(TrackPublicApi)' == 'true'">
-    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" PrivateAssets="all"/>
-    <AdditionalFiles Include="$(MSBuildProjectDirectory)\PublicAPI\$(TargetFramework)\PublicAPI.Shipped.txt"/>
-    <AdditionalFiles Include="$(MSBuildProjectDirectory)\PublicAPI\$(TargetFramework)\PublicAPI.Unshipped.txt"/>
+    <PackageReference Include="PublicApiSharp.Analyzers" PrivateAssets="all"/>
   </ItemGroup>
 
   <!-- Alias Lock to the dedicated System.Threading.Lock on .NET 9+ (faster EnterScope fast path),

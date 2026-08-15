@@ -11,6 +11,7 @@ namespace ReactiveUI.Primitives.Signals;
 /// <typeparam name="TResult">The TResult type.</typeparam>
 /// <param name="source">The source value.</param>
 /// <param name="selector">The selector value.</param>
+[System.Diagnostics.DebuggerDisplay("Source = {_source}, Selector = {_selector}")]
 public sealed class MapSignal<TSource, TResult>(IObservable<TSource> source, Func<TSource, TResult> selector) : IRequireCurrentThread<TResult>
 {
     /// <summary>Stores state for the signal implementation.</summary>
@@ -45,18 +46,17 @@ public sealed class MapSignal<TSource, TResult>(IObservable<TSource> source, Fun
         /// <summary>Stores state for the signal implementation.</summary>
         private readonly Func<TSource, TResult> _selector = selector;
 
-        /// <summary>Stores state for the signal implementation.</summary>
-        private bool _stopped;
+        /// <summary>Stores state for the signal implementation; non-zero once the sink has terminated.</summary>
+        private int _stopped;
 
         /// <summary>Executes the OnCompleted operation.</summary>
         public void OnCompleted()
         {
-            if (_stopped)
+            if (Interlocked.Exchange(ref _stopped, 1) != 0)
             {
                 return;
             }
 
-            _stopped = true;
             _observer.OnCompleted();
         }
 
@@ -64,12 +64,11 @@ public sealed class MapSignal<TSource, TResult>(IObservable<TSource> source, Fun
         /// <param name="error">The error value.</param>
         public void OnError(Exception error)
         {
-            if (_stopped)
+            if (Interlocked.Exchange(ref _stopped, 1) != 0)
             {
                 return;
             }
 
-            _stopped = true;
             _observer.OnError(error);
         }
 
@@ -77,7 +76,7 @@ public sealed class MapSignal<TSource, TResult>(IObservable<TSource> source, Fun
         /// <param name="value">The value.</param>
         public void OnNext(TSource value)
         {
-            if (_stopped)
+            if (Volatile.Read(ref _stopped) != 0)
             {
                 return;
             }

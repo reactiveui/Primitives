@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Signals;
 #else
@@ -12,8 +14,8 @@ namespace ReactiveUI.Primitives.Signals;
 public static partial class SignalExtensions
 {
     /// <summary>Cancellation-handling operators for an observable source sequence.</summary>
-    /// <param name="asyncTask">The asynchronous task.</param>
     /// <typeparam name="TResult">The type.</typeparam>
+    /// <param name="asyncTask">The asynchronous task.</param>
     extension<TResult>(IObservable<TResult> asyncTask)
     {
         /// <summary>Handles the cancellation.</summary>
@@ -21,6 +23,7 @@ public static partial class SignalExtensions
         /// <returns>
         /// A Task.
         /// </returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Task<TResult?> HandleCancellation(CancellationToken token) =>
             asyncTask.HandleCancellation(null, token);
 
@@ -52,6 +55,7 @@ public static partial class SignalExtensions
     {
         /// <summary>Handles the cancellation.</summary>
         /// <returns>A Task.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Task HandleCancellation() => asyncTask.HandleCancellation(null);
 
         /// <summary>Handles the cancellation.</summary>
@@ -71,12 +75,13 @@ public static partial class SignalExtensions
     }
 
     /// <summary>Cancellation-handling operators for a result-producing task.</summary>
-    /// <param name="asyncTask">The asynchronous task.</param>
     /// <typeparam name="TResult">The type of the result.</typeparam>
+    /// <param name="asyncTask">The asynchronous task.</param>
     extension<TResult>(Task<TResult> asyncTask)
     {
         /// <summary>Handles the cancellation.</summary>
         /// <returns>A Task of TResult.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Task<TResult?> HandleCancellation() => asyncTask.HandleCancellation(null);
 
         /// <summary>Handles the cancellation.</summary>

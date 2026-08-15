@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async;
@@ -74,6 +75,7 @@ public sealed class SwitchToSignal<T>(IObservableAsync<IObservableAsync<T>> sour
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask DisposeAsync() => FinishAsync(null);
 
         /// <summary>Subscribes to the outer observable sequence.</summary>

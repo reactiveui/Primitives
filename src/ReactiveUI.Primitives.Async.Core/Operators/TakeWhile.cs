@@ -10,9 +10,9 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>TakeWhile operators for an observable source sequence.</summary>
-    /// <param name="this">The source observable sequence.</param>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-    extension<T>(IObservableAsync<T> @this)
+    /// <param name="source">The source observable sequence.</param>
+    extension<T>(IObservableAsync<T> source)
     {
         /// <summary>Returns elements from the observable sequence as long as the specified asynchronous condition is true, then completes.</summary>
         /// <param name="predicate">An asynchronous function to test each element for a condition. Receives the element
@@ -22,10 +22,10 @@ public static partial class SignalAsyncExtensions
         /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="predicate"/> is null.</exception>
         public IObservableAsync<T> TakeWhile(Func<T, CancellationToken, ValueTask<bool>> predicate)
         {
-            ArgumentExceptionHelper.ThrowIfNull(@this);
+            ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(predicate);
 
-            return new TakeWhileAsyncSignal<T>(@this, predicate);
+            return new TakeWhileAsyncSignal<T>(source, predicate);
         }
 
         /// <summary>Returns elements from the observable sequence as long as the specified condition is true, then completes.</summary>
@@ -35,10 +35,10 @@ public static partial class SignalAsyncExtensions
         /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="predicate"/> is null.</exception>
         public IObservableAsync<T> TakeWhile(Func<T, bool> predicate)
         {
-            ArgumentExceptionHelper.ThrowIfNull(@this);
+            ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(predicate);
 
-            return new TakeWhileSyncSignal<T>(@this, predicate);
+            return new TakeWhileSyncSignal<T>(source, predicate);
         }
     }
 
@@ -77,13 +77,13 @@ public static partial class SignalAsyncExtensions
             Func<T, bool> predicate,
             CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
         {
-            /// <summary>Latches to <see langword="true"/> once the predicate has returned <see langword="false"/>.</summary>
-            private bool _terminated;
+            /// <summary>Latches to <c>1</c> once the predicate has returned <see langword="false"/>.</summary>
+            private int _terminated;
 
             /// <inheritdoc/>
             protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
             {
-                if (_terminated)
+                if (Volatile.Read(ref _terminated) != 0)
                 {
                     return default;
                 }
@@ -93,8 +93,9 @@ public static partial class SignalAsyncExtensions
                     return downstream.OnNextAsync(value, cancellationToken);
                 }
 
-                _terminated = true;
-                return downstream.OnCompletedAsync(Result.Success);
+                return Interlocked.Exchange(ref _terminated, 1) != 0
+                    ? default
+                    : downstream.OnCompletedAsync(Result.Success);
             }
 
             /// <inheritdoc/>
@@ -141,13 +142,13 @@ public static partial class SignalAsyncExtensions
             Func<T, CancellationToken, ValueTask<bool>> predicate,
             CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
         {
-            /// <summary>Latches to <see langword="true"/> once the predicate has returned <see langword="false"/>.</summary>
-            private bool _terminated;
+            /// <summary>Latches to <c>1</c> once the predicate has returned <see langword="false"/>.</summary>
+            private int _terminated;
 
             /// <inheritdoc/>
             protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
             {
-                if (_terminated)
+                if (Volatile.Read(ref _terminated) != 0)
                 {
                     return default;
                 }
@@ -160,8 +161,9 @@ public static partial class SignalAsyncExtensions
                         return downstream.OnNextAsync(value, cancellationToken);
                     }
 
-                    _terminated = true;
-                    return downstream.OnCompletedAsync(Result.Success);
+                    return Interlocked.Exchange(ref _terminated, 1) != 0
+                        ? default
+                        : downstream.OnCompletedAsync(Result.Success);
                 }
 
                 return EvaluateAndForwardAsync(pending, value, cancellationToken);
@@ -191,8 +193,10 @@ public static partial class SignalAsyncExtensions
                     return;
                 }
 
-                _terminated = true;
-                await downstream.OnCompletedAsync(Result.Success).ConfigureAwait(false);
+                if (Interlocked.Exchange(ref _terminated, 1) == 0)
+                {
+                    await downstream.OnCompletedAsync(Result.Success).ConfigureAwait(false);
+                }
             }
         }
     }

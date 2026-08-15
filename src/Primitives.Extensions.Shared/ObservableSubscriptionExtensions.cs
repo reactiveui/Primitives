@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 
 #if REACTIVE_SHIM
@@ -44,16 +45,19 @@ public static class ObservableSubscriptionExtensions
         }
 
         /// <summary>Blocks until the <see cref="RxVoid"/>-producing source completes (default 30s timeout); rethrows any captured error.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WaitForCompletion() =>
             WaitForCompletionCore(source, null, DefaultTimeout);
 
         /// <summary>Blocks until the <see cref="RxVoid"/>-producing source completes, honoring an explicit <paramref name="timeout"/>; rethrows any captured error.</summary>
         /// <param name="timeout">The wait timeout.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WaitForCompletion(TimeSpan timeout) =>
             WaitForCompletionCore(source, null, timeout);
 
         /// <summary>Blocks until the <see cref="RxVoid"/>-producing source completes, routing the subscribe call through <paramref name="scheduler"/>; rethrows any captured error.</summary>
         /// <param name="scheduler">Scheduler used to dispatch the subscribe call.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WaitForCompletion(ISequencer scheduler) =>
             WaitForCompletionCore(source, scheduler, DefaultTimeout);
 
@@ -63,6 +67,7 @@ public static class ObservableSubscriptionExtensions
         /// </summary>
         /// <param name="scheduler">Scheduler used to dispatch the subscribe call.</param>
         /// <param name="timeout">The wait timeout.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WaitForCompletion(ISequencer scheduler, TimeSpan timeout) =>
             WaitForCompletionCore(source, scheduler, timeout);
     }
@@ -97,6 +102,7 @@ public static class ObservableSubscriptionExtensions
         /// <summary>Blocks until the source emits a value, errors, or completes (default 30s timeout).</summary>
         /// <returns>The last value emitted before terminal, or <see langword="default"/> if the sequence completed empty.</returns>
         /// <exception cref="TimeoutException">The sequence did not terminate in time.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public T? WaitForValue() =>
             WaitForValueCore(source, null, DefaultTimeout);
 
@@ -104,6 +110,7 @@ public static class ObservableSubscriptionExtensions
         /// <param name="timeout">The wait timeout.</param>
         /// <returns>The last value emitted before terminal, or <see langword="default"/> if the sequence completed empty.</returns>
         /// <exception cref="TimeoutException">The sequence did not terminate within <paramref name="timeout"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public T? WaitForValue(TimeSpan timeout) =>
             WaitForValueCore(source, null, timeout);
 
@@ -111,6 +118,7 @@ public static class ObservableSubscriptionExtensions
         /// <param name="scheduler">Scheduler used to dispatch the subscribe call.</param>
         /// <returns>The last value emitted before terminal, or <see langword="default"/> if the sequence completed empty.</returns>
         /// <exception cref="TimeoutException">The sequence did not terminate in time.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public T? WaitForValue(ISequencer scheduler) =>
             WaitForValueCore(source, scheduler, DefaultTimeout);
 
@@ -119,23 +127,27 @@ public static class ObservableSubscriptionExtensions
         /// <param name="timeout">The wait timeout.</param>
         /// <returns>The last value emitted before terminal, or <see langword="default"/> if the sequence completed empty.</returns>
         /// <exception cref="TimeoutException">The sequence did not terminate within <paramref name="timeout"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public T? WaitForValue(ISequencer scheduler, TimeSpan timeout) =>
             WaitForValueCore(source, scheduler, timeout);
 
         /// <summary>Blocks until the source terminates; returns any captured error (does NOT rethrow). Default 30s timeout.</summary>
         /// <returns>The captured error, or <see langword="null"/> if completion was normal.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Exception? WaitForError() =>
             WaitForErrorCore(source, null, DefaultTimeout);
 
         /// <summary>Blocks until the source terminates with an explicit <paramref name="timeout"/>; returns any captured error (does NOT rethrow).</summary>
         /// <param name="timeout">The wait timeout.</param>
         /// <returns>The captured error, or <see langword="null"/> if completion was normal.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Exception? WaitForError(TimeSpan timeout) =>
             WaitForErrorCore(source, null, timeout);
 
         /// <summary>Blocks until the source terminates, routing the subscribe call through <paramref name="scheduler"/>; returns any captured error (does NOT rethrow).</summary>
         /// <param name="scheduler">Scheduler used to dispatch the subscribe call.</param>
         /// <returns>The captured error, or <see langword="null"/> if completion was normal.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Exception? WaitForError(ISequencer scheduler) =>
             WaitForErrorCore(source, scheduler, DefaultTimeout);
 
@@ -147,6 +159,7 @@ public static class ObservableSubscriptionExtensions
         /// <param name="scheduler">Scheduler used to dispatch the subscribe call.</param>
         /// <param name="timeout">The wait timeout.</param>
         /// <returns>The captured error, or <see langword="null"/> if completion was normal.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Exception? WaitForError(ISequencer scheduler, TimeSpan timeout) =>
             WaitForErrorCore(source, scheduler, timeout);
     }
@@ -157,6 +170,7 @@ public static class ObservableSubscriptionExtensions
     /// <param name="scheduler">Optional scheduler for the subscribe call.</param>
     /// <param name="timeout">The wait timeout.</param>
     /// <returns>The last value emitted before terminal, or <see langword="default"/>.</returns>
+    /// <exception cref="TimeoutException">The sequence did not terminate within <paramref name="timeout"/>.</exception>
     private static T? WaitForValueCore<T>(IObservable<T> source, ISequencer? scheduler, TimeSpan timeout)
     {
         ArgumentExceptionHelper.ThrowIfNull(source);
@@ -178,6 +192,7 @@ public static class ObservableSubscriptionExtensions
     /// <param name="source">The source observable.</param>
     /// <param name="scheduler">Optional scheduler for the subscribe call.</param>
     /// <param name="timeout">The wait timeout.</param>
+    /// <exception cref="TimeoutException">The sequence did not terminate within <paramref name="timeout"/>.</exception>
     private static void WaitForCompletionCore(IObservable<RxVoid> source, ISequencer? scheduler, TimeSpan timeout)
     {
         ArgumentExceptionHelper.ThrowIfNull(source);
@@ -206,6 +221,7 @@ public static class ObservableSubscriptionExtensions
     /// <param name="scheduler">Optional scheduler for the subscribe call.</param>
     /// <param name="timeout">The wait timeout.</param>
     /// <returns>The captured error, or <see langword="null"/>.</returns>
+    /// <exception cref="TimeoutException">The sequence did not terminate within <paramref name="timeout"/>.</exception>
     private static Exception? WaitForErrorCore<T>(IObservable<T> source, ISequencer? scheduler, TimeSpan timeout)
     {
         ArgumentExceptionHelper.ThrowIfNull(source);
@@ -335,9 +351,11 @@ public static class ObservableSubscriptionExtensions
         public void OnNext(T value) => Result = value;
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnError(Exception error) => done.Set();
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
             "Design",
             "SST2318:Members should not have identical bodies",
@@ -369,6 +387,7 @@ public static class ObservableSubscriptionExtensions
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnCompleted() => done.Set();
     }
 }

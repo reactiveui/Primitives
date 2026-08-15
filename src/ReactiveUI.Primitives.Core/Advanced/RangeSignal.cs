@@ -2,11 +2,13 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Represents the RangeSignal class.</summary>
+[System.Diagnostics.DebuggerDisplay("Start = {Start}, Count = {Count}")]
 public sealed class RangeSignal : IRequireCurrentThread<int>, IInlineSignal<int>
 {
     /// <summary>Initializes a new instance of the <see cref="RangeSignal"/> class.</summary>
@@ -26,6 +28,7 @@ public sealed class RangeSignal : IRequireCurrentThread<int>, IInlineSignal<int>
 
     /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
     /// <returns>The result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() => false;
 
     /// <summary>Executes the Subscribe operation.</summary>

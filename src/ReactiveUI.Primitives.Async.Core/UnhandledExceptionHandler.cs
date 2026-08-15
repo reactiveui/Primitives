@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>
@@ -21,17 +23,17 @@ public static class UnhandledExceptionHandler
     internal static Action<Exception> CurrentHandler => _unhandledException;
 
     /// <summary>Registers a handler to be invoked when an unhandled exception occurs.</summary>
-    /// <remarks>Registering a new handler replaces any previously registered handler. The handler
-    /// will be called for each unhandled exception that occurs after registration.</remarks>
     /// <param name="unhandledExceptionHandler">An action to execute when an unhandled exception is encountered. The exception instance is passed as a
     /// parameter to the handler. Cannot be null.</param>
+    /// <remarks>Registering a new handler replaces any previously registered handler. The handler
+    /// will be called for each unhandled exception that occurs after registration.</remarks>
     public static void Register(Action<Exception> unhandledExceptionHandler) =>
         _unhandledException = unhandledExceptionHandler;
 
     /// <summary>Invokes the application's unhandled exception handler for exceptions that are not operation cancellations.</summary>
+    /// <param name="e">The exception to be processed by the unhandled exception handler. Cannot be null.</param>
     /// <remarks>OperationCanceledException instances are ignored and not passed to the
     /// handler.</remarks>
-    /// <param name="e">The exception to be processed by the unhandled exception handler. Cannot be null.</param>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST1429:Handle, rethrow, or narrow this catch; an empty catch of the base exception hides failures",
@@ -55,10 +57,11 @@ public static class UnhandledExceptionHandler
     }
 
     /// <summary>Handles unhandled exceptions by writing an error message to the console output.</summary>
+    /// <param name="exception">The exception that was not handled. Cannot be null.</param>
     /// <remarks>This method is intended to be used as a default handler for unhandled exceptions in
     /// an application. It writes the exception details to the standard console output for diagnostic
     /// purposes.</remarks>
-    /// <param name="exception">The exception that was not handled. Cannot be null.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void TraceUnhandledException(Exception exception) =>
         System.Diagnostics.Trace.TraceError("UnhandleException: {0}", exception);
 }

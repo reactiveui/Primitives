@@ -2,17 +2,20 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async.Signals;
 
 /// <summary>
 /// Represents an asynchronous Signal that replays only the latest value to new observers and supports concurrent
 /// notification of observers.
 /// </summary>
+/// <typeparam name="T">The type of the elements processed by the Signal.</typeparam>
+/// <param name="startValue">An optional initial value to be emitted to observers upon subscription if no other value has been published.</param>
 /// <remarks>This Signal notifies all observers concurrently, which can improve throughput in scenarios with
 /// multiple observers. The order in which observers receive notifications is not guaranteed. This type is thread-safe
 /// and suitable for use in asynchronous and concurrent environments.</remarks>
-/// <typeparam name="T">The type of the elements processed by the Signal.</typeparam>
-/// <param name="startValue">An optional initial value to be emitted to observers upon subscription if no other value has been published.</param>
+[System.Diagnostics.DebuggerDisplay("LastValue = {_state.LastValue}, IsDisposed = {_state.IsDisposed}")]
 public sealed class ConcurrentReplayLatestSignalAsync<T>(Optional<T> startValue) : ISignalAsync<T>
 {
     /// <inheritdoc/>
@@ -22,6 +25,7 @@ public sealed class ConcurrentReplayLatestSignalAsync<T>(Optional<T> startValue)
     private readonly ReplayLatestSignalAsyncState<T> _state = new(startValue);
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask OnNextAsync(
         T value,
         CancellationToken cancellationToken) =>
@@ -32,6 +36,7 @@ public sealed class ConcurrentReplayLatestSignalAsync<T>(Optional<T> startValue)
             cancellationToken);
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask OnErrorResumeAsync(
         Exception error,
         CancellationToken cancellationToken) =>
@@ -42,13 +47,16 @@ public sealed class ConcurrentReplayLatestSignalAsync<T>(Optional<T> startValue)
             cancellationToken);
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask OnCompletedAsync(Result result) =>
         ReplayLatestSignalAsyncStateHelper.OnCompletedAsync(_state, SignalBroadcastKind.Concurrent, result);
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask DisposeAsync() => ReplayLatestSignalAsyncStateHelper.DisposeAsync(_state);
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask<IAsyncDisposable> SubscribeAsync(
         IObserverAsync<T> observer,
         CancellationToken cancellationToken) =>

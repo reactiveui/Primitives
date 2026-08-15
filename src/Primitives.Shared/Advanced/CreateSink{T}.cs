@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -15,6 +17,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// implementation that hands an observer to a caller-supplied subscribe delegate.
 /// </summary>
 /// <typeparam name="T">The value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}, Observer = {_observer}")]
 public sealed class CreateSink<T> : IDisposable, IObserver<T>
 {
     /// <summary>A value indicating whether a throwing downstream <c>OnNext</c> releases the subscription.</summary>
@@ -59,6 +62,7 @@ public sealed class CreateSink<T> : IDisposable, IObserver<T>
 
     /// <summary>Assigns the cancellation resource, releasing it immediately when already stopped.</summary>
     /// <param name="cancel">Cancellation resource.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetCancel(IDisposable cancel) =>
         WitnessLifetime.SetCancel(ref _cancel, ref _stopped, cancel);
 

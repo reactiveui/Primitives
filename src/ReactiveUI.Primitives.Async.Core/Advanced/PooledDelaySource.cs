@@ -4,6 +4,7 @@
 
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks.Sources;
 using ReactiveUI.Primitives.Internal;
 
@@ -23,6 +24,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// flag. The loser is a no-op. After the caller awaits the returned <see cref="ValueTask"/>, the
 /// instance is reset and pushed back to the pool inside <see cref="GetResult(short)"/>.</para>
 /// </remarks>
+[System.Diagnostics.DebuggerDisplay("Completed = {_completed}, Timer = {_timer}")]
 public sealed class PooledDelaySource : IValueTaskSource
 {
     /// <summary>State value for <see cref="_completed"/> meaning "no terminal event yet".</summary>
@@ -117,9 +119,11 @@ public sealed class PooledDelaySource : IValueTaskSource
     }
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTaskSourceStatus GetStatus(short token) => _core.GetStatus(token);
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnCompleted(
         Action<object?> continuation,
         object? state,

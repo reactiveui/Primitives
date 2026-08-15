@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Signals;
 
 /// <summary>Mutable latest-value signal with a ReactiveUI.Primitives name for reactive-property parity.</summary>
@@ -39,28 +41,35 @@ public sealed class StateSignal<T> : ISignal<T>, IWitnessRemovable<T>
     /// <summary>Tries to get the current value, returning <see langword="false"/> when disposed.</summary>
     /// <param name="value">The current value, or <see langword="default"/> when disposed.</param>
     /// <returns><see langword="true"/> when a value is available.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryGetValue(out T? value) => _state.TryGetValue(out value);
 
     /// <summary>Notifies all subscribed observers about the end of the sequence.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnCompleted() => _state.OnCompleted();
 
     /// <summary>Notifies all subscribed observers about the exception.</summary>
     /// <param name="error">The exception to send to all observers.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnError(Exception error) => _state.OnError(error);
 
     /// <summary>Notifies all subscribed observers about the arrival of the specified element in the sequence.</summary>
     /// <param name="value">The value to send to all observers.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnNext(T value) => _state.OnNext(value);
 
     /// <summary>Subscribes an observer to the signal.</summary>
     /// <param name="observer">The observer to subscribe.</param>
     /// <returns>A handle that unsubscribes the observer when disposed.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IDisposable Subscribe(IObserver<T> observer) => _state.Subscribe(this, observer);
 
     /// <summary>Releases the signal's observers and cached state.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose() => _state.Release();
 
     /// <summary>Emits the current value again without changing it.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Refresh() => _state.OnNext(Value);
 
     /// <summary>Creates a read-only projected state view that tracks this state until disposed.</summary>
@@ -75,5 +84,6 @@ public sealed class StateSignal<T> : ISignal<T>, IWitnessRemovable<T>
     }
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     void IWitnessRemovable<T>.RemoveObserver(IObserver<T> observer) => _state.RemoveObserver(observer);
 }

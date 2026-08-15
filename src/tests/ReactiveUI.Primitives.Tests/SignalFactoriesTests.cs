@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Disposables;
@@ -620,6 +621,7 @@ public partial class SignalFactoriesTests
     private sealed class TrackedDisposable(Action onDispose) : IDisposable
     {
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose() => onDispose();
     }
 

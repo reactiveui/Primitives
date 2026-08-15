@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Signals;
 #else
@@ -50,6 +52,7 @@ internal sealed class TaskTerminalCompletion<T>
     }
 
     /// <summary>Faults the task with the shared empty-source error and releases the subscription and registration.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void FailEmpty() =>
         Fail(new InvalidOperationException("The source completed without producing a value."));
 

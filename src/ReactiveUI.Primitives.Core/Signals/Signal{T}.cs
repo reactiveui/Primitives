@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using ReactiveUI.Primitives.Disposables;
 
@@ -298,6 +299,7 @@ public class Signal<T> : ISignal<T>
     }
 
     /// <summary>Executes the ThrowDisposed operation.</summary>
+    /// <exception cref="ObjectDisposedException">Always; the signal has already been disposed.</exception>
     private static void ThrowDisposed() => throw new ObjectDisposedException(string.Empty);
 
     /// <summary>Executes the Completed operation.</summary>
@@ -603,9 +605,11 @@ public class Signal<T> : ISignal<T>
 
         /// <summary>Sends an error to observer subscriptions.</summary>
         /// <param name="exception">The exception.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnError(Exception exception) => _observer?.OnError(exception);
 
         /// <summary>Sends completion to observer subscriptions.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnCompleted() => _observer?.OnCompleted();
 
         /// <summary>Executes the Dispose operation.</summary>

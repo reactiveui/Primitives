@@ -12,8 +12,8 @@ namespace ReactiveUI.Primitives;
 public static class ConnectableSignalExtensions
 {
     /// <summary>Reference-counting operators for a connectable signal source.</summary>
-    /// <param name="source">Connectable signal to reference count or auto-connect.</param>
     /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">Connectable signal to reference count or auto-connect.</param>
     extension<T>(ConnectableSignal<T> source)
     {
         /// <summary>Connects on first subscriber and disconnects when the last subscriber disposes.</summary>
@@ -63,8 +63,8 @@ public static class ConnectableSignalExtensions
     }
 
     /// <summary>Hot-sharing operators for an observable source sequence.</summary>
-    /// <param name="source">Source sequence to multicast, share, or replay.</param>
     /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">Source sequence to multicast, share, or replay.</param>
     extension<T>(IObservable<T> source)
     {
         /// <summary>Multicasts source values through the supplied hub.</summary>

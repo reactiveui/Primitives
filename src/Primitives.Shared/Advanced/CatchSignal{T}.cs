@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -21,11 +23,13 @@ internal sealed class CatchSignal<T> : IRequireCurrentThread<T>
 
     /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
     /// <returns>The result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() => true;
 
     /// <summary>Executes the Subscribe operation.</summary>
     /// <param name="observer">The observer value.</param>
     /// <returns>The result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IDisposable Subscribe(IObserver<T> observer) =>
         SignalSubscription.Subscribe(observer, true, SubscribeCore);
 
@@ -33,6 +37,7 @@ internal sealed class CatchSignal<T> : IRequireCurrentThread<T>
     /// <param name="observer">The observer value.</param>
     /// <param name="cancel">The cancel value.</param>
     /// <returns>The result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel) =>
         new Catch(this, observer, cancel).Run();
 
@@ -74,6 +79,7 @@ internal sealed class CatchSignal<T> : IRequireCurrentThread<T>
         /// <param name="parent">The parent value.</param>
         /// <param name="observer">The observer value.</param>
         /// <param name="cancel">The cancel value.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="cancel"/> is <see langword="null"/>.</exception>
         public Catch(CatchSignal<T> parent, IObserver<T> observer, IDisposable cancel)
         {
             _cancel = cancel ?? throw new ArgumentNullException(nameof(cancel));
@@ -104,6 +110,7 @@ internal sealed class CatchSignal<T> : IRequireCurrentThread<T>
 
         /// <summary>Executes the OnNext operation.</summary>
         /// <param name="value">The value.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnNext(T value) => _observer.OnNext(value);
 
         /// <summary>Executes the OnError operation.</summary>
@@ -169,6 +176,7 @@ internal sealed class CatchSignal<T> : IRequireCurrentThread<T>
         /// <param name="next">The next source, or <see langword="null"/> once the sequence is exhausted.</param>
         /// <param name="error">The exception the sequence raised, when it raised one.</param>
         /// <returns><see langword="true"/> when the sequence advanced without raising.</returns>
+        /// <exception cref="InvalidOperationException">The sequence yielded a <see langword="null"/> source.</exception>
         private bool TryMoveToNextSource(out IObservable<T>? next, out Exception? error)
         {
             next = null;

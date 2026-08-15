@@ -10,12 +10,14 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Concrete signal for time-windowed buffer operators.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Window = {Window}, Source = {Source}")]
 public sealed class BufferSignal<T> : IObservable<IList<T>>
 {
     /// <summary>Initializes a new instance of the <see cref="BufferSignal{T}"/> class.</summary>
     /// <param name="source">The source observable.</param>
     /// <param name="timeSpan">The buffer window duration.</param>
     /// <param name="sequencer">The sequencer used to schedule buffer flushes.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="sequencer"/> is <see langword="null"/>.</exception>
     public BufferSignal(IObservable<T> source, TimeSpan timeSpan, ISequencer sequencer)
     {
         Source = source ?? throw new ArgumentNullException(nameof(source));

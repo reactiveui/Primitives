@@ -4,6 +4,7 @@
 
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using ReactiveUI.Primitives.Async;
@@ -297,6 +298,7 @@ public class R3BridgeGeneratorTests
     /// <summary>Checks whether diagnostics contain any compiler errors.</summary>
     /// <param name="diagnostics">Diagnostics to inspect.</param>
     /// <returns><see langword="true"/> when an error diagnostic is present.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool ContainsError(IEnumerable<Diagnostic> diagnostics) => diagnostics.Any(IsErrorDiagnostic);
 
     /// <summary>Checks whether a diagnostic is an error.</summary>
@@ -314,6 +316,7 @@ public class R3BridgeGeneratorTests
     /// <param name="generatedSources">Generated source text to inspect.</param>
     /// <param name="typeName">Bridge type name.</param>
     /// <returns><see langword="true"/> when the bridge type is emitted.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool GeneratedBridgeTypeExists(string[] generatedSources, string typeName) => Array.Exists(
         generatedSources,
         text => text.Contains($"internal static class {typeName}", StringComparison.Ordinal));
@@ -321,6 +324,7 @@ public class R3BridgeGeneratorTests
     /// <summary>Checks whether generated source contains the assembly metadata marker.</summary>
     /// <param name="generatedSources">Generated source text to inspect.</param>
     /// <returns><see langword="true"/> when the metadata marker source is emitted.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool GeneratedMetadataExists(string[] generatedSources) => Array.Exists(
         generatedSources,
         static text => text.Contains($"AssemblyMetadata(\"{GeneratedMetadataKey}\"", StringComparison.Ordinal));
@@ -328,6 +332,7 @@ public class R3BridgeGeneratorTests
     /// <summary>Checks whether generated source contains the removed custom marker attribute type.</summary>
     /// <param name="generatedSources">Generated source text to inspect.</param>
     /// <returns><see langword="true"/> when the legacy generated marker type is emitted.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool LegacyGeneratedMarkerTypeExists(string[] generatedSources) => Array.Exists(
         generatedSources,
         static text => text.Contains(LegacyGeneratedMarkerName, StringComparison.Ordinal));

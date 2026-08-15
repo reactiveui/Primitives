@@ -55,11 +55,11 @@ public class AsyncSerialGateTests
     }
 
     /// <summary>Verifies that a contended waiter resumes via the semaphore-signal slow path once the owning lock is released.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     /// <remarks>This intentionally avoids a "waiter has not resumed within Xms" timing assertion —
     /// such a probe is unreliable across CI runners. What matters for coverage is that the slow path
     /// (semaphore park + retry CAS) actually runs; we drive that by serialising two contenders so the
     /// second must wait on the first's release.</remarks>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenContendedWaiter_ThenResumesAfterRelease()
     {

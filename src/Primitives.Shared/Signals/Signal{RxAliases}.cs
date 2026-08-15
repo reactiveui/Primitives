@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 using ReactiveUI.Primitives.Reactive.Advanced;
 
@@ -32,6 +34,7 @@ public static partial class Signal
     /// <param name="condition">The condition used to choose the source.</param>
     /// <param name="thenSource">The source used when <paramref name="condition"/> returns <see langword="true"/>.</param>
     /// <returns>A deferred conditional observable sequence.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservable<T> If<T>(Func<bool> condition, IObservable<T> thenSource) =>
         If(condition, thenSource, Empty<T>());
 
@@ -58,6 +61,7 @@ public static partial class Signal
     /// <param name="selector">The selector used to choose the source key.</param>
     /// <param name="sources">The keyed source map.</param>
     /// <returns>A deferred conditional observable sequence.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservable<T> Case<TKey, T>(Func<TKey> selector, IDictionary<TKey, IObservable<T>> sources)
         where TKey : notnull =>
         Case(selector, sources, Empty<T>());
@@ -88,6 +92,7 @@ public static partial class Signal
     /// <typeparam name="T">The value type.</typeparam>
     /// <param name="value">The value to emit.</param>
     /// <returns>An observable sequence that emits <paramref name="value"/> and completes.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservable<T> Return<T>(T value) =>
         new ImmediateReturnSignal<T>(value);
 
@@ -109,6 +114,7 @@ public static partial class Signal
     /// <typeparam name="T">The value type.</typeparam>
     /// <param name="value">The value to repeat.</param>
     /// <returns>An observable sequence that repeats <paramref name="value"/> indefinitely.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservable<T> Repeat<T>(T value) =>
         new LoopSignal<T>(value);
 
@@ -127,6 +133,7 @@ public static partial class Signal
     /// <summary>Returns an empty observable sequence.</summary>
     /// <typeparam name="T">The value type.</typeparam>
     /// <returns>An observable sequence that completes without values.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
@@ -153,6 +160,7 @@ public static partial class Signal
     /// <summary>Returns a non-terminating observable sequence.</summary>
     /// <typeparam name="T">The value type.</typeparam>
     /// <returns>An observable sequence that never emits and never terminates.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
@@ -164,6 +172,7 @@ public static partial class Signal
     /// <typeparam name="T">The value type.</typeparam>
     /// <param name="error">The error used to terminate the sequence.</param>
     /// <returns>An observable sequence that terminates with <paramref name="error"/>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
@@ -248,6 +257,7 @@ public static partial class Signal
     /// <summary>Returns an observable sequence that emits a single tick after the due time.</summary>
     /// <param name="dueTime">The relative time after which to emit the tick.</param>
     /// <returns>An observable sequence that emits one tick and completes.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservable<long> Timer(TimeSpan dueTime) =>
         new AfterSignal(dueTime, ThreadPoolSequencer.Instance);
 
@@ -265,6 +275,7 @@ public static partial class Signal
     /// <summary>Returns an observable sequence that emits a single tick at an absolute due time.</summary>
     /// <param name="dueTime">The absolute time at which to emit the tick.</param>
     /// <returns>An observable sequence that emits one tick and completes.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservable<long> Timer(DateTimeOffset dueTime) =>
         new AfterSignal(Sequencer.Normalize(dueTime - ThreadPoolSequencer.Instance.Now), ThreadPoolSequencer.Instance);
 
@@ -283,6 +294,7 @@ public static partial class Signal
     /// <param name="dueTime">The relative time before the first tick.</param>
     /// <param name="period">The period between subsequent ticks.</param>
     /// <returns>An observable sequence that emits periodic ticks.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservable<long> Timer(TimeSpan dueTime, TimeSpan period) =>
         new AfterSignal(dueTime, period, ThreadPoolSequencer.Instance);
 

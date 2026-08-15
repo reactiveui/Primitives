@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Signals;
 
@@ -232,6 +233,7 @@ public sealed class DelayableNotificationSignalTests
         public int Completed => Volatile.Read(ref _completed);
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnCompleted() => Interlocked.Increment(ref _completed);
 
         /// <inheritdoc/>

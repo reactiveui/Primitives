@@ -6,6 +6,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>An observable that invokes a synchronous function and emits its result for each subscription.</summary>
 /// <typeparam name="TResult">The result type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Function = {Function}, TaskScheduler = {TaskScheduler}")]
 public sealed class StartSignal<TResult> : IObservableAsync<TResult>
 {
     /// <summary>Initializes a new instance of the <see cref="StartSignal{TResult}"/> class.</summary>

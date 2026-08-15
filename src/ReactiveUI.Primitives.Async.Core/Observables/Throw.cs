@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async;
@@ -14,12 +15,12 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsync
 {
     /// <summary>Creates an observable sequence that terminates immediately with the specified exception.</summary>
-    /// <remarks>Use this method to create an observable sequence that fails immediately, which can be useful
-    /// for testing error handling or representing error conditions in reactive workflows.</remarks>
     /// <typeparam name="T">The type of the elements in the observable sequence.</typeparam>
     /// <param name="error">The exception to be propagated to observers as an error notification. Cannot be null.</param>
     /// <returns>An observable sequence of type <typeparamref name="T"/> that signals the specified exception upon subscription.</returns>
     /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="error"/> is null.</exception>
+    /// <remarks>Use this method to create an observable sequence that fails immediately, which can be useful
+    /// for testing error handling or representing error conditions in reactive workflows.</remarks>
     [SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
@@ -35,7 +36,8 @@ public static partial class SignalAsync
     /// <typeparam name="T">The type of the elements in the observable sequence.</typeparam>
     /// <param name="error">The exception to be propagated to observers as an error notification. Cannot be null.</param>
     /// <returns>An observable sequence of type <typeparamref name="T"/> that signals the specified exception upon subscription.</returns>
-    /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="error"/> is null.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="error"/> is <see langword="null"/>.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
@@ -44,11 +46,11 @@ public static partial class SignalAsync
         new ThrowSignalAsync<T>(error ?? throw new ArgumentNullException(nameof(error)));
 
     /// <summary>Represents an asynchronous observable sequence that immediately terminates with the specified exception.</summary>
+    /// <typeparam name="T">The type of elements in the observable sequence.</typeparam>
+    /// <param name="error">The exception that will be signaled to observers as the terminal error.</param>
     /// <remarks>Use this type to create an observable sequence that fails immediately upon subscription,
     /// propagating the provided exception to subscribers. This can be useful for representing error conditions in
     /// asynchronous observable scenarios.</remarks>
-    /// <typeparam name="T">The type of elements in the observable sequence.</typeparam>
-    /// <param name="error">The exception that will be signaled to observers as the terminal error.</param>
     internal sealed class ThrowSignalAsync<T>(Exception error) : IObservableAsync<T>
     {
         /// <inheritdoc/>

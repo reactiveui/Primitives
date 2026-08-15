@@ -2,19 +2,22 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Extensions;
 
 /// <summary>Coordinates phase synchronization between a lock holder and its continuation.</summary>
+[System.Diagnostics.DebuggerDisplay("Locked = {_locked}, CompletedPhases = {CompletedPhases}")]
 public class Continuation : IDisposable
 {
     /// <summary>The barrier used to synchronize phases between the lock holder and the continuation.</summary>
     private readonly Barrier _phaseSync = new(2);
 
-    /// <summary>A value indicating whether this instance has been disposed.</summary>
-    private bool _disposedValue;
+    /// <summary>One once this instance has been disposed; otherwise zero.</summary>
+    private int _disposedValue;
 
-    /// <summary>A value indicating whether the continuation is currently locked.</summary>
-    private bool _locked;
+    /// <summary>One while the continuation is locked; otherwise zero.</summary>
+    private int _locked;
 
     /// <summary>Gets the number of completed phases.</summary>
     /// <value>
@@ -36,14 +39,13 @@ public class Continuation : IDisposable
     /// <returns>
     /// A <see cref="Task" /> representing the asynchronous operation.
     /// </returns>
-    public Task Lock<T>(T item, IObserver<(T value, IDisposable Sync)>? observer)
+    public Task Lock<T>(T item, IObserver<(T Value, IDisposable Sync)>? observer)
     {
-        if (_locked)
+        if (Interlocked.Exchange(ref _locked, 1) != 0)
         {
             return Task.CompletedTask;
         }
 
-        _locked = true;
         observer?.OnNext((item, this));
         return ScheduleSignalPhase();
     }
@@ -57,30 +59,21 @@ public class Continuation : IDisposable
     /// <param name="item">The item.</param>
     /// <param name="observer">The observer.</param>
     /// <returns>A <see cref="ValueTask"/> representing the asynchronous operation.</returns>
-    public ValueTask LockValueTask<T>(T item, IObserver<(T value, IDisposable Sync)>? observer)
+    public ValueTask LockValueTask<T>(T item, IObserver<(T Value, IDisposable Sync)>? observer)
     {
-        if (_locked)
+        if (Interlocked.Exchange(ref _locked, 1) != 0)
         {
             return default;
         }
 
-        _locked = true;
         observer?.OnNext((item, this));
         return new(ScheduleSignalPhase());
     }
 
     /// <summary>UnLocks this instance.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    internal Task UnLock()
-    {
-        if (!_locked)
-        {
-            return Task.CompletedTask;
-        }
-
-        _locked = false;
-        return ScheduleSignalPhase();
-    }
+    internal Task UnLock() =>
+        Interlocked.Exchange(ref _locked, 0) == 0 ? Task.CompletedTask : ScheduleSignalPhase();
 
     /// <summary>Releases unmanaged and - optionally - managed resources.</summary>
     /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
@@ -92,22 +85,18 @@ public class Continuation : IDisposable
             + "Task. The await is best-effort teardown of the phase barrier during disposal, with no caller positioned to observe it.")]
     protected virtual async void Dispose(bool disposing)
     {
-        if (_disposedValue)
+        if (Interlocked.Exchange(ref _disposedValue, 1) != 0 || !disposing)
         {
             return;
         }
 
-        if (disposing)
-        {
-            await UnLock().ConfigureAwait(false);
-            _phaseSync.Dispose();
-        }
-
-        _disposedValue = true;
+        await UnLock().ConfigureAwait(false);
+        _phaseSync.Dispose();
     }
 
     /// <summary>Static state-carrying signal callback; avoids the per-call closure allocation a captured lambda would produce.</summary>
     /// <param name="state">The owning <see cref="Continuation"/> instance.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void SignalPhaseSync(object? state) =>
         ((Continuation)state!)._phaseSync.SignalAndWait(CancellationToken.None);
 
@@ -116,6 +105,7 @@ public class Continuation : IDisposable
     /// tags the multi-argument <c>Task.Factory.StartNew(...)</c> call as a branch line — the
     /// per-call overload-resolution metadata is collapsed here so it counts once.</summary>
     /// <returns>The task representing the scheduled signal work.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private Task ScheduleSignalPhase() =>
         Task.Factory.StartNew(
             SignalPhaseSync,

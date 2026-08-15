@@ -1,0 +1,29 @@
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.Maui.Reactive.Tests")]
+namespace ReactiveUI.Primitives.Reactive.Concurrency;
+
+[System.Diagnostics.DebuggerDisplay("ReadyCount = {_readyCount}, DrainPosted = {_drainPosted}")]
+public abstract class CoalescingDispatchScheduler : System.Reactive.Concurrency.LocalScheduler
+{
+    protected CoalescingDispatchScheduler() { }
+    protected abstract bool Post(System.Action drain) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    protected void RequestDrain() { }
+    public override System.IDisposable Schedule<TState>(TState state, System.Func<System.Reactive.Concurrency.IScheduler, TState, System.IDisposable> action) { }
+    public override System.IDisposable Schedule<TState>(TState state, System.TimeSpan dueTime, System.Func<System.Reactive.Concurrency.IScheduler, TState, System.IDisposable> action) { }
+    protected virtual System.IDisposable ScheduleOnDispatcher(System.Action work, System.TimeSpan dueTime) { }
+}
+[System.Diagnostics.DebuggerDisplay("Dispatcher = {Dispatcher}")]
+public sealed class MauiDispatcherSequencer : ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler
+{
+    public MauiDispatcherSequencer(Microsoft.Maui.Dispatching.IDispatcher dispatcher) { }
+    public Microsoft.Maui.Dispatching.IDispatcher Dispatcher { get; }
+    protected override bool Post(System.Action drain) { }
+    protected override System.IDisposable ScheduleOnDispatcher(System.Action work, System.TimeSpan dueTime) { }
+}
+public static class MauiDispatcherSequencerExtensions
+{
+    extension(Microsoft.Maui.Dispatching.IDispatcher dispatcher)
+    {
+        public ReactiveUI.Primitives.Reactive.Concurrency.MauiDispatcherSequencer ToSequencer() { }
+    }
+}

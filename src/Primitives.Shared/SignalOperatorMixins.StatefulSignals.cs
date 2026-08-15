@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive;
 #else
@@ -53,10 +55,10 @@ public static partial class LinqExtensions
 
             SingleDisposable subscription = new();
             _ = Sequencer.CurrentThread.Schedule(
-                (self: this, subscription, observer),
+                (Self: this, subscription, observer),
                 static (_, s) =>
                 {
-                    s.subscription.Create(s.self.SubscribeCore(s.observer));
+                    s.subscription.Create(s.Self.SubscribeCore(s.observer));
                     return EmptyDisposable.Instance;
                 });
             return subscription;
@@ -104,10 +106,10 @@ public static partial class LinqExtensions
 
             SingleDisposable subscription = new();
             _ = Sequencer.CurrentThread.Schedule(
-                (self: this, subscription, observer),
+                (Self: this, subscription, observer),
                 static (_, s) =>
                 {
-                    s.subscription.Create(s.self.SubscribeCore(s.observer));
+                    s.subscription.Create(s.Self.SubscribeCore(s.observer));
                     return EmptyDisposable.Instance;
                 });
             return subscription;
@@ -152,10 +154,12 @@ public static partial class LinqExtensions
             internal bool IsStopped => Volatile.Read(ref _stopped) != 0;
 
             /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Dispose() => _subscriptions.Dispose();
 
             /// <summary>Adds a subscription to the coordinator lifetime.</summary>
             /// <param name="subscription">The subscription to add.</param>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             internal void Add(IDisposable subscription) => _subscriptions.Add(subscription);
 
             /// <summary>Forwards a source value when the sequence has not stopped.</summary>
@@ -216,12 +220,15 @@ public static partial class LinqExtensions
             internal TakeUntilSourceWitness(TakeUntilCoordinator coordinator) => _coordinator = coordinator;
 
             /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void OnNext(T value) => _coordinator.Next(value);
 
             /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void OnError(Exception error) => _coordinator.Error(error);
 
             /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void OnCompleted() => _coordinator.Complete();
         }
 
@@ -236,9 +243,11 @@ public static partial class LinqExtensions
             internal TakeUntilOtherWitness(TakeUntilCoordinator coordinator) => _coordinator = coordinator;
 
             /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void OnNext(TOther value) => _coordinator.Complete();
 
             /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void OnError(Exception error) => _coordinator.Error(error);
 
             /// <inheritdoc/>
@@ -471,10 +480,10 @@ public static partial class LinqExtensions
 
             SingleDisposable subscription = new();
             _ = Sequencer.CurrentThread.Schedule(
-                (self: this, subscription, observer),
+                (Self: this, subscription, observer),
                 static (_, s) =>
                 {
-                    s.subscription.Create(s.self.SubscribeCore(s.observer));
+                    s.subscription.Create(s.Self.SubscribeCore(s.observer));
                     return EmptyDisposable.Instance;
                 });
             return subscription;

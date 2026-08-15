@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async;
 
@@ -10,8 +11,8 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Combines the latest values from multiple asynchronous observable sources.</summary>
-    /// <param name="src1">Source observable 1 whose latest value is combined.</param>
     /// <typeparam name="T1">The element type of source 1.</typeparam>
+    /// <param name="src1">Source observable 1 whose latest value is combined.</param>
     extension<T1>(IObservableAsync<T1> src1)
     {
         /// <summary>
@@ -37,6 +38,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="src9">Source observable 9 whose latest value is combined.</param>
         /// <param name="selector">Projects the latest value of every source into a result.</param>
         /// <returns>An observable sequence of projected results.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [SuppressMessage(
             "Maintainability",
             "SST1472:Signatures should not declare too many parameters",
@@ -79,6 +81,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="src9">Source observable 9 whose latest value is combined.</param>
         /// <param name="selector">Projects the latest value of every source into a result.</param>
         /// <returns>An observable sequence of projected results.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [SuppressMessage(
             "Maintainability",
             "SST1472:Signatures should not declare too many parameters",

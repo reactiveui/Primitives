@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Signals;
 
@@ -257,6 +258,7 @@ public sealed class ScheduledSignalTests
         }
 
         /// <inheritdoc />
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Schedule(IWorkItem item, long dueTimestamp) => Schedule(item);
 
         /// <summary>Executes all queued work items.</summary>
@@ -377,6 +379,7 @@ public sealed class ScheduledSignalTests
         }
 
         /// <summary>Invokes the protected dispose overload without managed cleanup.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void DisposeWithoutManagedCleanup() => Dispose(false);
     }
 }

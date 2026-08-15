@@ -14,14 +14,14 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsync
 {
     /// <summary>Creates an asynchronous observable sequence that emits a single value produced by the specified factory function.</summary>
-    /// <remarks>The observable sequence will emit the value produced by the factory and then signal
-    /// completion. The factory function is invoked when the sequence is subscribed to, and supports cancellation via
-    /// the provided <see cref="CancellationToken"/>.</remarks>
     /// <typeparam name="T">The type of the value produced by the factory and emitted by the observable sequence.</typeparam>
     /// <param name="factory">A function that asynchronously produces a value of type <typeparamref name="T"/> when invoked with a <see
     /// cref="CancellationToken"/>. Cannot be null.</param>
     /// <returns>An observable that emits the value returned by the factory function and then completes.</returns>
     /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="factory"/> is null.</exception>
+    /// <remarks>The observable sequence will emit the value produced by the factory and then signal
+    /// completion. The factory function is invoked when the sequence is subscribed to, and supports cancellation via
+    /// the provided <see cref="CancellationToken"/>.</remarks>
     [SuppressMessage(
         "Roslynator",
         "RCS1047:Non-asynchronous method name should not end with \'Async\'",

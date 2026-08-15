@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using BenchmarkDotNet.Attributes;
 using ReactiveUI.Primitives.Signals;
 using RxObservable = System.Reactive.Linq.Observable;
@@ -93,36 +94,42 @@ public class TerminalCollectionBenchmarks
 
     /// <summary>Benchmarks first-value task conversion.</summary>
     /// <returns>The first value.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public Task<int> PrimitivesFirstAsync() =>
         Signal.Sequence(1, Count).FirstAsync();
 
     /// <summary>Benchmarks first-value task conversion using System.Reactive.</summary>
     /// <returns>The first value.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public Task<int> SystemReactiveFirstAsync() =>
         RxObservable.Range(1, Count).FirstAsync().ToTask();
 
     /// <summary>Benchmarks first-value task conversion using R3.</summary>
     /// <returns>The first value.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public Task<int> R3FirstAsync() =>
         R3.ObservableExtensions.FirstAsync(R3.Observable.Range(1, Count), CancellationToken.None);
 
     /// <summary>Benchmarks last-value task conversion.</summary>
     /// <returns>The last value.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public Task<int> PrimitivesToTask() =>
         Signal.Sequence(1, Count).ToTask();
 
     /// <summary>Benchmarks last-value task conversion using System.Reactive.</summary>
     /// <returns>The last value.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public Task<int> SystemReactiveToTask() =>
         RxObservable.Range(1, Count).ToTask();
 
     /// <summary>Benchmarks last-value task conversion using R3.</summary>
     /// <returns>The last value.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public Task<int> R3ToTask() =>
         R3.ObservableExtensions.LastAsync(R3.Observable.Range(1, Count), CancellationToken.None);
@@ -151,6 +158,7 @@ public class TerminalCollectionBenchmarks
 
     /// <summary>Benchmarks predicate count using R3.</summary>
     /// <returns>The matching count.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public Task<int> R3CountPredicate() =>
         R3.ObservableExtensions.CountAsync(

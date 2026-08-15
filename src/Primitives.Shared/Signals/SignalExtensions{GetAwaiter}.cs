@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Signals;
 #else
@@ -12,8 +14,8 @@ namespace ReactiveUI.Primitives.Signals;
 public static partial class SignalExtensions
 {
     /// <summary>Awaiter operators for an observable source sequence.</summary>
-    /// <param name="source">Source sequence to await.</param>
     /// <typeparam name="TSource">The type of the source.</typeparam>
+    /// <param name="source">Source sequence to await.</param>
     extension<TSource>(IObservable<TSource> source)
     {
         /// <summary>
@@ -22,6 +24,7 @@ public static partial class SignalExtensions
         /// </summary>
         /// <returns>A final signal awaiter.</returns>
         /// <exception cref="ArgumentExceptionHelper">source.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IAwaitSignal<TSource> GetAwaiter() =>
             Signal.RunAsync(source);
 
@@ -34,6 +37,7 @@ public static partial class SignalExtensions
         /// A final signal awaiter.
         /// </returns>
         /// <exception cref="ArgumentExceptionHelper">source.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IAwaitSignal<TSource> GetAwaiter(CancellationToken cancellationToken) =>
             Signal.RunAsync(source, cancellationToken);
     }

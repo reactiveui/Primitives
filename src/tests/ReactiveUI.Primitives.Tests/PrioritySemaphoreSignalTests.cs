@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Signals;
 
@@ -419,6 +420,7 @@ public sealed class PrioritySemaphoreSignalTests
         }
 
         /// <inheritdoc />
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Schedule(IWorkItem item, long dueTimestamp) => Schedule(item);
 
         /// <summary>Executes all queued work items.</summary>
@@ -578,9 +580,11 @@ public sealed class PrioritySemaphoreSignalTests
         /// <summary>Blocks until <see cref="OnNext"/> has started delivering at least one value.</summary>
         /// <param name="timeout">The maximum time to wait.</param>
         /// <returns><see langword="true"/> when delivery started within the timeout.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool WaitForOnNextStarted(TimeSpan timeout) => _onNextStarted.Wait(timeout);
 
         /// <inheritdoc />
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose() => _onNextStarted.Dispose();
 
         /// <inheritdoc />

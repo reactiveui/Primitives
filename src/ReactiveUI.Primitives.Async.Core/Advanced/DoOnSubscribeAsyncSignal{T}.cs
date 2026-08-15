@@ -6,6 +6,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>An observable that invokes an asynchronous side effect before subscribing to its source.</summary>
 /// <typeparam name="T">The element type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Source = {Source}, Action = {Action}")]
 public sealed class DoOnSubscribeAsyncSignal<T> : IObservableAsync<T>
 {
     /// <summary>Initializes a new instance of the <see cref="DoOnSubscribeAsyncSignal{T}"/> class.</summary>

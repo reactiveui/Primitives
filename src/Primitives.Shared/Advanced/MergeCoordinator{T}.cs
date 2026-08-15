@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -10,6 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Coordinates concurrent merge subscriptions.</summary>
 /// <typeparam name="T">The value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Active = {Active}, Done = {Done}")]
 public sealed class MergeCoordinator<T> : IDisposable
 {
     /// <summary>Serializes downstream callbacks and counters.</summary>
@@ -17,6 +20,7 @@ public sealed class MergeCoordinator<T> : IDisposable
 
     /// <summary>Initializes a new instance of the <see cref="MergeCoordinator{T}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="observer"/> is <see langword="null"/>.</exception>
     public MergeCoordinator(IObserver<T> observer) =>
         Observer = observer ?? throw new ArgumentNullException(nameof(observer));
 
@@ -36,6 +40,7 @@ public sealed class MergeCoordinator<T> : IDisposable
     private bool Done { get; set; }
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose() => Subscriptions.Dispose();
 
     /// <summary>Subscribes to enumerable sources.</summary>

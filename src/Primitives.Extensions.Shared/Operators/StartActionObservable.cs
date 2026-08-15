@@ -27,11 +27,9 @@ internal sealed class StartActionObservable(Action action, ISequencer? scheduler
             return EmptyDisposable.Instance;
         }
 
-        var capturedObserver = observer;
-        var capturedAction = action;
-        return scheduler.Schedule((capturedObserver, capturedAction), static (_, state) =>
+        return scheduler.Schedule((observer, action), static (_, state) =>
         {
-            Run(state.capturedObserver, state.capturedAction);
+            Run(state.observer, state.action);
             return EmptyDisposable.Instance;
         });
     }

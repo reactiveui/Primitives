@@ -12,6 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="TLeft">The left value type.</typeparam>
 /// <typeparam name="TRight">The right value type.</typeparam>
 /// <typeparam name="TResult">The result value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("HasLeft = {HasLeft}, HasRight = {HasRight}, IsCompleted = {IsCompleted}")]
 public sealed class SyncLatestWitness<TLeft, TRight, TResult>
 {
     /// <summary>The synchronization gate.</summary>

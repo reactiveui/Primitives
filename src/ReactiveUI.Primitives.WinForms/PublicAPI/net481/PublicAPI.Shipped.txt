@@ -1,8 +1,0 @@
-#nullable enable
-ReactiveUI.Primitives.Concurrency.ControlSequencer
-ReactiveUI.Primitives.Concurrency.ControlSequencer.Control.get -> System.Windows.Forms.Control!
-ReactiveUI.Primitives.Concurrency.ControlSequencer.ControlSequencer(System.Windows.Forms.Control! control) -> void
-ReactiveUI.Primitives.Concurrency.ControlSequencer.Now.get -> System.DateTimeOffset
-ReactiveUI.Primitives.Concurrency.ControlSequencer.Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem! item) -> void
-ReactiveUI.Primitives.Concurrency.ControlSequencer.Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem! item, long dueTimestamp) -> void
-ReactiveUI.Primitives.Concurrency.ControlSequencer.Timestamp.get -> long

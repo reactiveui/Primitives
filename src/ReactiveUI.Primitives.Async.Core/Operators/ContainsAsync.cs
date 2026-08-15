@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides a set of extension methods for working with asynchronous observable sequences.</summary>
@@ -11,9 +13,9 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Asynchronous containment operators for an observable source sequence.</summary>
-    /// <param name="this">The source observable sequence.</param>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-    extension<T>(IObservableAsync<T> @this)
+    /// <param name="source">The source observable sequence.</param>
+    extension<T>(IObservableAsync<T> source)
     {
         /// <summary>Asynchronously determines whether the sequence contains a specified value using the given equality comparer.</summary>
         /// <param name="value">The value to locate in the sequence.</param>
@@ -21,8 +23,9 @@ public static partial class SignalAsyncExtensions
         /// type.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains <see langword="true"/> if the
         /// value is found in the sequence; otherwise, <see langword="false"/>.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<bool> ContainsAsync(T value, IEqualityComparer<T>? comparer) =>
-            @this.ContainsAsync(value, comparer, CancellationToken.None);
+            source.ContainsAsync(value, comparer, CancellationToken.None);
 
         /// <summary>Asynchronously determines whether the sequence contains a specified value using the given equality comparer.</summary>
         /// <param name="value">The value to locate in the sequence.</param>
@@ -40,7 +43,7 @@ public static partial class SignalAsyncExtensions
             var cmp = comparer ?? EqualityComparer<T>.Default;
             ContainsTaskWitness<T> observer = new(value, cmp, cancellationToken);
             await using var subscription =
-                await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
+                await source.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
             return await observer.AwaitResultAsync().ConfigureAwait(false);
         }
 
@@ -48,16 +51,18 @@ public static partial class SignalAsyncExtensions
         /// <param name="value">The value to locate in the collection.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains <see langword="true"/> if the
         /// value is found in the collection; otherwise, <see langword="false"/>.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<bool> ContainsAsync(T value) =>
-            @this.ContainsAsync(value, null, CancellationToken.None);
+            source.ContainsAsync(value, null, CancellationToken.None);
 
         /// <summary>Asynchronously determines whether the collection contains a specified value.</summary>
         /// <param name="value">The value to locate in the collection.</param>
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains <see langword="true"/> if the
         /// value is found in the collection; otherwise, <see langword="false"/>.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<bool> ContainsAsync(T value, CancellationToken cancellationToken) =>
-            @this.ContainsAsync(value, null, cancellationToken);
+            source.ContainsAsync(value, null, cancellationToken);
     }
 
     /// <summary>A witness that determines whether a sequence contains a specified value.</summary>

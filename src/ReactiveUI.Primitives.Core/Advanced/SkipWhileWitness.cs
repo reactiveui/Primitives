@@ -2,12 +2,15 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Sink that drops leading values while the predicate holds, then mirrors the source.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 /// <param name="observer">The downstream observer.</param>
 /// <param name="predicate">The predicate that determines whether to keep skipping values.</param>
+[System.Diagnostics.DebuggerDisplay("Skipping = {_skipping}, Subscription = {_subscription}")]
 public sealed class SkipWhileWitness<T>(IObserver<T> observer, Func<T, bool> predicate) : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>
@@ -43,15 +46,19 @@ public sealed class SkipWhileWitness<T>(IObserver<T> observer, Func<T, bool> pre
     }
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnError(Exception error) => SinkTerminal.Fault(_observer, error, this);
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnCompleted() => SinkTerminal.Complete(_observer, this);
 
     /// <summary>Assigns the upstream subscription, disposing it if one is already held.</summary>
     /// <param name="subscription">The upstream subscription.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetSubscription(IDisposable subscription) => SinkSubscription.Set(ref _subscription, subscription);
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose() => SinkSubscription.Dispose(ref _subscription);
 }

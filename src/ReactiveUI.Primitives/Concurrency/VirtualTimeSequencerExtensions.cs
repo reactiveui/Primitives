@@ -43,9 +43,9 @@ public static class VirtualTimeSequencerExtensions
     }
 
     /// <summary>Provides virtual-time scheduling extensions for <see cref="VirtualTimeSequencer{TAbsolute, TRelative}"/>.</summary>
-    /// <param name="scheduler">Sequencer to execute the action on.</param>
     /// <typeparam name="TAbsolute">Absolute time representation type.</typeparam>
     /// <typeparam name="TRelative">Relative time representation type.</typeparam>
+    /// <param name="scheduler">Sequencer to execute the action on.</param>
     extension<TAbsolute, TRelative>(VirtualTimeSequencer<TAbsolute, TRelative> scheduler)
         where TAbsolute : IComparable<TAbsolute>
     {

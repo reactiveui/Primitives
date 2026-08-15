@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
 /// <summary>Forwards source values verbatim, invokes the logger on error, then propagates the error downstream.</summary>
@@ -24,6 +26,7 @@ public sealed class LogErrorsObservable<T>(IObservable<T> source, Action<Excepti
     private sealed class LogErrorsWitness(IObserver<T> downstream, Action<Exception> logger) : IObserver<T>
     {
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnNext(T value) => downstream.OnNext(value);
 
         /// <inheritdoc/>
@@ -34,6 +37,7 @@ public sealed class LogErrorsObservable<T>(IObservable<T> source, Action<Excepti
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnCompleted() => downstream.OnCompleted();
     }
 }

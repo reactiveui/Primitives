@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Globalization;
+using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Core;
 
@@ -36,6 +37,7 @@ public readonly struct Moment<T> : IEquatable<Moment<T>>
     /// <param name="first">First value.</param>
     /// <param name="second">Second value.</param>
     /// <returns><c>true</c> when both values and timestamps are equal.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool operator ==(Moment<T> first, Moment<T> second) => first.Equals(second);
 
     /// <summary>Compares two timestamped values for inequality.</summary>

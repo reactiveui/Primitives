@@ -2,12 +2,14 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Represents a finite signal backed by an enumerable sequence.</summary>
 /// <typeparam name="T">The value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Values = {_values}, CancellationToken = {_cancellationToken}")]
 public sealed class FromEnumerableSignal<T> : IRequireCurrentThread<T>, IInlineSignal<T>
 {
     /// <summary>Stores the source values.</summary>
@@ -32,6 +34,7 @@ public sealed class FromEnumerableSignal<T> : IRequireCurrentThread<T>, IInlineS
 
     /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
     /// <returns><see langword="false"/>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() => false;
 
     /// <summary>Executes the Subscribe operation.</summary>

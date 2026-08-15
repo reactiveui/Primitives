@@ -8,9 +8,9 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Timeout operators for an observable source sequence.</summary>
-    /// <param name="this">The source observable sequence.</param>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
-    extension<T>(IObservableAsync<T> @this)
+    /// <param name="source">The source observable sequence.</param>
+    extension<T>(IObservableAsync<T> source)
     {
         /// <summary>
         /// Applies a dueTime policy to the observable sequence. If the next element is not received within
@@ -24,8 +24,7 @@ public static partial class SignalAsyncExtensions
         {
             ArgumentOutOfRangeExceptionHelper.ThrowIfLessThanOrEqual(dueTime, TimeSpan.Zero);
 
-            var timeProvider = TimeProvider.System;
-            return new TimeoutSignal<T>(@this, dueTime, timeProvider);
+            return new TimeoutSignal<T>(source, dueTime, TimeProvider.System);
         }
 
         /// <summary>
@@ -42,7 +41,7 @@ public static partial class SignalAsyncExtensions
         {
             ArgumentOutOfRangeExceptionHelper.ThrowIfLessThanOrEqual(dueTime, TimeSpan.Zero);
 
-            return new TimeoutSignal<T>(@this, dueTime, timeProvider ?? TimeProvider.System);
+            return new TimeoutSignal<T>(source, dueTime, timeProvider ?? TimeProvider.System);
         }
 
         /// <summary>
@@ -60,8 +59,7 @@ public static partial class SignalAsyncExtensions
             ArgumentExceptionHelper.ThrowIfNull(fallback);
             ArgumentOutOfRangeExceptionHelper.ThrowIfLessThanOrEqual(dueTime, TimeSpan.Zero);
 
-            var timeProvider = TimeProvider.System;
-            return new TimeoutWithFallbackSignal<T>(@this, dueTime, fallback, timeProvider);
+            return new TimeoutWithFallbackSignal<T>(source, dueTime, fallback, TimeProvider.System);
         }
 
         /// <summary>
@@ -84,7 +82,7 @@ public static partial class SignalAsyncExtensions
             ArgumentExceptionHelper.ThrowIfNull(fallback);
             ArgumentOutOfRangeExceptionHelper.ThrowIfLessThanOrEqual(dueTime, TimeSpan.Zero);
 
-            return new TimeoutWithFallbackSignal<T>(@this, dueTime, fallback, timeProvider ?? TimeProvider.System);
+            return new TimeoutWithFallbackSignal<T>(source, dueTime, fallback, timeProvider ?? TimeProvider.System);
         }
     }
 }

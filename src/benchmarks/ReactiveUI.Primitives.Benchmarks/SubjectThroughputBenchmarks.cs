@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using BenchmarkDotNet.Attributes;
 using R3;
 using ReactiveUI.Primitives.Signals;
@@ -21,31 +22,37 @@ public class SubjectThroughputBenchmarks
 
     /// <summary>Emits 32 values into primitives <see cref="Signal{T}"/>.</summary>
     /// <returns>The sum of observed values.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark(Baseline = true)]
     public int PrimitivesSubjectEmit32() => EmitThroughSignal(EmitCount32);
 
     /// <summary>Emits 32 values into System.Reactive Subject.</summary>
     /// <returns>The sum of observed values.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public int SystemReactiveSubjectEmit32() => EmitThroughSystemSubject(EmitCount32);
 
     /// <summary>Emits 32 values into <see cref="R3.Subject{T}"/>.</summary>
     /// <returns>The sum of observed values.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public int R3SubjectEmit32() => EmitThroughR3Subject(EmitCount32);
 
     /// <summary>Emits 1024 values into primitives <see cref="Signal{T}"/>.</summary>
     /// <returns>The sum of observed values.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public int PrimitivesSubjectEmit1024() => EmitThroughSignal(EmitCount1024);
 
     /// <summary>Emits 1024 values into System.Reactive Subject.</summary>
     /// <returns>The sum of observed values.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public int SystemReactiveSubjectEmit1024() => EmitThroughSystemSubject(EmitCount1024);
 
     /// <summary>Emits 1024 values into <see cref="R3.Subject{T}"/>.</summary>
     /// <returns>The sum of observed values.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public int R3SubjectEmit1024() => EmitThroughR3Subject(EmitCount1024);
 

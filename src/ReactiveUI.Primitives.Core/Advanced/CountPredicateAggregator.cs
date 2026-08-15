@@ -6,6 +6,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Immutable accumulator that counts the values matching a predicate as an <see cref="int"/>.</summary>
 /// <typeparam name="T">The observed value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Result = {Result}, Predicate = {_predicate}")]
 public readonly record struct CountPredicateAggregator<T> : IAggregator<T, int, CountPredicateAggregator<T>>
 {
     /// <summary>The predicate selecting which values to count.</summary>

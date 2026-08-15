@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
@@ -22,11 +23,13 @@ public class BehaviourSignalTests
     private const int IgnoredAfterCompletionValue = 1234;
 
     /// <summary>Subscribes the argument checking.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void Subscribe_ArgumentChecking() =>
         Assert.Throws<ArgumentNullException>(static () => new BehaviorSignal<int>(1).Subscribe(null!));
 
     /// <summary>Called when [error argument checking].</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void OnError_ArgumentChecking() =>
         Assert.Throws<ArgumentNullException>(static () => new BehaviorSignal<int>(1).OnError(null!));

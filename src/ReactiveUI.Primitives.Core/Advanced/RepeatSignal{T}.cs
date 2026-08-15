@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Advanced;
@@ -10,6 +11,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="T">The T type.</typeparam>
 /// <param name="value">The value.</param>
 /// <param name="count">The count value.</param>
+[System.Diagnostics.DebuggerDisplay("Value = {_value}, Count = {_count}")]
 public sealed class RepeatSignal<T>(T value, int count) : IRequireCurrentThread<T>, IInlineSignal<T>
 {
     /// <summary>Stores state for the signal implementation.</summary>
@@ -20,6 +22,7 @@ public sealed class RepeatSignal<T>(T value, int count) : IRequireCurrentThread<
 
     /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
     /// <returns>The result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() => false;
 
     /// <summary>Executes the Subscribe operation.</summary>

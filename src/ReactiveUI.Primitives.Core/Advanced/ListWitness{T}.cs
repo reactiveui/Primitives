@@ -2,10 +2,13 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Observer that forwards notifications to an immutable observer list.</summary>
 /// <typeparam name="T">The observed value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("HasObservers = {HasObservers}, Count = {_observers.Items.Length}")]
 public sealed class ListWitness<T> : IObserver<T>
 {
     /// <summary>Immutable observer snapshot.</summary>
@@ -51,6 +54,7 @@ public sealed class ListWitness<T> : IObserver<T>
     /// <summary>Returns a witness with the observer added.</summary>
     /// <param name="observer">Observer to add.</param>
     /// <returns>The updated observer list witness.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal IObserver<T> Add(IObserver<T> observer) => new ListWitness<T>(_observers.Add(observer));
 
     /// <summary>Returns a witness with the observer removed.</summary>

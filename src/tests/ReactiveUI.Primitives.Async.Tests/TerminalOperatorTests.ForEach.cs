@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 
 namespace ReactiveUI.Primitives.Async.Tests;
@@ -62,6 +63,7 @@ public partial class TerminalOperatorTests
     }
 
     /// <summary>Tests Wrap with a null observer throws ArgumentNullException.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void WhenWrapWithNullObserver_ThenThrowsArgumentNullException() =>
         Assert.Throws<ArgumentNullException>(static () => SignalAsyncExtensions.Wrap<int>(null!));

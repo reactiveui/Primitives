@@ -2,12 +2,14 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Disposables;
 using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
 /// <summary>Tests for the Merge operator.</summary>
+[System.Diagnostics.DebuggerDisplay("{nameof(CombiningOperatorTests),nq}")]
 public partial class CombiningOperatorTests
 {
     /// <summary>Tests Merge two sequences emits from both.</summary>
@@ -476,12 +478,12 @@ public partial class CombiningOperatorTests
     }
 
     /// <summary>Tests Merge with max concurrency and error propagation.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     /// <remarks>Background jobs run with <c>startSynchronously: true</c> so the test does
     /// not depend on free thread-pool threads — under heavy cross-assembly parallel test runs
     /// the default <c>Task.Yield()</c> path used to starve and the test hit the 60s timeout.
     /// The concurrency-limit contract being asserted (four sources flow through a Merge(2)
     /// gate and all emit) is preserved.</remarks>
-    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMergeConcurrencyWithSlowSource_ThenLimitsAndCompletes()
     {
@@ -845,10 +847,12 @@ public partial class CombiningOperatorTests
 
         /// <inheritdoc/>
         /// <returns>A task representing the asynchronous operation.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask OnCompletedAsync(Result result) => default;
 
         /// <inheritdoc/>
         /// <returns>A task representing the asynchronous operation.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask DisposeAsync() => default;
     }
 }

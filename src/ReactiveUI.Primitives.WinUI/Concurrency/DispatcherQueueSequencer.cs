@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using Microsoft.UI.Dispatching;
 using ReactiveUI.Primitives.Advanced;
 
@@ -59,9 +60,11 @@ public sealed class DispatcherQueueSequencer : ISequencer
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Schedule(IWorkItem item) => _state.Schedule(item);
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Schedule(IWorkItem item, long dueTimestamp) => _state.Schedule(item, dueTimestamp);
 
     /// <summary>Marshals the cached drain callback through the dispatcher queue.</summary>
@@ -96,5 +99,6 @@ public sealed class DispatcherQueueSequencer : ISequencer
     }
 
     /// <summary>Forwards the cached drain callback to the engine.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void RunDrain() => _state.RunDrain();
 }

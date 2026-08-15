@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Concurrency;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Disposables;
 using RxScheduler = System.Reactive.Concurrency.Scheduler;
@@ -36,12 +37,14 @@ internal static class SequencerSchedulingExtensions
         /// <summary>Schedules an action to be executed.</summary>
         /// <param name="action">Action to execute.</param>
         /// <returns>The disposable used to cancel the scheduled action.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal IDisposable Schedule(Action action) => RxScheduler.Schedule(scheduler, action);
 
         /// <summary>Schedules an action to be executed after a relative due time.</summary>
         /// <param name="dueTime">Relative time after which to execute the action.</param>
         /// <param name="action">Action to execute.</param>
         /// <returns>The disposable used to cancel the scheduled action.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal IDisposable Schedule(TimeSpan dueTime, Action action) =>
             RxScheduler.Schedule(scheduler, dueTime, action);
 
@@ -49,12 +52,14 @@ internal static class SequencerSchedulingExtensions
         /// <param name="dueTime">Absolute time at which to execute the action.</param>
         /// <param name="action">Action to execute.</param>
         /// <returns>The disposable used to cancel the scheduled action.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal IDisposable Schedule(DateTimeOffset dueTime, Action action) =>
             RxScheduler.Schedule(scheduler, dueTime, action);
 
         /// <summary>Schedules a recursive action to be executed.</summary>
         /// <param name="action">Recursive action; invoke its argument to schedule the next iteration.</param>
         /// <returns>The disposable used to cancel recursive work.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal IDisposable Schedule(Action<Action> action) => RxScheduler.Schedule(scheduler, action);
 
         /// <summary>Schedules a stateful action without capturing state in a closure.</summary>
@@ -62,6 +67,7 @@ internal static class SequencerSchedulingExtensions
         /// <param name="state">State passed to the action.</param>
         /// <param name="action">Action to execute.</param>
         /// <returns>The disposable used to cancel the scheduled action.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal IDisposable Schedule<TState>(TState state, Action<TState> action) =>
             scheduler.Schedule((state, action), static (_, tuple) =>
             {
@@ -75,6 +81,7 @@ internal static class SequencerSchedulingExtensions
         /// <param name="dueTime">Relative time after which to execute the action.</param>
         /// <param name="action">Action to execute.</param>
         /// <returns>The disposable used to cancel the scheduled action.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal IDisposable Schedule<TState>(TState state, TimeSpan dueTime, Action<TState> action) =>
             scheduler.Schedule((state, action), dueTime, static (_, tuple) =>
             {

@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Extensions.Tests.Internal;
 
 /// <summary>Direct RxVoid tests for <see cref="TimerSinkState{T}"/> — covers the terminal
@@ -101,6 +103,7 @@ public class TimerSinkStateTests
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnError(Exception error) => Errors.Add(error);
 
         /// <inheritdoc/>

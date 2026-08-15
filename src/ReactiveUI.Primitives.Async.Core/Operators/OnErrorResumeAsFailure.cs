@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for working with asynchronous observable sequences.</summary>
@@ -11,24 +13,24 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Error-handling operators that convert source errors into failure completion results for an observable source sequence.</summary>
-    /// <param name="this">The source asynchronous observable sequence to monitor for errors.</param>
     /// <typeparam name="T">The type of the elements in the observable sequence.</typeparam>
-    extension<T>(IObservableAsync<T> @this)
+    /// <param name="source">The source asynchronous observable sequence to monitor for errors.</param>
+    extension<T>(IObservableAsync<T> source)
     {
         /// <summary>
         /// Creates a new observable sequence that converts any error encountered in the source sequence into a failure
         /// result, allowing the sequence to complete without propagating exceptions.
         /// </summary>
+        /// <returns>An observable sequence that emits the same elements as the source, but represents errors as failure results
+        /// instead of throwing exceptions.</returns>
         /// <remarks>This method enables error handling by transforming exceptions into failure notifications
         /// within the sequence, rather than terminating the sequence with an error. Consumers can inspect the result to
         /// determine whether an operation succeeded or failed.</remarks>
-        /// <returns>An observable sequence that emits the same elements as the source, but represents errors as failure results
-        /// instead of throwing exceptions.</returns>
         public IObservableAsync<T> OnErrorResumeAsFailure()
         {
-            ArgumentExceptionHelper.ThrowIfNull(@this);
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return new OnErrorResumeAsFailureSignal<T>(@this);
+            return new OnErrorResumeAsFailureSignal<T>(source);
         }
     }
 
@@ -38,6 +40,7 @@ public static partial class SignalAsyncExtensions
     internal sealed class OnErrorResumeAsFailureSignal<T>(IObservableAsync<T> source) : IObservableAsync<T>
     {
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken) =>

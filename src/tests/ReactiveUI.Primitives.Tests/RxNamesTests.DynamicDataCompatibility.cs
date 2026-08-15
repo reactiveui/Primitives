@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Signals;
 
@@ -444,6 +445,7 @@ public partial class RxNamesTests
         public IEnumerator<IObservable<int>> GetEnumerator() => this;
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
 
         /// <inheritdoc/>

@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
@@ -318,16 +319,19 @@ public partial class SignalTests
     }
 
     /// <summary>Tests that SignalAsync.Create throws ArgumentOutOfRangeException for an invalid options combination.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void WhenCreateWithInvalidOptions_ThenThrowsArgumentOutOfRangeException() =>
         Assert.Throws<ArgumentOutOfRangeException>(static () => Signal.Create<int>(null!));
 
     /// <summary>Tests that Signal.CreateBehavior throws ArgumentOutOfRangeException for an invalid options combination.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void WhenCreateBehaviorWithInvalidOptions_ThenThrowsArgumentOutOfRangeException() =>
         Assert.Throws<ArgumentOutOfRangeException>(static () => Signal.CreateBehavior(0, null!));
 
     /// <summary>Tests that SignalAsync.CreateReplayLatest throws ArgumentOutOfRangeException for an invalid options combination.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void WhenCreateReplayLatestWithInvalidOptions_ThenThrowsArgumentOutOfRangeException() =>
         Assert.Throws<ArgumentOutOfRangeException>(static () => Signal.CreateReplayLatest<int>(null!));

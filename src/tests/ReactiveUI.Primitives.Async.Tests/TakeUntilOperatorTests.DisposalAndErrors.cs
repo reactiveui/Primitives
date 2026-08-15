@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Disposables;
 using ReactiveUI.Primitives.Async.Signals;
 
@@ -206,11 +207,13 @@ public partial class TakeUntilOperatorTests
     }
 
     /// <summary>Tests that TakeUntil throws on null predicate.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void WhenTakeUntilNullPredicate_ThenThrowsArgumentNull() =>
         Assert.Throws<ArgumentNullException>(static () => SignalAsync.Return(1).TakeUntil((Func<int, bool>)null!));
 
     /// <summary>Tests that TakeUntil throws on null async predicate.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void WhenTakeUntilNullAsyncPredicate_ThenThrowsArgumentNull() => Assert.Throws<ArgumentNullException>(
         static () => SignalAsync.Return(1).TakeUntil((Func<int, CancellationToken, ValueTask<bool>>)null!));

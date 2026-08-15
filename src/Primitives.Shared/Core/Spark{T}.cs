@@ -4,6 +4,7 @@
 
 using System.Diagnostics;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Core;
@@ -63,15 +64,12 @@ public readonly record struct Spark<T>
     /// Equality of Spark&lt;T&gt; objects is based on the equality of the observer message payload they represent,
     /// including the Spark Kind and the Value or Exception (if any).
     /// </remarks>
-    public bool Equals(Spark<T> other) =>
-        Kind != other.Kind
-            ? false
-            : Kind switch
-            {
-                SparkKind.OnNext => EqualityComparer<T>.Default.Equals(Value, other.Value),
-                SparkKind.OnError => Equals(_exception, other._exception),
-                _ => true
-            };
+    public bool Equals(Spark<T> other) => Kind == other.Kind && Kind switch
+    {
+        SparkKind.OnNext => EqualityComparer<T>.Default.Equals(Value, other.Value),
+        SparkKind.OnError => Equals(_exception, other._exception),
+        _ => true
+    };
 
     /// <summary>Returns the hash code for this spark.</summary>
     /// <returns>A hash code for this spark.</returns>
@@ -182,6 +180,7 @@ public readonly record struct Spark<T>
 
     /// <summary>Returns an observable sequence with a single Spark, using the immediate scheduler.</summary>
     /// <returns>The observable sequence that surfaces the behavior of the Spark upon subscription.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IObservable<T> ToObservable() => ToObservable(Sequencer.Immediate);
 
     /// <summary>Returns an observable sequence with a single Spark.</summary>

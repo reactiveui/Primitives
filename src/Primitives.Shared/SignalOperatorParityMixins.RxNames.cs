@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive;
 #else
@@ -16,8 +18,8 @@ namespace ReactiveUI.Primitives;
 public static partial class LinqExtensions
 {
     /// <summary>System.Reactive-named combining operators for enumerable observable sources.</summary>
-    /// <param name="sources">The observable sources.</param>
     /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="sources">The observable sources.</param>
     extension<T>(IEnumerable<IObservable<T>> sources)
     {
         /// <summary>Concurrently merges the supplied observable sources. System.Reactive name for <c>Blend</c>.</summary>
@@ -46,8 +48,8 @@ public static partial class LinqExtensions
     }
 
     /// <summary>System.Reactive-named combining operators for an observable source of inner observable sequences.</summary>
-    /// <param name="sources">The outer sequence of inner sequences.</param>
     /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="sources">The outer sequence of inner sequences.</param>
     extension<T>(IObservable<IObservable<T>> sources)
     {
         /// <summary>Subscribes to all inner sequences and forwards their values as they arrive. System.Reactive name for <c>Blend</c>.</summary>
@@ -94,8 +96,8 @@ public static partial class LinqExtensions
     }
 
     /// <summary>System.Reactive-named notification-materialization operator for an observable source of spark values.</summary>
-    /// <param name="source">The spark sequence.</param>
     /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The spark sequence.</param>
     extension<T>(IObservable<Spark<T>> source)
     {
         /// <summary>Converts <see cref="Spark{T}"/> values back into observer notifications. System.Reactive name for <c>Unspark</c>.</summary>
@@ -110,14 +112,15 @@ public static partial class LinqExtensions
     }
 
     /// <summary>System.Reactive-named side-effect, accumulation, and projection operators for an observable source sequence.</summary>
-    /// <param name="source">The source sequence.</param>
     /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
     extension<T>(IObservable<T> source)
     {
         /// <summary>Subscribes an observer with downstream exception protection.</summary>
         /// <param name="observer">The observer to subscribe.</param>
         /// <returns>A disposable that cancels the subscription.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="observer"/> is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IDisposable SubscribeSafe(IObserver<T> observer) => SubscribeSafeCore(source, observer);
 
         /// <summary>Subscribes callbacks with downstream exception protection.</summary>
@@ -125,6 +128,7 @@ public static partial class LinqExtensions
         /// <param name="onError">The action to invoke for an error.</param>
         /// <returns>A disposable that cancels the subscription.</returns>
         /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IDisposable SubscribeSafe(Action<T> onNext, Action<Exception> onError) =>
             SubscribeSafeCore(source, Witness.Create(onNext, onError));
 
@@ -134,6 +138,7 @@ public static partial class LinqExtensions
         /// <param name="onCompleted">The action to invoke when the sequence completes.</param>
         /// <returns>A disposable that cancels the subscription.</returns>
         /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IDisposable SubscribeSafe(Action<T> onNext, Action<Exception> onError, Action onCompleted) =>
             SubscribeSafeCore(source, Witness.Create(onNext, onError, onCompleted));
 
@@ -141,6 +146,7 @@ public static partial class LinqExtensions
         /// <param name="onError">The action to invoke for an error.</param>
         /// <returns>A disposable that cancels the subscription.</returns>
         /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IDisposable SubscribeSafe(Action<Exception> onError) =>
             SubscribeSafeCore(source, Witness.Create<T>(static _ => { }, onError));
 
@@ -149,6 +155,7 @@ public static partial class LinqExtensions
         /// <param name="onCompleted">The action to invoke when the sequence completes.</param>
         /// <returns>A disposable that cancels the subscription.</returns>
         /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IDisposable SubscribeSafe(Action<Exception> onError, Action onCompleted) =>
             SubscribeSafeCore(source, Witness.Create<T>(static _ => { }, onError, onCompleted));
 
@@ -246,6 +253,12 @@ public static partial class LinqExtensions
             "PSH1409",
             Justification =
                 "Lock argument via ThrowIfNull(object) triggers CS9216 (unintended monitor-based locking).")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage(
+            "Modernization",
+            "SST2000:Use ArgumentNullException.ThrowIfNull",
+            Justification =
+                "ThrowIfNull takes object, so passing the Lock gate triggers CS9216 (unintended monitor-based locking), "
+                + "which is an error under TreatWarningsAsErrors and cannot be suppressed by attribute.")]
         public IObservable<T> Synchronize(Lock gate)
         {
             if (gate is null)
@@ -600,8 +613,8 @@ public static partial class LinqExtensions
     }
 
     /// <summary>Null-filtering operator using System.Reactive vocabulary for an observable source of nullable reference values.</summary>
-    /// <param name="source">The source observable sequence to filter.</param>
     /// <typeparam name="T">The type of elements in the observable sequence.</typeparam>
+    /// <param name="source">The source observable sequence to filter.</param>
     extension<T>(IObservable<T?> source)
         where T : class
     {
@@ -617,8 +630,8 @@ public static partial class LinqExtensions
     }
 
     /// <summary>System.Reactive-named pairwise combination and timing operators for an observable source sequence.</summary>
-    /// <param name="left">The left sequence.</param>
     /// <typeparam name="TLeft">The left value type.</typeparam>
+    /// <param name="left">The left sequence.</param>
     extension<TLeft>(IObservable<TLeft> left)
     {
         /// <summary>Combines paired values from two sequences by index. System.Reactive name for <c>Pair</c>.</summary>
@@ -839,8 +852,8 @@ public static partial class LinqExtensions
     }
 
     /// <summary>LINQ-named projection and filtering operators for an observable source sequence.</summary>
-    /// <param name="source">An observable sequence of elements to project.</param>
     /// <typeparam name="TSource">The type of the elements in the source sequence.</typeparam>
+    /// <param name="source">An observable sequence of elements to project.</param>
     extension<TSource>(IObservable<TSource> source)
     {
         /// <summary>Projects each element of an observable sequence into a new form. LINQ name for <c>Map</c>.</summary>
@@ -917,8 +930,8 @@ public static partial class LinqExtensions
     }
 
     /// <summary>System.Reactive-named combining operators for an observable source of tasks.</summary>
-    /// <param name="sources">The outer sequence of task sources.</param>
     /// <typeparam name="T">The task result type.</typeparam>
+    /// <param name="sources">The outer sequence of task sources.</param>
     extension<T>(IObservable<Task<T>> sources)
     {
         /// <summary>Subscribes to task results one at a time in source order. System.Reactive name for <c>Chain</c>.</summary>

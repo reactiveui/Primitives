@@ -26,8 +26,8 @@ internal static class TaskPolyfillExtensions
     }
 
     /// <summary>Polyfill awaiting operations for a task that produces a result.</summary>
-    /// <param name="task">The task to await.</param>
     /// <typeparam name="T">The task result type.</typeparam>
+    /// <param name="task">The task to await.</param>
     extension<T>(Task<T> task)
     {
         /// <summary>Gets a task that completes with the same result as <paramref name="task"/>, or faults when the timeout elapses or the token is cancelled.</summary>
@@ -46,6 +46,7 @@ internal static class TaskPolyfillExtensions
     /// <param name="timeout">The timeout after which the wait fails, or <see cref="Timeout.InfiniteTimeSpan"/> for no timeout.</param>
     /// <param name="cancellationToken">A token that cancels the wait.</param>
     /// <returns>A task that completes when the wait condition is resolved.</returns>
+    /// <exception cref="TimeoutException"><paramref name="timeout"/> elapsed before <paramref name="task"/> completed.</exception>
     private static async Task WaitForCompletionAsync(Task task, TimeSpan timeout, CancellationToken cancellationToken)
     {
         if (task.IsCompleted)

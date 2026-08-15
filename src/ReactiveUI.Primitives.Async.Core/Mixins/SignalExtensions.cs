@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async;
@@ -14,9 +15,9 @@ namespace ReactiveUI.Primitives.Async;
 public static class SignalExtensions
 {
     /// <summary>Observer-wrapping and value-mapping operators for a signal source.</summary>
-    /// <param name="this">The signal to wrap as an asynchronous observer. Cannot be null.</param>
     /// <typeparam name="T">The type of the elements processed by the signal.</typeparam>
-    extension<T>(ISignalAsync<T> @this)
+    /// <param name="source">The signal to wrap as an asynchronous observer. Cannot be null.</param>
+    extension<T>(ISignalAsync<T> source)
     {
         /// <summary>Creates an asynchronous observer wrapper for the specified signal.</summary>
         /// <returns>An asynchronous observer that forwards notifications to the specified signal.</returns>
@@ -26,35 +27,35 @@ public static class SignalExtensions
             Justification = "This is an existing method")]
         public IObserverAsync<T> AsObserverAsync()
         {
-            ArgumentExceptionHelper.ThrowIfNull(@this);
+            ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return new SignalAsyncWitness<T>(@this);
+            return new SignalAsyncWitness<T>(source);
         }
 
         /// <summary>
         /// Creates a new signal that applies a transformation to the values of the source signal using the specified
         /// mapping function.
         /// </summary>
-        /// <remarks>The returned signal reflects the mapped values of the original signal. Subscribers to the
-        /// returned signal will observe the transformed sequence as defined by the mapper function. The mapping is applied
-        /// to all values published by the source signal.</remarks>
         /// <param name="mapper">A function that takes an asynchronous observable of type T and returns a transformed asynchronous observable of
         /// type T. This function defines how the values are mapped.</param>
         /// <returns>A signal that emits values transformed by the specified mapping function.</returns>
+        /// <remarks>The returned signal reflects the mapped values of the original signal. Subscribers to the
+        /// returned signal will observe the transformed sequence as defined by the mapper function. The mapping is applied
+        /// to all values published by the source signal.</remarks>
         public ISignalAsync<T> MapValues(Func<IObservableAsync<T>, IObservableAsync<T>> mapper)
         {
-            ArgumentExceptionHelper.ThrowIfNull(@this);
+            ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(mapper);
 
-            return new MappedSignal<T>(@this, mapper);
+            return new MappedSignal<T>(source, mapper);
         }
     }
 
     /// <summary>A signal that applies a transformation to the observable values of the source signal.</summary>
+    /// <typeparam name="T">The type of elements processed by the signal.</typeparam>
     /// <param name="original">The source signal.</param>
     /// <param name="mapper">A function that takes an asynchronous observable of type T and returns a transformed asynchronous observable of
     /// type T. This function defines how the values are mapped.</param>
-    /// <typeparam name="T">The type of elements processed by the signal.</typeparam>
     internal sealed class MappedSignal<T>(
         ISignalAsync<T> original,
         Func<IObservableAsync<T>, IObservableAsync<T>> mapper) : ISignalAsync<T>
@@ -63,23 +64,28 @@ public static class SignalExtensions
         public IObservableAsync<T> Values { get; } = mapper(original.Values);
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<IAsyncDisposable> SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken) =>
             Values.SubscribeAsync(observer, cancellationToken);
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
             original.OnNextAsync(value, cancellationToken);
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
             original.OnErrorResumeAsync(error, cancellationToken);
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask OnCompletedAsync(Result result) => original.OnCompletedAsync(result);
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask DisposeAsync() => original.DisposeAsync();
     }
 

@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for creating and manipulating asynchronous observable sequences.</summary>
@@ -12,39 +14,41 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Filtering (Keep/Where) operators for an observable source sequence.</summary>
-    /// <param name="this">The source observable sequence.</param>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-    extension<T>(IObservableAsync<T> @this)
+    /// <param name="source">The source observable sequence.</param>
+    extension<T>(IObservableAsync<T> source)
     {
         /// <summary>
         /// Creates a new observable sequence that contains only the elements from the source sequence that satisfy the
         /// specified asynchronous predicate.
         /// </summary>
-        /// <remarks>The predicate is invoked asynchronously for each element as it is observed. If the
-        /// predicate throws an exception or the ValueTask is faulted, the resulting sequence will propagate the error
-        /// to its observers. The cancellation token provided to the predicate can be used to observe cancellation
-        /// requests during predicate evaluation.</remarks>
         /// <param name="predicate">A function that evaluates each element and its associated cancellation token, returning a ValueTask that
         /// resolves to <see langword="true"/> to include the element in the resulting sequence; otherwise, <see
         /// langword="false"/>.</param>
         /// <returns>An observable sequence that emits only those elements for which the predicate returns <see
         /// langword="true"/>.</returns>
+        /// <remarks>The predicate is invoked asynchronously for each element as it is observed. If the
+        /// predicate throws an exception or the ValueTask is faulted, the resulting sequence will propagate the error
+        /// to its observers. The cancellation token provided to the predicate can be used to observe cancellation
+        /// requests during predicate evaluation.</remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> Keep(Func<T, CancellationToken, ValueTask<bool>> predicate) =>
-            new KeepAsyncSignal<T>(@this, predicate);
+            new KeepAsyncSignal<T>(source, predicate);
 
         /// <summary>
         /// Creates a new observable sequence that contains only the elements from the current sequence that satisfy the
         /// specified predicate.
         /// </summary>
-        /// <remarks>The resulting observable emits only those elements for which the <paramref
-        /// name="predicate"/> returns <see langword="true"/>. The order and timing of element emission are preserved
-        /// from the original sequence.</remarks>
         /// <param name="predicate">A function to test each element for a condition. The element is included in the resulting sequence if the
         /// function returns <see langword="true"/>.</param>
         /// <returns>An observable sequence that contains elements from the current sequence that satisfy the specified
         /// predicate.</returns>
+        /// <remarks>The resulting observable emits only those elements for which the <paramref
+        /// name="predicate"/> returns <see langword="true"/>. The order and timing of element emission are preserved
+        /// from the original sequence.</remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> Keep(Func<T, bool> predicate) =>
-            new KeepSyncSignal<T>(@this, predicate);
+            new KeepSyncSignal<T>(source, predicate);
 
         /// <summary>Keeps values that satisfy a stateful predicate.</summary>
         /// <typeparam name="TState">The caller-supplied state type.</typeparam>
@@ -57,7 +61,7 @@ public static partial class SignalAsyncExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(predicate);
 
-            return new KeepSyncSignal<T>(@this, value => predicate(state, value));
+            return new KeepSyncSignal<T>(source, value => predicate(state, value));
         }
 
         /// <summary>
@@ -66,8 +70,9 @@ public static partial class SignalAsyncExtensions
         /// </summary>
         /// <param name="predicate">A function that evaluates each element and cancellation token.</param>
         /// <returns>An observable sequence that emits only those elements for which the predicate returns <see langword="true"/>.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> Where(Func<T, CancellationToken, ValueTask<bool>> predicate) =>
-            new KeepAsyncSignal<T>(@this, predicate);
+            new KeepAsyncSignal<T>(source, predicate);
 
         /// <summary>
         /// Creates a new observable sequence that contains only the elements from the current sequence that satisfy the
@@ -75,8 +80,9 @@ public static partial class SignalAsyncExtensions
         /// </summary>
         /// <param name="predicate">A function to test each element for a condition.</param>
         /// <returns>An observable sequence that contains elements from the current sequence that satisfy the predicate.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> Where(Func<T, bool> predicate) =>
-            new KeepSyncSignal<T>(@this, predicate);
+            new KeepSyncSignal<T>(source, predicate);
     }
 
     /// <summary>

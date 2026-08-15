@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Extensions.Tests;
@@ -15,11 +16,13 @@ internal static class VirtualClockTestExtensions
     {
         /// <summary>Advances a virtual clock by ticks.</summary>
         /// <param name="ticks">The number of ticks to advance.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void AdvanceBy(long ticks) =>
             clock.AdvanceBy(TimeSpan.FromTicks(ticks));
 
         /// <summary>Advances a virtual clock to an absolute tick value.</summary>
         /// <param name="ticks">The absolute tick value.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void AdvanceTo(long ticks) =>
             clock.AdvanceTo(new(ticks, TimeSpan.Zero));
     }

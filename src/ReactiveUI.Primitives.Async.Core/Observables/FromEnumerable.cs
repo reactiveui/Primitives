@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides factory methods for converting enumerable sources into asynchronous observable sequences.</summary>
@@ -11,6 +13,7 @@ public static partial class SignalAsync
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="values">The enumerable to convert.</param>
     /// <returns>An observable sequence emitting the enumerable's values.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservableAsync<T> FromEnumerable<T>(IEnumerable<T> values) =>
         new EnumerableSignal<T>(values);
 
@@ -18,6 +21,7 @@ public static partial class SignalAsync
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="values">The async enumerable to convert.</param>
     /// <returns>An observable sequence emitting the async enumerable's values.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservableAsync<T> FromAsyncEnumerable<T>(IAsyncEnumerable<T> values) =>
         new AsyncEnumerableSignal<T>(values);
 }

@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Collections;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Signals;
 
@@ -140,9 +141,11 @@ public class SignalRecoverTests
         public ThrowingMoveNextEnumerable(Exception error) => _error = error;
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IEnumerator<T> GetEnumerator() => new ThrowingMoveNextEnumerator(_error);
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
         /// <summary>Enumerator test double that fails on movement.</summary>
@@ -189,6 +192,7 @@ public class SignalRecoverTests
         public IEnumerator<T> GetEnumerator() => throw _error;
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }

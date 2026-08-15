@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
 using Timer = System.Threading.Timer;
 
@@ -154,10 +155,12 @@ public sealed class WasmSequencer : ISequencer, IDisposable
     /// </summary>
     /// <param name="item">Work item to run once it is due.</param>
     /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void ScheduleDelayed(IWorkItem item, long dueTimestamp) =>
         ThreadPoolSequencer.Instance.Schedule(new DelayedWorkItem(this, item), dueTimestamp);
 
     /// <summary>Forwards the cached drain callback to the engine.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void RunDrain() => _state.RunDrain();
 
     /// <summary>Releases the ready queue when a disposal raced the enqueue that just happened.</summary>

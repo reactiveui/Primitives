@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Advanced;
@@ -10,6 +11,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="T">The value type.</typeparam>
 /// <param name="observer">Downstream observer.</param>
 /// <param name="count">Number of values to forward.</param>
+[System.Diagnostics.DebuggerDisplay("Remaining = {_remaining}, Stopped = {_stopped}")]
 public sealed class TakeWitness<T>(IObserver<T> observer, int count) : IObserver<T>, IDisposable
 {
     /// <summary>Downstream observer.</summary>
@@ -26,6 +28,7 @@ public sealed class TakeWitness<T>(IObserver<T> observer, int count) : IObserver
 
     /// <summary>Sets the upstream subscription.</summary>
     /// <param name="subscription">Upstream subscription.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetSubscription(IDisposable subscription) => _subscription.Create(subscription);
 
     /// <inheritdoc/>
@@ -74,6 +77,7 @@ public sealed class TakeWitness<T>(IObserver<T> observer, int count) : IObserver
     }
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnCompleted() => Complete();
 
     /// <inheritdoc/>

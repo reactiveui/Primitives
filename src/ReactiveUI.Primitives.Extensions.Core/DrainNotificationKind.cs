@@ -8,11 +8,11 @@ namespace ReactiveUI.Primitives.Extensions;
 public enum DrainNotificationKind
 {
     /// <summary>OnNext with a value.</summary>
-    Next,
+    Next = 0,
 
     /// <summary>OnError with an exception.</summary>
-    Error,
+    Error = 1,
 
     /// <summary>OnCompleted (no value).</summary>
-    Completed
+    Completed = 2,
 }

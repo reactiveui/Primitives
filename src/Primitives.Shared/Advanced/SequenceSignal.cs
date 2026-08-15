@@ -9,6 +9,7 @@ namespace ReactiveUI.Primitives.Advanced;
 #endif
 
 /// <summary>Emits a scheduled integer sequence.</summary>
+[System.Diagnostics.DebuggerDisplay("Start = {Start}, Count = {Count}")]
 public sealed class SequenceSignal : IRequireCurrentThread<int>
 {
     /// <summary>Initializes a new instance of the <see cref="SequenceSignal"/> class.</summary>
@@ -46,12 +47,12 @@ public sealed class SequenceSignal : IRequireCurrentThread<int>
 
         SingleDisposable subscription = new();
         _ = Sequencer.CurrentThread.Schedule(
-            (self: this, subscription, observer),
+            (Self: this, subscription, observer),
             static (_, s) =>
             {
-                s.subscription.Create(s.self.Scheduler.Schedule(
-                    (s.self, s.observer),
-                    static (_, state) => state.self.Emit(state.observer)));
+                s.subscription.Create(s.Self.Scheduler.Schedule(
+                    (s.Self, s.observer),
+                    static (_, state) => state.Self.Emit(state.observer)));
                 return EmptyDisposable.Instance;
             });
         return subscription;

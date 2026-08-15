@@ -2,13 +2,16 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async.Signals;
 
 /// <summary>Provides an asynchronous Signal that forwards notifications to observers concurrently.</summary>
+/// <typeparam name="T">The type of value observed and forwarded to observers.</typeparam>
 /// <remarks>Observers are notified in parallel for each event. This class is suitable for scenarios where high
 /// throughput and concurrent notification of multiple observers are required. Thread safety is ensured for observer
 /// notification operations. Cancellation tokens can be used to cancel ongoing notification tasks.</remarks>
-/// <typeparam name="T">The type of value observed and forwarded to observers.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Observers = {_state.Observers.Length}, Result = {_state.Result}")]
 public sealed class ConcurrentSignalAsync<T> : ISignalAsync<T>
 {
     /// <inheritdoc/>
@@ -18,25 +21,30 @@ public sealed class ConcurrentSignalAsync<T> : ISignalAsync<T>
     private readonly SignalAsyncState<T> _state = new();
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask OnNextAsync(
         T value,
         CancellationToken cancellationToken) =>
         SignalAsyncStateHelper.OnNextAsync(_state, SignalBroadcastKind.Concurrent, value, cancellationToken);
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask OnErrorResumeAsync(
         Exception error,
         CancellationToken cancellationToken) =>
         SignalAsyncStateHelper.OnErrorResumeAsync(_state, SignalBroadcastKind.Concurrent, error, cancellationToken);
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask OnCompletedAsync(Result result) =>
         SignalAsyncStateHelper.OnCompletedAsync(_state, SignalBroadcastKind.Concurrent, result);
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask DisposeAsync() => SignalAsyncStateHelper.DisposeAsync();
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask<IAsyncDisposable> SubscribeAsync(
         IObserverAsync<T> observer,
         CancellationToken cancellationToken) =>

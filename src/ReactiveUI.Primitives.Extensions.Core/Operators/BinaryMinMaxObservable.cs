@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
@@ -11,6 +12,7 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <param name="left">The first source.</param>
 /// <param name="right">The second source.</param>
 /// <param name="emitMaximum"><c>true</c> to emit the maximum; <c>false</c> to emit the minimum.</param>
+[System.Diagnostics.DebuggerDisplay("Left = {_left}, Right = {_right}")]
 public sealed class BinaryMinMaxObservable<T>(IObservable<T> left, IObservable<T> right, bool emitMaximum) : IObservable<T>
     where T : struct, IComparable<T>
 {
@@ -171,12 +173,15 @@ public sealed class BinaryMinMaxObservable<T>(IObservable<T> left, IObservable<T
     private sealed class IndexedWitness(Sink sink, bool isLeft) : IObserver<T>
     {
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnNext(T value) => sink.OnNext(isLeft, value);
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnError(Exception error) => sink.OnError(error);
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnCompleted() => sink.OnCompleted(isLeft);
     }
 }

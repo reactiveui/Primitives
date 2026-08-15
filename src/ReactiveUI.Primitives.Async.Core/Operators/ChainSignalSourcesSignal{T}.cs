@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async;
@@ -71,6 +72,7 @@ public sealed class ChainSignalSourcesSignal<T>(IObservableAsync<IObservableAsyn
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask DisposeAsync() => FinishAsync(null);
 
         /// <summary>Handles a second call to <see cref="FinishAsync"/> when already disposed, routing any failure exception to the unhandled exception handler.</summary>

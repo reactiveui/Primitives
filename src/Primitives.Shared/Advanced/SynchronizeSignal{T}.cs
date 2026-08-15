@@ -10,6 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Signal that serializes source notifications behind a private per-subscription gate.</summary>
 /// <typeparam name="T">The value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Source = {Source}")]
 public sealed class SynchronizeSignal<T> : IObservable<T>
 {
     /// <summary>Initializes a new instance of the <see cref="SynchronizeSignal{T}"/> class.</summary>

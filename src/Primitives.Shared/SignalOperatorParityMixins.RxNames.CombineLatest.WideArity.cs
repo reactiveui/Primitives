@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive;
@@ -18,8 +19,8 @@ namespace ReactiveUI.Primitives;
 public static partial class LinqExtensions
 {
     /// <summary>System.Reactive-named latest-value combination operators for ten through sixteen observable sources.</summary>
-    /// <param name="source">Source observable 1 whose latest value is combined.</param>
     /// <typeparam name="T">The element type of source 1.</typeparam>
+    /// <param name="source">Source observable 1 whose latest value is combined.</param>
     extension<T>(IObservable<T> source)
     {
         /// <summary>
@@ -48,6 +49,7 @@ public static partial class LinqExtensions
         /// <param name="selector">Projects the latest value of every source into a result.</param>
         /// <returns>An observable sequence of projected results.</returns>
         /// <exception cref="ArgumentNullException">A source or selector is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [SuppressMessage(
             "Maintainability",
             "SST1472:Signatures should not declare too many parameters",
@@ -103,6 +105,7 @@ public static partial class LinqExtensions
         /// <param name="selector">Projects the latest value of every source into a result.</param>
         /// <returns>An observable sequence of projected results.</returns>
         /// <exception cref="ArgumentNullException">A source or selector is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [SuppressMessage(
             "Maintainability",
             "SST1472:Signatures should not declare too many parameters",
@@ -162,6 +165,7 @@ public static partial class LinqExtensions
         /// <param name="selector">Projects the latest value of every source into a result.</param>
         /// <returns>An observable sequence of projected results.</returns>
         /// <exception cref="ArgumentNullException">A source or selector is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [SuppressMessage(
             "Maintainability",
             "SST1472:Signatures should not declare too many parameters",
@@ -225,6 +229,7 @@ public static partial class LinqExtensions
         /// <param name="selector">Projects the latest value of every source into a result.</param>
         /// <returns>An observable sequence of projected results.</returns>
         /// <exception cref="ArgumentNullException">A source or selector is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [SuppressMessage(
             "Maintainability",
             "SST1472:Signatures should not declare too many parameters",
@@ -292,6 +297,7 @@ public static partial class LinqExtensions
         /// <param name="selector">Projects the latest value of every source into a result.</param>
         /// <returns>An observable sequence of projected results.</returns>
         /// <exception cref="ArgumentNullException">A source or selector is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [SuppressMessage(
             "Maintainability",
             "SST1472:Signatures should not declare too many parameters",
@@ -363,6 +369,7 @@ public static partial class LinqExtensions
         /// <param name="selector">Projects the latest value of every source into a result.</param>
         /// <returns>An observable sequence of projected results.</returns>
         /// <exception cref="ArgumentNullException">A source or selector is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [SuppressMessage(
             "Maintainability",
             "SST1472:Signatures should not declare too many parameters",
@@ -438,6 +445,7 @@ public static partial class LinqExtensions
         /// <param name="selector">Projects the latest value of every source into a result.</param>
         /// <returns>An observable sequence of projected results.</returns>
         /// <exception cref="ArgumentNullException">A source or selector is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [SuppressMessage(
             "Maintainability",
             "SST1472:Signatures should not declare too many parameters",

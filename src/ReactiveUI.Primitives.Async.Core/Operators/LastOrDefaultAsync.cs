@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides a set of extension methods for working with asynchronous observable sequences.</summary>
@@ -11,9 +13,9 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Last-or-default operators for an observable source sequence.</summary>
-    /// <param name="this">The source observable sequence.</param>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
-    extension<T>(IObservableAsync<T> @this)
+    /// <param name="source">The source observable sequence.</param>
+    extension<T>(IObservableAsync<T> source)
     {
         /// <summary>
         /// Asynchronously returns the last element in the sequence that satisfies the specified predicate, or a default
@@ -24,10 +26,11 @@ public static partial class SignalAsyncExtensions
         /// <param name="defaultValue">The value to return if no element in the sequence satisfies the predicate.</param>
         /// <returns>A value task that represents the asynchronous operation. The result contains the last element that matches
         /// the predicate, or <paramref name="defaultValue"/> if no such element is found.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T?> LastOrDefaultAsync(
             Func<T, bool> predicate,
             T? defaultValue) =>
-            @this.LastOrDefaultAsync(predicate, defaultValue, CancellationToken.None);
+            source.LastOrDefaultAsync(predicate, defaultValue, CancellationToken.None);
 
         /// <summary>
         /// Asynchronously returns the last element in the sequence that satisfies the specified predicate, or a default
@@ -47,22 +50,24 @@ public static partial class SignalAsyncExtensions
             cancellationToken.ThrowIfCancellationRequested();
             LastOrDefaultTaskWitness<T> observer = new(predicate, defaultValue, cancellationToken);
             await using var subscription =
-                await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
+                await source.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
             return await observer.AwaitResultAsync().ConfigureAwait(false);
         }
 
         /// <summary>Asynchronously returns the last element of a sequence, or a default value if the sequence contains no elements.</summary>
         /// <returns>A value task that represents the asynchronous operation. The task result contains the last element of the
         /// sequence, or the default value for type T if the sequence is empty.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T?> LastOrDefaultAsync() =>
-            @this.LastOrDefaultAsync(default, CancellationToken.None);
+            source.LastOrDefaultAsync(default, CancellationToken.None);
 
         /// <summary>Asynchronously returns the last element of a sequence, or a default value if the sequence contains no elements.</summary>
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
         /// <returns>A value task that represents the asynchronous operation. The task result contains the last element of the
         /// sequence, or the default value for type T if the sequence is empty.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T?> LastOrDefaultAsync(CancellationToken cancellationToken) =>
-            @this.LastOrDefaultAsync(default, cancellationToken);
+            source.LastOrDefaultAsync(default, cancellationToken);
 
         /// <summary>
         /// Asynchronously returns the last element of the sequence, or a specified default value if the sequence
@@ -71,8 +76,9 @@ public static partial class SignalAsyncExtensions
         /// <param name="defaultValue">The value to return if the sequence is empty.</param>
         /// <returns>A value task that represents the asynchronous operation. The task result contains the last element of the
         /// sequence, or <paramref name="defaultValue"/> if the sequence is empty.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T?> LastOrDefaultAsync(T? defaultValue) =>
-            @this.LastOrDefaultAsync(defaultValue, CancellationToken.None);
+            source.LastOrDefaultAsync(defaultValue, CancellationToken.None);
 
         /// <summary>
         /// Asynchronously returns the last element of the sequence, or a specified default value if the sequence
@@ -87,7 +93,7 @@ public static partial class SignalAsyncExtensions
             cancellationToken.ThrowIfCancellationRequested();
             LastOrDefaultTaskWitness<T> observer = new(null, defaultValue, cancellationToken);
             await using var subscription =
-                await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
+                await source.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
             return await observer.AwaitResultAsync().ConfigureAwait(false);
         }
     }

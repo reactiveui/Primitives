@@ -37,8 +37,8 @@ public static partial class LinqExtensions
     }
 
     /// <summary>Buffering operators for an observable source sequence.</summary>
-    /// <param name="source">The source.</param>
     /// <typeparam name="TSource">The type of the source.</typeparam>
+    /// <param name="source">The source.</param>
     extension<TSource>(IObservable<TSource> source)
     {
         /// <summary>Buffers the specified count.</summary>

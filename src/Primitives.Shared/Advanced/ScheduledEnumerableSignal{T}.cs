@@ -10,6 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Scheduled enumerable-backed signal used by observable conversion overloads.</summary>
 /// <typeparam name="T">The value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Values = {Values}, Scheduler = {Scheduler}")]
 public sealed class ScheduledEnumerableSignal<T> : IObservable<T>
 {
     /// <summary>Initializes a new instance of the <see cref="ScheduledEnumerableSignal{T}"/> class.</summary>
@@ -38,10 +39,10 @@ public sealed class ScheduledEnumerableSignal<T> : IObservable<T>
 
         CancellationDisposable cancel = new();
         var scheduled = Scheduler.Schedule(
-            (self: this, observer, cancel),
+            (Self: this, observer, cancel),
             static (_, s) =>
             {
-                s.self.Emit(s.observer, s.cancel);
+                s.Self.Emit(s.observer, s.cancel);
                 return EmptyDisposable.Instance;
             });
         return new MultipleDisposable(cancel, scheduled);

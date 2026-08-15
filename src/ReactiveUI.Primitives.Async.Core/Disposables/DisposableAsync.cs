@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async.Disposables;
 
 /// <summary>Provides factory methods for creating and working with implementations of <see cref="IAsyncDisposable"/>.</summary>
@@ -75,6 +77,7 @@ public static class DisposableAsync
     internal sealed class NoopAsyncDisposable : IAsyncDisposable
     {
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask DisposeAsync() => default;
     }
 }

@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -12,6 +14,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="TSource">The source value type.</typeparam>
 /// <typeparam name="TCollection">The inner value type.</typeparam>
 /// <typeparam name="TResult">The result value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Active = {Active}, OuterCompleted = {OuterCompleted}, Done = {Done}")]
 public sealed class SelectManyResultCoordinator<TSource, TCollection, TResult> : IObserver<TSource>, IDisposable
 {
     /// <summary>Serializes downstream callbacks and counters.</summary>
@@ -21,6 +24,7 @@ public sealed class SelectManyResultCoordinator<TSource, TCollection, TResult> :
     /// <param name="observer">The downstream observer.</param>
     /// <param name="collectionSelector">The selector that creates an inner observable for each source value.</param>
     /// <param name="resultSelector">The selector that combines outer and inner values.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="observer"/>, <paramref name="collectionSelector"/>, or <paramref name="resultSelector"/> is <see langword="null"/>.</exception>
     public SelectManyResultCoordinator(
         IObserver<TResult> observer,
         Func<TSource, IObservable<TCollection>> collectionSelector,
@@ -53,6 +57,7 @@ public sealed class SelectManyResultCoordinator<TSource, TCollection, TResult> :
     private bool Done { get; set; }
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose() => Subscriptions.Dispose();
 
     /// <inheritdoc/>
@@ -67,6 +72,7 @@ public sealed class SelectManyResultCoordinator<TSource, TCollection, TResult> :
     }
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnError(Exception error) => OnAnyError(error);
 
     /// <inheritdoc/>

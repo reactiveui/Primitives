@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 #else
@@ -72,18 +74,23 @@ internal sealed class ObserveOnObservable<T>(IObservable<T> source, ISequencer s
 
         /// <summary>Records the upstream subscription so <see cref="Dispose"/> can tear it down.</summary>
         /// <param name="subscription">The upstream subscription handle.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AttachSourceSubscription(IDisposable subscription) => _state.Attach(subscription);
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnNext(T value) => _state.EnqueueNext(value);
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnError(Exception error) => _state.EnqueueError(error);
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnCompleted() => _state.EnqueueCompleted();
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose() => _state.BeginDispose()?.Dispose();
 
         /// <inheritdoc/>

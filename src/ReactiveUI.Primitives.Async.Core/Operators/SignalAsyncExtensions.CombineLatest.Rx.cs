@@ -8,8 +8,8 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>CombineLatest operators for an enumerable collection of observable source sequences.</summary>
-    /// <param name="sources">The source sequences to combine.</param>
     /// <typeparam name="TSource">The element type produced by the source sequences.</typeparam>
+    /// <param name="sources">The source sequences to combine.</param>
     extension<TSource>(IEnumerable<IObservableAsync<TSource>> sources)
     {
         /// <summary>Combines the latest value from each asynchronous observable sequence in the supplied collection.</summary>
@@ -39,8 +39,7 @@ public static partial class SignalAsyncExtensions
             ArgumentExceptionHelper.ThrowIfNull(sources);
             ArgumentExceptionHelper.ThrowIfNull(resultSelector);
 
-            var combineSelector = resultSelector;
-            return new SyncLatestEnumerableSignal<TSource, TResult>(sources, combineSelector);
+            return new SyncLatestEnumerableSignal<TSource, TResult>(sources, resultSelector);
         }
     }
 }

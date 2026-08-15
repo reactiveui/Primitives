@@ -12,37 +12,37 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Disposal-callback operators that run an action when the observable source subscription is disposed.</summary>
-    /// <param name="this">The source observable sequence.</param>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-    extension<T>(IObservableAsync<T> @this)
+    /// <param name="source">The source observable sequence.</param>
+    extension<T>(IObservableAsync<T> source)
     {
         /// <summary>Registers a callback to be invoked asynchronously when the observable sequence is disposed.</summary>
-        /// <remarks>Use this method to perform custom asynchronous cleanup or resource release logic when
-        /// the observable sequence is disposed. The callback is invoked when the subscription is disposed, either
-        /// explicitly or when the observer completes or errors.</remarks>
         /// <param name="disposeAction">A function that returns a ValueTask representing the asynchronous operation to execute upon disposal of the
         /// observable sequence. Cannot be null.</param>
         /// <returns>An SignalAsync{T} that invokes the specified asynchronous callback when disposed.</returns>
+        /// <remarks>Use this method to perform custom asynchronous cleanup or resource release logic when
+        /// the observable sequence is disposed. The callback is invoked when the subscription is disposed, either
+        /// explicitly or when the observer completes or errors.</remarks>
         public IObservableAsync<T> OnDispose(Func<ValueTask> disposeAction)
         {
-            ArgumentExceptionHelper.ThrowIfNull(@this);
+            ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(disposeAction);
 
-            return new OnDisposeSignal<T>(@this, disposeAction);
+            return new OnDisposeSignal<T>(source, disposeAction);
         }
 
         /// <summary>Registers an action to be invoked when the observable sequence is disposed.</summary>
+        /// <param name="disposeAction">The action to execute when the subscription is disposed. Cannot be null.</param>
+        /// <returns>An observable sequence that invokes the specified action upon disposal of the subscription.</returns>
         /// <remarks>Use this method to perform cleanup or resource release logic when a subscription to
         /// the observable is disposed. The specified action is called synchronously during disposal. If multiple
         /// actions are registered through chained calls, each will be invoked in the order registered.</remarks>
-        /// <param name="disposeAction">The action to execute when the subscription is disposed. Cannot be null.</param>
-        /// <returns>An observable sequence that invokes the specified action upon disposal of the subscription.</returns>
         public IObservableAsync<T> OnDispose(Action disposeAction)
         {
-            ArgumentExceptionHelper.ThrowIfNull(@this);
+            ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(disposeAction);
 
-            return new OnDisposeSyncSignal<T>(@this, disposeAction);
+            return new OnDisposeSyncSignal<T>(source, disposeAction);
         }
     }
 

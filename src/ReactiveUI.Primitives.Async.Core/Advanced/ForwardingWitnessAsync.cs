@@ -10,6 +10,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// The protected constructor, rather than <c>abstract</c>, is what keeps it from being used on its own.
 /// </summary>
 /// <typeparam name="T">The observed element type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Downstream = {Downstream}")]
 public class ForwardingWitnessAsync<T> : WitnessAsync<T>
 {
     /// <summary>Initializes a new instance of the <see cref="ForwardingWitnessAsync{T}"/> class.</summary>

@@ -4,6 +4,7 @@
 
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Core;
 using ReactiveUI.Primitives.Signals;
 
@@ -167,6 +168,7 @@ public class EventPatternTests
 
         /// <summary>Raises <see cref="Changed"/> with the supplied value.</summary>
         /// <param name="value">The value supplied to the event arguments.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Raise(int value) => Changed?.Invoke(this, new(value));
     }
 
@@ -189,6 +191,7 @@ public class EventPatternTests
 
         /// <summary>Raises the stored handlers with the supplied assembly.</summary>
         /// <param name="assembly">The assembly supplied to the event arguments.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Raise(System.Reflection.Assembly assembly) => _assemblyLoaded?.Invoke(this, new(assembly));
     }
 
@@ -211,6 +214,7 @@ public class EventPatternTests
 
         /// <summary>Raises the stored handlers with the supplied property name.</summary>
         /// <param name="propertyName">The property name supplied to the event arguments.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Raise(string propertyName) => _propertyChanged?.Invoke(this, new(propertyName));
     }
 
@@ -229,6 +233,7 @@ public class EventPatternTests
         public void RemoveHandler(NotifyCollectionChangedEventHandler handler) => _collectionChanged -= handler;
 
         /// <summary>Raises the stored handlers with an add action.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void RaiseAdd() =>
             _collectionChanged?.Invoke(this, new(NotifyCollectionChangedAction.Add, "value"));
     }
@@ -248,6 +253,7 @@ public class EventPatternTests
         public void RemoveHandler(ListChangedEventHandler handler) => _listChanged -= handler;
 
         /// <summary>Raises the stored handlers with an item-added action.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void RaiseAdd() => _listChanged?.Invoke(this, new(ListChangedType.ItemAdded, 0));
     }
 
@@ -273,6 +279,7 @@ public class EventPatternTests
 
         /// <summary>Raises the fake click event.</summary>
         /// <param name="command">The click command.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Raise(string command) => Clicked?.Invoke(this, new(command));
     }
 }

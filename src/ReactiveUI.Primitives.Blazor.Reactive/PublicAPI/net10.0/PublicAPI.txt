@@ -1,0 +1,54 @@
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.Blazor.Reactive.Tests")]
+namespace ReactiveUI.Primitives.Blazor.Reactive.Components
+{
+    [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+    public class ReactiveComponentBase : Microsoft.AspNetCore.Components.ComponentBase, System.IDisposable
+    {
+        protected ReactiveComponentBase() { }
+        protected bool IsDisposed { get; }
+        protected System.Reactive.Concurrency.IScheduler RendererSequencer { get; }
+        public void Dispose() { }
+        protected virtual void Dispose(bool disposing) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        protected System.Threading.Tasks.Task InvalidateAsync() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        protected System.IDisposable Observe<T>(System.IObservable<T> source, System.Action<T> onNext) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        protected System.IDisposable Observe<T>(System.IObservable<T> source, System.Action<T> onNext, System.Action<System.Exception>? onError, System.Action? onCompleted) { }
+        protected System.IDisposable Observe<T>(System.IObservable<T> source, System.Action<T> onNext, System.Action<System.Exception>? onError, System.Action? onCompleted, bool refreshAfterCallbacks) { }
+        protected virtual void OnObservedError(System.Exception error) { }
+        protected System.IDisposable Track(System.IDisposable subscription) { }
+    }
+}
+namespace ReactiveUI.Primitives.Blazor.Reactive.Concurrency
+{
+    [System.Diagnostics.DebuggerDisplay("InvokeAsync = {_invokeAsync}, UnhandledExceptionHandler = {UnhandledExceptionHandler}")]
+    public sealed class BlazorRendererSequencer : ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler
+    {
+        public BlazorRendererSequencer(Microsoft.AspNetCore.Components.Dispatcher dispatcher) { }
+        public BlazorRendererSequencer(System.Func<System.Action, System.Threading.Tasks.Task> invokeAsync) { }
+        public System.Action<System.Exception>? UnhandledExceptionHandler { get; set; }
+        protected override bool Post(System.Action drain) { }
+    }
+    public static class BlazorRendererSequencerExtensions
+    {
+        extension(Microsoft.AspNetCore.Components.Dispatcher dispatcher)
+        {
+            public ReactiveUI.Primitives.Blazor.Reactive.Concurrency.BlazorRendererSequencer ToSequencer() { }
+        }
+    }
+}
+namespace ReactiveUI.Primitives.Reactive.Concurrency
+{
+    [System.Diagnostics.DebuggerDisplay("ReadyCount = {_readyCount}, DrainPosted = {_drainPosted}")]
+    public abstract class CoalescingDispatchScheduler : System.Reactive.Concurrency.LocalScheduler
+    {
+        protected CoalescingDispatchScheduler() { }
+        protected abstract bool Post(System.Action drain) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        protected void RequestDrain() { }
+        public override System.IDisposable Schedule<TState>(TState state, System.Func<System.Reactive.Concurrency.IScheduler, TState, System.IDisposable> action) { }
+        public override System.IDisposable Schedule<TState>(TState state, System.TimeSpan dueTime, System.Func<System.Reactive.Concurrency.IScheduler, TState, System.IDisposable> action) { }
+        protected virtual System.IDisposable ScheduleOnDispatcher(System.Action work, System.TimeSpan dueTime) { }
+    }
+}

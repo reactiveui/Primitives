@@ -1,0 +1,25 @@
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.Wpf.Reactive.Tests")]
+[assembly: System.Runtime.Versioning.SupportedOSPlatform("Windows7.0")]
+namespace ReactiveUI.Primitives.Reactive.Concurrency;
+
+[System.Diagnostics.DebuggerDisplay("ReadyCount = {_readyCount}, DrainPosted = {_drainPosted}")]
+public abstract class CoalescingDispatchScheduler : System.Reactive.Concurrency.LocalScheduler
+{
+    protected CoalescingDispatchScheduler() { }
+    protected abstract bool Post(System.Action drain) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    protected void RequestDrain() { }
+    public override System.IDisposable Schedule<TState>(TState state, System.Func<System.Reactive.Concurrency.IScheduler, TState, System.IDisposable> action) { }
+    public override System.IDisposable Schedule<TState>(TState state, System.TimeSpan dueTime, System.Func<System.Reactive.Concurrency.IScheduler, TState, System.IDisposable> action) { }
+    protected virtual System.IDisposable ScheduleOnDispatcher(System.Action work, System.TimeSpan dueTime) { }
+}
+[System.Diagnostics.DebuggerDisplay("Dispatcher = {Dispatcher}, Priority = {Priority}")]
+public sealed class DispatcherSequencer : ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler
+{
+    public DispatcherSequencer(System.Windows.Threading.Dispatcher dispatcher) { }
+    public DispatcherSequencer(System.Windows.Threading.Dispatcher dispatcher, System.Windows.Threading.DispatcherPriority priority) { }
+    public System.Windows.Threading.Dispatcher Dispatcher { get; }
+    public System.Windows.Threading.DispatcherPriority Priority { get; }
+    protected override bool Post(System.Action drain) { }
+    protected override System.IDisposable ScheduleOnDispatcher(System.Action work, System.TimeSpan dueTime) { }
+}

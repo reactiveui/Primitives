@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions;
@@ -16,6 +17,7 @@ namespace ReactiveUI.Primitives.Extensions;
 /// </list>
 /// </summary>
 /// <typeparam name="T">The element type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Value = {_value}, Completed = {_completed}, Disposed = {_disposed}")]
 public sealed class CurrentValueSubject<T> : IObservable<T>, IObserver<T>, IDisposable
 {
     /// <summary>Lock guarding state mutations; held only across snapshot reads and field writes.</summary>
@@ -198,6 +200,7 @@ public sealed class CurrentValueSubject<T> : IObservable<T>, IObserver<T>, IDisp
 
     /// <summary>Returns an <see cref="IObservable{T}"/> view that hides the <see cref="IObserver{T}"/> side.</summary>
     /// <returns>A read-only observable view.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IObservable<T> AsObservable() => new ReadOnlyView(this);
 
     /// <inheritdoc/>
@@ -312,6 +315,7 @@ public sealed class CurrentValueSubject<T> : IObservable<T>, IObserver<T>, IDisp
     private sealed class ReadOnlyView(CurrentValueSubject<T> parent) : IObservable<T>
     {
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IDisposable Subscribe(IObserver<T> observer) => parent.Subscribe(observer);
     }
 }

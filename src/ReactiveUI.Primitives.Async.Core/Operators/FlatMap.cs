@@ -11,9 +11,9 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>FlatMap/SelectMany operators for an observable source sequence.</summary>
-    /// <param name="this">The source observable sequence.</param>
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
-    extension<T>(IObservableAsync<T> @this)
+    /// <param name="source">The source observable sequence.</param>
+    extension<T>(IObservableAsync<T> source)
     {
         /// <summary>
         /// Projects each element of the observable sequence to an asynchronous observable sequence and
@@ -29,7 +29,7 @@ public static partial class SignalAsyncExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(selector);
 
-            return new FlatMapSignal<T, TResult>(@this, selector);
+            return new FlatMapSignal<T, TResult>(source, selector);
         }
 
         /// <summary>
@@ -47,7 +47,7 @@ public static partial class SignalAsyncExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(selector);
 
-            return new FlatMapSignal<T, TResult>(@this, selector);
+            return new FlatMapSignal<T, TResult>(source, selector);
         }
     }
 }

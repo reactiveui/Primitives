@@ -2,12 +2,14 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 
 namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Delegate-backed observer that defaults missing handlers to no-op behavior.</summary>
 /// <typeparam name="T">The observed value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("OnNext = {_onNext}, OnError = {_onError}, OnCompleted = {_onCompleted}")]
 public sealed class EmptyWitness<T> : IObserver<T>
 {
     /// <summary>Gets the shared no-op witness instance.</summary>
@@ -66,13 +68,16 @@ public sealed class EmptyWitness<T> : IObserver<T>
     }
 
     /// <summary>Calls the action implementing <see cref="IObserver{T}.OnCompleted()"/>.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnCompleted() => (_onCompleted ?? nop)();
 
     /// <summary>Calls the action implementing <see cref="IObserver{T}.OnError(Exception)"/>.</summary>
     /// <param name="error">Error notification.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnError(Exception error) => (_onError ?? nope)(error);
 
     /// <summary>Calls the action implementing <see cref="IObserver{T}.OnNext(T)"/>.</summary>
     /// <param name="value">Value notification.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnNext(T value) => _onNext(value);
 }

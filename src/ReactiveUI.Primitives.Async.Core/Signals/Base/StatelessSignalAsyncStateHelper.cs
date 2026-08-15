@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async.Signals;
@@ -16,6 +17,7 @@ internal static class StatelessSignalAsyncStateHelper
     /// <param name="value">The value to publish.</param>
     /// <param name="cancellationToken">A token that can cancel the operation.</param>
     /// <returns>A task that represents the asynchronous notification.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static ValueTask OnNextAsync<T>(
         StatelessSignalAsyncState<T> state,
         SignalBroadcastKind kind,
@@ -30,6 +32,7 @@ internal static class StatelessSignalAsyncStateHelper
     /// <param name="error">The recoverable error to publish.</param>
     /// <param name="cancellationToken">A token that can cancel the operation.</param>
     /// <returns>A task that represents the asynchronous notification.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static ValueTask OnErrorResumeAsync<T>(
         StatelessSignalAsyncState<T> state,
         SignalBroadcastKind kind,
@@ -43,6 +46,7 @@ internal static class StatelessSignalAsyncStateHelper
     /// <param name="kind">The broadcast mode for observer notifications.</param>
     /// <param name="result">The completion result to publish.</param>
     /// <returns>A task that represents the asynchronous notification.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static ValueTask OnCompletedAsync<T>(
         StatelessSignalAsyncState<T> state,
         SignalBroadcastKind kind,

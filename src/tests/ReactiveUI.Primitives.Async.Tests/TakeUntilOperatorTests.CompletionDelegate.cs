@@ -8,6 +8,7 @@ using ReactiveUI.Primitives.Async.Signals;
 namespace ReactiveUI.Primitives.Async.Tests;
 
 /// <summary>TakeUntil operator tests — CompletionSignalDelegate overload and option behavior.</summary>
+[System.Diagnostics.DebuggerDisplay("WaitTimeout = {WaitTimeout}")]
 public partial class TakeUntilOperatorTests
 {
     /// <summary>String literal "subscribe failed" used by multiple tests.</summary>
@@ -130,11 +131,8 @@ public partial class TakeUntilOperatorTests
     /// <summary>Tests TakeUntilOptions default has SourceFailsWhenOtherFails false.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilOptionsDefault_ThenSourceFailsWhenOtherFailsIsFalse()
-    {
-        var options = TakeUntilOptions.Default;
-        await Assert.That(options.SourceFailsWhenOtherFails).IsFalse();
-    }
+    public async Task WhenTakeUntilOptionsDefault_ThenSourceFailsWhenOtherFailsIsFalse() =>
+        await Assert.That(TakeUntilOptions.Default.SourceFailsWhenOtherFails).IsFalse();
 
     /// <summary>Tests TakeUntilOptions with SourceFailsWhenOtherFails set to true.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>

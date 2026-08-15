@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -33,11 +35,13 @@ internal sealed class ThrowSignal<T> : IRequireCurrentThread<T>
 
     /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
     /// <returns>The result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() => _currentThreadRequired;
 
     /// <summary>Executes the Subscribe operation.</summary>
     /// <param name="observer">The observer value.</param>
     /// <returns>The result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IDisposable Subscribe(IObserver<T> observer) =>
         SignalSubscription.Subscribe(observer, _currentThreadRequired, SubscribeCore);
 

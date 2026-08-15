@@ -12,8 +12,8 @@ namespace ReactiveUI.Primitives.Signals;
 public static partial class SignalExtensions
 {
     /// <summary>Throttling operators for an observable source sequence.</summary>
-    /// <param name="source">The source signal.</param>
     /// <typeparam name="TSource">The source value type.</typeparam>
+    /// <param name="source">The source signal.</param>
     extension<TSource>(IObservable<TSource> source)
     {
         /// <summary>Emits only the latest value after a quiet period using the default sequencer.</summary>

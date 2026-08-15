@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals;
@@ -12,6 +13,7 @@ namespace ReactiveUI.Primitives.Signals;
 /// Fuses the <c>Buffer(boundary).SelectMany(distinct).Publish().RefCount()</c> pipeline into one allocation-light sink.
 /// </summary>
 /// <typeparam name="T">The notification type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}, Buffer = {_buffer}")]
 public sealed class DelayableNotificationSignal<T> : ISignal<T>
 {
     /// <summary>Guards the observer set, buffer, and terminal state.</summary>
@@ -180,6 +182,7 @@ public sealed class DelayableNotificationSignal<T> : ISignal<T>
     private sealed class Subscription(DelayableNotificationSignal<T> parent, IObserver<T> observer) : IDisposable
     {
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose() => parent.Unsubscribe(observer);
     }
 }

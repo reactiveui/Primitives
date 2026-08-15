@@ -10,6 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Tracks reference-counted connection state.</summary>
 /// <typeparam name="T">The value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Count = {_count}, Connection = {_connection}")]
 public sealed class AutoShareSignal<T> : IObservable<T>
 {
     /// <summary>Synchronizes reference-count state.</summary>

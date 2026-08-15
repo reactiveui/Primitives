@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 
 #if REACTIVE_SHIM
@@ -23,6 +24,7 @@ internal static class SequencerPeriodicExtensions
         /// <param name="period">The period between ticks.</param>
         /// <param name="action">The tick action.</param>
         /// <returns>A disposable that cancels future ticks.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal IDisposable SchedulePeriodic<TState>(
             TState state,
             TimeSpan period,
@@ -34,6 +36,7 @@ internal static class SequencerPeriodicExtensions
         /// <param name="period">The period between ticks.</param>
         /// <param name="action">The tick action.</param>
         /// <returns>A disposable that cancels future ticks.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal IDisposable SchedulePeriodic(
             TimeSpan dueTime,
             TimeSpan period,

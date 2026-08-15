@@ -5,6 +5,7 @@
 namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>A subscription that emits one or more timer ticks.</summary>
+[System.Diagnostics.DebuggerDisplay("DueTime = {DueTime}, Period = {Period}")]
 public sealed class TimerSubscription : TaskSignalSubscription<long>
 {
     /// <summary>Initializes a new instance of the <see cref="TimerSubscription"/> class.</summary>

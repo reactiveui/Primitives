@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async;
@@ -16,55 +17,59 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Blend/Merge operators for an enumerable collection of observable source sequences.</summary>
-    /// <param name="this">A collection of asynchronous observable sequences to be merged.</param>
     /// <typeparam name="T">The type of the elements produced by the observable sequences.</typeparam>
-    extension<T>(IEnumerable<IObservableAsync<T>> @this)
+    /// <param name="sources">A collection of asynchronous observable sequences to be merged.</param>
+    extension<T>(IEnumerable<IObservableAsync<T>> sources)
     {
         /// <summary>
         /// Combines multiple asynchronous observable sequences into a single observable sequence that emits items from all
         /// source sequences as they arrive.
         /// </summary>
+        /// <returns>An observable sequence that emits items from all input sequences as they are produced.</returns>
         /// <remarks>The resulting observable sequence emits items from all source sequences in the order they
         /// arrive, interleaving emissions if sources produce items concurrently. The merged sequence completes when all
         /// source sequences have completed. If any source sequence signals an error, the merged sequence will propagate
         /// that error and terminate.</remarks>
-        /// <returns>An observable sequence that emits items from all input sequences as they are produced.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> Blend() =>
-            new BlendEnumerableSignal<T>(@this);
+            new BlendEnumerableSignal<T>(sources);
 
         /// <summary>
         /// Combines multiple asynchronous observable sequences into a single observable sequence that emits items from all
         /// source sequences as they arrive.
         /// </summary>
         /// <returns>An observable sequence that emits items from all input sequences as they are produced.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> Merge() =>
-            new BlendEnumerableSignal<T>(@this);
+            new BlendEnumerableSignal<T>(sources);
     }
 
     /// <summary>Blend/Merge operators for an observable source sequence of inner observable sequences.</summary>
-    /// <param name="this">The source asynchronous observable sequence whose elements are themselves observable sequences to be merged.
-    /// Cannot be null.</param>
     /// <typeparam name="T">The type of the elements emitted by the inner observable sequences.</typeparam>
-    extension<T>(IObservableAsync<IObservableAsync<T>> @this)
+    /// <param name="source">The source asynchronous observable sequence whose elements are themselves observable sequences to be merged.
+    /// Cannot be null.</param>
+    extension<T>(IObservableAsync<IObservableAsync<T>> source)
     {
         /// <summary>
         /// Merges multiple asynchronous observable sequences into a single observable sequence that emits items from all
         /// inner sequences as they arrive.
         /// </summary>
+        /// <returns>An asynchronous observable sequence that emits items from all inner observable sequences as they are produced.</returns>
         /// <remarks>The resulting sequence emits items from all inner sequences concurrently as they become
         /// available. The merged sequence completes when the source sequence and all inner sequences have completed. If any
         /// inner sequence signals an error, the merged sequence will propagate that error and terminate.</remarks>
-        /// <returns>An asynchronous observable sequence that emits items from all inner observable sequences as they are produced.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> Blend() =>
-            new BlendSignalSourcesSignal<T>(@this);
+            new BlendSignalSourcesSignal<T>(source);
 
         /// <summary>
         /// Merges multiple asynchronous observable sequences into a single observable sequence that emits items from all
         /// inner sequences as they arrive.
         /// </summary>
         /// <returns>An asynchronous observable sequence that emits items from all inner observable sequences as they are produced.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> Merge() =>
-            new BlendSignalSourcesSignal<T>(@this);
+            new BlendSignalSourcesSignal<T>(source);
 
         /// <summary>
         /// Merges the emissions of multiple asynchronous observable sequences into a single observable sequence, limiting
@@ -72,29 +77,32 @@ public static partial class SignalAsyncExtensions
         /// </summary>
         /// <param name="maxConcurrent">The maximum number of inner observable sequences to subscribe to concurrently.</param>
         /// <returns>An observable sequence that emits the items from the merged inner observable sequences.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> Merge(int maxConcurrent) =>
-            new BlendSignalSourcesSignalWithMaxConcurrency<T>(@this, maxConcurrent);
+            new BlendSignalSourcesSignalWithMaxConcurrency<T>(source, maxConcurrent);
     }
 
     /// <summary>Blend/Merge operators that combine an observable source sequence with another sequence.</summary>
-    /// <param name="this">The first asynchronous observable sequence to merge.</param>
     /// <typeparam name="T">The type of the elements in the observable sequences.</typeparam>
-    extension<T>(IObservableAsync<T> @this)
+    /// <param name="source">The first asynchronous observable sequence to merge.</param>
+    extension<T>(IObservableAsync<T> source)
     {
         /// <summary>Combines the elements of two asynchronous observable sequences into a single sequence by merging their emissions.</summary>
+        /// <param name="other">The second asynchronous observable sequence to merge with the first.</param>
+        /// <returns>An SignalAsync{T} that emits the elements from both input sequences as they arrive.</returns>
         /// <remarks>The resulting sequence emits items from both source sequences in the order they are produced.
         /// The merged sequence completes when both input sequences have completed. If either source sequence signals an
         /// error, the merged sequence will propagate that error and terminate.</remarks>
-        /// <param name="other">The second asynchronous observable sequence to merge with the first.</param>
-        /// <returns>An SignalAsync{T} that emits the elements from both input sequences as they arrive.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> Blend(IObservableAsync<T> other) =>
-            new BlendEnumerableSignal<T>([@this, other]);
+            new BlendEnumerableSignal<T>([source, other]);
 
         /// <summary>Combines the elements of two asynchronous observable sequences into a single sequence by merging their emissions.</summary>
         /// <param name="other">The second asynchronous observable sequence to merge with the first.</param>
         /// <returns>An observable that emits the elements from both input sequences as they arrive.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> Merge(IObservableAsync<T> other) =>
-            new BlendEnumerableSignal<T>([@this, other]);
+            new BlendEnumerableSignal<T>([source, other]);
     }
 
     /// <summary>Async observable that merges items from an observable of observables into a single stream.</summary>
@@ -176,18 +184,19 @@ public static partial class SignalAsyncExtensions
 
         /// <summary>Asynchronously releases resources used by this subscription.</summary>
         /// <returns>A task representing the asynchronous dispose operation.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask DisposeAsync() => FinishAsync(null);
 
         /// <summary>Subscribes to the outer observable and begins merging inner observable sequences.</summary>
-        /// <param name="this">The outer observable whose inner sequences will be merged.</param>
+        /// <param name="source">The outer observable whose inner sequences will be merged.</param>
         /// <param name="cancellationToken">A token to cancel the subscription.</param>
         /// <returns>A task representing the asynchronous subscribe operation.</returns>
         internal async ValueTask SubscribeSourcesAsync(
-            IObservableAsync<IObservableAsync<T>> @this,
+            IObservableAsync<IObservableAsync<T>> source,
             CancellationToken cancellationToken)
         {
             _ = cancellationToken;
-            var outerSubscription = await @this.SubscribeAsync(
+            var outerSubscription = await source.SubscribeAsync(
                 (x, _) => SubscribeBranchAsync(x),
                 RelayErrorAsync,
                 result =>
@@ -526,6 +535,7 @@ public static partial class SignalAsyncExtensions
 
             /// <summary>Asynchronously releases resources used by this subscription.</summary>
             /// <returns>A task representing the asynchronous dispose operation.</returns>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public ValueTask DisposeAsync() => FinishAsync(null);
 
             /// <summary>
@@ -545,6 +555,7 @@ public static partial class SignalAsyncExtensions
             }
 
             /// <summary>Begins subscribing to all source observables asynchronously.</summary>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             [SuppressMessage(
                 "Roslynator",
                 "RCS1047:Non-asynchronous method name should not end with \'Async\'",

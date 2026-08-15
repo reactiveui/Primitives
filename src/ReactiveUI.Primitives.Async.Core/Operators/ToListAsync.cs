@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for working with asynchronous observable sequences.</summary>
@@ -11,21 +13,23 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Asynchronous list-materialization operators for an observable source sequence.</summary>
-    /// <param name="this">The source observable sequence.</param>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
-    extension<T>(IObservableAsync<T> @this)
+    /// <param name="source">The source observable sequence.</param>
+    extension<T>(IObservableAsync<T> source)
     {
         /// <summary>Asynchronously collects all elements from the source sequence into a list.</summary>
         /// <returns>A task that represents the asynchronous operation. The task result contains a list of all elements in the
         /// source sequence, in the order they were received.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<List<T>> CollectListAsync() =>
-            @this.ToListAsync(CancellationToken.None);
+            source.ToListAsync(CancellationToken.None);
 
         /// <summary>Asynchronously collects all elements from the source sequence into a list.</summary>
         /// <returns>A task that represents the asynchronous operation. The task result contains a list of all elements in the
         /// source sequence, in the order they were received.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<List<T>> ToListAsync() =>
-            @this.CollectListAsync();
+            source.CollectListAsync();
 
         /// <summary>Asynchronously collects all elements from the source sequence into a list.</summary>
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
@@ -36,7 +40,7 @@ public static partial class SignalAsyncExtensions
             cancellationToken.ThrowIfCancellationRequested();
             ToListTaskWitness<T> observer = new(cancellationToken);
             await using var subscription =
-                await @this.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
+                await source.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
             return await observer.AwaitResultAsync().ConfigureAwait(false);
         }
 
@@ -44,7 +48,7 @@ public static partial class SignalAsyncExtensions
         /// <returns>A task that completes with the collected array of values.</returns>
         public async ValueTask<T[]> CollectArrayAsync()
         {
-            var values = await @this.CollectListAsync().ConfigureAwait(false);
+            var values = await source.CollectListAsync().ConfigureAwait(false);
             return [.. values];
         }
     }

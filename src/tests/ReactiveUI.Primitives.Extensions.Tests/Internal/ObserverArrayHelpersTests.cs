@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Extensions.Tests.Internal;
 
 /// <summary>Direct RxVoid tests for <see cref="ObserverArrayHelpers"/> — both the broadcast
@@ -139,6 +141,7 @@ public class ObserverArrayHelpersTests
         public List<T> Values { get; } = [];
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnNext(T value) => Values.Add(value);
 
         /// <inheritdoc/>

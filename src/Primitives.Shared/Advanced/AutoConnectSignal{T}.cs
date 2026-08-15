@@ -10,6 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Tracks auto-connect subscription state.</summary>
 /// <typeparam name="T">The value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Count = {_count}, Connected = {_connected}")]
 public sealed class AutoConnectSignal<T> : IObservable<T>
 {
     /// <summary>Current subscriber count.</summary>

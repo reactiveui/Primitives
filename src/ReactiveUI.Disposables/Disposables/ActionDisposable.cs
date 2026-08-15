@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Disposables;
 
 /// <summary>An <see cref="IDisposable"/> that runs the supplied <see cref="Action"/> exactly once on <see cref="Dispose"/>. Replaces <c>new ActionDisposable(Action)</c>.</summary>
@@ -24,5 +26,6 @@ public sealed class ActionDisposable : IsDisposed
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose() => Interlocked.Exchange(ref _action, null)?.Invoke();
 }

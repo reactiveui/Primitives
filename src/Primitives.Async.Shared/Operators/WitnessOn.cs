@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 using ReactiveUI.Primitives.Async.Reactive.Advanced;
 #endif
@@ -19,23 +21,25 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncReactiveExtensions
 {
     /// <summary>Context-switching operators that control where observer callbacks are invoked for an observable source sequence.</summary>
-    /// <param name="this">The source observable sequence.</param>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-    extension<T>(IObservableAsync<T> @this)
+    /// <param name="source">The source observable sequence.</param>
+    extension<T>(IObservableAsync<T> source)
     {
         /// <summary>Wraps the source observable so that observer callbacks are invoked on the specified async context.</summary>
         /// <param name="asyncContext">The async context on which observer callbacks should be invoked.</param>
         /// <param name="forceYielding">When true, forces an asynchronous yield before invoking each callback, even if already on the target
         /// context.</param>
         /// <returns>An observable sequence whose observer callbacks execute on the specified context.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> WitnessOn(AsyncContext asyncContext, bool forceYielding) =>
-            new WitnessOnSignal<T>(@this, asyncContext, forceYielding);
+            new WitnessOnSignal<T>(source, asyncContext, forceYielding);
 
         /// <summary>Wraps the source observable so that observer callbacks are invoked on the specified async context.</summary>
         /// <param name="asyncContext">The async context on which observer callbacks should be invoked.</param>
         /// <returns>An observable sequence whose observer callbacks execute on the specified context.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> WitnessOn(AsyncContext asyncContext) =>
-            new WitnessOnSignal<T>(@this, asyncContext, false);
+            new WitnessOnSignal<T>(source, asyncContext, false);
 
         /// <summary>Wraps the source observable so that observer callbacks are invoked on the specified synchronization context.</summary>
         /// <param name="synchronizationContext">The synchronization context on which observer callbacks should be posted.</param>
@@ -44,14 +48,15 @@ public static partial class SignalAsyncReactiveExtensions
         public IObservableAsync<T> WitnessOn(SynchronizationContext synchronizationContext, bool forceYielding)
         {
             var asyncContext = AsyncContext.From(synchronizationContext);
-            return new WitnessOnSignal<T>(@this, asyncContext, forceYielding);
+            return new WitnessOnSignal<T>(source, asyncContext, forceYielding);
         }
 
         /// <summary>Wraps the source observable so that observer callbacks are invoked on the specified synchronization context.</summary>
         /// <param name="synchronizationContext">The synchronization context on which observer callbacks should be posted.</param>
         /// <returns>An observable sequence whose observer callbacks execute on the specified synchronization context.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> WitnessOn(SynchronizationContext synchronizationContext) =>
-            new WitnessOnSignal<T>(@this, AsyncContext.From(synchronizationContext), false);
+            new WitnessOnSignal<T>(source, AsyncContext.From(synchronizationContext), false);
 
         /// <summary>Wraps the source observable so that observer callbacks are invoked using the specified task scheduler.</summary>
         /// <param name="taskScheduler">The task scheduler on which observer callbacks should be scheduled.</param>
@@ -60,32 +65,34 @@ public static partial class SignalAsyncReactiveExtensions
         public IObservableAsync<T> WitnessOn(TaskScheduler taskScheduler, bool forceYielding)
         {
             var asyncContext = AsyncContext.From(taskScheduler);
-            return new WitnessOnSignal<T>(@this, asyncContext, forceYielding);
+            return new WitnessOnSignal<T>(source, asyncContext, forceYielding);
         }
 
         /// <summary>Wraps the source observable so that observer callbacks are invoked using the specified task scheduler.</summary>
         /// <param name="taskScheduler">The task scheduler on which observer callbacks should be scheduled.</param>
         /// <returns>An observable sequence whose observer callbacks execute on the specified task scheduler.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> WitnessOn(TaskScheduler taskScheduler) =>
-            new WitnessOnSignal<T>(@this, AsyncContext.From(taskScheduler), false);
+            new WitnessOnSignal<T>(source, AsyncContext.From(taskScheduler), false);
 
         /// <summary>Configures the observable sequence to notify observers on the specified scheduler.</summary>
-        /// <remarks>Use this method to control the context (such as a UI thread or a specific task
-        /// scheduler) on which observers receive notifications. This is useful for ensuring thread safety or updating
-        /// UI elements from observable sequences.</remarks>
         /// <param name="scheduler">The scheduler on which to observe and deliver notifications to observers. Cannot be null.</param>
         /// <param name="forceYielding">true to force yielding to the scheduler even if already on the target context; otherwise, false.</param>
         /// <returns>An observable sequence whose notifications are delivered on the specified scheduler.</returns>
+        /// <remarks>Use this method to control the context (such as a UI thread or a specific task
+        /// scheduler) on which observers receive notifications. This is useful for ensuring thread safety or updating
+        /// UI elements from observable sequences.</remarks>
         public IObservableAsync<T> WitnessOn(ISequencer scheduler, bool forceYielding)
         {
             var asyncContext = AsyncContext.From(scheduler);
-            return new WitnessOnSignal<T>(@this, asyncContext, forceYielding);
+            return new WitnessOnSignal<T>(source, asyncContext, forceYielding);
         }
 
         /// <summary>Configures the observable sequence to notify observers on the specified scheduler.</summary>
         /// <param name="scheduler">The scheduler on which to observe and deliver notifications to observers. Cannot be null.</param>
         /// <returns>An observable sequence whose notifications are delivered on the specified scheduler.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> WitnessOn(ISequencer scheduler) =>
-            new WitnessOnSignal<T>(@this, AsyncContext.From(scheduler), false);
+            new WitnessOnSignal<T>(source, AsyncContext.From(scheduler), false);
     }
 }

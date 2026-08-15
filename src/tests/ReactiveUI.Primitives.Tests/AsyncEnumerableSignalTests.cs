@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
 
 namespace ReactiveUI.Primitives.Tests;
@@ -139,6 +140,7 @@ public sealed class AsyncEnumerableSignalTests
 
         /// <summary>Releases the gated <c>MoveNextAsync</c> with the given outcome.</summary>
         /// <param name="result">The value returned by <c>MoveNextAsync</c>.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ReleaseMoveNext(bool result) => _moveNextGate.TrySetResult(result);
 
         /// <inheritdoc/>
@@ -232,6 +234,7 @@ public sealed class AsyncEnumerableSignalTests
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask DisposeAsync() => default;
     }
 
@@ -260,9 +263,11 @@ public sealed class AsyncEnumerableSignalTests
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnError(Exception error) => Errors.Add(error);
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnNext(T value) => Values.Add(value);
     }
 }

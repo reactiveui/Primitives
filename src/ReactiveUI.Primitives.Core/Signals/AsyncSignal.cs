@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Disposables;
 
@@ -268,6 +269,7 @@ public sealed class AsyncSignal<T> : IAwaitSignal<T>
     }
 
     /// <summary>Executes the ThrowIfDisposed operation.</summary>
+    /// <exception cref="ObjectDisposedException">This instance has already been disposed.</exception>
     private void ThrowIfDisposed()
     {
         if (!IsDisposed)
@@ -281,6 +283,7 @@ public sealed class AsyncSignal<T> : IAwaitSignal<T>
     /// <summary>Executes the SubscribeCompletion operation.</summary>
     /// <param name="continuation">The continuation value.</param>
     /// <param name="originalContext">The originalContext value.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void SubscribeCompletion(Action continuation, bool originalContext) =>
         Subscribe(new AwaitWitness<T>(continuation, originalContext));
 }

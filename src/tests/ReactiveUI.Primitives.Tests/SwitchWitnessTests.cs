@@ -59,11 +59,11 @@ public sealed class SwitchWitnessTests
         // blocking delivery on a dedicated thread rather than the thread pool: on a saturated runner a Task.Run
         // body can sit unscheduled past the wait window, so FirstEntered would never be set in time even though
         // the delivery is ready to run. An OS thread is not subject to pool starvation.
-        DeliveryThread firstDelivery = DeliveryThread.Start(() => first.Observer!.OnNext(One));
+        var firstDelivery = DeliveryThread.Start(() => first.Observer!.OnNext(One));
         await Assert.That(observer.FirstEntered.Wait(WaitTimeout)).IsTrue();
 
         // Switching sources is gated too: OnSource cannot subscribe the new inner until the delivery releases.
-        DeliveryThread switchDelivery = DeliveryThread.Start(() => outer.OnNext(second));
+        var switchDelivery = DeliveryThread.Start(() => outer.OnNext(second));
         await Assert.That(SpinWait.SpinUntil(() => second.Observer is not null, GateProbeMilliseconds)).IsFalse();
         await Assert.That(observer.ConcurrentOnNext).IsFalse();
 

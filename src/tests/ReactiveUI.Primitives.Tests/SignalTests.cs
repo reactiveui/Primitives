@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Disposables;
@@ -275,10 +276,12 @@ public class SignalTests
     }
 
     /// <summary>Called when [error null throws].</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void OnErrorNullThrows() => Assert.Throws<ArgumentNullException>(static () => new Signal<int>().OnError(null!));
 
     /// <summary>Subscribes the null throws.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void SubscribeNullThrows() => Assert.Throws<ArgumentNullException>(static () => new Signal<int>().Subscribe(null!));
 
@@ -728,11 +731,13 @@ public class SignalTests
 
         /// <summary>Returns whether subscription must occur on the current thread.</summary>
         /// <returns>The configured flag.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool IsRequiredSubscribeOnCurrentThread() => _currentThreadRequired;
 
         /// <summary>Subscribes via the shared routing helper.</summary>
         /// <param name="observer">The observer to subscribe.</param>
         /// <returns>The subscription.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IDisposable Subscribe(IObserver<T> observer) =>
             SignalSubscription.Subscribe(observer, _currentThreadRequired, SubscribeCore);
 
@@ -740,6 +745,7 @@ public class SignalTests
         /// <param name="observer">The observer to subscribe.</param>
         /// <param name="cancel">The disposable used to cancel the subscription.</param>
         /// <returns>An empty disposable.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [SuppressMessage("Maintainability", "SST1461:Remove unread private parameters", Justification = "The signature is fixed by the delegate SignalSubscription.Subscribe expects.")]
         private static IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel) =>
             EmptyDisposable.Instance;
@@ -749,6 +755,7 @@ public class SignalTests
     private sealed class FinalizerPathSignal : Signal<int>
     {
         /// <summary>Runs the disposal path with managed cleanup suppressed, as a finalizer would.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ReleaseUnmanagedOnly() => Dispose(false);
     }
 

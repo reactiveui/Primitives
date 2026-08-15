@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Windows.Threading;
 using ReactiveUI.Primitives.Concurrency;
 
@@ -69,6 +70,7 @@ public sealed class DispatcherSequencerTests
         public DelegateWorkItem(Action action) => _action = action;
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Execute() => _action();
     }
 

@@ -19,26 +19,30 @@ namespace ReactiveUI.Primitives.Async;
 /// <summary>Provides factory methods for creating shim-typed observables from asynchronous operations.</summary>
 public static partial class SignalAsyncReactiveExtensions
 {
-    /// <summary>
-    /// Creates an asynchronous observable sequence that executes the specified factory function and signals completion
-    /// when the operation finishes.
-    /// </summary>
-    /// <remarks>The returned observable executes the factory function as a background job. The sequence emits
-    /// <see cref="RxVoid"/> after the factory completes and then signals completion. Cancellation is supported
-    /// via the provided token.</remarks>
+    /// <summary>Observable factory operators for an asynchronous operation that signals completion only.</summary>
     /// <param name="factory">A function that performs the asynchronous operation. The function receives a cancellation token that can be used
     /// to cancel the operation.</param>
-    /// <returns>An observable sequence that emits a single value of <see cref="RxVoid"/> when the factory function completes,
-    /// followed by a completion notification.</returns>
-    /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="factory"/> is <see langword="null"/>.</exception>
-    [SuppressMessage(
-        "Roslynator",
-        "RCS1047:Non-asynchronous method name should not end with \'Async\'",
-        Justification = "This is an existing method")]
-    public static IObservableAsync<RxVoid> FromAsync(Func<CancellationToken, ValueTask> factory)
+    extension(Func<CancellationToken, ValueTask> factory)
     {
-        ArgumentExceptionHelper.ThrowIfNull(factory);
+        /// <summary>
+        /// Creates an asynchronous observable sequence that executes the specified factory function and signals completion
+        /// when the operation finishes.
+        /// </summary>
+        /// <returns>An observable sequence that emits a single value of <see cref="RxVoid"/> when the factory function completes,
+        /// followed by a completion notification.</returns>
+        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="factory"/> is <see langword="null"/>.</exception>
+        /// <remarks>The returned observable executes the factory function as a background job. The sequence emits
+        /// <see cref="RxVoid"/> after the factory completes and then signals completion. Cancellation is supported
+        /// via the provided token.</remarks>
+        [SuppressMessage(
+            "Roslynator",
+            "RCS1047:Non-asynchronous method name should not end with \'Async\'",
+            Justification = "This is an existing method")]
+        public IObservableAsync<RxVoid> FromAsync()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(factory);
 
-        return new FromAsyncSignal(factory);
+            return new FromAsyncSignal(factory);
+        }
     }
 }

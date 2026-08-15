@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Signals;
 #else
@@ -10,6 +12,7 @@ namespace ReactiveUI.Primitives.Signals;
 
 /// <summary>A signal which emits items using the specified scheduler.</summary>
 /// <typeparam name="T">The type of item to emit.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Observers = {_observerRefCount}, Disposed = {_isDisposed}")]
 public class ScheduledSignal<T> : ISignal<T>
 {
     /// <summary>Guards default-observer and subscription-count state.</summary>
@@ -163,17 +166,16 @@ public class ScheduledSignal<T> : ISignal<T>
     /// <summary>Subscribes the default observer through the configured scheduler.</summary>
     /// <param name="observer">The observer value.</param>
     /// <returns>The subscription value.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private IDisposable SubscribeDefaultObserver(IObserver<T> observer) =>
         _subject.ObserveOn(_scheduler).Subscribe(observer);
 
     /// <summary>Releases one non-default observer and restores the default observer when needed.</summary>
     private void ReleaseObserver()
     {
-        var defaultObserver = _defaultObserver;
-
         lock (_observerLock)
         {
-            ReleaseObserverLocked(defaultObserver);
+            ReleaseObserverLocked(_defaultObserver);
         }
     }
 
@@ -195,6 +197,7 @@ public class ScheduledSignal<T> : ISignal<T>
     }
 
     /// <summary>Executes the ThrowIfDisposed operation.</summary>
+    /// <exception cref="ObjectDisposedException">This instance or its backing signal has been disposed.</exception>
     private void ThrowIfDisposed()
     {
         if (!IsDisposed)

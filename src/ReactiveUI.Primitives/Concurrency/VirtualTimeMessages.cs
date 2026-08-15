@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Globalization;
+using System.Runtime.CompilerServices;
 #if NET8_0_OR_GREATER
 using System.Text;
 #endif
@@ -31,6 +32,7 @@ internal static class VirtualTimeMessages
     /// <summary>Builds the message thrown when a clock-advancing method runs against an already-running scheduler.</summary>
     /// <param name="methodName">The name of the clock-advancing method that was called.</param>
     /// <returns>The formatted message.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static string SchedulerAlreadyRunning(string methodName) =>
 #if NET8_0_OR_GREATER
         string.Format(CultureInfo.CurrentCulture, SchedulerAlreadyRunningComposite, methodName);

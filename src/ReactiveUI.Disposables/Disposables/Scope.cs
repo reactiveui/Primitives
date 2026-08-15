@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Disposables;
 
 /// <summary>Provides factory helpers for creating disposables.</summary>
@@ -29,12 +31,14 @@ public static class Scope
     /// <param name="first">The first disposable.</param>
     /// <param name="second">The second disposable.</param>
     /// <returns>A disposable that disposes both supplied resources.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IDisposable Combine(IDisposable first, IDisposable second) =>
         new MultipleDisposable(first, second);
 
     /// <summary>Combines disposable resources into a single disposable.</summary>
     /// <param name="disposables">The disposables to combine.</param>
     /// <returns>A disposable that disposes all supplied resources.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IDisposable Combine(params IDisposable[] disposables) =>
         new MultipleDisposable(disposables);
 }

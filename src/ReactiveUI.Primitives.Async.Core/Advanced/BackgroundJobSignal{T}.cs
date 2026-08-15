@@ -6,6 +6,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>An observable that runs a supplied asynchronous job for each subscription.</summary>
 /// <typeparam name="T">The element type emitted by the job.</typeparam>
+[System.Diagnostics.DebuggerDisplay("StartSynchronously = {StartSynchronously}, TaskScheduler = {TaskScheduler}")]
 public sealed class BackgroundJobSignal<T> : IObservableAsync<T>
 {
     /// <summary>Initializes a new instance of the <see cref="BackgroundJobSignal{T}"/> class.</summary>

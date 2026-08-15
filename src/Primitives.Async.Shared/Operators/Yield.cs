@@ -14,22 +14,22 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncReactiveExtensions
 {
     /// <summary>Scheduler-yielding operators for an observable source sequence.</summary>
-    /// <param name = "this">The source observable sequence to yield from.</param>
     /// <typeparam name = "T">The type of the elements in the observable sequence.</typeparam>
-    extension<T>(IObservableAsync<T> @this)
+    /// <param name = "source">The source observable sequence to yield from.</param>
+    extension<T>(IObservableAsync<T> source)
     {
         /// <summary>
         /// Returns an observable sequence that yields control to the current thread's scheduler before emitting items from
         /// the source sequence.
         /// </summary>
-        /// <remarks>This method can be used to ensure that the source sequence's emissions are scheduled
-        /// asynchronously, which may help avoid stack overflows or improve responsiveness in certain scenarios.</remarks>
         /// <returns>An observable sequence that emits the same elements as the source, but yields control to the scheduler before
         /// each emission.</returns>
+        /// <remarks>This method can be used to ensure that the source sequence's emissions are scheduled
+        /// asynchronously, which may help avoid stack overflows or improve responsiveness in certain scenarios.</remarks>
         public IObservableAsync<T> Yield()
         {
-            ArgumentExceptionHelper.ThrowIfNull(@this);
-            return new YieldSignal<T>(@this);
+            ArgumentExceptionHelper.ThrowIfNull(source);
+            return new YieldSignal<T>(source);
         }
     }
 

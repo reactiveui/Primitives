@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async.Tests;
 
 /// <summary>Shared test helpers for async observable tests.</summary>
@@ -18,6 +20,7 @@ internal static class AsyncTestHelpers
     /// <param name="source">The async observable to collect from.</param>
     /// <param name="cancellationToken">Optional cancellation token.</param>
     /// <returns>A tuple containing the collected items and the completion result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static Task<(List<T> Items, Result? Completion)> CollectAsync<T>(
         IObservableAsync<T> source,
         CancellationToken cancellationToken = default) =>
@@ -85,6 +88,7 @@ internal static class AsyncTestHelpers
     /// <param name="timeout">Maximum time to wait.</param>
     /// <param name="pollInterval">Optional polling interval.</param>
     /// <returns>True if the condition was met before timing out.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static Task<bool> WaitForConditionAsync(
         Func<bool> condition,
         TimeSpan timeout,

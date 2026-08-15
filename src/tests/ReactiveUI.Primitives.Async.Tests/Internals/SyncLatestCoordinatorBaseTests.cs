@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async.Tests.Internals;
 
 /// <summary>Tests for <see cref="SyncLatestCoordinatorBase{TResult}"/>, the shared scaffolding derived by every <c>CombineLatestN</c> arity-specific subscription.</summary>
@@ -179,6 +181,7 @@ public class SyncLatestCoordinatorBaseTests
         public static IAsyncDisposable Instance { get; } = new NoopDisposable();
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask DisposeAsync() => default;
     }
 
@@ -219,6 +222,7 @@ public class SyncLatestCoordinatorBaseTests
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask DisposeAsync() => default;
     }
 }

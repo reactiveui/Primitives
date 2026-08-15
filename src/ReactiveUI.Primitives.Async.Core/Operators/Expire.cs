@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides Timeout extension methods for asynchronous observable sequences.</summary>
@@ -11,9 +13,9 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Timeout operators for an observable source sequence.</summary>
-    /// <param name="this">The source observable sequence.</param>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
-    extension<T>(IObservableAsync<T> @this)
+    /// <param name="source">The source observable sequence.</param>
+    extension<T>(IObservableAsync<T> source)
     {
         /// <summary>
         /// Applies a dueTime policy to the observable sequence. If the next element is not received within
@@ -27,7 +29,7 @@ public static partial class SignalAsyncExtensions
         {
             ArgumentOutOfRangeExceptionHelper.ThrowIfLessThanOrEqual(dueTime, TimeSpan.Zero);
 
-            return new TimeoutSignal<T>(@this, dueTime, TimeProvider.System);
+            return new TimeoutSignal<T>(source, dueTime, TimeProvider.System);
         }
     }
 
@@ -194,6 +196,7 @@ public static partial class SignalAsyncExtensions
             /// coverage because the <c>_timer is null</c> branch is only reachable when the
             /// source emits after the sink's <c>DisposeAsyncCore</c> has nulled the timer —
             /// a race the single-threaded test harness cannot deterministically trigger.</summary>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
             private void RearmTimer() =>
                 _timer?.Change(dueTime, System.Threading.Timeout.InfiniteTimeSpan);
@@ -201,6 +204,7 @@ public static partial class SignalAsyncExtensions
             /// <summary>Stops the timeout deadline on terminal forwarding. Isolated from
             /// coverage because the <c>_timer is null</c> branch is only reachable under the
             /// same source-after-Dispose race that <see cref="RearmTimer"/> guards against.</summary>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
             private void StopTimer() =>
                 _timer?.Change(System.Threading.Timeout.InfiniteTimeSpan, System.Threading.Timeout.InfiniteTimeSpan);

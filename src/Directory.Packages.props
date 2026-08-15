@@ -5,21 +5,21 @@
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
     <!-- StyleSharp.Analyzers, PerformanceSharp.Analyzers and SecuritySharp.Analyzers ship from the
          same release pipeline and always share a version. -->
-    <RoslynCommonAnalyzersVersion>3.38.1</RoslynCommonAnalyzersVersion>
+    <RoslynCommonAnalyzersVersion>3.45.0</RoslynCommonAnalyzersVersion>
     <AvaloniaVersion>12.1.1</AvaloniaVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.301"/>
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.400"/>
   </ItemGroup>
   <ItemGroup>
     <PackageVersion Include="MinVer" Version="7.0.0"/>
     <PackageVersion Include="StyleSharp.Analyzers" Version="$(RoslynCommonAnalyzersVersion)"/>
     <PackageVersion Include="PerformanceSharp.Analyzers" Version="$(RoslynCommonAnalyzersVersion)"/>
     <PackageVersion Include="SecuritySharp.Analyzers" Version="$(RoslynCommonAnalyzersVersion)"/>
-    <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0"/>
+    <PackageVersion Include="Roslynator.Analyzers" Version="4.16.0"/>
     <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0"/>
-    <PackageVersion Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="5.6.0"/>
-    <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.30.0.144632"/>
+    <PackageVersion Include="PublicApiSharp.Analyzers" Version="1.0.7"/>
+    <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.32.0.713"/>
   </ItemGroup>
   <!-- Benchmarks + tests -->
   <ItemGroup>
@@ -37,11 +37,11 @@
     <PackageVersion Include="Microsoft.AspNetCore.Components" Version="8.0.29" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0')) AND !$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0'))"/>
     <PackageVersion Include="Microsoft.AspNetCore.Components" Version="9.0.18" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0')) AND !$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0'))"/>
     <PackageVersion Include="Microsoft.AspNetCore.Components" Version="10.0.10" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0')) AND !$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
-    <PackageVersion Include="Microsoft.AspNetCore.Components" Version="11.0.0-preview.6.26359.118" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
+    <PackageVersion Include="Microsoft.AspNetCore.Components" Version="11.0.0-preview.7.26381.103" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
     <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="8.0.29" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0')) AND !$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0'))"/>
     <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="9.0.18" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net9.0')) AND !$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0'))"/>
     <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="10.0.10" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0')) AND !$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
-    <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="11.0.0-preview.6.26359.118" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
+    <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="11.0.0-preview.7.26381.103" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
     <PackageVersion Include="Microsoft.Bcl.TimeProvider" Version="10.0.11"/>
     <PackageVersion Include="Microsoft.Extensions.Configuration" Version="11.0.0-preview.7.26381.103" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="11.0.0-preview.7.26381.103" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
@@ -50,7 +50,7 @@
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="11.0.0-preview.7.26381.103" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
     <PackageVersion Include="Microsoft.Maui.Core" Version="10.0.90" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0')) AND !$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
     <PackageVersion Include="Microsoft.Maui.Core" Version="11.0.0-preview.7.26406.9" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))"/>
-    <PackageVersion Include="Microsoft.WindowsAppSDK" Version="2.3.1"/>
+    <PackageVersion Include="Microsoft.WindowsAppSDK" Version="2.4.0"/>
   </ItemGroup>
   <!-- .NET Framework legs -->
   <ItemGroup>
@@ -67,9 +67,9 @@
        the compiler the generator demands of every consumer. Renovate's Roslyn PR is not for us. -->
   <ItemGroup>
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0"/>
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1"/>
-    <PackageVersion Include="TUnit" Version="1.64.13"/>
-    <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.9.0"/>
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.9.0"/>
+    <PackageVersion Include="TUnit" Version="1.65.0"/>
+    <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.10.0"/>
   </ItemGroup>
   <Import Project="$(MSBuildThisFileDirectory)/directory.packages.support.props" Condition="Exists('$(MSBuildThisFileDirectory)/directory.packages.support.props')"/>
 </Project>

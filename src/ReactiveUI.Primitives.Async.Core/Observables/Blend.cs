@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides factory methods for composing asynchronous observable sequences.</summary>
@@ -11,6 +13,7 @@ public static partial class SignalAsync
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="sources">The sources to merge.</param>
     /// <returns>An observable sequence that merges the sources.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservableAsync<T> Blend<T>(params IObservableAsync<T>[] sources) =>
         new SignalAsyncExtensions.BlendEnumerableSignal<T>(sources);
 }

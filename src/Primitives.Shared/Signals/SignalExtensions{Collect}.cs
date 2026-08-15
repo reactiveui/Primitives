@@ -12,8 +12,8 @@ namespace ReactiveUI.Primitives.Signals;
 public static partial class SignalExtensions
 {
     /// <summary>Time-windowed batching operators for an observable source sequence.</summary>
-    /// <param name="source">The source signal to collect into batches.</param>
     /// <typeparam name="TSource">The source value type.</typeparam>
+    /// <param name="source">The source signal to collect into batches.</param>
     extension<TSource>(IObservable<TSource> source)
     {
         /// <summary>Collects values into time-windowed batches using the default sequencer.</summary>

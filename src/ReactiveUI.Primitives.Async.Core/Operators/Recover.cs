@@ -13,23 +13,23 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Error-handling operators for an observable source sequence.</summary>
-    /// <param name="source">The source observable sequence.</param>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
+    /// <param name="source">The source observable sequence.</param>
     extension<T>(IObservableAsync<T> source)
     {
         /// <summary>
         /// Creates a new observable sequence that continues with a handler-provided sequence when an exception occurs
         /// in the source sequence.
         /// </summary>
-        /// <remarks>Use this method to recover from errors in the source sequence by switching to an
-        /// alternative observable sequence. The handler function is called with the exception, allowing custom error
-        /// recovery logic. If the handler itself throws an exception, the resulting sequence completes with that
-        /// exception.</remarks>
         /// <param name="handler">A function that receives the exception thrown by the source sequence and returns an alternative observable
         /// sequence to continue with.</param>
         /// <returns>An observable sequence that emits items from the source sequence, or from the handler-provided sequence if
         /// an exception is encountered.</returns>
         /// <exception cref="ArgumentNullException">Thrown if the source sequence or <paramref name="handler"/> is null.</exception>
+        /// <remarks>Use this method to recover from errors in the source sequence by switching to an
+        /// alternative observable sequence. The handler function is called with the exception, allowing custom error
+        /// recovery logic. If the handler itself throws an exception, the resulting sequence completes with that
+        /// exception.</remarks>
         public IObservableAsync<T> Recover(Func<Exception, IObservableAsync<T>> handler)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -52,13 +52,13 @@ public static partial class SignalAsyncExtensions
         /// Continues the observable sequence with an alternative sequence provided by the specified handler when an
         /// error occurs, and ignores the error after invoking the handler.
         /// </summary>
-        /// <remarks>If an error occurs and the handler is invoked, the error is also reported to the
-        /// global unhandled exception handler before being ignored. This method allows the sequence to continue without
-        /// propagating the error to subscribers.</remarks>
         /// <param name="handler">A function that receives the exception and returns an alternative observable sequence to resume with after
         /// an error occurs.</param>
         /// <returns>An observable sequence that resumes with the sequence returned by the handler when an error is encountered,
         /// and ignores the error after handling.</returns>
+        /// <remarks>If an error occurs and the handler is invoked, the error is also reported to the
+        /// global unhandled exception handler before being ignored. This method allows the sequence to continue without
+        /// propagating the error to subscribers.</remarks>
         public IObservableAsync<T> CatchAndIgnoreErrorResume(Func<Exception, IObservableAsync<T>> handler)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);

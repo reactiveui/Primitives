@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using ReactiveUI.Primitives.Disposables;
 
@@ -20,6 +21,7 @@ public static class Witness
     /// <typeparam name="T">The observed value type.</typeparam>
     /// <param name="onNext">Callback invoked for each value.</param>
     /// <returns>An observer backed by the supplied callbacks.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObserver<T> Create<T>(Action<T> onNext) =>
         Create(onNext, Rethrow, Nop);
 
@@ -28,6 +30,7 @@ public static class Witness
     /// <param name="onNext">Callback invoked for each value.</param>
     /// <param name="onError">Callback invoked for terminal errors.</param>
     /// <returns>An observer backed by the supplied callbacks.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObserver<T> Create<T>(Action<T> onNext, Action<Exception> onError) =>
         Create(onNext, onError, Nop);
 
@@ -36,6 +39,7 @@ public static class Witness
     /// <param name="onNext">Callback invoked for each value.</param>
     /// <param name="onCompleted">Callback invoked for completion.</param>
     /// <returns>An observer backed by the supplied callbacks.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObserver<T> Create<T>(Action<T> onNext, Action onCompleted) =>
         Create(onNext, Rethrow, onCompleted);
 
@@ -61,6 +65,7 @@ public static class Witness
     /// <typeparam name="T">The observed value type.</typeparam>
     /// <param name="observer">Observer to protect.</param>
     /// <returns>A safe observer wrapper.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObserver<T> Safe<T>(IObserver<T> observer) =>
         Safe(observer, EmptyDisposable.Instance);
 
@@ -164,6 +169,7 @@ public static class Witness
         }
 
         /// <summary>Disposes the cancellation resource exactly once.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void DisposeCancel() => Interlocked.Exchange(ref _cancel, null)?.Dispose();
     }
 
@@ -251,6 +257,7 @@ public static class Witness
         }
 
         /// <summary>Enables terminal safety in-place.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void MakeSafe() => Volatile.Write(ref _safe, 1);
     }
 

@@ -11,6 +11,7 @@ namespace ReactiveUI.Primitives.Extensions;
 /// <c>new Stale&lt;T&gt;()</c> to construct a staleness signal.
 /// </summary>
 /// <typeparam name="T">The type of the update value.</typeparam>
+[System.Diagnostics.DebuggerDisplay("IsStale = {IsStale}")]
 public readonly record struct Stale<T> : IStale<T>
 {
     /// <summary>Initializes a new instance of the <see cref="Stale{T}"/> struct representing a stale signal.</summary>

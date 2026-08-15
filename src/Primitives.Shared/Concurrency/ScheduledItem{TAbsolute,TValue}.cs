@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Concurrency;
 #else
@@ -44,6 +46,7 @@ public static class ScheduledItem
     /// <param name="dueTime">Time at which to run the scheduled action.</param>
     /// <returns>The materialized scheduled work item.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="scheduler"/> or <paramref name="action"/> is <c>null</c>.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ScheduledItem<TAbsolute> Create<TAbsolute, TValue>(
         ISequencer scheduler,
         TValue state,

@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive;
 #else
@@ -15,8 +17,8 @@ namespace ReactiveUI.Primitives;
 public static partial class LinqExtensions
 {
     /// <summary>Fused projection operators for an observable source sequence.</summary>
-    /// <param name="source">The source observable.</param>
     /// <typeparam name="TIn">The source element type.</typeparam>
+    /// <param name="source">The source observable.</param>
     extension<TIn>(IObservable<TIn> source)
     {
         /// <summary>
@@ -58,8 +60,8 @@ public static partial class LinqExtensions
     }
 
     /// <summary>Fused projection operators for an observable source sequence of nullable values.</summary>
-    /// <param name="source">The source observable.</param>
     /// <typeparam name="TSource">The (nullable) source element type.</typeparam>
+    /// <param name="source">The source observable.</param>
     extension<TSource>(IObservable<TSource?> source)
     {
         /// <summary>
@@ -124,9 +126,11 @@ public static partial class LinqExtensions
             }
 
             /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void OnError(Exception error) => downstream.OnError(error);
 
             /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void OnCompleted() => downstream.OnCompleted();
         }
     }

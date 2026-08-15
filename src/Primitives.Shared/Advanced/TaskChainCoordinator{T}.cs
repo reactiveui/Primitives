@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -10,6 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Coordinates sequential task-source concatenation without a map adapter.</summary>
 /// <typeparam name="T">The task result type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Queued = {_queue.Count}, Active = {_active}, Done = {_done}")]
 public sealed class TaskChainCoordinator<T> : IDisposable
 {
     /// <summary>Guards the queue and active/completed flags.</summary>
@@ -38,6 +41,7 @@ public sealed class TaskChainCoordinator<T> : IDisposable
     public TaskChainCoordinator(IObserver<T> observer) => _observer = observer;
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose() => _pocket.Dispose();
 
     /// <summary>Subscribes to the outer task source.</summary>
@@ -125,6 +129,7 @@ public sealed class TaskChainCoordinator<T> : IDisposable
     }
 
     /// <summary>Marks the active task signal complete and pumps the drain.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void OnInnerCompleted() =>
         TaskChainCoordinatorState.OnInnerCompleted(_gate, ref _done, ref _active, this);
 

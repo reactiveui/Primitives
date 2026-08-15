@@ -5,6 +5,7 @@
 namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>A subscription that emits a contiguous integer sequence.</summary>
+[System.Diagnostics.DebuggerDisplay("StartValue = {StartValue}, Count = {Count}")]
 public sealed class SequenceSubscription : TaskSignalSubscription<int>
 {
     /// <summary>Initializes a new instance of the <see cref="SequenceSubscription"/> class.</summary>

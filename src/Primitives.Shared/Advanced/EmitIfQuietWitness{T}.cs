@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -10,6 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Observer that emits only the latest value after a quiet period.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("HasValue = {_hasValue}, Stopped = {_stopped}, Version = {_version}")]
 public sealed class EmitIfQuietWitness<T> : IObserver<T>, IDisposable
 {
     /// <summary>Serializes access to latest value and terminal state.</summary>
@@ -31,6 +34,7 @@ public sealed class EmitIfQuietWitness<T> : IObserver<T>, IDisposable
     /// <param name="observer">The downstream observer.</param>
     /// <param name="dueTime">The quiet period before emitting the latest value.</param>
     /// <param name="sequencer">The sequencer used to schedule delayed emissions.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="observer"/> or <paramref name="sequencer"/> is <see langword="null"/>.</exception>
     public EmitIfQuietWitness(IObserver<T> observer, TimeSpan dueTime, ISequencer sequencer)
     {
         Observer = observer ?? throw new ArgumentNullException(nameof(observer));
@@ -59,6 +63,7 @@ public sealed class EmitIfQuietWitness<T> : IObserver<T>, IDisposable
 
     /// <summary>Assigns the upstream subscription.</summary>
     /// <param name="subscription">The upstream subscription.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetSubscription(IDisposable subscription) => Disposables.Add(subscription);
 
     /// <inheritdoc/>
@@ -70,11 +75,11 @@ public sealed class EmitIfQuietWitness<T> : IObserver<T>, IDisposable
         }
 
         Disposables.Add(Sequencer.Schedule(
-            (self: this, currentVersion),
+            (Self: this, currentVersion),
             DueTime,
             static (_, s) =>
             {
-                s.self.EmitIfLatest(s.currentVersion);
+                s.Self.EmitIfLatest(s.currentVersion);
                 return EmptyDisposable.Instance;
             }));
     }

@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Avalonia.Threading;
 using ReactiveUI.Primitives.Concurrency;
 
@@ -100,6 +101,7 @@ public sealed class AvaloniaSchedulerTests
     private sealed class DelegateWorkItem(Action action) : IWorkItem
     {
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Execute() => action();
     }
 }

@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Core;
 
 namespace ReactiveUI.Primitives.Concurrency;
@@ -44,6 +45,7 @@ public class SequencerQueue<TAbsolute>
 
     /// <summary>Enqueues the specified work item to be scheduled.</summary>
     /// <param name="scheduledItem">Work item to be scheduled.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Enqueue(ScheduledItem<TAbsolute> scheduledItem) => _queue.Enqueue(scheduledItem);
 
     /// <summary>Removes the specified work item from the scheduler queue.</summary>
@@ -67,9 +69,11 @@ public class SequencerQueue<TAbsolute>
 
     /// <summary>Dequeues the next work item from the scheduler queue.</summary>
     /// <returns>Next work item in the scheduler queue (removed).</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ScheduledItem<TAbsolute> Dequeue() => _queue.Dequeue();
 
     /// <summary>Peeks the next work item in the scheduler queue.</summary>
     /// <returns>Next work item in the scheduler queue (not removed).</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ScheduledItem<TAbsolute> Peek() => _queue.Peek();
 }

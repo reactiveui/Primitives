@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using BenchmarkDotNet.Attributes;
 using R3;
 using ReactiveUI.Primitives.Signals;
@@ -27,31 +28,37 @@ public class SubjectMulticastBenchmarks
 
     /// <summary>Emits to four observers through primitives <see cref="Signal{T}"/>.</summary>
     /// <returns>The sum observed by the first observer.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark(Baseline = true)]
     public int PrimitivesSignalMulticast4() => EmitThroughSignal(ObserverCount4);
 
     /// <summary>Emits to four observers through System.Reactive Subject.</summary>
     /// <returns>The sum observed by the first observer.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public int SystemReactiveSubjectMulticast4() => EmitThroughSystemSubject(ObserverCount4);
 
     /// <summary>Emits to four observers through <see cref="R3.Subject{T}"/>.</summary>
     /// <returns>The sum observed by the first observer.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public int R3SubjectMulticast4() => EmitThroughR3Subject(ObserverCount4);
 
     /// <summary>Emits to eight observers through primitives <see cref="Signal{T}"/>.</summary>
     /// <returns>The sum observed by the first observer.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public int PrimitivesSignalMulticast8() => EmitThroughSignal(ObserverCount8);
 
     /// <summary>Emits to eight observers through System.Reactive Subject.</summary>
     /// <returns>The sum observed by the first observer.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public int SystemReactiveSubjectMulticast8() => EmitThroughSystemSubject(ObserverCount8);
 
     /// <summary>Emits to eight observers through <see cref="R3.Subject{T}"/>.</summary>
     /// <returns>The sum observed by the first observer.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public int R3SubjectMulticast8() => EmitThroughR3Subject(ObserverCount8);
 

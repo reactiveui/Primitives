@@ -8,11 +8,11 @@ namespace ReactiveUI.Primitives.Async.Signals;
 internal enum SignalBroadcastKind
 {
     /// <summary>Notify observers one at a time.</summary>
-    Serial,
+    Serial = 0,
 
     /// <summary>Notify observers one at a time with multi-observer value semantics.</summary>
-    SerialMulti,
+    SerialMulti = 1,
 
     /// <summary>Notify observers concurrently.</summary>
-    Concurrent
+    Concurrent = 2,
 }

@@ -12,8 +12,8 @@ namespace ReactiveUI.Primitives;
 public static partial class LinqExtensions
 {
     /// <summary>System.Reactive-named conversion operators for an enumerable source.</summary>
-    /// <param name="values">The values to enumerate.</param>
     /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="values">The values to enumerate.</param>
     extension<T>(IEnumerable<T> values)
     {
         /// <summary>Converts an enumerable sequence to a Primitives signal using the System.Reactive conversion name.</summary>
@@ -56,8 +56,8 @@ public static partial class LinqExtensions
     }
 
     /// <summary>System.Reactive-named parity operators for an observable source sequence.</summary>
-    /// <param name="source">The source sequence.</param>
     /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
     extension<T>(IObservable<T> source)
     {
         /// <summary>Prepends a value before the source sequence. Alias of <c>Prepend</c> using Primitives vocabulary.</summary>
@@ -593,8 +593,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            var scheduler = ThreadPoolSequencer.Instance;
-            return new CalmSignal<T>(source, dueTime, scheduler);
+            return new CalmSignal<T>(source, dueTime, ThreadPoolSequencer.Instance);
         }
 
         /// <summary>Emits only the most recent value after the quiet period elapses.</summary>
@@ -762,8 +761,8 @@ public static partial class LinqExtensions
     }
 
     /// <summary>Task-compatibility helpers for migrations from System.Reactive.</summary>
-    /// <param name="task">The task.</param>
     /// <typeparam name="T">The task result type.</typeparam>
+    /// <param name="task">The task.</param>
     extension<T>(Task<T> task)
     {
         /// <summary>Converts a task to an observable sequence that emits the task result.</summary>

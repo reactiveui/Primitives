@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive;
 #else
@@ -23,6 +25,7 @@ public static partial class LinqExtensions
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="sources">The sources to merge.</param>
     /// <returns>An observable of the distinct merged values.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservable<T> BlendUnique<T>(params IObservable<T>[] sources) =>
         BlendUnique(sources, null);
 
@@ -128,6 +131,7 @@ public static partial class LinqExtensions
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose() => _pocket.Dispose();
 
         /// <summary>Forwards a value when it differs from the previously forwarded one.</summary>
@@ -194,12 +198,15 @@ public static partial class LinqExtensions
         private sealed class Element(BlendUniqueSink<T> parent) : IObserver<T>
         {
             /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void OnNext(T value) => parent.Forward(value);
 
             /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void OnError(Exception error) => parent.ForwardError(error);
 
             /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void OnCompleted() => parent.Complete();
         }
     }

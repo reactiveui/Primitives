@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive;
@@ -39,6 +40,7 @@ public static partial class LinqExtensions
         /// <param name="source10">The tenth source observable.</param>
         /// <param name="selector">The selector that combines latest values from all sources.</param>
         /// <returns>The combine-latest signal.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [SuppressMessage(
             "Maintainability",
             "SST1472:Signatures should not declare too many parameters",
@@ -103,6 +105,7 @@ public static partial class LinqExtensions
         /// <param name="source11">The eleventh source observable.</param>
         /// <param name="selector">The selector that combines latest values from all sources.</param>
         /// <returns>The combine-latest signal.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [SuppressMessage(
             "Maintainability",
             "SST1472:Signatures should not declare too many parameters",
@@ -172,6 +175,7 @@ public static partial class LinqExtensions
         /// <param name="source12">The twelfth source observable.</param>
         /// <param name="selector">The selector that combines latest values from all sources.</param>
         /// <returns>The combine-latest signal.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [SuppressMessage(
             "Maintainability",
             "SST1472:Signatures should not declare too many parameters",
@@ -246,6 +250,7 @@ public static partial class LinqExtensions
         /// <param name="source13">The thirteenth source observable.</param>
         /// <param name="selector">The selector that combines latest values from all sources.</param>
         /// <returns>The combine-latest signal.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [SuppressMessage(
             "Maintainability",
             "SST1472:Signatures should not declare too many parameters",
@@ -325,6 +330,7 @@ public static partial class LinqExtensions
         /// <param name="source14">The fourteenth source observable.</param>
         /// <param name="selector">The selector that combines latest values from all sources.</param>
         /// <returns>The combine-latest signal.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [SuppressMessage(
             "Maintainability",
             "SST1472:Signatures should not declare too many parameters",
@@ -410,6 +416,7 @@ public static partial class LinqExtensions
         /// <param name="source15">The fifteenth source observable.</param>
         /// <param name="selector">The selector that combines latest values from all sources.</param>
         /// <returns>The combine-latest signal.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [SuppressMessage(
             "Maintainability",
             "SST1472:Signatures should not declare too many parameters",
@@ -499,6 +506,7 @@ public static partial class LinqExtensions
         /// <param name="source16">The sixteenth source observable.</param>
         /// <param name="selector">The selector that combines latest values from all sources.</param>
         /// <returns>The combine-latest signal.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [SuppressMessage(
             "Maintainability",
             "SST1472:Signatures should not declare too many parameters",

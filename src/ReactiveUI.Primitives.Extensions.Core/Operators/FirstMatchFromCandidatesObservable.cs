@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
@@ -14,13 +15,6 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// candidate is skipped and the next one is tried). If no candidate matches,
 /// completes with a single emission of <paramref name="fallback"/>.
 /// </summary>
-/// <remarks>
-/// <c>Subscribe</c> attempts a synchronous fast-path first: each candidate's
-/// projection is subscribed and, if it completes inline, the transform + predicate
-/// run on the calling thread with zero additional allocations. Only when a
-/// projection completes asynchronously does the method allocate an
-/// <see cref="AsyncSink"/> to track state across callbacks.
-/// </remarks>
 /// <typeparam name="TKey">The type of candidate keys.</typeparam>
 /// <typeparam name="TRaw">The element type emitted by the projected observable.</typeparam>
 /// <typeparam name="TResult">The final result type emitted to downstream after transformation.</typeparam>
@@ -29,6 +23,13 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <param name="transform">Synchronous transform applied to each raw value to produce the result.</param>
 /// <param name="predicate">Returns <see langword="true"/> when a transformed value is a match.</param>
 /// <param name="fallback">Value emitted when no candidate matches.</param>
+/// <remarks>
+/// <c>Subscribe</c> attempts a synchronous fast-path first: each candidate's
+/// projection is subscribed and, if it completes inline, the transform + predicate
+/// run on the calling thread with zero additional allocations. Only when a
+/// projection completes asynchronously does the method allocate an
+/// <see cref="AsyncSink"/> to track state across callbacks.
+/// </remarks>
 public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
     IReadOnlyList<TKey> candidates,
     Func<TKey, IObservable<TRaw>> project,
@@ -99,13 +100,15 @@ public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
                 continue;
             }
 
-            if (predicate(transformed))
+            if (!predicate(transformed))
             {
-                observer.OnNext(transformed);
-                observer.OnCompleted();
-                SyncProbe.ReturnToCurrentThread(probe);
-                return EmptyDisposable.Instance;
+                continue;
             }
+
+            observer.OnNext(transformed);
+            observer.OnCompleted();
+            SyncProbe.ReturnToCurrentThread(probe);
+            return EmptyDisposable.Instance;
         }
 
         observer.OnNext(fallback);
@@ -119,6 +122,7 @@ public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
     /// of a one-shot projection. Cheaper than <see cref="AsyncSink"/> because it
     /// carries no downstream observer, candidate list, or delegate references.
     /// </summary>
+    [System.Diagnostics.DebuggerDisplay("Completed = {Completed}, HasValue = {HasValue}, Value = {Value}")]
     public sealed class SyncProbe : IObserver<TRaw>
     {
         /// <summary>Per-thread cached instance; rented on entry to <c>TrySyncLoop</c> and returned
@@ -210,8 +214,8 @@ public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
         /// <summary>The subscription to the current candidate's projected observable.</summary>
         private IDisposable? _currentSubscription;
 
-        /// <summary>Whether the sink has reached a terminal state.</summary>
-        private bool _done;
+        /// <summary>One once the sink has reached a terminal state; otherwise zero.</summary>
+        private int _done;
 
         /// <summary>Whether the sink is currently looping through candidates.</summary>
         private bool _looping;
@@ -219,7 +223,7 @@ public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
         /// <inheritdoc/>
         public void OnNext(TRaw value)
         {
-            if (_done)
+            if (Volatile.Read(ref _done) != 0)
             {
                 return;
             }
@@ -239,7 +243,11 @@ public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
                 return;
             }
 
-            _done = true;
+            if (Interlocked.Exchange(ref _done, 1) != 0)
+            {
+                return;
+            }
+
             downstream.OnNext(transformed);
             downstream.OnCompleted();
         }
@@ -247,7 +255,7 @@ public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
         /// <inheritdoc/>
         public void OnError(Exception error)
         {
-            if (_done)
+            if (Volatile.Read(ref _done) != 0)
             {
                 return;
             }
@@ -272,7 +280,7 @@ public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
                 + "ability to give candidate errors their own policy later.")]
         public void OnCompleted()
         {
-            if (_done)
+            if (Volatile.Read(ref _done) != 0)
             {
                 return;
             }
@@ -289,7 +297,7 @@ public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
         /// <inheritdoc/>
         public void Dispose()
         {
-            _done = true;
+            Volatile.Write(ref _done, 1);
             Interlocked.Exchange(ref _currentSubscription, null)?.Dispose();
         }
 
@@ -299,7 +307,7 @@ public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
             _looping = true;
             try
             {
-                while (!_done && _index < candidates.Count)
+                while (Volatile.Read(ref _done) == 0 && _index < candidates.Count)
                 {
                     var key = candidates[_index];
                     _index++;
@@ -329,12 +337,11 @@ public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
                 _looping = false;
             }
 
-            if (_done)
+            if (Interlocked.Exchange(ref _done, 1) != 0)
             {
                 return;
             }
 
-            _done = true;
             downstream.OnNext(fallback);
             downstream.OnCompleted();
         }
@@ -352,6 +359,7 @@ public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
             public bool Completed { get; private set; }
 
             /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void OnNext(TRaw value) => inner.OnNext(value);
 
             /// <inheritdoc/>

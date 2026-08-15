@@ -8,9 +8,9 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Zip operators for a first observable source sequence.</summary>
-    /// <param name="first">The first observable sequence.</param>
     /// <typeparam name="T1">The type of elements in the first source sequence.</typeparam>
-    extension<T1>(IObservableAsync<T1> first)
+    /// <param name="src1">The first observable sequence.</param>
+    extension<T1>(IObservableAsync<T1> src1)
     {
         /// <summary>Combines two observable sequences element-by-element using the specified result selector.</summary>
         /// <typeparam name="T2">The type of elements in the second source sequence.</typeparam>
@@ -22,12 +22,11 @@ public static partial class SignalAsyncExtensions
             IObservableAsync<T2> second,
             Func<T1, T2, TResult> resultSelector)
         {
-            ArgumentExceptionHelper.ThrowIfNull(first);
+            ArgumentExceptionHelper.ThrowIfNull(src1);
             ArgumentExceptionHelper.ThrowIfNull(second);
             ArgumentExceptionHelper.ThrowIfNull(resultSelector);
 
-            var zipSelector = resultSelector;
-            return new ZipSignal<T1, T2, TResult>(first, second, zipSelector);
+            return new ZipSignal<T1, T2, TResult>(src1, second, resultSelector);
         }
 
         /// <summary>Combines two observable sequences element-by-element into pairs.</summary>
@@ -36,11 +35,11 @@ public static partial class SignalAsyncExtensions
         /// <returns>An observable sequence of tuples pairing elements from each source.</returns>
         public IObservableAsync<(T1 First, T2 Second)> Zip<T2>(IObservableAsync<T2> second)
         {
-            ArgumentExceptionHelper.ThrowIfNull(first);
+            ArgumentExceptionHelper.ThrowIfNull(src1);
             ArgumentExceptionHelper.ThrowIfNull(second);
 
             return new ZipSignal<T1, T2, (T1 First, T2 Second)>(
-                first,
+                src1,
                 second,
                 static (firstValue, secondValue) => (firstValue, secondValue));
         }

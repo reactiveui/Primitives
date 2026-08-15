@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Core;
 #else
@@ -18,6 +20,7 @@ public static class Spark
     /// </typeparam>
     /// <param name="value">The value contained in the spark.</param>
     /// <returns>The OnNext spark containing the value.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Spark<T> CreateOnNext<T>(T value) => Spark<T>.OnNext(value);
 
     /// <summary>Creates an object that represents an OnError spark to an observer.</summary>
@@ -46,6 +49,7 @@ public static class Spark
     /// Upon dematerialization of the spark into an observable sequence, this type is used as the element type for the sequence.
     /// </typeparam>
     /// <returns>The OnCompleted spark.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",

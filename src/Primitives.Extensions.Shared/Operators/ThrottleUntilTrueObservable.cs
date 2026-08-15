@@ -86,15 +86,15 @@ internal sealed class ThrottleUntilTrueObservable<T>(
                 else
                 {
                     _timer.Disposable = scheduler.Schedule(
-                        (sink: this, value),
+                        (Sink: this, value),
                         _throttle,
                         static (_, state) =>
                         {
-                            lock (state.sink._gate)
+                            lock (state.Sink._gate)
                             {
-                                if (!state.sink._done)
+                                if (!state.Sink._done)
                                 {
-                                    state.sink._downstream.OnNext(state.value);
+                                    state.Sink._downstream.OnNext(state.value);
                                 }
                             }
 

@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using Microsoft.AspNetCore.Components;
 using ReactiveUI.Primitives.Advanced;
@@ -55,9 +56,11 @@ public sealed class BlazorRendererSequencer : ISequencer
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Schedule(IWorkItem item) => _state.Schedule(item);
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Schedule(IWorkItem item, long dueTimestamp) => _state.Schedule(item, dueTimestamp);
 
     /// <summary>Marshals the cached drain callback through the Blazor renderer.</summary>
@@ -103,5 +106,6 @@ public sealed class BlazorRendererSequencer : ISequencer
     }
 
     /// <summary>Forwards the cached drain callback to the engine.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void RunDrain() => _state.RunDrain();
 }

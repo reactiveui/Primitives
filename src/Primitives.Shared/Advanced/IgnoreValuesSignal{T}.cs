@@ -10,6 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Signal that ignores source values and forwards terminal notifications.</summary>
 /// <typeparam name="T">The value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Source = {Source}")]
 public sealed class IgnoreValuesSignal<T> : IObservable<T>
 {
     /// <summary>Initializes a new instance of the <see cref="IgnoreValuesSignal{T}"/> class.</summary>

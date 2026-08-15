@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using Android.OS;
 using ReactiveUI.Primitives.Advanced;
 
@@ -32,7 +33,7 @@ public sealed class HandlerSequencer : ISequencer
 
     /// <summary>Initializes a new instance of the <see cref="HandlerSequencer"/> class.</summary>
     /// <param name="handler">The handler used to marshal work onto its looper thread.</param>
-    /// <exception cref="ArgumentExceptionHelper"><paramref name="handler"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="handler"/> is <see langword="null"/>.</exception>
     public HandlerSequencer(Handler handler)
     {
         Handler = handler ?? throw new ArgumentNullException(nameof(handler));
@@ -59,9 +60,11 @@ public sealed class HandlerSequencer : ISequencer
     public override string ToString() => $"HandlerSequencer({Handler})";
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Schedule(IWorkItem item) => _state.Schedule(item);
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Schedule(IWorkItem item, long dueTimestamp) => _state.Schedule(item, dueTimestamp);
 
     /// <summary>Marshals the cached drain callback onto the handler's looper thread.</summary>
@@ -76,11 +79,13 @@ public sealed class HandlerSequencer : ISequencer
     /// <summary>Runs delayed work through the handler's native delayed post.</summary>
     /// <param name="item">Work item to execute at the due time.</param>
     /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void ScheduleDelayed(IWorkItem item, long dueTimestamp) =>
         Handler.PostDelayed(
             () => DispatchSequencerState.RunIfActive(item),
             (long)DispatchSequencerState.DelayUntil(dueTimestamp).TotalMilliseconds);
 
     /// <summary>Forwards the cached drain callback to the engine.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void RunDrain() => _state.RunDrain();
 }

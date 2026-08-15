@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -10,6 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Mediates candidate subscriptions for <see cref="RaceSignal{T}"/>.</summary>
 /// <typeparam name="T">The value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Arms = {_arms}")]
 public sealed class RaceWitness<T> : IDisposable
 {
     /// <summary>The shared race-arm bookkeeping.</summary>
@@ -20,6 +23,7 @@ public sealed class RaceWitness<T> : IDisposable
     public RaceWitness(IObserver<T> observer) => _arms = new(observer);
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose() => _arms.Dispose();
 
     /// <summary>Starts observing an outer observable of candidates.</summary>

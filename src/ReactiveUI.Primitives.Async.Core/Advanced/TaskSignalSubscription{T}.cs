@@ -8,12 +8,13 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// Represents an asynchronous subscription that can be cancelled and disposed, managing the lifecycle of an
 /// observer and its associated operations.
 /// </summary>
+/// <typeparam name="T">The type of the elements observed by the subscription.</typeparam>
+/// <param name="observer">The observer that receives notifications for the subscription. Cannot be null.</param>
 /// <remarks>This type provides a base for implementing cancellable, asynchronously disposable
 /// subscriptions that coordinate observer notifications and resource cleanup. Disposal cancels any ongoing
 /// operations and ensures that all resources are released before completion. Derived classes should implement the
 /// core execution logic in <see cref="ExecuteAsyncCore"/>.</remarks>
-/// <typeparam name="T">The type of the elements observed by the subscription.</typeparam>
-/// <param name="observer">The observer that receives notifications for the subscription. Cannot be null.</param>
+[System.Diagnostics.DebuggerDisplay("Disposed = {_disposed}, Completed = {_tcs.Task.IsCompleted}")]
 public abstract class TaskSignalSubscription<T>(IObserverAsync<T> observer) : IAsyncDisposable
 {
     /// <summary>The task completion source used to signal when the subscription's asynchronous operation has finished.</summary>
@@ -41,10 +42,10 @@ public abstract class TaskSignalSubscription<T>(IObserverAsync<T> observer) : IA
     public void Start() => _ = ExecuteAsync(_cts.Token).AsTask();
 
     /// <summary>Asynchronously releases the resources used by the object and cancels any ongoing operations.</summary>
+    /// <returns>A ValueTask that represents the asynchronous dispose operation.</returns>
     /// <remarks>Call this method to ensure that all resources are released and any pending operations
     /// are cancelled before the object is discarded. Await the returned ValueTask to guarantee that disposal has
     /// completed.</remarks>
-    /// <returns>A ValueTask that represents the asynchronous dispose operation.</returns>
     public async ValueTask DisposeAsync()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0)

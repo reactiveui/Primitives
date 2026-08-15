@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -10,6 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>An observable that emits a single value then completes on the supplied scheduler; the concrete backing for the scheduled emit path.</summary>
 /// <typeparam name="T">The emitted value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Value = {_value}, Scheduler = {_scheduler}")]
 public sealed class ReturnSignal<T> : IRequireCurrentThread<T>
 {
     /// <summary>Stores state for the signal implementation.</summary>
@@ -33,11 +36,13 @@ public sealed class ReturnSignal<T> : IRequireCurrentThread<T>
 
     /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
     /// <returns>The result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() => _currentThreadRequired;
 
     /// <summary>Executes the Subscribe operation.</summary>
     /// <param name="observer">The observer value.</param>
     /// <returns>The result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IDisposable Subscribe(IObserver<T> observer) =>
         SignalSubscription.Subscribe(observer, _currentThreadRequired, SubscribeCore);
 
@@ -57,10 +62,10 @@ public sealed class ReturnSignal<T> : IRequireCurrentThread<T>
         }
 
         return _scheduler.Schedule(
-            (self: this, observer),
+            (Self: this, observer),
             static (_, s) =>
             {
-                s.observer.OnNext(s.self._value);
+                s.observer.OnNext(s.Self._value);
                 s.observer.OnCompleted();
                 return EmptyDisposable.Instance;
             });

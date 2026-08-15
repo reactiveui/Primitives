@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Concurrency;
 
 /// <summary>Deterministic virtual scheduler backed by <see cref="DateTimeOffset"/> and <see cref="TimeSpan"/>.</summary>
@@ -51,26 +53,33 @@ public sealed class VirtualClock : ISequencer, IServiceProvider, IStopwatchProvi
 
     /// <summary>Advances the scheduler's clock by the specified relative time, running all work scheduled for that timespan.</summary>
     /// <param name="time">Relative time to advance the scheduler's clock by.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void AdvanceBy(TimeSpan time) => _state.AdvanceBy(time);
 
     /// <summary>Advances the scheduler's clock to the specified time, running all work till that point.</summary>
     /// <param name="time">Absolute time to advance the scheduler's clock to.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void AdvanceTo(DateTimeOffset time) => _state.AdvanceTo(time);
 
     /// <summary>Advances the scheduler's clock by the specified relative time without running work.</summary>
     /// <param name="time">Relative time to advance the scheduler's clock by.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Sleep(TimeSpan time) => _state.Sleep(time);
 
     /// <summary>Starts the virtual time scheduler.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Start() => _state.Start();
 
     /// <summary>Stops the virtual time scheduler.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Stop() => _state.Stop();
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Schedule(IWorkItem item) => _state.Schedule(this, item);
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Schedule(IWorkItem item, long dueTimestamp) => _state.Schedule(this, item, dueTimestamp);
 
     /// <summary>Schedules an action to be executed at the current clock.</summary>
@@ -78,6 +87,7 @@ public sealed class VirtualClock : ISequencer, IServiceProvider, IStopwatchProvi
     /// <param name="state">State passed to the action to be executed.</param>
     /// <param name="action">Action to be executed.</param>
     /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IDisposable Schedule<TState>(TState state, Func<ISequencer, TState, IDisposable> action) =>
         _state.Schedule(this, state, action);
 
@@ -87,6 +97,7 @@ public sealed class VirtualClock : ISequencer, IServiceProvider, IStopwatchProvi
     /// <param name="dueTime">Relative time after which to execute the action.</param>
     /// <param name="action">Action to be executed.</param>
     /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IDisposable Schedule<TState>(TState state, TimeSpan dueTime, Func<ISequencer, TState, IDisposable> action) =>
         _state.Schedule(this, state, dueTime, action);
 
@@ -96,6 +107,7 @@ public sealed class VirtualClock : ISequencer, IServiceProvider, IStopwatchProvi
     /// <param name="dueTime">Absolute date-time at which to execute the action.</param>
     /// <param name="action">Action to be executed.</param>
     /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2318:Members should not have identical bodies",
@@ -114,6 +126,7 @@ public sealed class VirtualClock : ISequencer, IServiceProvider, IStopwatchProvi
     /// <param name="dueTime">Absolute time at which to execute the action.</param>
     /// <param name="action">Action to be executed.</param>
     /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IDisposable ScheduleAbsolute<TState>(
         TState state,
         DateTimeOffset dueTime,
@@ -125,6 +138,7 @@ public sealed class VirtualClock : ISequencer, IServiceProvider, IStopwatchProvi
     /// <param name="dueTime">Relative time after which to execute the action.</param>
     /// <param name="action">Action to be executed.</param>
     /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IDisposable ScheduleRelative<TState>(
         TState state,
         TimeSpan dueTime,
@@ -132,6 +146,7 @@ public sealed class VirtualClock : ISequencer, IServiceProvider, IStopwatchProvi
 
     /// <summary>Starts a new stopwatch object.</summary>
     /// <returns>New stopwatch object; started at the time of the request.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IStopwatch StartStopwatch() => new VirtualTimeStopwatch(() => Now, Now);
 
     /// <inheritdoc/>

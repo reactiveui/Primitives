@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using TUnit.Assertions.Conditions;
 using TUnit.Assertions.Core;
 
@@ -11,9 +12,9 @@ namespace ReactiveUI.Primitives.Async.Tests;
 internal static class AotSafeAssertionExtensions
 {
     /// <summary>Provides collection-equality assertions for assertion sources.</summary>
-    /// <param name="source">The assertion source.</param>
     /// <typeparam name="TCollection">The collection type being asserted.</typeparam>
     /// <typeparam name="TItem">The element type.</typeparam>
+    /// <param name="source">The assertion source.</param>
     extension<TCollection, TItem>(IAssertionSource<TCollection> source)
         where TCollection : IEnumerable<TItem>
     {
@@ -25,6 +26,7 @@ internal static class AotSafeAssertionExtensions
         /// </summary>
         /// <param name="expected">The expected element sequence.</param>
         /// <returns>The chained collection-equivalency assertion.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal IsEquivalentToAssertion<TCollection, TItem> IsCollectionEqualTo(IEnumerable<TItem> expected) =>
             source.IsEquivalentTo(expected, EqualityComparer<TItem>.Default);
     }

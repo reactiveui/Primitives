@@ -21,6 +21,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// <typeparam name="T14">Element type of source 14.</typeparam>
 /// <typeparam name="T15">Element type of source 15.</typeparam>
 /// <typeparam name="TResult">The projected element type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Sources = {Sources}, Selector = {Selector}")]
 public sealed class
     SyncLatest15Signal<
         T1,

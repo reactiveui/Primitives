@@ -171,9 +171,9 @@ public class ScheduledAndDebounceSyncOperatorTests
     }
 
     /// <summary>Verifies that <c>Schedule(this T value, TimeSpan, ISequencer)</c> emits the value after the delay.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     /// <remarks>The operator preserves the original <c>Observable.Create</c>-based semantics —
     /// the scheduled callback emits <c>OnNext</c> only; <c>OnCompleted</c> is not signalled.</remarks>
-    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenScheduleValueWithDelay_ThenEmitsAfterDelay()
     {

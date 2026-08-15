@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>
@@ -54,26 +56,15 @@ public static partial class SignalAsync
     /// <summary>Alias for <see cref="Every(TimeSpan)"/>.</summary>
     /// <param name="period">The interval between ticks.</param>
     /// <returns>An observable sequence of periodic ticks.</returns>
-    public static IObservableAsync<long> Pulse(TimeSpan period)
-    {
-        ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(period, TimeSpan.Zero);
-        ArgumentOutOfRangeExceptionHelper.ThrowIfLessThanOrEqual(period, TimeSpan.Zero);
-
-        var dueTime = period;
-        return new TimerSignal(dueTime, period, TimeProvider.System);
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static IObservableAsync<long> Pulse(TimeSpan period) => Every(period);
 
     /// <summary>Creates an observable sequence that produces a single value (0) after the specified delay, then completes.</summary>
     /// <param name="dueTime">The time span after which to produce the value. Must be non-negative.</param>
     /// <returns>An observable sequence that produces a single value after the specified delay and then completes.</returns>
     /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="dueTime"/> is negative.</exception>
-    public static IObservableAsync<long> Timer(TimeSpan dueTime)
-    {
-        ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(dueTime, TimeSpan.Zero);
-
-        var timeProvider = TimeProvider.System;
-        return new TimerSignal(dueTime, null, timeProvider);
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static IObservableAsync<long> Timer(TimeSpan dueTime) => After(dueTime);
 
     /// <summary>Creates an observable sequence that produces a single value (0) after the specified delay, then completes.</summary>
     /// <param name="dueTime">The time span after which to produce the value. Must be non-negative.</param>
@@ -85,8 +76,7 @@ public static partial class SignalAsync
     {
         ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(dueTime, TimeSpan.Zero);
 
-        var tp = timeProvider ?? TimeProvider.System;
-        return new TimerSignal(dueTime, null, tp);
+        return new TimerSignal(dueTime, null, timeProvider ?? TimeProvider.System);
     }
 
     /// <summary>
@@ -99,14 +89,8 @@ public static partial class SignalAsync
     /// at the specified period.</returns>
     /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="dueTime"/> is negative
     /// or <paramref name="period"/> is non-positive.</exception>
-    public static IObservableAsync<long> Timer(TimeSpan dueTime, TimeSpan period)
-    {
-        ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(dueTime, TimeSpan.Zero);
-        ArgumentOutOfRangeExceptionHelper.ThrowIfLessThanOrEqual(period, TimeSpan.Zero);
-
-        var timeProvider = TimeProvider.System;
-        return new TimerSignal(dueTime, period, timeProvider);
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static IObservableAsync<long> Timer(TimeSpan dueTime, TimeSpan period) => After(dueTime, period);
 
     /// <summary>
     /// Creates an observable sequence that produces a single value (0) after the specified delay,
@@ -125,7 +109,6 @@ public static partial class SignalAsync
         ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(dueTime, TimeSpan.Zero);
         ArgumentOutOfRangeExceptionHelper.ThrowIfLessThanOrEqual(period, TimeSpan.Zero);
 
-        var tp = timeProvider ?? TimeProvider.System;
-        return new TimerSignal(dueTime, period, tp);
+        return new TimerSignal(dueTime, period, timeProvider ?? TimeProvider.System);
     }
 }

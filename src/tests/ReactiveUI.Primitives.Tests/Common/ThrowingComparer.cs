@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Tests;
 
 /// <summary>An equality comparer that throws when comparing values.</summary>
@@ -11,14 +13,17 @@ internal sealed class ThrowingComparer : IEqualityComparer<int>
     /// <param name="x">The first value to compare.</param>
     /// <param name="y">The second value to compare.</param>
     /// <returns>This method never returns; the faulting comparison always throws.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Equals(int x, int y) => Fail();
 
     /// <summary>Returns the hash code for the specified value.</summary>
     /// <param name="obj">The value to hash.</param>
     /// <returns>The hash code for the value.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int GetHashCode(int obj) => obj.GetHashCode();
 
     /// <summary>Throws to simulate a faulting comparison.</summary>
     /// <returns>This method never returns; it always throws.</returns>
+    /// <exception cref="InvalidOperationException">Always, to simulate a faulting comparison.</exception>
     private static bool Fail() => throw new InvalidOperationException("comparer-fault");
 }

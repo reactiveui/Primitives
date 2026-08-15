@@ -6,6 +6,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Async-enumerable observable adapter.</summary>
 /// <typeparam name="T">The value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Values = {Values}, CancellationRequested = {CancellationToken.IsCancellationRequested}")]
 public sealed class AsyncEnumerableSignal<T> : IAsyncEnumerableBackedSignal<T>
 {
     /// <summary>Initializes a new instance of the <see cref="AsyncEnumerableSignal{T}"/> class.</summary>

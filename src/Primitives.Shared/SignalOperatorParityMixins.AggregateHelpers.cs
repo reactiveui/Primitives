@@ -348,10 +348,10 @@ public static partial class LinqExtensions
 
             SingleDisposable subscription = new();
             _ = Sequencer.CurrentThread.Schedule(
-                (self: this, subscription, observer),
+                (Self: this, subscription, observer),
                 static (_, s) =>
                 {
-                    s.subscription.Create(s.self.SubscribeCore(s.observer));
+                    s.subscription.Create(s.Self.SubscribeCore(s.observer));
                     return EmptyDisposable.Instance;
                 });
             return subscription;
@@ -404,10 +404,10 @@ public static partial class LinqExtensions
 
             SingleDisposable subscription = new();
             _ = Sequencer.CurrentThread.Schedule(
-                (self: this, subscription, observer),
+                (Self: this, subscription, observer),
                 static (_, s) =>
                 {
-                    s.subscription.Create(s.self.SubscribeCore(s.observer));
+                    s.subscription.Create(s.Self.SubscribeCore(s.observer));
                     return EmptyDisposable.Instance;
                 });
             return subscription;

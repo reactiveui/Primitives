@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Extensions.Internal;
 
@@ -15,6 +16,7 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// </summary>
 /// <param name="sources">The source observables.</param>
 /// <param name="target">The value every source must hold for the operator to emit <c>true</c>.</param>
+[System.Diagnostics.DebuggerDisplay("Sources = {_sourceList}")]
 public sealed class BooleanReduceObservable(IEnumerable<IObservable<bool>> sources, bool target) : IObservable<bool>
 {
     /// <summary>Capacity the materialization buffer starts at when the source count is not known up front.</summary>
@@ -116,14 +118,17 @@ public sealed class BooleanReduceObservable(IEnumerable<IObservable<bool>> sourc
         /// <summary>Handles OnNext from a source.</summary>
         /// <param name="index">Source index.</param>
         /// <param name="value">Emitted value.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnNext(int index, bool value) => _state.HandleNext(index, value, _reduce);
 
         /// <summary>Handles OnError from any source.</summary>
         /// <param name="error">The error.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnError(Exception error) => _state.HandleError(error);
 
         /// <summary>Handles OnCompleted from a source.</summary>
         /// <param name="index">Source index.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnCompleted(int index) => _state.HandleCompleted(index);
     }
 }

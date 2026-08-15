@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
@@ -312,17 +313,20 @@ public partial class RxNamesTests
         /// <summary>Emits a value from the selected subscription.</summary>
         /// <param name="subscriptionIndex">The subscription index.</param>
         /// <param name="value">The value to emit.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void Emit(int subscriptionIndex, T value) =>
             _observers[subscriptionIndex].OnNext(value);
 
         /// <summary>Completes the selected subscription.</summary>
         /// <param name="subscriptionIndex">The subscription index.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void Complete(int subscriptionIndex) =>
             _observers[subscriptionIndex].OnCompleted();
 
         /// <summary>Fails the selected subscription.</summary>
         /// <param name="subscriptionIndex">The subscription index.</param>
         /// <param name="failure">The error to emit.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void Error(int subscriptionIndex, Exception failure) =>
             _observers[subscriptionIndex].OnError(failure);
     }

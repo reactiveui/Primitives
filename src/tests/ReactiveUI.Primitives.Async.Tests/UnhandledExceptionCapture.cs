@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async.Tests;
 
 /// <summary>Captures unhandled async exceptions while restoring the previous process-wide handler on disposal.</summary>
@@ -20,7 +22,7 @@ internal sealed class UnhandledExceptionCapture : IDisposable
     private readonly Action<Exception> _previousHandler;
 
     /// <summary>Tracks whether the capture has already restored the previous handler.</summary>
-    private bool _disposed;
+    private int _disposed;
 
     /// <summary>Initializes a new instance of the <see cref="UnhandledExceptionCapture"/> class.</summary>
     public UnhandledExceptionCapture()
@@ -30,6 +32,7 @@ internal sealed class UnhandledExceptionCapture : IDisposable
     }
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose() => Restore();
 
     /// <summary>Waits for an exception with the expected message.</summary>
@@ -99,12 +102,11 @@ internal sealed class UnhandledExceptionCapture : IDisposable
     /// <summary>Restores the previously registered unhandled exception handler.</summary>
     private void Restore()
     {
-        if (_disposed)
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
         {
             return;
         }
 
-        _disposed = true;
         UnhandledExceptionHandler.Register(_previousHandler);
     }
 }

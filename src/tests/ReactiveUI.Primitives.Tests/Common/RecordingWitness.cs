@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Tests;
 
 /// <summary>An observer that records all values, errors, and completion counts.</summary>
@@ -22,9 +24,11 @@ internal sealed class RecordingWitness<T> : IObserver<T>
 
     /// <summary>Records an error callback.</summary>
     /// <param name="error">The error to record.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnError(Exception error) => Errors.Add(error);
 
     /// <summary>Records a value callback.</summary>
     /// <param name="value">The value to record.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnNext(T value) => Values.Add(value);
 }

@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 
 #if REACTIVE_SHIM
@@ -84,12 +85,15 @@ internal sealed class ConflateObservable<T>(
         }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnNext(T value) => _state.EnqueueNext(value);
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnError(Exception error) => _state.EnqueueError(error);
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnCompleted() => _state.EnqueueCompleted();
 
         /// <inheritdoc/>
@@ -142,6 +146,7 @@ internal sealed class ConflateObservable<T>(
 
         /// <summary>Records the upstream subscription so <see cref="Dispose"/> can tear it down.</summary>
         /// <param name="subscription">The upstream subscription handle.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void AttachSourceSubscription(IDisposable subscription) => _state.Attach(subscription);
 
         /// <summary>Applies the throttle-window decision to a dequeued value and either emits inline or

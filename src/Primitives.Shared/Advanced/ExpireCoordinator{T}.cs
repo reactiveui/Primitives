@@ -10,6 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Coordinates timeout delivery with one active timer.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Done = {_done}, DueTime = {_dueTime}, Deadline = {_deadline}")]
 public sealed class ExpireCoordinator<T> : IObserver<T>, IDisposable
 {
     /// <summary>The synchronization gate for downstream observer calls.</summary>

@@ -1,0 +1,21 @@
+namespace ReactiveUI.Primitives.Concurrency;
+
+[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
+public sealed class MauiDispatcherSequencer : ReactiveUI.Primitives.Concurrency.ISequencer
+{
+    public MauiDispatcherSequencer(Microsoft.Maui.Dispatching.IDispatcher dispatcher) { }
+    public Microsoft.Maui.Dispatching.IDispatcher Dispatcher { get; }
+    public System.DateTimeOffset Now { get; }
+    public long Timestamp { get; }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public void Schedule(ReactiveUI.Primitives.Concurrency.IWorkItem item, long dueTimestamp) { }
+}
+public static class MauiDispatcherSequencerExtensions
+{
+    extension(Microsoft.Maui.Dispatching.IDispatcher dispatcher)
+    {
+        public ReactiveUI.Primitives.Concurrency.MauiDispatcherSequencer ToSequencer() { }
+    }
+}

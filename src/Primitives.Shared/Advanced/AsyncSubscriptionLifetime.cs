@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -12,6 +14,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <remarks>
 /// Call <see cref="Complete"/> exactly once after asynchronous setup has finished, even when setup faults or is canceled.
 /// </remarks>
+[System.Diagnostics.DebuggerDisplay("Completed = {_completed}, Canceled = {_canceled}, Disposed = {_disposed}")]
 public sealed class AsyncSubscriptionLifetime : IDisposable
 {
     /// <summary>The cancellation source passed to the asynchronous subscription.</summary>
@@ -40,6 +43,7 @@ public sealed class AsyncSubscriptionLifetime : IDisposable
 
     /// <summary>Assigns the disposable returned by asynchronous setup.</summary>
     /// <param name="disposable">The returned disposable, or <see langword="null"/> for an empty lifetime.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetSubscription(IDisposable? disposable) =>
         _subscription.Create(disposable ?? EmptyDisposable.Instance);
 

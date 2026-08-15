@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async.Tests;
@@ -79,6 +80,7 @@ public class FactorySignalTests
     }
 
     /// <summary>Tests Throw rejects null exception.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void WhenThrowNullException_ThenThrowsArgumentNull() =>
         Assert.Throws<ArgumentNullException>(static () => SignalAsync.Throw<int>(null!));
@@ -234,6 +236,7 @@ public class FactorySignalTests
     }
 
     /// <summary>Tests Create with null subscribe function.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void WhenCreateWithNullSubscribeFunc_ThenThrowsArgumentNull() =>
         Assert.Throws<ArgumentNullException>(static () => SignalAsync.Create<int>(null!));
@@ -287,11 +290,13 @@ public class FactorySignalTests
     }
 
     /// <summary>Tests Timer negative due time.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void WhenTimerNegativeDueTime_ThenThrowsArgumentOutOfRange() =>
         Assert.Throws<ArgumentOutOfRangeException>(static () => SignalAsync.Timer(TimeSpan.FromMilliseconds(-1)));
 
     /// <summary>Tests Timer periodic with non-positive period.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void WhenTimerPeriodicNonPositivePeriod_ThenThrowsArgumentOutOfRange() =>
         Assert.Throws<ArgumentOutOfRangeException>(static () => SignalAsync.Timer(TimeSpan.Zero, TimeSpan.Zero));
@@ -309,6 +314,7 @@ public class FactorySignalTests
     }
 
     /// <summary>Tests async observable ToAsyncSignal null source validation.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void WhenObservableToAsyncSignalWithNullSource_ThenThrowsArgumentNull() =>
         Assert.Throws<ArgumentNullException>(static () => ((IObservableAsync<int>)null!).ToAsyncSignal());
@@ -355,8 +361,7 @@ public class FactorySignalTests
     [Test]
     public async Task WhenVoidTaskToAsyncSignal_ThenEmitsUnit()
     {
-        var task = Task.CompletedTask;
-        var source = task.ToAsyncSignal();
+        var source = Task.CompletedTask.ToAsyncSignal();
         await source.WaitCompletionAsync();
     }
 

@@ -4,6 +4,7 @@
 
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async;
@@ -15,18 +16,19 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Reference-counting operators for a connectable observable source sequence.</summary>
-    /// <param name="source">The connectable observable sequence to ref count. Cannot be null.</param>
     /// <typeparam name="T">The type of the elements in the observable sequence.</typeparam>
+    /// <param name="source">The connectable observable sequence to ref count. Cannot be null.</param>
     extension<T>(ConnectableSignalAsync<T> source)
     {
         /// <summary>
         /// Returns an observable sequence that connects to the underlying connectable observable when the first observer
         /// subscribes, and disconnects when the last observer unsubscribes.
         /// </summary>
+        /// <returns>An observable sequence that stays connected to the source as long as there is at least one subscription.</returns>
         /// <remarks>This operator is useful for sharing a single subscription to the underlying connectable
         /// observable among multiple subscribers. When the last observer unsubscribes, the connection to the source is
         /// automatically disposed.</remarks>
-        /// <returns>An observable sequence that stays connected to the source as long as there is at least one subscription.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> RefCount() =>
             new RefCountSignal<T>(source);
     }
@@ -48,10 +50,11 @@ public static partial class SignalAsyncExtensions
         /// <summary>The single-assignment disposable holding the connection to the underlying connectable source.</summary>
         private SingleAssignmentDisposableAsync? _connection;
 
-        /// <summary>Indicates whether this instance has been disposed.</summary>
-        private bool _disposedValue;
+        /// <summary>Non-zero after this instance has been disposed.</summary>
+        private int _disposedValue;
 
         /// <summary>Disposes the ref-count observable, releasing the connection gate and any active connection.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose() => Dispose(true);
 
         /// <summary>Releases managed resources if <paramref name="disposing"/> is true.</summary>
@@ -63,18 +66,18 @@ public static partial class SignalAsyncExtensions
                 "IDisposable.Dispose is intrinsically synchronous; this method must tear down the async connection on the sync dispose path.")]
         internal void Dispose(bool disposing)
         {
-            if (_disposedValue)
+            if (Interlocked.Exchange(ref _disposedValue, 1) != 0)
             {
                 return;
             }
 
-            if (disposing)
+            if (!disposing)
             {
-                _gate.Dispose();
-                _connection?.DisposeAsync().AsTask().GetAwaiter().GetResult();
+                return;
             }
 
-            _disposedValue = true;
+            _gate.Dispose();
+            _connection?.DisposeAsync().AsTask().GetAwaiter().GetResult();
         }
 
         /// <summary>

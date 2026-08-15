@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using BenchmarkDotNet.Attributes;
 using R3;
 using ReactiveUI.Primitives.Signals;
@@ -21,31 +22,37 @@ public class StatefulSignalBenchmarks
 
     /// <summary>Baseline state signal updates with 32 notifications.</summary>
     /// <returns>The final sum plus latest value.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark(Baseline = true)]
     public int PrimitivesStateSignal32() => EmitAndReadStateSignal(Count32);
 
     /// <summary>Behavior subject updates with 32 notifications using System.Reactive.</summary>
     /// <returns>The final sum plus latest value.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public int SystemReactiveBehaviorSubject32() => EmitAndReadSystemBehaviorSubject(Count32);
 
     /// <summary>Behavior subject updates with 32 notifications using R3.</summary>
     /// <returns>The final sum plus latest value.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public int R3BehaviorSubject32() => EmitAndReadR3BehaviorSubject(Count32);
 
     /// <summary>Baseline state signal updates with 1024 notifications.</summary>
     /// <returns>The final sum plus latest value.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public int PrimitivesStateSignal1024() => EmitAndReadStateSignal(Count1024);
 
     /// <summary>Behavior subject updates with 1024 notifications using System.Reactive.</summary>
     /// <returns>The final sum plus latest value.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public int SystemReactiveBehaviorSubject1024() => EmitAndReadSystemBehaviorSubject(Count1024);
 
     /// <summary>Behavior subject updates with 1024 notifications using R3.</summary>
     /// <returns>The final sum plus latest value.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Benchmark]
     public int R3BehaviorSubject1024() => EmitAndReadR3BehaviorSubject(Count1024);
 

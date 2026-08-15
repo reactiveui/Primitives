@@ -11,9 +11,9 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Element-skipping operators for an observable source sequence.</summary>
-    /// <param name="this">The source observable sequence.</param>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
-    extension<T>(IObservableAsync<T> @this)
+    /// <param name="source">The source observable sequence.</param>
+    extension<T>(IObservableAsync<T> source)
     {
         /// <summary>Returns a new observable sequence that skips the specified number of elements from the start of the source sequence.</summary>
         /// <param name="count">The number of elements to skip. Must be greater than or equal to 0.</param>
@@ -22,10 +22,10 @@ public static partial class SignalAsyncExtensions
         /// <exception cref="ArgumentOutOfRangeException">Thrown if count is less than 0.</exception>
         public IObservableAsync<T> Skip(int count)
         {
-            ArgumentExceptionHelper.ThrowIfNull(@this);
+            ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(count);
 
-            return count == 0 ? @this : new SkipSignal<T>(@this, count);
+            return count == 0 ? source : new SkipSignal<T>(source, count);
         }
     }
 

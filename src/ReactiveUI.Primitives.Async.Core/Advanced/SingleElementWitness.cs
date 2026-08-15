@@ -19,6 +19,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// </param>
 /// <param name="defaultValue">The value to return on empty when <paramref name="requireExactlyOne"/> is <c>false</c>.</param>
 /// <param name="cancellationToken">A cancellation token for the operation.</param>
+[System.Diagnostics.DebuggerDisplay("HasValue = {_hasValue}, Value = {_value}")]
 public sealed class SingleElementWitness<T>(
     Func<T, bool>? predicate,
     bool requireExactlyOne,

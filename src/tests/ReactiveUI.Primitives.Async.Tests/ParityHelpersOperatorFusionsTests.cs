@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Disposables;
 using ReactiveUI.Primitives.Async.Signals;
 
@@ -844,13 +845,16 @@ public class ParityHelpersOperatorFusionsTests
             throw error;
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
             default;
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask OnCompletedAsync(Result result) => default;
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask DisposeAsync() => default;
     }
 
@@ -859,15 +863,19 @@ public class ParityHelpersOperatorFusionsTests
     private sealed class NoOpAsyncWitness<T> : IObserverAsync<T>
     {
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) => default;
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) => default;
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask OnCompletedAsync(Result result) => default;
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask DisposeAsync() => default;
     }
 }

@@ -2,10 +2,13 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Reactive.Concurrency;
 
 /// <summary>Windows Forms scheduler that coalesces scheduled work through a UI control.</summary>
 /// <seealso cref="System.Reactive.Concurrency.IScheduler" />
+[System.Diagnostics.DebuggerDisplay("Control = {Control}")]
 public sealed class ControlSequencer : CoalescingDispatchScheduler
 {
     /// <summary>Initializes a new instance of the <see cref="ControlSequencer"/> class.</summary>
@@ -45,5 +48,6 @@ public sealed class ControlSequencer : CoalescingDispatchScheduler
     /// <summary>Posts queued work once the control handle becomes available.</summary>
     /// <param name="sender">The event source.</param>
     /// <param name="e">The event arguments.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void OnHandleCreated(object? sender, EventArgs e) => RequestDrain();
 }

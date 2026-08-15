@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
 /// <summary>Edge-case coverage for <c>ToPropertyObservable</c> backed by
@@ -143,6 +145,7 @@ public class PropertyChangedObservableTests
         public int Value { get; }
 
         /// <summary>Invokes the retained handler with a <c>PropertyChanged</c> event for <see cref="Value"/>.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Raise() => _retained?.Invoke(this, new(nameof(Value)));
     }
 

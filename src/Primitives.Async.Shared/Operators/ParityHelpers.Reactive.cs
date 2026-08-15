@@ -22,8 +22,8 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncReactiveExtensions
 {
     /// <summary>Async-native parity helper operators for an observable source sequence.</summary>
-    /// <param name="source">The source observable sequence.</param>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
+    /// <param name="source">The source observable sequence.</param>
     extension<T>(IObservableAsync<T> source)
     {
         /// <summary>Converts the source sequence into a signal sequence that emits <see cref="RxVoid.Default"/> for each source value.</summary>

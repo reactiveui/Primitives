@@ -16,13 +16,13 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// have completed. If the list is empty, emits <see cref="RxVoid.Default"/> immediately.
 /// Errors from any observable propagate to the downstream observer.
 /// </summary>
+/// <param name="sources">The list of one-shot observables to run in order.</param>
 /// <remarks>
 /// Replaces patterns like <c>sources.Concat().LastOrDefaultAsync()</c> with a single
 /// operator that subscribes sequentially. Uses an iterative loop with a sync-completion
 /// flag to avoid stack overflow when sources complete synchronously during
 /// <c>Subscribe</c>.
 /// </remarks>
-/// <param name="sources">The list of one-shot observables to run in order.</param>
 internal sealed class RunAllObservable(IReadOnlyList<IObservable<RxVoid>> sources) : IObservable<RxVoid>
 {
     /// <inheritdoc/>
@@ -60,8 +60,8 @@ internal sealed class RunAllObservable(IReadOnlyList<IObservable<RxVoid>> source
         /// <summary>Subscription to the current source.</summary>
         private IDisposable? _currentSubscription;
 
-        /// <summary>Set once all sources have completed or we've been disposed.</summary>
-        private bool _done;
+        /// <summary>Terminal latch (0 = running, 1 = all sources completed or disposed).</summary>
+        private int _done;
 
         /// <summary>Guards against re-entrant <see cref="RunNext"/> calls.</summary>
         private bool _looping;
@@ -81,19 +81,18 @@ internal sealed class RunAllObservable(IReadOnlyList<IObservable<RxVoid>> source
         /// <inheritdoc/>
         public void OnError(Exception error)
         {
-            if (_done)
+            if (Interlocked.Exchange(ref _done, 1) != 0)
             {
                 return;
             }
 
-            _done = true;
             downstream.OnError(error);
         }
 
         /// <inheritdoc/>
         public void OnCompleted()
         {
-            if (_done)
+            if (Volatile.Read(ref _done) != 0)
             {
                 return;
             }
@@ -111,7 +110,7 @@ internal sealed class RunAllObservable(IReadOnlyList<IObservable<RxVoid>> source
         /// <inheritdoc/>
         public void Dispose()
         {
-            _done = true;
+            Volatile.Write(ref _done, 1);
             Interlocked.Exchange(ref _currentSubscription, null)?.Dispose();
         }
 
@@ -124,7 +123,7 @@ internal sealed class RunAllObservable(IReadOnlyList<IObservable<RxVoid>> source
             _looping = true;
             try
             {
-                while (!_done && _index < sources.Count)
+                while (Volatile.Read(ref _done) == 0 && _index < sources.Count)
                 {
                     var source = sources[_index];
                     _index++;
@@ -153,12 +152,11 @@ internal sealed class RunAllObservable(IReadOnlyList<IObservable<RxVoid>> source
         [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
         private void CompleteRun()
         {
-            if (_done)
+            if (Interlocked.Exchange(ref _done, 1) != 0)
             {
                 return;
             }
 
-            _done = true;
             downstream.OnNext(RxVoid.Default);
             downstream.OnCompleted();
         }

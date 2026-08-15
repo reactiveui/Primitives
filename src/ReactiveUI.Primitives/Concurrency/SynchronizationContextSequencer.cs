@@ -16,8 +16,8 @@ public sealed class SynchronizationContextSequencer : ISequencer
         Context = context ?? throw new ArgumentNullException(nameof(context));
 
     /// <summary>Gets a sequencer for the current synchronization context.</summary>
-    /// <remarks>Coverage excludes the getter because the ambient context cannot be changed safely by parallel tests.</remarks>
     /// <exception cref="InvalidOperationException">There is no current synchronization context.</exception>
+    /// <remarks>Coverage excludes the getter because the ambient context cannot be changed safely by parallel tests.</remarks>
     public static SynchronizationContextSequencer Current
     {
         [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]

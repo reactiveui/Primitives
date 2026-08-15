@@ -4,6 +4,7 @@
 
 using System.Reactive;
 using System.Reactive.Linq;
+using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions.Tests;
 
@@ -211,9 +212,11 @@ public partial class ReactiveExtensionsTests
         public T this[int index] => items[index];
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IEnumerator<T> GetEnumerator() => ((IEnumerable<T>)items).GetEnumerator();
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }

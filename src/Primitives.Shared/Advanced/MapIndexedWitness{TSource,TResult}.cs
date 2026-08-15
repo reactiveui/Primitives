@@ -13,6 +13,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="TResult">The projected value type.</typeparam>
 /// <param name="observer">The downstream observer.</param>
 /// <param name="selector">The indexed selector.</param>
+[System.Diagnostics.DebuggerDisplay("Index = {_index}, Stopped = {_stopped}")]
 public sealed class MapIndexedWitness<TSource, TResult>(IObserver<TResult> observer, Func<TSource, int, TResult> selector) : IObserver<TSource>
 {
     /// <summary>The downstream observer.</summary>
@@ -24,13 +25,13 @@ public sealed class MapIndexedWitness<TSource, TResult>(IObserver<TResult> obser
     /// <summary>The next zero-based index.</summary>
     private int _index;
 
-    /// <summary>Whether a terminal notification has been forwarded.</summary>
-    private bool _stopped;
+    /// <summary>Latches to <c>1</c> once a terminal notification has been forwarded.</summary>
+    private int _stopped;
 
     /// <inheritdoc/>
     public void OnNext(TSource value)
     {
-        if (_stopped)
+        if (Volatile.Read(ref _stopped) != 0)
         {
             return;
         }
@@ -55,24 +56,22 @@ public sealed class MapIndexedWitness<TSource, TResult>(IObserver<TResult> obser
     /// <inheritdoc/>
     public void OnError(Exception error)
     {
-        if (_stopped)
+        if (Interlocked.Exchange(ref _stopped, 1) != 0)
         {
             return;
         }
 
-        _stopped = true;
         _observer.OnError(error);
     }
 
     /// <inheritdoc/>
     public void OnCompleted()
     {
-        if (_stopped)
+        if (Interlocked.Exchange(ref _stopped, 1) != 0)
         {
             return;
         }
 
-        _stopped = true;
         _observer.OnCompleted();
     }
 }

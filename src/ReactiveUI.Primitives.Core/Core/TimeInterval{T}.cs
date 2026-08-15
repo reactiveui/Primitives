@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Globalization;
+using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Core;
 
@@ -39,6 +40,7 @@ public readonly struct TimeInterval<T> : IEquatable<TimeInterval<T>>
     /// <param name="first">The first TimeInterval value to compare.</param>
     /// <param name="second">The second TimeInterval value to compare.</param>
     /// <returns>true if the first TimeInterval value has the same Value and Interval as the second TimeInterval value; otherwise, false.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool operator ==(TimeInterval<T> first, TimeInterval<T> second) =>
         first.Equals(second);
 
@@ -58,16 +60,7 @@ public readonly struct TimeInterval<T> : IEquatable<TimeInterval<T>>
     /// <summary>Determines whether the specified System.Object is equal to the current TimeInterval.</summary>
     /// <param name="obj">The System.Object to compare with the current TimeInterval.</param>
     /// <returns>true if the specified System.Object is equal to the current TimeInterval; otherwise, false.</returns>
-    public override bool Equals(object? obj)
-    {
-        if (obj is not TimeInterval<T>)
-        {
-            return false;
-        }
-
-        var other = (TimeInterval<T>)obj;
-        return Equals(other);
-    }
+    public override bool Equals(object? obj) => obj is TimeInterval<T> other && Equals(other);
 
     /// <summary>Returns the hash code for the current TimeInterval value.</summary>
     /// <returns>A hash code for the current TimeInterval value.</returns>

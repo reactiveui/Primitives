@@ -10,6 +10,7 @@ namespace ReactiveUI.Primitives.Signals;
 /// <typeparam name="T">The T type.</typeparam>
 /// <param name="source">The source value.</param>
 /// <param name="predicate">The predicate value.</param>
+[System.Diagnostics.DebuggerDisplay("Source = {_source}, Predicate = {_predicate}")]
 public sealed class KeepSignal<T>(IObservable<T> source, Func<T, bool> predicate) : IRequireCurrentThread<T>
 {
     /// <summary>Stores state for the signal implementation.</summary>
@@ -45,17 +46,16 @@ public sealed class KeepSignal<T>(IObservable<T> source, Func<T, bool> predicate
         private readonly Func<T, bool> _predicate = predicate;
 
         /// <summary>Stores state for the signal implementation.</summary>
-        private bool _stopped;
+        private int _stopped;
 
         /// <summary>Executes the OnCompleted operation.</summary>
         public void OnCompleted()
         {
-            if (_stopped)
+            if (Interlocked.Exchange(ref _stopped, 1) != 0)
             {
                 return;
             }
 
-            _stopped = true;
             _observer.OnCompleted();
         }
 
@@ -63,12 +63,11 @@ public sealed class KeepSignal<T>(IObservable<T> source, Func<T, bool> predicate
         /// <param name="error">The error value.</param>
         public void OnError(Exception error)
         {
-            if (_stopped)
+            if (Interlocked.Exchange(ref _stopped, 1) != 0)
             {
                 return;
             }
 
-            _stopped = true;
             _observer.OnError(error);
         }
 
@@ -76,7 +75,7 @@ public sealed class KeepSignal<T>(IObservable<T> source, Func<T, bool> predicate
         /// <param name="value">The value.</param>
         public void OnNext(T value)
         {
-            if (_stopped)
+            if (Volatile.Read(ref _stopped) != 0)
             {
                 return;
             }

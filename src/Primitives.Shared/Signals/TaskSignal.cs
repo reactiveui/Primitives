@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Signals;
 #else
@@ -18,6 +20,7 @@ public static class TaskSignal
     /// An AsyncObservable.
     /// </returns>
     /// <exception cref="ArgumentExceptionHelper">observableFactory.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ITaskSignal<TResult> Create<TResult>(
         Func<ITaskSignal<TResult>, IObservable<TResult>> observableFactory) =>
         Instance(observableFactory, null, null);
@@ -30,6 +33,7 @@ public static class TaskSignal
     /// An AsyncObservable.
     /// </returns>
     /// <exception cref="ArgumentExceptionHelper">observableFactory.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ITaskSignal<TResult> Create<TResult>(
         Func<ITaskSignal<TResult>, IObservable<TResult>> observableFactory,
         ISequencer? scheduler) =>
@@ -44,6 +48,7 @@ public static class TaskSignal
     /// An AsyncObservable.
     /// </returns>
     /// <exception cref="ArgumentExceptionHelper">observableFactory.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ITaskSignal<TResult> Create<TResult>(
         Func<ITaskSignal<TResult>, IObservable<TResult>> observableFactory,
         ISequencer? scheduler,

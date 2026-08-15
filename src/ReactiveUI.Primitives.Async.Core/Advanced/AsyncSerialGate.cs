@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async.Advanced;
 
@@ -12,6 +13,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// <see cref="SemaphoreSlim"/> touch); the contended path waits on a signal-only semaphore and retries
 /// the CAS after each signal. Same-thread reentry is granted via the owner-thread-id and a recursion counter.
 /// </summary>
+[System.Diagnostics.DebuggerDisplay("OwnerThreadId = {_ownerThreadId}, Waiters = {_waiters}, RecursionDepth = {_recursionDepth}")]
 public sealed class AsyncSerialGate : IDisposable
 {
     /// <summary>Signal-only semaphore; released once per recorded waiter to wake one.</summary>
@@ -26,8 +28,8 @@ public sealed class AsyncSerialGate : IDisposable
     /// <summary>Awaiters parked on the slow path; read by <see cref="Exit"/> to decide whether to signal.</summary>
     private int _waiters;
 
-    /// <summary>Whether this instance has been disposed.</summary>
-    private bool _disposedValue;
+    /// <summary>Disposal latch; non-zero once this instance has been disposed.</summary>
+    private int _disposedValue;
 
     /// <summary>Gets the number of awaiters currently parked on the slow path. Exposed for
     /// deterministic contention tests so they can spin-wait until a contender has entered
@@ -36,6 +38,7 @@ public sealed class AsyncSerialGate : IDisposable
 
     /// <summary>Asynchronously acquires the gate, returning a <see cref="Lease"/> that releases it on disposal.</summary>
     /// <returns>A <see cref="ValueTask{Lease}"/> that completes when the gate has been acquired.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerStepThrough]
     public ValueTask<Lease> EnterAsync() =>
         EnterAsync(CancellationToken.None);
@@ -64,13 +67,12 @@ public sealed class AsyncSerialGate : IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
-        if (_disposedValue)
+        if (Interlocked.Exchange(ref _disposedValue, 1) != 0)
         {
             return;
         }
 
         _semaphore.Dispose();
-        _disposedValue = true;
     }
 
     /// <summary>
@@ -131,6 +133,7 @@ public sealed class AsyncSerialGate : IDisposable
     }
 
     /// <summary>Releases a previously acquired <see cref="AsyncSerialGate"/> when disposed.</summary>
+    [System.Diagnostics.DebuggerDisplay("Parent = {_parent}")]
     public readonly record struct Lease : IDisposable
     {
         /// <summary>The parent <see cref="AsyncSerialGate"/> whose lock is released when this lease is disposed.</summary>
@@ -141,6 +144,7 @@ public sealed class AsyncSerialGate : IDisposable
         public Lease(AsyncSerialGate parent) => _parent = parent;
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose() => _parent.Exit();
     }
 }

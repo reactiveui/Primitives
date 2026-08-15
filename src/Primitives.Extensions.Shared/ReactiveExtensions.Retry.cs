@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Extensions.Operators;
 
 #if REACTIVE_SHIM
@@ -17,8 +18,8 @@ public static partial class ReactiveExtensions
     private const double DefaultBackoffFactor = 2.0;
 
     /// <summary>Retry operators that re-subscribe to a failed source, optionally after a growing delay.</summary>
-    /// <param name="source">The source observable sequence.</param>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
+    /// <param name="source">The source observable sequence.</param>
     extension<T>(IObservable<T> source)
     {
         /// <summary>Repeats the source until it terminates successfully (alias of Retry).</summary>
@@ -33,6 +34,7 @@ public static partial class ReactiveExtensions
         /// <typeparam name="TException">The type of the exception.</typeparam>
         /// <param name="onError">The on error.</param>
         /// <returns>A sequence that retries on error with optional delay.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> OnErrorRetry<TException>(Action<TException> onError)
             where TException : Exception =>
             new RetryWithBackoffObservable<T>(
@@ -58,6 +60,7 @@ public static partial class ReactiveExtensions
         /// <param name="onError">The on error.</param>
         /// <param name="delay">The delay.</param>
         /// <returns>A sequence that retries on error with optional delay.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> OnErrorRetry<TException>(Action<TException> onError, TimeSpan delay)
             where TException : Exception =>
             new RetryWithBackoffObservable<T>(
@@ -83,6 +86,7 @@ public static partial class ReactiveExtensions
         /// <param name="onError">The on error.</param>
         /// <param name="retryCount">The retry count.</param>
         /// <returns>A sequence that retries on error with optional delay.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> OnErrorRetry<TException>(Action<TException> onError, int retryCount)
             where TException : Exception =>
             new RetryWithBackoffObservable<T>(
@@ -109,6 +113,7 @@ public static partial class ReactiveExtensions
         /// <param name="retryCount">The retry count.</param>
         /// <param name="delay">The delay.</param>
         /// <returns>A sequence that retries on error with optional delay.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> OnErrorRetry<TException>(Action<TException> onError, int retryCount, TimeSpan delay)
             where TException : Exception =>
             new RetryWithBackoffObservable<T>(
@@ -171,6 +176,7 @@ public static partial class ReactiveExtensions
         /// <param name="maxRetries">Maximum number of retries.</param>
         /// <param name="initialDelay">Initial backoff delay.</param>
         /// <returns>Retried sequence with backoff.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> RetryWithBackoff(int maxRetries, TimeSpan initialDelay) =>
             new RetryWithBackoffObservable<T>(
                 source,
@@ -189,6 +195,7 @@ public static partial class ReactiveExtensions
         /// <param name="maxDelay">Optional maximum delay.</param>
         /// <param name="scheduler">Scheduler (optional).</param>
         /// <returns>Retried sequence with backoff.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> RetryWithBackoff(
             int maxRetries,
             TimeSpan initialDelay,
@@ -209,12 +216,14 @@ public static partial class ReactiveExtensions
         /// <param name="retryCount">The retry count.</param>
         /// <param name="delaySelector">The delay selector.</param>
         /// <returns>An IObservable of T.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> RetryWithDelay(int retryCount, Func<int, TimeSpan> delaySelector) =>
             new RetryWithDelayObservable<T>(source, retryCount, delaySelector);
 
         /// <summary>Retries the forever with delay.</summary>
         /// <param name="delay">The delay.</param>
         /// <returns>An IObservable of T.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> RetryForeverWithDelay(TimeSpan delay) =>
             new RetryWithDelayObservable<T>(source, int.MaxValue, _ => delay);
 
@@ -222,6 +231,7 @@ public static partial class ReactiveExtensions
         /// <param name="retryCount">The retry count.</param>
         /// <param name="delay">The delay.</param>
         /// <returns>An IObservable of T.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> RetryWithFixedDelay(int retryCount, TimeSpan delay) =>
             new RetryWithBackoffObservable<T>(
                 source,

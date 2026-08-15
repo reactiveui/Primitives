@@ -14,8 +14,8 @@ namespace ReactiveUI.Primitives;
 public static partial class LinqExtensions
 {
     /// <summary>Primitives-named latest-value combination operators for ten through sixteen observable sources.</summary>
-    /// <param name="source">Source observable 1 whose latest value is combined.</param>
     /// <typeparam name="T">The element type of source 1.</typeparam>
+    /// <param name="source">Source observable 1 whose latest value is combined.</param>
     extension<T>(IObservable<T> source)
     {
         /// <summary>

@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Concurrency;
+using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Components;
 using ReactiveUI.Primitives.Blazor.Reactive.Components;
 using ReactiveUI.Primitives.Blazor.Reactive.Concurrency;
@@ -184,15 +185,18 @@ public sealed class BlazorRendererSequencerTests
         /// <param name="source">The source sequence.</param>
         /// <param name="onNext">The value callback.</param>
         /// <returns>The tracked subscription.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IDisposable ObserveSource<T>(IObservable<T> source, Action<T> onNext) => Observe(source, onNext);
 
         /// <summary>Calls the protected track method.</summary>
         /// <param name="subscription">The subscription to track.</param>
         /// <returns>The tracked subscription.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IDisposable TrackSubscription(IDisposable subscription) => Track(subscription);
 
         /// <summary>Calls the protected observed-error handler.</summary>
         /// <param name="error">The observed error.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void NotifyObservedError(Exception error) => OnObservedError(error);
     }
 
@@ -201,6 +205,7 @@ public sealed class BlazorRendererSequencerTests
     private sealed class PassiveObservable<T> : IObservable<T>
     {
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IDisposable Subscribe(IObserver<T> observer) => EmptyDisposable.Instance;
     }
 
@@ -210,8 +215,8 @@ public sealed class BlazorRendererSequencerTests
         /// <summary>The callback to invoke on dispose.</summary>
         private readonly Action _onDispose;
 
-        /// <summary>A value indicating whether dispose already ran.</summary>
-        private bool _disposed;
+        /// <summary>A latch set to one once dispose has run.</summary>
+        private int _disposed;
 
         /// <summary>Initializes a new instance of the <see cref="FlagDisposable"/> class.</summary>
         /// <param name="onDispose">The dispose callback.</param>
@@ -220,12 +225,11 @@ public sealed class BlazorRendererSequencerTests
         /// <inheritdoc/>
         public void Dispose()
         {
-            if (_disposed)
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
             {
                 return;
             }
 
-            _disposed = true;
             _onDispose();
         }
     }

@@ -3,12 +3,14 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>Coordinates subscriptions and projected snapshot emission for enumerable <c>SyncLatest</c> sources.</summary>
 /// <typeparam name="TSource">The source element type.</typeparam>
 /// <typeparam name="TResult">The projected result type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Sources = {Sources.Length}, Completed = {_completedCount}, Disposed = {_disposed}")]
 public sealed class SyncLatestEnumerableCoordinator<TSource, TResult> : IAsyncDisposable
 {
     /// <summary>Synchronization gate.</summary>
@@ -33,6 +35,7 @@ public sealed class SyncLatestEnumerableCoordinator<TSource, TResult> : IAsyncDi
     /// <param name="sources">The source sequences.</param>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="resultSelector">The result selector.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="sources"/> or <paramref name="observer"/> is <see langword="null"/>.</exception>
     public SyncLatestEnumerableCoordinator(
         IObservableAsync<TSource>[] sources,
         IObserverAsync<TResult> observer,
@@ -91,6 +94,7 @@ public sealed class SyncLatestEnumerableCoordinator<TSource, TResult> : IAsyncDi
     }
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask DisposeAsync() => FinishAsync(null);
 
     /// <summary>Handles OnNext from a source.</summary>

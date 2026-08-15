@@ -2,12 +2,14 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>Coordinates outer and inner subscriptions for flat-map operations.</summary>
 /// <typeparam name="TResult">The result element type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("ActiveInnerCount = {ActiveInnerCount}, OuterCompleted = {OuterCompleted}, Disposed = {Disposed}")]
 public sealed class FlatMapCoordinator<TResult> : IAsyncDisposable
 {
     /// <summary>Protects mutable lifecycle state.</summary>
@@ -54,6 +56,7 @@ public sealed class FlatMapCoordinator<TResult> : IAsyncDisposable
     /// <summary>Sets the outer observer.</summary>
     /// <param name="observer">The outer observer.</param>
     /// <returns>A task representing the asynchronous assignment.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask SetOuterObserverAsync(IAsyncDisposable observer) =>
         OuterObserver.SetDisposableAsync(observer);
 
@@ -78,6 +81,7 @@ public sealed class FlatMapCoordinator<TResult> : IAsyncDisposable
     }
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask DisposeAsync() => FinishAsync(null);
 
     /// <summary>Subscribes and tracks an inner sequence.</summary>

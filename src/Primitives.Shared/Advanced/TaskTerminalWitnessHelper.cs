@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -13,6 +15,7 @@ internal static class TaskTerminalWitnessHelper
 {
     /// <summary>Disposes the source subscription.</summary>
     /// <param name="subscription">The subscription slot.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void DisposeSubscription(ref IDisposable? subscription) =>
         Interlocked.Exchange(ref subscription, null)?.Dispose();
 
@@ -39,7 +42,7 @@ internal static class TaskTerminalWitnessHelper
             return;
         }
 
-        registration = cancellationToken.Register(callback, state);
+        registration = cancellationToken.UnsafeRegister(callback, state);
     }
 
     /// <summary>Assigns the source subscription.</summary>

@@ -4,6 +4,7 @@
 
 using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
+using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Reactive.Concurrency;
 
@@ -82,5 +83,6 @@ internal class DispatchWorkItemBase<TState>
     protected bool TryClaimDispose() => Interlocked.Exchange(ref _isDisposed, 1) == 0;
 
     /// <summary>Releases the disposable the action returned once it has started, so a late cancel still tears it down.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected void ReleaseStartedWork() => Interlocked.Exchange(ref _disposable, Disposable.Empty)?.Dispose();
 }

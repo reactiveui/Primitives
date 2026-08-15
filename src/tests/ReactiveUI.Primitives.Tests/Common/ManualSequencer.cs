@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Tests;
@@ -27,11 +28,13 @@ internal sealed class ManualSequencer : ISequencer
 
     /// <summary>Queues a work item.</summary>
     /// <param name="item">The work item to queue.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Schedule(IWorkItem item) => _pending.Add(item);
 
     /// <summary>Queues a work item, ignoring its due time; the test decides when it runs.</summary>
     /// <param name="item">The work item to queue.</param>
     /// <param name="dueTimestamp">The due time, which this sequencer does not honor.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2318:Members should not have identical bodies",
@@ -58,5 +61,6 @@ internal sealed class ManualSequencer : ISequencer
     }
 
     /// <summary>Runs the most recently run work item again, modelling a stale timer tick.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void RunStaleTick() => _lastRun?.Execute();
 }

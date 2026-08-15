@@ -11,6 +11,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <summary>Connects a published source around a selector subscription.</summary>
 /// <typeparam name="TSource">The source value type.</typeparam>
 /// <typeparam name="TResult">The selected value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Source = {Source}, Selector = {Selector}")]
 public sealed class PublishSelectorSignal<TSource, TResult> : IObservable<TResult>
 {
     /// <summary>Initializes a new instance of the <see cref="PublishSelectorSignal{TSource,TResult}"/> class.</summary>

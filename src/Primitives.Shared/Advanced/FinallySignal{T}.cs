@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -22,11 +24,13 @@ internal sealed class FinallySignal<T>(IObservable<T> source, Action finallyActi
 
     /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
     /// <returns>The result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() => true;
 
     /// <summary>Executes the Subscribe operation.</summary>
     /// <param name="observer">The observer value.</param>
     /// <returns>The result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IDisposable Subscribe(IObserver<T> observer) =>
         SignalSubscription.Subscribe(observer, true, SubscribeCore);
 
@@ -34,6 +38,7 @@ internal sealed class FinallySignal<T>(IObservable<T> source, Action finallyActi
     /// <param name="observer">The observer value.</param>
     /// <param name="cancel">The cancel value.</param>
     /// <returns>The result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel) =>
         new Finally(this, observer, cancel).Run();
 
@@ -56,6 +61,7 @@ internal sealed class FinallySignal<T>(IObservable<T> source, Action finallyActi
         /// <param name="parent">The parent value.</param>
         /// <param name="observer">The observer value.</param>
         /// <param name="cancel">The cancel value.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="cancel"/> is <see langword="null"/>.</exception>
         public Finally(FinallySignal<T> parent, IObserver<T> observer, IDisposable cancel)
         {
             _cancel = cancel ?? throw new ArgumentNullException(nameof(cancel));
@@ -83,6 +89,7 @@ internal sealed class FinallySignal<T>(IObservable<T> source, Action finallyActi
 
         /// <summary>Executes the OnNext operation.</summary>
         /// <param name="value">The value.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnNext(T value) => _observer.OnNext(value);
 
         /// <summary>Executes the OnError operation.</summary>
@@ -113,6 +120,7 @@ internal sealed class FinallySignal<T>(IObservable<T> source, Action finallyActi
         }
 
         /// <summary>Executes the Dispose operation.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose() => WitnessTeardown.Dispose(ref _disposed, ref _cancel);
     }
 }

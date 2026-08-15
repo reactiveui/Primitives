@@ -12,6 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="T">The value type.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="gate">The gate shared across subscriptions and other synchronized sequences.</param>
+[System.Diagnostics.DebuggerDisplay("Source = {_source}, Gate = {_gate}")]
 public sealed class SynchronizeObjectSignal<T>(IObservable<T> source, object gate) : IObservable<T>
 {
     /// <summary>The source observable.</summary>

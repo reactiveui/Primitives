@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
@@ -336,6 +337,7 @@ public partial class SignalOperatorParityMixinsTests
     /// <summary>Returns a scalar signal for the supplied value.</summary>
     /// <param name="value">The value to emit.</param>
     /// <returns>A scalar signal.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static IObservable<int> ReturnValue(int value) => Signal.Emit(value);
 
     /// <summary>Contact reference record with nullable fields.</summary>

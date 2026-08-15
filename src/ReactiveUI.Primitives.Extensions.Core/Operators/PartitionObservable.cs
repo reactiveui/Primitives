@@ -3,12 +3,14 @@
 // See the LICENSE file in the project root for full license information.
 
 using System;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
 /// <summary>Partitions a sequence into two observables based on a predicate.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Source = {_source}, Subscriptions = {_subscriptionCount}")]
 public sealed class PartitionObservable<T>
 {
     /// <summary>The source observable.</summary>
@@ -123,6 +125,7 @@ public sealed class PartitionObservable<T>
     private sealed class PartitionSide(PartitionObservable<T> parent, bool side) : IObservable<T>
     {
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IDisposable Subscribe(IObserver<T> observer) => parent.Subscribe(observer, side);
     }
 

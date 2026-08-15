@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Disposables;
@@ -409,10 +410,26 @@ public partial class SignalOperatorMixinsTests
         List<string> catchErrors = [];
         var finallyCalls = 0;
         _ = Signal.FromEnumerable([One, Two])
-            .Keep(static value => value == One ? true : throw new InvalidOperationException("keep-predicate"))
+            .Keep(static value =>
+            {
+                if (value == One)
+                {
+                    return true;
+                }
+
+                throw new InvalidOperationException("keep-predicate");
+            })
             .Subscribe(static _ => { }, ex => keepErrors.Add(ex.Message));
         _ = Signal.FromEnumerable([One, Two])
-            .All(static value => value == One ? true : throw new InvalidOperationException("all-predicate"))
+            .All(static value =>
+            {
+                if (value == One)
+                {
+                    return true;
+                }
+
+                throw new InvalidOperationException("all-predicate");
+            })
             .Subscribe(static _ => { }, ex => allErrors.Add(ex.Message));
         _ = Assert.Throws<InvalidOperationException>(() => Signal.FromEnumerable(["a", "bb"])
             .DistinctBy(static value =>
@@ -740,6 +757,7 @@ public partial class SignalOperatorMixinsTests
 
     /// <summary>Covers the synchronous collect-list and collect-array operator branches.</summary>
     /// <param name="source">A four-element integer source.</param>
+    /// <exception cref="InvalidOperationException">A collect operator produced an unexpected sequence.</exception>
     private static void VerifyCollectOperators(IObservable<int> source)
     {
         List<IList<int>> listValues = [];
@@ -848,9 +866,11 @@ public partial class SignalOperatorMixinsTests
     private sealed class CurrentThreadObservable<T> : IRequireCurrentThread<T>
     {
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool IsRequiredSubscribeOnCurrentThread() => true;
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IDisposable Subscribe(IObserver<T> observer) => EmptyDisposable.Instance;
     }
 }

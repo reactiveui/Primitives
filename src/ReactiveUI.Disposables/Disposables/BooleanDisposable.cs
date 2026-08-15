@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Disposables;
 
 /// <summary>A disposable that exposes its disposed state as a boolean flag.</summary>
@@ -23,5 +25,6 @@ public sealed class BooleanDisposable : IsDisposed
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose() => Interlocked.Exchange(ref _isDisposed, 1);
 }

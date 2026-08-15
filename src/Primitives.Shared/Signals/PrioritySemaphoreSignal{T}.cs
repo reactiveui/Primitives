@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Signals;
 #else
@@ -10,6 +12,7 @@ namespace ReactiveUI.Primitives.Signals;
 
 /// <summary>A signal that limits forwarded values with priority-based semaphore semantics.</summary>
 /// <typeparam name="T">The comparable value type used for priority ordering.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Count = {_count}, MaximumCount = {_maximumCount}, IsDraining = {_isDraining}")]
 public sealed class PrioritySemaphoreSignal<T> : ISignal<T>
     where T : IComparable<T>
 {
@@ -60,13 +63,13 @@ public sealed class PrioritySemaphoreSignal<T> : ISignal<T>
     private enum TerminalNotification
     {
         /// <summary>No terminal notification has been queued.</summary>
-        None,
+        None = 0,
 
         /// <summary>Completion notification.</summary>
-        Completed,
+        Completed = 1,
 
         /// <summary>Error notification.</summary>
-        Error
+        Error = 2,
     }
 
     /// <inheritdoc />
@@ -154,6 +157,7 @@ public sealed class PrioritySemaphoreSignal<T> : ISignal<T>
     }
 
     /// <inheritdoc />
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IDisposable Subscribe(IObserver<T> observer) => _inner.Subscribe(observer);
 
     /// <inheritdoc />

@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Disposables;
@@ -62,6 +63,7 @@ public class SignalCreateTests
     }
 
     /// <summary>Creates the exception.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void Create_Exception() => Assert.Throws<InvalidOperationException>(static () => Signal.Create(
             new Func<IObserver<int>, IDisposable>(static _ => throw new InvalidOperationException()))
@@ -119,6 +121,7 @@ public class SignalCreateTests
     }
 
     /// <summary>Creates the with disposable exception.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
@@ -492,6 +495,7 @@ public class SignalCreateTests
         public void OnError(Exception error) => throw error;
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnNext(T value) => Values.Add(value);
     }
 }

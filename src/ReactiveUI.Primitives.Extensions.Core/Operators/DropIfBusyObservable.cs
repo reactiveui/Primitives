@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
@@ -38,13 +39,13 @@ public sealed class DropIfBusyObservable<T>(
         /// <summary>0 = idle, 1 = busy.</summary>
         private int _isBusy;
 
-        /// <summary>Whether the sink is terminal.</summary>
-        private bool _done;
+        /// <summary>Non-zero once the sink is terminal.</summary>
+        private int _done;
 
         /// <inheritdoc/>
         public void OnNext(T value)
         {
-            if (_done)
+            if (Volatile.Read(ref _done) != 0)
             {
                 return;
             }
@@ -61,24 +62,24 @@ public sealed class DropIfBusyObservable<T>(
         /// <inheritdoc/>
         public void OnError(Exception error)
         {
-            if (_done)
+            if (Interlocked.Exchange(ref _done, 1) != 0)
             {
                 return;
             }
 
-            _done = true;
             downstream.OnError(error);
         }
 
         /// <inheritdoc/>
         public void OnCompleted()
         {
-            _done = true;
+            Volatile.Write(ref _done, 1);
             downstream.OnCompleted();
         }
 
         /// <inheritdoc/>
-        public void Dispose() => _done = true;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Dispose() => Volatile.Write(ref _done, 1);
 
         /// <summary>Executes the async action and manages the busy state transition.</summary>
         /// <param name="value">The value to process.</param>
@@ -88,7 +89,7 @@ public sealed class DropIfBusyObservable<T>(
             try
             {
                 await asyncAction(value).ConfigureAwait(false);
-                if (_done)
+                if (Volatile.Read(ref _done) != 0)
                 {
                     return;
                 }
@@ -97,7 +98,7 @@ public sealed class DropIfBusyObservable<T>(
             }
             catch (Exception ex)
             {
-                if (_done)
+                if (Volatile.Read(ref _done) != 0)
                 {
                     return;
                 }

@@ -102,6 +102,7 @@ public partial class UsingActionObservableTests
 
     /// <summary>Throws when the resource was disposed before the action ran.</summary>
     /// <param name="resource">The resource to check.</param>
+    /// <exception cref="InvalidOperationException"><paramref name="resource"/> was already disposed.</exception>
     private static void ThrowIfDisposed(TrackedDisposable resource)
     {
         if (resource.DisposeCount == 0)

@@ -311,6 +311,7 @@ public sealed class ReplaySignal<T> : ISignal<T>
     }
 
     /// <summary>Executes the ThrowIfDisposed operation.</summary>
+    /// <exception cref="ObjectDisposedException">The signal has already been disposed.</exception>
     private void ThrowIfDisposed()
     {
         if (!IsDisposed)

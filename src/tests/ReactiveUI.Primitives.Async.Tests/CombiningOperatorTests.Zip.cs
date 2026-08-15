@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
@@ -59,6 +60,7 @@ public partial class CombiningOperatorTests
     }
 
     /// <summary>Tests Zip null arguments throws.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void WhenZipNullArguments_ThenThrowsArgumentNull() =>
         Assert.Throws<ArgumentNullException>(static () =>
@@ -315,11 +317,13 @@ public partial class CombiningOperatorTests
     }
 
     /// <summary>Tests that Zip throws on null second argument.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void WhenZipNullSecond_ThenThrowsArgumentNull() => Assert.Throws<ArgumentNullException>(static () =>
         SignalAsync.Return(1).Zip((IObservableAsync<string>)null!, static (a, _) => a));
 
     /// <summary>Tests that Zip throws on null resultSelector.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void WhenZipNullResultSelector_ThenThrowsArgumentNull() => Assert.Throws<ArgumentNullException>(
         static () => SignalAsync.Return(1).Zip<int, int, int>(SignalAsync.Return(SampleValue2), null!));

@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -46,11 +48,13 @@ internal sealed class FromAsyncExternalCancellation<T> : IDisposable
     private CancellationTokenRegistration Registration { get; set; }
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose() => Registration.Dispose();
 
     /// <summary>Creates a linked source for subscription disposal and external cancellation.</summary>
     /// <param name="subscriptionToken">The subscription-owned cancellation token.</param>
     /// <returns>A linked cancellation token source.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal CancellationTokenSource CreateLinkedSource(CancellationToken subscriptionToken) =>
         CancellationTokenSource.CreateLinkedTokenSource(CancellationToken, subscriptionToken);
 
@@ -64,7 +68,7 @@ internal sealed class FromAsyncExternalCancellation<T> : IDisposable
         }
 
         Registration =
-            CancellationToken.Register(static state => ((FromAsyncExternalCancellation<T>)state!).Cancel(), this);
+            CancellationToken.UnsafeRegister(static state => ((FromAsyncExternalCancellation<T>)state!).Cancel(), this);
         return !Lifetime.IsCompleted;
     }
 

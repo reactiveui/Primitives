@@ -11,9 +11,9 @@ namespace ReactiveUI.Primitives.Async;
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Delay operators that time-shift an observable source sequence.</summary>
-    /// <param name="this">The source observable sequence.</param>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-    extension<T>(IObservableAsync<T> @this)
+    /// <param name="source">The source observable sequence.</param>
+    extension<T>(IObservableAsync<T> source)
     {
         /// <summary>
         /// Time-shifts the observable sequence by the specified time span. Each element notification
@@ -27,8 +27,8 @@ public static partial class SignalAsyncExtensions
             ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(delayInterval, TimeSpan.Zero);
 
             return delayInterval == TimeSpan.Zero
-                ? @this
-                : new DelaySignal<T>(@this, delayInterval, TimeProvider.System);
+                ? source
+                : new DelaySignal<T>(source, delayInterval, TimeProvider.System);
         }
     }
 

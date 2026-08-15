@@ -2,12 +2,14 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Zips two synchronous integer ranges without coordinator queues.</summary>
 /// <typeparam name="TResult">The result value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Count = {_count}, LeftStart = {_leftStart}, RightStart = {_rightStart}")]
 public sealed class RangeZipSignal<TResult> : IRequireCurrentThread<TResult>, IInlineSignal<TResult>
 {
     /// <summary>Stores state for the signal implementation.</summary>
@@ -36,6 +38,7 @@ public sealed class RangeZipSignal<TResult> : IRequireCurrentThread<TResult>, II
 
     /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
     /// <returns>The result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() => false;
 
     /// <summary>Executes the Subscribe operation.</summary>

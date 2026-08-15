@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Disposables;
 
 /// <summary>
@@ -35,5 +37,6 @@ public sealed class SwapDisposable : IsDisposed
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose() => DisposableSlotHelper.TryDispose(ref _current, ref _disposed);
 }

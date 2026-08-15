@@ -18,8 +18,8 @@ namespace ReactiveUI.Primitives;
 public static class ConnectableSignalRxNameExtensions
 {
     /// <summary>Reference-counting operators for a connectable signal source.</summary>
-    /// <param name="source">Connectable signal to reference count.</param>
     /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">Connectable signal to reference count.</param>
     extension<T>(ConnectableSignal<T> source)
     {
         /// <summary>Shares a single subscription while observers are present. System.Reactive name for <c>AutoShare</c>.</summary>
@@ -33,8 +33,8 @@ public static class ConnectableSignalRxNameExtensions
     }
 
     /// <summary>Hot-sharing operators for an observable source sequence.</summary>
-    /// <param name="source">Source sequence to share or replay.</param>
     /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">Source sequence to share or replay.</param>
     extension<T>(IObservable<T> source)
     {
         /// <summary>Creates a connectable live signal. System.Reactive name for <c>ShareLive</c>.</summary>

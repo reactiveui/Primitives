@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Extensions.Internal;
 
@@ -33,6 +34,7 @@ public class SequencerPeriodicMixinsTests
 
     /// <summary>Invokes the tick method to exercise the disposed tick guard.</summary>
     /// <param name="subscription">The subscription under test.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void InvokeTick(IDisposable subscription) =>
         ((SequencerPeriodicExtensions.PeriodicSubscription<Action>)subscription).Tick();
 }

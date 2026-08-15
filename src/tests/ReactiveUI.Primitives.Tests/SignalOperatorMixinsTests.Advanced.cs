@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Disposables;
@@ -379,6 +380,7 @@ public partial class SignalOperatorMixinsTests
             ReturnNullEnumerator ? null! : ((IEnumerable<IObservable<T>>)EmptySources).GetEnumerator();
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
 
@@ -394,9 +396,11 @@ public partial class SignalOperatorMixinsTests
         private bool Required { get; }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool IsRequiredSubscribeOnCurrentThread() => Required;
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IDisposable Subscribe(IObserver<T> observer) => EmptyDisposable.Instance;
     }
 }

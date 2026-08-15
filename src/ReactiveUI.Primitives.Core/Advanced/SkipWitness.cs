@@ -2,12 +2,15 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Sink that drops the first <c>count</c> values, then forwards the rest.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 /// <param name="observer">The downstream observer.</param>
 /// <param name="count">The number of leading values to drop.</param>
+[System.Diagnostics.DebuggerDisplay("Remaining = {_remaining}, Observer = {_observer}")]
 public sealed class SkipWitness<T>(IObserver<T> observer, int count) : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>
@@ -40,15 +43,19 @@ public sealed class SkipWitness<T>(IObserver<T> observer, int count) : IObserver
     }
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnError(Exception error) => SinkTerminal.Fault(_observer, error, this);
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnCompleted() => SinkTerminal.Complete(_observer, this);
 
     /// <summary>Assigns the upstream subscription, disposing it if one is already held.</summary>
     /// <param name="subscription">The upstream subscription.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetSubscription(IDisposable subscription) => SinkSubscription.Set(ref _subscription, subscription);
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose() => SinkSubscription.Dispose(ref _subscription);
 }

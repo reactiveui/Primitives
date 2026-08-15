@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -10,6 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Observer wrapper for object casts.</summary>
 /// <typeparam name="TResult">The result value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}, Observer = {Observer}")]
 public sealed class CastWitness<TResult> : IObserver<object?>, IDisposable
 {
     /// <summary>Non-zero after terminal notification or disposal.</summary>
@@ -53,18 +56,22 @@ public sealed class CastWitness<TResult> : IObserver<object?>, IDisposable
     }
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnError(Exception error) =>
         WitnessLifetime.Error(ref _stopped, Subscription, Observer, error);
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnCompleted() =>
         WitnessLifetime.Complete(ref _stopped, Subscription, Observer);
 
     /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose() => WitnessLifetime.Dispose(ref _stopped, Subscription);
 
     /// <summary>Assigns the upstream subscription.</summary>
     /// <param name="subscription">The upstream subscription.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetSubscription(IDisposable subscription) =>
         WitnessLifetime.SetSubscription(ref _stopped, Subscription, subscription);
 }

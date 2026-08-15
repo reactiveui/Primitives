@@ -8,6 +8,7 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 
 /// <summary>Subscribes to an observable sequence and executes an asynchronous handler for each element.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Queued = {_queue.Count}, Processing = {_isProcessing}, Done = {_done}")]
 public sealed class SubscribeAsyncObservable<T> : IDisposable
 {
     /// <summary>The gate for state access.</summary>

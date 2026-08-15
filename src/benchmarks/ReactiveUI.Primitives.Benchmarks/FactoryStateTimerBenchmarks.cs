@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Concurrency;
+using System.Runtime.CompilerServices;
 using BenchmarkDotNet.Attributes;
 using Microsoft.Extensions.Time.Testing;
 using R3;
@@ -20,6 +21,7 @@ namespace ReactiveUI.Primitives.Benchmarks;
 /// factories under virtual time, and the <c>FromEventPattern</c> event bridge.
 /// </summary>
 [MemoryDiagnoser]
+[System.Diagnostics.DebuggerDisplay("Limit = {_limit}")]
 public class FactoryStateTimerBenchmarks
 {
     /// <summary>The number of values generated or events raised per benchmark iteration.</summary>
@@ -225,6 +227,7 @@ public class FactoryStateTimerBenchmarks
         public event EventHandler? Tick;
 
         /// <summary>Raises the <see cref="Tick"/> event once.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Raise() => Tick?.Invoke(this, EventArgs.Empty);
     }
 }

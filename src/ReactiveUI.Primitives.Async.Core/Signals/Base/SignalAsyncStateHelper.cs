@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async.Signals;
@@ -14,6 +15,7 @@ internal static class SignalAsyncStateHelper
     /// <typeparam name="T">The observed value type.</typeparam>
     /// <param name="signal">The signal instance.</param>
     /// <returns>The signal as an observable sequence.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static IObservableAsync<T> Values<T>(ISignalAsync<T> signal) => signal;
 
     /// <summary>Asynchronously notifies subscribed observers of a new value.</summary>
@@ -62,6 +64,7 @@ internal static class SignalAsyncStateHelper
 
     /// <summary>Releases resources used by the signal.</summary>
     /// <returns>A completed task.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static ValueTask DisposeAsync() => default;
 
     /// <summary>Subscribes an observer to a signal.</summary>

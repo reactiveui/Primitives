@@ -2,10 +2,13 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Signals;
 
 /// <summary>Represents the AwaitWitness class.</summary>
 /// <typeparam name="T">The Type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Callback = {_callback}, Context = {_context}")]
 public sealed class AwaitWitness<T> : IObserver<T>
 {
     /// <summary>Stores state for the signal implementation.</summary>
@@ -28,10 +31,12 @@ public sealed class AwaitWitness<T> : IObserver<T>
     }
 
     /// <summary>Executes the OnCompleted operation.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnCompleted() => InvokeOnOriginalContext();
 
     /// <summary>Executes the OnError operation.</summary>
     /// <param name="error">The error value.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2318:Members should not have identical bodies",

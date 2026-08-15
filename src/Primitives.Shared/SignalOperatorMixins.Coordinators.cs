@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive;
 #else
@@ -171,6 +173,7 @@ public static partial class LinqExtensions
         internal BlendCoordinator(IObserver<T> observer) => _observer = observer;
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose() => _pocket.Dispose();
 
         /// <summary>Subscribes to the outer source.</summary>
@@ -374,6 +377,7 @@ public static partial class LinqExtensions
         internal RaceCoordinator(IObserver<T> observer) => _arms = new(observer);
 
         /// <summary>Releases the active subscriptions.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose() => _arms.Dispose();
 
         /// <summary>Starts observing the candidate source streams.</summary>

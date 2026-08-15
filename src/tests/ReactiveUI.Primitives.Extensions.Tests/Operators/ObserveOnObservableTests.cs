@@ -4,6 +4,7 @@
 
 using System.Reactive.Disposables;
 using System.Reactive.Subjects;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
@@ -157,9 +158,11 @@ public class ObserveOnObservableTests
         public long Timestamp => Now.UtcTicks;
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Schedule(IWorkItem item) => item.Execute();
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
             "Design",
             "SST2318:Members should not have identical bodies",

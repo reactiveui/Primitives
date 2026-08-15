@@ -5,6 +5,7 @@
 namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>An observable that emits incrementing ticks at a fixed interval.</summary>
+[System.Diagnostics.DebuggerDisplay("Period = {Period}, TimeProvider = {TimeProvider}")]
 public sealed class IntervalSignal : IObservableAsync<long>
 {
     /// <summary>Initializes a new instance of the <see cref="IntervalSignal"/> class.</summary>

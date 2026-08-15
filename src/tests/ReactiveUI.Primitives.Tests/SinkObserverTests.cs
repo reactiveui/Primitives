@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
@@ -751,9 +752,11 @@ public class SinkObserverTests
 
         /// <summary>Pushes a value to the retained observer.</summary>
         /// <param name = "value">The value to push.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Next(T value) => _observer?.OnNext(value);
 
         /// <summary>Pushes completion to the retained observer.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Complete() => _observer?.OnCompleted();
     }
 
@@ -797,6 +800,7 @@ public class SinkObserverTests
         public bool Completed { get; private set; }
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnNext(T value) => Values.Add(value);
 
         /// <inheritdoc/>

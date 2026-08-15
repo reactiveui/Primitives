@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 using ReactiveUI.Primitives.Reactive.Advanced;
 
@@ -49,6 +51,7 @@ public static partial class Signal
     /// <typeparam name="T">The type.</typeparam>
     /// <param name="value">The value.</param>
     /// <returns>An Signals.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservable<T> Loop<T>(T value) =>
         new LoopSignal<T>(value);
 
@@ -254,6 +257,7 @@ public static partial class Signal
     /// <typeparam name="T">The type.</typeparam>
     /// <param name="taskFactory">The factory that creates the task.</param>
     /// <returns>An Signals.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservable<T> FromAsync<T>(Func<CancellationToken, Task<T>> taskFactory) =>
         new FromAsyncSignal<T>(taskFactory);
 
@@ -374,6 +378,7 @@ public static partial class Signal
     /// <summary>Emits a single zero tick after the due time.</summary>
     /// <param name="dueTime">The relative time after which to emit the tick.</param>
     /// <returns>An Signals.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservable<long> After(TimeSpan dueTime) =>
         new AfterSignal(dueTime, ThreadPoolSequencer.Instance);
 
@@ -391,6 +396,7 @@ public static partial class Signal
     /// <summary>Emits a single zero tick at the specified absolute due time.</summary>
     /// <param name="dueTime">The absolute time at which to emit the tick.</param>
     /// <returns>An Signals.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservable<long> After(DateTimeOffset dueTime) =>
         new AfterSignal(Sequencer.Normalize(dueTime - ThreadPoolSequencer.Instance.Now), ThreadPoolSequencer.Instance);
 
@@ -409,6 +415,7 @@ public static partial class Signal
     /// <param name="dueTime">The relative time before the first tick.</param>
     /// <param name="period">The period between subsequent ticks.</param>
     /// <returns>An Signals.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservable<long> After(TimeSpan dueTime, TimeSpan period) =>
         new AfterSignal(dueTime, period, ThreadPoolSequencer.Instance);
 

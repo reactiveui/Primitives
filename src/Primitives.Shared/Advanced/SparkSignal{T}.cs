@@ -10,6 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Signal that materializes source notifications into <see cref="Spark{T}"/> values.</summary>
 /// <typeparam name="T">The value type.</typeparam>
+[System.Diagnostics.DebuggerDisplay("Source = {Source}")]
 public sealed class SparkSignal<T> : IObservable<Spark<T>>
 {
     /// <summary>Initializes a new instance of the <see cref="SparkSignal{T}"/> class.</summary>
