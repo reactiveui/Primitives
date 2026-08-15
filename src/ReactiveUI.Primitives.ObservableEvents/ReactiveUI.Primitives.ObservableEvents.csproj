@@ -18,7 +18,7 @@
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all"/>
     <!-- Keep the analyzer loadable in every supported compiler host. The repository-wide
          transitive pin targets v10, while net9 compiler hosts provide v9. -->
-    <PackageReference Include="System.Collections.Immutable" VersionOverride="9.0.0" PrivateAssets="all"/>
+    <PackageReference Include="System.Collections.Immutable" VersionOverride="9.0.19" PrivateAssets="all"/>
   </ItemGroup>
 
   <ItemGroup>
