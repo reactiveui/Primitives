@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net10.0;net11.0</TargetFrameworks>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <RunAnalyzers>true</RunAnalyzers>
+    <NoWarn>$(NoWarn);CA1822</NoWarn>
+    <!-- Roslyn is not trim- or AOT-friendly, and these benchmarks host it in-process. -->
+    <IsAotCompatible>false</IsAotCompatible>
+    <EnableAotAnalyzer>false</EnableAotAnalyzer>
+    <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+    <!-- The compiler the benchmarks host. Deliberately newer than the 4.8 the generator is built against:
+         that is the direction consumers actually run it in, so it is the direction worth measuring. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Referenced as an ordinary assembly rather than an analyzer: the benchmarks drive the generator
+         themselves through CSharpGeneratorDriver instead of letting the build run it. -->
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.ObservableEvents\ReactiveUI.Primitives.ObservableEvents.csproj"/>
+    <!-- The corpus compiles against the lean provider, which is what the generated wrappers name. -->
+    <ProjectReference Include="..\..\ReactiveUI.Primitives\ReactiveUI.Primitives.csproj"/>
+  </ItemGroup>
+
+</Project>

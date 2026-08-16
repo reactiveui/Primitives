@@ -10,15 +10,38 @@
     <DevelopmentDependency>true</DevelopmentDependency>
     <PackageType>Analyzer</PackageType>
     <TrackPublicApi>false</TrackPublicApi>
+    <!-- The repository-wide transitive pins exist to keep the runtime packages on one set of versions. They are
+         wrong here: this assembly is loaded by whatever compiler the consumer is running, so its dependencies
+         have to be the ones that compiler already carries, which is whatever Roslyn itself asks for. Pinning
+         System.Collections.Immutable forward is how an analyzer ends up unloadable on the SDK it targets. -->
+    <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
     <PackageDescription>Incremental source generator that exposes .NET events as observables for ReactiveUI.Primitives, ReactiveUI.Primitives.Reactive, and standalone System.Reactive projects.</PackageDescription>
     <PackageTags>reactiveui;primitives;system.reactive;source-generator;analyzer;observable;events</PackageTags>
   </PropertyGroup>
 
+  <!-- Roslyn 4.8.0 baseline (VS 2022 17.8, .NET 8.0.1xx SDK). The generator ships in the version-less
+       analyzers/dotnet/cs folder, and a compiler refuses to load a generator built against a newer Roslyn
+       than itself, so 4.8.0 is what keeps .NET 8 SDK consumers working. Only APIs present in Roslyn 4.8
+       may be used here. This is the generator's one dependency; System.Collections.Immutable arrives
+       through it, at the version that compiler already carries. -->
   <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all"/>
-    <!-- Keep the analyzer loadable in every supported compiler host. The repository-wide
-         transitive pin targets v10, while net9 compiler hosts provide v9. -->
-    <PackageReference Include="System.Collections.Immutable" VersionOverride="9.0.0" PrivateAssets="all"/>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" VersionOverride="4.8.0" PrivateAssets="all"/>
+  </ItemGroup>
+
+  <!-- Records need this marker type, which netstandard2.0 does not carry. -->
+  <ItemGroup>
+    <Compile Include="..\Polyfills\IsExternalInit.cs" Link="Polyfills\IsExternalInit.cs"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.ObservableEvents.Tests"/>
+  </ItemGroup>
+
+  <!-- The generator runs per keystroke, where a LINQ iterator and its closure are a per-node allocation.
+       ImplicitUsings would otherwise import System.Linq, so removing it makes reaching for it a build error
+       rather than something to notice in a profile later. -->
+  <ItemGroup>
+    <Using Remove="System.Linq"/>
   </ItemGroup>
 
   <ItemGroup>

@@ -1,6 +1,7 @@
 <Solution>
     <Folder Name="/benchmarks/">
         <Project Path="benchmarks/ReactiveUI.Primitives.Benchmarks/ReactiveUI.Primitives.Benchmarks.csproj" />
+        <Project Path="benchmarks/ReactiveUI.Primitives.ObservableEvents.Benchmarks/ReactiveUI.Primitives.ObservableEvents.Benchmarks.csproj" />
     </Folder>
     <Folder Name="/SolutionConfig/">
         <File Path="../.editorconfig" />
