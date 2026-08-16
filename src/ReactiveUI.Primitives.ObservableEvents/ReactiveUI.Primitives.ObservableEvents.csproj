@@ -25,7 +25,7 @@
        may be used here. This is the generator's one dependency; System.Collections.Immutable arrives
        through it, at the version that compiler already carries. -->
   <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" VersionOverride="4.8.0" PrivateAssets="all"/>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" VersionOverride="4.14.0" PrivateAssets="all"/>
   </ItemGroup>
 
   <!-- Records need this marker type, which netstandard2.0 does not carry. -->
