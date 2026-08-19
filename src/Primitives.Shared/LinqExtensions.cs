@@ -11,19 +11,10 @@ namespace ReactiveUI.Primitives;
 /// <summary>Miscellaneous Primitives extensions.</summary>
 public static partial class LinqExtensions
 {
-    /// <summary>Disposal-tracking operators for a disposable.</summary>
+    /// <summary>Disposal operators for a disposable.</summary>
     /// <param name="disposable">The disposable.</param>
     extension(IDisposable disposable)
     {
-        /// <summary>Disposes the IDisposable with the disposables instance.</summary>
-        /// <param name="disposables">The disposables.</param>
-        /// <returns>An IDisposable.</returns>
-        public IDisposable DisposeWith(MultipleDisposable disposables)
-        {
-            disposables?.Add(disposable);
-            return disposable;
-        }
-
         /// <summary>Disposes the with.</summary>
         /// <returns>A SingleDisposable.</returns>
         public SingleDisposable DisposeWith() =>
@@ -74,6 +65,24 @@ public static partial class LinqExtensions
             ArgumentOutOfRangeExceptionHelper.ThrowIfNegativeOrZero(skip);
 
             return new BufferCountSignal<TSource>(source, count, skip);
+        }
+    }
+
+    /// <summary>Disposal-tracking operators for a disposable.</summary>
+    /// <typeparam name="T">The disposable type.</typeparam>
+    /// <param name="disposable">The disposable.</param>
+    extension<T>(T disposable)
+        where T : IDisposable
+    {
+        /// <summary>Disposes the IDisposable with the disposables instance.</summary>
+        /// <param name="disposables">The disposables.</param>
+        /// <returns>The original disposable.</returns>
+        public T DisposeWith(MultipleDisposable disposables)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(disposables);
+
+            disposables.Add(disposable);
+            return disposable;
         }
     }
 }
