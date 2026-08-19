@@ -425,6 +425,7 @@ namespace ReactiveUI.Primitives.Reactive
         extension<T>(T disposable) where T : System.IDisposable
         {
             public T DisposeWith(ReactiveUI.Primitives.Disposables.MultipleDisposable disposables) { }
+            public T DisposeWith(ReactiveUI.Primitives.Reactive.Disposables.ContainerDisposable disposables) { }
         }
         extension(System.IObservable<object?> source)
         {
@@ -1590,6 +1591,20 @@ namespace ReactiveUI.Primitives.Reactive.Core
         public readonly System.IObservable<T> ToObservable() { }
         public readonly System.IObservable<T> ToObservable(System.Reactive.Concurrency.IScheduler scheduler) { }
         public override readonly string ToString() { }
+    }
+}
+namespace ReactiveUI.Primitives.Reactive.Disposables
+{
+    [System.Diagnostics.DebuggerDisplay("Count = {Count}, IsDisposed = {IsDisposed}")]
+    public sealed class ContainerDisposable : ReactiveUI.Primitives.Disposables.MultipleDisposable
+    {
+        public ContainerDisposable() { }
+        public ContainerDisposable(params System.IDisposable[] disposables) { }
+        public ContainerDisposable(System.IDisposable first, System.IDisposable second) { }
+        public ContainerDisposable(System.IDisposable first, System.IDisposable second, System.IDisposable third) { }
+        protected override void Dispose(bool disposing) { }
+        public System.Reactive.Disposables.CompositeDisposable ToCompositeDisposable() { }
+        public static implicit operator System.Reactive.Disposables.CompositeDisposable(ReactiveUI.Primitives.Reactive.Disposables.ContainerDisposable container) { }
     }
 }
 namespace ReactiveUI.Primitives.Reactive.Signals

@@ -3,9 +3,15 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive;
+using System.Reactive.Disposables;
+
+// Imported so the DisposeWith tests below are compiled with System.Reactive's own fluent disposal helpers in
+// scope - that is the call-site shape the ContainerDisposable overload exists to keep unambiguous.
+using System.Reactive.Disposables.Fluent;
 using System.Reactive.Linq;
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Disposables;
+using ReactiveUI.Primitives.Reactive.Disposables;
 using ReactiveUI.Primitives.Reactive.Signals;
 using ReactiveLinqExtensions = ReactiveUI.Primitives.Reactive.LinqExtensions;
 
@@ -52,6 +58,61 @@ public class LinqExtensionsTests
             disposable.DisposeWith((MultipleDisposable)null!));
 
         await Assert.That(exception.ParamName).IsEqualTo("disposables");
+    }
+
+    /// <summary>Verifies DisposeWith resolves to this overload for a container and tracks the original disposable.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task DisposeWithContainerReturnsConcreteDisposableAndTracksIt()
+    {
+        var disposalCount = 0;
+        ActionDisposable disposable = new(() => disposalCount++);
+        ContainerDisposable disposables = [];
+
+        var result = disposable.DisposeWith(disposables);
+
+        await Assert.That(result).IsSameReferenceAs(disposable);
+        await Assert.That(disposables.Contains(disposable)).IsTrue();
+
+        // Resolving to this overload rather than System.Reactive's is what keeps the registration on the
+        // container itself instead of the composite it would have been converted into.
+        await Assert.That(((CompositeDisposable)disposables).Count).IsEqualTo(0);
+
+        disposables.Dispose();
+
+        await Assert.That(disposalCount).IsEqualTo(1);
+    }
+
+    /// <summary>Verifies DisposeWith rejects a null container.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task DisposeWithThrowsForNullContainerDisposable()
+    {
+        using ActionDisposable disposable = new(static () => { });
+
+        var exception = Assert.Throws<ArgumentNullException>(() =>
+            disposable.DisposeWith((ContainerDisposable)null!));
+
+        await Assert.That(exception.ParamName).IsEqualTo("disposables");
+    }
+
+    /// <summary>Verifies a container converted to a composite still disposes what System.Reactive registered on it.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task DisposeWithComposedFromAContainerDisposesWithTheContainer()
+    {
+        ContainerDisposable disposables = [];
+        var disposalCount = 0;
+        ActionDisposable disposable = new(() => disposalCount++);
+
+        var result = disposable.DisposeWith((CompositeDisposable)disposables);
+
+        await Assert.That(result).IsSameReferenceAs(disposable);
+        await Assert.That(disposalCount).IsEqualTo(0);
+
+        disposables.Dispose();
+
+        await Assert.That(disposalCount).IsEqualTo(1);
     }
 
     /// <summary>Verifies fluent <c>SubscribeSafe</c> accepts nullable object values with Rx imports present.</summary>
