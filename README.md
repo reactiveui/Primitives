@@ -83,6 +83,12 @@ These two types are the only places the lean surface departs from the System.Rea
 variants close the gap: they recompile the same source with `ISequencer` mapped to `IScheduler` and `RxVoid` mapped to
 `System.Reactive.Unit`, so code that already speaks System.Reactive sees the types it expects.
 
+Disposal groups are a third seam, and one the shared types cannot close on their own: `MultipleDisposable` ships in the
+dependency-free `ReactiveUI.Disposables` package, so it cannot name `CompositeDisposable`. `ReactiveUI.Primitives.Reactive`
+adds `ContainerDisposable` for that - a `MultipleDisposable` that converts implicitly to a `CompositeDisposable` it owns
+and disposes. Hand one to `DisposeWith`, to a library that takes a `CompositeDisposable`, or to your own helper, and it
+just works; anything registered through the composite is disposed with the container.
+
 ## Table of contents
 
 1. [Install](#install)
