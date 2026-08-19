@@ -5,6 +5,7 @@
 using System.Reactive;
 using System.Reactive.Linq;
 using ReactiveUI.Primitives.Advanced;
+using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Reactive.Signals;
 using ReactiveLinqExtensions = ReactiveUI.Primitives.Reactive.LinqExtensions;
 
@@ -21,6 +22,37 @@ public class LinqExtensionsTests
 
     /// <summary>The string value used by nullable object subscription tests.</summary>
     private const string SubscribeSafeValue = "value";
+
+    /// <summary>Verifies DisposeWith preserves the concrete type and tracks the original disposable.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task DisposeWithReturnsConcreteDisposableAndTracksIt()
+    {
+        var disposalCount = 0;
+        ActionDisposable disposable = new(() => disposalCount++);
+        MultipleDisposable disposables = [];
+
+        var result = disposable.DisposeWith(disposables);
+
+        await Assert.That(result).IsSameReferenceAs(disposable);
+        await Assert.That(result.IsDisposed).IsFalse();
+        await Assert.That(disposables.Contains(disposable)).IsTrue();
+        disposables.Dispose();
+        await Assert.That(disposalCount).IsEqualTo(1);
+    }
+
+    /// <summary>Verifies DisposeWith rejects a null disposable collection.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task DisposeWithThrowsForNullMultipleDisposable()
+    {
+        using ActionDisposable disposable = new(static () => { });
+
+        var exception = Assert.Throws<ArgumentNullException>(() =>
+            disposable.DisposeWith((MultipleDisposable)null!));
+
+        await Assert.That(exception.ParamName).IsEqualTo("disposables");
+    }
 
     /// <summary>Verifies fluent <c>SubscribeSafe</c> accepts nullable object values with Rx imports present.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>

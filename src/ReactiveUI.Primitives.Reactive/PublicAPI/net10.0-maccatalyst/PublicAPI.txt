@@ -420,8 +420,11 @@ namespace ReactiveUI.Primitives.Reactive
         extension(System.IDisposable disposable)
         {
             public ReactiveUI.Primitives.Disposables.SingleDisposable DisposeWith() { }
-            public System.IDisposable DisposeWith(ReactiveUI.Primitives.Disposables.MultipleDisposable disposables) { }
             public ReactiveUI.Primitives.Disposables.SingleDisposable DisposeWith(System.Action? action) { }
+        }
+        extension<T>(T disposable) where T : System.IDisposable
+        {
+            public T DisposeWith(ReactiveUI.Primitives.Disposables.MultipleDisposable disposables) { }
         }
         extension(System.IObservable<object?> source)
         {
