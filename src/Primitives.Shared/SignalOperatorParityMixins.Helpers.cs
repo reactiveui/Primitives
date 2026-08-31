@@ -560,8 +560,15 @@ public static partial class LinqExtensions
 
         /// <summary>Schedules the active timer.</summary>
         /// <param name="delay">The timer delay.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void Schedule(TimeSpan delay) => _timer.Create(_sequencer.Schedule(delay, Tick));
+        private void Schedule(TimeSpan delay)
+        {
+            // Publish ownership before scheduling: a callback may run before Schedule returns and
+            // install its successor. Assigning the returned handle directly to _timer would cancel
+            // that successor instead of the timer that just fired.
+            SingleDisposable pending = new();
+            _timer.Create(pending);
+            pending.Create(_sequencer.Schedule(delay, Tick));
+        }
 
         /// <summary>Handles a timer tick.</summary>
         private void Tick()

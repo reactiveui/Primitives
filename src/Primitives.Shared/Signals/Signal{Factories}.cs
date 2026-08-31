@@ -189,6 +189,33 @@ public static partial class Signal
         return new FromEventPatternSignal<TEventHandler, TEventArgs>(addHandler, removeHandler);
     }
 
+    /// <summary>Converts an event using an explicit handler conversion.</summary>
+    /// <typeparam name="TEventHandler">The delegate type used by the event.</typeparam>
+    /// <typeparam name="TEventArgs">The event argument type.</typeparam>
+    /// <param name="conversion">Converts the notification callback into the event's handler type.</param>
+    /// <param name="addHandler">The action that attaches the converted event handler.</param>
+    /// <param name="removeHandler">The action that detaches the same converted event handler.</param>
+    /// <returns>A signal that emits event patterns when the converted handler invokes its callback.</returns>
+    /// <exception cref="ArgumentNullException">A callback argument is <see langword="null"/>.</exception>
+    public static IObservable<EventPattern<TEventArgs>> FromEventPattern<TEventHandler, TEventArgs>(
+        Func<EventHandler<TEventArgs>, TEventHandler> conversion,
+        Action<TEventHandler> addHandler,
+        Action<TEventHandler> removeHandler)
+        where TEventHandler : Delegate
+        where TEventArgs : EventArgs
+    {
+        ArgumentExceptionHelper.ThrowIfNull(conversion);
+        ArgumentExceptionHelper.ThrowIfNull(addHandler);
+        ArgumentExceptionHelper.ThrowIfNull(removeHandler);
+
+        return Create<EventPattern<TEventArgs>>(observer =>
+        {
+            var handler = conversion((sender, args) => observer.OnNext(new(sender, args)));
+            addHandler(handler);
+            return Scope.Create((removeHandler, handler), static state => state.removeHandler(state.handler));
+        });
+    }
+
     /// <summary>Creates a signal from an enumerable sequence.</summary>
     /// <typeparam name="T">The type.</typeparam>
     /// <param name="values">The values to emit.</param>

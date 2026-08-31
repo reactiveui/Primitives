@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using ReactiveUI.Primitives.Advanced;
 
@@ -108,6 +109,43 @@ public static class SubscribeExtensions
                 ? inline.Subscribe(onNext, onError, onCompleted)
                 : source.Subscribe(new EmptyWitness<T>(onNext, onError, onCompleted));
         }
+
+        /// <summary>Subscribes to the Signals sequence without specifying any handlers using a Primitives-specific name.</summary>
+        /// <returns><see cref="IDisposable"/> object used to unsubscribe from the Signals sequence.</returns>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <c>null</c>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IDisposable SubscribePrimitives() => Subscribe(source);
+
+        /// <summary>Subscribes to the Signals providing just the <paramref name="onNext" /> delegate using a Primitives-specific name.</summary>
+        /// <param name="onNext">The on next.</param>
+        /// <returns>A IDisposable.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IDisposable SubscribePrimitives(Action<T> onNext) => Subscribe(source, onNext);
+
+        /// <summary>Subscribes to the Signals providing next and error delegates using a Primitives-specific name.</summary>
+        /// <param name="onNext">The on next.</param>
+        /// <param name="onError">The on error.</param>
+        /// <returns>A IDisposable.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IDisposable SubscribePrimitives(Action<T> onNext, Action<Exception> onError) =>
+            Subscribe(source, onNext, onError);
+
+        /// <summary>Subscribes to the Signals providing next and completed delegates using a Primitives-specific name.</summary>
+        /// <param name="onNext">The on next.</param>
+        /// <param name="onCompleted">The on completed.</param>
+        /// <returns>A IDisposable.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IDisposable SubscribePrimitives(Action<T> onNext, Action onCompleted) =>
+            Subscribe(source, onNext, onCompleted);
+
+        /// <summary>Subscribes to the Signals providing all callback delegates using a Primitives-specific name.</summary>
+        /// <param name="onNext">The on next.</param>
+        /// <param name="onError">The on error.</param>
+        /// <param name="onCompleted">The on completed.</param>
+        /// <returns>A IDisposable.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IDisposable SubscribePrimitives(Action<T> onNext, Action<Exception> onError, Action onCompleted) =>
+            Subscribe(source, onNext, onError, onCompleted);
     }
 
     /// <summary>Holds cached no-op value callbacks by value type.</summary>

@@ -18,7 +18,7 @@ using ReactiveLinqExtensions = ReactiveUI.Primitives.Reactive.LinqExtensions;
 namespace ReactiveUI.Primitives.Reactive.Tests;
 
 /// <summary>Tests for the System.Reactive-flavored LINQ compatibility extensions.</summary>
-public class LinqExtensionsTests
+public partial class LinqExtensionsTests
 {
     /// <summary>The first non-null test value.</summary>
     private const int One = 1;

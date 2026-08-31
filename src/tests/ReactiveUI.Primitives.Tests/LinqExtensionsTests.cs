@@ -7,7 +7,7 @@ using ReactiveUI.Primitives.Disposables;
 namespace ReactiveUI.Primitives.Tests;
 
 /// <summary>Verifies miscellaneous Primitives extension contracts.</summary>
-public class LinqExtensionsTests
+public partial class LinqExtensionsTests
 {
     /// <summary>Verifies DisposeWith preserves the concrete type and tracks the original disposable.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>

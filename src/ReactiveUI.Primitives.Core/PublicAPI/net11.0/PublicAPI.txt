@@ -96,6 +96,16 @@ namespace ReactiveUI.Primitives
             public System.IDisposable Subscribe(System.Action<T> onNext, System.Action onCompleted) { }
             public System.IDisposable Subscribe(System.Action<T> onNext, System.Action<System.Exception> onError) { }
             public System.IDisposable Subscribe(System.Action<T> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IDisposable SubscribePrimitives() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IDisposable SubscribePrimitives(System.Action<T> onNext) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IDisposable SubscribePrimitives(System.Action<T> onNext, System.Action onCompleted) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IDisposable SubscribePrimitives(System.Action<T> onNext, System.Action<System.Exception> onError) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IDisposable SubscribePrimitives(System.Action<T> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
         }
     }
 }
