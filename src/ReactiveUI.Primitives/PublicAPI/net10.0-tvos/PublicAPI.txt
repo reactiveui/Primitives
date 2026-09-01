@@ -45,6 +45,9 @@ namespace ReactiveUI.Primitives
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public static System.IObservable<T> BlendUnique<T>(params System.IObservable<T>[] sources) { }
         public static System.IObservable<T> BlendUnique<T>(System.IObservable<T>[] sources, System.Collections.Generic.IEqualityComparer<T>? comparer) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        [System.Runtime.CompilerServices.OverloadResolutionPriority(-2)]
+        public static System.IObservable<System.Collections.Generic.IList<T>> CombineLatest<T>(params System.IObservable<T>[] sources) { }
         [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
         public static System.IDisposable SubscribeSafe<T>(System.IObservable<T> source, System.Action<System.Exception> onError, params byte[] allowValueType) where T : struct { }
         [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
@@ -80,10 +83,6 @@ namespace ReactiveUI.Primitives
             public ReactiveUI.Primitives.Disposables.SingleDisposable DisposeWith() { }
             public ReactiveUI.Primitives.Disposables.SingleDisposable DisposeWith(System.Action? action) { }
         }
-        extension<T>(T disposable) where T : System.IDisposable
-        {
-            public T DisposeWith(ReactiveUI.Primitives.Disposables.MultipleDisposable disposables) { }
-        }
         extension(System.IObservable<object?> source)
         {
             public System.IObservable<TResult> CastTo<TResult>() { }
@@ -98,6 +97,12 @@ namespace ReactiveUI.Primitives
         {
             public System.IObservable<T> Blend() { }
             public System.IObservable<T> Blend(int maxConcurrent) { }
+        }
+        extension<T>(System.Collections.Generic.IEnumerable<System.IObservable<T>> sources)
+        {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<System.Collections.Generic.IList<T>> CombineLatest() { }
+            public System.IObservable<TResult> CombineLatest<TResult>(System.Func<System.Collections.Generic.IList<T>, TResult> resultSelector) { }
         }
         extension<T>(System.Collections.Generic.IEnumerable<System.IObservable<T>> sources)
         {
@@ -117,11 +122,11 @@ namespace ReactiveUI.Primitives
         }
         extension<T>(System.IObservable<ReactiveUI.Primitives.Core.Spark<T>> source)
         {
-            public System.IObservable<T> Unspark() { }
+            public System.IObservable<T> Dematerialize() { }
         }
         extension<T>(System.IObservable<ReactiveUI.Primitives.Core.Spark<T>> source)
         {
-            public System.IObservable<T> Dematerialize() { }
+            public System.IObservable<T> Unspark() { }
         }
         extension<T>(System.IObservable<System.IObservable<T>> sources)
         {
@@ -144,6 +149,23 @@ namespace ReactiveUI.Primitives
         extension<T>(System.IObservable<System.Threading.Tasks.Task<T>> sources)
         {
             public System.IObservable<T> Concat() { }
+        }
+        extension<T>(System.IObservable<T> source)
+        {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult> selector) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult> selector) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.IObservable<T12> source12, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TResult> selector) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.IObservable<T12> source12, System.IObservable<T13> source13, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult> selector) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.IObservable<T12> source12, System.IObservable<T13> source13, System.IObservable<T14> source14, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult> selector) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.IObservable<T12> source12, System.IObservable<T13> source13, System.IObservable<T14> source14, System.IObservable<T15> source15, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult> selector) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IObservable<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.IObservable<T12> source12, System.IObservable<T13> source13, System.IObservable<T14> source14, System.IObservable<T15> source15, System.IObservable<T16> source16, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult> selector) { }
         }
         extension<T>(System.IObservable<T> source)
         {
@@ -182,6 +204,8 @@ namespace ReactiveUI.Primitives
             public System.IDisposable SubscribeSafe(System.Action<T> onNext, System.Action<System.Exception> onError) { }
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public System.IDisposable SubscribeSafe(System.Action<T> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IDisposable SubscribeSafePrimitives(System.IObserver<T> observer) { }
             public System.IObservable<T> Synchronize() { }
             public System.IObservable<T> Synchronize(System.Threading.Lock gate) { }
             public System.IObservable<T> Synchronize(object gate) { }
@@ -191,19 +215,50 @@ namespace ReactiveUI.Primitives
         extension<T>(System.IObservable<T> source)
         {
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.IObservable<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult> selector) { }
+            [System.Runtime.CompilerServices.OverloadResolutionPriority(-1)]
+            public System.IObservable<(T First, T2 Second)> CombineLatest<T2>(System.IObservable<T2> source2) { }
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.IObservable<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult> selector) { }
+            [System.Runtime.CompilerServices.OverloadResolutionPriority(-1)]
+            public System.IObservable<(T First, T2 Second, T3 Third)> CombineLatest<T2, T3>(System.IObservable<T2> source2, System.IObservable<T3> source3) { }
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.IObservable<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.IObservable<T12> source12, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TResult> selector) { }
+            [System.Runtime.CompilerServices.OverloadResolutionPriority(-1)]
+            public System.IObservable<(T First, T2 Second, T3 Third, T4 Fourth)> CombineLatest<T2, T3, T4>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4) { }
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.IObservable<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.IObservable<T12> source12, System.IObservable<T13> source13, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult> selector) { }
+            [System.Runtime.CompilerServices.OverloadResolutionPriority(-1)]
+            public System.IObservable<(T First, T2 Second, T3 Third, T4 Fourth, T5 Fifth)> CombineLatest<T2, T3, T4, T5>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5) { }
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.IObservable<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.IObservable<T12> source12, System.IObservable<T13> source13, System.IObservable<T14> source14, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult> selector) { }
+            [System.Runtime.CompilerServices.OverloadResolutionPriority(-1)]
+            public System.IObservable<(T First, T2 Second, T3 Third, T4 Fourth, T5 Fifth, T6 Sixth)> CombineLatest<T2, T3, T4, T5, T6>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6) { }
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.IObservable<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.IObservable<T12> source12, System.IObservable<T13> source13, System.IObservable<T14> source14, System.IObservable<T15> source15, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult> selector) { }
+            [System.Runtime.CompilerServices.OverloadResolutionPriority(-1)]
+            public System.IObservable<(T First, T2 Second, T3 Third, T4 Fourth, T5 Fifth, T6 Sixth, T7 Seventh)> CombineLatest<T2, T3, T4, T5, T6, T7>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7) { }
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.IObservable<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.IObservable<T12> source12, System.IObservable<T13> source13, System.IObservable<T14> source14, System.IObservable<T15> source15, System.IObservable<T16> source16, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult> selector) { }
+            [System.Runtime.CompilerServices.OverloadResolutionPriority(-1)]
+            public System.IObservable<(T First, T2 Second, T3 Third, T4 Fourth, T5 Fifth, T6 Sixth, T7 Seventh, T8 Eighth)> CombineLatest<T2, T3, T4, T5, T6, T7, T8>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            [System.Runtime.CompilerServices.OverloadResolutionPriority(-1)]
+            public System.IObservable<(T First, T2 Second, T3 Third, T4 Fourth, T5 Fifth, T6 Sixth, T7 Seventh, T8 Eighth, T9 Ninth)> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            [System.Runtime.CompilerServices.OverloadResolutionPriority(-1)]
+            public System.IObservable<(T First, T2 Second, T3 Third, T4 Fourth, T5 Fifth, T6 Sixth, T7 Seventh, T8 Eighth, T9 Ninth, T10 Tenth)> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            [System.Runtime.CompilerServices.OverloadResolutionPriority(-1)]
+            public System.IObservable<(T First, T2 Second, T3 Third, T4 Fourth, T5 Fifth, T6 Sixth, T7 Seventh, T8 Eighth, T9 Ninth, T10 Tenth, T11 Eleventh)> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            [System.Runtime.CompilerServices.OverloadResolutionPriority(-1)]
+            public System.IObservable<(T First, T2 Second, T3 Third, T4 Fourth, T5 Fifth, T6 Sixth, T7 Seventh, T8 Eighth, T9 Ninth, T10 Tenth, T11 Eleventh, T12 Twelfth)> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.IObservable<T12> source12) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            [System.Runtime.CompilerServices.OverloadResolutionPriority(-1)]
+            public System.IObservable<(T First, T2 Second, T3 Third, T4 Fourth, T5 Fifth, T6 Sixth, T7 Seventh, T8 Eighth, T9 Ninth, T10 Tenth, T11 Eleventh, T12 Twelfth, T13 Thirteenth)> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.IObservable<T12> source12, System.IObservable<T13> source13) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            [System.Runtime.CompilerServices.OverloadResolutionPriority(-1)]
+            public System.IObservable<(T First, T2 Second, T3 Third, T4 Fourth, T5 Fifth, T6 Sixth, T7 Seventh, T8 Eighth, T9 Ninth, T10 Tenth, T11 Eleventh, T12 Twelfth, T13 Thirteenth, T14 Fourteenth)> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.IObservable<T12> source12, System.IObservable<T13> source13, System.IObservable<T14> source14) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            [System.Runtime.CompilerServices.OverloadResolutionPriority(-1)]
+            public System.IObservable<(T First, T2 Second, T3 Third, T4 Fourth, T5 Fifth, T6 Sixth, T7 Seventh, T8 Eighth, T9 Ninth, T10 Tenth, T11 Eleventh, T12 Twelfth, T13 Thirteenth, T14 Fourteenth, T15 Fifteenth)> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.IObservable<T12> source12, System.IObservable<T13> source13, System.IObservable<T14> source14, System.IObservable<T15> source15) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            [System.Runtime.CompilerServices.OverloadResolutionPriority(-1)]
+            public System.IObservable<(T First, T2 Second, T3 Third, T4 Fourth, T5 Fifth, T6 Sixth, T7 Seventh, T8 Eighth, T9 Ninth, T10 Tenth, T11 Eleventh, T12 Twelfth, T13 Thirteenth, T14 Fourteenth, T15 Fifteenth, T16 Sixteenth)> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.IObservable<T12> source12, System.IObservable<T13> source13, System.IObservable<T14> source14, System.IObservable<T15> source15, System.IObservable<T16> source16) { }
         }
         extension<T>(System.IObservable<T> source)
         {
@@ -214,6 +269,110 @@ namespace ReactiveUI.Primitives
             public System.IObservable<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.Func<T, T2, T3, T4, T5, T6, T7, TResult> selector) { }
             public System.IObservable<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.Func<T, T2, T3, T4, T5, T6, T7, T8, TResult> selector) { }
             public System.IObservable<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, TResult> selector) { }
+        }
+        extension<T>(System.IObservable<T> source)
+        {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.Task<bool> AnyAsync() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.Task<bool> AnyAsync(System.Func<T, bool> predicate) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.Task<bool> AnyAsync(System.Threading.CancellationToken cancellationToken) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.Task<bool> AnyAsync(System.Func<T, bool> predicate, System.Threading.CancellationToken cancellationToken) { }
+            public System.Threading.Tasks.Task<T[]> CollectArrayAsync() { }
+            public System.Threading.Tasks.Task<System.Collections.Generic.IList<T>> CollectListAsync() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.Task<int> CountAsync() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.Task<int> CountAsync(System.Func<T, bool> predicate) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.Task<int> CountAsync(System.Threading.CancellationToken cancellationToken) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.Task<int> CountAsync(System.Func<T, bool> predicate, System.Threading.CancellationToken cancellationToken) { }
+            public System.Threading.Tasks.Task<T> FirstAsync() { }
+            public System.Threading.Tasks.Task<T> FirstAsync(System.Threading.CancellationToken cancellationToken) { }
+            public System.Threading.Tasks.Task<T> FirstOrDefaultAsync() { }
+            [System.Runtime.CompilerServices.OverloadResolutionPriority(-1)]
+            public System.Threading.Tasks.Task<T> FirstOrDefaultAsync(System.Threading.CancellationToken cancellationToken) { }
+            public System.Threading.Tasks.Task<T> FirstOrDefaultAsync(T defaultValue) { }
+            public System.Threading.Tasks.Task<T> FirstOrDefaultAsync(T defaultValue, System.Threading.CancellationToken cancellationToken) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.Task<T> LastAsync() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.Task<T> LastAsync(System.Threading.CancellationToken cancellationToken) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.Task<T> LastOrDefaultAsync() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            [System.Runtime.CompilerServices.OverloadResolutionPriority(-1)]
+            public System.Threading.Tasks.Task<T> LastOrDefaultAsync(System.Threading.CancellationToken cancellationToken) { }
+            public System.Threading.Tasks.Task<T> LastOrDefaultAsync(T defaultValue) { }
+            public System.Threading.Tasks.Task<T> LastOrDefaultAsync(T defaultValue, System.Threading.CancellationToken cancellationToken) { }
+            public System.IObservable<T[]> ToArray() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.Task<T[]> ToArrayAsync() { }
+            public System.IObservable<System.Collections.Generic.IList<T>> ToList() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.Task<System.Collections.Generic.IList<T>> ToListAsync() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.Task<T> ToTask() { }
+            public System.Threading.Tasks.Task<T> ToTask(System.Threading.CancellationToken cancellationToken) { }
+        }
+        extension<T>(System.IObservable<T> source)
+        {
+            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult> selector) { }
+            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult> selector) { }
+            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.IObservable<T12> source12, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TResult> selector) { }
+            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.IObservable<T12> source12, System.IObservable<T13> source13, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult> selector) { }
+            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.IObservable<T12> source12, System.IObservable<T13> source13, System.IObservable<T14> source14, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult> selector) { }
+            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.IObservable<T12> source12, System.IObservable<T13> source13, System.IObservable<T14> source14, System.IObservable<T15> source15, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult> selector) { }
+            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.IObservable<T12> source12, System.IObservable<T13> source13, System.IObservable<T14> source14, System.IObservable<T15> source15, System.IObservable<T16> source16, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult> selector) { }
+        }
+        extension<T>(System.IObservable<T> source)
+        {
+            public System.IObservable<TResult> SyncLatest<T2, T3, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.Func<T, T2, T3, TResult> selector) { }
+            public System.IObservable<TResult> SyncLatest<T2, T3, T4, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.Func<T, T2, T3, T4, TResult> selector) { }
+            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.Func<T, T2, T3, T4, T5, TResult> selector) { }
+            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, T6, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.Func<T, T2, T3, T4, T5, T6, TResult> selector) { }
+            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.Func<T, T2, T3, T4, T5, T6, T7, TResult> selector) { }
+            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.Func<T, T2, T3, T4, T5, T6, T7, T8, TResult> selector) { }
+            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, TResult> selector) { }
+        }
+        extension<T>(System.IObservable<T> source)
+        {
+            public System.IObservable<T> Chain(System.IObservable<T> second) { }
+            public System.IObservable<T[]> CollectArray() { }
+            public System.IObservable<System.Collections.Generic.IList<T>> CollectList() { }
+            public System.IObservable<T> Distinct() { }
+            public System.IObservable<T> Distinct(System.Collections.Generic.IEqualityComparer<T>? comparer) { }
+            public System.IObservable<T> Expire(System.TimeSpan dueTime) { }
+            public System.IObservable<T> Expire(System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+            public System.IObservable<TAccumulate> Fold<TAccumulate>(TAccumulate seed, System.Func<TAccumulate, T, TAccumulate> accumulator) { }
+            public System.IObservable<T> Keep(System.Func<T, bool> predicate) { }
+            public System.IObservable<T> KeepWith<TState>(TState state, System.Func<TState, T, bool> predicate) { }
+            public System.IObservable<TResult> Latch<TRight, TResult>(System.IObservable<TRight> right, System.Func<T, TRight, TResult> selector) { }
+            public System.IObservable<TResult> Map<TResult>(System.Func<T, TResult> selector) { }
+            public System.IObservable<TResult> MapIndexed<TResult>(System.Func<T, int, TResult> selector) { }
+            public System.IObservable<TResult> MapWith<TState, TResult>(TState state, System.Func<TState, T, TResult> selector) { }
+            public System.IObservable<TResult> Pair<TRight, TResult>(System.IObservable<TRight> right, System.Func<T, TRight, TResult> selector) { }
+            public System.IObservable<T> Reattempt(int retryCount) { }
+            public System.IObservable<T> Recover(System.Func<System.Exception, System.IObservable<T>> handler) { }
+            public System.IObservable<TAccumulate> Reduce<TAccumulate>(TAccumulate seed, System.Func<TAccumulate, T, TAccumulate> accumulator) { }
+            public System.IObservable<T> Rescue(System.Func<System.Exception, System.IObservable<T>> handler) { }
+            public System.IObservable<T> Resume(System.IObservable<T> fallback) { }
+            public System.IObservable<T> Shift(System.TimeSpan dueTime) { }
+            public System.IObservable<T> Shift(System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+            public System.IObservable<T> Skip(int count) { }
+            public System.IObservable<ReactiveUI.Primitives.Core.Spark<T>> Spark() { }
+            public System.IObservable<TResult> SyncLatest<TRight, TResult>(System.IObservable<TRight> right, System.Func<T, TRight, TResult> selector) { }
+            public System.IObservable<T> Take(int count) { }
+            public System.IObservable<T> TakeUntil(System.Threading.CancellationToken cancellationToken) { }
+            public System.IObservable<T> TakeUntil<TOther>(System.IObservable<TOther> other) { }
+            public System.IObservable<T> Tap(System.Action<T> onNext) { }
+            public System.IObservable<T> TapWith<TState>(TState state, System.Action<TState, T> onNext) { }
+            public System.IObservable<T> ToSignal() { }
+            public System.IObservable<T> Unique() { }
+            public System.IObservable<T> Unique(System.Collections.Generic.IEqualityComparer<T>? comparer) { }
         }
         extension<T>(System.IObservable<T> source)
         {
@@ -271,110 +430,6 @@ namespace ReactiveUI.Primitives
         }
         extension<T>(System.IObservable<T> source)
         {
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.Task<bool> AnyAsync() { }
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.Task<bool> AnyAsync(System.Func<T, bool> predicate) { }
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.Task<bool> AnyAsync(System.Threading.CancellationToken cancellationToken) { }
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.Task<bool> AnyAsync(System.Func<T, bool> predicate, System.Threading.CancellationToken cancellationToken) { }
-            public System.Threading.Tasks.Task<T[]> CollectArrayAsync() { }
-            public System.Threading.Tasks.Task<System.Collections.Generic.IList<T>> CollectListAsync() { }
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.Task<int> CountAsync() { }
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.Task<int> CountAsync(System.Func<T, bool> predicate) { }
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.Task<int> CountAsync(System.Threading.CancellationToken cancellationToken) { }
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.Task<int> CountAsync(System.Func<T, bool> predicate, System.Threading.CancellationToken cancellationToken) { }
-            public System.Threading.Tasks.Task<T> FirstAsync() { }
-            public System.Threading.Tasks.Task<T> FirstAsync(System.Threading.CancellationToken cancellationToken) { }
-            public System.Threading.Tasks.Task<T> FirstOrDefaultAsync() { }
-            [System.Runtime.CompilerServices.OverloadResolutionPriority(-1)]
-            public System.Threading.Tasks.Task<T> FirstOrDefaultAsync(System.Threading.CancellationToken cancellationToken) { }
-            public System.Threading.Tasks.Task<T> FirstOrDefaultAsync(T defaultValue) { }
-            public System.Threading.Tasks.Task<T> FirstOrDefaultAsync(T defaultValue, System.Threading.CancellationToken cancellationToken) { }
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.Task<T> LastAsync() { }
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.Task<T> LastAsync(System.Threading.CancellationToken cancellationToken) { }
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.Task<T> LastOrDefaultAsync() { }
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            [System.Runtime.CompilerServices.OverloadResolutionPriority(-1)]
-            public System.Threading.Tasks.Task<T> LastOrDefaultAsync(System.Threading.CancellationToken cancellationToken) { }
-            public System.Threading.Tasks.Task<T> LastOrDefaultAsync(T defaultValue) { }
-            public System.Threading.Tasks.Task<T> LastOrDefaultAsync(T defaultValue, System.Threading.CancellationToken cancellationToken) { }
-            public System.IObservable<T[]> ToArray() { }
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.Task<T[]> ToArrayAsync() { }
-            public System.IObservable<System.Collections.Generic.IList<T>> ToList() { }
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.Task<System.Collections.Generic.IList<T>> ToListAsync() { }
-            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.Threading.Tasks.Task<T> ToTask() { }
-            public System.Threading.Tasks.Task<T> ToTask(System.Threading.CancellationToken cancellationToken) { }
-        }
-        extension<T>(System.IObservable<T> source)
-        {
-            public System.IObservable<TResult> SyncLatest<T2, T3, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.Func<T, T2, T3, TResult> selector) { }
-            public System.IObservable<TResult> SyncLatest<T2, T3, T4, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.Func<T, T2, T3, T4, TResult> selector) { }
-            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.Func<T, T2, T3, T4, T5, TResult> selector) { }
-            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, T6, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.Func<T, T2, T3, T4, T5, T6, TResult> selector) { }
-            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.Func<T, T2, T3, T4, T5, T6, T7, TResult> selector) { }
-            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.Func<T, T2, T3, T4, T5, T6, T7, T8, TResult> selector) { }
-            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, TResult> selector) { }
-        }
-        extension<T>(System.IObservable<T> source)
-        {
-            public System.IObservable<T> Chain(System.IObservable<T> second) { }
-            public System.IObservable<T[]> CollectArray() { }
-            public System.IObservable<System.Collections.Generic.IList<T>> CollectList() { }
-            public System.IObservable<T> Distinct() { }
-            public System.IObservable<T> Distinct(System.Collections.Generic.IEqualityComparer<T>? comparer) { }
-            public System.IObservable<T> Expire(System.TimeSpan dueTime) { }
-            public System.IObservable<T> Expire(System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
-            public System.IObservable<TAccumulate> Fold<TAccumulate>(TAccumulate seed, System.Func<TAccumulate, T, TAccumulate> accumulator) { }
-            public System.IObservable<T> Keep(System.Func<T, bool> predicate) { }
-            public System.IObservable<T> KeepWith<TState>(TState state, System.Func<TState, T, bool> predicate) { }
-            public System.IObservable<TResult> Latch<TRight, TResult>(System.IObservable<TRight> right, System.Func<T, TRight, TResult> selector) { }
-            public System.IObservable<TResult> Map<TResult>(System.Func<T, TResult> selector) { }
-            public System.IObservable<TResult> MapIndexed<TResult>(System.Func<T, int, TResult> selector) { }
-            public System.IObservable<TResult> MapWith<TState, TResult>(TState state, System.Func<TState, T, TResult> selector) { }
-            public System.IObservable<TResult> Pair<TRight, TResult>(System.IObservable<TRight> right, System.Func<T, TRight, TResult> selector) { }
-            public System.IObservable<T> Reattempt(int retryCount) { }
-            public System.IObservable<T> Recover(System.Func<System.Exception, System.IObservable<T>> handler) { }
-            public System.IObservable<TAccumulate> Reduce<TAccumulate>(TAccumulate seed, System.Func<TAccumulate, T, TAccumulate> accumulator) { }
-            public System.IObservable<T> Rescue(System.Func<System.Exception, System.IObservable<T>> handler) { }
-            public System.IObservable<T> Resume(System.IObservable<T> fallback) { }
-            public System.IObservable<T> Shift(System.TimeSpan dueTime) { }
-            public System.IObservable<T> Shift(System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
-            public System.IObservable<T> Skip(int count) { }
-            public System.IObservable<ReactiveUI.Primitives.Core.Spark<T>> Spark() { }
-            public System.IObservable<TResult> SyncLatest<TRight, TResult>(System.IObservable<TRight> right, System.Func<T, TRight, TResult> selector) { }
-            public System.IObservable<T> Take(int count) { }
-            public System.IObservable<T> TakeUntil(System.Threading.CancellationToken cancellationToken) { }
-            public System.IObservable<T> TakeUntil<TOther>(System.IObservable<TOther> other) { }
-            public System.IObservable<T> Tap(System.Action<T> onNext) { }
-            public System.IObservable<T> TapWith<TState>(TState state, System.Action<TState, T> onNext) { }
-            public System.IObservable<T> ToSignal() { }
-            public System.IObservable<T> Unique() { }
-            public System.IObservable<T> Unique(System.Collections.Generic.IEqualityComparer<T>? comparer) { }
-        }
-        extension<T>(System.IObservable<T> source)
-        {
-            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult> selector) { }
-            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult> selector) { }
-            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.IObservable<T12> source12, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TResult> selector) { }
-            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.IObservable<T12> source12, System.IObservable<T13> source13, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult> selector) { }
-            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.IObservable<T12> source12, System.IObservable<T13> source13, System.IObservable<T14> source14, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult> selector) { }
-            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.IObservable<T12> source12, System.IObservable<T13> source13, System.IObservable<T14> source14, System.IObservable<T15> source15, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult> selector) { }
-            public System.IObservable<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult>(System.IObservable<T2> source2, System.IObservable<T3> source3, System.IObservable<T4> source4, System.IObservable<T5> source5, System.IObservable<T6> source6, System.IObservable<T7> source7, System.IObservable<T8> source8, System.IObservable<T9> source9, System.IObservable<T10> source10, System.IObservable<T11> source11, System.IObservable<T12> source12, System.IObservable<T13> source13, System.IObservable<T14> source14, System.IObservable<T15> source15, System.IObservable<T16> source16, System.Func<T, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult> selector) { }
-        }
-        extension<T>(System.IObservable<T> source)
-        {
             public System.IObservable<T> Repeat() { }
             public System.IObservable<T> Repeat(int repeatCount) { }
         }
@@ -395,6 +450,10 @@ namespace ReactiveUI.Primitives
         extension<T>(System.Threading.Tasks.Task<T> task)
         {
             public System.IObservable<T> ToSignal() { }
+        }
+        extension<T>(T disposable) where T : System.IDisposable
+        {
+            public T DisposeWith(ReactiveUI.Primitives.Disposables.MultipleDisposable disposables) { }
         }
         extension<TIn>(System.IObservable<TIn> source)
         {
@@ -672,6 +731,10 @@ namespace ReactiveUI.Primitives.Advanced
         public EnumerableBlendSignal(System.Collections.Generic.IEnumerable<System.IObservable<T>> sources) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
+    public static class EventHandlerScope
+    {
+        public static System.IDisposable Attach<TEventHandler>(TEventHandler handler, System.Action<TEventHandler> addHandler, System.Action<TEventHandler> removeHandler, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+    }
     [System.Diagnostics.DebuggerDisplay("Done = {_done}, DueTime = {_dueTime}, Deadline = {_deadline}")]
     public sealed class ExpireCoordinator<T> : System.IDisposable, System.IObserver<T>
     {
@@ -721,10 +784,17 @@ namespace ReactiveUI.Primitives.Advanced
         public FromAsyncSubscription(System.IObserver<T> observer, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<T>> taskFactory, System.Threading.CancellationToken externalCancellationToken) { }
         public void Dispose() { }
     }
+    [System.Diagnostics.DebuggerDisplay("FromEventConversionSignal: Conversion = {_conversion}, Scheduler = {_scheduler}")]
+    public sealed class FromEventConversionSignal<TEventHandler, TCallback, TResult> : System.IObservable<TResult> where TEventHandler : System.Delegate
+    {
+        public FromEventConversionSignal(System.Func<TCallback, TEventHandler> conversion, System.Action<TEventHandler> addHandler, System.Action<TEventHandler> removeHandler, System.Func<System.IObserver<TResult>, TCallback> callback, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+        public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
+    }
     [System.Diagnostics.DebuggerDisplay("AddHandler = {AddHandler}, RemoveHandler = {RemoveHandler}")]
     public sealed class FromEventPatternSignal<TEventHandler, TEventArgs> : System.IObservable<ReactiveUI.Primitives.Core.EventPattern<TEventArgs>> where TEventHandler : System.Delegate where TEventArgs : System.EventArgs
     {
         public FromEventPatternSignal(System.Action<TEventHandler> addHandler, System.Action<TEventHandler> removeHandler) { }
+        public FromEventPatternSignal(System.Action<TEventHandler> addHandler, System.Action<TEventHandler> removeHandler, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
         public System.IDisposable Subscribe(System.IObserver<ReactiveUI.Primitives.Core.EventPattern<TEventArgs>> observer) { }
     }
     [System.Diagnostics.DebuggerDisplay("Disposed = {_disposed}, Observer = {_observer}")]
@@ -1190,6 +1260,10 @@ namespace ReactiveUI.Primitives.Advanced
         public void OnNext(T value) { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
+    }
+    public static class TimerSlot
+    {
+        public static void Arm(ReactiveUI.Primitives.Disposables.SingleReplaceableDisposable slot, ReactiveUI.Primitives.Concurrency.ISequencer sequencer, System.TimeSpan delay, System.Action tick) { }
     }
     [System.Diagnostics.DebuggerDisplay("Source = {Source}")]
     public sealed class UnsparkSignal<T> : System.IObservable<T>
@@ -1904,9 +1978,26 @@ namespace ReactiveUI.Primitives.Signals
         public static System.IObservable<T> FromAsyncEnumerable<T>(System.Collections.Generic.IAsyncEnumerable<T> values, System.Threading.CancellationToken cancellationToken) { }
         public static System.IObservable<T> FromEnumerable<T>(System.Collections.Generic.IEnumerable<T> values) { }
         public static System.IObservable<T> FromEnumerable<T>(System.Collections.Generic.IEnumerable<T> values, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<TEventArgs> FromEvent<TEventArgs>(System.Action<System.Action<TEventArgs>> addHandler, System.Action<System.Action<TEventArgs>> removeHandler) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<TEventArgs> FromEvent<TEventHandler, TEventArgs>(System.Func<System.Action<TEventArgs>, TEventHandler> conversion, System.Action<TEventHandler> addHandler, System.Action<TEventHandler> removeHandler) where TEventHandler : System.Delegate { }
+        public static System.IObservable<TEventArgs> FromEvent<TEventHandler, TEventArgs>(System.Func<System.Action<TEventArgs>, TEventHandler> conversion, System.Action<TEventHandler> addHandler, System.Action<TEventHandler> removeHandler, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) where TEventHandler : System.Delegate { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public static System.IObservable<ReactiveUI.Primitives.Core.EventPattern<System.EventArgs>> FromEventPattern(System.Action<System.EventHandler> addHandler, System.Action<System.EventHandler> removeHandler) { }
+        public static System.IObservable<ReactiveUI.Primitives.Core.EventPattern<System.EventArgs>> FromEventPattern(System.Action<System.EventHandler> addHandler, System.Action<System.EventHandler> removeHandler, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public static System.IObservable<ReactiveUI.Primitives.Core.EventPattern<TEventArgs>> FromEventPattern<TEventArgs>(System.Action<System.EventHandler<TEventArgs>> addHandler, System.Action<System.EventHandler<TEventArgs>> removeHandler) where TEventArgs : System.EventArgs { }
+        public static System.IObservable<ReactiveUI.Primitives.Core.EventPattern<TEventArgs>> FromEventPattern<TEventArgs>(System.Action<System.EventHandler<TEventArgs>> addHandler, System.Action<System.EventHandler<TEventArgs>> removeHandler, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) where TEventArgs : System.EventArgs { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public static System.IObservable<ReactiveUI.Primitives.Core.EventPattern<TEventArgs>> FromEventPattern<TEventHandler, TEventArgs>(System.Action<TEventHandler> addHandler, System.Action<TEventHandler> removeHandler) where TEventHandler : System.Delegate where TEventArgs : System.EventArgs { }
+        public static System.IObservable<ReactiveUI.Primitives.Core.EventPattern<TEventArgs>> FromEventPattern<TEventHandler, TEventArgs>(System.Action<TEventHandler> addHandler, System.Action<TEventHandler> removeHandler, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) where TEventHandler : System.Delegate where TEventArgs : System.EventArgs { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<ReactiveUI.Primitives.Core.EventPattern<TEventArgs>> FromEventPattern<TEventHandler, TEventArgs>(System.Func<System.EventHandler<TEventArgs>, TEventHandler> conversion, System.Action<TEventHandler> addHandler, System.Action<TEventHandler> removeHandler) where TEventHandler : System.Delegate where TEventArgs : System.EventArgs { }
+        public static System.IObservable<ReactiveUI.Primitives.Core.EventPattern<TEventArgs>> FromEventPattern<TEventHandler, TEventArgs>(System.Func<System.EventHandler<TEventArgs>, TEventHandler> conversion, System.Action<TEventHandler> addHandler, System.Action<TEventHandler> removeHandler, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) where TEventHandler : System.Delegate where TEventArgs : System.EventArgs { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static System.IObservable<ReactiveUI.Primitives.Core.EventPattern<TSender, TEventArgs>> FromEventPattern<TEventHandler, TSender, TEventArgs>(System.Func<System.EventHandler<TEventArgs>, TEventHandler> conversion, System.Action<TEventHandler> addHandler, System.Action<TEventHandler> removeHandler) where TEventHandler : System.Delegate where TEventArgs : System.EventArgs { }
+        public static System.IObservable<ReactiveUI.Primitives.Core.EventPattern<TSender, TEventArgs>> FromEventPattern<TEventHandler, TSender, TEventArgs>(System.Func<System.EventHandler<TEventArgs>, TEventHandler> conversion, System.Action<TEventHandler> addHandler, System.Action<TEventHandler> removeHandler, ReactiveUI.Primitives.Concurrency.ISequencer? scheduler) where TEventHandler : System.Delegate where TEventArgs : System.EventArgs { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public static ReactiveUI.Primitives.Signals.ITaskSignal<ReactiveUI.Primitives.RxVoid> FromTask(System.Func<System.Threading.CancellationTokenSource, System.Threading.Tasks.Task<ReactiveUI.Primitives.RxVoid>> execution) { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]

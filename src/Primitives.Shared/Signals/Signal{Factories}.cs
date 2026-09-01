@@ -135,15 +135,28 @@ public static partial class Signal
     /// <param name="addHandler">The action that subscribes the event handler.</param>
     /// <param name="removeHandler">The action that unsubscribes the event handler.</param>
     /// <returns>An Signals.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservable<EventPattern<EventArgs>> FromEventPattern(
         Action<EventHandler> addHandler,
-        Action<EventHandler> removeHandler)
+        Action<EventHandler> removeHandler) =>
+        FromEventPattern(addHandler, removeHandler, null);
+
+    /// <summary>Converts an event into a signal of event pattern values, attaching the handler on a sequencer.</summary>
+    /// <param name="addHandler">The action that subscribes the event handler.</param>
+    /// <param name="removeHandler">The action that unsubscribes the event handler.</param>
+    /// <param name="scheduler">The sequencer that attaches and detaches the handler, or <see langword="null"/> to use the subscribing thread.</param>
+    /// <returns>A signal that emits event patterns for each raised event.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="addHandler"/> or <paramref name="removeHandler"/> is <see langword="null"/>.</exception>
+    public static IObservable<EventPattern<EventArgs>> FromEventPattern(
+        Action<EventHandler> addHandler,
+        Action<EventHandler> removeHandler,
+        ISequencer? scheduler)
     {
         ArgumentExceptionHelper.ThrowIfNull(addHandler);
 
         ArgumentExceptionHelper.ThrowIfNull(removeHandler);
 
-        return new FromEventPatternSignal<EventHandler, EventArgs>(addHandler, removeHandler);
+        return new FromEventPatternSignal<EventHandler, EventArgs>(addHandler, removeHandler, scheduler);
     }
 
     /// <summary>Converts an event into a signal of event pattern values.</summary>
@@ -151,16 +164,31 @@ public static partial class Signal
     /// <param name="addHandler">The action that subscribes the event handler.</param>
     /// <param name="removeHandler">The action that unsubscribes the event handler.</param>
     /// <returns>An Signals.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservable<EventPattern<TEventArgs>> FromEventPattern<TEventArgs>(
         Action<EventHandler<TEventArgs>> addHandler,
         Action<EventHandler<TEventArgs>> removeHandler)
+        where TEventArgs : EventArgs =>
+        FromEventPattern(addHandler, removeHandler, null);
+
+    /// <summary>Converts an event into a signal of event pattern values, attaching the handler on a sequencer.</summary>
+    /// <typeparam name="TEventArgs">The type of the event arguments.</typeparam>
+    /// <param name="addHandler">The action that subscribes the event handler.</param>
+    /// <param name="removeHandler">The action that unsubscribes the event handler.</param>
+    /// <param name="scheduler">The sequencer that attaches and detaches the handler, or <see langword="null"/> to use the subscribing thread.</param>
+    /// <returns>A signal that emits event patterns for each raised event.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="addHandler"/> or <paramref name="removeHandler"/> is <see langword="null"/>.</exception>
+    public static IObservable<EventPattern<TEventArgs>> FromEventPattern<TEventArgs>(
+        Action<EventHandler<TEventArgs>> addHandler,
+        Action<EventHandler<TEventArgs>> removeHandler,
+        ISequencer? scheduler)
         where TEventArgs : EventArgs
     {
         ArgumentExceptionHelper.ThrowIfNull(addHandler);
 
         ArgumentExceptionHelper.ThrowIfNull(removeHandler);
 
-        return new FromEventPatternSignal<EventHandler<TEventArgs>, TEventArgs>(addHandler, removeHandler);
+        return new FromEventPatternSignal<EventHandler<TEventArgs>, TEventArgs>(addHandler, removeHandler, scheduler);
     }
 
     /// <summary>Creates a signal from an event add/remove pair.</summary>
@@ -176,9 +204,32 @@ public static partial class Signal
         "SST2307:Generic method type parameters should be inferable from the parameters",
         Justification =
             "The event argument type is part of the returned EventPattern and must be specified for non-generic event handlers.")]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservable<EventPattern<TEventArgs>> FromEventPattern<TEventHandler, TEventArgs>(
         Action<TEventHandler> addHandler,
         Action<TEventHandler> removeHandler)
+        where TEventHandler : Delegate
+        where TEventArgs : EventArgs =>
+        FromEventPattern<TEventHandler, TEventArgs>(addHandler, removeHandler, null);
+
+    /// <summary>Creates a signal from an event add/remove pair, attaching the handler on a sequencer.</summary>
+    /// <typeparam name="TEventHandler">The delegate type used by the event.</typeparam>
+    /// <typeparam name="TEventArgs">The event argument type.</typeparam>
+    /// <param name="addHandler">The action that attaches the generated event handler.</param>
+    /// <param name="removeHandler">The action that detaches the generated event handler.</param>
+    /// <param name="scheduler">The sequencer that attaches and detaches the handler, or <see langword="null"/> to use the subscribing thread.</param>
+    /// <returns>A signal that emits event patterns for each raised event.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="addHandler"/> or <paramref name="removeHandler"/> is <see langword="null"/>.</exception>
+    /// <exception cref="NotSupportedException"><typeparamref name="TEventHandler"/> is not a supported event delegate type.</exception>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "SST2307:Generic method type parameters should be inferable from the parameters",
+        Justification =
+            "The event argument type is part of the returned EventPattern and must be specified for non-generic event handlers.")]
+    public static IObservable<EventPattern<TEventArgs>> FromEventPattern<TEventHandler, TEventArgs>(
+        Action<TEventHandler> addHandler,
+        Action<TEventHandler> removeHandler,
+        ISequencer? scheduler)
         where TEventHandler : Delegate
         where TEventArgs : EventArgs
     {
@@ -186,7 +237,167 @@ public static partial class Signal
 
         ArgumentExceptionHelper.ThrowIfNull(removeHandler);
 
-        return new FromEventPatternSignal<TEventHandler, TEventArgs>(addHandler, removeHandler);
+        return new FromEventPatternSignal<TEventHandler, TEventArgs>(addHandler, removeHandler, scheduler);
+    }
+
+    /// <summary>Converts an event using an explicit handler conversion.</summary>
+    /// <typeparam name="TEventHandler">The delegate type used by the event.</typeparam>
+    /// <typeparam name="TEventArgs">The event argument type.</typeparam>
+    /// <param name="conversion">Converts the notification callback into the event's handler type.</param>
+    /// <param name="addHandler">The action that attaches the converted event handler.</param>
+    /// <param name="removeHandler">The action that detaches the same converted event handler.</param>
+    /// <returns>A signal that emits event patterns when the converted handler invokes its callback.</returns>
+    /// <exception cref="ArgumentNullException">A callback argument is <see langword="null"/>.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static IObservable<EventPattern<TEventArgs>> FromEventPattern<TEventHandler, TEventArgs>(
+        Func<EventHandler<TEventArgs>, TEventHandler> conversion,
+        Action<TEventHandler> addHandler,
+        Action<TEventHandler> removeHandler)
+        where TEventHandler : Delegate
+        where TEventArgs : EventArgs =>
+        FromEventPattern(conversion, addHandler, removeHandler, null);
+
+    /// <summary>Converts an event using an explicit handler conversion, attaching the handler on a sequencer.</summary>
+    /// <typeparam name="TEventHandler">The delegate type used by the event.</typeparam>
+    /// <typeparam name="TEventArgs">The event argument type.</typeparam>
+    /// <param name="conversion">Converts the notification callback into the event's handler type.</param>
+    /// <param name="addHandler">The action that attaches the converted event handler.</param>
+    /// <param name="removeHandler">The action that detaches the same converted event handler.</param>
+    /// <param name="scheduler">The sequencer that attaches and detaches the handler, or <see langword="null"/> to use the subscribing thread.</param>
+    /// <returns>A signal that emits event patterns when the converted handler invokes its callback.</returns>
+    /// <exception cref="ArgumentNullException">A callback argument is <see langword="null"/>.</exception>
+    public static IObservable<EventPattern<TEventArgs>> FromEventPattern<TEventHandler, TEventArgs>(
+        Func<EventHandler<TEventArgs>, TEventHandler> conversion,
+        Action<TEventHandler> addHandler,
+        Action<TEventHandler> removeHandler,
+        ISequencer? scheduler)
+        where TEventHandler : Delegate
+        where TEventArgs : EventArgs
+    {
+        ArgumentExceptionHelper.ThrowIfNull(conversion);
+        ArgumentExceptionHelper.ThrowIfNull(addHandler);
+        ArgumentExceptionHelper.ThrowIfNull(removeHandler);
+
+        return new FromEventConversionSignal<TEventHandler, EventHandler<TEventArgs>, EventPattern<TEventArgs>>(
+            conversion,
+            addHandler,
+            removeHandler,
+            static observer => (sender, args) => observer.OnNext(new(sender, args)),
+            scheduler);
+    }
+
+    /// <summary>Converts an event using an explicit handler conversion, keeping the sender's static type.</summary>
+    /// <typeparam name="TEventHandler">The delegate type used by the event.</typeparam>
+    /// <typeparam name="TSender">The event sender type.</typeparam>
+    /// <typeparam name="TEventArgs">The event argument type.</typeparam>
+    /// <param name="conversion">Converts the notification callback into the event's handler type.</param>
+    /// <param name="addHandler">The action that attaches the converted event handler.</param>
+    /// <param name="removeHandler">The action that detaches the same converted event handler.</param>
+    /// <returns>A signal that emits typed-sender event patterns when the converted handler invokes its callback.</returns>
+    /// <exception cref="ArgumentNullException">A callback argument is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidCastException">A raised event supplied a sender that is not a <typeparamref name="TSender"/>.</exception>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "SST2307:Generic method type parameters should be inferable from the parameters",
+        Justification = "The sender type is part of the returned EventPattern and cannot be inferred from the handler conversion.")]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static IObservable<EventPattern<TSender, TEventArgs>> FromEventPattern<TEventHandler, TSender, TEventArgs>(
+        Func<EventHandler<TEventArgs>, TEventHandler> conversion,
+        Action<TEventHandler> addHandler,
+        Action<TEventHandler> removeHandler)
+        where TEventHandler : Delegate
+        where TEventArgs : EventArgs =>
+        FromEventPattern<TEventHandler, TSender, TEventArgs>(conversion, addHandler, removeHandler, null);
+
+    /// <summary>Converts an event using an explicit handler conversion, keeping the sender's static type.</summary>
+    /// <typeparam name="TEventHandler">The delegate type used by the event.</typeparam>
+    /// <typeparam name="TSender">The event sender type.</typeparam>
+    /// <typeparam name="TEventArgs">The event argument type.</typeparam>
+    /// <param name="conversion">Converts the notification callback into the event's handler type.</param>
+    /// <param name="addHandler">The action that attaches the converted event handler.</param>
+    /// <param name="removeHandler">The action that detaches the same converted event handler.</param>
+    /// <param name="scheduler">The sequencer that attaches and detaches the handler, or <see langword="null"/> to use the subscribing thread.</param>
+    /// <returns>A signal that emits typed-sender event patterns when the converted handler invokes its callback.</returns>
+    /// <exception cref="ArgumentNullException">A callback argument is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidCastException">A raised event supplied a sender that is not a <typeparamref name="TSender"/>.</exception>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Design",
+        "SST2307:Generic method type parameters should be inferable from the parameters",
+        Justification = "The sender type is part of the returned EventPattern and cannot be inferred from the handler conversion.")]
+    public static IObservable<EventPattern<TSender, TEventArgs>> FromEventPattern<TEventHandler, TSender, TEventArgs>(
+        Func<EventHandler<TEventArgs>, TEventHandler> conversion,
+        Action<TEventHandler> addHandler,
+        Action<TEventHandler> removeHandler,
+        ISequencer? scheduler)
+        where TEventHandler : Delegate
+        where TEventArgs : EventArgs
+    {
+        ArgumentExceptionHelper.ThrowIfNull(conversion);
+        ArgumentExceptionHelper.ThrowIfNull(addHandler);
+        ArgumentExceptionHelper.ThrowIfNull(removeHandler);
+
+        return new FromEventConversionSignal<TEventHandler, EventHandler<TEventArgs>, EventPattern<TSender, TEventArgs>>(
+            conversion,
+            addHandler,
+            removeHandler,
+            static observer => (sender, args) => observer.OnNext(new((TSender)sender!, args)),
+            scheduler);
+    }
+
+    /// <summary>Converts an event that carries only its argument value into a signal of those values.</summary>
+    /// <typeparam name="TEventArgs">The event argument type.</typeparam>
+    /// <param name="addHandler">The action that attaches the generated callback.</param>
+    /// <param name="removeHandler">The action that detaches the same generated callback.</param>
+    /// <returns>A signal that emits the argument of each raised event.</returns>
+    /// <exception cref="ArgumentNullException">A callback argument is <see langword="null"/>.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static IObservable<TEventArgs> FromEvent<TEventArgs>(
+        Action<Action<TEventArgs>> addHandler,
+        Action<Action<TEventArgs>> removeHandler) =>
+        FromEvent<Action<TEventArgs>, TEventArgs>(static callback => callback, addHandler, removeHandler);
+
+    /// <summary>Converts an event using an explicit handler conversion into a signal of argument values.</summary>
+    /// <typeparam name="TEventHandler">The delegate type used by the event.</typeparam>
+    /// <typeparam name="TEventArgs">The event argument type.</typeparam>
+    /// <param name="conversion">Converts the notification callback into the event's handler type.</param>
+    /// <param name="addHandler">The action that attaches the converted event handler.</param>
+    /// <param name="removeHandler">The action that detaches the same converted event handler.</param>
+    /// <returns>A signal that emits the argument the converted handler passes to its callback.</returns>
+    /// <exception cref="ArgumentNullException">A callback argument is <see langword="null"/>.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static IObservable<TEventArgs> FromEvent<TEventHandler, TEventArgs>(
+        Func<Action<TEventArgs>, TEventHandler> conversion,
+        Action<TEventHandler> addHandler,
+        Action<TEventHandler> removeHandler)
+        where TEventHandler : Delegate =>
+        FromEvent(conversion, addHandler, removeHandler, null);
+
+    /// <summary>Converts an event using an explicit handler conversion, attaching the handler on a sequencer.</summary>
+    /// <typeparam name="TEventHandler">The delegate type used by the event.</typeparam>
+    /// <typeparam name="TEventArgs">The event argument type.</typeparam>
+    /// <param name="conversion">Converts the notification callback into the event's handler type.</param>
+    /// <param name="addHandler">The action that attaches the converted event handler.</param>
+    /// <param name="removeHandler">The action that detaches the same converted event handler.</param>
+    /// <param name="scheduler">The sequencer that attaches and detaches the handler, or <see langword="null"/> to use the subscribing thread.</param>
+    /// <returns>A signal that emits the argument the converted handler passes to its callback.</returns>
+    /// <exception cref="ArgumentNullException">A callback argument is <see langword="null"/>.</exception>
+    public static IObservable<TEventArgs> FromEvent<TEventHandler, TEventArgs>(
+        Func<Action<TEventArgs>, TEventHandler> conversion,
+        Action<TEventHandler> addHandler,
+        Action<TEventHandler> removeHandler,
+        ISequencer? scheduler)
+        where TEventHandler : Delegate
+    {
+        ArgumentExceptionHelper.ThrowIfNull(conversion);
+        ArgumentExceptionHelper.ThrowIfNull(addHandler);
+        ArgumentExceptionHelper.ThrowIfNull(removeHandler);
+
+        return new FromEventConversionSignal<TEventHandler, Action<TEventArgs>, TEventArgs>(
+            conversion,
+            addHandler,
+            removeHandler,
+            static observer => observer.OnNext,
+            scheduler);
     }
 
     /// <summary>Creates a signal from an enumerable sequence.</summary>

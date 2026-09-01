@@ -96,6 +96,16 @@ namespace ReactiveUI.Primitives
             public System.IDisposable Subscribe(System.Action<T> onNext, System.Action onCompleted) { }
             public System.IDisposable Subscribe(System.Action<T> onNext, System.Action<System.Exception> onError) { }
             public System.IDisposable Subscribe(System.Action<T> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IDisposable SubscribePrimitives() { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IDisposable SubscribePrimitives(System.Action<T> onNext) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IDisposable SubscribePrimitives(System.Action<T> onNext, System.Action onCompleted) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IDisposable SubscribePrimitives(System.Action<T> onNext, System.Action<System.Exception> onError) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.IDisposable SubscribePrimitives(System.Action<T> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
         }
     }
 }
@@ -845,6 +855,20 @@ namespace ReactiveUI.Primitives.Core
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public static bool operator ==(ReactiveUI.Primitives.Core.EventPattern<TEventArgs> left, ReactiveUI.Primitives.Core.EventPattern<TEventArgs> right) { }
         public static bool operator !=(ReactiveUI.Primitives.Core.EventPattern<TEventArgs> left, ReactiveUI.Primitives.Core.EventPattern<TEventArgs> right) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("EventPattern: {DebuggerDisplay,nq}")]
+    public readonly struct EventPattern<TSender, TEventArgs> : System.IEquatable<ReactiveUI.Primitives.Core.EventPattern<TSender, TEventArgs>>
+    {
+        public EventPattern(TSender sender, TEventArgs eventArgs) { }
+        public TEventArgs EventArgs { get; }
+        public TSender Sender { get; }
+        public readonly bool Equals(ReactiveUI.Primitives.Core.EventPattern<TSender, TEventArgs> other) { }
+        public override readonly bool Equals(object? obj) { }
+        public override readonly int GetHashCode() { }
+        public override readonly string ToString() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static bool operator ==(ReactiveUI.Primitives.Core.EventPattern<TSender, TEventArgs> left, ReactiveUI.Primitives.Core.EventPattern<TSender, TEventArgs> right) { }
+        public static bool operator !=(ReactiveUI.Primitives.Core.EventPattern<TSender, TEventArgs> left, ReactiveUI.Primitives.Core.EventPattern<TSender, TEventArgs> right) { }
     }
     public interface IObserver<in TValue, out TResult>
     {

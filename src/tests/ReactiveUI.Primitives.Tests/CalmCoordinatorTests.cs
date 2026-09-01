@@ -25,6 +25,59 @@ public sealed class CalmCoordinatorTests
     /// <summary>The quiet period used by these tests; its timer only fires when the test runs it.</summary>
     private static readonly TimeSpan QuietPeriod = TimeSpan.FromMilliseconds(50);
 
+    /// <summary>Verifies each new value extends the quiet period without emitting the previous value.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ThrottleWaitsForTheQuietPeriodAfterTheLatestValue()
+    {
+        ManualSequencer sequencer = new();
+        IObserver<int>? source = null;
+        RecordingWitness<int> witness = new();
+        using var subscription = new ScriptedObservable<int>(observer => source = observer)
+            .Throttle(QuietPeriod, sequencer)
+            .Subscribe(witness);
+
+        source!.OnNext(One);
+        sequencer.Advance(QuietPeriod / Two);
+        source.OnNext(Two);
+        sequencer.Advance(QuietPeriod / Two);
+        sequencer.RunPending();
+        await Assert.That(witness.Values).IsEmpty();
+
+        sequencer.Advance(QuietPeriod / Two);
+        sequencer.RunPending();
+        await Assert.That(witness.Values.SequenceEqual([Two])).IsTrue();
+    }
+
+    /// <summary>Verifies a callback that runs before Schedule returns cannot cancel a reentrant timer.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ThrottleRetainsTheTimerCreatedByAReentrantValue()
+    {
+        FirstInlineSequencer sequencer = new(QuietPeriod);
+        IObserver<int>? source = null;
+        List<int> values = [];
+        using var subscription = new ScriptedObservable<int>(observer => source = observer)
+            .Throttle(QuietPeriod, sequencer)
+            .Subscribe(value =>
+            {
+                values.Add(value);
+                if (value != One)
+                {
+                    return;
+                }
+
+                source!.OnNext(Two);
+            });
+
+        source!.OnNext(One);
+        await Assert.That(values.SequenceEqual([One])).IsTrue();
+
+        sequencer.Advance(QuietPeriod);
+        sequencer.RunPending();
+        await Assert.That(values.SequenceEqual([One, Two])).IsTrue();
+    }
+
     /// <summary>Verifies completion inside the quiet window emits the buffered value before completing.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]

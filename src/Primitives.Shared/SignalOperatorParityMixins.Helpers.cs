@@ -561,7 +561,7 @@ public static partial class LinqExtensions
         /// <summary>Schedules the active timer.</summary>
         /// <param name="delay">The timer delay.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void Schedule(TimeSpan delay) => _timer.Create(_sequencer.Schedule(delay, Tick));
+        private void Schedule(TimeSpan delay) => TimerSlot.Arm(_timer, _sequencer, delay, Tick);
 
         /// <summary>Handles a timer tick.</summary>
         private void Tick()

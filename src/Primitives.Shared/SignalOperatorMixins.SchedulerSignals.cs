@@ -259,7 +259,7 @@ public static partial class LinqExtensions
         /// <summary>Schedules the single active drain timer.</summary>
         /// <param name="delay">The delay before the drain should run.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void Schedule(TimeSpan delay) => _timer.Create(_sequencer.Schedule(delay, Tick));
+        private void Schedule(TimeSpan delay) => TimerSlot.Arm(_timer, _sequencer, delay, Tick);
 
         /// <summary>Drains all due notifications in FIFO order.</summary>
         private void Tick()
