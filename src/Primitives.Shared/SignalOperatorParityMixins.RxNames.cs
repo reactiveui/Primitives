@@ -123,6 +123,18 @@ public static partial class LinqExtensions
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IDisposable SubscribeSafe(IObserver<T> observer) => SubscribeSafeCore(source, observer);
 
+        /// <summary>Subscribes an observer with downstream exception protection, using a Primitives-specific name.</summary>
+        /// <param name="observer">The observer to subscribe.</param>
+        /// <returns>A disposable that cancels the subscription.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="observer"/> is <see langword="null"/>.</exception>
+        /// <remarks>
+        /// System.Reactive declares an observer-taking <c>SubscribeSafe</c> in the <c>System</c> namespace, so the
+        /// two are ambiguous whenever both packages are in scope. The other <c>SubscribeSafe</c> shapes here have no
+        /// System.Reactive counterpart and stay callable under their own name.
+        /// </remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IDisposable SubscribeSafePrimitives(IObserver<T> observer) => SubscribeSafeCore(source, observer);
+
         /// <summary>Subscribes callbacks with downstream exception protection.</summary>
         /// <param name="onNext">The action to invoke for each value.</param>
         /// <param name="onError">The action to invoke for an error.</param>

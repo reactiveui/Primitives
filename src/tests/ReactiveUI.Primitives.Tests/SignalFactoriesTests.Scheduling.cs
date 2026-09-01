@@ -21,6 +21,26 @@ public partial class SignalFactoriesTests
     /// <summary>The tick used as both the due time and the period of the virtual timers.</summary>
     private static readonly TimeSpan SingleTick = TimeSpan.FromTicks(1);
 
+    /// <summary>
+    /// Verifies a periodic timer keeps ticking under a sequencer that runs the first tick before its own
+    /// <c>Schedule</c> returns. The tick arms the next one, and the handle the outer call goes on to return must
+    /// not replace - and so cancel - that successor, which would leave the timer emitting a single value.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task TimerRetainsThePeriodicTickArmedByAnInlineFirstTick()
+    {
+        FirstInlineSequencer sequencer = new(TimeSpan.Zero);
+        List<long> ticks = [];
+        using var subscription = Signal.Timer(SingleTick, SingleTick, sequencer).Subscribe(ticks.Add);
+
+        await Assert.That(ticks.SequenceEqual([0L])).IsTrue();
+
+        sequencer.RunPending();
+
+        await Assert.That(ticks.SequenceEqual([0L, 1L])).IsTrue();
+    }
+
     /// <summary>The action factory defers its work to the sequencer and emits a single unit on completion.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]

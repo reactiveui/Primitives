@@ -96,7 +96,7 @@ internal sealed class EverySignal(TimeSpan period, ISequencer scheduler) : IRequ
 
         /// <summary>Schedules the next tick into the cancellation slot.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void ScheduleNext() => _slot.Create(_scheduler.Schedule(_period, _tickAction));
+        private void ScheduleNext() => TimerSlot.Arm(_slot, _scheduler, _period, _tickAction);
 
         /// <summary>Emits the current tick and reschedules unless cancelled.</summary>
         /// <remarks>

@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Signals;
 
@@ -24,6 +25,18 @@ public partial class LinqExtensionsTests
 
     /// <summary>The replacement value for the final source.</summary>
     private const int OneHundred = 100;
+
+    /// <summary>A consumer that passes an untyped null selector through the fully generic static call shape.</summary>
+    private const string NullSelectorConsumer = """
+        using System;
+        using ReactiveUI.Primitives;
+
+        public static class Consumer
+        {
+            public static IObservable<string> Legacy(IObservable<int> first, IObservable<int> second) =>
+                LinqExtensions.CombineLatest<int, int, string>(first, second, null!);
+        }
+        """;
 
     /// <summary>The tuple-returning CombineLatest builders, ordered by arity from 2 through 16.</summary>
     private static readonly Func<TupleSources, IObservable<int>>[] _tupleCombineLatestBuilders =
@@ -258,6 +271,25 @@ public partial class LinqExtensionsTests
 
         await Assert.That(source.HasObservers).IsFalse();
         await Assert.That(source2.HasObservers).IsFalse();
+    }
+
+    /// <summary>
+    /// Verifies a fully generic call passing an untyped null selector still binds to the selector overload.
+    /// That call shape fits both the arity-2 selector overload and the arity-3 tuple overload, so it is only
+    /// unambiguous while the tuple overloads keep their lower overload resolution priority.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    [RequiresAssemblyFiles("Builds metadata references from loaded assembly locations.")]
+    public async Task CombineLatestKeepsSelectingTheSelectorOverloadForAnUntypedNullSelector()
+    {
+        var (compilation, syntaxTree, errors) = ConsumerCompilation.Compile(NullSelectorConsumer);
+
+        await Assert.That(errors).IsEmpty();
+        var symbol = ConsumerCompilation.ResolveInvocation(compilation, syntaxTree, "CombineLatest");
+
+        await Assert.That(symbol?.Parameters.Length).IsEqualTo(Three);
+        await Assert.That(symbol?.Parameters[Two].Type.Name).IsEqualTo("Func");
     }
 
     /// <summary>Creates a tuple-returning CombineLatest overload and maps its tuple to a sum.</summary>

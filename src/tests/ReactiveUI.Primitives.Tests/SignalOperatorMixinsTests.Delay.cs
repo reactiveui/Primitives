@@ -47,6 +47,30 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(sequencer.ScheduledCount).IsEqualTo(0);
     }
 
+    /// <summary>
+    /// Verifies the drain timer a tick reschedules for itself survives the scheduling call that ran that tick.
+    /// A sequencer may run the drain before <c>Schedule</c> returns; the tick then finds the queued value is not
+    /// due yet and arms the next drain, and that successor must not be cancelled when the outer call returns.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ShiftRetainsTheDrainTimerArmedByAnInlineTick()
+    {
+        var dueTime = TimeSpan.FromTicks(Ten);
+        FirstInlineSequencer sequencer = new(TimeSpan.Zero);
+        Signal<int> source = new();
+        RecordingWitness<int> observer = new();
+        using var subscription = source.Shift(dueTime, sequencer).Subscribe(observer);
+
+        source.OnNext(One);
+        await Assert.That(observer.Values.Count).IsEqualTo(0);
+
+        sequencer.Advance(dueTime);
+        sequencer.RunPending();
+
+        await Assert.That(observer.Values.SequenceEqual([One])).IsTrue();
+    }
+
     /// <summary>Verifies that dispose waits for in-flight delivery and blocks queued notifications.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]

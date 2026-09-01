@@ -14,83 +14,33 @@ namespace ReactiveUI.Primitives;
 /// <summary>Coordinator helpers for multi-source combine-latest signal operators.</summary>
 public static partial class LinqExtensions
 {
-    /// <summary>Adapts a typed source to the shared multi-source coordinator.</summary>
-    /// <typeparam name="TResult">The projected result type.</typeparam>
-    private interface ICombineLatestSource<TResult>
+    /// <summary>The element-type-agnostic view of a latest-value slot, so the coordinator can hold them all.</summary>
+    private abstract class CombineLatestSlot
     {
-        /// <summary>Subscribes the coordinator to the source.</summary>
-        /// <param name="coordinator">The shared subscription coordinator.</param>
-        /// <param name="index">The source index.</param>
+        /// <summary>Subscribes the slot to the source it holds the latest value of.</summary>
         /// <returns>The source subscription.</returns>
-        IDisposable Subscribe(CombineLatestCoordinator<TResult> coordinator, int index);
+        internal abstract IDisposable Subscribe();
     }
 
     /// <summary>Observable implementation for generated multi-source combine-latest overloads.</summary>
     /// <typeparam name="TResult">The projected result type.</typeparam>
-    /// <param name="selector">The array-based selector wrapper.</param>
-    /// <param name="sources">The typed source adapters.</param>
-    private sealed partial class CombineLatestSignal<TResult>(Func<object?[], TResult> selector, ICombineLatestSource<TResult>[] sources) : IObservable<TResult>
+    /// <param name="connect">
+    /// Creates one typed slot per source against a fresh coordinator and returns the projection that reads
+    /// them. Running per subscription is what keeps every latest value in a field of its own source's type.
+    /// </param>
+    private sealed partial class CombineLatestSignal<TResult>(
+        Func<CombineLatestCoordinator<TResult>, Func<TResult>> connect) : IObservable<TResult>
     {
-        /// <summary>The first source slot.</summary>
-        private const int FirstSourceIndex = 0;
-
-        /// <summary>The second source slot.</summary>
-        private const int SecondSourceIndex = 1;
-
-        /// <summary>The third source slot.</summary>
-        private const int ThirdSourceIndex = 2;
-
-        /// <summary>The fourth source slot.</summary>
-        private const int FourthSourceIndex = 3;
-
-        /// <summary>The fifth source slot.</summary>
-        private const int FifthSourceIndex = 4;
-
-        /// <summary>The sixth source slot.</summary>
-        private const int SixthSourceIndex = 5;
-
-        /// <summary>The seventh source slot.</summary>
-        private const int SeventhSourceIndex = 6;
-
-        /// <summary>The eighth source slot.</summary>
-        private const int EighthSourceIndex = 7;
-
-        /// <summary>The ninth source slot.</summary>
-        private const int NinthSourceIndex = 8;
-
-        /// <summary>The tenth source slot.</summary>
-        private const int TenthSourceIndex = 9;
-
-        /// <summary>The eleventh source slot.</summary>
-        private const int EleventhSourceIndex = 10;
-
-        /// <summary>The twelfth source slot.</summary>
-        private const int TwelfthSourceIndex = 11;
-
-        /// <summary>The thirteenth source slot.</summary>
-        private const int ThirteenthSourceIndex = 12;
-
-        /// <summary>The fourteenth source slot.</summary>
-        private const int FourteenthSourceIndex = 13;
-
-        /// <summary>The fifteenth source slot.</summary>
-        private const int FifteenthSourceIndex = 14;
-
-        /// <summary>The sixteenth source slot.</summary>
-        private const int SixteenthSourceIndex = 15;
-
-        /// <summary>The typed source adapters.</summary>
-        private readonly ICombineLatestSource<TResult>[] _sources = sources;
-
-        /// <summary>The selector applied once every source has produced a value.</summary>
-        private readonly Func<object?[], TResult> _selector = selector;
+        /// <summary>Creates this subscription's typed slots and the projection that reads them.</summary>
+        private readonly Func<CombineLatestCoordinator<TResult>, Func<TResult>> _connect = connect;
 
         /// <inheritdoc/>
         public IDisposable Subscribe(IObserver<TResult> observer)
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            return new CombineLatestCoordinator<TResult>(observer, _selector, _sources.Length).Run(_sources);
+            CombineLatestCoordinator<TResult> coordinator = new(observer);
+            return coordinator.Run(_connect(coordinator));
         }
 
         /// <summary>Creates an arity-3 combine-latest signal.</summary>
@@ -108,14 +58,17 @@ public static partial class LinqExtensions
             IObservable<T2> source2,
             IObservable<T3> source3,
             Func<T1, T2, T3, TResult> selector) =>
-            Build(
-                values => selector(
-                    Value<T1>(values, FirstSourceIndex),
-                    Value<T2>(values, SecondSourceIndex),
-                    Value<T3>(values, ThirdSourceIndex)),
-                CreateSource(source),
-                CreateSource(source2),
-                CreateSource(source3));
+            new(coordinator =>
+            {
+                var slot = coordinator.Attach(source);
+                var slot2 = coordinator.Attach(source2);
+                var slot3 = coordinator.Attach(source3);
+
+                return () => selector(
+                    slot.Value,
+                    slot2.Value,
+                    slot3.Value);
+            });
 
         /// <summary>Creates an arity-4 combine-latest signal.</summary>
         /// <typeparam name="T1">The first source element type.</typeparam>
@@ -135,16 +88,19 @@ public static partial class LinqExtensions
             IObservable<T3> source3,
             IObservable<T4> source4,
             Func<T1, T2, T3, T4, TResult> selector) =>
-            Build(
-                values => selector(
-                    Value<T1>(values, FirstSourceIndex),
-                    Value<T2>(values, SecondSourceIndex),
-                    Value<T3>(values, ThirdSourceIndex),
-                    Value<T4>(values, FourthSourceIndex)),
-                CreateSource(source),
-                CreateSource(source2),
-                CreateSource(source3),
-                CreateSource(source4));
+            new(coordinator =>
+            {
+                var slot = coordinator.Attach(source);
+                var slot2 = coordinator.Attach(source2);
+                var slot3 = coordinator.Attach(source3);
+                var slot4 = coordinator.Attach(source4);
+
+                return () => selector(
+                    slot.Value,
+                    slot2.Value,
+                    slot3.Value,
+                    slot4.Value);
+            });
 
         /// <summary>Creates an arity-5 combine-latest signal.</summary>
         /// <typeparam name="T1">The first source element type.</typeparam>
@@ -167,18 +123,21 @@ public static partial class LinqExtensions
             IObservable<T4> source4,
             IObservable<T5> source5,
             Func<T1, T2, T3, T4, T5, TResult> selector) =>
-            Build(
-                values => selector(
-                    Value<T1>(values, FirstSourceIndex),
-                    Value<T2>(values, SecondSourceIndex),
-                    Value<T3>(values, ThirdSourceIndex),
-                    Value<T4>(values, FourthSourceIndex),
-                    Value<T5>(values, FifthSourceIndex)),
-                CreateSource(source),
-                CreateSource(source2),
-                CreateSource(source3),
-                CreateSource(source4),
-                CreateSource(source5));
+            new(coordinator =>
+            {
+                var slot = coordinator.Attach(source);
+                var slot2 = coordinator.Attach(source2);
+                var slot3 = coordinator.Attach(source3);
+                var slot4 = coordinator.Attach(source4);
+                var slot5 = coordinator.Attach(source5);
+
+                return () => selector(
+                    slot.Value,
+                    slot2.Value,
+                    slot3.Value,
+                    slot4.Value,
+                    slot5.Value);
+            });
 
         /// <summary>Creates an arity-6 combine-latest signal.</summary>
         /// <typeparam name="T1">The first source element type.</typeparam>
@@ -204,20 +163,23 @@ public static partial class LinqExtensions
             IObservable<T5> source5,
             IObservable<T6> source6,
             Func<T1, T2, T3, T4, T5, T6, TResult> selector) =>
-            Build(
-                values => selector(
-                    Value<T1>(values, FirstSourceIndex),
-                    Value<T2>(values, SecondSourceIndex),
-                    Value<T3>(values, ThirdSourceIndex),
-                    Value<T4>(values, FourthSourceIndex),
-                    Value<T5>(values, FifthSourceIndex),
-                    Value<T6>(values, SixthSourceIndex)),
-                CreateSource(source),
-                CreateSource(source2),
-                CreateSource(source3),
-                CreateSource(source4),
-                CreateSource(source5),
-                CreateSource(source6));
+            new(coordinator =>
+            {
+                var slot = coordinator.Attach(source);
+                var slot2 = coordinator.Attach(source2);
+                var slot3 = coordinator.Attach(source3);
+                var slot4 = coordinator.Attach(source4);
+                var slot5 = coordinator.Attach(source5);
+                var slot6 = coordinator.Attach(source6);
+
+                return () => selector(
+                    slot.Value,
+                    slot2.Value,
+                    slot3.Value,
+                    slot4.Value,
+                    slot5.Value,
+                    slot6.Value);
+            });
 
         /// <summary>Creates an arity-7 combine-latest signal.</summary>
         /// <typeparam name="T1">The first source element type.</typeparam>
@@ -250,22 +212,25 @@ public static partial class LinqExtensions
             IObservable<T6> source6,
             IObservable<T7> source7,
             Func<T1, T2, T3, T4, T5, T6, T7, TResult> selector) =>
-            Build(
-                values => selector(
-                    Value<T1>(values, FirstSourceIndex),
-                    Value<T2>(values, SecondSourceIndex),
-                    Value<T3>(values, ThirdSourceIndex),
-                    Value<T4>(values, FourthSourceIndex),
-                    Value<T5>(values, FifthSourceIndex),
-                    Value<T6>(values, SixthSourceIndex),
-                    Value<T7>(values, SeventhSourceIndex)),
-                CreateSource(source),
-                CreateSource(source2),
-                CreateSource(source3),
-                CreateSource(source4),
-                CreateSource(source5),
-                CreateSource(source6),
-                CreateSource(source7));
+            new(coordinator =>
+            {
+                var slot = coordinator.Attach(source);
+                var slot2 = coordinator.Attach(source2);
+                var slot3 = coordinator.Attach(source3);
+                var slot4 = coordinator.Attach(source4);
+                var slot5 = coordinator.Attach(source5);
+                var slot6 = coordinator.Attach(source6);
+                var slot7 = coordinator.Attach(source7);
+
+                return () => selector(
+                    slot.Value,
+                    slot2.Value,
+                    slot3.Value,
+                    slot4.Value,
+                    slot5.Value,
+                    slot6.Value,
+                    slot7.Value);
+            });
 
         /// <summary>Creates an arity-8 combine-latest signal.</summary>
         /// <typeparam name="T1">The first source element type.</typeparam>
@@ -301,24 +266,27 @@ public static partial class LinqExtensions
             IObservable<T7> source7,
             IObservable<T8> source8,
             Func<T1, T2, T3, T4, T5, T6, T7, T8, TResult> selector) =>
-            Build(
-                values => selector(
-                    Value<T1>(values, FirstSourceIndex),
-                    Value<T2>(values, SecondSourceIndex),
-                    Value<T3>(values, ThirdSourceIndex),
-                    Value<T4>(values, FourthSourceIndex),
-                    Value<T5>(values, FifthSourceIndex),
-                    Value<T6>(values, SixthSourceIndex),
-                    Value<T7>(values, SeventhSourceIndex),
-                    Value<T8>(values, EighthSourceIndex)),
-                CreateSource(source),
-                CreateSource(source2),
-                CreateSource(source3),
-                CreateSource(source4),
-                CreateSource(source5),
-                CreateSource(source6),
-                CreateSource(source7),
-                CreateSource(source8));
+            new(coordinator =>
+            {
+                var slot = coordinator.Attach(source);
+                var slot2 = coordinator.Attach(source2);
+                var slot3 = coordinator.Attach(source3);
+                var slot4 = coordinator.Attach(source4);
+                var slot5 = coordinator.Attach(source5);
+                var slot6 = coordinator.Attach(source6);
+                var slot7 = coordinator.Attach(source7);
+                var slot8 = coordinator.Attach(source8);
+
+                return () => selector(
+                    slot.Value,
+                    slot2.Value,
+                    slot3.Value,
+                    slot4.Value,
+                    slot5.Value,
+                    slot6.Value,
+                    slot7.Value,
+                    slot8.Value);
+            });
 
         /// <summary>Creates an arity-9 combine-latest signal.</summary>
         /// <typeparam name="T1">The first source element type.</typeparam>
@@ -357,95 +325,99 @@ public static partial class LinqExtensions
             IObservable<T8> source8,
             IObservable<T9> source9,
             Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult> selector) =>
-            Build(
-                values => selector(
-                    Value<T1>(values, FirstSourceIndex),
-                    Value<T2>(values, SecondSourceIndex),
-                    Value<T3>(values, ThirdSourceIndex),
-                    Value<T4>(values, FourthSourceIndex),
-                    Value<T5>(values, FifthSourceIndex),
-                    Value<T6>(values, SixthSourceIndex),
-                    Value<T7>(values, SeventhSourceIndex),
-                    Value<T8>(values, EighthSourceIndex),
-                    Value<T9>(values, NinthSourceIndex)),
-                CreateSource(source),
-                CreateSource(source2),
-                CreateSource(source3),
-                CreateSource(source4),
-                CreateSource(source5),
-                CreateSource(source6),
-                CreateSource(source7),
-                CreateSource(source8),
-                CreateSource(source9));
+            new(coordinator =>
+            {
+                var slot = coordinator.Attach(source);
+                var slot2 = coordinator.Attach(source2);
+                var slot3 = coordinator.Attach(source3);
+                var slot4 = coordinator.Attach(source4);
+                var slot5 = coordinator.Attach(source5);
+                var slot6 = coordinator.Attach(source6);
+                var slot7 = coordinator.Attach(source7);
+                var slot8 = coordinator.Attach(source8);
+                var slot9 = coordinator.Attach(source9);
 
-        /// <summary>Creates the typed multi-source signal.</summary>
-        /// <param name="selector">The array-based selector wrapper.</param>
-        /// <param name="sources">The typed source adapters.</param>
-        /// <returns>The observable that coordinates the sources.</returns>
-        private static CombineLatestSignal<TResult> Build(
-            Func<object?[], TResult> selector,
-            params ICombineLatestSource<TResult>[] sources) =>
-            new(selector, sources);
-
-        /// <summary>Creates a typed source adapter.</summary>
-        /// <typeparam name="T">The source element type.</typeparam>
-        /// <param name="observable">The source observable.</param>
-        /// <returns>The source adapter.</returns>
-        private static CombineLatestSource<TResult, T> CreateSource<T>(IObservable<T> observable) =>
-            new(observable);
-
-        /// <summary>Reads a typed value from the latest-value array.</summary>
-        /// <typeparam name="T">The value type stored at the slot.</typeparam>
-        /// <param name="values">The latest-value array.</param>
-        /// <param name="index">The source index.</param>
-        /// <returns>The typed value.</returns>
-        [SuppressMessage(
-            "Design",
-            "SST2307:Generic method type parameters should be inferable from the parameters",
-            Justification =
-                "The caller supplies the source slot type when casting from the shared latest-value array.")]
-        private static T Value<T>(object?[] values, int index) => (T)values[index]!;
+                return () => selector(
+                    slot.Value,
+                    slot2.Value,
+                    slot3.Value,
+                    slot4.Value,
+                    slot5.Value,
+                    slot6.Value,
+                    slot7.Value,
+                    slot8.Value,
+                    slot9.Value);
+            });
     }
 
-    /// <summary>Adapts a typed observable source to the shared coordinator shape.</summary>
+    /// <summary>
+    /// Holds the latest value of one source in a field of that source's own type, and observes the source
+    /// directly so a subscription costs one object per source rather than a closure and a delegate per callback.
+    /// </summary>
     /// <typeparam name="TResult">The projected result type.</typeparam>
     /// <typeparam name="T">The source element type.</typeparam>
+    /// <param name="coordinator">The coordinator that serializes this slot against its siblings.</param>
     /// <param name="source">The source observable.</param>
-    private sealed class CombineLatestSource<TResult, T>(IObservable<T> source) : ICombineLatestSource<TResult>
+    /// <param name="index">The source index.</param>
+    [System.Diagnostics.DebuggerDisplay("CombineLatestSlot: Value = {Value}")]
+    private sealed class CombineLatestSlot<TResult, T>(
+        CombineLatestCoordinator<TResult> coordinator,
+        IObservable<T> source,
+        int index) : CombineLatestSlot, IObserver<T>
     {
+        /// <summary>Gets the latest value this source produced, valid once every slot has one.</summary>
+        internal T Value { get; private set; } = default!;
+
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IDisposable Subscribe(CombineLatestCoordinator<TResult> coordinator, int index) =>
-            source.Subscribe(
-                value => coordinator.OnNext(index, value),
-                coordinator.OnError,
-                () => coordinator.OnCompleted(index));
+        public void OnNext(T value) => coordinator.OnNext(index, this, value);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void OnError(Exception error) => coordinator.OnError(error);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void OnCompleted() => coordinator.OnCompleted(index);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal override IDisposable Subscribe() => source.Subscribe(this);
+
+        /// <summary>Records the latest value. Called by the coordinator while it holds the serialization gate.</summary>
+        /// <param name="value">The value the source produced.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void Accept(T value) => Value = value;
     }
 
     /// <summary>Coordinates latest values, completion, and errors for a multi-source combine-latest subscription.</summary>
     /// <typeparam name="TResult">The projected result type.</typeparam>
     private sealed class CombineLatestCoordinator<TResult> : IDisposable
     {
+        /// <summary>The number of flag slots each source occupies: one for its value, one for its completion.</summary>
+        private const int FlagsPerSource = 2;
+
         /// <summary>Serializes notifications across all sources.</summary>
         private readonly Lock _gate = new();
 
         /// <summary>The downstream observer.</summary>
         private readonly IObserver<TResult> _observer;
 
-        /// <summary>The selector applied once every source has produced a value.</summary>
-        private readonly Func<object?[], TResult> _selector;
-
-        /// <summary>The latest value for each source.</summary>
-        private readonly object?[] _values;
-
-        /// <summary>Tracks whether each source has produced at least one value.</summary>
-        private readonly bool[] _hasValues;
-
-        /// <summary>Tracks whether each source has completed.</summary>
-        private readonly bool[] _isDone;
+        /// <summary>The typed latest-value slot for each source, in source order.</summary>
+        private readonly List<CombineLatestSlot> _slots = [];
 
         /// <summary>The active source subscriptions.</summary>
         private readonly MultipleDisposable _subscriptions = [];
+
+        /// <summary>
+        /// One flag per source twice over: the first half records whether a source has produced a value, the
+        /// second whether it has completed. A single array keeps both counters' state in one allocation and
+        /// stays correct for the collection overloads, whose source count has no upper bound.
+        /// </summary>
+        private bool[] _flags = [];
+
+        /// <summary>The projection over this subscription's slots.</summary>
+        private Func<TResult> _project = null!;
 
         /// <summary>The number of sources still waiting for their first value.</summary>
         private int _missingValues;
@@ -458,36 +430,41 @@ public static partial class LinqExtensions
 
         /// <summary>Initializes a new instance of the <see cref="CombineLatestCoordinator{TResult}"/> class.</summary>
         /// <param name="observer">The downstream observer.</param>
-        /// <param name="selector">The selector applied once every source has produced a value.</param>
-        /// <param name="sourceCount">The number of sources being coordinated.</param>
-        internal CombineLatestCoordinator(
-            IObserver<TResult> observer,
-            Func<object?[], TResult> selector,
-            int sourceCount)
-        {
-            _observer = observer;
-            _selector = selector;
-            _values = new object?[sourceCount];
-            _hasValues = new bool[sourceCount];
-            _isDone = new bool[sourceCount];
-            _missingValues = sourceCount;
-            _remainingCompletions = sourceCount;
-        }
+        internal CombineLatestCoordinator(IObserver<TResult> observer) => _observer = observer;
 
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose() => _subscriptions.Dispose();
 
-        /// <summary>Subscribes to every source and returns this coordinator as the subscription.</summary>
-        /// <param name="sources">The source adapters to subscribe to.</param>
-        /// <returns>This coordinator.</returns>
-        internal CombineLatestCoordinator<TResult> Run(ICombineLatestSource<TResult>[] sources)
+        /// <summary>Creates the next source's typed slot, without subscribing to it yet.</summary>
+        /// <typeparam name="T">The source element type.</typeparam>
+        /// <param name="source">The source observable.</param>
+        /// <returns>The slot that will hold the source's latest value.</returns>
+        internal CombineLatestSlot<TResult, T> Attach<T>(IObservable<T> source)
         {
+            CombineLatestSlot<TResult, T> slot = new(this, source, _slots.Count);
+            _slots.Add(slot);
+            return slot;
+        }
+
+        /// <summary>Subscribes to every attached source and returns this coordinator as the subscription.</summary>
+        /// <param name="project">The projection over the slots created by <see cref="Attach{T}"/>.</param>
+        /// <returns>This coordinator.</returns>
+        /// <remarks>
+        /// The projection is installed before the first subscription, so a source that produces a value inside
+        /// its own subscribe call still finds somewhere to project into.
+        /// </remarks>
+        internal CombineLatestCoordinator<TResult> Run(Func<TResult> project)
+        {
+            _project = project;
+            _flags = new bool[_slots.Count * FlagsPerSource];
+            _missingValues = _slots.Count;
+            _remainingCompletions = _slots.Count;
             try
             {
-                for (var i = 0; i < sources.Length; i++)
+                for (var i = 0; i < _slots.Count; i++)
                 {
-                    _subscriptions.Add(sources[i].Subscribe(this, i));
+                    _subscriptions.Add(_slots[i].Subscribe());
                 }
             }
             catch
@@ -500,9 +477,11 @@ public static partial class LinqExtensions
         }
 
         /// <summary>Records a latest source value and emits a projected value once every source has produced one.</summary>
+        /// <typeparam name="T">The source element type.</typeparam>
         /// <param name="index">The source index.</param>
+        /// <param name="slot">The slot that holds the source's latest value.</param>
         /// <param name="value">The source value.</param>
-        internal void OnNext(int index, object? value)
+        internal void OnNext<T>(int index, CombineLatestSlot<TResult, T> slot, T value)
         {
             lock (_gate)
             {
@@ -511,16 +490,16 @@ public static partial class LinqExtensions
                     return;
                 }
 
-                _values[index] = value;
-                if (!_hasValues[index])
+                slot.Accept(value);
+                if (!_flags[index])
                 {
-                    _hasValues[index] = true;
+                    _flags[index] = true;
                     _missingValues--;
                 }
 
                 if (_missingValues == 0)
                 {
-                    _observer.OnNext(_selector(_values));
+                    _observer.OnNext(_project());
                 }
             }
         }
@@ -547,14 +526,15 @@ public static partial class LinqExtensions
         /// <param name="index">The source index.</param>
         internal void OnCompleted(int index)
         {
+            var done = _slots.Count + index;
             lock (_gate)
             {
-                if (_completed || _isDone[index])
+                if (_completed || _flags[done])
                 {
                     return;
                 }
 
-                _isDone[index] = true;
+                _flags[done] = true;
                 _remainingCompletions--;
                 if (_remainingCompletions != 0)
                 {

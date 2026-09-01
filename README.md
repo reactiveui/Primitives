@@ -486,6 +486,11 @@ resolve the conflict. Import only one set of LINQ operators when their signature
 not values emitted by an `IObservable<Exception>`. To handle exception values with `SubscribeSafe`, supply
 both `onNext` and `onError` explicitly.
 
+System.Reactive declares its own observer-taking `SubscribeSafe` in the `System` namespace, so that one
+overload is ambiguous under the same conditions as `Subscribe`. Use `SubscribeSafePrimitives(observer)` to
+select the Primitives implementation. The callback shapes of `SubscribeSafe` have no System.Reactive
+counterpart and stay callable under their own name.
+
 ### Scheduling event handlers and drawing
 
 `ObserveOn` schedules downstream notifications. Moving work from an event handler into a subscriber
@@ -496,7 +501,26 @@ perform the drawing in the resulting paint callback.
 
 The `Signal.FromEventPattern<TEventHandler, TEventArgs>(conversion, addHandler, removeHandler)` overload
 lets a custom event handler perform synchronous work before invoking the notification callback. Each
-subscription owns its converted handler and detaches that same handler on disposal.
+subscription owns its converted handler and detaches that same handler on disposal. Supplying the conversion
+also avoids deriving the handler reflectively, which is what makes this shape trim- and AOT-safe.
+
+Three siblings build on the same conversion. `FromEventPattern<TEventHandler, TSender, TEventArgs>` keeps the
+sender's static type instead of erasing it to `object`. `FromEvent<TEventHandler, TEventArgs>` emits the event
+argument on its own, for events that carry no sender, and `FromEvent<TEventArgs>(addHandler, removeHandler)`
+covers the plain `Action<TEventArgs>` case. Every one of them, and every `FromEventPattern` overload, accepts a
+trailing sequencer that attaches and detaches the handler as scheduled work rather than on the subscribing
+thread — the shape to use when an event may only be subscribed from the UI thread:
+
+```csharp
+using var painted = Signal.FromEventPattern<SKPaintSurfaceEventArgs>(
+        handler => view.SkiaElement.PaintSurface += handler,
+        handler => view.SkiaElement.PaintSurface -= handler,
+        RxSchedulers.MainThreadScheduler)
+    .SubscribePrimitives(pattern => Draw(pattern.EventArgs));
+```
+
+Disposing cancels a pending attach, so a subscription torn down before the sequencer ran it never leaves the
+handler on the event.
 
 `Throttle` (also called `Calm` or `Stabilize`) waits for a quiet period after the most recent value.
 By default its timer uses the thread pool; it does not marshal the result to the UI thread. Use
@@ -759,6 +783,18 @@ implementation.
 using var dimensions = width.CombineLatest(height)
     .SubscribePrimitives(size => Console.WriteLine($"{size.First} x {size.Second}"));
 ```
+
+When the sources share an element type and are too many to name, or they only exist as a collection,
+`CombineLatest` also combines them into an `IList<T>`, with an optional selector over that list. The
+collection is enumerated once, when the operator is called, and every notification carries its own list:
+
+```csharp
+using var totals = gauges.CombineLatest(readings => Total(readings))
+    .SubscribePrimitives(total => Console.WriteLine($"total={total}"));
+```
+
+Listing two to sixteen same-typed sources inline still selects the tuple overload that names each of them;
+the list overload takes over past that arity, and whenever the sources arrive as an array or a sequence.
 
 Multi-source latest example:
 

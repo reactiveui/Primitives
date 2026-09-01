@@ -53,7 +53,7 @@ public sealed class AfterSubscription : IDisposable
     /// <returns>The subscription handle.</returns>
     public AfterSubscription Run()
     {
-        Slot.Create(Scheduler.Schedule(Sequencer.Normalize(DueTime), Tick));
+        TimerSlot.Arm(Slot, Scheduler, Sequencer.Normalize(DueTime), Tick);
         return this;
     }
 
@@ -74,6 +74,6 @@ public sealed class AfterSubscription : IDisposable
             return;
         }
 
-        Slot.Create(Scheduler.Schedule(period, Tick));
+        TimerSlot.Arm(Slot, Scheduler, period, Tick);
     }
 }

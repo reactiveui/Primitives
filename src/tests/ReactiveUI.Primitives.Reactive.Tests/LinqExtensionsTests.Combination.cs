@@ -30,6 +30,24 @@ public partial class LinqExtensionsTests
         await Assert.That(values.SequenceEqual([(One, SecondValue), (Two, SecondValue)])).IsTrue();
     }
 
+    /// <summary>Verifies list combination works with System.Reactive subjects.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task CombineLatestListsAcceptSystemReactiveSources()
+    {
+        using Subject<int> first = new();
+        using Subject<int> second = new();
+        List<IList<int>> values = [];
+        using var subscription = ReactiveLinqExtensions.CombineLatest<int>(first, second).Subscribe(values.Add);
+
+        first.OnNext(One);
+        await Assert.That(values).IsEmpty();
+        second.OnNext(Two);
+
+        await Assert.That(values.Count).IsEqualTo(1);
+        await Assert.That(values[0].SequenceEqual([One, Two])).IsTrue();
+    }
+
     /// <summary>Verifies the Reactive throttle honors the latest value's quiet period.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]

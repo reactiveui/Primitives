@@ -49,6 +49,27 @@ public sealed class EverySignalTests
     /// </summary>
     private static readonly TimeSpan LivelockTimeout = TimeSpan.FromSeconds(30);
 
+    /// <summary>
+    /// Verifies the recurring schedule survives a sequencer that runs the first tick before its own
+    /// <c>Schedule</c> returns. That tick arms the next one, and the handle the outer call goes on to return
+    /// must not replace - and so cancel - the successor the tick just armed, which would stop the interval
+    /// after a single value.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task EveryRetainsTheTickArmedByAnInlineFirstTick()
+    {
+        FirstInlineSequencer sequencer = new(TimeSpan.Zero);
+        List<long> ticks = [];
+        using var subscription = Signal.Every(TickPeriod, sequencer).Subscribe(ticks.Add);
+
+        await Assert.That(ticks.SequenceEqual([0L])).IsTrue();
+
+        sequencer.RunPending();
+
+        await Assert.That(ticks.SequenceEqual([0L, 1L])).IsTrue();
+    }
+
     /// <summary>Verifies a bounded <c>Every</c> on the current-thread sequencer terminates instead of livelocking.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]

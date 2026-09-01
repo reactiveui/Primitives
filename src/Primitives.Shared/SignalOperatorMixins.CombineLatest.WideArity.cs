@@ -57,28 +57,31 @@ public static partial class LinqExtensions
             IObservable<T9> source9,
             IObservable<T10> source10,
             Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult> selector) =>
-            Build(
-                values => selector(
-                    Value<T1>(values, FirstSourceIndex),
-                    Value<T2>(values, SecondSourceIndex),
-                    Value<T3>(values, ThirdSourceIndex),
-                    Value<T4>(values, FourthSourceIndex),
-                    Value<T5>(values, FifthSourceIndex),
-                    Value<T6>(values, SixthSourceIndex),
-                    Value<T7>(values, SeventhSourceIndex),
-                    Value<T8>(values, EighthSourceIndex),
-                    Value<T9>(values, NinthSourceIndex),
-                    Value<T10>(values, TenthSourceIndex)),
-                CreateSource(source),
-                CreateSource(source2),
-                CreateSource(source3),
-                CreateSource(source4),
-                CreateSource(source5),
-                CreateSource(source6),
-                CreateSource(source7),
-                CreateSource(source8),
-                CreateSource(source9),
-                CreateSource(source10));
+            new(coordinator =>
+            {
+                var slot = coordinator.Attach(source);
+                var slot2 = coordinator.Attach(source2);
+                var slot3 = coordinator.Attach(source3);
+                var slot4 = coordinator.Attach(source4);
+                var slot5 = coordinator.Attach(source5);
+                var slot6 = coordinator.Attach(source6);
+                var slot7 = coordinator.Attach(source7);
+                var slot8 = coordinator.Attach(source8);
+                var slot9 = coordinator.Attach(source9);
+                var slot10 = coordinator.Attach(source10);
+
+                return () => selector(
+                    slot.Value,
+                    slot2.Value,
+                    slot3.Value,
+                    slot4.Value,
+                    slot5.Value,
+                    slot6.Value,
+                    slot7.Value,
+                    slot8.Value,
+                    slot9.Value,
+                    slot10.Value);
+            });
 
         /// <summary>Creates an arity-11 combine-latest signal.</summary>
         /// <typeparam name="T1">The first source element type.</typeparam>
@@ -123,30 +126,33 @@ public static partial class LinqExtensions
             IObservable<T10> source10,
             IObservable<T11> source11,
             Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult> selector) =>
-            Build(
-                values => selector(
-                    Value<T1>(values, FirstSourceIndex),
-                    Value<T2>(values, SecondSourceIndex),
-                    Value<T3>(values, ThirdSourceIndex),
-                    Value<T4>(values, FourthSourceIndex),
-                    Value<T5>(values, FifthSourceIndex),
-                    Value<T6>(values, SixthSourceIndex),
-                    Value<T7>(values, SeventhSourceIndex),
-                    Value<T8>(values, EighthSourceIndex),
-                    Value<T9>(values, NinthSourceIndex),
-                    Value<T10>(values, TenthSourceIndex),
-                    Value<T11>(values, EleventhSourceIndex)),
-                CreateSource(source),
-                CreateSource(source2),
-                CreateSource(source3),
-                CreateSource(source4),
-                CreateSource(source5),
-                CreateSource(source6),
-                CreateSource(source7),
-                CreateSource(source8),
-                CreateSource(source9),
-                CreateSource(source10),
-                CreateSource(source11));
+            new(coordinator =>
+            {
+                var slot = coordinator.Attach(source);
+                var slot2 = coordinator.Attach(source2);
+                var slot3 = coordinator.Attach(source3);
+                var slot4 = coordinator.Attach(source4);
+                var slot5 = coordinator.Attach(source5);
+                var slot6 = coordinator.Attach(source6);
+                var slot7 = coordinator.Attach(source7);
+                var slot8 = coordinator.Attach(source8);
+                var slot9 = coordinator.Attach(source9);
+                var slot10 = coordinator.Attach(source10);
+                var slot11 = coordinator.Attach(source11);
+
+                return () => selector(
+                    slot.Value,
+                    slot2.Value,
+                    slot3.Value,
+                    slot4.Value,
+                    slot5.Value,
+                    slot6.Value,
+                    slot7.Value,
+                    slot8.Value,
+                    slot9.Value,
+                    slot10.Value,
+                    slot11.Value);
+            });
 
         /// <summary>Creates an arity-12 combine-latest signal.</summary>
         /// <typeparam name="T1">The first source element type.</typeparam>
@@ -194,32 +200,35 @@ public static partial class LinqExtensions
             IObservable<T11> source11,
             IObservable<T12> source12,
             Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TResult> selector) =>
-            Build(
-                values => selector(
-                    Value<T1>(values, FirstSourceIndex),
-                    Value<T2>(values, SecondSourceIndex),
-                    Value<T3>(values, ThirdSourceIndex),
-                    Value<T4>(values, FourthSourceIndex),
-                    Value<T5>(values, FifthSourceIndex),
-                    Value<T6>(values, SixthSourceIndex),
-                    Value<T7>(values, SeventhSourceIndex),
-                    Value<T8>(values, EighthSourceIndex),
-                    Value<T9>(values, NinthSourceIndex),
-                    Value<T10>(values, TenthSourceIndex),
-                    Value<T11>(values, EleventhSourceIndex),
-                    Value<T12>(values, TwelfthSourceIndex)),
-                CreateSource(source),
-                CreateSource(source2),
-                CreateSource(source3),
-                CreateSource(source4),
-                CreateSource(source5),
-                CreateSource(source6),
-                CreateSource(source7),
-                CreateSource(source8),
-                CreateSource(source9),
-                CreateSource(source10),
-                CreateSource(source11),
-                CreateSource(source12));
+            new(coordinator =>
+            {
+                var slot = coordinator.Attach(source);
+                var slot2 = coordinator.Attach(source2);
+                var slot3 = coordinator.Attach(source3);
+                var slot4 = coordinator.Attach(source4);
+                var slot5 = coordinator.Attach(source5);
+                var slot6 = coordinator.Attach(source6);
+                var slot7 = coordinator.Attach(source7);
+                var slot8 = coordinator.Attach(source8);
+                var slot9 = coordinator.Attach(source9);
+                var slot10 = coordinator.Attach(source10);
+                var slot11 = coordinator.Attach(source11);
+                var slot12 = coordinator.Attach(source12);
+
+                return () => selector(
+                    slot.Value,
+                    slot2.Value,
+                    slot3.Value,
+                    slot4.Value,
+                    slot5.Value,
+                    slot6.Value,
+                    slot7.Value,
+                    slot8.Value,
+                    slot9.Value,
+                    slot10.Value,
+                    slot11.Value,
+                    slot12.Value);
+            });
 
         /// <summary>Creates an arity-13 combine-latest signal.</summary>
         /// <typeparam name="T1">The first source element type.</typeparam>
@@ -270,34 +279,37 @@ public static partial class LinqExtensions
             IObservable<T12> source12,
             IObservable<T13> source13,
             Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult> selector) =>
-            Build(
-                values => selector(
-                    Value<T1>(values, FirstSourceIndex),
-                    Value<T2>(values, SecondSourceIndex),
-                    Value<T3>(values, ThirdSourceIndex),
-                    Value<T4>(values, FourthSourceIndex),
-                    Value<T5>(values, FifthSourceIndex),
-                    Value<T6>(values, SixthSourceIndex),
-                    Value<T7>(values, SeventhSourceIndex),
-                    Value<T8>(values, EighthSourceIndex),
-                    Value<T9>(values, NinthSourceIndex),
-                    Value<T10>(values, TenthSourceIndex),
-                    Value<T11>(values, EleventhSourceIndex),
-                    Value<T12>(values, TwelfthSourceIndex),
-                    Value<T13>(values, ThirteenthSourceIndex)),
-                CreateSource(source),
-                CreateSource(source2),
-                CreateSource(source3),
-                CreateSource(source4),
-                CreateSource(source5),
-                CreateSource(source6),
-                CreateSource(source7),
-                CreateSource(source8),
-                CreateSource(source9),
-                CreateSource(source10),
-                CreateSource(source11),
-                CreateSource(source12),
-                CreateSource(source13));
+            new(coordinator =>
+            {
+                var slot = coordinator.Attach(source);
+                var slot2 = coordinator.Attach(source2);
+                var slot3 = coordinator.Attach(source3);
+                var slot4 = coordinator.Attach(source4);
+                var slot5 = coordinator.Attach(source5);
+                var slot6 = coordinator.Attach(source6);
+                var slot7 = coordinator.Attach(source7);
+                var slot8 = coordinator.Attach(source8);
+                var slot9 = coordinator.Attach(source9);
+                var slot10 = coordinator.Attach(source10);
+                var slot11 = coordinator.Attach(source11);
+                var slot12 = coordinator.Attach(source12);
+                var slot13 = coordinator.Attach(source13);
+
+                return () => selector(
+                    slot.Value,
+                    slot2.Value,
+                    slot3.Value,
+                    slot4.Value,
+                    slot5.Value,
+                    slot6.Value,
+                    slot7.Value,
+                    slot8.Value,
+                    slot9.Value,
+                    slot10.Value,
+                    slot11.Value,
+                    slot12.Value,
+                    slot13.Value);
+            });
 
         /// <summary>Creates an arity-14 combine-latest signal.</summary>
         /// <typeparam name="T1">The first source element type.</typeparam>
@@ -352,36 +364,39 @@ public static partial class LinqExtensions
                 IObservable<T13> source13,
                 IObservable<T14> source14,
                 Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult> selector) =>
-            Build(
-                values => selector(
-                    Value<T1>(values, FirstSourceIndex),
-                    Value<T2>(values, SecondSourceIndex),
-                    Value<T3>(values, ThirdSourceIndex),
-                    Value<T4>(values, FourthSourceIndex),
-                    Value<T5>(values, FifthSourceIndex),
-                    Value<T6>(values, SixthSourceIndex),
-                    Value<T7>(values, SeventhSourceIndex),
-                    Value<T8>(values, EighthSourceIndex),
-                    Value<T9>(values, NinthSourceIndex),
-                    Value<T10>(values, TenthSourceIndex),
-                    Value<T11>(values, EleventhSourceIndex),
-                    Value<T12>(values, TwelfthSourceIndex),
-                    Value<T13>(values, ThirteenthSourceIndex),
-                    Value<T14>(values, FourteenthSourceIndex)),
-                CreateSource(source),
-                CreateSource(source2),
-                CreateSource(source3),
-                CreateSource(source4),
-                CreateSource(source5),
-                CreateSource(source6),
-                CreateSource(source7),
-                CreateSource(source8),
-                CreateSource(source9),
-                CreateSource(source10),
-                CreateSource(source11),
-                CreateSource(source12),
-                CreateSource(source13),
-                CreateSource(source14));
+            new(coordinator =>
+            {
+                var slot = coordinator.Attach(source);
+                var slot2 = coordinator.Attach(source2);
+                var slot3 = coordinator.Attach(source3);
+                var slot4 = coordinator.Attach(source4);
+                var slot5 = coordinator.Attach(source5);
+                var slot6 = coordinator.Attach(source6);
+                var slot7 = coordinator.Attach(source7);
+                var slot8 = coordinator.Attach(source8);
+                var slot9 = coordinator.Attach(source9);
+                var slot10 = coordinator.Attach(source10);
+                var slot11 = coordinator.Attach(source11);
+                var slot12 = coordinator.Attach(source12);
+                var slot13 = coordinator.Attach(source13);
+                var slot14 = coordinator.Attach(source14);
+
+                return () => selector(
+                    slot.Value,
+                    slot2.Value,
+                    slot3.Value,
+                    slot4.Value,
+                    slot5.Value,
+                    slot6.Value,
+                    slot7.Value,
+                    slot8.Value,
+                    slot9.Value,
+                    slot10.Value,
+                    slot11.Value,
+                    slot12.Value,
+                    slot13.Value,
+                    slot14.Value);
+            });
 
         /// <summary>Creates an arity-15 combine-latest signal.</summary>
         /// <typeparam name="T1">The first source element type.</typeparam>
@@ -438,38 +453,41 @@ public static partial class LinqExtensions
             IObservable<T14> source14,
             IObservable<T15> source15,
             Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult> selector) =>
-            Build(
-                values => selector(
-                    Value<T1>(values, FirstSourceIndex),
-                    Value<T2>(values, SecondSourceIndex),
-                    Value<T3>(values, ThirdSourceIndex),
-                    Value<T4>(values, FourthSourceIndex),
-                    Value<T5>(values, FifthSourceIndex),
-                    Value<T6>(values, SixthSourceIndex),
-                    Value<T7>(values, SeventhSourceIndex),
-                    Value<T8>(values, EighthSourceIndex),
-                    Value<T9>(values, NinthSourceIndex),
-                    Value<T10>(values, TenthSourceIndex),
-                    Value<T11>(values, EleventhSourceIndex),
-                    Value<T12>(values, TwelfthSourceIndex),
-                    Value<T13>(values, ThirteenthSourceIndex),
-                    Value<T14>(values, FourteenthSourceIndex),
-                    Value<T15>(values, FifteenthSourceIndex)),
-                CreateSource(source),
-                CreateSource(source2),
-                CreateSource(source3),
-                CreateSource(source4),
-                CreateSource(source5),
-                CreateSource(source6),
-                CreateSource(source7),
-                CreateSource(source8),
-                CreateSource(source9),
-                CreateSource(source10),
-                CreateSource(source11),
-                CreateSource(source12),
-                CreateSource(source13),
-                CreateSource(source14),
-                CreateSource(source15));
+            new(coordinator =>
+            {
+                var slot = coordinator.Attach(source);
+                var slot2 = coordinator.Attach(source2);
+                var slot3 = coordinator.Attach(source3);
+                var slot4 = coordinator.Attach(source4);
+                var slot5 = coordinator.Attach(source5);
+                var slot6 = coordinator.Attach(source6);
+                var slot7 = coordinator.Attach(source7);
+                var slot8 = coordinator.Attach(source8);
+                var slot9 = coordinator.Attach(source9);
+                var slot10 = coordinator.Attach(source10);
+                var slot11 = coordinator.Attach(source11);
+                var slot12 = coordinator.Attach(source12);
+                var slot13 = coordinator.Attach(source13);
+                var slot14 = coordinator.Attach(source14);
+                var slot15 = coordinator.Attach(source15);
+
+                return () => selector(
+                    slot.Value,
+                    slot2.Value,
+                    slot3.Value,
+                    slot4.Value,
+                    slot5.Value,
+                    slot6.Value,
+                    slot7.Value,
+                    slot8.Value,
+                    slot9.Value,
+                    slot10.Value,
+                    slot11.Value,
+                    slot12.Value,
+                    slot13.Value,
+                    slot14.Value,
+                    slot15.Value);
+            });
 
         /// <summary>Creates an arity-16 combine-latest signal.</summary>
         /// <typeparam name="T1">The first source element type.</typeparam>
@@ -529,39 +547,42 @@ public static partial class LinqExtensions
             IObservable<T15> source15,
             IObservable<T16> source16,
             Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult> selector) =>
-            Build(
-                values => selector(
-                    Value<T1>(values, FirstSourceIndex),
-                    Value<T2>(values, SecondSourceIndex),
-                    Value<T3>(values, ThirdSourceIndex),
-                    Value<T4>(values, FourthSourceIndex),
-                    Value<T5>(values, FifthSourceIndex),
-                    Value<T6>(values, SixthSourceIndex),
-                    Value<T7>(values, SeventhSourceIndex),
-                    Value<T8>(values, EighthSourceIndex),
-                    Value<T9>(values, NinthSourceIndex),
-                    Value<T10>(values, TenthSourceIndex),
-                    Value<T11>(values, EleventhSourceIndex),
-                    Value<T12>(values, TwelfthSourceIndex),
-                    Value<T13>(values, ThirteenthSourceIndex),
-                    Value<T14>(values, FourteenthSourceIndex),
-                    Value<T15>(values, FifteenthSourceIndex),
-                    Value<T16>(values, SixteenthSourceIndex)),
-                CreateSource(source),
-                CreateSource(source2),
-                CreateSource(source3),
-                CreateSource(source4),
-                CreateSource(source5),
-                CreateSource(source6),
-                CreateSource(source7),
-                CreateSource(source8),
-                CreateSource(source9),
-                CreateSource(source10),
-                CreateSource(source11),
-                CreateSource(source12),
-                CreateSource(source13),
-                CreateSource(source14),
-                CreateSource(source15),
-                CreateSource(source16));
+            new(coordinator =>
+            {
+                var slot = coordinator.Attach(source);
+                var slot2 = coordinator.Attach(source2);
+                var slot3 = coordinator.Attach(source3);
+                var slot4 = coordinator.Attach(source4);
+                var slot5 = coordinator.Attach(source5);
+                var slot6 = coordinator.Attach(source6);
+                var slot7 = coordinator.Attach(source7);
+                var slot8 = coordinator.Attach(source8);
+                var slot9 = coordinator.Attach(source9);
+                var slot10 = coordinator.Attach(source10);
+                var slot11 = coordinator.Attach(source11);
+                var slot12 = coordinator.Attach(source12);
+                var slot13 = coordinator.Attach(source13);
+                var slot14 = coordinator.Attach(source14);
+                var slot15 = coordinator.Attach(source15);
+                var slot16 = coordinator.Attach(source16);
+
+                return () => selector(
+                    slot.Value,
+                    slot2.Value,
+                    slot3.Value,
+                    slot4.Value,
+                    slot5.Value,
+                    slot6.Value,
+                    slot7.Value,
+                    slot8.Value,
+                    slot9.Value,
+                    slot10.Value,
+                    slot11.Value,
+                    slot12.Value,
+                    slot13.Value,
+                    slot14.Value,
+                    slot15.Value,
+                    slot16.Value);
+            });
     }
 }

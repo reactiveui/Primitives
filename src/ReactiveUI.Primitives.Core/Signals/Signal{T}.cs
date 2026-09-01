@@ -19,25 +19,33 @@ public class Signal<T> : ISignal<T>
     /// <summary>The factor the subscription array grows by when it fills.</summary>
     private const int SubscriptionGrowthFactor = 2;
 
+    /// <summary>Published in place of the observers once a terminal notification has been delivered.</summary>
+    private static readonly object StoppedMarker = new();
+
+    /// <summary>Published in place of the observers once the signal has been disposed.</summary>
+    private static readonly object DisposedMarker = new();
+
     /// <summary>
-    /// Guards observer-set and terminal-state mutations. Dispatch (OnNext) reads the observer
-    /// slots lock-free via Volatile; only subscribe/remove/terminal take the lock, and they mutate
-    /// reusable array slots in place rather than copying, so subscribe/unsubscribe churn does not
-    /// allocate a new array per change.
+    /// Guards observer-set and terminal-state mutations. Dispatch does not take it: subscribe, remove, and
+    /// the terminal transitions each publish one new value to <see cref="_observers"/>, and they mutate
+    /// reusable array slots in place rather than copying, so subscribe/unsubscribe churn does not allocate a
+    /// new array per change.
     /// </summary>
     private readonly Lock _observerLock = new();
 
     /// <summary>Stores state for the signal implementation.</summary>
     private Exception? _exception;
 
-    /// <summary>Stores state for the signal implementation.</summary>
-    private SignalSubscription? _singleActionSubscription;
+    /// <summary>
+    /// The dispatch target, and the only field <see cref="OnNext"/> reads: <see langword="null"/> while
+    /// nobody is subscribed, the subscription itself for exactly one subscriber, the slot array for more, or
+    /// one of the terminal markers. Every shape change publishes a single new value here, so a dispatch sees
+    /// either the whole change or none of it. That is what lets the emit path run without taking the gate.
+    /// </summary>
+    private object? _observers;
 
-    /// <summary>Stores state for the signal implementation.</summary>
-    private SignalSubscription? _singleObserverSubscription;
-
-    /// <summary>Stores state for the signal implementation.</summary>
-    private SignalSubscription?[]? _subscriptions;
+    /// <summary>The reusable slot array backing the multi-subscriber shape, kept across an empty period.</summary>
+    private SignalSubscription?[]? _slots;
 
     /// <summary>Stores state for the signal implementation.</summary>
     private int _subscriptionCount;
@@ -52,9 +60,15 @@ public class Signal<T> : ISignal<T>
     private bool _isStopped;
 
     /// <summary>Gets a value indicating whether indicates whether the subject has observers subscribed to it.</summary>
-    public virtual bool HasObservers =>
-        (_singleActionSubscription is not null || _singleObserverSubscription is not null || _subscriptionCount != 0)
-        && !_isStopped;
+    public virtual bool HasObservers
+    {
+        get
+        {
+            var observers = Volatile.Read(ref _observers);
+            return observers is SignalSubscription
+                || (observers is SignalSubscription?[] && _subscriptionCount != 0);
+        }
+    }
 
     /// <summary>Gets a value indicating whether indicates whether the subject has been disposed.</summary>
     public virtual bool IsDisposed => _isDisposed;
@@ -74,8 +88,7 @@ public class Signal<T> : ISignal<T>
     /// <summary>Called when [completed].</summary>
     public void OnCompleted()
     {
-        SignalSubscription? singleObserver;
-        SignalSubscription?[]? subscriptions;
+        object? observers;
 
         lock (_observerLock)
         {
@@ -85,12 +98,11 @@ public class Signal<T> : ISignal<T>
                 return;
             }
 
-            singleObserver = _singleObserverSubscription;
-            subscriptions = ClearObserversLocked();
+            observers = ClearObserversLocked(StoppedMarker);
             _isStopped = true;
         }
 
-        Completed(singleObserver, subscriptions);
+        Completed(observers);
     }
 
     /// <summary>Called when [error].</summary>
@@ -99,9 +111,7 @@ public class Signal<T> : ISignal<T>
     {
         ArgumentExceptionHelper.ThrowIfNull(error);
 
-        SignalSubscription? singleObserver;
-        SignalSubscription?[]? subscriptions;
-        bool hasActionSubscribers;
+        object? observers;
 
         lock (_observerLock)
         {
@@ -112,14 +122,12 @@ public class Signal<T> : ISignal<T>
             }
 
             _exception = error;
-            hasActionSubscribers = _singleActionSubscription is not null || HasActionSubscribers(_subscriptions);
-            singleObserver = _singleObserverSubscription;
-            subscriptions = ClearObserversLocked();
+            observers = ClearObserversLocked(StoppedMarker);
             _isStopped = true;
         }
 
-        Error(singleObserver, subscriptions, error);
-        if (!hasActionSubscribers)
+        Error(observers, error);
+        if (!HasActionSubscribers(observers))
         {
             return;
         }
@@ -129,44 +137,32 @@ public class Signal<T> : ISignal<T>
 
     /// <summary>Called when [next].</summary>
     /// <param name="value">The value.</param>
+    /// <remarks>
+    /// One volatile read of <see cref="_observers"/> decides the whole dispatch, so emitting never takes the
+    /// observer gate. A terminal transition or a disposal publishes a marker to that same field, which is how
+    /// a stopped signal stays silent and a disposed one still throws without a lock on the emit path.
+    /// </remarks>
     public void OnNext(T value)
     {
-        SignalSubscription? singleObserver;
-        SignalSubscription? singleAction;
-        SignalSubscription?[]? subscriptions;
-
-        lock (_observerLock)
+        var observers = Volatile.Read(ref _observers);
+        if (observers is SignalSubscription single)
         {
-            ThrowIfDisposed();
-            if (_isStopped)
-            {
-                return;
-            }
-
-            singleObserver = _singleObserverSubscription;
-            singleAction = _singleActionSubscription;
-            subscriptions = _subscriptions;
-        }
-
-        if (singleObserver is not null)
-        {
-            singleObserver.Observer.OnNext(value);
+            single.OnNext(value);
             return;
         }
 
-        if (singleAction is not null)
+        if (observers is SignalSubscription?[] subscriptions)
         {
-            singleAction.Action(value);
+            DispatchToSlots(subscriptions, value);
             return;
         }
 
-        DispatchSubscriptions(subscriptions, value);
-        if (!Volatile.Read(ref _isDisposed))
+        if (!ReferenceEquals(observers, DisposedMarker))
         {
             return;
         }
 
-        ThrowDisposed();
+        throw Disposed();
     }
 
     /// <summary>Subscribes the specified observer.</summary>
@@ -189,18 +185,8 @@ public class Signal<T> : ISignal<T>
             ex = _exception;
             if (!stopped)
             {
-                if (_singleActionSubscription is null && _singleObserverSubscription is null && _subscriptionCount == 0)
-                {
-                    subscription = new(this, observer);
-                    _singleObserverSubscription = subscription;
-                }
-                else
-                {
-                    PromoteSingleObserverLocked();
-                    PromoteSingleActionObserverLocked();
-                    subscription = new(this, observer);
-                    AddSubscriptionLocked(subscription);
-                }
+                subscription = new(this, observer);
+                AddSubscriptionLocked(subscription);
             }
         }
 
@@ -240,16 +226,7 @@ public class Signal<T> : ISignal<T>
             if (!stopped)
             {
                 subscription = new(this, onNext);
-                if (_singleActionSubscription is null && _singleObserverSubscription is null && _subscriptionCount == 0)
-                {
-                    _singleActionSubscription = subscription;
-                }
-                else
-                {
-                    PromoteSingleObserverLocked();
-                    PromoteSingleActionObserverLocked();
-                    AddSubscriptionLocked(subscription);
-                }
+                AddSubscriptionLocked(subscription);
             }
         }
 
@@ -280,35 +257,40 @@ public class Signal<T> : ISignal<T>
             return;
         }
 
-        SignalSubscription? singleActionSubscription;
-        SignalSubscription? singleObserverSubscription;
-        SignalSubscription?[]? subscriptions;
+        object? observers;
 
         lock (_observerLock)
         {
-            singleActionSubscription = _singleActionSubscription;
-            singleObserverSubscription = _singleObserverSubscription;
-            subscriptions = ClearObserversLocked();
             _exception = null;
+
+            // Set before the marker is published: the marker goes out with a release write, so a dispatch
+            // that acquires it is guaranteed to see the disposed flag its trailing check reads.
             _isDisposed = true;
+            observers = ClearObserversLocked(DisposedMarker);
         }
 
-        singleActionSubscription?.Dispose();
-        singleObserverSubscription?.Dispose();
-        DisposeSubscriptions(subscriptions);
+        DisposeSubscriptions(observers);
     }
 
-    /// <summary>Executes the ThrowDisposed operation.</summary>
-    /// <exception cref="ObjectDisposedException">Always; the signal has already been disposed.</exception>
-    private static void ThrowDisposed() => throw new ObjectDisposedException(string.Empty);
+    /// <summary>Creates the exception every use-after-disposal path throws.</summary>
+    /// <returns>The exception to throw.</returns>
+    /// <remarks>
+    /// Returned rather than thrown so each caller ends in <c>throw</c>. The guard-clause shape the analyzers
+    /// require would otherwise leave every one of those methods with an epilogue nothing can reach.
+    /// </remarks>
+    private static ObjectDisposedException Disposed() => new(string.Empty);
 
     /// <summary>Executes the Completed operation.</summary>
-    /// <param name="singleObserver">The single observer fast-path subscription.</param>
-    /// <param name="subscriptions">The subscriptions value.</param>
-    private static void Completed(SignalSubscription? singleObserver, SignalSubscription?[]? subscriptions)
+    /// <param name="observers">The observer shape captured while the signal was still running.</param>
+    private static void Completed(object? observers)
     {
-        singleObserver?.OnCompleted();
-        if (subscriptions is null)
+        if (observers is SignalSubscription single)
+        {
+            single.OnCompleted();
+            return;
+        }
+
+        if (observers is not SignalSubscription?[] subscriptions)
         {
             return;
         }
@@ -320,16 +302,17 @@ public class Signal<T> : ISignal<T>
     }
 
     /// <summary>Executes the Error operation.</summary>
-    /// <param name="singleObserver">The single observer fast-path subscription.</param>
-    /// <param name="subscriptions">The subscriptions value.</param>
+    /// <param name="observers">The observer shape captured while the signal was still running.</param>
     /// <param name="exception">The exception value.</param>
-    private static void Error(
-        SignalSubscription? singleObserver,
-        SignalSubscription?[]? subscriptions,
-        Exception exception)
+    private static void Error(object? observers, Exception exception)
     {
-        singleObserver?.OnError(exception);
-        if (subscriptions is null)
+        if (observers is SignalSubscription single)
+        {
+            single.OnError(exception);
+            return;
+        }
+
+        if (observers is not SignalSubscription?[] subscriptions)
         {
             return;
         }
@@ -341,11 +324,16 @@ public class Signal<T> : ISignal<T>
     }
 
     /// <summary>Executes the HasActionSubscribers operation.</summary>
-    /// <param name="subscriptions">The subscriptions value.</param>
+    /// <param name="observers">The observer shape captured while the signal was still running.</param>
     /// <returns>The result.</returns>
-    private static bool HasActionSubscribers(SignalSubscription?[]? subscriptions)
+    private static bool HasActionSubscribers(object? observers)
     {
-        if (subscriptions is null)
+        if (observers is SignalSubscription single)
+        {
+            return single.IsAction;
+        }
+
+        if (observers is not SignalSubscription?[] subscriptions)
         {
             return false;
         }
@@ -362,10 +350,16 @@ public class Signal<T> : ISignal<T>
     }
 
     /// <summary>Executes the DisposeSubscriptions operation.</summary>
-    /// <param name="subscriptions">The subscriptions value.</param>
-    private static void DisposeSubscriptions(SignalSubscription?[]? subscriptions)
+    /// <param name="observers">The observer shape captured before disposal.</param>
+    private static void DisposeSubscriptions(object? observers)
     {
-        if (subscriptions is null)
+        if (observers is SignalSubscription single)
+        {
+            single.Dispose();
+            return;
+        }
+
+        if (observers is not SignalSubscription?[] subscriptions)
         {
             return;
         }
@@ -377,15 +371,10 @@ public class Signal<T> : ISignal<T>
     }
 
     /// <summary>Executes the DispatchSubscriptions operation.</summary>
-    /// <param name="subscriptions">The subscription snapshot.</param>
+    /// <param name="subscriptions">The subscription snapshot, which the observer field only ever holds non-null.</param>
     /// <param name="value">The value.</param>
-    private static void DispatchSubscriptions(SignalSubscription?[]? subscriptions, T value)
+    private static void DispatchSubscriptions(SignalSubscription?[] subscriptions, T value)
     {
-        if (subscriptions is null)
-        {
-            return;
-        }
-
         for (var i = 0; i < subscriptions.Length; i++)
         {
             var subscription = Volatile.Read(ref subscriptions[i]);
@@ -398,6 +387,20 @@ public class Signal<T> : ISignal<T>
         }
     }
 
+    /// <summary>Dispatches to every live slot, then reports a disposal that raced the dispatch.</summary>
+    /// <param name="subscriptions">The slot array this dispatch captured.</param>
+    /// <param name="value">The value.</param>
+    private void DispatchToSlots(SignalSubscription?[] subscriptions, T value)
+    {
+        DispatchSubscriptions(subscriptions, value);
+        if (!Volatile.Read(ref _isDisposed))
+        {
+            return;
+        }
+
+        throw Disposed();
+    }
+
     /// <summary>Executes the ThrowIfDisposed operation.</summary>
     private void ThrowIfDisposed()
     {
@@ -406,82 +409,79 @@ public class Signal<T> : ISignal<T>
             return;
         }
 
-        ThrowDisposed();
+        throw Disposed();
     }
 
-    /// <summary>Executes the AddSubscriptionLocked operation.</summary>
+    /// <summary>Adds a subscription and publishes the resulting observer shape.</summary>
     /// <param name="subscription">The subscription value.</param>
     private void AddSubscriptionLocked(SignalSubscription subscription)
     {
-        var subscriptions = _subscriptions;
-        if (subscriptions is null)
+        if (_observers is null)
         {
-            subscriptions = new SignalSubscription[InitialSubscriptionCapacity];
-            Volatile.Write(ref _subscriptions, subscriptions);
+            _subscriptionCount = 1;
+            Volatile.Write(ref _observers, subscription);
+            return;
+        }
+
+        if (_observers is SignalSubscription single)
+        {
+            _subscriptionCount = 0;
+            _subscriptionTail = 0;
+            _ = AddToSlotsLocked(single);
+        }
+
+        Volatile.Write(ref _observers, AddToSlotsLocked(subscription));
+    }
+
+    /// <summary>Places a subscription in the reusable slot array, growing it when every slot is taken.</summary>
+    /// <param name="subscription">The subscription value.</param>
+    /// <returns>The slot array the subscription now lives in.</returns>
+    private SignalSubscription?[] AddToSlotsLocked(SignalSubscription subscription)
+    {
+        var slots = _slots;
+        if (slots is null)
+        {
+            slots = new SignalSubscription[InitialSubscriptionCapacity];
+            _slots = slots;
         }
 
         for (var i = 0; i < _subscriptionTail; i++)
         {
-            if (subscriptions[i] is not null)
+            if (slots[i] is not null)
             {
                 continue;
             }
 
-            Volatile.Write(ref subscriptions[i], subscription);
+            Volatile.Write(ref slots[i], subscription);
             _subscriptionCount++;
-            return;
+            return slots;
         }
 
-        if (_subscriptionTail == subscriptions.Length)
+        if (_subscriptionTail == slots.Length)
         {
-            var copy = new SignalSubscription[subscriptions.Length * SubscriptionGrowthFactor];
-            Array.Copy(subscriptions, copy, subscriptions.Length);
-            subscriptions = copy;
-            Volatile.Write(ref _subscriptions, subscriptions);
+            var copy = new SignalSubscription[slots.Length * SubscriptionGrowthFactor];
+            Array.Copy(slots, copy, slots.Length);
+            slots = copy;
+            _slots = slots;
         }
 
-        Volatile.Write(ref subscriptions[_subscriptionTail], subscription);
+        Volatile.Write(ref slots[_subscriptionTail], subscription);
         _subscriptionTail++;
         _subscriptionCount++;
+        return slots;
     }
 
-    /// <summary>Executes the ClearObserversLocked operation.</summary>
-    /// <returns>The result.</returns>
-    private SignalSubscription?[]? ClearObserversLocked()
+    /// <summary>Publishes a terminal marker and hands back the observer shape it replaced.</summary>
+    /// <param name="marker">The marker to publish in place of the observers.</param>
+    /// <returns>The observer shape that was active before the marker was published.</returns>
+    private object? ClearObserversLocked(object marker)
     {
-        _singleActionSubscription = null;
-        _singleObserverSubscription = null;
-        var subscriptions = _subscriptions;
-        Volatile.Write(ref _subscriptions, null);
+        var observers = _observers;
+        _slots = null;
         _subscriptionCount = 0;
         _subscriptionTail = 0;
-        return subscriptions;
-    }
-
-    /// <summary>Executes the PromoteSingleActionObserverLocked operation.</summary>
-    private void PromoteSingleActionObserverLocked()
-    {
-        var single = _singleActionSubscription;
-        if (single is null)
-        {
-            return;
-        }
-
-        _singleActionSubscription = null;
-        AddSubscriptionLocked(single);
-    }
-
-    /// <summary>Executes the PromoteSingleObserverLocked operation.</summary>
-    private void PromoteSingleObserverLocked()
-    {
-        var single = _singleObserverSubscription;
-        if (single is null)
-        {
-            return;
-        }
-
-        _singleObserverSubscription = null;
-        AddSubscriptionLocked(single);
+        Volatile.Write(ref _observers, marker);
+        return observers;
     }
 
     /// <summary>Executes the Remove operation.</summary>
@@ -490,62 +490,54 @@ public class Signal<T> : ISignal<T>
     {
         lock (_observerLock)
         {
-            if (RemoveSingleSubscriptionLocked(subscription))
+            if (ReferenceEquals(_observers, subscription))
             {
+                _subscriptionCount = 0;
+                Volatile.Write(ref _observers, null);
                 return;
             }
 
-            RemoveArraySubscriptionLocked(subscription);
+            if (_observers is SignalSubscription?[] slots)
+            {
+                RemoveFromSlotsLocked(slots, subscription);
+            }
         }
     }
 
-    /// <summary>Removes a single-subscription fast path entry.</summary>
+    /// <summary>Removes an array-backed subscription, keeping the array for the next subscriber.</summary>
+    /// <param name="slots">The active slot array.</param>
     /// <param name="subscription">The subscription value.</param>
-    /// <returns><c>true</c> when a single subscription was removed; otherwise, <c>false</c>.</returns>
-    private bool RemoveSingleSubscriptionLocked(SignalSubscription subscription)
+    /// <remarks>
+    /// A subscription disposes itself once and only ever sits in the array it was added to, so the search
+    /// always finds it. The index guard is what keeps that assumption from corrupting the slot array if it
+    /// ever stops holding.
+    /// </remarks>
+    private void RemoveFromSlotsLocked(SignalSubscription?[] slots, SignalSubscription subscription)
     {
-        if (ReferenceEquals(_singleActionSubscription, subscription))
-        {
-            _singleActionSubscription = null;
-            return true;
-        }
-
-        if (!ReferenceEquals(_singleObserverSubscription, subscription))
-        {
-            return false;
-        }
-
-        _singleObserverSubscription = null;
-        return true;
-    }
-
-    /// <summary>Removes an array-backed subscription.</summary>
-    /// <param name="subscription">The subscription value.</param>
-    private void RemoveArraySubscriptionLocked(SignalSubscription subscription)
-    {
-        var subscriptions = _subscriptions;
-        if (subscriptions is null)
+        var index = Array.IndexOf(slots, subscription);
+        if (index < 0)
         {
             return;
         }
 
-        for (var i = 0; i < subscriptions.Length; i++)
+        ClearSlotLocked(slots, index);
+    }
+
+    /// <summary>Vacates one slot and drops back to the empty shape when it was the last live subscription.</summary>
+    /// <param name="slots">The active slot array.</param>
+    /// <param name="index">The slot the subscription occupies.</param>
+    private void ClearSlotLocked(SignalSubscription?[] slots, int index)
+    {
+        Volatile.Write(ref slots[index], null);
+        _subscriptionCount--;
+        if (_subscriptionCount != 0)
         {
-            if (!ReferenceEquals(subscriptions[i], subscription))
-            {
-                continue;
-            }
-
-            Volatile.Write(ref subscriptions[i], null);
-            _subscriptionCount--;
-            if (_subscriptionCount != 0)
-            {
-                return;
-            }
-
-            _subscriptionTail = 0;
             return;
         }
+
+        // Keep the array for the next subscriber; only the shape published to dispatch goes back to empty.
+        _subscriptionTail = 0;
+        Volatile.Write(ref _observers, null);
     }
 
     /// <summary>Represents the SignalSubscription class.</summary>
@@ -580,12 +572,6 @@ public class Signal<T> : ISignal<T>
 
         /// <summary>Gets a value indicating whether this subscription stores an action callback.</summary>
         public bool IsAction => _action is not null;
-
-        /// <summary>Gets the observer target.</summary>
-        public IObserver<T> Observer => _observer!;
-
-        /// <summary>Gets the action target.</summary>
-        public Action<T> Action => _action!;
 
         /// <summary>Sends a value to the subscription target.</summary>
         /// <param name="value">The value.</param>

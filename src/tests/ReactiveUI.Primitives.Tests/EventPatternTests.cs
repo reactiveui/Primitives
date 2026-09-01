@@ -36,6 +36,45 @@ public class EventPatternTests
         });
     }
 
+    /// <summary>Covers typed-sender event-pattern equality, hashing, and formatting.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task TypedSenderEventPatternEqualityAndFormattingCoverContracts()
+    {
+        GenericEventSource sender = new();
+        var args = EventArgs.Empty;
+        EventPattern<GenericEventSource, EventArgs> pattern = new(sender, args);
+        EventPattern<GenericEventSource, EventArgs> same = new(sender, args);
+        EventPattern<GenericEventSource, EventArgs> otherSender = new(new(), args);
+        EventPattern<GenericEventSource, EventArgs> otherArgs = new(sender, new CancelEventArgs());
+
+        await Assert.That(pattern.Sender).IsSameReferenceAs(sender);
+        await Assert.That(pattern.EventArgs).IsSameReferenceAs(args);
+        await Assert.That(pattern == same).IsTrue();
+        await Assert.That(pattern != otherSender).IsTrue();
+        await Assert.That(pattern != otherArgs).IsTrue();
+        await Assert.That(pattern.Equals(same)).IsTrue();
+        await Assert.That(pattern.Equals((object)same)).IsTrue();
+        await Assert.That(pattern.Equals("not an event")).IsFalse();
+        await Assert.That(pattern.GetHashCode()).IsEqualTo(same.GetHashCode());
+        await Assert.That(pattern.ToString().Contains(nameof(EventArgs), StringComparison.Ordinal)).IsTrue();
+    }
+
+    /// <summary>Verifies a typed-sender pattern holding nulls hashes and compares without dereferencing them.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task TypedSenderEventPatternHandlesNullSenderAndArguments()
+    {
+        EventPattern<GenericEventSource?, EventArgs?> empty = new(null, null);
+        EventPattern<GenericEventSource?, EventArgs?> alsoEmpty = new(null, null);
+        EventPattern<GenericEventSource?, EventArgs?> withArgs = new(null, EventArgs.Empty);
+
+        await Assert.That(empty.GetHashCode()).IsEqualTo(alsoEmpty.GetHashCode());
+        await Assert.That(empty == alsoEmpty).IsTrue();
+        await Assert.That(empty != withArgs).IsTrue();
+        await Assert.That(empty.ToString()).IsNotNull();
+    }
+
     /// <summary>Verifies generic event factory overloads for supported and unsupported handler shapes.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]

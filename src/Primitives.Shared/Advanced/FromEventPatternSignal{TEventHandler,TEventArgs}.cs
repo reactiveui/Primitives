@@ -28,9 +28,22 @@ public sealed class FromEventPatternSignal<TEventHandler, TEventArgs> : IObserva
     /// <param name="addHandler">The action that attaches the generated handler.</param>
     /// <param name="removeHandler">The action that detaches the generated handler.</param>
     public FromEventPatternSignal(Action<TEventHandler> addHandler, Action<TEventHandler> removeHandler)
+        : this(addHandler, removeHandler, null)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="FromEventPatternSignal{TEventHandler, TEventArgs}"/> class.</summary>
+    /// <param name="addHandler">The action that attaches the generated handler.</param>
+    /// <param name="removeHandler">The action that detaches the generated handler.</param>
+    /// <param name="scheduler">The sequencer that attaches and detaches the handler, or <see langword="null"/> to use the subscribing thread.</param>
+    public FromEventPatternSignal(
+        Action<TEventHandler> addHandler,
+        Action<TEventHandler> removeHandler,
+        ISequencer? scheduler)
     {
         AddHandler = addHandler;
         RemoveHandler = removeHandler;
+        Scheduler = scheduler;
     }
 
     /// <summary>Gets the action that attaches the generated handler.</summary>
@@ -39,14 +52,16 @@ public sealed class FromEventPatternSignal<TEventHandler, TEventArgs> : IObserva
     /// <summary>Gets the action that detaches the generated handler.</summary>
     private Action<TEventHandler> RemoveHandler { get; }
 
+    /// <summary>Gets the sequencer that attaches and detaches the handler.</summary>
+    private ISequencer? Scheduler { get; }
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<EventPattern<TEventArgs>> observer)
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
         var handler = CreateHandler(observer);
-        AddHandler(handler);
-        return Scope.Create((Self: this, handler), static s => s.Self.RemoveHandler(s.handler));
+        return EventHandlerScope.Attach(handler, AddHandler, RemoveHandler, Scheduler);
     }
 
     /// <summary>Creates a supported event delegate for the observer.</summary>

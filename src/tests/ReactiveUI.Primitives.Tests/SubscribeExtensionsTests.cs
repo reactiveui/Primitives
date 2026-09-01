@@ -3,9 +3,6 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
@@ -45,6 +42,19 @@ public class SubscribeExtensionsTests
                 Action<Exception> onError,
                 Action onCompleted) =>
                 source.SubscribePrimitives(onNext, onError, onCompleted);
+        }
+        """;
+
+    /// <summary>A consumer that still uses the plain subscription name with both extension namespaces in scope.</summary>
+    private const string AmbiguousSubscribeConsumer = """
+        global using System;
+        global using ReactiveUI.Primitives;
+        global using System.Reactive.Linq;
+
+        public static class Consumer
+        {
+            public static IDisposable SubscribeNext(IObservable<Exception> source, Action<Exception> onNext) =>
+                source.Subscribe(onNext);
         }
         """;
 
@@ -112,47 +122,26 @@ public class SubscribeExtensionsTests
     [RequiresAssemblyFiles("Builds metadata references from loaded assembly locations.")]
     public async Task SubscribePrimitivesCallbacksCompileWithSystemReactiveAndPrimitivesGlobalUsings()
     {
-        var (compilation, syntaxTree, errors) = CompileConsumer(SubscribePrimitivesConsumerWithGlobalUsings);
+        var (compilation, syntaxTree, errors) =
+            ConsumerCompilation.Compile(SubscribePrimitivesConsumerWithGlobalUsings);
 
         await Assert.That(errors).IsEmpty();
-        var root = await syntaxTree.GetRootAsync();
-        var invocation = root
-            .DescendantNodes()
-            .OfType<InvocationExpressionSyntax>()
-            .First(static node => node.Expression.ToString().EndsWith(".SubscribePrimitives", StringComparison.Ordinal));
-        var symbol = compilation.GetSemanticModel(syntaxTree).GetSymbolInfo(invocation).Symbol;
+        var symbol = ConsumerCompilation.ResolveInvocation(compilation, syntaxTree, "SubscribePrimitives");
 
         await Assert.That(symbol?.ContainingNamespace.ToDisplayString()).IsEqualTo("ReactiveUI.Primitives");
         await Assert.That(symbol?.ContainingType.Name).IsEqualTo(nameof(SubscribeExtensions));
     }
 
-    /// <summary>Compiles a consumer with references matching a DynamicData-style transitive System.Reactive dependency.</summary>
-    /// <param name="source">The C# source to compile.</param>
-    /// <returns>Compilation errors.</returns>
+    /// <summary>Verifies the plain Subscribe name stays ambiguous, which is what the explicit name exists to avoid.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
     [RequiresAssemblyFiles("Builds metadata references from loaded assembly locations.")]
-    private static (CSharpCompilation Compilation, SyntaxTree SyntaxTree, string[] Errors) CompileConsumer(string source)
+    public async Task SubscribeRemainsAmbiguousWithSystemReactiveInScope()
     {
-        var references = AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!.ToString()!
-            .Split(Path.PathSeparator)
-            .Select(static path => MetadataReference.CreateFromFile(path))
-            .Cast<MetadataReference>()
-            .ToList();
-        references.Add(MetadataReference.CreateFromFile(typeof(System.Reactive.Unit).Assembly.Location));
-        references.Add(MetadataReference.CreateFromFile(typeof(SubscribeExtensions).Assembly.Location));
+        var (_, _, errors) = ConsumerCompilation.Compile(AmbiguousSubscribeConsumer);
 
-        var syntaxTree = CSharpSyntaxTree.ParseText(
-            source,
-            CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Preview));
-        var compilation = CSharpCompilation.Create(
-            "SubscribeExtensionsConsumer",
-            [syntaxTree],
-            references,
-            new(OutputKind.DynamicallyLinkedLibrary));
-
-        var errors = compilation.GetDiagnostics()
-            .Where(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
-            .Select(static diagnostic => diagnostic.ToString())
-            .ToArray();
-        return (compilation, syntaxTree, errors);
+        await Assert.That(errors.Length).IsEqualTo(1);
+        await Assert.That(errors[0]).Contains("CS0121");
+        await Assert.That(errors[0]).Contains("System.ObservableExtensions.Subscribe");
     }
 }

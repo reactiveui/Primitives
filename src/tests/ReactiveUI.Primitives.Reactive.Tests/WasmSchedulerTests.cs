@@ -291,17 +291,26 @@ public sealed class WasmSchedulerTests
     [Test]
     public async Task SelfCancellingImmediateActionDisposesReturnedDisposable()
     {
+        using var scheduler = CreateIsolatedScheduler();
         TaskCompletionSource returnedDisposed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var returned = Disposable.Create(returnedDisposed, static source => source.TrySetResult());
 
-        // Holder to capture subscription in closure (works around race condition on net8.0/Linux)
-        var holder = new Holder { Subscription = null };
-        holder.Subscription = WasmScheduler.Default.Schedule(0, (_, _) =>
-        {
-            // Cancel while running: the run/cancel handshake must dispose the disposable the action returns next.
-            holder.Subscription?.Dispose();
-            return returned;
-        });
+        // Build the item and publish the handle it cancels through before anything can run it. Scheduling normally
+        // arms the drain inside Schedule and only then returns the handle, so the action is free to run first and
+        // find nothing to cancel; enqueueing by hand is the same path with that window closed.
+        WasmScheduler.StatefulWorkItem<int>? subscription = null;
+        WasmScheduler.StatefulWorkItem<int> item = new(
+            scheduler,
+            StatePayload,
+            (_, _) =>
+            {
+                // Cancel while running: the run/cancel handshake must dispose the disposable the action returns next.
+                subscription!.Dispose();
+                return returned;
+            });
+
+        subscription = item;
+        scheduler.Enqueue(item);
 
         await returnedDisposed.Task.WaitAsync(WaitTimeout);
         await Assert.That(returnedDisposed.Task.IsCompletedSuccessfully).IsTrue();
@@ -549,11 +558,4 @@ public sealed class WasmSchedulerTests
     /// </summary>
     /// <returns>The isolated scheduler.</returns>
     private static WasmScheduler CreateIsolatedScheduler() => new();
-
-    /// <summary>Simple holder to work around race condition in closure.</summary>
-    private sealed class Holder
-    {
-        /// <summary>Gets or sets the subscription held by this holder.</summary>
-        public IDisposable? Subscription { get; set; }
-    }
 }

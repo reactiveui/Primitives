@@ -19,6 +19,30 @@ public partial class RxNamesTests
     /// <summary>The string value used by nullable object subscription tests.</summary>
     private const string SubscribeSafeValue = "value";
 
+    /// <summary>A consumer that uses the observer-taking SubscribeSafe with System.Reactive also in scope.</summary>
+    private const string AmbiguousSubscribeSafeConsumer = """
+        using System;
+        using ReactiveUI.Primitives;
+
+        public static class Consumer
+        {
+            public static IDisposable Subscribe(IObservable<int> source, IObserver<int> observer) =>
+                source.SubscribeSafe(observer);
+        }
+        """;
+
+    /// <summary>A consumer that selects the Primitives observer overload by its explicit name.</summary>
+    private const string SubscribeSafePrimitivesConsumer = """
+        using System;
+        using ReactiveUI.Primitives;
+
+        public static class Consumer
+        {
+            public static IDisposable Subscribe(IObservable<int> source, IObserver<int> observer) =>
+                source.SubscribeSafePrimitives(observer);
+        }
+        """;
+
     /// <summary>A C# 12 consumer covering non-nullable and nullable value-type static calls.</summary>
     private const string CSharp12ValueTypeConsumer = """
         using System;
@@ -353,5 +377,50 @@ public partial class RxNamesTests
         await Assert.That(referenceCompleted).IsEqualTo(1);
         await Assert.That(valueObserved).IsNull();
         await Assert.That(valueCompleted).IsEqualTo(1);
+    }
+
+    /// <summary>Verifies the explicit Primitives name delivers the same notifications as the observer overload.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task SubscribeSafePrimitivesDeliversTheSameNotificationsAsSubscribeSafe()
+    {
+        using Signal<int> source = new();
+        RecordingWitness<int> witness = new();
+        var subscription = source.SubscribeSafePrimitives(witness);
+
+        source.OnNext(One);
+        source.OnNext(Two);
+        source.OnCompleted();
+
+        await Assert.That(witness.Values.SequenceEqual([One, Two])).IsTrue();
+        await Assert.That(witness.Completed).IsEqualTo(1);
+        await Assert.That(witness.Errors).IsEmpty();
+
+        subscription.Dispose();
+        await Assert.That(source.HasObservers).IsFalse();
+    }
+
+    /// <summary>
+    /// Verifies the observer-taking <c>SubscribeSafe</c> is ambiguous once System.Reactive is in scope, and that
+    /// the explicit Primitives name resolves. System.Reactive declares its own observer overload in the
+    /// <c>System</c> namespace, which an implicit <c>using System;</c> always brings along.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    [RequiresAssemblyFiles("Builds metadata references from loaded assembly locations.")]
+    public async Task SubscribeSafePrimitivesResolvesWhereSubscribeSafeIsAmbiguous()
+    {
+        var (_, _, ambiguousErrors) = ConsumerCompilation.Compile(AmbiguousSubscribeSafeConsumer);
+
+        await Assert.That(ambiguousErrors.Length).IsEqualTo(1);
+        await Assert.That(ambiguousErrors[0]).Contains("CS0121");
+        await Assert.That(ambiguousErrors[0]).Contains("System.ObservableExtensions.SubscribeSafe");
+
+        var (compilation, syntaxTree, errors) = ConsumerCompilation.Compile(SubscribeSafePrimitivesConsumer);
+
+        await Assert.That(errors).IsEmpty();
+        var symbol = ConsumerCompilation.ResolveInvocation(compilation, syntaxTree, "SubscribeSafePrimitives");
+
+        await Assert.That(symbol?.ContainingType.Name).IsEqualTo(nameof(LinqExtensions));
     }
 }
