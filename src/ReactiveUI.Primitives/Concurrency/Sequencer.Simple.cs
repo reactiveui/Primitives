@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 
@@ -140,6 +141,21 @@ public static partial class Sequencer
                 return;
             }
 
+            DisposeIfRaced(disposable);
+        }
+
+        /// <summary>
+        /// Race-only cleanup: releases what the action returned when <see cref="Dispose"/> latched the
+        /// flag after the store above claimed the slot. Single-threaded this can never fire - a completed
+        /// <see cref="Dispose"/> leaves the slot holding <see cref="EmptyDisposable.Instance"/>, so the
+        /// compare-exchange takes the already-claimed branch instead and never reaches here. Only a real
+        /// concurrent disposal lands in this window, so it is excluded rather than chased with a
+        /// timing-dependent test.
+        /// </summary>
+        /// <param name="disposable">The disposable the scheduled action returned.</param>
+        [ExcludeFromCodeCoverage]
+        private void DisposeIfRaced(IDisposable disposable)
+        {
             if (!IsDisposed)
             {
                 return;
