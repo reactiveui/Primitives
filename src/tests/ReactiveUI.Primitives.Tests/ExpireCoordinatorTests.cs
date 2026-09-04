@@ -179,22 +179,51 @@ public sealed class ExpireCoordinatorTests
         BlockingObserver observer = new();
         using var subscription = source.Expire(TimeSpan.FromTicks(One), clock).Subscribe(observer);
 
-        var onNextTask = Task.Run(() => source.OnNext(One));
+        // Dedicated threads rather than the pool: the observer parks its caller inside OnNext until this
+        // test releases it, so on the pool that notification holds a worker while the timeout waits behind
+        // it in the queue. A saturated pool then starves the very interleaving under test.
+        var onNextFinished = RunOnDedicatedThread(() => source.OnNext(One));
         await observer.OnNextEntered.Task.WaitAsync(WaitTimeout).ConfigureAwait(false);
 
-        var timeoutTask = Task.Run(() => clock.AdvanceBy(TimeSpan.FromTicks(One)));
+        var timeoutFinished = RunOnDedicatedThread(() => clock.AdvanceBy(TimeSpan.FromTicks(One)));
         await Task.Delay(RaceSettleDelay).ConfigureAwait(false);
 
         await Assert.That(observer.ErrorEnteredDuringOnNext).IsFalse();
 
         observer.ReleaseOnNext.Set();
-        await onNextTask.WaitAsync(WaitTimeout).ConfigureAwait(false);
-        await timeoutTask.WaitAsync(WaitTimeout).ConfigureAwait(false);
+        await onNextFinished.WaitAsync(WaitTimeout).ConfigureAwait(false);
+        await timeoutFinished.WaitAsync(WaitTimeout).ConfigureAwait(false);
 
         // Timeout may be observed after OnNext exits depending on scheduler timing.
         // The invariant required here is that OnError never re-enters while OnNext is active.
         await Assert.That(observer.Errors).IsLessThanOrEqualTo(One);
         await Assert.That(observer.Values).IsEqualTo(One);
+    }
+
+    /// <summary>
+    /// Runs work on its own thread and reports when it finished. Used where the work blocks for the duration of
+    /// the scenario, which the thread pool cannot absorb without the risk of the work never being given a thread.
+    /// </summary>
+    /// <param name="work">The work to run.</param>
+    /// <returns>A task that completes when the work has returned.</returns>
+    private static Task RunOnDedicatedThread(Action work)
+    {
+        TaskCompletionSource finished = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        Thread thread = new(() =>
+        {
+            try
+            {
+                work();
+                _ = finished.TrySetResult();
+            }
+            catch (Exception error)
+            {
+                _ = finished.TrySetException(error);
+            }
+        }) { IsBackground = true };
+
+        thread.Start();
+        return finished.Task;
     }
 
     /// <summary>
@@ -245,6 +274,20 @@ public sealed class ExpireCoordinatorTests
             + "not IDisposable.")]
     private sealed class BlockingObserver : IObserver<int>
     {
+        /// <summary>Non-zero while <see cref="OnNext"/> is active. Written by the notifying thread and read by
+        /// the timeout thread, so the two must not race on a plain field.</summary>
+        private int _isInOnNext;
+
+        /// <summary>Non-zero once an error arrived while <see cref="OnNext"/> was active. The test reads this
+        /// while both threads are still running, so the write has to be published rather than merely made.</summary>
+        private int _errorEnteredDuringOnNext;
+
+        /// <summary>The number of forwarded values.</summary>
+        private int _values;
+
+        /// <summary>The number of forwarded errors.</summary>
+        private int _errors;
+
         /// <summary>Gets the task completed when <see cref="OnNext"/> is entered.</summary>
         public TaskCompletionSource OnNextEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -252,16 +295,13 @@ public sealed class ExpireCoordinatorTests
         public ManualResetEventSlim ReleaseOnNext { get; } = new();
 
         /// <summary>Gets the number of forwarded values.</summary>
-        public int Values { get; private set; }
+        public int Values => Volatile.Read(ref _values);
 
         /// <summary>Gets the number of forwarded errors.</summary>
-        public int Errors { get; private set; }
+        public int Errors => Volatile.Read(ref _errors);
 
         /// <summary>Gets a value indicating whether an error entered while <see cref="OnNext"/> was active.</summary>
-        public bool ErrorEnteredDuringOnNext { get; private set; }
-
-        /// <summary>Gets or sets a value indicating whether <see cref="OnNext"/> is active.</summary>
-        private bool IsInOnNext { get; set; }
+        public bool ErrorEnteredDuringOnNext => Volatile.Read(ref _errorEnteredDuringOnNext) != 0;
 
         /// <inheritdoc/>
         public void OnCompleted()
@@ -271,22 +311,22 @@ public sealed class ExpireCoordinatorTests
         /// <inheritdoc/>
         public void OnError(Exception error)
         {
-            if (IsInOnNext)
+            if (Volatile.Read(ref _isInOnNext) != 0)
             {
-                ErrorEnteredDuringOnNext = true;
+                Volatile.Write(ref _errorEnteredDuringOnNext, 1);
             }
 
-            Errors++;
+            _ = Interlocked.Increment(ref _errors);
         }
 
         /// <inheritdoc/>
         public void OnNext(int value)
         {
-            Values++;
-            IsInOnNext = true;
+            _ = Interlocked.Increment(ref _values);
+            Volatile.Write(ref _isInOnNext, 1);
             OnNextEntered.SetResult();
             _ = ReleaseOnNext.Wait(WaitTimeout);
-            IsInOnNext = false;
+            Volatile.Write(ref _isInOnNext, 0);
         }
     }
 }

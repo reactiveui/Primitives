@@ -37,7 +37,7 @@ public class WitnessTests
     /// <summary>A reusable value for fourteen.</summary>
     private const int Fourteen = 14;
 
-    /// <summary>Timeout used when waiting for thread-pool scheduled observer callbacks.</summary>
+    /// <summary>Timeout used when awaiting a witness task that has already been driven to its terminal.</summary>
     private const int TimeoutSeconds = 2;
 
     /// <summary>Shared state value.</summary>
@@ -52,7 +52,7 @@ public class WitnessTests
     /// <summary>Expected safe witness event sequence.</summary>
     private static readonly string[] ExpectedSafeEvents = ["next:3", "completed"];
 
-    /// <summary>Expected values from thread-pool observer dispatch.</summary>
+    /// <summary>Expected values from sequenced observer dispatch.</summary>
     private static readonly int[] WitnessOnExpected = [One];
 
     /// <summary>Verifies delegate witnesses route next, error, and completion callbacks.</summary>
@@ -157,28 +157,50 @@ public class WitnessTests
         _ = Assert.Throws<ArgumentNullException>(() => safe.OnError(null!));
     }
 
-    /// <summary>Covers the thread-pool-specialized witness dispatch implementation.</summary>
-    /// <returns>A task representing asynchronous observer dispatch.</returns>
+    /// <summary>
+    /// Verifies the witness holds every notification back until its sequencer runs the queued drain, then replays
+    /// values and the completion through the observer in order. The dispatch is driven by a sequencer the test owns
+    /// so the handover is observed exactly rather than raced against a pool thread.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task WitnessOnThreadPoolDispatchesNextCompletedAndErrorSignals()
+    public async Task WitnessOnDefersNextAndCompletedUntilTheSequencerDrainsThem()
     {
+        ManualSequencer sequencer = new();
         List<int> values = [];
-        TaskCompletionSource completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var completed = 0;
+
         using (Signal.FromEnumerable(WitnessOnExpected)
-                   .WitnessOn(ThreadPoolSequencer.Instance)
-                   .Subscribe(values.Add, completion.SetException, completion.SetResult))
+                   .WitnessOn(sequencer)
+                   .Subscribe(values.Add, static error => throw error, () => completed++))
         {
-            await WaitForAsync(completion.Task);
+            await Assert.That(values).IsEmpty();
+            await Assert.That(completed).IsEqualTo(0);
+            sequencer.RunPending();
         }
 
-        await Assert.That(values.Count <= WitnessOnExpected.Length).IsTrue();
-        InvalidOperationException error = new("thread-pool");
-        TaskCompletionSource<Exception> observed = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        using (Signal.Fail<int>(error).WitnessOn(ThreadPoolSequencer.Instance)
-                   .Subscribe(static _ => { }, observed.SetResult, static () => { }))
+        await Assert.That(values.SequenceEqual(WitnessOnExpected)).IsTrue();
+        await Assert.That(completed).IsEqualTo(1);
+    }
+
+    /// <summary>Verifies the witness routes a source failure through the same deferred sequencer drain.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task WitnessOnDefersAnErrorUntilTheSequencerDrainsIt()
+    {
+        ManualSequencer sequencer = new();
+        InvalidOperationException error = new("sequenced");
+        Exception? observed = null;
+
+        using (Signal.Fail<int>(error)
+                   .WitnessOn(sequencer)
+                   .Subscribe(static _ => { }, failure => observed = failure, static () => { }))
         {
-            await Assert.That(await WaitForAsync(observed.Task)).IsSameReferenceAs(error);
+            await Assert.That(observed).IsNull();
+            sequencer.RunPending();
         }
+
+        await Assert.That(observed).IsSameReferenceAs(error);
     }
 
     /// <summary>Covers callback, forwarding, and stateful witness contracts.</summary>
@@ -1044,7 +1066,7 @@ public class WitnessTests
         var completed = await Task.WhenAny(task, timeout).ConfigureAwait(false);
         if (completed == timeout)
         {
-            throw new TimeoutException("Timed out waiting for scheduled observer dispatch.");
+            throw new TimeoutException("Timed out waiting for the witness task to complete.");
         }
 
         await task.ConfigureAwait(false);
