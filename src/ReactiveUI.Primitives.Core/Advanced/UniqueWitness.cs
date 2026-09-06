@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="T">The value type.</typeparam>
 /// <param name="observer">The downstream observer.</param>
 /// <param name="comparer">The comparer used to compare adjacent values.</param>
-[System.Diagnostics.DebuggerDisplay("HasLast = {_hasLast}, Last = {_last}")]
+[System.Diagnostics.DebuggerDisplay("UniqueWitness: HasLast = {_hasLast}, Last = {_last}")]
 public sealed class UniqueWitness<T>(IObserver<T> observer, IEqualityComparer<T> comparer) : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>

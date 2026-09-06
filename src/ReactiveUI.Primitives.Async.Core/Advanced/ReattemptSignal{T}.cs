@@ -6,7 +6,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>An observable that resubscribes to the source after terminal failures.</summary>
 /// <typeparam name="T">The element type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Source = {Source}, RetryCount = {RetryCount}")]
+[System.Diagnostics.DebuggerDisplay("ReattemptSignal: Source = {Source}, RetryCount = {RetryCount}")]
 public sealed class ReattemptSignal<T> : IObservableAsync<T>
 {
     /// <summary>Initializes a new instance of the <see cref="ReattemptSignal{T}"/> class.</summary>

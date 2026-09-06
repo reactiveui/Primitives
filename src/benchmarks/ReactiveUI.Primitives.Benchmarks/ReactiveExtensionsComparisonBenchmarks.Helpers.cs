@@ -245,7 +245,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     /// <summary>Provides a named benchmark scenario.</summary>
     /// <param name="name">The scenario name.</param>
     /// <param name="run">The delegate that runs the scenario.</param>
-    [System.Diagnostics.DebuggerDisplay("Name = {_name}")]
+    [System.Diagnostics.DebuggerDisplay("ExtensionScenario: Name = {_name}")]
     public sealed class ExtensionScenario(string name, Func<int> run)
     {
         /// <summary>Stores the scenario name.</summary>

@@ -15,7 +15,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="TResult">The projected value type.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="selector">The indexed selector.</param>
-[System.Diagnostics.DebuggerDisplay("Source = {_source}")]
+[System.Diagnostics.DebuggerDisplay("MapIndexedSignal: Source = {_source}")]
 public sealed class MapIndexedSignal<TSource, TResult>(IObservable<TSource> source, Func<TSource, int, TResult> selector) : IRequireCurrentThread<TResult>
 {
     /// <summary>The source observable.</summary>

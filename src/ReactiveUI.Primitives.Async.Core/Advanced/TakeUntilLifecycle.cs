@@ -13,7 +13,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// in one place.
 /// </summary>
 /// <typeparam name="T">The downstream element type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Observer = {_observer}, DisposeRequested = {DisposeToken.IsCancellationRequested}")]
+[System.Diagnostics.DebuggerDisplay("TakeUntilLifecycle: Observer = {_observer}, DisposeRequested = {DisposeToken.IsCancellationRequested}")]
 public sealed class TakeUntilLifecycle<T> : IAsyncDisposable
 {
     /// <summary>Cancellation source for subscription disposal; cancelled exactly once.</summary>

@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Signal that dematerializes <see cref="Spark{T}"/> values into ordinary notifications.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Source = {Source}")]
+[System.Diagnostics.DebuggerDisplay("UnsparkSignal: Source = {Source}")]
 public sealed class UnsparkSignal<T> : IObservable<T>
 {
     /// <summary>Initializes a new instance of the <see cref="UnsparkSignal{T}"/> class.</summary>

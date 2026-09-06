@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <param name="observer">The downstream observer.</param>
 /// <param name="seed">The initial accumulated value.</param>
 /// <param name="accumulator">The accumulator function.</param>
-[System.Diagnostics.DebuggerDisplay("Current = {_current}, Observer = {_observer}")]
+[System.Diagnostics.DebuggerDisplay("FoldWitness: Current = {_current}, Observer = {_observer}")]
 public sealed class FoldWitness<TSource, TAccumulate>(
     IObserver<TAccumulate> observer,
     TAccumulate seed,

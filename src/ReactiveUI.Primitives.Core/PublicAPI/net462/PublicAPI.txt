@@ -6,7 +6,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.Tests")]
 namespace ReactiveUI.Primitives
 {
-    [System.Diagnostics.DebuggerDisplay("Subscribe = {_subscribe}")]
+    [System.Diagnostics.DebuggerDisplay("AnonymousSignal: Subscribe = {_subscribe}")]
     public sealed class AnonymousSignal<T> : System.IObservable<T>
     {
         public AnonymousSignal(System.Func<System.IObserver<T>, System.IDisposable> subscribe) { }
@@ -48,7 +48,7 @@ namespace ReactiveUI.Primitives
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public static ReactiveUI.Primitives.Optional<T> Some<T>(T value) { }
     }
-    [System.Diagnostics.DebuggerDisplay("HasValue = {HasValue}, Value = {_value}")]
+    [System.Diagnostics.DebuggerDisplay("Optional: HasValue = {HasValue}, Value = {_value}")]
     public readonly record struct Optional<T> : System.IEquatable<ReactiveUI.Primitives.Optional<T>>
     {
         public Optional() { }
@@ -67,7 +67,7 @@ namespace ReactiveUI.Primitives
         public static explicit operator T?(in ReactiveUI.Primitives.Optional<T> value) { }
         public static implicit operator ReactiveUI.Primitives.Optional<T>(T value) { }
     }
-    [System.Diagnostics.DebuggerDisplay("IsSuccess = {IsSuccess}, Exception = {Exception}")]
+    [System.Diagnostics.DebuggerDisplay("Result: IsSuccess = {IsSuccess}, Exception = {Exception}")]
     public readonly record struct Result : System.IEquatable<ReactiveUI.Primitives.Result>
     {
         public Result(System.Exception exception) { }
@@ -108,7 +108,7 @@ namespace ReactiveUI.Primitives
 }
 namespace ReactiveUI.Primitives.Advanced
 {
-    [System.Diagnostics.DebuggerDisplay("Done = {_done}, Aggregator = {_aggregator}")]
+    [System.Diagnostics.DebuggerDisplay("AggregateWitness: Done = {_done}, Aggregator = {_aggregator}")]
     public sealed class AggregateWitness<T, TResult, TAggregator> : System.IDisposable, System.IObserver<T> where TAggregator : struct, ReactiveUI.Primitives.Advanced.IAggregator<T, TResult, TAggregator>
     {
         public AggregateWitness(System.IObserver<TResult> observer, TAggregator aggregator) { }
@@ -122,7 +122,7 @@ namespace ReactiveUI.Primitives.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Done = {_done}, Observer = {_observer}")]
+    [System.Diagnostics.DebuggerDisplay("AllPredicateWitness: Done = {_done}, Observer = {_observer}")]
     public sealed class AllPredicateWitness<T> : System.IDisposable, System.IObserver<T>
     {
         public AllPredicateWitness(System.IObserver<bool> observer, System.Func<T, bool> predicate) { }
@@ -136,7 +136,7 @@ namespace ReactiveUI.Primitives.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Done = {_done}, Observer = {_observer}")]
+    [System.Diagnostics.DebuggerDisplay("AnyPredicateWitness: Done = {_done}, Observer = {_observer}")]
     public sealed class AnyPredicateWitness<T> : System.IDisposable, System.IObserver<T>
     {
         public AnyPredicateWitness(System.IObserver<bool> observer, System.Func<T, bool> predicate) { }
@@ -150,7 +150,7 @@ namespace ReactiveUI.Primitives.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Done = {_done}, Observer = {_observer}")]
+    [System.Diagnostics.DebuggerDisplay("AnyWitness: Done = {_done}, Observer = {_observer}")]
     public sealed class AnyWitness<T> : System.IDisposable, System.IObserver<T>
     {
         public AnyWitness(System.IObserver<bool> observer) { }
@@ -165,7 +165,7 @@ namespace ReactiveUI.Primitives.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Value = {_value}, Subscription = {_subscription}")]
+    [System.Diagnostics.DebuggerDisplay("AppendDelegateWitness: Value = {_value}, Subscription = {_subscription}")]
     public sealed class AppendDelegateWitness<T> : System.IDisposable, System.IObserver<T>
     {
         public AppendDelegateWitness(System.Action<T> onNext, System.Action<System.Exception> onError, System.Action onCompleted, T value) { }
@@ -177,7 +177,7 @@ namespace ReactiveUI.Primitives.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
-    [System.Diagnostics.DebuggerDisplay("AppendedValue = {_value}, Observer = {_observer}")]
+    [System.Diagnostics.DebuggerDisplay("AppendWitness: AppendedValue = {_value}, Observer = {_observer}")]
     public sealed class AppendWitness<T> : System.IDisposable, System.IObserver<T>
     {
         public AppendWitness(System.IObserver<T> observer, T value) { }
@@ -191,7 +191,7 @@ namespace ReactiveUI.Primitives.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Count = {_count}, Skip = {_skip}, Index = {_index}, Done = {_done}")]
+    [System.Diagnostics.DebuggerDisplay("BufferWitness: Count = {_count}, Skip = {_skip}, Index = {_index}, Done = {_done}")]
     public sealed class BufferWitness<T> : System.IDisposable, System.IObserver<T>
     {
         public BufferWitness(System.IObserver<System.Collections.Generic.IList<T>> observer, int count, int skip) { }
@@ -202,7 +202,7 @@ namespace ReactiveUI.Primitives.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
-    [System.Diagnostics.DebuggerDisplay("OnNext = {_onNext}, OnError = {_onError}, OnCompleted = {_onCompleted}")]
+    [System.Diagnostics.DebuggerDisplay("CallbackWitness: OnNext = {_onNext}, OnError = {_onError}, OnCompleted = {_onCompleted}")]
     public sealed class CallbackWitness<T> : System.IObserver<T>
     {
         public CallbackWitness(System.Action<T> onNext, System.Action<System.Exception>? onError, System.Action<ReactiveUI.Primitives.Result>? onCompleted) { }
@@ -213,7 +213,7 @@ namespace ReactiveUI.Primitives.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void OnNext(T value) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Count = {_values.Count}, Subscription = {_subscription}")]
+    [System.Diagnostics.DebuggerDisplay("CollectArrayWitness: Count = {_values.Count}, Subscription = {_subscription}")]
     public sealed class CollectArrayWitness<T> : System.IDisposable, System.IObserver<T>
     {
         public CollectArrayWitness(System.IObserver<T[]> observer) { }
@@ -228,7 +228,7 @@ namespace ReactiveUI.Primitives.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Count = {_values.Count}, Subscription = {_subscription}")]
+    [System.Diagnostics.DebuggerDisplay("CollectListWitness: Count = {_values.Count}, Subscription = {_subscription}")]
     public sealed class CollectListWitness<T> : System.IDisposable, System.IObserver<T>
     {
         public CollectListWitness(System.IObserver<System.Collections.Generic.IList<T>> observer) { }
@@ -243,7 +243,7 @@ namespace ReactiveUI.Primitives.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
-    [System.Diagnostics.DebuggerDisplay("SoughtValue = {_value}, Done = {_done}")]
+    [System.Diagnostics.DebuggerDisplay("ContainsWitness: SoughtValue = {_value}, Done = {_done}")]
     public sealed class ContainsWitness<T> : System.IDisposable, System.IObserver<T>
     {
         public ContainsWitness(System.IObserver<bool> observer, T value, System.Collections.Generic.IEqualityComparer<T> comparer) { }
@@ -257,7 +257,7 @@ namespace ReactiveUI.Primitives.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Count = {Items.Length}")]
+    [System.Diagnostics.DebuggerDisplay("CopyOnWriteList: Count = {Items.Length}")]
     public sealed class CopyOnWriteList<T>
     {
         public CopyOnWriteList(T[] data) { }
@@ -267,20 +267,20 @@ namespace ReactiveUI.Primitives.Advanced
         public int IndexOf(T value) { }
         public ReactiveUI.Primitives.Advanced.CopyOnWriteList<T> Remove(T value) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Result = {Result}")]
+    [System.Diagnostics.DebuggerDisplay("CountAggregator: Result = {Result}")]
     public readonly record struct CountAggregator<T> : ReactiveUI.Primitives.Advanced.IAggregator<T, int, ReactiveUI.Primitives.Advanced.CountAggregator<T>>, System.IEquatable<ReactiveUI.Primitives.Advanced.CountAggregator<T>>
     {
         public int Result { get; }
         public readonly ReactiveUI.Primitives.Advanced.CountAggregator<T> Add(T value) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Result = {Result}, Predicate = {_predicate}")]
+    [System.Diagnostics.DebuggerDisplay("CountPredicateAggregator: Result = {Result}, Predicate = {_predicate}")]
     public readonly record struct CountPredicateAggregator<T> : ReactiveUI.Primitives.Advanced.IAggregator<T, int, ReactiveUI.Primitives.Advanced.CountPredicateAggregator<T>>, System.IEquatable<ReactiveUI.Primitives.Advanced.CountPredicateAggregator<T>>
     {
         public CountPredicateAggregator(System.Func<T, bool> predicate) { }
         public int Result { get; }
         public readonly ReactiveUI.Primitives.Advanced.CountPredicateAggregator<T> Add(T value) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Seen = {_seen}, DefaultValue = {_defaultValue}")]
+    [System.Diagnostics.DebuggerDisplay("DefaultIfEmptyWitness: Seen = {_seen}, DefaultValue = {_defaultValue}")]
     public sealed class DefaultIfEmptyWitness<T> : System.IDisposable, System.IObserver<T>
     {
         public DefaultIfEmptyWitness(System.IObserver<T> observer, T defaultValue) { }
@@ -305,21 +305,21 @@ namespace ReactiveUI.Primitives.Advanced
         public void OnError(System.Exception error) { }
         public void OnNext(T value) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Result = {Result}, Seen = {_seen}")]
+    [System.Diagnostics.DebuggerDisplay("DistinctByCountAggregator: Result = {Result}, Seen = {_seen}")]
     public readonly record struct DistinctByCountAggregator<T, TKey> : ReactiveUI.Primitives.Advanced.IAggregator<T, int, ReactiveUI.Primitives.Advanced.DistinctByCountAggregator<T, TKey>>, System.IEquatable<ReactiveUI.Primitives.Advanced.DistinctByCountAggregator<T, TKey>>
     {
         public DistinctByCountAggregator(System.Func<T, TKey> keySelector, System.Collections.Generic.IEqualityComparer<TKey>? comparer) { }
         public int Result { get; }
         public readonly ReactiveUI.Primitives.Advanced.DistinctByCountAggregator<T, TKey> Add(T value) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Result = {Result}, Seen = {_seen}")]
+    [System.Diagnostics.DebuggerDisplay("DistinctByLongCountAggregator: Result = {Result}, Seen = {_seen}")]
     public readonly record struct DistinctByLongCountAggregator<T, TKey> : ReactiveUI.Primitives.Advanced.IAggregator<T, long, ReactiveUI.Primitives.Advanced.DistinctByLongCountAggregator<T, TKey>>, System.IEquatable<ReactiveUI.Primitives.Advanced.DistinctByLongCountAggregator<T, TKey>>
     {
         public DistinctByLongCountAggregator(System.Func<T, TKey> keySelector, System.Collections.Generic.IEqualityComparer<TKey>? comparer) { }
         public long Result { get; }
         public readonly ReactiveUI.Primitives.Advanced.DistinctByLongCountAggregator<T, TKey> Add(T value) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Done = {_done}, SeenKeys = {_seen.Count}")]
+    [System.Diagnostics.DebuggerDisplay("DistinctByWitness: Done = {_done}, SeenKeys = {_seen.Count}")]
     public sealed class DistinctByWitness<T, TKey> : System.IDisposable, System.IObserver<T>
     {
         public DistinctByWitness(System.IObserver<T> observer, System.Func<T, TKey> keySelector, System.Collections.Generic.IEqualityComparer<TKey>? comparer) { }
@@ -333,7 +333,7 @@ namespace ReactiveUI.Primitives.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Seen = {_seen.Count}, Subscription = {_subscription}")]
+    [System.Diagnostics.DebuggerDisplay("DistinctWitness: Seen = {_seen.Count}, Subscription = {_subscription}")]
     public sealed class DistinctWitness<T> : System.IDisposable, System.IObserver<T>
     {
         public DistinctWitness(System.IObserver<T> observer, System.Collections.Generic.HashSet<T> seen) { }
@@ -347,7 +347,7 @@ namespace ReactiveUI.Primitives.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
-    [System.Diagnostics.DebuggerDisplay("OnNext = {_onNext}, OnError = {_onError}, OnCompleted = {_onCompleted}")]
+    [System.Diagnostics.DebuggerDisplay("EmptyWitness: OnNext = {_onNext}, OnError = {_onError}, OnCompleted = {_onCompleted}")]
     public sealed class EmptyWitness<T> : System.IObserver<T>
     {
         public EmptyWitness(System.Action<T> onNext) { }
@@ -362,7 +362,7 @@ namespace ReactiveUI.Primitives.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void OnNext(T value) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Current = {_current}, Observer = {_observer}")]
+    [System.Diagnostics.DebuggerDisplay("FoldWitness: Current = {_current}, Observer = {_observer}")]
     public sealed class FoldWitness<TSource, TAccumulate> : System.IDisposable, System.IObserver<TSource>
     {
         public FoldWitness(System.IObserver<TAccumulate> observer, TAccumulate seed, System.Func<TAccumulate, TSource, TAccumulate> accumulator) { }
@@ -376,7 +376,7 @@ namespace ReactiveUI.Primitives.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Observer = {_observer}")]
+    [System.Diagnostics.DebuggerDisplay("ForwardingWitness: Observer = {_observer}")]
     public sealed class ForwardingWitness<T> : System.IObserver<T>
     {
         public ForwardingWitness(System.IObserver<T> observer) { }
@@ -387,7 +387,7 @@ namespace ReactiveUI.Primitives.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void OnNext(T value) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Values = {_values}, CancellationToken = {_cancellationToken}")]
+    [System.Diagnostics.DebuggerDisplay("FromEnumerableSignal: Values = {_values}, CancellationToken = {_cancellationToken}")]
     public sealed class FromEnumerableSignal<T> : ReactiveUI.Primitives.Advanced.IInlineSignal<T>, ReactiveUI.Primitives.Advanced.IRequireCurrentThread<T>
     {
         public FromEnumerableSignal(System.Collections.Generic.IEnumerable<T> values) { }
@@ -411,7 +411,7 @@ namespace ReactiveUI.Primitives.Advanced
     {
         bool IsRequiredSubscribeOnCurrentThread() { }
     }
-    [System.Diagnostics.DebuggerDisplay("Observer = {_observer}, Subscription = {_subscription}")]
+    [System.Diagnostics.DebuggerDisplay("IgnoreValuesWitness: Observer = {_observer}, Subscription = {_subscription}")]
     public sealed class IgnoreValuesWitness<T> : System.IDisposable, System.IObserver<T>
     {
         public IgnoreValuesWitness(System.IObserver<T> observer) { }
@@ -425,7 +425,7 @@ namespace ReactiveUI.Primitives.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Value = {_value}")]
+    [System.Diagnostics.DebuggerDisplay("ImmediateReturnSignal: Value = {_value}")]
     public sealed class ImmediateReturnSignal<T> : ReactiveUI.Primitives.Advanced.IInlineSignal<T>, ReactiveUI.Primitives.Advanced.IRequireCurrentThread<T>
     {
         public ImmediateReturnSignal(T value) { }
@@ -434,7 +434,7 @@ namespace ReactiveUI.Primitives.Advanced
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
         public System.IDisposable Subscribe(System.Action<T> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Error = {_error}")]
+    [System.Diagnostics.DebuggerDisplay("ImmediateThrowSignal: Error = {_error}")]
     public sealed class ImmediateThrowSignal<T> : ReactiveUI.Primitives.Advanced.IInlineSignal<T>, ReactiveUI.Primitives.Advanced.IRequireCurrentThread<T>
     {
         public ImmediateThrowSignal(System.Exception error) { }
@@ -468,7 +468,7 @@ namespace ReactiveUI.Primitives.Advanced
         public System.IDisposable Subscribe(System.IObserver<bool> observer) { }
         public System.IDisposable Subscribe(System.Action<bool> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Value = {_x}")]
+    [System.Diagnostics.DebuggerDisplay("ImmutableReturnInt32Signal: Value = {_x}")]
     public sealed class ImmutableReturnInt32Signal : ReactiveUI.Primitives.Advanced.IInlineSignal<int>, ReactiveUI.Primitives.Advanced.IRequireCurrentThread<int>
     {
         public ImmutableReturnInt32Signal(int x) { }
@@ -486,7 +486,7 @@ namespace ReactiveUI.Primitives.Advanced
         public System.IDisposable Subscribe(System.IObserver<bool> observer) { }
         public System.IDisposable Subscribe(System.Action<bool> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Observer = {_observer}, Subscription = {_subscription}")]
+    [System.Diagnostics.DebuggerDisplay("KeepNotNullWitness: Observer = {_observer}, Subscription = {_subscription}")]
     public sealed class KeepNotNullWitness<T> : System.IDisposable, System.IObserver<T?> where T : class
     {
         public KeepNotNullWitness(System.IObserver<T> observer) { }
@@ -500,7 +500,7 @@ namespace ReactiveUI.Primitives.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Observer = {_observer}, Subscription = {_subscription}")]
+    [System.Diagnostics.DebuggerDisplay("KeepTypeWitness: Observer = {_observer}, Subscription = {_subscription}")]
     public sealed class KeepTypeWitness<TResult> : System.IDisposable, System.IObserver<object?>
     {
         public KeepTypeWitness(System.IObserver<TResult> observer) { }
@@ -514,7 +514,7 @@ namespace ReactiveUI.Primitives.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
-    [System.Diagnostics.DebuggerDisplay("HasObservers = {HasObservers}, Count = {_observers.Items.Length}")]
+    [System.Diagnostics.DebuggerDisplay("ListWitness: HasObservers = {HasObservers}, Count = {_observers.Items.Length}")]
     public sealed class ListWitness<T> : System.IObserver<T>
     {
         public ListWitness(ReactiveUI.Primitives.Advanced.CopyOnWriteList<System.IObserver<T>> observers) { }
@@ -523,20 +523,20 @@ namespace ReactiveUI.Primitives.Advanced
         public void OnError(System.Exception error) { }
         public void OnNext(T value) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Result = {Result}")]
+    [System.Diagnostics.DebuggerDisplay("LongCountAggregator: Result = {Result}")]
     public readonly record struct LongCountAggregator<T> : ReactiveUI.Primitives.Advanced.IAggregator<T, long, ReactiveUI.Primitives.Advanced.LongCountAggregator<T>>, System.IEquatable<ReactiveUI.Primitives.Advanced.LongCountAggregator<T>>
     {
         public long Result { get; }
         public readonly ReactiveUI.Primitives.Advanced.LongCountAggregator<T> Add(T value) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Result = {Result}, Predicate = {_predicate}")]
+    [System.Diagnostics.DebuggerDisplay("LongCountPredicateAggregator: Result = {Result}, Predicate = {_predicate}")]
     public readonly record struct LongCountPredicateAggregator<T> : ReactiveUI.Primitives.Advanced.IAggregator<T, long, ReactiveUI.Primitives.Advanced.LongCountPredicateAggregator<T>>, System.IEquatable<ReactiveUI.Primitives.Advanced.LongCountPredicateAggregator<T>>
     {
         public LongCountPredicateAggregator(System.Func<T, bool> predicate) { }
         public long Result { get; }
         public readonly ReactiveUI.Primitives.Advanced.LongCountPredicateAggregator<T> Add(T value) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Ranges = {_ranges.Length}")]
+    [System.Diagnostics.DebuggerDisplay("RangeConcatSignal: Ranges = {_ranges.Length}")]
     public sealed class RangeConcatSignal : ReactiveUI.Primitives.Advanced.IInlineSignal<int>, ReactiveUI.Primitives.Advanced.IRequireCurrentThread<int>
     {
         public RangeConcatSignal(ReactiveUI.Primitives.Advanced.RangeSignal[] ranges) { }
@@ -545,7 +545,7 @@ namespace ReactiveUI.Primitives.Advanced
         public System.IDisposable Subscribe(System.IObserver<int> observer) { }
         public System.IDisposable Subscribe(System.Action<int> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Start = {Start}, Count = {Count}")]
+    [System.Diagnostics.DebuggerDisplay("RangeSignal: Start = {Start}, Count = {Count}")]
     public sealed class RangeSignal : ReactiveUI.Primitives.Advanced.IInlineSignal<int>, ReactiveUI.Primitives.Advanced.IRequireCurrentThread<int>
     {
         public RangeSignal(int start, int count) { }
@@ -556,7 +556,7 @@ namespace ReactiveUI.Primitives.Advanced
         public System.IDisposable Subscribe(System.IObserver<int> observer) { }
         public System.IDisposable Subscribe(System.Action<int> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Count = {_count}, LeftStart = {_leftStart}, RightStart = {_rightStart}")]
+    [System.Diagnostics.DebuggerDisplay("RangeZipSignal: Count = {_count}, LeftStart = {_leftStart}, RightStart = {_rightStart}")]
     public sealed class RangeZipSignal<TResult> : ReactiveUI.Primitives.Advanced.IInlineSignal<TResult>, ReactiveUI.Primitives.Advanced.IRequireCurrentThread<TResult>
     {
         public RangeZipSignal(ReactiveUI.Primitives.Advanced.RangeSignal left, ReactiveUI.Primitives.Advanced.RangeSignal right, System.Func<int, int, TResult> selector) { }
@@ -565,7 +565,7 @@ namespace ReactiveUI.Primitives.Advanced
         public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
         public System.IDisposable Subscribe(System.Action<TResult> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Current = {_current}, Subscription = {_subscription}")]
+    [System.Diagnostics.DebuggerDisplay("ReduceWitness: Current = {_current}, Subscription = {_subscription}")]
     public sealed class ReduceWitness<TSource, TAccumulate> : System.IDisposable, System.IObserver<TSource>
     {
         public ReduceWitness(System.IObserver<TAccumulate> observer, TAccumulate seed, System.Func<TAccumulate, TSource, TAccumulate> accumulator) { }
@@ -579,7 +579,7 @@ namespace ReactiveUI.Primitives.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Value = {_value}, Count = {_count}")]
+    [System.Diagnostics.DebuggerDisplay("RepeatSignal: Value = {_value}, Count = {_count}")]
     public sealed class RepeatSignal<T> : ReactiveUI.Primitives.Advanced.IInlineSignal<T>, ReactiveUI.Primitives.Advanced.IRequireCurrentThread<T>
     {
         public RepeatSignal(T value, int count) { }
@@ -604,7 +604,7 @@ namespace ReactiveUI.Primitives.Advanced
         public static void Fault<TResult>(System.IObserver<TResult> observer, System.Exception error, System.IDisposable sink) { }
         public static void Fault<TResult>(System.IObserver<TResult> observer, System.Exception error, System.IDisposable sink, ref bool done) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Skipping = {_skipping}, Subscription = {_subscription}")]
+    [System.Diagnostics.DebuggerDisplay("SkipWhileWitness: Skipping = {_skipping}, Subscription = {_subscription}")]
     public sealed class SkipWhileWitness<T> : System.IDisposable, System.IObserver<T>
     {
         public SkipWhileWitness(System.IObserver<T> observer, System.Func<T, bool> predicate) { }
@@ -618,7 +618,7 @@ namespace ReactiveUI.Primitives.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Remaining = {_remaining}, Observer = {_observer}")]
+    [System.Diagnostics.DebuggerDisplay("SkipWitness: Remaining = {_remaining}, Observer = {_observer}")]
     public sealed class SkipWitness<T> : System.IDisposable, System.IObserver<T>
     {
         public SkipWitness(System.IObserver<T> observer, int count) { }
@@ -632,7 +632,7 @@ namespace ReactiveUI.Primitives.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
-    [System.Diagnostics.DebuggerDisplay("State = {_state}, OnError = {_onError}")]
+    [System.Diagnostics.DebuggerDisplay("StatefulWitness: State = {_state}, OnError = {_onError}")]
     public sealed class StatefulWitness<T, TState> : System.IObserver<T>
     {
         public StatefulWitness(TState state, System.Action<T, TState> onNext, System.Action<System.Exception, TState>? onError, System.Action<ReactiveUI.Primitives.Result, TState>? onCompleted) { }
@@ -649,7 +649,7 @@ namespace ReactiveUI.Primitives.Advanced
         public static void Assign(ref System.IDisposable? slot, System.IDisposable subscription) { }
         public static void Release(ref System.IDisposable? slot) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Observer = {_observer}, Subscription = {_subscription}")]
+    [System.Diagnostics.DebuggerDisplay("SynchronizeWitness: Observer = {_observer}, Subscription = {_subscription}")]
     public sealed class SynchronizeWitness<T> : System.IDisposable, System.IObserver<T>
     {
         public SynchronizeWitness(System.IObserver<T> observer) { }
@@ -662,7 +662,7 @@ namespace ReactiveUI.Primitives.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Completed = {_completed}, Subscription = {_subscription}")]
+    [System.Diagnostics.DebuggerDisplay("TakeWhileWitness: Completed = {_completed}, Subscription = {_subscription}")]
     public sealed class TakeWhileWitness<T> : System.IDisposable, System.IObserver<T>
     {
         public TakeWhileWitness(System.IObserver<T> observer, System.Func<T, bool> predicate) { }
@@ -675,7 +675,7 @@ namespace ReactiveUI.Primitives.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Remaining = {_remaining}, Stopped = {_stopped}")]
+    [System.Diagnostics.DebuggerDisplay("TakeWitness: Remaining = {_remaining}, Stopped = {_stopped}")]
     public sealed class TakeWitness<T> : System.IDisposable, System.IObserver<T>
     {
         public TakeWitness(System.IObserver<T> observer, int count) { }
@@ -687,7 +687,7 @@ namespace ReactiveUI.Primitives.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Observer = {_observer}, Subscription = {_subscription}")]
+    [System.Diagnostics.DebuggerDisplay("TapWitness: Observer = {_observer}, Subscription = {_subscription}")]
     public sealed class TapWitness<T> : System.IDisposable, System.IObserver<T>
     {
         public TapWitness(System.IObserver<T> observer, System.Action<T> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
@@ -707,7 +707,7 @@ namespace ReactiveUI.Primitives.Advanced
         public void OnError(System.Exception error) { }
         public void OnNext(T value) { }
     }
-    [System.Diagnostics.DebuggerDisplay("InitialState = {_initialState}, Condition = {_condition}")]
+    [System.Diagnostics.DebuggerDisplay("UnfoldSignal: InitialState = {_initialState}, Condition = {_condition}")]
     public sealed class UnfoldSignal<TState, TResult> : ReactiveUI.Primitives.Advanced.IInlineSignal<TResult>, ReactiveUI.Primitives.Advanced.IRequireCurrentThread<TResult>
     {
         public UnfoldSignal(TState initialState, System.Func<TState, bool> condition, System.Func<TState, TState> iterate, System.Func<TState, TResult> resultSelector) { }
@@ -716,7 +716,7 @@ namespace ReactiveUI.Primitives.Advanced
         public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
         public System.IDisposable Subscribe(System.Action<TResult> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
     }
-    [System.Diagnostics.DebuggerDisplay("HasLast = {_hasLast}, Last = {_last}")]
+    [System.Diagnostics.DebuggerDisplay("UniqueByWitness: HasLast = {_hasLast}, Last = {_last}")]
     public sealed class UniqueByWitness<T, TKey> : System.IDisposable, System.IObserver<T>
     {
         public UniqueByWitness(System.IObserver<T> observer, System.Func<T, TKey> keySelector, System.Collections.Generic.IEqualityComparer<TKey> comparer) { }
@@ -730,7 +730,7 @@ namespace ReactiveUI.Primitives.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
-    [System.Diagnostics.DebuggerDisplay("HasLast = {_hasLast}, Last = {_last}")]
+    [System.Diagnostics.DebuggerDisplay("UniqueWitness: HasLast = {_hasLast}, Last = {_last}")]
     public sealed class UniqueWitness<T> : System.IDisposable, System.IObserver<T>
     {
         public UniqueWitness(System.IObserver<T> observer, System.Collections.Generic.IEqualityComparer<T> comparer) { }
@@ -744,7 +744,7 @@ namespace ReactiveUI.Primitives.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
-    [System.Diagnostics.DebuggerDisplay("ResourceFactory = {_resourceFactory}, SignalFactory = {_signalFactory}")]
+    [System.Diagnostics.DebuggerDisplay("UseSignal: ResourceFactory = {_resourceFactory}, SignalFactory = {_signalFactory}")]
     public sealed class UseSignal<TResource, T> : System.IObservable<T> where TResource : System.IDisposable
     {
         public UseSignal(System.Func<TResource> resourceFactory, System.Func<TResource, System.IObservable<T>> signalFactory) { }
@@ -875,7 +875,7 @@ namespace ReactiveUI.Primitives.Core
         public static bool operator ==(ReactiveUI.Primitives.Core.Moment<T> first, ReactiveUI.Primitives.Core.Moment<T> second) { }
         public static bool operator !=(ReactiveUI.Primitives.Core.Moment<T> first, ReactiveUI.Primitives.Core.Moment<T> second) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Count = {Count}, Capacity = {_items.Length}")]
+    [System.Diagnostics.DebuggerDisplay("PriorityQueue: Count = {Count}, Capacity = {_items.Length}")]
     public sealed class PriorityQueue<T> where T : System.IComparable<T>
     {
         public PriorityQueue() { }
@@ -918,14 +918,14 @@ namespace ReactiveUI.Primitives.Core
 }
 namespace ReactiveUI.Primitives.Extensions
 {
-    [System.Diagnostics.DebuggerDisplay("Outstanding = {_outstanding}, Disposed = {_disposed}")]
+    [System.Diagnostics.DebuggerDisplay("ConcurrencyLimiter: Outstanding = {_outstanding}, Disposed = {_disposed}")]
     public sealed class ConcurrencyLimiter<T> : System.IObservable<T>
     {
         public ConcurrencyLimiter(System.Collections.Generic.IEnumerable<System.Threading.Tasks.Task<T>> taskFunctions, int maxConcurrency) { }
         public System.IObservable<T> Observable { get; }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Locked = {_locked}, CompletedPhases = {CompletedPhases}")]
+    [System.Diagnostics.DebuggerDisplay("Continuation: Locked = {_locked}, CompletedPhases = {CompletedPhases}")]
     public class Continuation : System.IDisposable
     {
         public Continuation() { }
@@ -935,7 +935,7 @@ namespace ReactiveUI.Primitives.Extensions
         public System.Threading.Tasks.Task Lock<T>(T item, System.IObserver<(T Value, System.IDisposable Sync)>? observer) { }
         public System.Threading.Tasks.ValueTask LockValueTask<T>(T item, System.IObserver<(T Value, System.IDisposable Sync)>? observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Value = {_value}, Completed = {_completed}, Disposed = {_disposed}")]
+    [System.Diagnostics.DebuggerDisplay("CurrentValueSubject: Value = {_value}, Completed = {_completed}, Disposed = {_disposed}")]
     public sealed class CurrentValueSubject<T> : System.IDisposable, System.IObservable<T>, System.IObserver<T>
     {
         public CurrentValueSubject(T initialValue) { }
@@ -962,7 +962,7 @@ namespace ReactiveUI.Primitives.Extensions
     {
         public static System.Threading.Tasks.ValueTask<T> FirstAsValueTask(System.IObservable<T> source) { }
     }
-    [System.Diagnostics.DebuggerDisplay("IsHeartbeat = {IsHeartbeat}, Update = {Update}")]
+    [System.Diagnostics.DebuggerDisplay("Heartbeat: IsHeartbeat = {IsHeartbeat}, Update = {Update}")]
     public readonly record struct Heartbeat<T> : ReactiveUI.Primitives.Extensions.IHeartbeat<T>, System.IEquatable<ReactiveUI.Primitives.Extensions.Heartbeat<T>>
     {
         public Heartbeat() { }
@@ -1011,7 +1011,7 @@ namespace ReactiveUI.Primitives.Extensions
         public SingleValueSignal(T value) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("IsStale = {IsStale}")]
+    [System.Diagnostics.DebuggerDisplay("Stale: IsStale = {IsStale}")]
     public readonly record struct Stale<T> : ReactiveUI.Primitives.Extensions.IStale<T>, System.IEquatable<ReactiveUI.Primitives.Extensions.Stale<T>>
     {
         public Stale() { }
@@ -1019,7 +1019,7 @@ namespace ReactiveUI.Primitives.Extensions
         public bool IsStale { get; }
         public T? Update { get; }
     }
-    [System.Diagnostics.DebuggerDisplay("Done = {Done}, Timer = {Timer}")]
+    [System.Diagnostics.DebuggerDisplay("TimerSinkState: Done = {Done}, Timer = {Timer}")]
     public sealed class TimerSinkState<T>
     {
         public TimerSinkState(System.IObserver<T> downstream) { }
@@ -1032,13 +1032,13 @@ namespace ReactiveUI.Primitives.Extensions
 }
 namespace ReactiveUI.Primitives.Extensions.Operators
 {
-    [System.Diagnostics.DebuggerDisplay("Left = {_left}, Right = {_right}")]
+    [System.Diagnostics.DebuggerDisplay("BinaryMinMaxObservable: Left = {_left}, Right = {_right}")]
     public sealed class BinaryMinMaxObservable<T> : System.IObservable<T> where T : struct, System.IComparable<T>
     {
         public BinaryMinMaxObservable(System.IObservable<T> left, System.IObservable<T> right, bool emitMaximum) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Sources = {_sourceList}")]
+    [System.Diagnostics.DebuggerDisplay("BooleanReduceObservable: Sources = {_sourceList}")]
     public sealed class BooleanReduceObservable : System.IObservable<bool>
     {
         public BooleanReduceObservable(System.Collections.Generic.IEnumerable<System.IObservable<bool>> sources, bool target) { }
@@ -1059,7 +1059,7 @@ namespace ReactiveUI.Primitives.Extensions.Operators
         public CatchIgnoreEmptyObservable(System.IObservable<T> source) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {_source}, ErrorAction = {_errorAction}")]
+    [System.Diagnostics.DebuggerDisplay("CatchIgnoreObservable: Source = {_source}, ErrorAction = {_errorAction}")]
     public sealed class CatchIgnoreObservable<TSource, TException> : System.IObservable<TSource> where TException : System.Exception
     {
         public CatchIgnoreObservable(System.IObservable<TSource> source, System.Action<TException> errorAction) { }
@@ -1094,7 +1094,7 @@ namespace ReactiveUI.Primitives.Extensions.Operators
     {
         public FirstMatchFromCandidatesObservable(System.Collections.Generic.IReadOnlyList<TKey> candidates, System.Func<TKey, System.IObservable<TRaw>> project, System.Func<TRaw, TResult> transform, System.Func<TResult, bool> predicate, TResult fallback) { }
         public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
-        [System.Diagnostics.DebuggerDisplay("Completed = {Completed}, HasValue = {HasValue}, Value = {Value}")]
+        [System.Diagnostics.DebuggerDisplay("SyncProbe: Completed = {Completed}, HasValue = {HasValue}, Value = {Value}")]
         public sealed class SyncProbe : System.IObserver<TRaw>
         {
             public SyncProbe() { }
@@ -1115,7 +1115,7 @@ namespace ReactiveUI.Primitives.Extensions.Operators
         public LogErrorsObservable(System.IObservable<T> source, System.Action<System.Exception> logger) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Sources = {_sourceList.Count}")]
+    [System.Diagnostics.DebuggerDisplay("MinMaxObservable: Sources = {_sourceList.Count}")]
     public sealed class MinMaxObservable<T> : System.IObservable<T> where T : struct, System.IComparable<T>
     {
         public MinMaxObservable(System.Collections.Generic.IReadOnlyList<System.IObservable<T>> sources, bool emitMaximum) { }
@@ -1131,7 +1131,7 @@ namespace ReactiveUI.Primitives.Extensions.Operators
         public PairwiseObservable(System.IObservable<T> source) { }
         public System.IDisposable Subscribe(System.IObserver<(T Previous, T Current)> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {_source}, Subscriptions = {_subscriptionCount}")]
+    [System.Diagnostics.DebuggerDisplay("PartitionObservable: Source = {_source}, Subscriptions = {_subscriptionCount}")]
     public sealed class PartitionObservable<T>
     {
         public PartitionObservable(System.IObservable<T> source, System.Func<T, bool> predicate) { }
@@ -1193,7 +1193,7 @@ namespace ReactiveUI.Primitives.Extensions.Operators
         public SkipWhileNullObservable(System.IObservable<T> source) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Queued = {_queue.Count}, Processing = {_isProcessing}, Done = {_done}")]
+    [System.Diagnostics.DebuggerDisplay("SubscribeAsyncObservable: Queued = {_queue.Count}, Processing = {_isProcessing}, Done = {_done}")]
     public sealed class SubscribeAsyncObservable<T> : System.IDisposable
     {
         public SubscribeAsyncObservable(System.IObservable<T> source, System.Func<T, System.Threading.Tasks.ValueTask> onNext, System.Action<System.Exception>? onError, System.Action? onCompleted) { }
@@ -1265,7 +1265,7 @@ namespace ReactiveUI.Primitives.Signals
         public void RemoveObserver(System.IObserver<T> observer) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Callback = {_callback}, Context = {_context}")]
+    [System.Diagnostics.DebuggerDisplay("AwaitWitness: Callback = {_callback}, Context = {_context}")]
     public sealed class AwaitWitness<T> : System.IObserver<T>
     {
         public AwaitWitness(System.Action callback, bool originalContext) { }
@@ -1297,7 +1297,7 @@ namespace ReactiveUI.Primitives.Signals
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public bool TryGetValue(out T? value) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Observers = {_observers}")]
+    [System.Diagnostics.DebuggerDisplay("Broadcaster: Observers = {_observers}")]
     public struct Broadcaster<T> : System.IEquatable<ReactiveUI.Primitives.Signals.Broadcaster<T>>
     {
         public bool HasObservers { get; }
@@ -1316,7 +1316,7 @@ namespace ReactiveUI.Primitives.Signals
         public static bool operator ==(ReactiveUI.Primitives.Signals.Broadcaster<T> left, ReactiveUI.Primitives.Signals.Broadcaster<T> right) { }
         public static bool operator !=(ReactiveUI.Primitives.Signals.Broadcaster<T> left, ReactiveUI.Primitives.Signals.Broadcaster<T> right) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Task = {_task}, Result = {_result}, Exception = {_exception}")]
+    [System.Diagnostics.DebuggerDisplay("CommandExecution: Task = {_task}, Result = {_result}, Exception = {_exception}")]
     public readonly record struct CommandExecution<TResult> : System.IEquatable<ReactiveUI.Primitives.Signals.CommandExecution<TResult>>
     {
         public CommandExecution(System.Exception exception) { }
@@ -1324,7 +1324,7 @@ namespace ReactiveUI.Primitives.Signals
         public CommandExecution(TResult result) { }
         public readonly ReactiveUI.Primitives.Signals.CommandExecution<TResult> ConfigureAwait(bool continueOnCapturedContext) { }
         public readonly ReactiveUI.Primitives.Signals.CommandExecution<TResult>.Awaiter GetAwaiter() { }
-        [System.Diagnostics.DebuggerDisplay("IsCompleted = {IsCompleted}, Result = {_result}, Exception = {_exception}")]
+        [System.Diagnostics.DebuggerDisplay("Awaiter: IsCompleted = {IsCompleted}, Result = {_result}, Exception = {_exception}")]
         public readonly record struct Awaiter : System.IEquatable<ReactiveUI.Primitives.Signals.CommandExecution<TResult>.Awaiter>, System.Runtime.CompilerServices.ICriticalNotifyCompletion
         {
             public Awaiter(System.Threading.Tasks.Task<TResult>? task, TResult? result, System.Exception? exception, bool continueOnCapturedContext) { }
@@ -1353,7 +1353,7 @@ namespace ReactiveUI.Primitives.Signals
         public ReactiveUI.Primitives.Signals.CommandExecution<TResult> ExecuteAsync(System.Threading.CancellationToken cancellationToken) { }
         public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}, Buffer = {_buffer}")]
+    [System.Diagnostics.DebuggerDisplay("DelayableNotificationSignal: Stopped = {_stopped}, Buffer = {_buffer}")]
     public sealed class DelayableNotificationSignal<T> : ReactiveUI.Primitives.Signals.ISignal<T>
     {
         public DelayableNotificationSignal(System.Func<bool> isDelayed, System.Func<System.Collections.Generic.IList<T>, System.Collections.Generic.IEnumerable<T>> flushDistinct) { }
@@ -1366,7 +1366,7 @@ namespace ReactiveUI.Primitives.Signals
         public void OnNext(T value) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("OnNext = {_onNext}")]
+    [System.Diagnostics.DebuggerDisplay("DelegateWitness: OnNext = {_onNext}")]
     public sealed class DelegateWitness<T> : System.IObserver<T>
     {
         public DelegateWitness(System.Action<T> onNext, System.Action<System.Exception>? onError = null, System.Action? onCompleted = null) { }
@@ -1397,41 +1397,41 @@ namespace ReactiveUI.Primitives.Signals
         System.IObservable<T>? Source { get; }
         void GetOperationCanceled(System.IObserver<System.Exception> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {_source}, Predicate = {_predicate}")]
+    [System.Diagnostics.DebuggerDisplay("KeepSignal: Source = {_source}, Predicate = {_predicate}")]
     public sealed class KeepSignal<T> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<T>
     {
         public KeepSignal(System.IObservable<T> source, System.Func<T, bool> predicate) { }
         public bool IsRequiredSubscribeOnCurrentThread() { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {_source}, State = {_state}")]
+    [System.Diagnostics.DebuggerDisplay("KeepWithSignal: Source = {_source}, State = {_state}")]
     public sealed class KeepWithSignal<T, TState> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<T>
     {
         public KeepWithSignal(System.IObservable<T> source, TState state, System.Func<TState, T, bool> predicate) { }
         public bool IsRequiredSubscribeOnCurrentThread() { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {_source}, Selector = {_selector}")]
+    [System.Diagnostics.DebuggerDisplay("MapSignal: Source = {_source}, Selector = {_selector}")]
     public sealed class MapSignal<TSource, TResult> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<TResult>
     {
         public MapSignal(System.IObservable<TSource> source, System.Func<TSource, TResult> selector) { }
         public bool IsRequiredSubscribeOnCurrentThread() { }
         public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {_source}, State = {_state}")]
+    [System.Diagnostics.DebuggerDisplay("MapWithSignal: Source = {_source}, State = {_state}")]
     public sealed class MapWithSignal<TSource, TState, TResult> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<TResult>
     {
         public MapWithSignal(System.IObservable<TSource> source, TState state, System.Func<TState, TSource, TResult> selector) { }
         public bool IsRequiredSubscribeOnCurrentThread() { }
         public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Subject = {_subject}, Observer = {_observer}")]
+    [System.Diagnostics.DebuggerDisplay("ObserverHandler: Subject = {_subject}, Observer = {_observer}")]
     public sealed class ObserverHandler<T> : System.IDisposable
     {
         public ObserverHandler(ReactiveUI.Primitives.Signals.AsyncSignal<T> subject, System.IObserver<T> observer) { }
         public void Dispose() { }
     }
-    [System.Diagnostics.DebuggerDisplay("{Value}")]
+    [System.Diagnostics.DebuggerDisplay("ProjectedReadOnlyState: {Value}")]
     public sealed class ProjectedReadOnlyState<TSource, TResult> : System.IDisposable, System.IObservable<TResult>, System.IObserver<TSource>
     {
         public System.IObservable<TResult> Changed { get; }
@@ -1493,7 +1493,7 @@ namespace ReactiveUI.Primitives.Signals
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public bool TryGetValue(out T? value) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {_source}, State = {_state}")]
+    [System.Diagnostics.DebuggerDisplay("TapWithSignal: Source = {_source}, State = {_state}")]
     public sealed class TapWithSignal<T, TState> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<T>
     {
         public TapWithSignal(System.IObservable<T> source, TState state, System.Action<TState, T> onNext) { }

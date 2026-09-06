@@ -17,7 +17,7 @@ namespace ReactiveUI.Primitives.Extensions;
 /// </list>
 /// </summary>
 /// <typeparam name="T">The element type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Value = {_value}, Completed = {_completed}, Disposed = {_disposed}")]
+[System.Diagnostics.DebuggerDisplay("CurrentValueSubject: Value = {_value}, Completed = {_completed}, Disposed = {_disposed}")]
 public sealed class CurrentValueSubject<T> : IObservable<T>, IObserver<T>, IDisposable
 {
     /// <summary>Lock guarding state mutations; held only across snapshot reads and field writes.</summary>

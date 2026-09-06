@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Async.Signals;
 /// <remarks>Use this type to configure how a Signal is created, specifying whether it should be stateless and
 /// which publishing option to apply. The options provided affect the Signal's behavior and lifecycle. This record is
 /// immutable and can be used to ensure consistent Signal creation across different parts of an application.</remarks>
-[System.Diagnostics.DebuggerDisplay("PublishingOption = {PublishingOption}, IsStateless = {IsStateless}")]
+[System.Diagnostics.DebuggerDisplay("SignalCreationOptions: PublishingOption = {PublishingOption}, IsStateless = {IsStateless}")]
 public sealed record SignalCreationOptions
 {
     /// <summary>Gets the default configuration for Signal creation options.</summary>

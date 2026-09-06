@@ -2,7 +2,7 @@
 [assembly: System.Runtime.Versioning.SupportedOSPlatform("Windows7.0")]
 namespace ReactiveUI.Primitives.Reactive.Concurrency;
 
-[System.Diagnostics.DebuggerDisplay("ReadyCount = {_readyCount}, DrainPosted = {_drainPosted}")]
+[System.Diagnostics.DebuggerDisplay("CoalescingDispatchScheduler: ReadyCount = {_readyCount}, DrainPosted = {_drainPosted}")]
 public abstract class CoalescingDispatchScheduler : System.Reactive.Concurrency.LocalScheduler
 {
     protected CoalescingDispatchScheduler() { }
@@ -13,7 +13,7 @@ public abstract class CoalescingDispatchScheduler : System.Reactive.Concurrency.
     public override System.IDisposable Schedule<TState>(TState state, System.TimeSpan dueTime, System.Func<System.Reactive.Concurrency.IScheduler, TState, System.IDisposable> action) { }
     protected virtual System.IDisposable ScheduleOnDispatcher(System.Action work, System.TimeSpan dueTime) { }
 }
-[System.Diagnostics.DebuggerDisplay("Control = {Control}")]
+[System.Diagnostics.DebuggerDisplay("ControlSequencer: Control = {Control}")]
 public sealed class ControlSequencer : ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler
 {
     public ControlSequencer(System.Windows.Forms.Control control) { }

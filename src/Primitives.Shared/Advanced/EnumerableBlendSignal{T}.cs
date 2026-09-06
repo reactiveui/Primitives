@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Merges enumerable observable sources concurrently.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Sources = {Sources}")]
+[System.Diagnostics.DebuggerDisplay("EnumerableBlendSignal: Sources = {Sources}")]
 public sealed class EnumerableBlendSignal<T> : IObservable<T>
 {
     /// <summary>Initializes a new instance of the <see cref="EnumerableBlendSignal{T}"/> class.</summary>

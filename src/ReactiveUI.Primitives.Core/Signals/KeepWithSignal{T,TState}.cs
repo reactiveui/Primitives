@@ -15,7 +15,7 @@ namespace ReactiveUI.Primitives.Signals;
 /// <param name="source">The source sequence.</param>
 /// <param name="state">The state passed to the predicate.</param>
 /// <param name="predicate">The predicate applied to each source value and the state.</param>
-[System.Diagnostics.DebuggerDisplay("Source = {_source}, State = {_state}")]
+[System.Diagnostics.DebuggerDisplay("KeepWithSignal: Source = {_source}, State = {_state}")]
 public sealed class KeepWithSignal<T, TState>(IObservable<T> source, TState state, Func<TState, T, bool> predicate) : IRequireCurrentThread<T>
 {
     /// <summary>The source sequence.</summary>

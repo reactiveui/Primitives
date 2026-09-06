@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Signals;
 /// <summary>Read-only state projection backed directly by a source state signal.</summary>
 /// <typeparam name="TSource">The source value type.</typeparam>
 /// <typeparam name="TResult">The projected value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("{Value}")]
+[System.Diagnostics.DebuggerDisplay("ProjectedReadOnlyState: {Value}")]
 public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResult>, IObserver<TSource>, IDisposable
 {
     /// <summary>Projection function.</summary>

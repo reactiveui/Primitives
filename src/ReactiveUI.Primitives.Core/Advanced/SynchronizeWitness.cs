@@ -13,7 +13,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// grammar; placing one of these ahead of them is the supported way to consume a non-conformant source.
 /// </summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Observer = {_observer}, Subscription = {_subscription}")]
+[System.Diagnostics.DebuggerDisplay("SynchronizeWitness: Observer = {_observer}, Subscription = {_subscription}")]
 public sealed class SynchronizeWitness<T> : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>

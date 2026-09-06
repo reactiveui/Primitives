@@ -16,7 +16,8 @@ namespace ReactiveUI.Primitives.Advanced;
 /// </summary>
 /// <param name="period">The interval between ticks.</param>
 /// <param name="scheduler">The sequencer used to schedule ticks.</param>
-internal sealed class EverySignal(TimeSpan period, ISequencer scheduler) : IRequireCurrentThread<long>
+[System.Diagnostics.DebuggerDisplay("EverySignal: Period = {_period}, Scheduler = {_scheduler}")]
+public sealed class EverySignal(TimeSpan period, ISequencer scheduler) : IRequireCurrentThread<long>
 {
     /// <summary>The interval between ticks.</summary>
     private readonly TimeSpan _period = period;

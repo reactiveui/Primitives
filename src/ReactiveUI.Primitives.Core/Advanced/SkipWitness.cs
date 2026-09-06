@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="T">The value type.</typeparam>
 /// <param name="observer">The downstream observer.</param>
 /// <param name="count">The number of leading values to drop.</param>
-[System.Diagnostics.DebuggerDisplay("Remaining = {_remaining}, Observer = {_observer}")]
+[System.Diagnostics.DebuggerDisplay("SkipWitness: Remaining = {_remaining}, Observer = {_observer}")]
 public sealed class SkipWitness<T>(IObserver<T> observer, int count) : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>

@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Repeats a source observable by resubscribing after each successful completion.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Source = {_source}, RepeatCount = {_repeatCount}")]
+[System.Diagnostics.DebuggerDisplay("RepeatSourceSignal: Source = {_source}, RepeatCount = {_repeatCount}")]
 public sealed class RepeatSourceSignal<T> : IRequireCurrentThread<T>
 {
     /// <summary>The source sequence.</summary>

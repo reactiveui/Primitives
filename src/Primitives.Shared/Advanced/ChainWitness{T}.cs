@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Mediates sequential concatenation for <see cref="ChainSignal{T}"/>.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("IsActive = {IsActive}, IsOuterCompleted = {IsOuterCompleted}")]
+[System.Diagnostics.DebuggerDisplay("ChainWitness: IsActive = {IsActive}, IsOuterCompleted = {IsOuterCompleted}")]
 public sealed class ChainWitness<T> : IDisposable
 {
     /// <summary>Guards the queue and active/completed flags.</summary>

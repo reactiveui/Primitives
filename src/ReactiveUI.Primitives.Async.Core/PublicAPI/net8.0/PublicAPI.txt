@@ -3,7 +3,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.Tests")]
 namespace ReactiveUI.Primitives.Async
 {
-    [System.Diagnostics.DebuggerDisplay("Signals = {_signals}")]
+    [System.Diagnostics.DebuggerDisplay("ChainEnumerableSignal: Signals = {_signals}")]
     public sealed class ChainEnumerableSignal<T> : ReactiveUI.Primitives.Async.IObservableAsync<T>
     {
         public ChainEnumerableSignal(System.Collections.Generic.IEnumerable<ReactiveUI.Primitives.Async.IObservableAsync<T>> signals) { }
@@ -22,7 +22,7 @@ namespace ReactiveUI.Primitives.Async
         public ConcurrentWitnessCallsException(string message) { }
         public ConcurrentWitnessCallsException(string message, System.Exception innerException) { }
     }
-    [System.Diagnostics.DebuggerDisplay("State = {State}")]
+    [System.Diagnostics.DebuggerDisplay("ConnectableSignalAsync: State = {State}")]
     public sealed class ConnectableSignalAsync<T> : ReactiveUI.Primitives.Async.IObservableAsync<T>, System.IDisposable
     {
         public ConnectableSignalAsync(ReactiveUI.Primitives.Async.IObservableAsync<T> source, ReactiveUI.Primitives.Async.Signals.ISignalAsync<T> signal) { }
@@ -40,7 +40,7 @@ namespace ReactiveUI.Primitives.Async
             public System.IAsyncDisposable ToDisposableAsync() { }
         }
     }
-    [System.Diagnostics.DebuggerDisplay("Key = {Key}")]
+    [System.Diagnostics.DebuggerDisplay("GroupedAsyncSignal: Key = {Key}")]
     public sealed class GroupedAsyncSignal<TKey, TValue> : ReactiveUI.Primitives.Async.IObservableAsync<TValue>
     {
         public TKey Key { get; }
@@ -825,7 +825,7 @@ namespace ReactiveUI.Primitives.Async
         public SwitchToSignal(ReactiveUI.Primitives.Async.IObservableAsync<ReactiveUI.Primitives.Async.IObservableAsync<T>> source) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<T>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("SourceFailsWhenOtherFails = {SourceFailsWhenOtherFails}")]
+    [System.Diagnostics.DebuggerDisplay("TakeUntilOptions: SourceFailsWhenOtherFails = {SourceFailsWhenOtherFails}")]
     public record TakeUntilOptions : System.IEquatable<ReactiveUI.Primitives.Async.TakeUntilOptions>
     {
         public bool SourceFailsWhenOtherFails { get; init; }
@@ -835,7 +835,7 @@ namespace ReactiveUI.Primitives.Async
     {
         public static void Register(System.Action<System.Exception> unhandledExceptionHandler) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Disposed = {_disposed}, CallState = {_callState}")]
+    [System.Diagnostics.DebuggerDisplay("WitnessAsync: Disposed = {_disposed}, CallState = {_callState}")]
     public abstract class WitnessAsync<T> : ReactiveUI.Primitives.Async.Advanced.IReentrantAsyncDisposable, ReactiveUI.Primitives.Async.IObserverAsync<T>
     {
         protected WitnessAsync() { }
@@ -859,19 +859,19 @@ namespace ReactiveUI.Primitives.Async
 }
 namespace ReactiveUI.Primitives.Async.Advanced
 {
-    [System.Diagnostics.DebuggerDisplay("Source = {Source}")]
+    [System.Diagnostics.DebuggerDisplay("AsyncEnumerableSignal: Source = {Source}")]
     public sealed class AsyncEnumerableSignal<T> : ReactiveUI.Primitives.Async.IObservableAsync<T>
     {
         public AsyncEnumerableSignal(System.Collections.Generic.IAsyncEnumerable<T> source) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<T>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {Source}")]
+    [System.Diagnostics.DebuggerDisplay("AsyncEnumerableSubscription: Source = {Source}")]
     public sealed class AsyncEnumerableSubscription<T> : ReactiveUI.Primitives.Async.Advanced.TaskSignalSubscription<T>
     {
         public AsyncEnumerableSubscription(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Collections.Generic.IAsyncEnumerable<T> source) { }
         protected override System.Threading.Tasks.ValueTask ExecuteAsyncCore(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("OwnerThreadId = {_ownerThreadId}, Waiters = {_waiters}, RecursionDepth = {_recursionDepth}")]
+    [System.Diagnostics.DebuggerDisplay("AsyncSerialGate: OwnerThreadId = {_ownerThreadId}, Waiters = {_waiters}, RecursionDepth = {_recursionDepth}")]
     public sealed class AsyncSerialGate : System.IDisposable
     {
         public AsyncSerialGate() { }
@@ -879,7 +879,7 @@ namespace ReactiveUI.Primitives.Async.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.Async.Advanced.AsyncSerialGate.Lease> EnterAsync() { }
         public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.Async.Advanced.AsyncSerialGate.Lease> EnterAsync(System.Threading.CancellationToken cancellationToken) { }
-        [System.Diagnostics.DebuggerDisplay("Parent = {_parent}")]
+        [System.Diagnostics.DebuggerDisplay("Lease: Parent = {_parent}")]
         public readonly record struct Lease : System.IDisposable, System.IEquatable<ReactiveUI.Primitives.Async.Advanced.AsyncSerialGate.Lease>
         {
             public Lease(ReactiveUI.Primitives.Async.Advanced.AsyncSerialGate parent) { }
@@ -887,13 +887,13 @@ namespace ReactiveUI.Primitives.Async.Advanced
             public readonly void Dispose() { }
         }
     }
-    [System.Diagnostics.DebuggerDisplay("StartSynchronously = {StartSynchronously}, TaskScheduler = {TaskScheduler}")]
+    [System.Diagnostics.DebuggerDisplay("BackgroundJobSignal: StartSynchronously = {StartSynchronously}, TaskScheduler = {TaskScheduler}")]
     public sealed class BackgroundJobSignal<T> : ReactiveUI.Primitives.Async.IObservableAsync<T>
     {
         public BackgroundJobSignal(System.Func<ReactiveUI.Primitives.Async.IObserverAsync<T>, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> job, bool startSynchronously, System.Threading.Tasks.TaskScheduler? taskScheduler) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<T>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("HasDisposed = {HasDisposed}")]
+    [System.Diagnostics.DebuggerDisplay("CallbackWitnessAsync: HasDisposed = {HasDisposed}")]
     public sealed class CallbackWitnessAsync<T> : ReactiveUI.Primitives.Async.WitnessAsync<T>
     {
         public CallbackWitnessAsync(System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> onNextAsync, System.Func<System.Exception, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>? onErrorResumeAsync = null, System.Func<ReactiveUI.Primitives.Result, System.Threading.Tasks.ValueTask>? onCompletedAsync = null) { }
@@ -901,31 +901,31 @@ namespace ReactiveUI.Primitives.Async.Advanced
         protected override System.Threading.Tasks.ValueTask OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
         protected override System.Threading.Tasks.ValueTask OnNextAsyncCore(T value, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {Source}, Action = {Action}")]
+    [System.Diagnostics.DebuggerDisplay("DoOnSubscribeAsyncSignal: Source = {Source}, Action = {Action}")]
     public sealed class DoOnSubscribeAsyncSignal<T> : ReactiveUI.Primitives.Async.IObservableAsync<T>
     {
         public DoOnSubscribeAsyncSignal(ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> action) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<T>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {Source}, Action = {Action}")]
+    [System.Diagnostics.DebuggerDisplay("DoOnSubscribeSignal: Source = {Source}, Action = {Action}")]
     public sealed class DoOnSubscribeSignal<T> : ReactiveUI.Primitives.Async.IObservableAsync<T>
     {
         public DoOnSubscribeSignal(ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.Action action) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<T>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {Source}")]
+    [System.Diagnostics.DebuggerDisplay("EnumerableSignal: Source = {Source}")]
     public sealed class EnumerableSignal<T> : ReactiveUI.Primitives.Async.IObservableAsync<T>
     {
         public EnumerableSignal(System.Collections.Generic.IEnumerable<T> source) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<T>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {Source}")]
+    [System.Diagnostics.DebuggerDisplay("EnumerableSubscription: Source = {Source}")]
     public sealed class EnumerableSubscription<T> : ReactiveUI.Primitives.Async.Advanced.TaskSignalSubscription<T>
     {
         public EnumerableSubscription(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Collections.Generic.IEnumerable<T> source) { }
         protected override System.Threading.Tasks.ValueTask ExecuteAsyncCore(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("ActiveInnerCount = {ActiveInnerCount}, OuterCompleted = {OuterCompleted}, Disposed = {Disposed}")]
+    [System.Diagnostics.DebuggerDisplay("FlatMapCoordinator: ActiveInnerCount = {ActiveInnerCount}, OuterCompleted = {OuterCompleted}, Disposed = {Disposed}")]
     public sealed class FlatMapCoordinator<TResult> : System.IAsyncDisposable
     {
         public FlatMapCoordinator(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer) { }
@@ -941,14 +941,14 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public System.Threading.Tasks.ValueTask SetOuterObserverAsync(System.IAsyncDisposable observer) { }
         public System.Threading.Tasks.ValueTask SubscribeInnerAsync(ReactiveUI.Primitives.Async.IObservableAsync<TResult> inner) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {Source}, SyncSelector = {SyncSelector}, AsyncSelector = {AsyncSelector}")]
+    [System.Diagnostics.DebuggerDisplay("FlatMapSignal: Source = {Source}, SyncSelector = {SyncSelector}, AsyncSelector = {AsyncSelector}")]
     public sealed class FlatMapSignal<TSource, TResult> : ReactiveUI.Primitives.Async.IObservableAsync<TResult>
     {
         public FlatMapSignal(ReactiveUI.Primitives.Async.IObservableAsync<TSource> source, System.Func<TSource, ReactiveUI.Primitives.Async.IObservableAsync<TResult>> selector) { }
         public FlatMapSignal(ReactiveUI.Primitives.Async.IObservableAsync<TSource> source, System.Func<TSource, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.Async.IObservableAsync<TResult>>> selector) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<TResult>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Coordinator = {Coordinator}")]
+    [System.Diagnostics.DebuggerDisplay("FlatMapWitness: Coordinator = {Coordinator}")]
     public sealed class FlatMapWitness<TResult> : ReactiveUI.Primitives.Async.WitnessAsync<TResult>
     {
         public FlatMapWitness(ReactiveUI.Primitives.Async.Advanced.FlatMapCoordinator<TResult> coordinator) { }
@@ -956,7 +956,7 @@ namespace ReactiveUI.Primitives.Async.Advanced
         protected override System.Threading.Tasks.ValueTask OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
         protected override System.Threading.Tasks.ValueTask OnNextAsyncCore(TResult value, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Coordinator = {Coordinator}, SyncSelector = {SyncSelector}, AsyncSelector = {AsyncSelector}")]
+    [System.Diagnostics.DebuggerDisplay("FlatMapWitness: Coordinator = {Coordinator}, SyncSelector = {SyncSelector}, AsyncSelector = {AsyncSelector}")]
     public sealed class FlatMapWitness<TSource, TResult> : ReactiveUI.Primitives.Async.WitnessAsync<TSource>
     {
         public FlatMapWitness(ReactiveUI.Primitives.Async.Advanced.FlatMapCoordinator<TResult> coordinator, System.Func<TSource, ReactiveUI.Primitives.Async.IObservableAsync<TResult>>? syncSelector, System.Func<TSource, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.Async.IObservableAsync<TResult>>>? asyncSelector) { }
@@ -964,7 +964,7 @@ namespace ReactiveUI.Primitives.Async.Advanced
         protected override System.Threading.Tasks.ValueTask OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
         protected override System.Threading.Tasks.ValueTask OnNextAsyncCore(TSource value, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Downstream = {Downstream}")]
+    [System.Diagnostics.DebuggerDisplay("ForwardingWitnessAsync: Downstream = {Downstream}")]
     public class ForwardingWitnessAsync<T> : ReactiveUI.Primitives.Async.WitnessAsync<T>
     {
         protected ForwardingWitnessAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> downstream) { }
@@ -973,13 +973,13 @@ namespace ReactiveUI.Primitives.Async.Advanced
         protected override System.Threading.Tasks.ValueTask OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
         protected override System.Threading.Tasks.ValueTask OnNextAsyncCore(T value, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Factory = {Factory}")]
+    [System.Diagnostics.DebuggerDisplay("FromAsyncSignal: Factory = {Factory}")]
     public sealed class FromAsyncSignal<T> : ReactiveUI.Primitives.Async.IObservableAsync<T>
     {
         public FromAsyncSignal(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<T>> factory) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<T>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Factory = {Factory}")]
+    [System.Diagnostics.DebuggerDisplay("FromAsyncSubscription: Factory = {Factory}")]
     public sealed class FromAsyncSubscription<T> : ReactiveUI.Primitives.Async.Advanced.TaskSignalSubscription<T>
     {
         public FromAsyncSubscription(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<T>> factory) { }
@@ -989,39 +989,39 @@ namespace ReactiveUI.Primitives.Async.Advanced
     {
         System.Threading.Tasks.ValueTask DisposeFromNotificationAsync() { }
     }
-    [System.Diagnostics.DebuggerDisplay("Period = {Period}, TimeProvider = {TimeProvider}")]
+    [System.Diagnostics.DebuggerDisplay("IntervalSignal: Period = {Period}, TimeProvider = {TimeProvider}")]
     public sealed class IntervalSignal : ReactiveUI.Primitives.Async.IObservableAsync<long>
     {
         public IntervalSignal(System.TimeSpan period, System.TimeProvider? timeProvider) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<System.Int64>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<long> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Period = {Period}, TimeProvider = {TimeProvider}")]
+    [System.Diagnostics.DebuggerDisplay("IntervalSubscription: Period = {Period}, TimeProvider = {TimeProvider}")]
     public sealed class IntervalSubscription : ReactiveUI.Primitives.Async.Advanced.TaskSignalSubscription<long>
     {
         public IntervalSubscription(ReactiveUI.Primitives.Async.IObserverAsync<long> observer, System.TimeSpan period, System.TimeProvider? timeProvider) { }
         protected override System.Threading.Tasks.ValueTask ExecuteAsyncCore(ReactiveUI.Primitives.Async.IObserverAsync<long> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {Source}, Values = {Values}")]
+    [System.Diagnostics.DebuggerDisplay("LeadSignal: Source = {Source}, Values = {Values}")]
     public sealed class LeadSignal<T> : ReactiveUI.Primitives.Async.IObservableAsync<T>
     {
         public LeadSignal(ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.Collections.Generic.IEnumerable<T> values) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<T>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Disposed = {Disposed}, Pipeline = {Pipeline}")]
+    [System.Diagnostics.DebuggerDisplay("LeadSubscription: Disposed = {Disposed}, Pipeline = {Pipeline}")]
     public sealed class LeadSubscription<T> : System.IAsyncDisposable
     {
         public LeadSubscription(ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.Collections.Generic.IEnumerable<T> values, ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken subscriptionToken) { }
         public System.Threading.Tasks.ValueTask DisposeAsync() { }
         public void Start() { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {Source}, Logger = {Logger}")]
+    [System.Diagnostics.DebuggerDisplay("LogErrorsSignal: Source = {Source}, Logger = {Logger}")]
     public sealed class LogErrorsSignal<T> : ReactiveUI.Primitives.Async.IObservableAsync<T>
     {
         public LogErrorsSignal(ReactiveUI.Primitives.Async.IObservableAsync<T> source, System.Action<System.Exception> logger) { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<T>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Downstream = {Downstream}, Logger = {Logger}")]
+    [System.Diagnostics.DebuggerDisplay("LogErrorsWitness: Downstream = {Downstream}, Logger = {Logger}")]
     public sealed class LogErrorsWitness<T> : ReactiveUI.Primitives.Async.WitnessAsync<T>
     {
         public LogErrorsWitness(ReactiveUI.Primitives.Async.IObserverAsync<T> downstream, System.Action<System.Exception> logger) { }
@@ -1029,7 +1029,7 @@ namespace ReactiveUI.Primitives.Async.Advanced
         protected override System.Threading.Tasks.ValueTask OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
         protected override System.Threading.Tasks.ValueTask OnNextAsyncCore(T value, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Completed = {_completed}, Timer = {_timer}")]
+    [System.Diagnostics.DebuggerDisplay("PooledDelaySource: Completed = {_completed}, Timer = {_timer}")]
     public sealed class PooledDelaySource : System.Threading.Tasks.Sources.IValueTaskSource
     {
         public System.Threading.Tasks.ValueTask BeginAsync(System.TimeSpan delay, System.TimeProvider timeProvider, System.Threading.CancellationToken cancellationToken) { }
@@ -1040,13 +1040,13 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public void OnCompleted(System.Action<object?> continuation, object? state, short token, System.Threading.Tasks.Sources.ValueTaskSourceOnCompletedFlags flags) { }
         public static ReactiveUI.Primitives.Async.Advanced.PooledDelaySource Rent() { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {Source}, RetryCount = {RetryCount}")]
+    [System.Diagnostics.DebuggerDisplay("ReattemptSignal: Source = {Source}, RetryCount = {RetryCount}")]
     public sealed class ReattemptSignal<T> : ReactiveUI.Primitives.Async.IObservableAsync<T>
     {
         public ReattemptSignal(ReactiveUI.Primitives.Async.IObservableAsync<T> source, int retryCount) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<T>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {Source}, Remaining = {Remaining}")]
+    [System.Diagnostics.DebuggerDisplay("ReattemptSubscription: Source = {Source}, Remaining = {Remaining}")]
     public sealed class ReattemptSubscription<T> : System.IAsyncDisposable
     {
         public ReattemptSubscription(ReactiveUI.Primitives.Async.IObservableAsync<T> source, ReactiveUI.Primitives.Async.IObserverAsync<T> observer, int retryCount, System.Threading.CancellationToken cancellationToken) { }
@@ -1059,7 +1059,7 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public System.Threading.Tasks.ValueTask RelayNextAsync(T value, System.Threading.CancellationToken cancellationToken) { }
         public System.Threading.Tasks.ValueTask SubscribeOnceAsync() { }
     }
-    [System.Diagnostics.DebuggerDisplay("Subscription = {Subscription}")]
+    [System.Diagnostics.DebuggerDisplay("ReattemptWitness: Subscription = {Subscription}")]
     public sealed class ReattemptWitness<T> : ReactiveUI.Primitives.Async.WitnessAsync<T>
     {
         public ReattemptWitness(ReactiveUI.Primitives.Async.Advanced.ReattemptSubscription<T> subscription) { }
@@ -1071,19 +1071,19 @@ namespace ReactiveUI.Primitives.Async.Advanced
     {
         public RelayWitnessAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("StartValue = {StartValue}, Count = {Count}")]
+    [System.Diagnostics.DebuggerDisplay("SequenceSignal: StartValue = {StartValue}, Count = {Count}")]
     public sealed class SequenceSignal : ReactiveUI.Primitives.Async.IObservableAsync<int>
     {
         public SequenceSignal(int start, int count) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<System.Int32>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<int> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("StartValue = {StartValue}, Count = {Count}")]
+    [System.Diagnostics.DebuggerDisplay("SequenceSubscription: StartValue = {StartValue}, Count = {Count}")]
     public sealed class SequenceSubscription : ReactiveUI.Primitives.Async.Advanced.TaskSignalSubscription<int>
     {
         public SequenceSubscription(ReactiveUI.Primitives.Async.IObserverAsync<int> observer, int start, int count) { }
         protected override System.Threading.Tasks.ValueTask ExecuteAsyncCore(ReactiveUI.Primitives.Async.IObserverAsync<int> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("HasValue = {_hasValue}, Value = {_value}")]
+    [System.Diagnostics.DebuggerDisplay("SingleElementWitness: HasValue = {_hasValue}, Value = {_value}")]
     public sealed class SingleElementWitness<T> : ReactiveUI.Primitives.Async.Advanced.TaskResultWitnessAsyncBase<T, T?>
     {
         public SingleElementWitness(System.Func<T, bool>? predicate, bool requireExactlyOne, T? defaultValue, System.Threading.CancellationToken cancellationToken) { }
@@ -1091,31 +1091,31 @@ namespace ReactiveUI.Primitives.Async.Advanced
         protected override System.Threading.Tasks.ValueTask OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
         protected override System.Threading.Tasks.ValueTask OnNextAsyncCore(T value, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Function = {Function}, TaskScheduler = {TaskScheduler}")]
+    [System.Diagnostics.DebuggerDisplay("StartSignal: Function = {Function}, TaskScheduler = {TaskScheduler}")]
     public sealed class StartSignal<TResult> : ReactiveUI.Primitives.Async.IObservableAsync<TResult>
     {
         public StartSignal(System.Func<TResult> function, System.Threading.Tasks.TaskScheduler? taskScheduler) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<TResult>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Function = {Function}, TaskScheduler = {TaskScheduler}")]
+    [System.Diagnostics.DebuggerDisplay("StartSubscription: Function = {Function}, TaskScheduler = {TaskScheduler}")]
     public sealed class StartSubscription<TResult> : ReactiveUI.Primitives.Async.Advanced.TaskSignalSubscription<TResult>
     {
         public StartSubscription(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, System.Func<TResult> function, System.Threading.Tasks.TaskScheduler? taskScheduler) { }
         protected override System.Threading.Tasks.ValueTask ExecuteAsyncCore(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("SourceCount = {SourceCount}, Sources = {Sources}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest10Coordinator: SourceCount = {SourceCount}, Sources = {Sources}")]
     public sealed class SyncLatest10Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult> : ReactiveUI.Primitives.Async.Advanced.SyncLatestCoordinatorBase<TResult>
     {
         public SyncLatest10Coordinator(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, ReactiveUI.Primitives.Async.Advanced.SyncLatest10State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> sources, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult> selector) { }
         protected override System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Sources = {Sources}, Selector = {Selector}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest10Signal: Sources = {Sources}, Selector = {Selector}")]
     public sealed class SyncLatest10Signal<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult> : ReactiveUI.Primitives.Async.IObservableAsync<TResult>
     {
         public SyncLatest10Signal(ReactiveUI.Primitives.Async.Advanced.SyncLatest10State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> sources, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult> selector) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<TResult>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source1 = {Source1}, Source10 = {Source10}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest10State: Source1 = {Source1}, Source10 = {Source10}")]
     public readonly record struct SyncLatest10State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : System.IEquatable<ReactiveUI.Primitives.Async.Advanced.SyncLatest10State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>>
     {
         public SyncLatest10State(ReactiveUI.Primitives.Async.IObservableAsync<T1> Source1, ReactiveUI.Primitives.Async.IObservableAsync<T2> Source2, ReactiveUI.Primitives.Async.IObservableAsync<T3> Source3, ReactiveUI.Primitives.Async.IObservableAsync<T4> Source4, ReactiveUI.Primitives.Async.IObservableAsync<T5> Source5, ReactiveUI.Primitives.Async.IObservableAsync<T6> Source6, ReactiveUI.Primitives.Async.IObservableAsync<T7> Source7, ReactiveUI.Primitives.Async.IObservableAsync<T8> Source8, ReactiveUI.Primitives.Async.IObservableAsync<T9> Source9, ReactiveUI.Primitives.Async.IObservableAsync<T10> Source10) { }
@@ -1130,19 +1130,19 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public ReactiveUI.Primitives.Async.IObservableAsync<T8> Source8 { get; init; }
         public ReactiveUI.Primitives.Async.IObservableAsync<T9> Source9 { get; init; }
     }
-    [System.Diagnostics.DebuggerDisplay("SourceCount = {SourceCount}, Sources = {Sources}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest11Coordinator: SourceCount = {SourceCount}, Sources = {Sources}")]
     public sealed class SyncLatest11Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult> : ReactiveUI.Primitives.Async.Advanced.SyncLatestCoordinatorBase<TResult>
     {
         public SyncLatest11Coordinator(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, ReactiveUI.Primitives.Async.Advanced.SyncLatest11State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> sources, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult> selector) { }
         protected override System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Sources = {Sources}, Selector = {Selector}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest11Signal: Sources = {Sources}, Selector = {Selector}")]
     public sealed class SyncLatest11Signal<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult> : ReactiveUI.Primitives.Async.IObservableAsync<TResult>
     {
         public SyncLatest11Signal(ReactiveUI.Primitives.Async.Advanced.SyncLatest11State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> sources, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult> selector) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<TResult>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source1 = {Source1}, Source2 = {Source2}, Source11 = {Source11}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest11State: Source1 = {Source1}, Source2 = {Source2}, Source11 = {Source11}")]
     public readonly record struct SyncLatest11State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : System.IEquatable<ReactiveUI.Primitives.Async.Advanced.SyncLatest11State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>>
     {
         public SyncLatest11State(ReactiveUI.Primitives.Async.IObservableAsync<T1> Source1, ReactiveUI.Primitives.Async.IObservableAsync<T2> Source2, ReactiveUI.Primitives.Async.IObservableAsync<T3> Source3, ReactiveUI.Primitives.Async.IObservableAsync<T4> Source4, ReactiveUI.Primitives.Async.IObservableAsync<T5> Source5, ReactiveUI.Primitives.Async.IObservableAsync<T6> Source6, ReactiveUI.Primitives.Async.IObservableAsync<T7> Source7, ReactiveUI.Primitives.Async.IObservableAsync<T8> Source8, ReactiveUI.Primitives.Async.IObservableAsync<T9> Source9, ReactiveUI.Primitives.Async.IObservableAsync<T10> Source10, ReactiveUI.Primitives.Async.IObservableAsync<T11> Source11) { }
@@ -1158,19 +1158,19 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public ReactiveUI.Primitives.Async.IObservableAsync<T8> Source8 { get; init; }
         public ReactiveUI.Primitives.Async.IObservableAsync<T9> Source9 { get; init; }
     }
-    [System.Diagnostics.DebuggerDisplay("Sources = {Sources}, Lifecycle = {Lifecycle}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest12Coordinator: Sources = {Sources}, Lifecycle = {Lifecycle}")]
     public sealed class SyncLatest12Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TResult> : ReactiveUI.Primitives.Async.Advanced.SyncLatestCoordinatorBase<TResult>
     {
         public SyncLatest12Coordinator(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, ReactiveUI.Primitives.Async.Advanced.SyncLatest12State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> sources, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TResult> selector) { }
         protected override System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Sources = {Sources}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest12Signal: Sources = {Sources}")]
     public sealed class SyncLatest12Signal<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TResult> : ReactiveUI.Primitives.Async.IObservableAsync<TResult>
     {
         public SyncLatest12Signal(ReactiveUI.Primitives.Async.Advanced.SyncLatest12State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> sources, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TResult> selector) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<TResult>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source1 = {Source1}, Source12 = {Source12}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest12State: Source1 = {Source1}, Source12 = {Source12}")]
     public readonly record struct SyncLatest12State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : System.IEquatable<ReactiveUI.Primitives.Async.Advanced.SyncLatest12State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>>
     {
         public SyncLatest12State(ReactiveUI.Primitives.Async.IObservableAsync<T1> Source1, ReactiveUI.Primitives.Async.IObservableAsync<T2> Source2, ReactiveUI.Primitives.Async.IObservableAsync<T3> Source3, ReactiveUI.Primitives.Async.IObservableAsync<T4> Source4, ReactiveUI.Primitives.Async.IObservableAsync<T5> Source5, ReactiveUI.Primitives.Async.IObservableAsync<T6> Source6, ReactiveUI.Primitives.Async.IObservableAsync<T7> Source7, ReactiveUI.Primitives.Async.IObservableAsync<T8> Source8, ReactiveUI.Primitives.Async.IObservableAsync<T9> Source9, ReactiveUI.Primitives.Async.IObservableAsync<T10> Source10, ReactiveUI.Primitives.Async.IObservableAsync<T11> Source11, ReactiveUI.Primitives.Async.IObservableAsync<T12> Source12) { }
@@ -1187,19 +1187,19 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public ReactiveUI.Primitives.Async.IObservableAsync<T8> Source8 { get; init; }
         public ReactiveUI.Primitives.Async.IObservableAsync<T9> Source9 { get; init; }
     }
-    [System.Diagnostics.DebuggerDisplay("Value1 = {Value1}, Value13 = {Value13}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest13Coordinator: Value1 = {Value1}, Value13 = {Value13}")]
     public sealed class SyncLatest13Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult> : ReactiveUI.Primitives.Async.Advanced.SyncLatestCoordinatorBase<TResult>
     {
         public SyncLatest13Coordinator(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, ReactiveUI.Primitives.Async.Advanced.SyncLatest13State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> sources, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult> selector) { }
         protected override System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Sources = {Sources}, Selector = {Selector}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest13Signal: Sources = {Sources}, Selector = {Selector}")]
     public sealed class SyncLatest13Signal<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult> : ReactiveUI.Primitives.Async.IObservableAsync<TResult>
     {
         public SyncLatest13Signal(ReactiveUI.Primitives.Async.Advanced.SyncLatest13State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> sources, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult> selector) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<TResult>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source1 = {Source1}, Source13 = {Source13}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest13State: Source1 = {Source1}, Source13 = {Source13}")]
     public readonly record struct SyncLatest13State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : System.IEquatable<ReactiveUI.Primitives.Async.Advanced.SyncLatest13State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>>
     {
         public SyncLatest13State(ReactiveUI.Primitives.Async.IObservableAsync<T1> Source1, ReactiveUI.Primitives.Async.IObservableAsync<T2> Source2, ReactiveUI.Primitives.Async.IObservableAsync<T3> Source3, ReactiveUI.Primitives.Async.IObservableAsync<T4> Source4, ReactiveUI.Primitives.Async.IObservableAsync<T5> Source5, ReactiveUI.Primitives.Async.IObservableAsync<T6> Source6, ReactiveUI.Primitives.Async.IObservableAsync<T7> Source7, ReactiveUI.Primitives.Async.IObservableAsync<T8> Source8, ReactiveUI.Primitives.Async.IObservableAsync<T9> Source9, ReactiveUI.Primitives.Async.IObservableAsync<T10> Source10, ReactiveUI.Primitives.Async.IObservableAsync<T11> Source11, ReactiveUI.Primitives.Async.IObservableAsync<T12> Source12, ReactiveUI.Primitives.Async.IObservableAsync<T13> Source13) { }
@@ -1217,19 +1217,19 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public ReactiveUI.Primitives.Async.IObservableAsync<T8> Source8 { get; init; }
         public ReactiveUI.Primitives.Async.IObservableAsync<T9> Source9 { get; init; }
     }
-    [System.Diagnostics.DebuggerDisplay("Sources = {Sources}, Lifecycle = {Lifecycle}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest14Coordinator: Sources = {Sources}, Lifecycle = {Lifecycle}")]
     public sealed class SyncLatest14Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult> : ReactiveUI.Primitives.Async.Advanced.SyncLatestCoordinatorBase<TResult>
     {
         public SyncLatest14Coordinator(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, ReactiveUI.Primitives.Async.Advanced.SyncLatest14State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> sources, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult> selector) { }
         protected override System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Sources = {Sources}, Selector = {Selector}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest14Signal: Sources = {Sources}, Selector = {Selector}")]
     public sealed class SyncLatest14Signal<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult> : ReactiveUI.Primitives.Async.IObservableAsync<TResult>
     {
         public SyncLatest14Signal(ReactiveUI.Primitives.Async.Advanced.SyncLatest14State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> sources, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult> selector) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<TResult>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source1 = {Source1}, Source14 = {Source14}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest14State: Source1 = {Source1}, Source14 = {Source14}")]
     public readonly record struct SyncLatest14State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : System.IEquatable<ReactiveUI.Primitives.Async.Advanced.SyncLatest14State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>>
     {
         public SyncLatest14State(ReactiveUI.Primitives.Async.IObservableAsync<T1> Source1, ReactiveUI.Primitives.Async.IObservableAsync<T2> Source2, ReactiveUI.Primitives.Async.IObservableAsync<T3> Source3, ReactiveUI.Primitives.Async.IObservableAsync<T4> Source4, ReactiveUI.Primitives.Async.IObservableAsync<T5> Source5, ReactiveUI.Primitives.Async.IObservableAsync<T6> Source6, ReactiveUI.Primitives.Async.IObservableAsync<T7> Source7, ReactiveUI.Primitives.Async.IObservableAsync<T8> Source8, ReactiveUI.Primitives.Async.IObservableAsync<T9> Source9, ReactiveUI.Primitives.Async.IObservableAsync<T10> Source10, ReactiveUI.Primitives.Async.IObservableAsync<T11> Source11, ReactiveUI.Primitives.Async.IObservableAsync<T12> Source12, ReactiveUI.Primitives.Async.IObservableAsync<T13> Source13, ReactiveUI.Primitives.Async.IObservableAsync<T14> Source14) { }
@@ -1248,19 +1248,19 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public ReactiveUI.Primitives.Async.IObservableAsync<T8> Source8 { get; init; }
         public ReactiveUI.Primitives.Async.IObservableAsync<T9> Source9 { get; init; }
     }
-    [System.Diagnostics.DebuggerDisplay("Value1 = {Value1}, Value15 = {Value15}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest15Coordinator: Value1 = {Value1}, Value15 = {Value15}")]
     public sealed class SyncLatest15Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult> : ReactiveUI.Primitives.Async.Advanced.SyncLatestCoordinatorBase<TResult>
     {
         public SyncLatest15Coordinator(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, ReactiveUI.Primitives.Async.Advanced.SyncLatest15State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> sources, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult> selector) { }
         protected override System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Sources = {Sources}, Selector = {Selector}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest15Signal: Sources = {Sources}, Selector = {Selector}")]
     public sealed class SyncLatest15Signal<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult> : ReactiveUI.Primitives.Async.IObservableAsync<TResult>
     {
         public SyncLatest15Signal(ReactiveUI.Primitives.Async.Advanced.SyncLatest15State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> sources, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult> selector) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<TResult>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source1 = {Source1}, Source15 = {Source15}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest15State: Source1 = {Source1}, Source15 = {Source15}")]
     public readonly record struct SyncLatest15State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : System.IEquatable<ReactiveUI.Primitives.Async.Advanced.SyncLatest15State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>>
     {
         public SyncLatest15State(ReactiveUI.Primitives.Async.IObservableAsync<T1> Source1, ReactiveUI.Primitives.Async.IObservableAsync<T2> Source2, ReactiveUI.Primitives.Async.IObservableAsync<T3> Source3, ReactiveUI.Primitives.Async.IObservableAsync<T4> Source4, ReactiveUI.Primitives.Async.IObservableAsync<T5> Source5, ReactiveUI.Primitives.Async.IObservableAsync<T6> Source6, ReactiveUI.Primitives.Async.IObservableAsync<T7> Source7, ReactiveUI.Primitives.Async.IObservableAsync<T8> Source8, ReactiveUI.Primitives.Async.IObservableAsync<T9> Source9, ReactiveUI.Primitives.Async.IObservableAsync<T10> Source10, ReactiveUI.Primitives.Async.IObservableAsync<T11> Source11, ReactiveUI.Primitives.Async.IObservableAsync<T12> Source12, ReactiveUI.Primitives.Async.IObservableAsync<T13> Source13, ReactiveUI.Primitives.Async.IObservableAsync<T14> Source14, ReactiveUI.Primitives.Async.IObservableAsync<T15> Source15) { }
@@ -1280,19 +1280,19 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public ReactiveUI.Primitives.Async.IObservableAsync<T8> Source8 { get; init; }
         public ReactiveUI.Primitives.Async.IObservableAsync<T9> Source9 { get; init; }
     }
-    [System.Diagnostics.DebuggerDisplay("Value1 = {Value1}, Value16 = {Value16}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest16Coordinator: Value1 = {Value1}, Value16 = {Value16}")]
     public sealed class SyncLatest16Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult> : ReactiveUI.Primitives.Async.Advanced.SyncLatestCoordinatorBase<TResult>
     {
         public SyncLatest16Coordinator(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, ReactiveUI.Primitives.Async.Advanced.SyncLatest16State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> sources, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult> selector) { }
         protected override System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Sources = {Sources}, Selector = {Selector}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest16Signal: Sources = {Sources}, Selector = {Selector}")]
     public sealed class SyncLatest16Signal<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult> : ReactiveUI.Primitives.Async.IObservableAsync<TResult>
     {
         public SyncLatest16Signal(ReactiveUI.Primitives.Async.Advanced.SyncLatest16State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> sources, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult> selector) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<TResult>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source1 = {Source1}, Source16 = {Source16}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest16State: Source1 = {Source1}, Source16 = {Source16}")]
     public readonly record struct SyncLatest16State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> : System.IEquatable<ReactiveUI.Primitives.Async.Advanced.SyncLatest16State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>>
     {
         public SyncLatest16State(ReactiveUI.Primitives.Async.IObservableAsync<T1> Source1, ReactiveUI.Primitives.Async.IObservableAsync<T2> Source2, ReactiveUI.Primitives.Async.IObservableAsync<T3> Source3, ReactiveUI.Primitives.Async.IObservableAsync<T4> Source4, ReactiveUI.Primitives.Async.IObservableAsync<T5> Source5, ReactiveUI.Primitives.Async.IObservableAsync<T6> Source6, ReactiveUI.Primitives.Async.IObservableAsync<T7> Source7, ReactiveUI.Primitives.Async.IObservableAsync<T8> Source8, ReactiveUI.Primitives.Async.IObservableAsync<T9> Source9, ReactiveUI.Primitives.Async.IObservableAsync<T10> Source10, ReactiveUI.Primitives.Async.IObservableAsync<T11> Source11, ReactiveUI.Primitives.Async.IObservableAsync<T12> Source12, ReactiveUI.Primitives.Async.IObservableAsync<T13> Source13, ReactiveUI.Primitives.Async.IObservableAsync<T14> Source14, ReactiveUI.Primitives.Async.IObservableAsync<T15> Source15, ReactiveUI.Primitives.Async.IObservableAsync<T16> Source16) { }
@@ -1313,38 +1313,38 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public ReactiveUI.Primitives.Async.IObservableAsync<T8> Source8 { get; init; }
         public ReactiveUI.Primitives.Async.IObservableAsync<T9> Source9 { get; init; }
     }
-    [System.Diagnostics.DebuggerDisplay("Sources = {Sources}, Selector = {Selector}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest2Coordinator: Sources = {Sources}, Selector = {Selector}")]
     public sealed class SyncLatest2Coordinator<T1, T2, TResult> : ReactiveUI.Primitives.Async.Advanced.SyncLatestCoordinatorBase<TResult>
     {
         public SyncLatest2Coordinator(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, ReactiveUI.Primitives.Async.Advanced.SyncLatest2State<T1, T2> sources, System.Func<T1, T2, TResult> selector) { }
         protected override System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Sources = {Sources}, Selector = {Selector}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest2Signal: Sources = {Sources}, Selector = {Selector}")]
     public sealed class SyncLatest2Signal<T1, T2, TResult> : ReactiveUI.Primitives.Async.IObservableAsync<TResult>
     {
         public SyncLatest2Signal(ReactiveUI.Primitives.Async.Advanced.SyncLatest2State<T1, T2> sources, System.Func<T1, T2, TResult> selector) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<TResult>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source1 = {Source1}, Source2 = {Source2}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest2State: Source1 = {Source1}, Source2 = {Source2}")]
     public readonly record struct SyncLatest2State<T1, T2> : System.IEquatable<ReactiveUI.Primitives.Async.Advanced.SyncLatest2State<T1, T2>>
     {
         public SyncLatest2State(ReactiveUI.Primitives.Async.IObservableAsync<T1> Source1, ReactiveUI.Primitives.Async.IObservableAsync<T2> Source2) { }
         public ReactiveUI.Primitives.Async.IObservableAsync<T1> Source1 { get; init; }
         public ReactiveUI.Primitives.Async.IObservableAsync<T2> Source2 { get; init; }
     }
-    [System.Diagnostics.DebuggerDisplay("Value1 = {Value1}, Value3 = {Value3}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest3Coordinator: Value1 = {Value1}, Value3 = {Value3}")]
     public sealed class SyncLatest3Coordinator<T1, T2, T3, TResult> : ReactiveUI.Primitives.Async.Advanced.SyncLatestCoordinatorBase<TResult>
     {
         public SyncLatest3Coordinator(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, ReactiveUI.Primitives.Async.Advanced.SyncLatest3State<T1, T2, T3> sources, System.Func<T1, T2, T3, TResult> selector) { }
         protected override System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Sources = {Sources}, Selector = {Selector}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest3Signal: Sources = {Sources}, Selector = {Selector}")]
     public sealed class SyncLatest3Signal<T1, T2, T3, TResult> : ReactiveUI.Primitives.Async.IObservableAsync<TResult>
     {
         public SyncLatest3Signal(ReactiveUI.Primitives.Async.Advanced.SyncLatest3State<T1, T2, T3> sources, System.Func<T1, T2, T3, TResult> selector) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<TResult>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source1 = {Source1}, Source2 = {Source2}, Source3 = {Source3}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest3State: Source1 = {Source1}, Source2 = {Source2}, Source3 = {Source3}")]
     public readonly record struct SyncLatest3State<T1, T2, T3> : System.IEquatable<ReactiveUI.Primitives.Async.Advanced.SyncLatest3State<T1, T2, T3>>
     {
         public SyncLatest3State(ReactiveUI.Primitives.Async.IObservableAsync<T1> Source1, ReactiveUI.Primitives.Async.IObservableAsync<T2> Source2, ReactiveUI.Primitives.Async.IObservableAsync<T3> Source3) { }
@@ -1352,19 +1352,19 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public ReactiveUI.Primitives.Async.IObservableAsync<T2> Source2 { get; init; }
         public ReactiveUI.Primitives.Async.IObservableAsync<T3> Source3 { get; init; }
     }
-    [System.Diagnostics.DebuggerDisplay("Value1 = {Value1}, Value4 = {Value4}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest4Coordinator: Value1 = {Value1}, Value4 = {Value4}")]
     public sealed class SyncLatest4Coordinator<T1, T2, T3, T4, TResult> : ReactiveUI.Primitives.Async.Advanced.SyncLatestCoordinatorBase<TResult>
     {
         public SyncLatest4Coordinator(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, ReactiveUI.Primitives.Async.Advanced.SyncLatest4State<T1, T2, T3, T4> sources, System.Func<T1, T2, T3, T4, TResult> selector) { }
         protected override System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Sources = {Sources}, Selector = {Selector}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest4Signal: Sources = {Sources}, Selector = {Selector}")]
     public sealed class SyncLatest4Signal<T1, T2, T3, T4, TResult> : ReactiveUI.Primitives.Async.IObservableAsync<TResult>
     {
         public SyncLatest4Signal(ReactiveUI.Primitives.Async.Advanced.SyncLatest4State<T1, T2, T3, T4> sources, System.Func<T1, T2, T3, T4, TResult> selector) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<TResult>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source1 = {Source1}, Source2 = {Source2}, Source3 = {Source3}, Source4 = {Source4}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest4State: Source1 = {Source1}, Source2 = {Source2}, Source3 = {Source3}, Source4 = {Source4}")]
     public readonly record struct SyncLatest4State<T1, T2, T3, T4> : System.IEquatable<ReactiveUI.Primitives.Async.Advanced.SyncLatest4State<T1, T2, T3, T4>>
     {
         public SyncLatest4State(ReactiveUI.Primitives.Async.IObservableAsync<T1> Source1, ReactiveUI.Primitives.Async.IObservableAsync<T2> Source2, ReactiveUI.Primitives.Async.IObservableAsync<T3> Source3, ReactiveUI.Primitives.Async.IObservableAsync<T4> Source4) { }
@@ -1373,19 +1373,19 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public ReactiveUI.Primitives.Async.IObservableAsync<T3> Source3 { get; init; }
         public ReactiveUI.Primitives.Async.IObservableAsync<T4> Source4 { get; init; }
     }
-    [System.Diagnostics.DebuggerDisplay("Value1 = {Value1}, Value5 = {Value5}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest5Coordinator: Value1 = {Value1}, Value5 = {Value5}")]
     public sealed class SyncLatest5Coordinator<T1, T2, T3, T4, T5, TResult> : ReactiveUI.Primitives.Async.Advanced.SyncLatestCoordinatorBase<TResult>
     {
         public SyncLatest5Coordinator(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, ReactiveUI.Primitives.Async.Advanced.SyncLatest5State<T1, T2, T3, T4, T5> sources, System.Func<T1, T2, T3, T4, T5, TResult> selector) { }
         protected override System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Sources = {Sources}, Selector = {Selector}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest5Signal: Sources = {Sources}, Selector = {Selector}")]
     public sealed class SyncLatest5Signal<T1, T2, T3, T4, T5, TResult> : ReactiveUI.Primitives.Async.IObservableAsync<TResult>
     {
         public SyncLatest5Signal(ReactiveUI.Primitives.Async.Advanced.SyncLatest5State<T1, T2, T3, T4, T5> sources, System.Func<T1, T2, T3, T4, T5, TResult> selector) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<TResult>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source1 = {Source1}, Source5 = {Source5}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest5State: Source1 = {Source1}, Source5 = {Source5}")]
     public readonly record struct SyncLatest5State<T1, T2, T3, T4, T5> : System.IEquatable<ReactiveUI.Primitives.Async.Advanced.SyncLatest5State<T1, T2, T3, T4, T5>>
     {
         public SyncLatest5State(ReactiveUI.Primitives.Async.IObservableAsync<T1> Source1, ReactiveUI.Primitives.Async.IObservableAsync<T2> Source2, ReactiveUI.Primitives.Async.IObservableAsync<T3> Source3, ReactiveUI.Primitives.Async.IObservableAsync<T4> Source4, ReactiveUI.Primitives.Async.IObservableAsync<T5> Source5) { }
@@ -1395,19 +1395,19 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public ReactiveUI.Primitives.Async.IObservableAsync<T4> Source4 { get; init; }
         public ReactiveUI.Primitives.Async.IObservableAsync<T5> Source5 { get; init; }
     }
-    [System.Diagnostics.DebuggerDisplay("Value1 = {Value1}, Value6 = {Value6}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest6Coordinator: Value1 = {Value1}, Value6 = {Value6}")]
     public sealed class SyncLatest6Coordinator<T1, T2, T3, T4, T5, T6, TResult> : ReactiveUI.Primitives.Async.Advanced.SyncLatestCoordinatorBase<TResult>
     {
         public SyncLatest6Coordinator(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, ReactiveUI.Primitives.Async.Advanced.SyncLatest6State<T1, T2, T3, T4, T5, T6> sources, System.Func<T1, T2, T3, T4, T5, T6, TResult> selector) { }
         protected override System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Sources = {Sources}, Selector = {Selector}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest6Signal: Sources = {Sources}, Selector = {Selector}")]
     public sealed class SyncLatest6Signal<T1, T2, T3, T4, T5, T6, TResult> : ReactiveUI.Primitives.Async.IObservableAsync<TResult>
     {
         public SyncLatest6Signal(ReactiveUI.Primitives.Async.Advanced.SyncLatest6State<T1, T2, T3, T4, T5, T6> sources, System.Func<T1, T2, T3, T4, T5, T6, TResult> selector) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<TResult>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source1 = {Source1}, Source6 = {Source6}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest6State: Source1 = {Source1}, Source6 = {Source6}")]
     public readonly record struct SyncLatest6State<T1, T2, T3, T4, T5, T6> : System.IEquatable<ReactiveUI.Primitives.Async.Advanced.SyncLatest6State<T1, T2, T3, T4, T5, T6>>
     {
         public SyncLatest6State(ReactiveUI.Primitives.Async.IObservableAsync<T1> Source1, ReactiveUI.Primitives.Async.IObservableAsync<T2> Source2, ReactiveUI.Primitives.Async.IObservableAsync<T3> Source3, ReactiveUI.Primitives.Async.IObservableAsync<T4> Source4, ReactiveUI.Primitives.Async.IObservableAsync<T5> Source5, ReactiveUI.Primitives.Async.IObservableAsync<T6> Source6) { }
@@ -1418,19 +1418,19 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public ReactiveUI.Primitives.Async.IObservableAsync<T5> Source5 { get; init; }
         public ReactiveUI.Primitives.Async.IObservableAsync<T6> Source6 { get; init; }
     }
-    [System.Diagnostics.DebuggerDisplay("Sources = {Sources}, Selector = {Selector}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest7Coordinator: Sources = {Sources}, Selector = {Selector}")]
     public sealed class SyncLatest7Coordinator<T1, T2, T3, T4, T5, T6, T7, TResult> : ReactiveUI.Primitives.Async.Advanced.SyncLatestCoordinatorBase<TResult>
     {
         public SyncLatest7Coordinator(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, ReactiveUI.Primitives.Async.Advanced.SyncLatest7State<T1, T2, T3, T4, T5, T6, T7> sources, System.Func<T1, T2, T3, T4, T5, T6, T7, TResult> selector) { }
         protected override System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Sources = {Sources}, Selector = {Selector}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest7Signal: Sources = {Sources}, Selector = {Selector}")]
     public sealed class SyncLatest7Signal<T1, T2, T3, T4, T5, T6, T7, TResult> : ReactiveUI.Primitives.Async.IObservableAsync<TResult>
     {
         public SyncLatest7Signal(ReactiveUI.Primitives.Async.Advanced.SyncLatest7State<T1, T2, T3, T4, T5, T6, T7> sources, System.Func<T1, T2, T3, T4, T5, T6, T7, TResult> selector) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<TResult>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source1 = {Source1}, Source7 = {Source7}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest7State: Source1 = {Source1}, Source7 = {Source7}")]
     public readonly record struct SyncLatest7State<T1, T2, T3, T4, T5, T6, T7> : System.IEquatable<ReactiveUI.Primitives.Async.Advanced.SyncLatest7State<T1, T2, T3, T4, T5, T6, T7>>
     {
         public SyncLatest7State(ReactiveUI.Primitives.Async.IObservableAsync<T1> Source1, ReactiveUI.Primitives.Async.IObservableAsync<T2> Source2, ReactiveUI.Primitives.Async.IObservableAsync<T3> Source3, ReactiveUI.Primitives.Async.IObservableAsync<T4> Source4, ReactiveUI.Primitives.Async.IObservableAsync<T5> Source5, ReactiveUI.Primitives.Async.IObservableAsync<T6> Source6, ReactiveUI.Primitives.Async.IObservableAsync<T7> Source7) { }
@@ -1442,19 +1442,19 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public ReactiveUI.Primitives.Async.IObservableAsync<T6> Source6 { get; init; }
         public ReactiveUI.Primitives.Async.IObservableAsync<T7> Source7 { get; init; }
     }
-    [System.Diagnostics.DebuggerDisplay("Sources = {Sources}, Selector = {Selector}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest8Coordinator: Sources = {Sources}, Selector = {Selector}")]
     public sealed class SyncLatest8Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, TResult> : ReactiveUI.Primitives.Async.Advanced.SyncLatestCoordinatorBase<TResult>
     {
         public SyncLatest8Coordinator(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, ReactiveUI.Primitives.Async.Advanced.SyncLatest8State<T1, T2, T3, T4, T5, T6, T7, T8> sources, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, TResult> selector) { }
         protected override System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Sources = {Sources}, Selector = {Selector}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest8Signal: Sources = {Sources}, Selector = {Selector}")]
     public sealed class SyncLatest8Signal<T1, T2, T3, T4, T5, T6, T7, T8, TResult> : ReactiveUI.Primitives.Async.IObservableAsync<TResult>
     {
         public SyncLatest8Signal(ReactiveUI.Primitives.Async.Advanced.SyncLatest8State<T1, T2, T3, T4, T5, T6, T7, T8> sources, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, TResult> selector) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<TResult>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source1 = {Source1}, Source8 = {Source8}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest8State: Source1 = {Source1}, Source8 = {Source8}")]
     public readonly record struct SyncLatest8State<T1, T2, T3, T4, T5, T6, T7, T8> : System.IEquatable<ReactiveUI.Primitives.Async.Advanced.SyncLatest8State<T1, T2, T3, T4, T5, T6, T7, T8>>
     {
         public SyncLatest8State(ReactiveUI.Primitives.Async.IObservableAsync<T1> Source1, ReactiveUI.Primitives.Async.IObservableAsync<T2> Source2, ReactiveUI.Primitives.Async.IObservableAsync<T3> Source3, ReactiveUI.Primitives.Async.IObservableAsync<T4> Source4, ReactiveUI.Primitives.Async.IObservableAsync<T5> Source5, ReactiveUI.Primitives.Async.IObservableAsync<T6> Source6, ReactiveUI.Primitives.Async.IObservableAsync<T7> Source7, ReactiveUI.Primitives.Async.IObservableAsync<T8> Source8) { }
@@ -1467,19 +1467,19 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public ReactiveUI.Primitives.Async.IObservableAsync<T7> Source7 { get; init; }
         public ReactiveUI.Primitives.Async.IObservableAsync<T8> Source8 { get; init; }
     }
-    [System.Diagnostics.DebuggerDisplay("Value1 = {Value1}, Value9 = {Value9}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest9Coordinator: Value1 = {Value1}, Value9 = {Value9}")]
     public sealed class SyncLatest9Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult> : ReactiveUI.Primitives.Async.Advanced.SyncLatestCoordinatorBase<TResult>
     {
         public SyncLatest9Coordinator(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, ReactiveUI.Primitives.Async.Advanced.SyncLatest9State<T1, T2, T3, T4, T5, T6, T7, T8, T9> sources, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult> selector) { }
         protected override System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Sources = {Sources}, Selector = {Selector}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest9Signal: Sources = {Sources}, Selector = {Selector}")]
     public sealed class SyncLatest9Signal<T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult> : ReactiveUI.Primitives.Async.IObservableAsync<TResult>
     {
         public SyncLatest9Signal(ReactiveUI.Primitives.Async.Advanced.SyncLatest9State<T1, T2, T3, T4, T5, T6, T7, T8, T9> sources, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult> selector) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<TResult>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source1 = {Source1}, Source9 = {Source9}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatest9State: Source1 = {Source1}, Source9 = {Source9}")]
     public readonly record struct SyncLatest9State<T1, T2, T3, T4, T5, T6, T7, T8, T9> : System.IEquatable<ReactiveUI.Primitives.Async.Advanced.SyncLatest9State<T1, T2, T3, T4, T5, T6, T7, T8, T9>>
     {
         public SyncLatest9State(ReactiveUI.Primitives.Async.IObservableAsync<T1> Source1, ReactiveUI.Primitives.Async.IObservableAsync<T2> Source2, ReactiveUI.Primitives.Async.IObservableAsync<T3> Source3, ReactiveUI.Primitives.Async.IObservableAsync<T4> Source4, ReactiveUI.Primitives.Async.IObservableAsync<T5> Source5, ReactiveUI.Primitives.Async.IObservableAsync<T6> Source6, ReactiveUI.Primitives.Async.IObservableAsync<T7> Source7, ReactiveUI.Primitives.Async.IObservableAsync<T8> Source8, ReactiveUI.Primitives.Async.IObservableAsync<T9> Source9) { }
@@ -1493,7 +1493,7 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public ReactiveUI.Primitives.Async.IObservableAsync<T8> Source8 { get; init; }
         public ReactiveUI.Primitives.Async.IObservableAsync<T9> Source9 { get; init; }
     }
-    [System.Diagnostics.DebuggerDisplay("SourceCount = {Lifecycle.Subscriptions.Length}, HasDisposed = {Lifecycle.HasDisposed}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatestCoordinatorBase: SourceCount = {Lifecycle.Subscriptions.Length}, HasDisposed = {Lifecycle.HasDisposed}")]
     public abstract class SyncLatestCoordinatorBase<TResult> : System.IAsyncDisposable
     {
         protected SyncLatestCoordinatorBase(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, int sourceCount) { }
@@ -1501,7 +1501,7 @@ namespace ReactiveUI.Primitives.Async.Advanced
         protected abstract System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAtAsync(int index, System.Threading.CancellationToken cancellationToken) { }
         public System.Threading.Tasks.ValueTask SubscribeSourcesAsync(System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Sources = {Sources.Length}, Completed = {_completedCount}, Disposed = {_disposed}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatestEnumerableCoordinator: Sources = {Sources.Length}, Completed = {_completedCount}, Disposed = {_disposed}")]
     public sealed class SyncLatestEnumerableCoordinator<TSource, TResult> : System.IAsyncDisposable
     {
         public SyncLatestEnumerableCoordinator(ReactiveUI.Primitives.Async.IObservableAsync<TSource>[] sources, ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, System.Func<System.Collections.Generic.IReadOnlyList<TSource>, TResult> resultSelector) { }
@@ -1509,13 +1509,13 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public System.Threading.Tasks.ValueTask DisposeAsync() { }
         public System.Threading.Tasks.ValueTask SubscribeSourcesAsync(System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("SourceCount = {Sources.Length}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatestEnumerableSignal: SourceCount = {Sources.Length}")]
     public sealed class SyncLatestEnumerableSignal<TSource, TResult> : ReactiveUI.Primitives.Async.IObservableAsync<TResult>
     {
         public SyncLatestEnumerableSignal(System.Collections.Generic.IEnumerable<ReactiveUI.Primitives.Async.IObservableAsync<TSource>> sources, System.Func<System.Collections.Generic.IReadOnlyList<TSource>, TResult> resultSelector) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<TResult>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Index = {Index}, Parent = {Parent}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatestEnumerableWitness: Index = {Index}, Parent = {Parent}")]
     public sealed class SyncLatestEnumerableWitness<TSource, TResult> : ReactiveUI.Primitives.Async.IObserverAsync<TSource>
     {
         public SyncLatestEnumerableWitness(ReactiveUI.Primitives.Async.Advanced.SyncLatestEnumerableCoordinator<TSource, TResult> parent, int index) { }
@@ -1535,7 +1535,7 @@ namespace ReactiveUI.Primitives.Async.Advanced
         protected override System.Threading.Tasks.ValueTask OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
         protected override System.Threading.Tasks.ValueTask OnNextAsyncCore(TSource value, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("SourceCount = {Subscriptions.Length}, HasDisposed = {HasDisposed}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatestLifecycle: SourceCount = {Subscriptions.Length}, HasDisposed = {HasDisposed}")]
     public sealed class SyncLatestLifecycle<TResult> : System.IAsyncDisposable
     {
         public SyncLatestLifecycle(ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, int sourceCount) { }
@@ -1557,7 +1557,7 @@ namespace ReactiveUI.Primitives.Async.Advanced
         protected override System.Threading.Tasks.ValueTask OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
         protected override System.Threading.Tasks.ValueTask OnNextAsyncCore(TSource value, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Observer = {_observer}, DisposeRequested = {DisposeToken.IsCancellationRequested}")]
+    [System.Diagnostics.DebuggerDisplay("TakeUntilLifecycle: Observer = {_observer}, DisposeRequested = {DisposeToken.IsCancellationRequested}")]
     public sealed class TakeUntilLifecycle<T> : System.IAsyncDisposable
     {
         public TakeUntilLifecycle(ReactiveUI.Primitives.Async.IObserverAsync<T> observer) { }
@@ -1575,7 +1575,7 @@ namespace ReactiveUI.Primitives.Async.Advanced
         protected override System.Threading.Tasks.ValueTask OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
         protected override System.Threading.Tasks.ValueTask OnNextAsyncCore(T value, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("IsCompleted = {_taskSource.Task.IsCompleted}")]
+    [System.Diagnostics.DebuggerDisplay("TaskResultCompletionSource: IsCompleted = {_taskSource.Task.IsCompleted}")]
     public sealed class TaskResultCompletionSource<T>
     {
         public TaskResultCompletionSource(System.Threading.CancellationToken cancellationToken) { }
@@ -1583,19 +1583,19 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public System.Threading.Tasks.ValueTask SetExceptionAndDisposeAsync(System.Exception exception, ReactiveUI.Primitives.Async.Advanced.IReentrantAsyncDisposable owner) { }
         public System.Threading.Tasks.ValueTask SetResultAndDisposeAsync(T value, ReactiveUI.Primitives.Async.Advanced.IReentrantAsyncDisposable owner) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Task = {Task}")]
+    [System.Diagnostics.DebuggerDisplay("TaskResultSignal: Task = {Task}")]
     public sealed class TaskResultSignal<T> : ReactiveUI.Primitives.Async.IObservableAsync<T>
     {
         public TaskResultSignal(System.Threading.Tasks.Task<T> task) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<T>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Task = {Task}")]
+    [System.Diagnostics.DebuggerDisplay("TaskResultSubscription: Task = {Task}")]
     public sealed class TaskResultSubscription<T> : ReactiveUI.Primitives.Async.Advanced.TaskSignalSubscription<T>
     {
         public TaskResultSubscription(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.Tasks.Task<T> task) { }
         protected override System.Threading.Tasks.ValueTask ExecuteAsyncCore(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Completion = {_completion}")]
+    [System.Diagnostics.DebuggerDisplay("TaskResultWitnessAsyncBase: Completion = {_completion}")]
     public abstract class TaskResultWitnessAsyncBase<T, TTaskValue> : ReactiveUI.Primitives.Async.WitnessAsync<T>
     {
         protected TaskResultWitnessAsyncBase(System.Threading.CancellationToken cancellationToken) { }
@@ -1610,7 +1610,7 @@ namespace ReactiveUI.Primitives.Async.Advanced
     {
         public static ReactiveUI.Primitives.Async.Advanced.TaskSignalSubscription<T> StartNew<T>(System.Func<ReactiveUI.Primitives.Async.IObserverAsync<T>, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> executeAsyncCore, ReactiveUI.Primitives.Async.IObserverAsync<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Disposed = {_disposed}, Completed = {_tcs.Task.IsCompleted}")]
+    [System.Diagnostics.DebuggerDisplay("TaskSignalSubscription: Disposed = {_disposed}, Completed = {_tcs.Task.IsCompleted}")]
     public abstract class TaskSignalSubscription<T> : System.IAsyncDisposable
     {
         protected TaskSignalSubscription(ReactiveUI.Primitives.Async.IObserverAsync<T> observer) { }
@@ -1618,25 +1618,25 @@ namespace ReactiveUI.Primitives.Async.Advanced
         protected abstract System.Threading.Tasks.ValueTask ExecuteAsyncCore(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
         public void Start() { }
     }
-    [System.Diagnostics.DebuggerDisplay("DueTime = {DueTime}, Period = {Period}")]
+    [System.Diagnostics.DebuggerDisplay("TimerSignal: DueTime = {DueTime}, Period = {Period}")]
     public sealed class TimerSignal : ReactiveUI.Primitives.Async.IObservableAsync<long>
     {
         public TimerSignal(System.TimeSpan dueTime, System.TimeSpan? period, System.TimeProvider timeProvider) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<System.Int64>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<long> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("DueTime = {DueTime}, Period = {Period}")]
+    [System.Diagnostics.DebuggerDisplay("TimerSubscription: DueTime = {DueTime}, Period = {Period}")]
     public sealed class TimerSubscription : ReactiveUI.Primitives.Async.Advanced.TaskSignalSubscription<long>
     {
         public TimerSubscription(ReactiveUI.Primitives.Async.IObserverAsync<long> observer, System.TimeSpan dueTime, System.TimeSpan? period, System.TimeProvider timeProvider) { }
         protected override System.Threading.Tasks.ValueTask ExecuteAsyncCore(ReactiveUI.Primitives.Async.IObserverAsync<long> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("ResourceFactory = {ResourceFactory}, SignalFactory = {SignalFactory}")]
+    [System.Diagnostics.DebuggerDisplay("UsingSignal: ResourceFactory = {ResourceFactory}, SignalFactory = {SignalFactory}")]
     public sealed class UsingSignal<TResource, T> : ReactiveUI.Primitives.Async.IObservableAsync<T> where TResource : System.IAsyncDisposable
     {
         public UsingSignal(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<TResource>> resourceFactory, System.Func<TResource, ReactiveUI.Primitives.Async.IObservableAsync<T>> signalFactory) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<T>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Resource = {Resource}")]
+    [System.Diagnostics.DebuggerDisplay("UsingWitness: Resource = {Resource}")]
     public sealed class UsingWitness<TResource, T> : ReactiveUI.Primitives.Async.Advanced.ForwardingWitnessAsync<T> where TResource : System.IAsyncDisposable
     {
         public UsingWitness(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, TResource resource) { }
@@ -1661,7 +1661,7 @@ namespace ReactiveUI.Primitives.Async.Disposables
         [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
         public static System.Threading.Tasks.ValueTask SwapAsync(ref System.IAsyncDisposable? slot, System.IAsyncDisposable? value) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Count = {_count}, IsDisposed = {_isDisposed}")]
+    [System.Diagnostics.DebuggerDisplay("MultipleDisposableAsync: Count = {_count}, IsDisposed = {_isDisposed}")]
     public sealed class MultipleDisposableAsync : System.IAsyncDisposable
     {
         public MultipleDisposableAsync() { }
@@ -1678,7 +1678,7 @@ namespace ReactiveUI.Primitives.Async.Disposables
         public System.Collections.Generic.IEnumerator<System.IAsyncDisposable> GetEnumerator() { }
         public System.Threading.Tasks.ValueTask<bool> Remove(System.IAsyncDisposable item) { }
     }
-    [System.Diagnostics.DebuggerDisplay("IsDisposed = {IsDisposed}, Current = {_current}")]
+    [System.Diagnostics.DebuggerDisplay("SingleAssignmentDisposableAsync: IsDisposed = {IsDisposed}, Current = {_current}")]
     public sealed class SingleAssignmentDisposableAsync : System.IAsyncDisposable
     {
         public SingleAssignmentDisposableAsync() { }
@@ -1689,7 +1689,7 @@ namespace ReactiveUI.Primitives.Async.Disposables
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public System.Threading.Tasks.ValueTask SetDisposableAsync(System.IAsyncDisposable? value) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Current = {_current}")]
+    [System.Diagnostics.DebuggerDisplay("SingleReplaceableDisposableAsync: Current = {_current}")]
     public class SingleReplaceableDisposableAsync : System.IAsyncDisposable
     {
         public SingleReplaceableDisposableAsync() { }
@@ -1715,7 +1715,7 @@ namespace ReactiveUI.Primitives.Async.Helpers
 }
 namespace ReactiveUI.Primitives.Async.Signals
 {
-    [System.Diagnostics.DebuggerDisplay("PublishingOption = {PublishingOption}, IsStateless = {IsStateless}")]
+    [System.Diagnostics.DebuggerDisplay("BehaviorSignalCreationOptions: PublishingOption = {PublishingOption}, IsStateless = {IsStateless}")]
     public record BehaviorSignalCreationOptions : System.IEquatable<ReactiveUI.Primitives.Async.Signals.BehaviorSignalCreationOptions>
     {
         public required bool IsStateless { get; init; }
@@ -1731,7 +1731,7 @@ namespace ReactiveUI.Primitives.Async.Signals
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public static System.Threading.Tasks.ValueTask ForwardOnNextConcurrently<T>(System.Collections.Immutable.ImmutableArray<ReactiveUI.Primitives.Async.IObserverAsync<T>> observers, T value, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("LastValue = {_state.LastValue}, IsDisposed = {_state.IsDisposed}")]
+    [System.Diagnostics.DebuggerDisplay("ConcurrentReplayLatestSignalAsync: LastValue = {_state.LastValue}, IsDisposed = {_state.IsDisposed}")]
     public sealed class ConcurrentReplayLatestSignalAsync<T> : ReactiveUI.Primitives.Async.Signals.ISignalAsync<T>
     {
         public ConcurrentReplayLatestSignalAsync(ReactiveUI.Primitives.Optional<T> startValue) { }
@@ -1747,7 +1747,7 @@ namespace ReactiveUI.Primitives.Async.Signals
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Observers = {_state.Observers.Length}, Result = {_state.Result}")]
+    [System.Diagnostics.DebuggerDisplay("ConcurrentSignalAsync: Observers = {_state.Observers.Length}, Result = {_state.Result}")]
     public sealed class ConcurrentSignalAsync<T> : ReactiveUI.Primitives.Async.Signals.ISignalAsync<T>
     {
         public ConcurrentSignalAsync() { }
@@ -1763,7 +1763,7 @@ namespace ReactiveUI.Primitives.Async.Signals
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Value = {_state.Value}, IsDisposed = {_state.IsDisposed}")]
+    [System.Diagnostics.DebuggerDisplay("ConcurrentStatelessReplayLatestSignalAsync: Value = {_state.Value}, IsDisposed = {_state.IsDisposed}")]
     public sealed class ConcurrentStatelessReplayLatestSignalAsync<T> : ReactiveUI.Primitives.Async.Signals.ISignalAsync<T>
     {
         public ConcurrentStatelessReplayLatestSignalAsync(ReactiveUI.Primitives.Optional<T> startValue) { }
@@ -1779,7 +1779,7 @@ namespace ReactiveUI.Primitives.Async.Signals
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Observers = {_state.Observers.Length}")]
+    [System.Diagnostics.DebuggerDisplay("ConcurrentStatelessSignalAsync: Observers = {_state.Observers.Length}")]
     public sealed class ConcurrentStatelessSignalAsync<T> : ReactiveUI.Primitives.Async.Signals.ISignalAsync<T>
     {
         public ConcurrentStatelessSignalAsync() { }
@@ -1804,14 +1804,14 @@ namespace ReactiveUI.Primitives.Async.Signals
         Serial = 0,
         Concurrent = 1,
     }
-    [System.Diagnostics.DebuggerDisplay("PublishingOption = {PublishingOption}, IsStateless = {IsStateless}")]
+    [System.Diagnostics.DebuggerDisplay("ReplayLatestSignalCreationOptions: PublishingOption = {PublishingOption}, IsStateless = {IsStateless}")]
     public record ReplayLatestSignalCreationOptions : System.IEquatable<ReactiveUI.Primitives.Async.Signals.ReplayLatestSignalCreationOptions>
     {
         public required bool IsStateless { get; init; }
         public required ReactiveUI.Primitives.Async.Signals.PublishingOption PublishingOption { get; init; }
         public static ReactiveUI.Primitives.Async.Signals.ReplayLatestSignalCreationOptions Default { get; }
     }
-    [System.Diagnostics.DebuggerDisplay("LastValue = {_state.LastValue}, IsDisposed = {_state.IsDisposed}")]
+    [System.Diagnostics.DebuggerDisplay("SerialReplayLatestSignalAsync: LastValue = {_state.LastValue}, IsDisposed = {_state.IsDisposed}")]
     public sealed class SerialReplayLatestSignalAsync<T> : ReactiveUI.Primitives.Async.Signals.ISignalAsync<T>
     {
         public SerialReplayLatestSignalAsync(ReactiveUI.Primitives.Optional<T> startValue) { }
@@ -1827,7 +1827,7 @@ namespace ReactiveUI.Primitives.Async.Signals
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Observers = {_state.Observers.Length}, Result = {_state.Result}")]
+    [System.Diagnostics.DebuggerDisplay("SerialSignalAsync: Observers = {_state.Observers.Length}, Result = {_state.Result}")]
     public sealed class SerialSignalAsync<T> : ReactiveUI.Primitives.Async.Signals.ISignalAsync<T>
     {
         public SerialSignalAsync() { }
@@ -1843,7 +1843,7 @@ namespace ReactiveUI.Primitives.Async.Signals
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("State = {_state}")]
+    [System.Diagnostics.DebuggerDisplay("SerialStatelessReplayLatestSignalAsync: State = {_state}")]
     public sealed class SerialStatelessReplayLatestSignalAsync<T> : ReactiveUI.Primitives.Async.Signals.ISignalAsync<T>
     {
         public SerialStatelessReplayLatestSignalAsync(ReactiveUI.Primitives.Optional<T> startValue) { }
@@ -1859,7 +1859,7 @@ namespace ReactiveUI.Primitives.Async.Signals
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Observers = {_state.Observers.Length}")]
+    [System.Diagnostics.DebuggerDisplay("SerialStatelessSignalAsync: Observers = {_state.Observers.Length}")]
     public sealed class SerialStatelessSignalAsync<T> : ReactiveUI.Primitives.Async.Signals.ISignalAsync<T>
     {
         public SerialStatelessSignalAsync() { }
@@ -1887,7 +1887,7 @@ namespace ReactiveUI.Primitives.Async.Signals
         public static ReactiveUI.Primitives.Async.Signals.ISignalAsync<T> CreateReplayLatest<T>() { }
         public static ReactiveUI.Primitives.Async.Signals.ISignalAsync<T> CreateReplayLatest<T>(ReactiveUI.Primitives.Async.Signals.ReplayLatestSignalCreationOptions? options) { }
     }
-    [System.Diagnostics.DebuggerDisplay("PublishingOption = {PublishingOption}, IsStateless = {IsStateless}")]
+    [System.Diagnostics.DebuggerDisplay("SignalCreationOptions: PublishingOption = {PublishingOption}, IsStateless = {IsStateless}")]
     public record SignalCreationOptions : System.IEquatable<ReactiveUI.Primitives.Async.Signals.SignalCreationOptions>
     {
         public required bool IsStateless { get; init; }

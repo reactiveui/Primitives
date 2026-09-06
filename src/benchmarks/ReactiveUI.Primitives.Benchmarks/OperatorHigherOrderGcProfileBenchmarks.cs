@@ -16,7 +16,7 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [ShortRunJob]
 [MemoryDiagnoser]
 [EventPipeProfiler(EventPipeProfile.GcVerbose)]
-[System.Diagnostics.DebuggerDisplay("Delegate = {_b}")]
+[System.Diagnostics.DebuggerDisplay("OperatorHigherOrderGcProfileBenchmarks: Delegate = {_b}")]
 public class OperatorHigherOrderGcProfileBenchmarks
 {
     /// <summary>The delegate benchmark instance that performs the measured work.</summary>

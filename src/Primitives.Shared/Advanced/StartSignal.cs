@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Advanced;
 #endif
 
 /// <summary>Runs an action on a scheduler and emits an <see cref="RxVoid"/> value when it completes.</summary>
-[System.Diagnostics.DebuggerDisplay("Action = {Action}, Scheduler = {Scheduler}")]
+[System.Diagnostics.DebuggerDisplay("StartSignal: Action = {Action}, Scheduler = {Scheduler}")]
 public sealed class StartSignal : IRequireCurrentThread<RxVoid>
 {
     /// <summary>Initializes a new instance of the <see cref="StartSignal"/> class.</summary>

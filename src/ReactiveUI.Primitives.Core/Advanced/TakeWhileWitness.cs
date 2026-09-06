@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="T">The value type.</typeparam>
 /// <param name="observer">The downstream observer.</param>
 /// <param name="predicate">The predicate that determines whether to keep taking values.</param>
-[System.Diagnostics.DebuggerDisplay("Completed = {_completed}, Subscription = {_subscription}")]
+[System.Diagnostics.DebuggerDisplay("TakeWhileWitness: Completed = {_completed}, Subscription = {_subscription}")]
 public sealed class TakeWhileWitness<T>(IObserver<T> observer, Func<T, bool> predicate) : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>

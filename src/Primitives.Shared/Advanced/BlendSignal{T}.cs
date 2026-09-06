@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Merges inner observable sources from an outer observable concurrently.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Sources = {Sources}")]
+[System.Diagnostics.DebuggerDisplay("BlendSignal: Sources = {Sources}")]
 public sealed class BlendSignal<T> : IObservable<T>
 {
     /// <summary>Initializes a new instance of the <see cref="BlendSignal{T}"/> class.</summary>

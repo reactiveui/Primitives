@@ -13,7 +13,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="TResult">The projected value type.</typeparam>
 /// <param name="observer">The downstream observer.</param>
 /// <param name="selector">The indexed selector.</param>
-[System.Diagnostics.DebuggerDisplay("Index = {_index}, Stopped = {_stopped}")]
+[System.Diagnostics.DebuggerDisplay("MapIndexedWitness: Index = {_index}, Stopped = {_stopped}")]
 public sealed class MapIndexedWitness<TSource, TResult>(IObserver<TResult> observer, Func<TSource, int, TResult> selector) : IObserver<TSource>
 {
     /// <summary>The downstream observer.</summary>

@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Cold task-backed signal that forwards an external cancellation token as an observer error.</summary>
 /// <typeparam name="T">The task result type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("CancellationRequested = {CancellationToken.IsCancellationRequested}")]
+[System.Diagnostics.DebuggerDisplay("FromAsyncExternalCancellationSignal: CancellationRequested = {CancellationToken.IsCancellationRequested}")]
 public sealed class FromAsyncExternalCancellationSignal<T> : IObservable<T>
 {
     /// <summary>Initializes a new instance of the <see cref="FromAsyncExternalCancellationSignal{T}"/> class.</summary>

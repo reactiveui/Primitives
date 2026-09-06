@@ -17,7 +17,7 @@ namespace ReactiveUI.Primitives.Async;
 /// be useful for sharing a single subscription among multiple observers or for deferring the start of data emission
 /// until explicitly connected. Implementations may vary in how connections are managed and whether multiple connections
 /// are supported concurrently.</remarks>
-[System.Diagnostics.DebuggerDisplay("State = {State}")]
+[System.Diagnostics.DebuggerDisplay("ConnectableSignalAsync: State = {State}")]
 public sealed class ConnectableSignalAsync<T> : IObservableAsync<T>, IDisposable
 {
     /// <summary>Initializes a new instance of the <see cref="ConnectableSignalAsync{T}"/> class.</summary>

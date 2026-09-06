@@ -6,7 +6,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>An observable that emits the result of a task for each subscription.</summary>
 /// <typeparam name="T">The task result type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Task = {Task}")]
+[System.Diagnostics.DebuggerDisplay("TaskResultSignal: Task = {Task}")]
 public sealed class TaskResultSignal<T> : IObservableAsync<T>
 {
     /// <summary>Initializes a new instance of the <see cref="TaskResultSignal{T}"/> class.</summary>

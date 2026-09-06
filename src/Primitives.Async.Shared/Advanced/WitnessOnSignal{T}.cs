@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>Switches source notifications onto an async context before forwarding them downstream.</summary>
 /// <typeparam name="T">The source element type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Source = {Source}, ForceYielding = {ForceYielding}")]
+[System.Diagnostics.DebuggerDisplay("WitnessOnSignal: Source = {Source}, ForceYielding = {ForceYielding}")]
 public sealed class WitnessOnSignal<T> : IObservableAsync<T>
 {
     /// <summary>Initializes a new instance of the <see cref="WitnessOnSignal{T}"/> class.</summary>

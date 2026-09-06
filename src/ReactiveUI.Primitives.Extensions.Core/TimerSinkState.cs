@@ -22,7 +22,7 @@ namespace ReactiveUI.Primitives.Extensions;
         "The timer's lifetime is owned by the parent operator sink, which releases it under its own gate through "
         + "HandleErrorLocked/HandleCompletedLocked/HandleDisposeLocked. This state object is deliberately not independently "
         + "IDisposable: adding IDisposable would expose an ungated disposal path that races the sink's gate.")]
-[System.Diagnostics.DebuggerDisplay("Done = {Done}, Timer = {Timer}")]
+[System.Diagnostics.DebuggerDisplay("TimerSinkState: Done = {Done}, Timer = {Timer}")]
 public sealed class TimerSinkState<T>(IObserver<T> downstream)
 {
     /// <summary>Gets the timer slot used by the operator's OnNext logic to schedule deferred emissions.</summary>

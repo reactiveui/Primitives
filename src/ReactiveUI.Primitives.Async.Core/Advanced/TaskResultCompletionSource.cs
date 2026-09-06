@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// <summary>Coordinates task completion for terminal observers and disposes the owning subscription when complete.</summary>
 /// <typeparam name="T">The result value type.</typeparam>
 /// <param name="cancellationToken">The cancellation token that can cancel the pending result.</param>
-[System.Diagnostics.DebuggerDisplay("IsCompleted = {_taskSource.Task.IsCompleted}")]
+[System.Diagnostics.DebuggerDisplay("TaskResultCompletionSource: IsCompleted = {_taskSource.Task.IsCompleted}")]
 public sealed class TaskResultCompletionSource<T>(CancellationToken cancellationToken)
 {
     /// <summary>The task completion source used to publish the terminal result.</summary>

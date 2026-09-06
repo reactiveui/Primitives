@@ -13,7 +13,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="TResult">The result value type.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="selector">The enumerable projection.</param>
-[System.Diagnostics.DebuggerDisplay("Source = {_source}")]
+[System.Diagnostics.DebuggerDisplay("SelectManyEnumerableSignal: Source = {_source}")]
 public sealed class SelectManyEnumerableSignal<TSource, TResult>(IObservable<TSource> source, Func<TSource, IEnumerable<TResult>> selector) : IObservable<TResult>
 {
     /// <summary>The source observable.</summary>

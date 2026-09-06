@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Cold task-backed signal that gives each subscription its own cancellable token.</summary>
 /// <typeparam name="T">The task result type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("TaskFactory = {TaskFactory}, CanBeCanceled = {CancellationToken.CanBeCanceled}")]
+[System.Diagnostics.DebuggerDisplay("FromAsyncSignal: TaskFactory = {TaskFactory}, CanBeCanceled = {CancellationToken.CanBeCanceled}")]
 public sealed class FromAsyncSignal<T> : IObservable<T>
 {
     /// <summary>Initializes a new instance of the <see cref="FromAsyncSignal{T}"/> class.</summary>

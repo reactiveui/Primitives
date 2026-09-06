@@ -17,7 +17,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// Fuses the projection into the switch: one object and one observer hop, where a projection followed by a
 /// separate switch costs two of each and an intermediate sequence of observables.
 /// </remarks>
-[System.Diagnostics.DebuggerDisplay("Source = {_source}, SkipNullSources = {_skipNullSources}")]
+[System.Diagnostics.DebuggerDisplay("SwitchMapSignal: Source = {_source}, SkipNullSources = {_skipNullSources}")]
 public sealed class SwitchMapSignal<TSource, TResult> : IObservable<TResult>
 {
     /// <summary>The source whose values are projected to inner observables.</summary>

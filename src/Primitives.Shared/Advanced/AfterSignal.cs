@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Advanced;
 #endif
 
 /// <summary>Emits timer ticks for the <c>After</c> factory overloads.</summary>
-[System.Diagnostics.DebuggerDisplay("DueTime = {_dueTime}, Period = {_period}")]
+[System.Diagnostics.DebuggerDisplay("AfterSignal: DueTime = {_dueTime}, Period = {_period}")]
 public sealed class AfterSignal : IRequireCurrentThread<long>
 {
     /// <summary>The delay before the single tick.</summary>

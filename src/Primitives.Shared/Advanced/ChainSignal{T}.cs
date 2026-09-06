@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <summary>Concatenates observable sources in source order.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 [System.Diagnostics.DebuggerDisplay(
-    "Sources = {Sources}, EnumerableSources = {EnumerableSources}, First = {First}, Second = {Second}")]
+"ChainSignal: Sources = {Sources}, EnumerableSources = {EnumerableSources}, First = {First}, Second = {Second}")]
 public sealed class ChainSignal<T> : IObservable<T>
 {
     /// <summary>Initializes a new instance of the <see cref="ChainSignal{T}"/> class from an outer observable.</summary>

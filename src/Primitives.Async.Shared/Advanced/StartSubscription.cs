@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 #endif
 
 /// <summary>Runs an action and forwards the signal notification for one subscription.</summary>
-[System.Diagnostics.DebuggerDisplay("Action = {Action}, TaskScheduler = {TaskScheduler}")]
+[System.Diagnostics.DebuggerDisplay("StartSubscription: Action = {Action}, TaskScheduler = {TaskScheduler}")]
 public sealed class StartSubscription : TaskSignalSubscription<RxVoid>
 {
     /// <summary>Initializes a new instance of the <see cref="StartSubscription"/> class.</summary>

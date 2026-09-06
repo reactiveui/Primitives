@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Signals;
 
 /// <summary>Copy-on-write observer broadcaster optimized for zero-allocation single-subscriber delivery.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Observers = {_observers}")]
+[System.Diagnostics.DebuggerDisplay("Broadcaster: Observers = {_observers}")]
 public struct Broadcaster<T> : IEquatable<Broadcaster<T>>
 {
     /// <summary>The starting value the observer hashes are folded into.</summary>

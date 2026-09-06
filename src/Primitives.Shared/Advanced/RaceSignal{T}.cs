@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Mirrors the first source that produces any notification.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Sources = {Sources}, EnumerableSources = {EnumerableSources}")]
+[System.Diagnostics.DebuggerDisplay("RaceSignal: Sources = {Sources}, EnumerableSources = {EnumerableSources}")]
 public sealed class RaceSignal<T> : IObservable<T>
 {
     /// <summary>Initializes a new instance of the <see cref="RaceSignal{T}"/> class from an outer observable.</summary>

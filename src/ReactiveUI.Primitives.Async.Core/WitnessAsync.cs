@@ -16,7 +16,7 @@ namespace ReactiveUI.Primitives.Async;
 /// handling new data, errors, and completion signals, and supports proper resource cleanup via asynchronous disposal.
 /// Instances are not thread-safe for concurrent notification handling; notifications are processed sequentially, and
 /// reentrant calls are detected and reported as unhandled exceptions.</remarks>
-[System.Diagnostics.DebuggerDisplay("Disposed = {_disposed}, CallState = {_callState}")]
+[System.Diagnostics.DebuggerDisplay("WitnessAsync: Disposed = {_disposed}, CallState = {_callState}")]
 public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDisposable
 {
     /// <summary>Lazily-created CTS that signals disposal to in-flight operations. Stays

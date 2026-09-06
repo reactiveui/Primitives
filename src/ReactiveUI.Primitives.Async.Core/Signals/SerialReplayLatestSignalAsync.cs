@@ -17,7 +17,7 @@ namespace ReactiveUI.Primitives.Async.Signals;
 /// notifications. All observer notifications are performed asynchronously and in a serial order, ensuring thread
 /// safety. This type is suitable for use cases where replaying only the latest value is desired, such as event streams
 /// or state broadcasts.</remarks>
-[System.Diagnostics.DebuggerDisplay("LastValue = {_state.LastValue}, IsDisposed = {_state.IsDisposed}")]
+[System.Diagnostics.DebuggerDisplay("SerialReplayLatestSignalAsync: LastValue = {_state.LastValue}, IsDisposed = {_state.IsDisposed}")]
 public sealed class SerialReplayLatestSignalAsync<T>(Optional<T> startValue) : ISignalAsync<T>
 {
     /// <inheritdoc/>

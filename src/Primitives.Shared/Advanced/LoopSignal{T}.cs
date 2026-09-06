@@ -12,7 +12,8 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Represents an infinite repetition signal.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-internal sealed class LoopSignal<T> : IRequireCurrentThread<T>
+[System.Diagnostics.DebuggerDisplay("LoopSignal: Value = {Value}")]
+public sealed class LoopSignal<T> : IRequireCurrentThread<T>
 {
     /// <summary>Whether subscription must run on the current thread.</summary>
     private readonly bool _currentThreadRequired;

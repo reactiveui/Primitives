@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// <summary>Async observable that combines latest values from an enumerable of sources and projects through a selector.</summary>
 /// <typeparam name="TSource">The source element type.</typeparam>
 /// <typeparam name="TResult">The projected result type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("SourceCount = {Sources.Length}")]
+[System.Diagnostics.DebuggerDisplay("SyncLatestEnumerableSignal: SourceCount = {Sources.Length}")]
 public sealed class SyncLatestEnumerableSignal<TSource, TResult> : IObservableAsync<TResult>
 {
     /// <summary>Initializes a new instance of the <see cref="SyncLatestEnumerableSignal{TSource, TResult}"/> class.</summary>

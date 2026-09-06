@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Async.Signals;
 /// <remarks>Observers are notified one at a time in the order they are registered. Each observer receives the
 /// event only after the previous observer has completed processing. This class is suitable for scenarios where event
 /// delivery order and sequential processing are required. Thread safety and ordering are managed internally.</remarks>
-[System.Diagnostics.DebuggerDisplay("Observers = {_state.Observers.Length}")]
+[System.Diagnostics.DebuggerDisplay("SerialStatelessSignalAsync: Observers = {_state.Observers.Length}")]
 public sealed class SerialStatelessSignalAsync<T> : ISignalAsync<T>
 {
     /// <inheritdoc/>

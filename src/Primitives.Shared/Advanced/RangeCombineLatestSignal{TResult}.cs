@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Combines two synchronous integer ranges using System.Reactive <c>CombineLatest</c> semantics.</summary>
 /// <typeparam name="TResult">The result value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Left = {Left}, Right = {Right}")]
+[System.Diagnostics.DebuggerDisplay("RangeCombineLatestSignal: Left = {Left}, Right = {Right}")]
 public sealed class RangeCombineLatestSignal<TResult> : IObservable<TResult>
 {
     /// <summary>Initializes a new instance of the <see cref="RangeCombineLatestSignal{TResult}"/> class.</summary>

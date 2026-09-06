@@ -12,7 +12,8 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Represents the EmptySignal class.</summary>
 /// <typeparam name="T">The T type.</typeparam>
-internal sealed class EmptySignal<T> : IRequireCurrentThread<T>
+[System.Diagnostics.DebuggerDisplay("EmptySignal: Scheduler = {_scheduler}")]
+public sealed class EmptySignal<T> : IRequireCurrentThread<T>
 {
     /// <summary>Stores state for the signal implementation.</summary>
     private readonly ISequencer _scheduler;

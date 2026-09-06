@@ -16,7 +16,7 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [ShortRunJob]
 [MemoryDiagnoser]
 [EventPipeProfiler(EventPipeProfile.GcVerbose)]
-[System.Diagnostics.DebuggerDisplay("{nameof(OperatorCoreGcProfileBenchmarks),nq}")]
+[System.Diagnostics.DebuggerDisplay("OperatorCoreGcProfileBenchmarks: {nameof(OperatorCoreGcProfileBenchmarks),nq}")]
 public class OperatorCoreGcProfileBenchmarks
 {
     /// <summary>The delegate target for the map/keep and aggregate scenarios.</summary>

@@ -8,7 +8,7 @@ namespace ReactiveUI.Primitives.Reactive.Concurrency;
 
 /// <summary>Windows Forms scheduler that coalesces scheduled work through a UI control.</summary>
 /// <seealso cref="System.Reactive.Concurrency.IScheduler" />
-[System.Diagnostics.DebuggerDisplay("Control = {Control}")]
+[System.Diagnostics.DebuggerDisplay("ControlSequencer: Control = {Control}")]
 public sealed class ControlSequencer : CoalescingDispatchScheduler
 {
     /// <summary>Initializes a new instance of the <see cref="ControlSequencer"/> class.</summary>

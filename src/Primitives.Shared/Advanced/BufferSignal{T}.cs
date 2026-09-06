@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Concrete signal for time-windowed buffer operators.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Window = {Window}, Source = {Source}")]
+[System.Diagnostics.DebuggerDisplay("BufferSignal: Window = {Window}, Source = {Source}")]
 public sealed class BufferSignal<T> : IObservable<IList<T>>
 {
     /// <summary>Initializes a new instance of the <see cref="BufferSignal{T}"/> class.</summary>

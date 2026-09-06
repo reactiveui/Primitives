@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Reference-counted subscription handle.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Owner = {_owner}, Subscription = {Subscription}")]
+[System.Diagnostics.DebuggerDisplay("AutoShareSubscription: Owner = {_owner}, Subscription = {Subscription}")]
 public sealed class AutoShareSubscription<T> : IDisposable
 {
     /// <summary>The owning gate; nulled once on dispose.</summary>

@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Observer that forwards notifications to delegates.</summary>
 /// <typeparam name="T">The observed value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("OnNext = {_onNext}, OnError = {_onError}, OnCompleted = {_onCompleted}")]
+[System.Diagnostics.DebuggerDisplay("CallbackWitness: OnNext = {_onNext}, OnError = {_onError}, OnCompleted = {_onCompleted}")]
 public sealed class CallbackWitness<T> : IObserver<T>
 {
     /// <summary>Next notification callback.</summary>

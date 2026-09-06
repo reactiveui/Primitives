@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Delegate-backed observer that defaults missing handlers to no-op behavior.</summary>
 /// <typeparam name="T">The observed value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("OnNext = {_onNext}, OnError = {_onError}, OnCompleted = {_onCompleted}")]
+[System.Diagnostics.DebuggerDisplay("EmptyWitness: OnNext = {_onNext}, OnError = {_onError}, OnCompleted = {_onCompleted}")]
 public sealed class EmptyWitness<T> : IObserver<T>
 {
     /// <summary>Gets the shared no-op witness instance.</summary>

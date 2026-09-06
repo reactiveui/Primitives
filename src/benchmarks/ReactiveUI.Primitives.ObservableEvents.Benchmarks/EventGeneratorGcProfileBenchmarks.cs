@@ -27,7 +27,7 @@ namespace ReactiveUI.Primitives.ObservableEvents.Benchmarks;
 /// </remarks>
 [ShortRunJob]
 [EventPipeProfiler(EventPipeProfile.GcVerbose)]
-[System.Diagnostics.DebuggerDisplay("{nameof(EventGeneratorGcProfileBenchmarks),nq}")]
+[System.Diagnostics.DebuggerDisplay("EventGeneratorGcProfileBenchmarks: {nameof(EventGeneratorGcProfileBenchmarks),nq}")]
 public class EventGeneratorGcProfileBenchmarks
 {
     /// <summary>The corpus size profiled here.</summary>

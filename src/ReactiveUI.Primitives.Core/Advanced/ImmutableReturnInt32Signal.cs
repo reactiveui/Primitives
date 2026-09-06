@@ -8,7 +8,7 @@ using ReactiveUI.Primitives.Disposables;
 namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Represents the ImmutableReturnInt32Signal class.</summary>
-[System.Diagnostics.DebuggerDisplay("Value = {_x}")]
+[System.Diagnostics.DebuggerDisplay("ImmutableReturnInt32Signal: Value = {_x}")]
 public sealed class ImmutableReturnInt32Signal : IRequireCurrentThread<int>, IInlineSignal<int>
 {
     /// <summary>Stores state for the signal implementation.</summary>

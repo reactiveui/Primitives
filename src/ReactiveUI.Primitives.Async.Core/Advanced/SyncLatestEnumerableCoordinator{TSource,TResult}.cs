@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// <summary>Coordinates subscriptions and projected snapshot emission for enumerable <c>SyncLatest</c> sources.</summary>
 /// <typeparam name="TSource">The source element type.</typeparam>
 /// <typeparam name="TResult">The projected result type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Sources = {Sources.Length}, Completed = {_completedCount}, Disposed = {_disposed}")]
+[System.Diagnostics.DebuggerDisplay("SyncLatestEnumerableCoordinator: Sources = {Sources.Length}, Completed = {_completedCount}, Disposed = {_disposed}")]
 public sealed class SyncLatestEnumerableCoordinator<TSource, TResult> : IAsyncDisposable
 {
     /// <summary>Synchronization gate.</summary>

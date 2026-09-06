@@ -16,7 +16,7 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [ShortRunJob]
 [MemoryDiagnoser]
 [EventPipeProfiler(EventPipeProfile.GcVerbose)]
-[System.Diagnostics.DebuggerDisplay("{nameof(SubjectGcProfileBenchmarks),nq}")]
+[System.Diagnostics.DebuggerDisplay("SubjectGcProfileBenchmarks: {nameof(SubjectGcProfileBenchmarks),nq}")]
 public class SubjectGcProfileBenchmarks
 {
     /// <summary>The delegate target for the subject throughput scenarios.</summary>

@@ -6,7 +6,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>An observer that logs resumable errors before forwarding them downstream.</summary>
 /// <typeparam name="T">The element type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Downstream = {Downstream}, Logger = {Logger}")]
+[System.Diagnostics.DebuggerDisplay("LogErrorsWitness: Downstream = {Downstream}, Logger = {Logger}")]
 public sealed class LogErrorsWitness<T> : WitnessAsync<T>
 {
     /// <summary>Initializes a new instance of the <see cref="LogErrorsWitness{T}"/> class.</summary>

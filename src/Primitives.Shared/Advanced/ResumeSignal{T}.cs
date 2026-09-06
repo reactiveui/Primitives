@@ -18,7 +18,8 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="T">The value type.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="fallback">The fallback observable subscribed to after the source errors.</param>
-internal sealed class ResumeSignal<T>(IObservable<T> source, IObservable<T> fallback) : IRequireCurrentThread<T>
+[System.Diagnostics.DebuggerDisplay("ResumeSignal: Source = {_source}, Fallback = {_fallback}")]
+public sealed class ResumeSignal<T>(IObservable<T> source, IObservable<T> fallback) : IRequireCurrentThread<T>
 {
     /// <summary>The source observable.</summary>
     private readonly IObservable<T> _source = source;

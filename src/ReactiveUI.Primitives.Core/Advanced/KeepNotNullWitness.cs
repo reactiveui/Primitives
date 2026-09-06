@@ -8,7 +8,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Sink that forwards only non-null values.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Observer = {_observer}, Subscription = {_subscription}")]
+[System.Diagnostics.DebuggerDisplay("KeepNotNullWitness: Observer = {_observer}, Subscription = {_subscription}")]
 public sealed class KeepNotNullWitness<T> : IObserver<T?>, IDisposable
     where T : class
 {

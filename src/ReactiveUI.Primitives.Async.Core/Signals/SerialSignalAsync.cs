@@ -14,7 +14,7 @@ namespace ReactiveUI.Primitives.Async.Signals;
 /// <remarks>SerialSignalAsync{T} is designed for scenarios where observers must be notified sequentially rather
 /// than concurrently. This can be useful when observer operations are not thread-safe or when order of notification is
 /// important. Notifications to observers are performed asynchronously and in sequence.</remarks>
-[System.Diagnostics.DebuggerDisplay("Observers = {_state.Observers.Length}, Result = {_state.Result}")]
+[System.Diagnostics.DebuggerDisplay("SerialSignalAsync: Observers = {_state.Observers.Length}, Result = {_state.Result}")]
 public sealed class SerialSignalAsync<T> : ISignalAsync<T>
 {
     /// <inheritdoc/>

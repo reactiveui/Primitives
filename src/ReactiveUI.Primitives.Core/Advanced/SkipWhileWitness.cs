@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="T">The value type.</typeparam>
 /// <param name="observer">The downstream observer.</param>
 /// <param name="predicate">The predicate that determines whether to keep skipping values.</param>
-[System.Diagnostics.DebuggerDisplay("Skipping = {_skipping}, Subscription = {_subscription}")]
+[System.Diagnostics.DebuggerDisplay("SkipWhileWitness: Skipping = {_skipping}, Subscription = {_subscription}")]
 public sealed class SkipWhileWitness<T>(IObserver<T> observer, Func<T, bool> predicate) : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>

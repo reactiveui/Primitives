@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <param name="observer">The downstream observer.</param>
 /// <param name="keySelector">The key projection.</param>
 /// <param name="comparer">The comparer used to compare adjacent keys.</param>
-[System.Diagnostics.DebuggerDisplay("HasLast = {_hasLast}, Last = {_last}")]
+[System.Diagnostics.DebuggerDisplay("UniqueByWitness: HasLast = {_hasLast}, Last = {_last}")]
 public sealed class UniqueByWitness<T, TKey>(
     IObserver<T> observer,
     Func<T, TKey> keySelector,

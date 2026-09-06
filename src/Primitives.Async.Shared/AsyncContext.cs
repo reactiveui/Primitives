@@ -22,7 +22,7 @@ namespace ReactiveUI.Primitives.Async;
 /// SynchronizationContext, TaskScheduler, or ISequencer. The Default context represents the absence of a specific
 /// synchronization or scheduling context, and typically corresponds to the default task scheduler.</remarks>
 [System.Diagnostics.DebuggerDisplay(
-    "SynchronizationContext = {SynchronizationContext}, TaskScheduler = {TaskScheduler}, Sequencer = {Sequencer}")]
+"AsyncContext: SynchronizationContext = {SynchronizationContext}, TaskScheduler = {TaskScheduler}, Sequencer = {Sequencer}")]
 public sealed record AsyncContext
 {
     /// <summary>Initializes a new instance of the <see cref="AsyncContext"/> class.</summary>
@@ -131,7 +131,7 @@ public sealed record AsyncContext
     /// continuation is scheduled, the continuation is invoked immediately and an OperationCanceledException will be
     /// thrown when GetResult is called. This type is intended for advanced scenarios where precise control over
     /// asynchronous context switching is required.</remarks>
-    [System.Diagnostics.DebuggerDisplay("IsCompleted = {IsCompleted}, ForceYielding = {ForceYielding}")]
+    [System.Diagnostics.DebuggerDisplay("AsyncContextSwitcherAwaitable: IsCompleted = {IsCompleted}, ForceYielding = {ForceYielding}")]
     public readonly record struct AsyncContextSwitcherAwaitable(
         AsyncContext AsyncContext,
         bool ForceYielding,

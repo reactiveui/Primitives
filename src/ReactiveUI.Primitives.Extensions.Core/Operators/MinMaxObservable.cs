@@ -17,7 +17,7 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <typeparam name="T">The value type.</typeparam>
 /// <param name="sources">The source observables.</param>
 /// <param name="emitMaximum"><c>true</c> to emit the maximum; <c>false</c> to emit the minimum.</param>
-[System.Diagnostics.DebuggerDisplay("Sources = {_sourceList.Count}")]
+[System.Diagnostics.DebuggerDisplay("MinMaxObservable: Sources = {_sourceList.Count}")]
 public sealed class MinMaxObservable<T>(IReadOnlyList<IObservable<T>> sources, bool emitMaximum) : IObservable<T>
     where T : struct, IComparable<T>
 {

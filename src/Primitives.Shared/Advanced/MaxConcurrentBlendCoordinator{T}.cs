@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Coordinates bounded-concurrency merging of enumerable observable sources.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Active = {_active}, EnumerationCompleted = {_enumerationCompleted}, Done = {_done}")]
+[System.Diagnostics.DebuggerDisplay("MaxConcurrentBlendCoordinator: Active = {_active}, EnumerationCompleted = {_enumerationCompleted}, Done = {_done}")]
 public sealed class MaxConcurrentBlendCoordinator<T> : IDisposable
 {
     /// <summary>Serializes enumeration, counters, and downstream callbacks.</summary>

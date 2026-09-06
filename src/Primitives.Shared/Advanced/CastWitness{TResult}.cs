@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Observer wrapper for object casts.</summary>
 /// <typeparam name="TResult">The result value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}, Observer = {Observer}")]
+[System.Diagnostics.DebuggerDisplay("CastWitness: Stopped = {_stopped}, Observer = {Observer}")]
 public sealed class CastWitness<TResult> : IObserver<object?>, IDisposable
 {
     /// <summary>Non-zero after terminal notification or disposal.</summary>

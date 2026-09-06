@@ -24,7 +24,7 @@ namespace ReactiveUI.Primitives.Reactive.Disposables;
 /// and <c>Contains</c>/<c>Remove</c> do not see through it.
 /// </para>
 /// </remarks>
-[System.Diagnostics.DebuggerDisplay("Count = {Count}, IsDisposed = {IsDisposed}")]
+[System.Diagnostics.DebuggerDisplay("ContainerDisposable: Count = {Count}, IsDisposed = {IsDisposed}")]
 public sealed class ContainerDisposable : MultipleDisposable
 {
     /// <summary>Serializes creation of the composite.</summary>

@@ -16,7 +16,7 @@ namespace ReactiveUI.Primitives.Signals;
 /// <param name="onNext">The delegate invoked with each value pushed to <see cref="IObserver{T}.OnNext"/>.</param>
 /// <param name="onError">The optional delegate invoked with the exception when the sequence faults via <see cref="IObserver{T}.OnError"/>.</param>
 /// <param name="onCompleted">The optional delegate invoked when the sequence finishes via <see cref="IObserver{T}.OnCompleted"/>.</param>
-[System.Diagnostics.DebuggerDisplay("OnNext = {_onNext}")]
+[System.Diagnostics.DebuggerDisplay("DelegateWitness: OnNext = {_onNext}")]
 public sealed class DelegateWitness<T>(
     Action<T> onNext,
     Action<Exception>? onError = null,

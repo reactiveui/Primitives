@@ -8,7 +8,7 @@ using ReactiveUI.Primitives.Async.Signals;
 namespace ReactiveUI.Primitives.Async.Tests;
 
 /// <summary>TakeUntil operator tests — CompletionSignalDelegate overload and option behavior.</summary>
-[System.Diagnostics.DebuggerDisplay("WaitTimeout = {WaitTimeout}")]
+[System.Diagnostics.DebuggerDisplay("TakeUntilOperatorTests: WaitTimeout = {WaitTimeout}")]
 public partial class TakeUntilOperatorTests
 {
     /// <summary>String literal "subscribe failed" used by multiple tests.</summary>

@@ -19,7 +19,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// <param name="Source5">Source observable 5.</param>
 /// <param name="Source6">Source observable 6.</param>
 /// <param name="Source7">Source observable 7.</param>
-[System.Diagnostics.DebuggerDisplay("Source1 = {Source1}, Source7 = {Source7}")]
+[System.Diagnostics.DebuggerDisplay("SyncLatest7State: Source1 = {Source1}, Source7 = {Source7}")]
 public readonly record struct SyncLatest7State<T1, T2, T3, T4, T5, T6, T7>(
     IObservableAsync<T1> Source1,
     IObservableAsync<T2> Source2,

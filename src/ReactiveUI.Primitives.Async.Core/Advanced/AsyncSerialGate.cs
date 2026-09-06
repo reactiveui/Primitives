@@ -13,7 +13,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// <see cref="SemaphoreSlim"/> touch); the contended path waits on a signal-only semaphore and retries
 /// the CAS after each signal. Same-thread reentry is granted via the owner-thread-id and a recursion counter.
 /// </summary>
-[System.Diagnostics.DebuggerDisplay("OwnerThreadId = {_ownerThreadId}, Waiters = {_waiters}, RecursionDepth = {_recursionDepth}")]
+[System.Diagnostics.DebuggerDisplay("AsyncSerialGate: OwnerThreadId = {_ownerThreadId}, Waiters = {_waiters}, RecursionDepth = {_recursionDepth}")]
 public sealed class AsyncSerialGate : IDisposable
 {
     /// <summary>Signal-only semaphore; released once per recorded waiter to wake one.</summary>
@@ -133,7 +133,7 @@ public sealed class AsyncSerialGate : IDisposable
     }
 
     /// <summary>Releases a previously acquired <see cref="AsyncSerialGate"/> when disposed.</summary>
-    [System.Diagnostics.DebuggerDisplay("Parent = {_parent}")]
+    [System.Diagnostics.DebuggerDisplay("Lease: Parent = {_parent}")]
     public readonly record struct Lease : IDisposable
     {
         /// <summary>The parent <see cref="AsyncSerialGate"/> whose lock is released when this lease is disposed.</summary>

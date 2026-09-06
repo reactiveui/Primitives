@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Async;
 /// <typeparam name="TValue">The type of the elements contained in the grouped observable sequence.</typeparam>
 /// <remarks>Each instance corresponds to a group within the parent observable, identified by its key. Observers
 /// can subscribe to receive elements belonging to the group associated with the specified key.</remarks>
-[System.Diagnostics.DebuggerDisplay("Key = {Key}")]
+[System.Diagnostics.DebuggerDisplay("GroupedAsyncSignal: Key = {Key}")]
 public sealed class GroupedAsyncSignal<TKey, TValue> : IObservableAsync<TValue>
 {
     /// <summary>Initializes a new instance of the <see cref="GroupedAsyncSignal{TKey,TValue}"/> class.</summary>

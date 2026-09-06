@@ -6,7 +6,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>Inner observer that relays projected values to a flat-map coordinator.</summary>
 /// <typeparam name="TResult">The result element type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Coordinator = {Coordinator}")]
+[System.Diagnostics.DebuggerDisplay("FlatMapWitness: Coordinator = {Coordinator}")]
 public sealed class FlatMapWitness<TResult> : WitnessAsync<TResult>
 {
     /// <summary>Initializes a new instance of the <see cref="FlatMapWitness{TResult}"/> class.</summary>

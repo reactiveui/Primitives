@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Signals;
 
 /// <summary>A signal that limits forwarded values with priority-based semaphore semantics.</summary>
 /// <typeparam name="T">The comparable value type used for priority ordering.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Count = {_count}, MaximumCount = {_maximumCount}, IsDraining = {_isDraining}")]
+[System.Diagnostics.DebuggerDisplay("PrioritySemaphoreSignal: Count = {_count}, MaximumCount = {_maximumCount}, IsDraining = {_isDraining}")]
 public sealed class PrioritySemaphoreSignal<T> : ISignal<T>
     where T : IComparable<T>
 {

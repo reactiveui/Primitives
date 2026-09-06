@@ -6,7 +6,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Immutable accumulator that counts the values matching a predicate as a <see cref="long"/>.</summary>
 /// <typeparam name="T">The observed value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Result = {Result}, Predicate = {_predicate}")]
+[System.Diagnostics.DebuggerDisplay("LongCountPredicateAggregator: Result = {Result}, Predicate = {_predicate}")]
 public readonly record struct LongCountPredicateAggregator<T> : IAggregator<T, long, LongCountPredicateAggregator<T>>
 {
     /// <summary>The predicate selecting which values to count.</summary>

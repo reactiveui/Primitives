@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Pass-through signal that invokes side effects for forwarded notifications.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Source = {Source}")]
+[System.Diagnostics.DebuggerDisplay("TapSignal: Source = {Source}")]
 public sealed class TapSignal<T> : IObservable<T>
 {
     /// <summary>Initializes a new instance of the <see cref="TapSignal{T}"/> class.</summary>

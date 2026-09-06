@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Task-source <c>Chain</c>/<c>Concat</c> signal.</summary>
 /// <typeparam name="T">The task result type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Sources = {_sources}")]
+[System.Diagnostics.DebuggerDisplay("TaskChainSignal: Sources = {_sources}")]
 public sealed class TaskChainSignal<T> : IObservable<T>
 {
     /// <summary>The outer task source.</summary>

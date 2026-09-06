@@ -15,7 +15,7 @@ namespace ReactiveUI.Primitives.Async.Disposables;
 /// once, and where disposal may occur before or after the assignment. If disposed before assignment, any subsequently
 /// assigned resource will be disposed immediately. This class is not thread-safe for concurrent assignment and
 /// disposal; external synchronization is required if used from multiple threads.</remarks>
-[System.Diagnostics.DebuggerDisplay("IsDisposed = {IsDisposed}, Current = {_current}")]
+[System.Diagnostics.DebuggerDisplay("SingleAssignmentDisposableAsync: IsDisposed = {IsDisposed}, Current = {_current}")]
 public sealed class SingleAssignmentDisposableAsync : IAsyncDisposable
 {
     /// <summary>The currently assigned disposable resource, or the disposed sentinel if already disposed.</summary>

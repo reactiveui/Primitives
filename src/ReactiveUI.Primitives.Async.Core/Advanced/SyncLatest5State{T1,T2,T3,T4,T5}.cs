@@ -15,7 +15,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// <param name="Source3">Source observable 3.</param>
 /// <param name="Source4">Source observable 4.</param>
 /// <param name="Source5">Source observable 5.</param>
-[System.Diagnostics.DebuggerDisplay("Source1 = {Source1}, Source5 = {Source5}")]
+[System.Diagnostics.DebuggerDisplay("SyncLatest5State: Source1 = {Source1}, Source5 = {Source5}")]
 public readonly record struct SyncLatest5State<T1, T2, T3, T4, T5>(
     IObservableAsync<T1> Source1,
     IObservableAsync<T2> Source2,

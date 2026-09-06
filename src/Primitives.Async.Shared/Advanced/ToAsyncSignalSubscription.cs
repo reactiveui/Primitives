@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 #endif
 
 /// <summary>Waits for a task and forwards the signal notification for one subscription.</summary>
-[System.Diagnostics.DebuggerDisplay("SourceTask = {SourceTask}, Completed = {SourceTask.IsCompleted}")]
+[System.Diagnostics.DebuggerDisplay("ToAsyncSignalSubscription: SourceTask = {SourceTask}, Completed = {SourceTask.IsCompleted}")]
 public sealed class ToAsyncSignalSubscription : TaskSignalSubscription<RxVoid>
 {
     /// <summary>Initializes a new instance of the <see cref="ToAsyncSignalSubscription"/> class.</summary>

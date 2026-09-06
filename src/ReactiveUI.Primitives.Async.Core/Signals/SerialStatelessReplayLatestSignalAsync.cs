@@ -17,7 +17,7 @@ namespace ReactiveUI.Primitives.Async.Signals;
 /// does not maintain any state beyond the most recent value, and only the last value (if any) is replayed to new
 /// subscribers. All observer notifications are dispatched asynchronously and serially, ensuring that each observer
 /// receives notifications in the correct order.</remarks>
-[System.Diagnostics.DebuggerDisplay("State = {_state}")]
+[System.Diagnostics.DebuggerDisplay("SerialStatelessReplayLatestSignalAsync: State = {_state}")]
 public sealed class SerialStatelessReplayLatestSignalAsync<T>(Optional<T> startValue) : ISignalAsync<T>
 {
     /// <inheritdoc/>

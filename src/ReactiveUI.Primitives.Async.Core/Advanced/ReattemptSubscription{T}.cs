@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>Coordinates retry subscriptions for <see cref="ReattemptSignal{T}"/>.</summary>
 /// <typeparam name="T">The element type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Source = {Source}, Remaining = {Remaining}")]
+[System.Diagnostics.DebuggerDisplay("ReattemptSubscription: Source = {Source}, Remaining = {Remaining}")]
 public sealed class ReattemptSubscription<T> : IAsyncDisposable
 {
     /// <summary>Initializes a new instance of the <see cref="ReattemptSubscription{T}"/> class.</summary>

@@ -2,7 +2,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.Tests")]
 namespace ReactiveUI.Primitives.Async
 {
-    [System.Diagnostics.DebuggerDisplay("SynchronizationContext = {SynchronizationContext}, TaskScheduler = {TaskScheduler}, Sequencer = {Sequencer}")]
+    [System.Diagnostics.DebuggerDisplay("AsyncContext: SynchronizationContext = {SynchronizationContext}, TaskScheduler = {TaskScheduler}, Sequencer = {Sequencer}")]
     public record AsyncContext : System.IEquatable<ReactiveUI.Primitives.Async.AsyncContext>
     {
         public ReactiveUI.Primitives.Concurrency.ISequencer? Sequencer { get; init; }
@@ -15,7 +15,7 @@ namespace ReactiveUI.Primitives.Async
         public static ReactiveUI.Primitives.Async.AsyncContext From(System.Threading.Tasks.TaskScheduler taskScheduler) { }
         [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
         public static ReactiveUI.Primitives.Async.AsyncContext GetCurrent() { }
-        [System.Diagnostics.DebuggerDisplay("IsCompleted = {IsCompleted}, ForceYielding = {ForceYielding}")]
+        [System.Diagnostics.DebuggerDisplay("AsyncContextSwitcherAwaitable: IsCompleted = {IsCompleted}, ForceYielding = {ForceYielding}")]
         public readonly record struct AsyncContextSwitcherAwaitable : System.IEquatable<ReactiveUI.Primitives.Async.AsyncContext.AsyncContextSwitcherAwaitable>, System.Runtime.CompilerServices.INotifyCompletion
         {
             public AsyncContextSwitcherAwaitable(ReactiveUI.Primitives.Async.AsyncContext AsyncContext, bool ForceYielding, System.Threading.CancellationToken CancellationToken) { }
@@ -95,49 +95,49 @@ namespace ReactiveUI.Primitives.Async
 }
 namespace ReactiveUI.Primitives.Async.Advanced
 {
-    [System.Diagnostics.DebuggerDisplay("Factory = {Factory}")]
+    [System.Diagnostics.DebuggerDisplay("FromAsyncSignal: Factory = {Factory}")]
     public sealed class FromAsyncSignal : ReactiveUI.Primitives.Async.IObservableAsync<ReactiveUI.Primitives.RxVoid>
     {
         public FromAsyncSignal(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> factory) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<ReactiveUI.Primitives.RxVoid>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<ReactiveUI.Primitives.RxVoid> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Factory = {Factory}")]
+    [System.Diagnostics.DebuggerDisplay("FromAsyncSubscription: Factory = {Factory}")]
     public sealed class FromAsyncSubscription : ReactiveUI.Primitives.Async.Advanced.TaskSignalSubscription<ReactiveUI.Primitives.RxVoid>
     {
         public FromAsyncSubscription(ReactiveUI.Primitives.Async.IObserverAsync<ReactiveUI.Primitives.RxVoid> observer, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> factory) { }
         protected override System.Threading.Tasks.ValueTask ExecuteAsyncCore(ReactiveUI.Primitives.Async.IObserverAsync<ReactiveUI.Primitives.RxVoid> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Action = {Action}, TaskScheduler = {TaskScheduler}")]
+    [System.Diagnostics.DebuggerDisplay("StartSignal: Action = {Action}, TaskScheduler = {TaskScheduler}")]
     public sealed class StartSignal : ReactiveUI.Primitives.Async.IObservableAsync<ReactiveUI.Primitives.RxVoid>
     {
         public StartSignal(System.Action action, System.Threading.Tasks.TaskScheduler? taskScheduler) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<ReactiveUI.Primitives.RxVoid>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<ReactiveUI.Primitives.RxVoid> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Action = {Action}, TaskScheduler = {TaskScheduler}")]
+    [System.Diagnostics.DebuggerDisplay("StartSubscription: Action = {Action}, TaskScheduler = {TaskScheduler}")]
     public sealed class StartSubscription : ReactiveUI.Primitives.Async.Advanced.TaskSignalSubscription<ReactiveUI.Primitives.RxVoid>
     {
         public StartSubscription(ReactiveUI.Primitives.Async.IObserverAsync<ReactiveUI.Primitives.RxVoid> observer, System.Action action, System.Threading.Tasks.TaskScheduler? taskScheduler) { }
         protected override System.Threading.Tasks.ValueTask ExecuteAsyncCore(ReactiveUI.Primitives.Async.IObserverAsync<ReactiveUI.Primitives.RxVoid> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("SourceTask = {SourceTask}")]
+    [System.Diagnostics.DebuggerDisplay("TaskToAsyncSignal: SourceTask = {SourceTask}")]
     public sealed class TaskToAsyncSignal : ReactiveUI.Primitives.Async.IObservableAsync<ReactiveUI.Primitives.RxVoid>
     {
         public TaskToAsyncSignal(System.Threading.Tasks.Task task) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<ReactiveUI.Primitives.RxVoid>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<ReactiveUI.Primitives.RxVoid> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("SourceTask = {SourceTask}, Completed = {SourceTask.IsCompleted}")]
+    [System.Diagnostics.DebuggerDisplay("ToAsyncSignalSubscription: SourceTask = {SourceTask}, Completed = {SourceTask.IsCompleted}")]
     public sealed class ToAsyncSignalSubscription : ReactiveUI.Primitives.Async.Advanced.TaskSignalSubscription<ReactiveUI.Primitives.RxVoid>
     {
         public ToAsyncSignalSubscription(ReactiveUI.Primitives.Async.IObserverAsync<ReactiveUI.Primitives.RxVoid> observer, System.Threading.Tasks.Task task) { }
         protected override System.Threading.Tasks.ValueTask ExecuteAsyncCore(ReactiveUI.Primitives.Async.IObserverAsync<ReactiveUI.Primitives.RxVoid> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {Source}, ForceYielding = {ForceYielding}")]
+    [System.Diagnostics.DebuggerDisplay("WitnessOnSignal: Source = {Source}, ForceYielding = {ForceYielding}")]
     public sealed class WitnessOnSignal<T> : ReactiveUI.Primitives.Async.IObservableAsync<T>
     {
         public WitnessOnSignal(ReactiveUI.Primitives.Async.IObservableAsync<T> source, ReactiveUI.Primitives.Async.AsyncContext asyncContext, bool forceYielding) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<T>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
     }
-    [System.Diagnostics.DebuggerDisplay("AsyncContext = {AsyncContext}, ForceYielding = {ForceYielding}")]
+    [System.Diagnostics.DebuggerDisplay("WitnessOnWitness: AsyncContext = {AsyncContext}, ForceYielding = {ForceYielding}")]
     public sealed class WitnessOnWitness<T> : ReactiveUI.Primitives.Async.WitnessAsync<T>
     {
         public WitnessOnWitness(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, ReactiveUI.Primitives.Async.AsyncContext asyncContext, bool forceYielding) { }

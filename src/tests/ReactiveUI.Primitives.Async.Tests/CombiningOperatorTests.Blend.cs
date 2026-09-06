@@ -9,7 +9,7 @@ using ReactiveUI.Primitives.Async.Signals;
 namespace ReactiveUI.Primitives.Async.Tests;
 
 /// <summary>Tests for the Merge operator.</summary>
-[System.Diagnostics.DebuggerDisplay("{nameof(CombiningOperatorTests),nq}")]
+[System.Diagnostics.DebuggerDisplay("CombiningOperatorTests: {nameof(CombiningOperatorTests),nq}")]
 public partial class CombiningOperatorTests
 {
     /// <summary>Tests Merge two sequences emits from both.</summary>

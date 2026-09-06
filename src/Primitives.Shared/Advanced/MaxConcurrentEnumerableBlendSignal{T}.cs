@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="T">The value type.</typeparam>
 /// <param name="sources">The sources to merge.</param>
 /// <param name="maxConcurrent">The maximum number of active inner subscriptions.</param>
-[System.Diagnostics.DebuggerDisplay("Sources = {_sources}, MaxConcurrent = {_maxConcurrent}")]
+[System.Diagnostics.DebuggerDisplay("MaxConcurrentEnumerableBlendSignal: Sources = {_sources}, MaxConcurrent = {_maxConcurrent}")]
 public sealed class MaxConcurrentEnumerableBlendSignal<T>(IEnumerable<IObservable<T>> sources, int maxConcurrent) : IObservable<T>
 {
     /// <summary>The sources to merge.</summary>

@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Concrete signal for Rx-named merge overloads.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Sources = {Sources}, MaxConcurrent = {MaxConcurrent}")]
+[System.Diagnostics.DebuggerDisplay("MergeSignal: Sources = {Sources}, MaxConcurrent = {MaxConcurrent}")]
 public sealed class MergeSignal<T> : IObservable<T>
 {
     /// <summary>Initializes a new instance of the <see cref="MergeSignal{T}"/> class.</summary>

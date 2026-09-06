@@ -7,7 +7,7 @@ using ReactiveUI.Primitives.Async.Signals;
 namespace ReactiveUI.Primitives.Async.Tests;
 
 /// <summary>BehaviorSignal and ReplayLatest tests for <see cref="SignalTests"/>.</summary>
-[System.Diagnostics.DebuggerDisplay("WaitTimeout = {WaitTimeout}")]
+[System.Diagnostics.DebuggerDisplay("SignalTests: WaitTimeout = {WaitTimeout}")]
 public partial class SignalTests
 {
     /// <summary>Tests behavior Signal with start value emits latest first to new subscriber.</summary>

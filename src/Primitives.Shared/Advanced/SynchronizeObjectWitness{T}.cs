@@ -14,7 +14,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="T">The value type.</typeparam>
 /// <param name="observer">The downstream observer.</param>
 /// <param name="gate">The gate shared with other synchronized observers.</param>
-[System.Diagnostics.DebuggerDisplay("Observer = {_observer}, Subscription = {_subscription}")]
+[System.Diagnostics.DebuggerDisplay("SynchronizeObjectWitness: Observer = {_observer}, Subscription = {_subscription}")]
 public sealed class SynchronizeObjectWitness<T>(IObserver<T> observer, object gate) : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>

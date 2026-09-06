@@ -6,7 +6,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Immutable accumulator that counts every observed value as an <see cref="int"/>.</summary>
 /// <typeparam name="T">The observed value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Result = {Result}")]
+[System.Diagnostics.DebuggerDisplay("CountAggregator: Result = {Result}")]
 public readonly record struct CountAggregator<T> : IAggregator<T, int, CountAggregator<T>>
 {
     /// <summary>Initializes a new instance of the <see cref="CountAggregator{T}"/> struct.</summary>

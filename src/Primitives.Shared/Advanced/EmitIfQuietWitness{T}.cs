@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Observer that emits only the latest value after a quiet period.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("HasValue = {_hasValue}, Stopped = {_stopped}, Version = {_version}")]
+[System.Diagnostics.DebuggerDisplay("EmitIfQuietWitness: HasValue = {_hasValue}, Stopped = {_stopped}, Version = {_version}")]
 public sealed class EmitIfQuietWitness<T> : IObserver<T>, IDisposable
 {
     /// <summary>Serializes access to latest value and terminal state.</summary>

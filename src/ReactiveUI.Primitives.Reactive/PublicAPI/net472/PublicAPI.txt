@@ -810,7 +810,7 @@ namespace ReactiveUI.Primitives.Reactive
 }
 namespace ReactiveUI.Primitives.Reactive.Advanced
 {
-    [System.Diagnostics.DebuggerDisplay("DueTime = {_dueTime}, Period = {_period}")]
+    [System.Diagnostics.DebuggerDisplay("AfterSignal: DueTime = {_dueTime}, Period = {_period}")]
     public sealed class AfterSignal : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<long>
     {
         public AfterSignal(System.TimeSpan dueTime, System.Reactive.Concurrency.IScheduler scheduler) { }
@@ -818,7 +818,7 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         public bool IsRequiredSubscribeOnCurrentThread() { }
         public System.IDisposable Subscribe(System.IObserver<long> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Current = {Current}, DueTime = {DueTime}, Period = {Period}")]
+    [System.Diagnostics.DebuggerDisplay("AfterSubscription: Current = {Current}, DueTime = {DueTime}, Period = {Period}")]
     public sealed class AfterSubscription : System.IDisposable
     {
         public AfterSubscription(System.IObserver<long> observer, System.Reactive.Concurrency.IScheduler scheduler, System.TimeSpan dueTime, System.TimeSpan? period) { }
@@ -826,21 +826,21 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         public void Dispose() { }
         public ReactiveUI.Primitives.Reactive.Advanced.AfterSubscription Run() { }
     }
-    [System.Diagnostics.DebuggerDisplay("SubscribeAsync = {SubscribeAsync}")]
+    [System.Diagnostics.DebuggerDisplay("AsyncCreateSignal: SubscribeAsync = {SubscribeAsync}")]
     public sealed class AsyncCreateSignal<T> : System.IObservable<T>
     {
         public AsyncCreateSignal(System.Func<System.IObserver<T>, System.Threading.CancellationToken, System.Threading.Tasks.Task<System.IDisposable>> subscribe) { }
         public AsyncCreateSignal(System.Func<System.IObserver<T>, System.Threading.Tasks.Task<System.IDisposable>> subscribe) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("ObservableFactory = {ObservableFactory}")]
+    [System.Diagnostics.DebuggerDisplay("AsyncDeferSignal: ObservableFactory = {ObservableFactory}")]
     public sealed class AsyncDeferSignal<T> : System.IObservable<T>
     {
         public AsyncDeferSignal(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<System.IObservable<T>>> observableFactory) { }
         public AsyncDeferSignal(System.Func<System.Threading.Tasks.Task<System.IObservable<T>>> observableFactory) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Completed = {_completed}, Canceled = {_canceled}, Disposed = {_disposed}")]
+    [System.Diagnostics.DebuggerDisplay("AsyncSubscriptionLifetime: Completed = {_completed}, Canceled = {_canceled}, Disposed = {_disposed}")]
     public sealed class AsyncSubscriptionLifetime : System.IDisposable
     {
         public AsyncSubscriptionLifetime() { }
@@ -851,33 +851,33 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable? disposable) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Count = {_count}, Connected = {_connected}")]
+    [System.Diagnostics.DebuggerDisplay("AutoConnectSignal: Count = {_count}, Connected = {_connected}")]
     public sealed class AutoConnectSignal<T> : System.IObservable<T>
     {
         public AutoConnectSignal(ReactiveUI.Primitives.ConnectableSignal<T> source, int subscriberCount) { }
         public AutoConnectSignal(ReactiveUI.Primitives.ConnectableSignal<T> source, int subscriberCount, System.Action<System.IDisposable>? onConnect) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Count = {_count}, Connection = {_connection}")]
+    [System.Diagnostics.DebuggerDisplay("AutoShareSignal: Count = {_count}, Connection = {_connection}")]
     public sealed class AutoShareSignal<T> : System.IObservable<T>
     {
         public AutoShareSignal(ReactiveUI.Primitives.ConnectableSignal<T> source) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Owner = {_owner}, Subscription = {Subscription}")]
+    [System.Diagnostics.DebuggerDisplay("AutoShareSubscription: Owner = {_owner}, Subscription = {Subscription}")]
     public sealed class AutoShareSubscription<T> : System.IDisposable
     {
         public AutoShareSubscription(ReactiveUI.Primitives.Reactive.Advanced.AutoShareSignal<T> owner, System.IDisposable subscription) { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void Dispose() { }
     }
-    [System.Diagnostics.DebuggerDisplay("Sources = {Sources}")]
+    [System.Diagnostics.DebuggerDisplay("BlendSignal: Sources = {Sources}")]
     public sealed class BlendSignal<T> : System.IObservable<T>
     {
         public BlendSignal(System.IObservable<System.IObservable<T>> sources) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("ActiveCount = {ActiveCount}, IsOuterCompleted = {IsOuterCompleted}, IsDone = {IsDone}")]
+    [System.Diagnostics.DebuggerDisplay("BlendWitness: ActiveCount = {ActiveCount}, IsOuterCompleted = {IsOuterCompleted}, IsDone = {IsDone}")]
     public sealed class BlendWitness<T> : System.IDisposable
     {
         public BlendWitness(System.IObserver<T> observer) { }
@@ -886,7 +886,7 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         public ReactiveUI.Primitives.Reactive.Advanced.BlendWitness<T> Run(System.Collections.Generic.IEnumerable<System.IObservable<T>> sources) { }
         public ReactiveUI.Primitives.Reactive.Advanced.BlendWitness<T> Run(System.IObservable<System.IObservable<T>> sources) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}, Observer = {Observer}")]
+    [System.Diagnostics.DebuggerDisplay("BufferEachWitness: Stopped = {_stopped}, Observer = {Observer}")]
     public sealed class BufferEachWitness<T> : System.IDisposable, System.IObserver<T>
     {
         public BufferEachWitness(System.IObserver<System.Collections.Generic.IList<T>> observer) { }
@@ -900,20 +900,20 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Window = {Window}, Source = {Source}")]
+    [System.Diagnostics.DebuggerDisplay("BufferSignal: Window = {Window}, Source = {Source}")]
     public sealed class BufferSignal<T> : System.IObservable<System.Collections.Generic.IList<T>>
     {
         public BufferSignal(System.IObservable<T> source, System.TimeSpan timeSpan, System.Reactive.Concurrency.IScheduler sequencer) { }
         public System.IDisposable Subscribe(System.IObserver<System.Collections.Generic.IList<T>> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {Source}")]
+    [System.Diagnostics.DebuggerDisplay("CastSignal: Source = {Source}")]
     public sealed class CastSignal<TResult> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<TResult>
     {
         public CastSignal(System.IObservable<object?> source) { }
         public bool IsRequiredSubscribeOnCurrentThread() { }
         public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}, Observer = {Observer}")]
+    [System.Diagnostics.DebuggerDisplay("CastWitness: Stopped = {_stopped}, Observer = {Observer}")]
     public sealed class CastWitness<TResult> : System.IDisposable, System.IObserver<object?>
     {
         public CastWitness(System.IObserver<TResult> observer) { }
@@ -927,7 +927,7 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Sources = {Sources}, EnumerableSources = {EnumerableSources}, First = {First}, Second = {Second}")]
+    [System.Diagnostics.DebuggerDisplay("ChainSignal: Sources = {Sources}, EnumerableSources = {EnumerableSources}, First = {First}, Second = {Second}")]
     public sealed class ChainSignal<T> : System.IObservable<T>
     {
         public ChainSignal(System.Collections.Generic.IEnumerable<System.IObservable<T>> sources) { }
@@ -935,7 +935,7 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         public ChainSignal(System.IObservable<T> first, System.IObservable<T> second) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("IsActive = {IsActive}, IsOuterCompleted = {IsOuterCompleted}")]
+    [System.Diagnostics.DebuggerDisplay("ChainWitness: IsActive = {IsActive}, IsOuterCompleted = {IsOuterCompleted}")]
     public sealed class ChainWitness<T> : System.IDisposable
     {
         public ChainWitness(System.IObserver<T> observer) { }
@@ -945,13 +945,13 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         public ReactiveUI.Primitives.Reactive.Advanced.ChainWitness<T> Run(System.IObservable<System.IObservable<T>> sources) { }
         public ReactiveUI.Primitives.Reactive.Advanced.ChainWitness<T> Run(System.IObservable<T> first, System.IObservable<T> second) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {Source}, TimeSpan = {TimeSpan}")]
+    [System.Diagnostics.DebuggerDisplay("CollectSignal: Source = {Source}, TimeSpan = {TimeSpan}")]
     public sealed class CollectSignal<T> : System.IObservable<System.Collections.Generic.IList<T>>
     {
         public CollectSignal(System.IObservable<T> source, System.TimeSpan timeSpan, System.Reactive.Concurrency.IScheduler sequencer) { }
         public System.IDisposable Subscribe(System.IObserver<System.Collections.Generic.IList<T>> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}, Buffered = {Values.Count}")]
+    [System.Diagnostics.DebuggerDisplay("CollectWitness: Stopped = {_stopped}, Buffered = {Values.Count}")]
     public sealed class CollectWitness<T> : System.IDisposable, System.IObserver<T>
     {
         public CollectWitness(System.IObserver<System.Collections.Generic.IList<T>> observer) { }
@@ -963,7 +963,7 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}, Observer = {_observer}")]
+    [System.Diagnostics.DebuggerDisplay("CreateSink: Stopped = {_stopped}, Observer = {_observer}")]
     public sealed class CreateSink<T> : System.IDisposable, System.IObserver<T>
     {
         public CreateSink(System.IObserver<T> observer, bool disposeOnNextThrow) { }
@@ -975,7 +975,7 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetCancel(System.IDisposable cancel) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}, Observer = {Observer}")]
+    [System.Diagnostics.DebuggerDisplay("CreateWitness: Stopped = {_stopped}, Observer = {Observer}")]
     public sealed class CreateWitness<T> : System.IDisposable, System.IObserver<T>
     {
         public CreateWitness(System.IObserver<T> observer) { }
@@ -989,13 +989,13 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetCancel(System.IDisposable cancel) { }
     }
-    [System.Diagnostics.DebuggerDisplay("DueTime = {DueTime}, Source = {Source}")]
+    [System.Diagnostics.DebuggerDisplay("EmitIfQuietSignal: DueTime = {DueTime}, Source = {Source}")]
     public sealed class EmitIfQuietSignal<T> : System.IObservable<T>
     {
         public EmitIfQuietSignal(System.IObservable<T> source, System.TimeSpan dueTime, System.Reactive.Concurrency.IScheduler sequencer) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("HasValue = {_hasValue}, Stopped = {_stopped}, Version = {_version}")]
+    [System.Diagnostics.DebuggerDisplay("EmitIfQuietWitness: HasValue = {_hasValue}, Stopped = {_stopped}, Version = {_version}")]
     public sealed class EmitIfQuietWitness<T> : System.IDisposable, System.IObserver<T>
     {
         public EmitIfQuietWitness(System.IObserver<T> observer, System.TimeSpan dueTime, System.Reactive.Concurrency.IScheduler sequencer) { }
@@ -1006,7 +1006,16 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Sources = {Sources}")]
+    [System.Diagnostics.DebuggerDisplay("EmptySignal: Scheduler = {_scheduler}")]
+    public sealed class EmptySignal<T> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<T>
+    {
+        public EmptySignal(System.Reactive.Concurrency.IScheduler scheduler) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public bool IsRequiredSubscribeOnCurrentThread() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("EnumerableBlendSignal: Sources = {Sources}")]
     public sealed class EnumerableBlendSignal<T> : System.IObservable<T>
     {
         public EnumerableBlendSignal(System.Collections.Generic.IEnumerable<System.IObservable<T>> sources) { }
@@ -1016,7 +1025,14 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
     {
         public static System.IDisposable Attach<TEventHandler>(TEventHandler handler, System.Action<TEventHandler> addHandler, System.Action<TEventHandler> removeHandler, System.Reactive.Concurrency.IScheduler? scheduler) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Done = {_done}, DueTime = {_dueTime}, Deadline = {_deadline}")]
+    [System.Diagnostics.DebuggerDisplay("EverySignal: Period = {_period}, Scheduler = {_scheduler}")]
+    public sealed class EverySignal : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<long>
+    {
+        public EverySignal(System.TimeSpan period, System.Reactive.Concurrency.IScheduler scheduler) { }
+        public bool IsRequiredSubscribeOnCurrentThread() { }
+        public System.IDisposable Subscribe(System.IObserver<long> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("ExpireCoordinator: Done = {_done}, DueTime = {_dueTime}, Deadline = {_deadline}")]
     public sealed class ExpireCoordinator<T> : System.IDisposable, System.IObserver<T>
     {
         public ExpireCoordinator(System.IObservable<T> source, System.TimeSpan dueTime, System.Reactive.Concurrency.IScheduler sequencer, System.IObserver<T> observer) { }
@@ -1026,39 +1042,48 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         public void OnNext(T value) { }
         public ReactiveUI.Primitives.Reactive.Advanced.ExpireCoordinator<T> Run() { }
     }
-    [System.Diagnostics.DebuggerDisplay("DueTime = {_dueTime}, Source = {_source}")]
+    [System.Diagnostics.DebuggerDisplay("ExpireSignal: DueTime = {_dueTime}, Source = {_source}")]
     public sealed class ExpireSignal<T> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<T>
     {
         public ExpireSignal(System.IObservable<T> source, System.TimeSpan dueTime, System.Reactive.Concurrency.IScheduler sequencer) { }
         public bool IsRequiredSubscribeOnCurrentThread() { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Left = {Left}, Right = {Right}")]
+    [System.Diagnostics.DebuggerDisplay("FinallySignal: Source = {_source}")]
+    public sealed class FinallySignal<T> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<T>
+    {
+        public FinallySignal(System.IObservable<T> source, System.Action finallyAction) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public bool IsRequiredSubscribeOnCurrentThread() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("ForkJoinSignal: Left = {Left}, Right = {Right}")]
     public sealed class ForkJoinSignal<TLeft, TRight, TResult> : System.IObservable<TResult>
     {
         public ForkJoinSignal(System.IObservable<TLeft> left, System.IObservable<TRight> right, System.Func<TLeft, TRight, TResult> selector) { }
         public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("HasLeft = {HasLeft}, HasRight = {HasRight}, IsDone = {IsDone}")]
+    [System.Diagnostics.DebuggerDisplay("ForkJoinWitness: HasLeft = {HasLeft}, HasRight = {HasRight}, IsDone = {IsDone}")]
     public sealed class ForkJoinWitness<TLeft, TRight, TResult>
     {
         public ForkJoinWitness(System.IObserver<TResult> observer, System.Func<TLeft, TRight, TResult> selector) { }
         public ReactiveUI.Primitives.Disposables.MultipleDisposable Run(System.IObservable<TLeft> left, System.IObservable<TRight> right) { }
     }
-    [System.Diagnostics.DebuggerDisplay("CancellationRequested = {CancellationToken.IsCancellationRequested}")]
+    [System.Diagnostics.DebuggerDisplay("FromAsyncExternalCancellationSignal: CancellationRequested = {CancellationToken.IsCancellationRequested}")]
     public sealed class FromAsyncExternalCancellationSignal<T> : System.IObservable<T>
     {
         public FromAsyncExternalCancellationSignal(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<T>> taskFactory, System.Threading.CancellationToken cancellationToken) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("TaskFactory = {TaskFactory}, CanBeCanceled = {CancellationToken.CanBeCanceled}")]
+    [System.Diagnostics.DebuggerDisplay("FromAsyncSignal: TaskFactory = {TaskFactory}, CanBeCanceled = {CancellationToken.CanBeCanceled}")]
     public sealed class FromAsyncSignal<T> : System.IObservable<T>
     {
         public FromAsyncSignal(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<T>> taskFactory) { }
         public FromAsyncSignal(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<T>> taskFactory, System.Threading.CancellationToken cancellationToken) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Completed = {Lifetime.IsCompleted}, CancellationRequested = {Lifetime.IsCancellationRequested}")]
+    [System.Diagnostics.DebuggerDisplay("FromAsyncSubscription: Completed = {Lifetime.IsCompleted}, CancellationRequested = {Lifetime.IsCancellationRequested}")]
     public sealed class FromAsyncSubscription<T> : System.IDisposable
     {
         public FromAsyncSubscription(System.IObserver<T> observer, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<T>> taskFactory) { }
@@ -1071,14 +1096,14 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         public FromEventConversionSignal(System.Func<TCallback, TEventHandler> conversion, System.Action<TEventHandler> addHandler, System.Action<TEventHandler> removeHandler, System.Func<System.IObserver<TResult>, TCallback> callback, System.Reactive.Concurrency.IScheduler? scheduler) { }
         public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("AddHandler = {AddHandler}, RemoveHandler = {RemoveHandler}")]
+    [System.Diagnostics.DebuggerDisplay("FromEventPatternSignal: AddHandler = {AddHandler}, RemoveHandler = {RemoveHandler}")]
     public sealed class FromEventPatternSignal<TEventHandler, TEventArgs> : System.IObservable<ReactiveUI.Primitives.Core.EventPattern<TEventArgs>> where TEventHandler : System.Delegate where TEventArgs : System.EventArgs
     {
         public FromEventPatternSignal(System.Action<TEventHandler> addHandler, System.Action<TEventHandler> removeHandler) { }
         public FromEventPatternSignal(System.Action<TEventHandler> addHandler, System.Action<TEventHandler> removeHandler, System.Reactive.Concurrency.IScheduler? scheduler) { }
         public System.IDisposable Subscribe(System.IObserver<ReactiveUI.Primitives.Core.EventPattern<TEventArgs>> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Disposed = {_disposed}, Observer = {_observer}")]
+    [System.Diagnostics.DebuggerDisplay("GuardedWitness: Disposed = {_disposed}, Observer = {_observer}")]
     public sealed class GuardedWitness<T> : System.IDisposable, System.IObserver<T>
     {
         public GuardedWitness(System.IObserver<T> observer, System.IDisposable cancel) { }
@@ -1088,7 +1113,7 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         public void OnError(System.Exception error) { }
         public void OnNext(T value) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {Source}")]
+    [System.Diagnostics.DebuggerDisplay("IgnoreValuesSignal: Source = {Source}")]
     public sealed class IgnoreValuesSignal<T> : System.IObservable<T>
     {
         public IgnoreValuesSignal(System.IObservable<T> source) { }
@@ -1102,14 +1127,14 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         public System.IDisposable Subscribe(System.IObserver<System.Reactive.Unit> observer) { }
         public System.IDisposable Subscribe(System.Action<System.Reactive.Unit> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {Source}")]
+    [System.Diagnostics.DebuggerDisplay("IsEmptySignal: Source = {Source}")]
     public sealed class IsEmptySignal<T> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<bool>
     {
         public IsEmptySignal(System.IObservable<T> source) { }
         public bool IsRequiredSubscribeOnCurrentThread() { }
         public System.IDisposable Subscribe(System.IObserver<bool> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}, Subscription = {Subscription}")]
+    [System.Diagnostics.DebuggerDisplay("IsEmptyWitness: Stopped = {_stopped}, Subscription = {Subscription}")]
     public sealed class IsEmptyWitness<T> : System.IDisposable, System.IObserver<T>
     {
         public IsEmptyWitness(System.IObserver<bool> observer) { }
@@ -1122,14 +1147,23 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Value = {Value}, Source = {Source}")]
+    [System.Diagnostics.DebuggerDisplay("LeadSignal: Value = {Value}, Source = {Source}")]
     public sealed class LeadSignal<T> : ReactiveUI.Primitives.Advanced.IInlineSignal<T>
     {
         public LeadSignal(System.IObservable<T> source, T value) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
         public System.IDisposable Subscribe(System.Action<T> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {_source}")]
+    [System.Diagnostics.DebuggerDisplay("LoopSignal: Value = {Value}")]
+    public sealed class LoopSignal<T> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<T>
+    {
+        public LoopSignal(T value) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public bool IsRequiredSubscribeOnCurrentThread() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("MapIndexedSignal: Source = {_source}")]
     public sealed class MapIndexedSignal<TSource, TResult> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<TResult>
     {
         public MapIndexedSignal(System.IObservable<TSource> source, System.Func<TSource, int, TResult> selector) { }
@@ -1137,7 +1171,7 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         public bool IsRequiredSubscribeOnCurrentThread() { }
         public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Index = {_index}, Stopped = {_stopped}")]
+    [System.Diagnostics.DebuggerDisplay("MapIndexedWitness: Index = {_index}, Stopped = {_stopped}")]
     public sealed class MapIndexedWitness<TSource, TResult> : System.IObserver<TSource>
     {
         public MapIndexedWitness(System.IObserver<TResult> observer, System.Func<TSource, int, TResult> selector) { }
@@ -1145,20 +1179,20 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         public void OnError(System.Exception error) { }
         public void OnNext(TSource value) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Active = {_active}, EnumerationCompleted = {_enumerationCompleted}, Done = {_done}")]
+    [System.Diagnostics.DebuggerDisplay("MaxConcurrentBlendCoordinator: Active = {_active}, EnumerationCompleted = {_enumerationCompleted}, Done = {_done}")]
     public sealed class MaxConcurrentBlendCoordinator<T> : System.IDisposable
     {
         public MaxConcurrentBlendCoordinator(System.IObserver<T> observer) { }
         public void Dispose() { }
         public ReactiveUI.Primitives.Reactive.Advanced.MaxConcurrentBlendCoordinator<T> Run(System.Collections.Generic.IEnumerable<System.IObservable<T>> sources, int maxConcurrent) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Sources = {_sources}, MaxConcurrent = {_maxConcurrent}")]
+    [System.Diagnostics.DebuggerDisplay("MaxConcurrentEnumerableBlendSignal: Sources = {_sources}, MaxConcurrent = {_maxConcurrent}")]
     public sealed class MaxConcurrentEnumerableBlendSignal<T> : System.IObservable<T>
     {
         public MaxConcurrentEnumerableBlendSignal(System.Collections.Generic.IEnumerable<System.IObservable<T>> sources, int maxConcurrent) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Active = {Active}, Done = {Done}")]
+    [System.Diagnostics.DebuggerDisplay("MergeCoordinator: Active = {Active}, Done = {Done}")]
     public sealed class MergeCoordinator<T> : System.IDisposable
     {
         public MergeCoordinator(System.IObserver<T> observer) { }
@@ -1169,7 +1203,7 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         public ReactiveUI.Primitives.Reactive.Advanced.MergeCoordinator<T> Run(System.Collections.Generic.IEnumerable<System.IObservable<T>> sources) { }
         public ReactiveUI.Primitives.Reactive.Advanced.MergeCoordinator<T> Run(System.IObservable<T> first, System.IObservable<T> second) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Sources = {Sources}, MaxConcurrent = {MaxConcurrent}")]
+    [System.Diagnostics.DebuggerDisplay("MergeSignal: Sources = {Sources}, MaxConcurrent = {MaxConcurrent}")]
     public sealed class MergeSignal<T> : System.IObservable<T>
     {
         public MergeSignal(System.Collections.Generic.IEnumerable<System.IObservable<T>> sources) { }
@@ -1177,32 +1211,39 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         public MergeSignal(System.IObservable<T> first, System.IObservable<T> second) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Left = {Left}, Right = {Right}")]
+    [System.Diagnostics.DebuggerDisplay("OnErrorResumeNextSignal: Sources = {_sources}")]
+    public sealed class OnErrorResumeNextSignal<T> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<T>
+    {
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public bool IsRequiredSubscribeOnCurrentThread() { }
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("PairSignal: Left = {Left}, Right = {Right}")]
     public sealed class PairSignal<TLeft, TRight, TResult> : System.IObservable<TResult>
     {
         public PairSignal(System.IObservable<TLeft> left, System.IObservable<TRight> right, System.Func<TLeft, TRight, TResult> selector) { }
         public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("IsCompleted = {IsCompleted}, LeftQueue = {LeftQueue.Count}, RightQueue = {RightQueue.Count}")]
+    [System.Diagnostics.DebuggerDisplay("PairWitness: IsCompleted = {IsCompleted}, LeftQueue = {LeftQueue.Count}, RightQueue = {RightQueue.Count}")]
     public sealed class PairWitness<TLeft, TRight, TResult>
     {
         public PairWitness(System.IObserver<TResult> observer, System.Func<TLeft, TRight, TResult> selector) { }
         public ReactiveUI.Primitives.Disposables.MultipleDisposable Run(System.IObservable<TLeft> left, System.IObservable<TRight> right) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {Source}, Selector = {Selector}")]
+    [System.Diagnostics.DebuggerDisplay("PublishSelectorSignal: Source = {Source}, Selector = {Selector}")]
     public sealed class PublishSelectorSignal<TSource, TResult> : System.IObservable<TResult>
     {
         public PublishSelectorSignal(System.IObservable<TSource> source, System.Func<System.IObservable<TSource>, System.IObservable<TResult>> selector) { }
         public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Sources = {Sources}, EnumerableSources = {EnumerableSources}")]
+    [System.Diagnostics.DebuggerDisplay("RaceSignal: Sources = {Sources}, EnumerableSources = {EnumerableSources}")]
     public sealed class RaceSignal<T> : System.IObservable<T>
     {
         public RaceSignal(System.Collections.Generic.IEnumerable<System.IObservable<T>> sources) { }
         public RaceSignal(System.IObservable<System.IObservable<T>> sources) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Arms = {_arms}")]
+    [System.Diagnostics.DebuggerDisplay("RaceWitness: Arms = {_arms}")]
     public sealed class RaceWitness<T> : System.IDisposable
     {
         public RaceWitness(System.IObserver<T> observer) { }
@@ -1211,40 +1252,48 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         public ReactiveUI.Primitives.Reactive.Advanced.RaceWitness<T> Run(System.Collections.Generic.IEnumerable<System.IObservable<T>> sources) { }
         public ReactiveUI.Primitives.Reactive.Advanced.RaceWitness<T> Run(System.IObservable<System.IObservable<T>> sources) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Left = {Left}, Right = {Right}")]
+    [System.Diagnostics.DebuggerDisplay("RangeCombineLatestSignal: Left = {Left}, Right = {Right}")]
     public sealed class RangeCombineLatestSignal<TResult> : System.IObservable<TResult>
     {
         public RangeCombineLatestSignal(ReactiveUI.Primitives.Advanced.RangeSignal left, ReactiveUI.Primitives.Advanced.RangeSignal right, System.Func<int, int, TResult> selector) { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Left = {Left.Start}+{Left.Count}, Right = {Right.Start}+{Right.Count}")]
+    [System.Diagnostics.DebuggerDisplay("RangeForkJoinSignal: Left = {Left.Start}+{Left.Count}, Right = {Right.Start}+{Right.Count}")]
     public sealed class RangeForkJoinSignal<TResult> : System.IObservable<TResult>
     {
         public RangeForkJoinSignal(ReactiveUI.Primitives.Advanced.RangeSignal left, ReactiveUI.Primitives.Advanced.RangeSignal right, System.Func<int, int, TResult> selector) { }
         public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Left = {Left}, Right = {Right}")]
+    [System.Diagnostics.DebuggerDisplay("RangeSyncLatestSignal: Left = {Left}, Right = {Right}")]
     public sealed class RangeSyncLatestSignal<TResult> : System.IObservable<TResult>
     {
         public RangeSyncLatestSignal(ReactiveUI.Primitives.Advanced.RangeSignal left, ReactiveUI.Primitives.Advanced.RangeSignal right, System.Func<int, int, TResult> selector) { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Left = {Left}, Right = {Right}")]
+    [System.Diagnostics.DebuggerDisplay("RangeWithLatestSignal: Left = {Left}, Right = {Right}")]
     public sealed class RangeWithLatestSignal<TResult> : System.IObservable<TResult>
     {
         public RangeWithLatestSignal(ReactiveUI.Primitives.Advanced.RangeSignal left, ReactiveUI.Primitives.Advanced.RangeSignal right, System.Func<int, int, TResult> selector) { }
         public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Remaining = {_remaining}, Disposed = {_disposed}")]
+    [System.Diagnostics.DebuggerDisplay("RecoverSignal: Source = {_source}")]
+    public sealed class RecoverSignal<T, TException> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<T> where TException : System.Exception
+    {
+        public RecoverSignal(System.IObservable<T> source, System.Func<TException, System.IObservable<T>> handler) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public bool IsRequiredSubscribeOnCurrentThread() { }
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("RepeatSourceCoordinator: Remaining = {_remaining}, Disposed = {_disposed}")]
     public sealed class RepeatSourceCoordinator<T> : System.IDisposable
     {
         public RepeatSourceCoordinator(System.IObservable<T> source, int? repeatCount, System.IObserver<T> observer) { }
         public void Dispose() { }
         public ReactiveUI.Primitives.Reactive.Advanced.RepeatSourceCoordinator<T> Run() { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {_source}, RepeatCount = {_repeatCount}")]
+    [System.Diagnostics.DebuggerDisplay("RepeatSourceSignal: Source = {_source}, RepeatCount = {_repeatCount}")]
     public sealed class RepeatSourceSignal<T> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<T>
     {
         public RepeatSourceSignal(System.IObservable<T> source, int? repeatCount) { }
@@ -1252,7 +1301,7 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         public bool IsRequiredSubscribeOnCurrentThread() { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Generation = {_generation}, Terminated = {_terminated}")]
+    [System.Diagnostics.DebuggerDisplay("RepeatSourceWitness: Generation = {_generation}, Terminated = {_terminated}")]
     public sealed class RepeatSourceWitness<T> : System.IObserver<T>
     {
         public RepeatSourceWitness(ReactiveUI.Primitives.Reactive.Advanced.RepeatSourceCoordinator<T> parent, int generation) { }
@@ -1260,7 +1309,15 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         public void OnError(System.Exception error) { }
         public void OnNext(T value) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Value = {_value}, Scheduler = {_scheduler}")]
+    [System.Diagnostics.DebuggerDisplay("ResumeSignal: Source = {_source}, Fallback = {_fallback}")]
+    public sealed class ResumeSignal<T> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<T>
+    {
+        public ResumeSignal(System.IObservable<T> source, System.IObservable<T> fallback) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public bool IsRequiredSubscribeOnCurrentThread() { }
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("ReturnSignal: Value = {_value}, Scheduler = {_scheduler}")]
     public sealed class ReturnSignal<T> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<T>
     {
         public ReturnSignal(T value, System.Reactive.Concurrency.IScheduler scheduler) { }
@@ -1269,13 +1326,13 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Values = {Values}, Scheduler = {Scheduler}")]
+    [System.Diagnostics.DebuggerDisplay("ScheduledEnumerableSignal: Values = {Values}, Scheduler = {Scheduler}")]
     public sealed class ScheduledEnumerableSignal<T> : System.IObservable<T>
     {
         public ScheduledEnumerableSignal(System.Collections.Generic.IEnumerable<T> values, System.Reactive.Concurrency.IScheduler scheduler) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Active = {Active}, OuterCompleted = {OuterCompleted}, Done = {Done}")]
+    [System.Diagnostics.DebuggerDisplay("SelectManyCoordinator: Active = {Active}, OuterCompleted = {OuterCompleted}, Done = {Done}")]
     public sealed class SelectManyCoordinator<TSource, TResult> : System.IDisposable, System.IObserver<TSource>
     {
         public SelectManyCoordinator(System.IObserver<TResult> observer, System.Func<TSource, System.IObservable<TResult>> selector) { }
@@ -1289,13 +1346,13 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         public void OnNext(TSource value) { }
         public ReactiveUI.Primitives.Reactive.Advanced.SelectManyCoordinator<TSource, TResult> Run(System.IObservable<TSource> source) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {_source}")]
+    [System.Diagnostics.DebuggerDisplay("SelectManyEnumerableSignal: Source = {_source}")]
     public sealed class SelectManyEnumerableSignal<TSource, TResult> : System.IObservable<TResult>
     {
         public SelectManyEnumerableSignal(System.IObservable<TSource> source, System.Func<TSource, System.Collections.Generic.IEnumerable<TResult>> selector) { }
         public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}, Observer = {_observer}")]
+    [System.Diagnostics.DebuggerDisplay("SelectManyEnumerableWitness: Stopped = {_stopped}, Observer = {_observer}")]
     public sealed class SelectManyEnumerableWitness<TSource, TResult> : System.IDisposable, System.IObserver<TSource>
     {
         public SelectManyEnumerableWitness(System.IObserver<TResult> observer, System.Func<TSource, System.Collections.Generic.IEnumerable<TResult>> selector) { }
@@ -1309,7 +1366,7 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Active = {Active}, OuterCompleted = {OuterCompleted}, Done = {Done}")]
+    [System.Diagnostics.DebuggerDisplay("SelectManyResultCoordinator: Active = {Active}, OuterCompleted = {OuterCompleted}, Done = {Done}")]
     public sealed class SelectManyResultCoordinator<TSource, TCollection, TResult> : System.IDisposable, System.IObserver<TSource>
     {
         public SelectManyResultCoordinator(System.IObserver<TResult> observer, System.Func<TSource, System.IObservable<TCollection>> collectionSelector, System.Func<TSource, TCollection, TResult> resultSelector) { }
@@ -1322,20 +1379,20 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         public void OnNext(TSource value) { }
         public ReactiveUI.Primitives.Reactive.Advanced.SelectManyResultCoordinator<TSource, TCollection, TResult> Run(System.IObservable<TSource> source) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {Source}, CollectionSelector = {CollectionSelector}")]
+    [System.Diagnostics.DebuggerDisplay("SelectManyResultSignal: Source = {Source}, CollectionSelector = {CollectionSelector}")]
     public sealed class SelectManyResultSignal<TSource, TCollection, TResult> : System.IObservable<TResult>
     {
         public SelectManyResultSignal(System.IObservable<TSource> source, System.Func<TSource, System.IObservable<TCollection>> collectionSelector, System.Func<TSource, TCollection, TResult> resultSelector) { }
         public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {Source}, Selector = {Selector}, Inner = {Inner}")]
+    [System.Diagnostics.DebuggerDisplay("SelectManySignal: Source = {Source}, Selector = {Selector}, Inner = {Inner}")]
     public sealed class SelectManySignal<TSource, TResult> : System.IObservable<TResult>
     {
         public SelectManySignal(System.IObservable<TSource> source, System.Func<TSource, System.IObservable<TResult>> selector) { }
         public SelectManySignal(System.IObservable<TSource> source, System.IObservable<TResult> inner) { }
         public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Start = {Start}, Count = {Count}")]
+    [System.Diagnostics.DebuggerDisplay("SequenceSignal: Start = {Start}, Count = {Count}")]
     public sealed class SequenceSignal : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<int>
     {
         public SequenceSignal(int start, int count, System.Reactive.Concurrency.IScheduler scheduler) { }
@@ -1346,13 +1403,13 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
     {
         public static System.IDisposable Subscribe<T>(System.IObserver<T> observer, bool currentThreadRequired, System.Func<System.IObserver<T>, System.IDisposable, System.IDisposable> subscribeCore) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {Source}")]
+    [System.Diagnostics.DebuggerDisplay("SparkSignal: Source = {Source}")]
     public sealed class SparkSignal<T> : System.IObservable<ReactiveUI.Primitives.Reactive.Core.Spark<T>>
     {
         public SparkSignal(System.IObservable<T> source) { }
         public System.IDisposable Subscribe(System.IObserver<ReactiveUI.Primitives.Reactive.Core.Spark<T>> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Observer = {_observer}, Subscription = {_subscription}")]
+    [System.Diagnostics.DebuggerDisplay("SparkWitness: Observer = {_observer}, Subscription = {_subscription}")]
     public sealed class SparkWitness<T> : System.IDisposable, System.IObserver<T>
     {
         public SparkWitness(System.IObserver<ReactiveUI.Primitives.Reactive.Core.Spark<T>> observer) { }
@@ -1367,21 +1424,21 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Action = {Action}, Scheduler = {Scheduler}")]
+    [System.Diagnostics.DebuggerDisplay("StartSignal: Action = {Action}, Scheduler = {Scheduler}")]
     public sealed class StartSignal : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<System.Reactive.Unit>
     {
         public StartSignal(System.Action action, System.Reactive.Concurrency.IScheduler scheduler) { }
         public bool IsRequiredSubscribeOnCurrentThread() { }
         public System.IDisposable Subscribe(System.IObserver<System.Reactive.Unit> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Function = {Function}, Scheduler = {Scheduler}")]
+    [System.Diagnostics.DebuggerDisplay("StartSignal: Function = {Function}, Scheduler = {Scheduler}")]
     public sealed class StartSignal<T> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<T>
     {
         public StartSignal(System.Func<T> function, System.Reactive.Concurrency.IScheduler scheduler) { }
         public bool IsRequiredSubscribeOnCurrentThread() { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}, Observer = {_observer}")]
+    [System.Diagnostics.DebuggerDisplay("SubscribeSafeWitness: Stopped = {_stopped}, Observer = {_observer}")]
     public sealed class SubscribeSafeWitness<T> : System.IDisposable, System.IObserver<T>
     {
         public SubscribeSafeWitness(System.IObserver<T> observer) { }
@@ -1395,50 +1452,50 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {_source}, SkipNullSources = {_skipNullSources}")]
+    [System.Diagnostics.DebuggerDisplay("SwitchMapSignal: Source = {_source}, SkipNullSources = {_skipNullSources}")]
     public sealed class SwitchMapSignal<TSource, TResult> : System.IObservable<TResult>
     {
         public SwitchMapSignal(System.IObservable<TSource> source, System.Func<TSource, System.IObservable<TResult>> selector) { }
         public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Sources = {Sources}")]
+    [System.Diagnostics.DebuggerDisplay("SwitchSignal: Sources = {Sources}")]
     public sealed class SwitchSignal<T> : System.IObservable<T>
     {
         public SwitchSignal(System.IObservable<System.IObservable<T>> sources) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Version = {_version}, IsDone = {IsDone}")]
+    [System.Diagnostics.DebuggerDisplay("SwitchWitness: Version = {_version}, IsDone = {IsDone}")]
     public sealed class SwitchWitness<T> : System.IDisposable
     {
         public SwitchWitness(System.IObserver<T> observer) { }
         public void Dispose() { }
         public ReactiveUI.Primitives.Reactive.Advanced.SwitchWitness<T> Run(System.IObservable<System.IObservable<T>> sources) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Left = {Left}, Right = {Right}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatestSignal: Left = {Left}, Right = {Right}")]
     public sealed class SyncLatestSignal<TLeft, TRight, TResult> : System.IObservable<TResult>
     {
         public SyncLatestSignal(System.IObservable<TLeft> left, System.IObservable<TRight> right, System.Func<TLeft, TRight, TResult> selector) { }
         public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("HasLeft = {HasLeft}, HasRight = {HasRight}, IsCompleted = {IsCompleted}")]
+    [System.Diagnostics.DebuggerDisplay("SyncLatestWitness: HasLeft = {HasLeft}, HasRight = {HasRight}, IsCompleted = {IsCompleted}")]
     public sealed class SyncLatestWitness<TLeft, TRight, TResult>
     {
         public SyncLatestWitness(System.IObserver<TResult> observer, System.Func<TLeft, TRight, TResult> selector) { }
         public ReactiveUI.Primitives.Disposables.MultipleDisposable Run(System.IObservable<TLeft> left, System.IObservable<TRight> right) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {Source}, Gate = {Gate}")]
+    [System.Diagnostics.DebuggerDisplay("SynchronizeGateSignal: Source = {Source}, Gate = {Gate}")]
     public sealed class SynchronizeGateSignal<T> : System.IObservable<T>
     {
         public SynchronizeGateSignal(System.IObservable<T> source, object gate) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {_source}, Gate = {_gate}")]
+    [System.Diagnostics.DebuggerDisplay("SynchronizeObjectSignal: Source = {_source}, Gate = {_gate}")]
     public sealed class SynchronizeObjectSignal<T> : System.IObservable<T>
     {
         public SynchronizeObjectSignal(System.IObservable<T> source, object gate) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Observer = {_observer}, Subscription = {_subscription}")]
+    [System.Diagnostics.DebuggerDisplay("SynchronizeObjectWitness: Observer = {_observer}, Subscription = {_subscription}")]
     public sealed class SynchronizeObjectWitness<T> : System.IDisposable, System.IObserver<T>
     {
         public SynchronizeObjectWitness(System.IObserver<T> observer, object gate) { }
@@ -1450,19 +1507,19 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {Source}")]
+    [System.Diagnostics.DebuggerDisplay("SynchronizeSignal: Source = {Source}")]
     public sealed class SynchronizeSignal<T> : System.IObservable<T>
     {
         public SynchronizeSignal(System.IObservable<T> source) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {Source}")]
+    [System.Diagnostics.DebuggerDisplay("TapSignal: Source = {Source}")]
     public sealed class TapSignal<T> : System.IObservable<T>
     {
         public TapSignal(System.IObservable<T> source, System.Action<T> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}, Task = {Task}")]
+    [System.Diagnostics.DebuggerDisplay("TaskAnyWitness: Stopped = {_stopped}, Task = {Task}")]
     public sealed class TaskAnyWitness<T> : System.IDisposable, System.IObserver<T>
     {
         public TaskAnyWitness(System.Threading.CancellationToken cancellationToken) { }
@@ -1478,7 +1535,7 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Queued = {_queue.Count}, Active = {_active}, Done = {_done}")]
+    [System.Diagnostics.DebuggerDisplay("TaskChainCoordinator: Queued = {_queue.Count}, Active = {_active}, Done = {_done}")]
     public sealed class TaskChainCoordinator<T> : System.IDisposable
     {
         public TaskChainCoordinator(System.IObserver<T> observer) { }
@@ -1486,13 +1543,13 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         public void Dispose() { }
         public ReactiveUI.Primitives.Reactive.Advanced.TaskChainCoordinator<T> Run(System.IObservable<System.Threading.Tasks.Task<T>> sources) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Sources = {_sources}")]
+    [System.Diagnostics.DebuggerDisplay("TaskChainSignal: Sources = {_sources}")]
     public sealed class TaskChainSignal<T> : System.IObservable<T>
     {
         public TaskChainSignal(System.IObservable<System.Threading.Tasks.Task<T>> sources) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Count = {_count}, Stopped = {_stopped}")]
+    [System.Diagnostics.DebuggerDisplay("TaskCountWitness: Count = {_count}, Stopped = {_stopped}")]
     public sealed class TaskCountWitness<T> : System.IDisposable, System.IObserver<T>
     {
         public TaskCountWitness(System.Threading.CancellationToken cancellationToken) { }
@@ -1508,13 +1565,13 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Task = {Task}")]
+    [System.Diagnostics.DebuggerDisplay("TaskInstanceSignal: Task = {Task}")]
     public sealed class TaskInstanceSignal<T> : System.IObservable<T>
     {
         public TaskInstanceSignal(System.Threading.Tasks.Task<T> task) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}")]
+    [System.Diagnostics.DebuggerDisplay("TaskInstanceSubscription: Stopped = {_stopped}")]
     public sealed class TaskInstanceSubscription : System.IDisposable
     {
         public TaskInstanceSubscription() { }
@@ -1522,13 +1579,22 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         public void Dispose() { }
         public bool TryStop() { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {Source}, Sequencer = {Sequencer}")]
+    [System.Diagnostics.DebuggerDisplay("ThrowSignal: Error = {_error}, Scheduler = {_scheduler}")]
+    public sealed class ThrowSignal<T> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<T>
+    {
+        public ThrowSignal(System.Exception error, System.Reactive.Concurrency.IScheduler scheduler) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public bool IsRequiredSubscribeOnCurrentThread() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("TimeIntervalSignal: Source = {Source}, Sequencer = {Sequencer}")]
     public sealed class TimeIntervalSignal<T> : System.IObservable<ReactiveUI.Primitives.Core.TimeInterval<T>>
     {
         public TimeIntervalSignal(System.IObservable<T> source, System.Reactive.Concurrency.IScheduler sequencer) { }
         public System.IDisposable Subscribe(System.IObserver<ReactiveUI.Primitives.Core.TimeInterval<T>> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("First = {_first}, Last = {_last}")]
+    [System.Diagnostics.DebuggerDisplay("TimeIntervalWitness: First = {_first}, Last = {_last}")]
     public sealed class TimeIntervalWitness<T> : System.IDisposable, System.IObserver<T>
     {
         public TimeIntervalWitness(System.IObserver<ReactiveUI.Primitives.Core.TimeInterval<T>> observer, System.Reactive.Concurrency.IScheduler scheduler) { }
@@ -1546,13 +1612,13 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
     {
         public static void Arm(ReactiveUI.Primitives.Disposables.SingleReplaceableDisposable slot, System.Reactive.Concurrency.IScheduler sequencer, System.TimeSpan delay, System.Action tick) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Source = {Source}")]
+    [System.Diagnostics.DebuggerDisplay("UnsparkSignal: Source = {Source}")]
     public sealed class UnsparkSignal<T> : System.IObservable<T>
     {
         public UnsparkSignal(System.IObservable<ReactiveUI.Primitives.Reactive.Core.Spark<T>> source) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Observer = {_observer}, Subscription = {_subscription}")]
+    [System.Diagnostics.DebuggerDisplay("UnsparkWitness: Observer = {_observer}, Subscription = {_subscription}")]
     public sealed class UnsparkWitness<T> : System.IDisposable, System.IObserver<ReactiveUI.Primitives.Reactive.Core.Spark<T>>
     {
         public UnsparkWitness(System.IObserver<T> observer) { }
@@ -1576,7 +1642,7 @@ namespace ReactiveUI.Primitives.Reactive.Concurrency
         public static ReactiveUI.Primitives.Concurrency.ScheduledItem<TAbsolute> Create<TAbsolute, TValue>(System.Reactive.Concurrency.IScheduler scheduler, TValue state, System.Func<System.Reactive.Concurrency.IScheduler, TValue, System.IDisposable> action, TAbsolute dueTime) where TAbsolute : System.IComparable<TAbsolute> { }
         public static ReactiveUI.Primitives.Concurrency.ScheduledItem<TAbsolute> Create<TAbsolute, TValue>(System.Reactive.Concurrency.IScheduler scheduler, TValue state, System.Func<System.Reactive.Concurrency.IScheduler, TValue, System.IDisposable> action, TAbsolute dueTime, System.Collections.Generic.IComparer<TAbsolute> comparer) where TAbsolute : System.IComparable<TAbsolute> { }
     }
-    [System.Diagnostics.DebuggerDisplay("ReadyCount = {_readyCount}, DrainState = {_drainState}, Disposed = {_isDisposed}")]
+    [System.Diagnostics.DebuggerDisplay("WasmScheduler: ReadyCount = {_readyCount}, DrainState = {_drainState}, Disposed = {_isDisposed}")]
     public sealed class WasmScheduler : System.Reactive.Concurrency.LocalScheduler, System.IDisposable, System.Reactive.Concurrency.ISchedulerPeriodic
     {
         public static ReactiveUI.Primitives.Reactive.Concurrency.WasmScheduler Default { get; }
@@ -1618,7 +1684,7 @@ namespace ReactiveUI.Primitives.Reactive.Core
 }
 namespace ReactiveUI.Primitives.Reactive.Disposables
 {
-    [System.Diagnostics.DebuggerDisplay("Count = {Count}, IsDisposed = {IsDisposed}")]
+    [System.Diagnostics.DebuggerDisplay("ContainerDisposable: Count = {Count}, IsDisposed = {IsDisposed}")]
     public sealed class ContainerDisposable : ReactiveUI.Primitives.Disposables.MultipleDisposable
     {
         public ContainerDisposable() { }
@@ -1632,7 +1698,7 @@ namespace ReactiveUI.Primitives.Reactive.Disposables
 }
 namespace ReactiveUI.Primitives.Reactive.Signals
 {
-    [System.Diagnostics.DebuggerDisplay("Count = {_count}, MaximumCount = {_maximumCount}, IsDraining = {_isDraining}")]
+    [System.Diagnostics.DebuggerDisplay("PrioritySemaphoreSignal: Count = {_count}, MaximumCount = {_maximumCount}, IsDraining = {_isDraining}")]
     public sealed class PrioritySemaphoreSignal<T> : ReactiveUI.Primitives.Signals.ISignal<T> where T : System.IComparable<T>
     {
         public PrioritySemaphoreSignal(int maxCount) { }
@@ -1667,7 +1733,7 @@ namespace ReactiveUI.Primitives.Reactive.Signals
         public void OnNext(T value) { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }
-    [System.Diagnostics.DebuggerDisplay("Observers = {_observerRefCount}, Disposed = {_isDisposed}")]
+    [System.Diagnostics.DebuggerDisplay("ScheduledSignal: Observers = {_observerRefCount}, Disposed = {_isDisposed}")]
     public class ScheduledSignal<T> : ReactiveUI.Primitives.Signals.ISignal<T>
     {
         public ScheduledSignal(System.Reactive.Concurrency.IScheduler scheduler) { }

@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <typeparam name="TException">The type of the exception to catch.</typeparam>
 /// <param name="source">The source observable sequence.</param>
 /// <param name="errorAction">Action to invoke when an exception of type <typeparamref name="TException"/> occurs.</param>
-[System.Diagnostics.DebuggerDisplay("Source = {_source}, ErrorAction = {_errorAction}")]
+[System.Diagnostics.DebuggerDisplay("CatchIgnoreObservable: Source = {_source}, ErrorAction = {_errorAction}")]
 public sealed class CatchIgnoreObservable<TSource, TException>(
     IObservable<TSource> source,
     Action<TException> errorAction) : IObservable<TSource>

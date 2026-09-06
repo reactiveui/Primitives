@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <param name="observer">The downstream observer.</param>
 /// <param name="seed">The initial accumulated value.</param>
 /// <param name="accumulator">The accumulator function.</param>
-[System.Diagnostics.DebuggerDisplay("Current = {_current}, Subscription = {_subscription}")]
+[System.Diagnostics.DebuggerDisplay("ReduceWitness: Current = {_current}, Subscription = {_subscription}")]
 public sealed class ReduceWitness<TSource, TAccumulate>(
     IObserver<TAccumulate> observer,
     TAccumulate seed,

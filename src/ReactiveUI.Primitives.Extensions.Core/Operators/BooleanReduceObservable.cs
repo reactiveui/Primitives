@@ -16,7 +16,7 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// </summary>
 /// <param name="sources">The source observables.</param>
 /// <param name="target">The value every source must hold for the operator to emit <c>true</c>.</param>
-[System.Diagnostics.DebuggerDisplay("Sources = {_sourceList}")]
+[System.Diagnostics.DebuggerDisplay("BooleanReduceObservable: Sources = {_sourceList}")]
 public sealed class BooleanReduceObservable(IEnumerable<IObservable<bool>> sources, bool target) : IObservable<bool>
 {
     /// <summary>Capacity the materialization buffer starts at when the source count is not known up front.</summary>

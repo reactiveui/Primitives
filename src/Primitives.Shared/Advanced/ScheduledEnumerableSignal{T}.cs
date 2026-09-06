@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Scheduled enumerable-backed signal used by observable conversion overloads.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Values = {Values}, Scheduler = {Scheduler}")]
+[System.Diagnostics.DebuggerDisplay("ScheduledEnumerableSignal: Values = {Values}, Scheduler = {Scheduler}")]
 public sealed class ScheduledEnumerableSignal<T> : IObservable<T>
 {
     /// <summary>Initializes a new instance of the <see cref="ScheduledEnumerableSignal{T}"/> class.</summary>

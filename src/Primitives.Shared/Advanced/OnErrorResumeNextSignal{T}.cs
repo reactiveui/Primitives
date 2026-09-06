@@ -12,7 +12,8 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Continues through observable sources after either completion or error.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-internal sealed class OnErrorResumeNextSignal<T> : IRequireCurrentThread<T>
+[System.Diagnostics.DebuggerDisplay("OnErrorResumeNextSignal: Sources = {_sources}")]
+public sealed class OnErrorResumeNextSignal<T> : IRequireCurrentThread<T>
 {
     /// <summary>The sources to subscribe in order.</summary>
     private readonly IEnumerable<IObservable<T>> _sources;

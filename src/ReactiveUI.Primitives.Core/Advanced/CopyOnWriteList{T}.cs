@@ -6,7 +6,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Immutable array-backed list optimized for copy-on-write observer storage.</summary>
 /// <typeparam name="T">The item type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Count = {Items.Length}")]
+[System.Diagnostics.DebuggerDisplay("CopyOnWriteList: Count = {Items.Length}")]
 public sealed class CopyOnWriteList<T>
 {
     /// <summary>Gets the shared empty list.</summary>

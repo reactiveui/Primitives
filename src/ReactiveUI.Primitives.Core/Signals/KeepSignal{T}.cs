@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Signals;
 /// <typeparam name="T">The T type.</typeparam>
 /// <param name="source">The source value.</param>
 /// <param name="predicate">The predicate value.</param>
-[System.Diagnostics.DebuggerDisplay("Source = {_source}, Predicate = {_predicate}")]
+[System.Diagnostics.DebuggerDisplay("KeepSignal: Source = {_source}, Predicate = {_predicate}")]
 public sealed class KeepSignal<T>(IObservable<T> source, Func<T, bool> predicate) : IRequireCurrentThread<T>
 {
     /// <summary>Stores state for the signal implementation.</summary>

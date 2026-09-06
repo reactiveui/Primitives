@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Sink that annotates each value with the elapsed interval since the previous value.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("First = {_first}, Last = {_last}")]
+[System.Diagnostics.DebuggerDisplay("TimeIntervalWitness: First = {_first}, Last = {_last}")]
 public sealed class TimeIntervalWitness<T> : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>

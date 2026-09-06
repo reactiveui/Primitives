@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Advanced;
 #endif
 
 /// <summary>Emits a scheduled integer sequence.</summary>
-[System.Diagnostics.DebuggerDisplay("Start = {Start}, Count = {Count}")]
+[System.Diagnostics.DebuggerDisplay("SequenceSignal: Start = {Start}, Count = {Count}")]
 public sealed class SequenceSignal : IRequireCurrentThread<int>
 {
     /// <summary>Initializes a new instance of the <see cref="SequenceSignal"/> class.</summary>

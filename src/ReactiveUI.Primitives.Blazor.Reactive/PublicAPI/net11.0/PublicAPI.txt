@@ -22,7 +22,7 @@ namespace ReactiveUI.Primitives.Blazor.Reactive.Components
 }
 namespace ReactiveUI.Primitives.Blazor.Reactive.Concurrency
 {
-    [System.Diagnostics.DebuggerDisplay("InvokeAsync = {_invokeAsync}, UnhandledExceptionHandler = {UnhandledExceptionHandler}")]
+    [System.Diagnostics.DebuggerDisplay("BlazorRendererSequencer: InvokeAsync = {_invokeAsync}, UnhandledExceptionHandler = {UnhandledExceptionHandler}")]
     public sealed class BlazorRendererSequencer : ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler
     {
         public BlazorRendererSequencer(Microsoft.AspNetCore.Components.Dispatcher dispatcher) { }
@@ -40,7 +40,7 @@ namespace ReactiveUI.Primitives.Blazor.Reactive.Concurrency
 }
 namespace ReactiveUI.Primitives.Reactive.Concurrency
 {
-    [System.Diagnostics.DebuggerDisplay("ReadyCount = {_readyCount}, DrainPosted = {_drainPosted}")]
+    [System.Diagnostics.DebuggerDisplay("CoalescingDispatchScheduler: ReadyCount = {_readyCount}, DrainPosted = {_drainPosted}")]
     public abstract class CoalescingDispatchScheduler : System.Reactive.Concurrency.LocalScheduler
     {
         protected CoalescingDispatchScheduler() { }

@@ -17,7 +17,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="TAggregator">The value-type accumulator that folds values and yields the result.</typeparam>
 /// <param name="observer">The downstream observer.</param>
 /// <param name="aggregator">The seed accumulator.</param>
-[System.Diagnostics.DebuggerDisplay("Done = {_done}, Aggregator = {_aggregator}")]
+[System.Diagnostics.DebuggerDisplay("AggregateWitness: Done = {_done}, Aggregator = {_aggregator}")]
 public sealed class AggregateWitness<T, TResult, TAggregator>(IObserver<TResult> observer, TAggregator aggregator) : IObserver<T>, IDisposable
     where TAggregator : struct, IAggregator<T, TResult, TAggregator>
 {

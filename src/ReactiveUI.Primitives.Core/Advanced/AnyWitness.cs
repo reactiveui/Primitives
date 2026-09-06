@@ -8,7 +8,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Observer for detecting whether any value is present.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Done = {_done}, Observer = {_observer}")]
+[System.Diagnostics.DebuggerDisplay("AnyWitness: Done = {_done}, Observer = {_observer}")]
 public sealed class AnyWitness<T> : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>

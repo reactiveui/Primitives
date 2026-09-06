@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <param name="observer">The downstream observer.</param>
 /// <param name="count">The window size.</param>
 /// <param name="skip">The number of elements skipped between windows.</param>
-[System.Diagnostics.DebuggerDisplay("Count = {_count}, Skip = {_skip}, Index = {_index}, Done = {_done}")]
+[System.Diagnostics.DebuggerDisplay("BufferWitness: Count = {_count}, Skip = {_skip}, Index = {_index}, Done = {_done}")]
 public sealed class BufferWitness<T>(IObserver<IList<T>> observer, int count, int skip) : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>

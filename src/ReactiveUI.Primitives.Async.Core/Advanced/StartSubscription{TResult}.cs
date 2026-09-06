@@ -6,7 +6,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>A subscription that invokes a synchronous function and emits its result.</summary>
 /// <typeparam name="TResult">The result type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Function = {Function}, TaskScheduler = {TaskScheduler}")]
+[System.Diagnostics.DebuggerDisplay("StartSubscription: Function = {Function}, TaskScheduler = {TaskScheduler}")]
 public sealed class StartSubscription<TResult> : TaskSignalSubscription<TResult>
 {
     /// <summary>Initializes a new instance of the <see cref="StartSubscription{TResult}"/> class.</summary>

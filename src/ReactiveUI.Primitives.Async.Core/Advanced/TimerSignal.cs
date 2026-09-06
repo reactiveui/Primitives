@@ -5,7 +5,7 @@
 namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>An observable that emits one or more timer ticks.</summary>
-[System.Diagnostics.DebuggerDisplay("DueTime = {DueTime}, Period = {Period}")]
+[System.Diagnostics.DebuggerDisplay("TimerSignal: DueTime = {DueTime}, Period = {Period}")]
 public sealed class TimerSignal : IObservableAsync<long>
 {
     /// <summary>Initializes a new instance of the <see cref="TimerSignal"/> class.</summary>

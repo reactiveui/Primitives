@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <summary>Observer that forwards notifications to stateful delegates.</summary>
 /// <typeparam name="T">The observed value type.</typeparam>
 /// <typeparam name="TState">The state type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("State = {_state}, OnError = {_onError}")]
+[System.Diagnostics.DebuggerDisplay("StatefulWitness: State = {_state}, OnError = {_onError}")]
 public sealed class StatefulWitness<T, TState> : IObserver<T>
 {
     /// <summary>Callback state.</summary>

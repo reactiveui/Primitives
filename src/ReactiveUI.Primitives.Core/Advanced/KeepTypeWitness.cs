@@ -8,7 +8,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Sink that forwards only values assignable to <typeparamref name="TResult"/>.</summary>
 /// <typeparam name="TResult">The result value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Observer = {_observer}, Subscription = {_subscription}")]
+[System.Diagnostics.DebuggerDisplay("KeepTypeWitness: Observer = {_observer}, Subscription = {_subscription}")]
 public sealed class KeepTypeWitness<TResult> : IObserver<object?>, IDisposable
 {
     /// <summary>The downstream observer.</summary>

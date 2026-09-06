@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="T">The T type.</typeparam>
 /// <param name="value">The value.</param>
 /// <param name="count">The count value.</param>
-[System.Diagnostics.DebuggerDisplay("Value = {_value}, Count = {_count}")]
+[System.Diagnostics.DebuggerDisplay("RepeatSignal: Value = {_value}, Count = {_count}")]
 public sealed class RepeatSignal<T>(T value, int count) : IRequireCurrentThread<T>, IInlineSignal<T>
 {
     /// <summary>Stores state for the signal implementation.</summary>

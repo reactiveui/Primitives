@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Zips two synchronous integer ranges without coordinator queues.</summary>
 /// <typeparam name="TResult">The result value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Count = {_count}, LeftStart = {_leftStart}, RightStart = {_rightStart}")]
+[System.Diagnostics.DebuggerDisplay("RangeZipSignal: Count = {_count}, LeftStart = {_leftStart}, RightStart = {_rightStart}")]
 public sealed class RangeZipSignal<TResult> : IRequireCurrentThread<TResult>, IInlineSignal<TResult>
 {
     /// <summary>Stores state for the signal implementation.</summary>

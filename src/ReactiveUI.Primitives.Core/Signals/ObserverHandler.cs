@@ -8,7 +8,7 @@ namespace ReactiveUI.Primitives.Signals;
 /// <typeparam name="T">The Type.</typeparam>
 /// <param name="subject">The subject value.</param>
 /// <param name="observer">The observer value.</param>
-[System.Diagnostics.DebuggerDisplay("Subject = {_subject}, Observer = {_observer}")]
+[System.Diagnostics.DebuggerDisplay("ObserverHandler: Subject = {_subject}, Observer = {_observer}")]
 public sealed class ObserverHandler<T>(AsyncSignal<T> subject, IObserver<T> observer) : IDisposable
 {
     /// <summary>Executes the new operation.</summary>

@@ -8,7 +8,7 @@ using ReactiveUI.Primitives.Concurrency;
 namespace ReactiveUI.Primitives.Extensions.Tests;
 
 /// <summary>Tests for ReactiveExtensionsTests.</summary>
-[System.Diagnostics.DebuggerDisplay("{nameof(ReactiveExtensionsTests),nq}")]
+[System.Diagnostics.DebuggerDisplay("ReactiveExtensionsTests: {nameof(ReactiveExtensionsTests),nq}")]
 public partial class ReactiveExtensionsTests
 {
     /// <summary>Tests BufferUntil with character delimiters.</summary>

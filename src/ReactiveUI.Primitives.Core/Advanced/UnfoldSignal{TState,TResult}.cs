@@ -14,7 +14,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <param name="condition">Loop condition.</param>
 /// <param name="iterate">State iterator.</param>
 /// <param name="resultSelector">Result selector.</param>
-[System.Diagnostics.DebuggerDisplay("InitialState = {_initialState}, Condition = {_condition}")]
+[System.Diagnostics.DebuggerDisplay("UnfoldSignal: InitialState = {_initialState}, Condition = {_condition}")]
 public sealed class UnfoldSignal<TState, TResult>(
     TState initialState,
     Func<TState, bool> condition,

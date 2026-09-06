@@ -7,7 +7,7 @@ namespace ReactiveUI.Primitives.Async;
 /// <summary>Provides configuration options for controlling the behavior of the TakeUntil operator.</summary>
 /// <remarks>This type allows customization of how the source sequence responds to failures in the 'other'
 /// sequence when using TakeUntil. It is immutable and thread-safe.</remarks>
-[System.Diagnostics.DebuggerDisplay("SourceFailsWhenOtherFails = {SourceFailsWhenOtherFails}")]
+[System.Diagnostics.DebuggerDisplay("TakeUntilOptions: SourceFailsWhenOtherFails = {SourceFailsWhenOtherFails}")]
 public sealed record TakeUntilOptions
 {
     /// <summary>Gets the default configuration options for the TakeUntil operation.</summary>

@@ -674,7 +674,7 @@ public partial class RxNamesTests
     /// <param name = "Rx">The Rx/LINQ-named builder.</param>
     /// <param name = "Input">The source values.</param>
     /// <param name = "Expected">The expected forwarded values.</param>
-    [System.Diagnostics.DebuggerDisplay("Name = {Name}, Expected = {Expected}")]
+    [System.Diagnostics.DebuggerDisplay("UnaryCase: Name = {Name}, Expected = {Expected}")]
     public sealed record UnaryCase(
         string Name,
         Func<IObservable<int>, IObservable<int>> Deviant,
@@ -692,7 +692,7 @@ public partial class RxNamesTests
     /// <param name = "Rx">The Rx/LINQ-named builder.</param>
     /// <param name = "Inners">The inner source values.</param>
     /// <param name = "Expected">The expected forwarded values.</param>
-    [System.Diagnostics.DebuggerDisplay("Name = {Name}, Expected = {Expected}")]
+    [System.Diagnostics.DebuggerDisplay("HigherOrderCase: Name = {Name}, Expected = {Expected}")]
     public sealed record HigherOrderCase(
         string Name,
         Func<IObservable<IObservable<int>>, IObservable<int>> Deviant,
@@ -710,7 +710,7 @@ public partial class RxNamesTests
     /// <param name = "Rx">The Rx/LINQ-named builder.</param>
     /// <param name = "Drive">The script that pushes values into the left and right subjects.</param>
     /// <param name = "Expected">The expected forwarded values.</param>
-    [System.Diagnostics.DebuggerDisplay("Name = {Name}, Expected = {Expected}")]
+    [System.Diagnostics.DebuggerDisplay("BinaryCase: Name = {Name}, Expected = {Expected}")]
     public sealed record BinaryCase(
         string Name,
         Func<IObservable<int>, IObservable<int>, IObservable<int>> Deviant,
@@ -729,7 +729,7 @@ public partial class RxNamesTests
     /// <param name = "Source">The source factory.</param>
     /// <param name = "Expected">The expected forwarded values.</param>
     /// <param name = "ExpectsTimeout">Whether a <see cref = "TimeoutException"/> is expected.</param>
-    [System.Diagnostics.DebuggerDisplay("Name = {Name}, ExpectsTimeout = {ExpectsTimeout}")]
+    [System.Diagnostics.DebuggerDisplay("TimeCase: Name = {Name}, ExpectsTimeout = {ExpectsTimeout}")]
     public sealed record TimeCase(
         string Name,
         Func<IObservable<int>, ISequencer, IObservable<int>> Deviant,

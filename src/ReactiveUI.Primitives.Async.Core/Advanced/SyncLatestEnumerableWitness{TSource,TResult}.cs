@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// <summary>Per-source observer for enumerable <c>SyncLatest</c> sources.</summary>
 /// <typeparam name="TSource">The source element type.</typeparam>
 /// <typeparam name="TResult">The downstream element type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Index = {Index}, Parent = {Parent}")]
+[System.Diagnostics.DebuggerDisplay("SyncLatestEnumerableWitness: Index = {Index}, Parent = {Parent}")]
 public sealed class SyncLatestEnumerableWitness<TSource, TResult> : IObserverAsync<TSource>
 {
     /// <summary>Initializes a new instance of the <see cref="SyncLatestEnumerableWitness{TSource, TResult}"/> class.</summary>

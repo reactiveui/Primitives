@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Represents a finite signal backed by an enumerable sequence.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Values = {_values}, CancellationToken = {_cancellationToken}")]
+[System.Diagnostics.DebuggerDisplay("FromEnumerableSignal: Values = {_values}, CancellationToken = {_cancellationToken}")]
 public sealed class FromEnumerableSignal<T> : IRequireCurrentThread<T>, IInlineSignal<T>
 {
     /// <summary>Stores the source values.</summary>

@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Signals;
 /// <typeparam name="TResult">The TResult type.</typeparam>
 /// <param name="source">The source value.</param>
 /// <param name="selector">The selector value.</param>
-[System.Diagnostics.DebuggerDisplay("Source = {_source}, Selector = {_selector}")]
+[System.Diagnostics.DebuggerDisplay("MapSignal: Source = {_source}, Selector = {_selector}")]
 public sealed class MapSignal<TSource, TResult>(IObservable<TSource> source, Func<TSource, TResult> selector) : IRequireCurrentThread<TResult>
 {
     /// <summary>Stores state for the signal implementation.</summary>

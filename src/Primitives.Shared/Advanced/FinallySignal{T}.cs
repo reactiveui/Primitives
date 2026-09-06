@@ -14,7 +14,8 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="T">The T type.</typeparam>
 /// <param name="source">The source value.</param>
 /// <param name="finallyAction">The finallyAction value.</param>
-internal sealed class FinallySignal<T>(IObservable<T> source, Action finallyAction) : IRequireCurrentThread<T>
+[System.Diagnostics.DebuggerDisplay("FinallySignal: Source = {_source}")]
+public sealed class FinallySignal<T>(IObservable<T> source, Action finallyAction) : IRequireCurrentThread<T>
 {
     /// <summary>Stores state for the signal implementation.</summary>
     private readonly IObservable<T> _source = source;
