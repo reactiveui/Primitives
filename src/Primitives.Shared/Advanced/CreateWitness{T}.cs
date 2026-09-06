@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Observer wrapper used by create-style signals.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}, Observer = {Observer}")]
+[System.Diagnostics.DebuggerDisplay("CreateWitness: Stopped = {_stopped}, Observer = {Observer}")]
 public sealed class CreateWitness<T> : IDisposable, IObserver<T>
 {
     /// <summary>Cancellation resource assigned by the subscription factory.</summary>

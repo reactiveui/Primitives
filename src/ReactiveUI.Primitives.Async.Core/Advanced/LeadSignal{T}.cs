@@ -6,7 +6,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>An observable that emits leading values before subscribing to the source sequence.</summary>
 /// <typeparam name="T">The element type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Source = {Source}, Values = {Values}")]
+[System.Diagnostics.DebuggerDisplay("LeadSignal: Source = {Source}, Values = {Values}")]
 public sealed class LeadSignal<T> : IObservableAsync<T>
 {
     /// <summary>Initializes a new instance of the <see cref="LeadSignal{T}"/> class.</summary>

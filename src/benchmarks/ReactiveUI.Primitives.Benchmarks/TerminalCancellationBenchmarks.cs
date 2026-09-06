@@ -17,7 +17,7 @@ namespace ReactiveUI.Primitives.Benchmarks;
 /// covering the live-token pass-through cost, the task-shim wrapper, and the cancel path.
 /// </summary>
 [MemoryDiagnoser]
-[System.Diagnostics.DebuggerDisplay("Canceled = {_liveSource.IsCancellationRequested}")]
+[System.Diagnostics.DebuggerDisplay("TerminalCancellationBenchmarks: Canceled = {_liveSource.IsCancellationRequested}")]
 public class TerminalCancellationBenchmarks : IDisposable
 {
     /// <summary>The inclusive start value of the range used by each benchmark.</summary>

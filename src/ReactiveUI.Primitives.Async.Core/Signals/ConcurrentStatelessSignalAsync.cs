@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Async.Signals;
 /// throughput in scenarios where observer processing can occur independently. Use this type when observer notification
 /// order is not important and concurrent delivery is desired. Thread safety is ensured for concurrent observer
 /// notifications.</remarks>
-[System.Diagnostics.DebuggerDisplay("Observers = {_state.Observers.Length}")]
+[System.Diagnostics.DebuggerDisplay("ConcurrentStatelessSignalAsync: Observers = {_state.Observers.Length}")]
 public sealed class ConcurrentStatelessSignalAsync<T> : ISignalAsync<T>
 {
     /// <inheritdoc/>

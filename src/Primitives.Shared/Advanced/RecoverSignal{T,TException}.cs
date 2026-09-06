@@ -19,7 +19,8 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="TException">The handled exception type.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="handler">The handler that selects the fallback sequence for a caught error.</param>
-internal sealed class RecoverSignal<T, TException>(IObservable<T> source, Func<TException, IObservable<T>> handler) : IRequireCurrentThread<T>
+[System.Diagnostics.DebuggerDisplay("RecoverSignal: Source = {_source}")]
+public sealed class RecoverSignal<T, TException>(IObservable<T> source, Func<TException, IObservable<T>> handler) : IRequireCurrentThread<T>
     where TException : Exception
 {
     /// <summary>The source observable.</summary>

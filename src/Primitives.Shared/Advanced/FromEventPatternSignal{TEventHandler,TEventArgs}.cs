@@ -16,7 +16,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <summary>Converts an event add/remove pair into event-pattern notifications.</summary>
 /// <typeparam name="TEventHandler">The event delegate type.</typeparam>
 /// <typeparam name="TEventArgs">The event argument type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("AddHandler = {AddHandler}, RemoveHandler = {RemoveHandler}")]
+[System.Diagnostics.DebuggerDisplay("FromEventPatternSignal: AddHandler = {AddHandler}, RemoveHandler = {RemoveHandler}")]
 public sealed class FromEventPatternSignal<TEventHandler, TEventArgs> : IObservable<EventPattern<TEventArgs>>
     where TEventHandler : Delegate
     where TEventArgs : EventArgs

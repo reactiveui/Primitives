@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Observer wrapper for detecting whether a source completes without values.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}, Subscription = {Subscription}")]
+[System.Diagnostics.DebuggerDisplay("IsEmptyWitness: Stopped = {_stopped}, Subscription = {Subscription}")]
 public sealed class IsEmptyWitness<T> : IObserver<T>, IDisposable
 {
     /// <summary>Stores the stopped flag for interlocked/ref helper calls.</summary>

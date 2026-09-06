@@ -8,7 +8,7 @@ namespace ReactiveUI.Primitives.Core;
 
 /// <summary>Binary heap priority queue that preserves insertion order for equal-priority items.</summary>
 /// <typeparam name="T">The queued item type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Count = {Count}, Capacity = {_items.Length}")]
+[System.Diagnostics.DebuggerDisplay("PriorityQueue: Count = {Count}, Capacity = {_items.Length}")]
 public sealed class PriorityQueue<T>
     where T : IComparable<T>
 {

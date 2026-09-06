@@ -8,7 +8,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>Subscription that emits leading values and then relays the source sequence.</summary>
 /// <typeparam name="T">The element type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Disposed = {Disposed}, Pipeline = {Pipeline}")]
+[System.Diagnostics.DebuggerDisplay("LeadSubscription: Disposed = {Disposed}, Pipeline = {Pipeline}")]
 public sealed class LeadSubscription<T> : IAsyncDisposable
 {
     /// <summary>Protects disposal state.</summary>

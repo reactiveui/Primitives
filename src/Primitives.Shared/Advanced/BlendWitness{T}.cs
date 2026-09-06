@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Mediates concurrent merging for <see cref="BlendSignal{T}"/> and <see cref="EnumerableBlendSignal{T}"/>.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("ActiveCount = {ActiveCount}, IsOuterCompleted = {IsOuterCompleted}, IsDone = {IsDone}")]
+[System.Diagnostics.DebuggerDisplay("BlendWitness: ActiveCount = {ActiveCount}, IsOuterCompleted = {IsOuterCompleted}, IsDone = {IsDone}")]
 public sealed class BlendWitness<T> : IDisposable
 {
     /// <summary>Serializes downstream callbacks and guards counters.</summary>

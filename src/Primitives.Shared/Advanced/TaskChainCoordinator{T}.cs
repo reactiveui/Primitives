@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Coordinates sequential task-source concatenation without a map adapter.</summary>
 /// <typeparam name="T">The task result type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Queued = {_queue.Count}, Active = {_active}, Done = {_done}")]
+[System.Diagnostics.DebuggerDisplay("TaskChainCoordinator: Queued = {_queue.Count}, Active = {_active}, Done = {_done}")]
 public sealed class TaskChainCoordinator<T> : IDisposable
 {
     /// <summary>Guards the queue and active/completed flags.</summary>

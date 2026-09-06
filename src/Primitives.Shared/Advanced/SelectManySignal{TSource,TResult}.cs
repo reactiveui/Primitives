@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <summary>Concrete signal for concurrent observable <c>SelectMany</c>.</summary>
 /// <typeparam name="TSource">The source value type.</typeparam>
 /// <typeparam name="TResult">The result value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Source = {Source}, Selector = {Selector}, Inner = {Inner}")]
+[System.Diagnostics.DebuggerDisplay("SelectManySignal: Source = {Source}, Selector = {Selector}, Inner = {Inner}")]
 public sealed class SelectManySignal<TSource, TResult> : IObservable<TResult>
 {
     /// <summary>Initializes a new instance of the <see cref="SelectManySignal{TSource, TResult}"/> class.</summary>

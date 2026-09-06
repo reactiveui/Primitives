@@ -15,7 +15,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// <typeparam name="T8">Element type of source 8.</typeparam>
 /// <typeparam name="T9">Element type of source 9.</typeparam>
 /// <typeparam name="TResult">The projected element type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Sources = {Sources}, Selector = {Selector}")]
+[System.Diagnostics.DebuggerDisplay("SyncLatest9Signal: Sources = {Sources}, Selector = {Selector}")]
 public sealed class SyncLatest9Signal<T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult> : IObservableAsync<TResult>
 {
     /// <summary>Initializes a new instance of the <see cref="SyncLatest9Signal{T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult}"/> class.</summary>

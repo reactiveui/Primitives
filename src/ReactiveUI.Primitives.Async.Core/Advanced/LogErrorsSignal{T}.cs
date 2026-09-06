@@ -8,7 +8,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>An observable that logs resumable errors without changing the source sequence.</summary>
 /// <typeparam name="T">The element type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Source = {Source}, Logger = {Logger}")]
+[System.Diagnostics.DebuggerDisplay("LogErrorsSignal: Source = {Source}, Logger = {Logger}")]
 public sealed class LogErrorsSignal<T> : IObservableAsync<T>
 {
     /// <summary>Initializes a new instance of the <see cref="LogErrorsSignal{T}"/> class.</summary>

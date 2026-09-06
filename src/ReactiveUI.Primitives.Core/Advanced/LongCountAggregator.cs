@@ -6,7 +6,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Immutable accumulator that counts every observed value as a <see cref="long"/>.</summary>
 /// <typeparam name="T">The observed value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Result = {Result}")]
+[System.Diagnostics.DebuggerDisplay("LongCountAggregator: Result = {Result}")]
 public readonly record struct LongCountAggregator<T> : IAggregator<T, long, LongCountAggregator<T>>
 {
     /// <summary>Initializes a new instance of the <see cref="LongCountAggregator{T}"/> struct.</summary>

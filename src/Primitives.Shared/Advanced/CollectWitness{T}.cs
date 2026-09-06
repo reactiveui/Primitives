@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Observer that collects source values into batches.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}, Buffered = {Values.Count}")]
+[System.Diagnostics.DebuggerDisplay("CollectWitness: Stopped = {_stopped}, Buffered = {Values.Count}")]
 public sealed class CollectWitness<T> : IObserver<T>, IDisposable
 {
     /// <summary>Serializes access to buffered values and terminal state.</summary>

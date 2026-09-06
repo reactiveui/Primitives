@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="T">Value type.</typeparam>
 /// <param name="resourceFactory">Resource factory.</param>
 /// <param name="signalFactory">Signal factory.</param>
-[System.Diagnostics.DebuggerDisplay("ResourceFactory = {_resourceFactory}, SignalFactory = {_signalFactory}")]
+[System.Diagnostics.DebuggerDisplay("UseSignal: ResourceFactory = {_resourceFactory}, SignalFactory = {_signalFactory}")]
 public sealed class UseSignal<TResource, T>(
     Func<TResource> resourceFactory,
     Func<TResource, IObservable<T>> signalFactory) : IObservable<T>

@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <param name="onError">The error callback.</param>
 /// <param name="onCompleted">The completion callback.</param>
 /// <param name="value">The appended value.</param>
-[System.Diagnostics.DebuggerDisplay("Value = {_value}, Subscription = {_subscription}")]
+[System.Diagnostics.DebuggerDisplay("AppendDelegateWitness: Value = {_value}, Subscription = {_subscription}")]
 public sealed class AppendDelegateWitness<T>(Action<T> onNext, Action<Exception> onError, Action onCompleted, T value) : IObserver<T>, IDisposable
 {
     /// <summary>The next callback.</summary>

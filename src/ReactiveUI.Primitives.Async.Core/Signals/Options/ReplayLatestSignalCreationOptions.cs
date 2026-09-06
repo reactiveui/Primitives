@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Async.Signals;
 /// maintains state. The options provided affect how subscribers receive messages and whether the Signal retains the
 /// latest value. This type is immutable and can be used to configure Signal creation in a thread-safe
 /// manner.</remarks>
-[System.Diagnostics.DebuggerDisplay("PublishingOption = {PublishingOption}, IsStateless = {IsStateless}")]
+[System.Diagnostics.DebuggerDisplay("ReplayLatestSignalCreationOptions: PublishingOption = {PublishingOption}, IsStateless = {IsStateless}")]
 public sealed record ReplayLatestSignalCreationOptions
 {
     /// <summary>Gets the default configuration options for creating a ReplayLatestSignal instance.</summary>

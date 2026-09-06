@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="TLeft">The left value type.</typeparam>
 /// <typeparam name="TRight">The right value type.</typeparam>
 /// <typeparam name="TResult">The result value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("HasLeft = {HasLeft}, HasRight = {HasRight}, IsDone = {IsDone}")]
+[System.Diagnostics.DebuggerDisplay("ForkJoinWitness: HasLeft = {HasLeft}, HasRight = {HasRight}, IsDone = {IsDone}")]
 public sealed class ForkJoinWitness<TLeft, TRight, TResult>
 {
     /// <summary>The synchronization gate.</summary>

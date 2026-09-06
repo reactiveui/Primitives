@@ -21,7 +21,7 @@ namespace ReactiveUI.Primitives.Benchmarks;
 /// factories under virtual time, and the <c>FromEventPattern</c> event bridge.
 /// </summary>
 [MemoryDiagnoser]
-[System.Diagnostics.DebuggerDisplay("Limit = {_limit}")]
+[System.Diagnostics.DebuggerDisplay("FactoryStateTimerBenchmarks: Limit = {_limit}")]
 public class FactoryStateTimerBenchmarks
 {
     /// <summary>The number of values generated or events raised per benchmark iteration.</summary>

@@ -12,7 +12,8 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Represents the ThrowSignal class.</summary>
 /// <typeparam name="T">The T type.</typeparam>
-internal sealed class ThrowSignal<T> : IRequireCurrentThread<T>
+[System.Diagnostics.DebuggerDisplay("ThrowSignal: Error = {_error}, Scheduler = {_scheduler}")]
+public sealed class ThrowSignal<T> : IRequireCurrentThread<T>
 {
     /// <summary>Stores state for the signal implementation.</summary>
     private readonly Exception _error;

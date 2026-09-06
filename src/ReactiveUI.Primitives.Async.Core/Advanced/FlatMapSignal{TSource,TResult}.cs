@@ -7,7 +7,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// <summary>An observable that projects source values to inner observables and merges those inner observables.</summary>
 /// <typeparam name="TSource">The source element type.</typeparam>
 /// <typeparam name="TResult">The result element type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Source = {Source}, SyncSelector = {SyncSelector}, AsyncSelector = {AsyncSelector}")]
+[System.Diagnostics.DebuggerDisplay("FlatMapSignal: Source = {Source}, SyncSelector = {SyncSelector}, AsyncSelector = {AsyncSelector}")]
 public sealed class FlatMapSignal<TSource, TResult> : IObservableAsync<TResult>
 {
     /// <summary>Initializes a new instance of the <see cref="FlatMapSignal{TSource,TResult}"/> class.</summary>

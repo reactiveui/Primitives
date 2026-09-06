@@ -8,7 +8,7 @@ namespace ReactiveUI.Primitives.Signals;
 
 /// <summary>Represents the AwaitWitness class.</summary>
 /// <typeparam name="T">The Type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Callback = {_callback}, Context = {_context}")]
+[System.Diagnostics.DebuggerDisplay("AwaitWitness: Callback = {_callback}, Context = {_context}")]
 public sealed class AwaitWitness<T> : IObserver<T>
 {
     /// <summary>Stores state for the signal implementation.</summary>

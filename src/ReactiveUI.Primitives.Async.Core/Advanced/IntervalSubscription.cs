@@ -5,7 +5,7 @@
 namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>A subscription that emits incrementing ticks at a fixed interval.</summary>
-[System.Diagnostics.DebuggerDisplay("Period = {Period}, TimeProvider = {TimeProvider}")]
+[System.Diagnostics.DebuggerDisplay("IntervalSubscription: Period = {Period}, TimeProvider = {TimeProvider}")]
 public sealed class IntervalSubscription : TaskSignalSubscription<long>
 {
     /// <summary>Initializes a new instance of the <see cref="IntervalSubscription"/> class.</summary>

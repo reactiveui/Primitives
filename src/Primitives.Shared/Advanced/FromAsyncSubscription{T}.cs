@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Subscription that invokes a cold task factory and forwards its terminal result.</summary>
 /// <typeparam name="T">The task result type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Completed = {Lifetime.IsCompleted}, CancellationRequested = {Lifetime.IsCancellationRequested}")]
+[System.Diagnostics.DebuggerDisplay("FromAsyncSubscription: Completed = {Lifetime.IsCompleted}, CancellationRequested = {Lifetime.IsCancellationRequested}")]
 public sealed class FromAsyncSubscription<T> : IDisposable
 {
     /// <summary>Initializes a new instance of the <see cref="FromAsyncSubscription{T}"/> class.</summary>

@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <param name="observer">The downstream observer.</param>
 /// <param name="value">The value to locate.</param>
 /// <param name="comparer">The comparer used for equality checks.</param>
-[System.Diagnostics.DebuggerDisplay("SoughtValue = {_value}, Done = {_done}")]
+[System.Diagnostics.DebuggerDisplay("ContainsWitness: SoughtValue = {_value}, Done = {_done}")]
 public sealed class ContainsWitness<T>(IObserver<bool> observer, T value, IEqualityComparer<T> comparer) : IObserver<T>, IDisposable
 {
     /// <summary>The value to locate.</summary>

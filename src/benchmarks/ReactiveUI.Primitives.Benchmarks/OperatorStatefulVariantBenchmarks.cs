@@ -16,7 +16,7 @@ namespace ReactiveUI.Primitives.Benchmarks;
 /// the comparison frameworks must capture the same runtime value in a closure.
 /// </summary>
 [MemoryDiagnoser]
-[System.Diagnostics.DebuggerDisplay("Factor = {_factor}, Threshold = {_threshold}")]
+[System.Diagnostics.DebuggerDisplay("OperatorStatefulVariantBenchmarks: Factor = {_factor}, Threshold = {_threshold}")]
 public class OperatorStatefulVariantBenchmarks
 {
     /// <summary>The number of values produced by each benchmarked sequence.</summary>

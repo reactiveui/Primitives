@@ -15,7 +15,7 @@ namespace ReactiveUI.Primitives.Async.Signals;
 /// <remarks>This Signal notifies all observers concurrently, which can improve throughput in scenarios with
 /// multiple observers. The order in which observers receive notifications is not guaranteed. This type is thread-safe
 /// and suitable for use in asynchronous and concurrent environments.</remarks>
-[System.Diagnostics.DebuggerDisplay("LastValue = {_state.LastValue}, IsDisposed = {_state.IsDisposed}")]
+[System.Diagnostics.DebuggerDisplay("ConcurrentReplayLatestSignalAsync: LastValue = {_state.LastValue}, IsDisposed = {_state.IsDisposed}")]
 public sealed class ConcurrentReplayLatestSignalAsync<T>(Optional<T> startValue) : ISignalAsync<T>
 {
     /// <inheritdoc/>

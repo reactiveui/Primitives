@@ -13,7 +13,7 @@ namespace ReactiveUI.Primitives.Signals;
 /// Fuses the <c>Buffer(boundary).SelectMany(distinct).Publish().RefCount()</c> pipeline into one allocation-light sink.
 /// </summary>
 /// <typeparam name="T">The notification type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}, Buffer = {_buffer}")]
+[System.Diagnostics.DebuggerDisplay("DelayableNotificationSignal: Stopped = {_stopped}, Buffer = {_buffer}")]
 public sealed class DelayableNotificationSignal<T> : ISignal<T>
 {
     /// <summary>Guards the observer set, buffer, and terminal state.</summary>

@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Signals;
 
 /// <summary>A signal which emits items using the specified scheduler.</summary>
 /// <typeparam name="T">The type of item to emit.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Observers = {_observerRefCount}, Disposed = {_isDisposed}")]
+[System.Diagnostics.DebuggerDisplay("ScheduledSignal: Observers = {_observerRefCount}, Disposed = {_isDisposed}")]
 public class ScheduledSignal<T> : ISignal<T>
 {
     /// <summary>Guards default-observer and subscription-count state.</summary>

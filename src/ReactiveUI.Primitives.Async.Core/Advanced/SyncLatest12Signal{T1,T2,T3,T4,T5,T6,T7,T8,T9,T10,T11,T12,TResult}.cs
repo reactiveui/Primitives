@@ -18,7 +18,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// <typeparam name="T11">Element type of source 11.</typeparam>
 /// <typeparam name="T12">Element type of source 12.</typeparam>
 /// <typeparam name="TResult">The projected element type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Sources = {Sources}")]
+[System.Diagnostics.DebuggerDisplay("SyncLatest12Signal: Sources = {Sources}")]
 public sealed class
     SyncLatest12Signal<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TResult> : IObservableAsync<TResult>
 {

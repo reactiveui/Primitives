@@ -14,7 +14,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <remarks>
 /// Call <see cref="Complete"/> exactly once after asynchronous setup has finished, even when setup faults or is canceled.
 /// </remarks>
-[System.Diagnostics.DebuggerDisplay("Completed = {_completed}, Canceled = {_canceled}, Disposed = {_disposed}")]
+[System.Diagnostics.DebuggerDisplay("AsyncSubscriptionLifetime: Completed = {_completed}, Canceled = {_canceled}, Disposed = {_disposed}")]
 public sealed class AsyncSubscriptionLifetime : IDisposable
 {
     /// <summary>The cancellation source passed to the asynchronous subscription.</summary>

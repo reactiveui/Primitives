@@ -14,7 +14,7 @@ namespace ReactiveUI.Primitives;
 /// contained value. If no value is present, HasValue is <see langword="false"/> and accessing Value throws an
 /// exception. This pattern is useful for APIs that need to distinguish between an explicit 'no value' state and a
 /// default value.</remarks>
-[System.Diagnostics.DebuggerDisplay("HasValue = {HasValue}, Value = {_value}")]
+[System.Diagnostics.DebuggerDisplay("Optional: HasValue = {HasValue}, Value = {_value}")]
 public readonly record struct Optional<T>
 {
     /// <summary>The underlying value, or <see langword="default"/> when no value is present.</summary>

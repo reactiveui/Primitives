@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Runs a function on a scheduler and emits its result.</summary>
 /// <typeparam name="T">The result type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Function = {Function}, Scheduler = {Scheduler}")]
+[System.Diagnostics.DebuggerDisplay("StartSignal: Function = {Function}, Scheduler = {Scheduler}")]
 public sealed class StartSignal<T> : IRequireCurrentThread<T>
 {
     /// <summary>Initializes a new instance of the <see cref="StartSignal{T}"/> class.</summary>

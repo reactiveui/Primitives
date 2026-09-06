@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="T">The source value type.</typeparam>
 /// <param name="observer">The downstream observer.</param>
 /// <param name="defaultValue">Value emitted for an empty source.</param>
-[System.Diagnostics.DebuggerDisplay("Seen = {_seen}, DefaultValue = {_defaultValue}")]
+[System.Diagnostics.DebuggerDisplay("DefaultIfEmptyWitness: Seen = {_seen}, DefaultValue = {_defaultValue}")]
 public sealed class DefaultIfEmptyWitness<T>(IObserver<T> observer, T defaultValue) : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>

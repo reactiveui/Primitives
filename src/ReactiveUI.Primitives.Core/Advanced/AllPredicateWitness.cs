@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="T">The source value type.</typeparam>
 /// <param name="observer">The downstream observer.</param>
 /// <param name="predicate">The predicate.</param>
-[System.Diagnostics.DebuggerDisplay("Done = {_done}, Observer = {_observer}")]
+[System.Diagnostics.DebuggerDisplay("AllPredicateWitness: Done = {_done}, Observer = {_observer}")]
 public sealed class AllPredicateWitness<T>(IObserver<bool> observer, Func<T, bool> predicate) : IObserver<T>, IDisposable
 {
     /// <summary>The predicate.</summary>

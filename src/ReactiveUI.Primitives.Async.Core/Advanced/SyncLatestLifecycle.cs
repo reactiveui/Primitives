@@ -14,7 +14,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// fan-out, completion-bitmask handling) lives in one place.
 /// </summary>
 /// <typeparam name="TResult">The downstream element type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("SourceCount = {Subscriptions.Length}, HasDisposed = {HasDisposed}")]
+[System.Diagnostics.DebuggerDisplay("SyncLatestLifecycle: SourceCount = {Subscriptions.Length}, HasDisposed = {HasDisposed}")]
 public sealed class SyncLatestLifecycle<TResult> : IAsyncDisposable
 {
     /// <summary>Serializes downstream notifications so OnNext / OnError / OnCompleted never overlap.</summary>

@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Advanced;
 #endif
 
 /// <summary>Subscription handle for an <see cref="AfterSignal"/> timer.</summary>
-[System.Diagnostics.DebuggerDisplay("Current = {Current}, DueTime = {DueTime}, Period = {Period}")]
+[System.Diagnostics.DebuggerDisplay("AfterSubscription: Current = {Current}, DueTime = {DueTime}, Period = {Period}")]
 public sealed class AfterSubscription : IDisposable
 {
     /// <summary>Initializes a new instance of the <see cref="AfterSubscription"/> class.</summary>

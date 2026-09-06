@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Sink that dematerializes <see cref="Spark{T}"/> values into notifications.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Observer = {_observer}, Subscription = {_subscription}")]
+[System.Diagnostics.DebuggerDisplay("UnsparkWitness: Observer = {_observer}, Subscription = {_subscription}")]
 public sealed class UnsparkWitness<T> : IObserver<Spark<T>>, IDisposable
 {
     /// <summary>The downstream observer.</summary>

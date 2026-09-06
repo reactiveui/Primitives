@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Coordinates sequential subscriptions for <see cref="RepeatSourceSignal{T}"/>.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Remaining = {_remaining}, Disposed = {_disposed}")]
+[System.Diagnostics.DebuggerDisplay("RepeatSourceCoordinator: Remaining = {_remaining}, Disposed = {_disposed}")]
 public sealed class RepeatSourceCoordinator<T> : IDisposable
 {
     /// <summary>The source sequence.</summary>

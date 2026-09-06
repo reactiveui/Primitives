@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Reactive.Concurrency;
 
 /// <summary>WinUI dispatcher queue scheduler that coalesces scheduled work through a <see cref="DispatcherQueue"/>.</summary>
 /// <seealso cref="System.Reactive.Concurrency.IScheduler" />
-[System.Diagnostics.DebuggerDisplay("DispatcherQueue = {DispatcherQueue}, Priority = {Priority}")]
+[System.Diagnostics.DebuggerDisplay("DispatcherQueueSequencer: DispatcherQueue = {DispatcherQueue}, Priority = {Priority}")]
 public sealed class DispatcherQueueSequencer : CoalescingDispatchScheduler
 {
     /// <summary>Cached dispatcher queue handler used for the drain.</summary>

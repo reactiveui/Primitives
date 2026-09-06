@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="TLeft">The left value type.</typeparam>
 /// <typeparam name="TRight">The right value type.</typeparam>
 /// <typeparam name="TResult">The result value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Left = {Left}, Right = {Right}")]
+[System.Diagnostics.DebuggerDisplay("SyncLatestSignal: Left = {Left}, Right = {Right}")]
 public sealed class SyncLatestSignal<TLeft, TRight, TResult> : IObservable<TResult>
 {
     /// <summary>Initializes a new instance of the <see cref="SyncLatestSignal{TLeft, TRight, TResult}"/> class.</summary>

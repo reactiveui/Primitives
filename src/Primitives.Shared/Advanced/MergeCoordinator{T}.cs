@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Coordinates concurrent merge subscriptions.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Active = {Active}, Done = {Done}")]
+[System.Diagnostics.DebuggerDisplay("MergeCoordinator: Active = {Active}, Done = {Done}")]
 public sealed class MergeCoordinator<T> : IDisposable
 {
     /// <summary>Serializes downstream callbacks and counters.</summary>

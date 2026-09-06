@@ -14,7 +14,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// subscriptions that coordinate observer notifications and resource cleanup. Disposal cancels any ongoing
 /// operations and ensures that all resources are released before completion. Derived classes should implement the
 /// core execution logic in <see cref="ExecuteAsyncCore"/>.</remarks>
-[System.Diagnostics.DebuggerDisplay("Disposed = {_disposed}, Completed = {_tcs.Task.IsCompleted}")]
+[System.Diagnostics.DebuggerDisplay("TaskSignalSubscription: Disposed = {_disposed}, Completed = {_tcs.Task.IsCompleted}")]
 public abstract class TaskSignalSubscription<T>(IObserverAsync<T> observer) : IAsyncDisposable
 {
     /// <summary>The task completion source used to signal when the subscription's asynchronous operation has finished.</summary>

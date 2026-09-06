@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Extensions;
 /// <c>new Heartbeat&lt;T&gt;()</c> to construct a heartbeat tick.
 /// </summary>
 /// <typeparam name="T">The type of the update value.</typeparam>
-[System.Diagnostics.DebuggerDisplay("IsHeartbeat = {IsHeartbeat}, Update = {Update}")]
+[System.Diagnostics.DebuggerDisplay("Heartbeat: IsHeartbeat = {IsHeartbeat}, Update = {Update}")]
 public readonly record struct Heartbeat<T> : IHeartbeat<T>
 {
     /// <summary>Initializes a new instance of the <see cref="Heartbeat{T}"/> struct representing a heartbeat tick.</summary>

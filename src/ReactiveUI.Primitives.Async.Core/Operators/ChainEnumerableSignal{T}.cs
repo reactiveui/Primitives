@@ -18,7 +18,7 @@ namespace ReactiveUI.Primitives.Async;
 /// from each source are emitted in order and that subsequent observables are not subscribed to until the preceding one
 /// has completed. If any observable in the sequence signals an error, the concatenation terminates and the error is
 /// propagated to the observer.</remarks>
-[System.Diagnostics.DebuggerDisplay("Signals = {_signals}")]
+[System.Diagnostics.DebuggerDisplay("ChainEnumerableSignal: Signals = {_signals}")]
 public sealed class ChainEnumerableSignal<T>(IEnumerable<IObservableAsync<T>> signals) : IObservableAsync<T>
 {
     /// <summary>The enumerable collection of signal sequences to concatenate.</summary>

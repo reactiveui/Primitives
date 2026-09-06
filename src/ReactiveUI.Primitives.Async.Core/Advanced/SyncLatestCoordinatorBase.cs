@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// <see cref="DisposeAsync"/> live here once instead of repeated 15× across <c>CombineLatest2..16</c>.
 /// </summary>
 /// <typeparam name="TResult">The downstream element type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("SourceCount = {Lifecycle.Subscriptions.Length}, HasDisposed = {Lifecycle.HasDisposed}")]
+[System.Diagnostics.DebuggerDisplay("SyncLatestCoordinatorBase: SourceCount = {Lifecycle.Subscriptions.Length}, HasDisposed = {Lifecycle.HasDisposed}")]
 public abstract class SyncLatestCoordinatorBase<TResult> : IAsyncDisposable
 {
     /// <summary>Initializes a new instance of the <see cref="SyncLatestCoordinatorBase{TResult}"/> class.</summary>

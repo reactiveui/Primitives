@@ -15,7 +15,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="TResult">The result value type.</typeparam>
 /// <param name="observer">The downstream observer.</param>
 /// <param name="selector">The enumerable projection.</param>
-[System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}, Observer = {_observer}")]
+[System.Diagnostics.DebuggerDisplay("SelectManyEnumerableWitness: Stopped = {_stopped}, Observer = {_observer}")]
 public sealed class SelectManyEnumerableWitness<TSource, TResult>(IObserver<TResult> observer, Func<TSource, IEnumerable<TResult>> selector) : IObserver<TSource>, IDisposable
 {
     /// <summary>The downstream observer.</summary>

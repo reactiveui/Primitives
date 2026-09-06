@@ -6,7 +6,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>An observable that emits values from an asynchronous enumerable for each subscription.</summary>
 /// <typeparam name="T">The element type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Source = {Source}")]
+[System.Diagnostics.DebuggerDisplay("AsyncEnumerableSignal: Source = {Source}")]
 public sealed class AsyncEnumerableSignal<T> : IObservableAsync<T>
 {
     /// <summary>Initializes a new instance of the <see cref="AsyncEnumerableSignal{T}"/> class.</summary>

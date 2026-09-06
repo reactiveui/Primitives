@@ -8,7 +8,7 @@ using ReactiveUI.Primitives.Disposables;
 namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Represents the RangeSignal class.</summary>
-[System.Diagnostics.DebuggerDisplay("Start = {Start}, Count = {Count}")]
+[System.Diagnostics.DebuggerDisplay("RangeSignal: Start = {Start}, Count = {Count}")]
 public sealed class RangeSignal : IRequireCurrentThread<int>, IInlineSignal<int>
 {
     /// <summary>Initializes a new instance of the <see cref="RangeSignal"/> class.</summary>

@@ -17,7 +17,7 @@ namespace ReactiveUI.Primitives.Extensions;
 /// <typeparam name="T">The type of the task results.</typeparam>
 /// <param name="taskFunctions">The task functions to drain.</param>
 /// <param name="maxConcurrency">The maximum concurrency.</param>
-[System.Diagnostics.DebuggerDisplay("Outstanding = {_outstanding}, Disposed = {_disposed}")]
+[System.Diagnostics.DebuggerDisplay("ConcurrencyLimiter: Outstanding = {_outstanding}, Disposed = {_disposed}")]
 public sealed class ConcurrencyLimiter<T>(IEnumerable<Task<T>> taskFunctions, int maxConcurrency) : IObservable<T>
 {
     /// <summary>The synchronization gate protecting task scheduling and completion state.</summary>

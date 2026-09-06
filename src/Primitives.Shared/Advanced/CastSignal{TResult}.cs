@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Observable sink that casts object values to the requested result type.</summary>
 /// <typeparam name="TResult">The result value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Source = {Source}")]
+[System.Diagnostics.DebuggerDisplay("CastSignal: Source = {Source}")]
 public sealed class CastSignal<TResult> : IRequireCurrentThread<TResult>
 {
     /// <summary>Initializes a new instance of the <see cref="CastSignal{TResult}"/> class.</summary>

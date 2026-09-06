@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="T">The value type.</typeparam>
 /// <param name="observer">Downstream observer.</param>
 /// <param name="count">Number of values to forward.</param>
-[System.Diagnostics.DebuggerDisplay("Remaining = {_remaining}, Stopped = {_stopped}")]
+[System.Diagnostics.DebuggerDisplay("TakeWitness: Remaining = {_remaining}, Stopped = {_stopped}")]
 public sealed class TakeWitness<T>(IObserver<T> observer, int count) : IObserver<T>, IDisposable
 {
     /// <summary>Downstream observer.</summary>

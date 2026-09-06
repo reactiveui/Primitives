@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <summary>Observer for distinct-by.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
 /// <typeparam name="TKey">The key type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Done = {_done}, SeenKeys = {_seen.Count}")]
+[System.Diagnostics.DebuggerDisplay("DistinctByWitness: Done = {_done}, SeenKeys = {_seen.Count}")]
 public sealed class DistinctByWitness<T, TKey> : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>

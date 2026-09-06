@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Signal that emits the result of an existing task instance.</summary>
 /// <typeparam name="T">The task result type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Task = {Task}")]
+[System.Diagnostics.DebuggerDisplay("TaskInstanceSignal: Task = {Task}")]
 public sealed class TaskInstanceSignal<T> : IObservable<T>
 {
     /// <summary>Initializes a new instance of the <see cref="TaskInstanceSignal{T}"/> class.</summary>

@@ -122,7 +122,7 @@ public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
     /// of a one-shot projection. Cheaper than <see cref="AsyncSink"/> because it
     /// carries no downstream observer, candidate list, or delegate references.
     /// </summary>
-    [System.Diagnostics.DebuggerDisplay("Completed = {Completed}, HasValue = {HasValue}, Value = {Value}")]
+    [System.Diagnostics.DebuggerDisplay("SyncProbe: Completed = {Completed}, HasValue = {HasValue}, Value = {Value}")]
     public sealed class SyncProbe : IObserver<TRaw>
     {
         /// <summary>Per-thread cached instance; rented on entry to <c>TrySyncLoop</c> and returned

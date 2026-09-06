@@ -16,7 +16,7 @@ namespace ReactiveUI.Primitives.Signals;
 /// <param name="source">The source sequence.</param>
 /// <param name="state">The state passed to the selector.</param>
 /// <param name="selector">The transform applied to each source value and the state.</param>
-[System.Diagnostics.DebuggerDisplay("Source = {_source}, State = {_state}")]
+[System.Diagnostics.DebuggerDisplay("MapWithSignal: Source = {_source}, State = {_state}")]
 public sealed class MapWithSignal<TSource, TState, TResult>(
     IObservable<TSource> source,
     TState state,

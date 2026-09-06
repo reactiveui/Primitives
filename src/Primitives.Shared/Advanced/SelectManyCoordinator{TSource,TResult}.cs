@@ -13,7 +13,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <summary>Coordinates concurrent observable <c>SelectMany</c> subscriptions.</summary>
 /// <typeparam name="TSource">The source value type.</typeparam>
 /// <typeparam name="TResult">The result value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Active = {Active}, OuterCompleted = {OuterCompleted}, Done = {Done}")]
+[System.Diagnostics.DebuggerDisplay("SelectManyCoordinator: Active = {Active}, OuterCompleted = {OuterCompleted}, Done = {Done}")]
 public sealed class SelectManyCoordinator<TSource, TResult> : IObserver<TSource>, IDisposable
 {
     /// <summary>Serializes downstream callbacks and counters.</summary>

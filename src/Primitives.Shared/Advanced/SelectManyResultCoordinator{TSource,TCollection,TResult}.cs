@@ -14,7 +14,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="TSource">The source value type.</typeparam>
 /// <typeparam name="TCollection">The inner value type.</typeparam>
 /// <typeparam name="TResult">The result value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Active = {Active}, OuterCompleted = {OuterCompleted}, Done = {Done}")]
+[System.Diagnostics.DebuggerDisplay("SelectManyResultCoordinator: Active = {Active}, OuterCompleted = {OuterCompleted}, Done = {Done}")]
 public sealed class SelectManyResultCoordinator<TSource, TCollection, TResult> : IObserver<TSource>, IDisposable
 {
     /// <summary>Serializes downstream callbacks and counters.</summary>

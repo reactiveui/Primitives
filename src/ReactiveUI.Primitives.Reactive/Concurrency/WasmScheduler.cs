@@ -17,7 +17,7 @@ namespace ReactiveUI.Primitives.Reactive.Concurrency;
 /// backs with the JS event loop. Successor to the retired <c>Reactive.Wasm</c> package's scheduler, whose runtime
 /// reflection no longer exists on modern .NET.
 /// </summary>
-[System.Diagnostics.DebuggerDisplay("ReadyCount = {_readyCount}, DrainState = {_drainState}, Disposed = {_isDisposed}")]
+[System.Diagnostics.DebuggerDisplay("WasmScheduler: ReadyCount = {_readyCount}, DrainState = {_drainState}, Disposed = {_isDisposed}")]
 public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposable
 {
     /// <summary>Drain state indicating no drain is in flight.</summary>

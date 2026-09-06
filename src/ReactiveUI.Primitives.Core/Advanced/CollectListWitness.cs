@@ -8,7 +8,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Sink that buffers values and emits them as a list on completion.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Count = {_values.Count}, Subscription = {_subscription}")]
+[System.Diagnostics.DebuggerDisplay("CollectListWitness: Count = {_values.Count}, Subscription = {_subscription}")]
 public sealed class CollectListWitness<T> : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>

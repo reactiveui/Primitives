@@ -8,7 +8,7 @@ namespace ReactiveUI.Primitives;
 
 /// <summary>Observable backed by a subscription delegate.</summary>
 /// <typeparam name="T">The observed value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Subscribe = {_subscribe}")]
+[System.Diagnostics.DebuggerDisplay("AnonymousSignal: Subscribe = {_subscribe}")]
 public sealed class AnonymousSignal<T> : IObservable<T>
 {
     /// <summary>Subscription delegate.</summary>

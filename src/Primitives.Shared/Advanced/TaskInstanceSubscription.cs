@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Advanced;
 #endif
 
 /// <summary>Subscription handle for an existing task-instance signal.</summary>
-[System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}")]
+[System.Diagnostics.DebuggerDisplay("TaskInstanceSubscription: Stopped = {_stopped}")]
 public sealed class TaskInstanceSubscription : IDisposable
 {
     /// <summary>Non-zero after disposal or terminal notification.</summary>

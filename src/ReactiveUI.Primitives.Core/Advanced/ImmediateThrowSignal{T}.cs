@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Represents the immediate Throw signal fast path.</summary>
 /// <typeparam name="T">The T type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Error = {_error}")]
+[System.Diagnostics.DebuggerDisplay("ImmediateThrowSignal: Error = {_error}")]
 public sealed class ImmediateThrowSignal<T> : IRequireCurrentThread<T>, IInlineSignal<T>
 {
     /// <summary>Stores the terminal error.</summary>

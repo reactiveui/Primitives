@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 #endif
 
 /// <summary>Observes a task and emits <see cref="RxVoid.Default"/> when it completes successfully.</summary>
-[System.Diagnostics.DebuggerDisplay("SourceTask = {SourceTask}")]
+[System.Diagnostics.DebuggerDisplay("TaskToAsyncSignal: SourceTask = {SourceTask}")]
 public sealed class TaskToAsyncSignal : IObservableAsync<RxVoid>
 {
     /// <summary>Initializes a new instance of the <see cref="TaskToAsyncSignal"/> class.</summary>

@@ -8,7 +8,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Sink that drops values and forwards only terminal notifications.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Observer = {_observer}, Subscription = {_subscription}")]
+[System.Diagnostics.DebuggerDisplay("IgnoreValuesWitness: Observer = {_observer}, Subscription = {_subscription}")]
 public sealed class IgnoreValuesWitness<T> : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>

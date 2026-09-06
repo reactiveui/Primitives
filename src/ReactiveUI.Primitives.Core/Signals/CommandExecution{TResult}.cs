@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Signals;
 
 /// <summary>Awaitable command execution result that avoids allocating a completed task for synchronous commands.</summary>
 /// <typeparam name="TResult">The command result type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Task = {_task}, Result = {_result}, Exception = {_exception}")]
+[System.Diagnostics.DebuggerDisplay("CommandExecution: Task = {_task}, Result = {_result}, Exception = {_exception}")]
 public readonly record struct CommandExecution<TResult>
 {
     /// <summary>Asynchronous execution task, when execution did not complete synchronously.</summary>
@@ -80,7 +80,7 @@ public readonly record struct CommandExecution<TResult>
     public Awaiter GetAwaiter() => new(_task, _result, _exception, _continueOnCapturedContext);
 
     /// <summary>Awaiter for command execution.</summary>
-    [System.Diagnostics.DebuggerDisplay("IsCompleted = {IsCompleted}, Result = {_result}, Exception = {_exception}")]
+    [System.Diagnostics.DebuggerDisplay("Awaiter: IsCompleted = {IsCompleted}, Result = {_result}, Exception = {_exception}")]
     public readonly record struct Awaiter : ICriticalNotifyCompletion
     {
         /// <summary>Asynchronous execution task.</summary>

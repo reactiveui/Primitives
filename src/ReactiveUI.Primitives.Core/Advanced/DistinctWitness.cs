@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="T">The value type.</typeparam>
 /// <param name="observer">The downstream observer.</param>
 /// <param name="seen">The set used to track already-observed values.</param>
-[System.Diagnostics.DebuggerDisplay("Seen = {_seen.Count}, Subscription = {_subscription}")]
+[System.Diagnostics.DebuggerDisplay("DistinctWitness: Seen = {_seen.Count}, Subscription = {_subscription}")]
 public sealed class DistinctWitness<T>(IObserver<T> observer, HashSet<T> seen) : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>

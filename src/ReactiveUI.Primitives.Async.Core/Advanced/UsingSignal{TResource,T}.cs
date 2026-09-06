@@ -7,7 +7,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// <summary>An observable that creates and disposes an asynchronous resource for each subscription.</summary>
 /// <typeparam name="TResource">The resource type.</typeparam>
 /// <typeparam name="T">The element type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("ResourceFactory = {ResourceFactory}, SignalFactory = {SignalFactory}")]
+[System.Diagnostics.DebuggerDisplay("UsingSignal: ResourceFactory = {ResourceFactory}, SignalFactory = {SignalFactory}")]
 public sealed class UsingSignal<TResource, T> : IObservableAsync<T>
     where TResource : IAsyncDisposable
 {

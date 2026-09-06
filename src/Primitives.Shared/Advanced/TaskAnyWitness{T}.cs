@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Task-producing terminal sink that completes with whether a source produced a matching value.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}, Task = {Task}")]
+[System.Diagnostics.DebuggerDisplay("TaskAnyWitness: Stopped = {_stopped}, Task = {Task}")]
 public sealed class TaskAnyWitness<T> : IObserver<T>, IDisposable
 {
     /// <summary>The task completed by this sink.</summary>

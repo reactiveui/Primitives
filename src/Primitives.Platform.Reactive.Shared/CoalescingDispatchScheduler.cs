@@ -14,7 +14,7 @@ namespace ReactiveUI.Primitives.Reactive.Concurrency;
 /// and drained one batch per post. A sealed platform scheduler supplies its dispatcher <see cref="Post"/> (and
 /// optionally a native delayed path via <see cref="ScheduleOnDispatcher"/>).
 /// </summary>
-[System.Diagnostics.DebuggerDisplay("ReadyCount = {_readyCount}, DrainPosted = {_drainPosted}")]
+[System.Diagnostics.DebuggerDisplay("CoalescingDispatchScheduler: ReadyCount = {_readyCount}, DrainPosted = {_drainPosted}")]
 public abstract class CoalescingDispatchScheduler : LocalScheduler
 {
     /// <summary>Ready work items awaiting a UI-thread drain.</summary>

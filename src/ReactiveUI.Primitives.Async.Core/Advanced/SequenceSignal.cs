@@ -5,7 +5,7 @@
 namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>An observable that emits a contiguous integer sequence for each subscription.</summary>
-[System.Diagnostics.DebuggerDisplay("StartValue = {StartValue}, Count = {Count}")]
+[System.Diagnostics.DebuggerDisplay("SequenceSignal: StartValue = {StartValue}, Count = {Count}")]
 public sealed class SequenceSignal : IObservableAsync<int>
 {
     /// <summary>Initializes a new instance of the <see cref="SequenceSignal"/> class.</summary>

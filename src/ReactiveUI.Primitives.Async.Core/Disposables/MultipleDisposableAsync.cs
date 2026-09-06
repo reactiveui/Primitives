@@ -13,7 +13,7 @@ namespace ReactiveUI.Primitives.Async.Disposables;
 /// <remarks>Use this class to manage the lifetime of multiple <see cref="IAsyncDisposable"/> resources, ensuring
 /// that all are disposed when the collection is disposed. Once disposed, the collection cannot be used to add or remove
 /// items. This class is not read-only and is safe for concurrent access from multiple threads.</remarks>
-[System.Diagnostics.DebuggerDisplay("Count = {_count}, IsDisposed = {_isDisposed}")]
+[System.Diagnostics.DebuggerDisplay("MultipleDisposableAsync: Count = {_count}, IsDisposed = {_isDisposed}")]
 public sealed class MultipleDisposableAsync : IAsyncDisposable
 {
     /// <summary>Capacity allocated on first <see cref="AddAsync"/>. Chosen as the typical upper bound

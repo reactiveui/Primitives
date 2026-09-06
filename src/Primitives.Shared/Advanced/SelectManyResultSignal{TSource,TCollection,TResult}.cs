@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="TSource">The source value type.</typeparam>
 /// <typeparam name="TCollection">The inner value type.</typeparam>
 /// <typeparam name="TResult">The result value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Source = {Source}, CollectionSelector = {CollectionSelector}")]
+[System.Diagnostics.DebuggerDisplay("SelectManyResultSignal: Source = {Source}, CollectionSelector = {CollectionSelector}")]
 public sealed class SelectManyResultSignal<TSource, TCollection, TResult> : IObservable<TResult>
 {
     /// <summary>Initializes a new instance of the <see cref="SelectManyResultSignal{TSource, TCollection, TResult}"/> class.</summary>

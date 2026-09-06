@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Witness that emits each source value as a single-item buffer.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}, Observer = {Observer}")]
+[System.Diagnostics.DebuggerDisplay("BufferEachWitness: Stopped = {_stopped}, Observer = {Observer}")]
 public sealed class BufferEachWitness<T> : IObserver<T>, IDisposable
 {
     /// <summary>The upstream subscription slot.</summary>

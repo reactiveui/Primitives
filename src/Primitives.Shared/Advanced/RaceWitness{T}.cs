@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Mediates candidate subscriptions for <see cref="RaceSignal{T}"/>.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Arms = {_arms}")]
+[System.Diagnostics.DebuggerDisplay("RaceWitness: Arms = {_arms}")]
 public sealed class RaceWitness<T> : IDisposable
 {
     /// <summary>The shared race-arm bookkeeping.</summary>

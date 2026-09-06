@@ -7,7 +7,7 @@ using System.Reactive.Subjects;
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
 /// <summary>Tests for the <see cref = "ScanWithInitialObservable{TSource, TAccumulate}"/> class.</summary>
-[System.Diagnostics.DebuggerDisplay("{nameof(ScanWithInitialTests),nq}")]
+[System.Diagnostics.DebuggerDisplay("ScanWithInitialTests: {nameof(ScanWithInitialTests),nq}")]
 public partial class ScanWithInitialTests
 {
     /// <summary>Spin iterations used to widen the interleaving window in contention tests.</summary>

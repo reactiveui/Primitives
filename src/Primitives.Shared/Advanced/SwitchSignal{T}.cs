@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Mirrors only the latest inner observable from an outer source.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Sources = {Sources}")]
+[System.Diagnostics.DebuggerDisplay("SwitchSignal: Sources = {Sources}")]
 public sealed class SwitchSignal<T> : IObservable<T>
 {
     /// <summary>Initializes a new instance of the <see cref="SwitchSignal{T}"/> class.</summary>

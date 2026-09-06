@@ -38,7 +38,7 @@ namespace ReactiveUI.Primitives.ObservableEvents.Benchmarks;
 /// the frames, which is the only way to tell the generator's cost from the compiler's.
 /// </para>
 /// </remarks>
-[System.Diagnostics.DebuggerDisplay("{Size}")]
+[System.Diagnostics.DebuggerDisplay("EventGeneratorDriverBenchmarks: {Size}")]
 [SimpleJob(warmupCount: 5, iterationCount: 15)]
 [EventPipeProfiler(EventPipeProfile.CpuSampling)]
 public class EventGeneratorDriverBenchmarks

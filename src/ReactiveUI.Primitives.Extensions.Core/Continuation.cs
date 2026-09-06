@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Extensions;
 
 /// <summary>Coordinates phase synchronization between a lock holder and its continuation.</summary>
-[System.Diagnostics.DebuggerDisplay("Locked = {_locked}, CompletedPhases = {CompletedPhases}")]
+[System.Diagnostics.DebuggerDisplay("Continuation: Locked = {_locked}, CompletedPhases = {CompletedPhases}")]
 public class Continuation : IDisposable
 {
     /// <summary>The barrier used to synchronize phases between the lock holder and the continuation.</summary>

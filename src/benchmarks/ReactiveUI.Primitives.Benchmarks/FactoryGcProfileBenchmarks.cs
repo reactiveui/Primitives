@@ -16,7 +16,7 @@ namespace ReactiveUI.Primitives.Benchmarks;
 [ShortRunJob]
 [MemoryDiagnoser]
 [EventPipeProfiler(EventPipeProfile.GcVerbose)]
-[System.Diagnostics.DebuggerDisplay("{nameof(FactoryGcProfileBenchmarks),nq}")]
+[System.Diagnostics.DebuggerDisplay("FactoryGcProfileBenchmarks: {nameof(FactoryGcProfileBenchmarks),nq}")]
 public class FactoryGcProfileBenchmarks
 {
     /// <summary>The scalar factory benchmark scenarios delegated to by this profile.</summary>

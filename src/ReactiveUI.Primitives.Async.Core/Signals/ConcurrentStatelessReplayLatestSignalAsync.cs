@@ -17,7 +17,7 @@ namespace ReactiveUI.Primitives.Async.Signals;
 /// delivered in parallel. It does not buffer or store a sequence of values, but only replays the most recent value (if
 /// any) to new subscribers. Thread safety is ensured for concurrent observer notifications. If a notification operation
 /// is canceled, not all observers may receive the notification.</remarks>
-[System.Diagnostics.DebuggerDisplay("Value = {_state.Value}, IsDisposed = {_state.IsDisposed}")]
+[System.Diagnostics.DebuggerDisplay("ConcurrentStatelessReplayLatestSignalAsync: Value = {_state.Value}, IsDisposed = {_state.IsDisposed}")]
 public sealed class ConcurrentStatelessReplayLatestSignalAsync<T>(Optional<T> startValue) : ISignalAsync<T>
 {
     /// <inheritdoc/>

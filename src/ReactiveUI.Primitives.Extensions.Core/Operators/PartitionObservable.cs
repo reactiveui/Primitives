@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 
 /// <summary>Partitions a sequence into two observables based on a predicate.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Source = {_source}, Subscriptions = {_subscriptionCount}")]
+[System.Diagnostics.DebuggerDisplay("PartitionObservable: Source = {_source}, Subscriptions = {_subscriptionCount}")]
 public sealed class PartitionObservable<T>
 {
     /// <summary>The source observable.</summary>

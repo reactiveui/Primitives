@@ -5,7 +5,7 @@
 namespace ReactiveUI.Primitives.Async.Signals;
 
 /// <summary>Represents configuration options for creating a behavior Signal, including publishing behavior and statefulness.</summary>
-[System.Diagnostics.DebuggerDisplay("PublishingOption = {PublishingOption}, IsStateless = {IsStateless}")]
+[System.Diagnostics.DebuggerDisplay("BehaviorSignalCreationOptions: PublishingOption = {PublishingOption}, IsStateless = {IsStateless}")]
 public sealed record BehaviorSignalCreationOptions
 {
     /// <summary>Gets the default configuration options for creating a new BehaviorSignal instance.</summary>

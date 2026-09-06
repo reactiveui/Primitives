@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Collects source values into time-windowed batches.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Source = {Source}, TimeSpan = {TimeSpan}")]
+[System.Diagnostics.DebuggerDisplay("CollectSignal: Source = {Source}, TimeSpan = {TimeSpan}")]
 public sealed class CollectSignal<T> : IObservable<IList<T>>
 {
     /// <summary>Initializes a new instance of the <see cref="CollectSignal{T}"/> class.</summary>

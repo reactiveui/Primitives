@@ -8,7 +8,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Observer that forwards notifications to an immutable observer list.</summary>
 /// <typeparam name="T">The observed value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("HasObservers = {HasObservers}, Count = {_observers.Items.Length}")]
+[System.Diagnostics.DebuggerDisplay("ListWitness: HasObservers = {HasObservers}, Count = {_observers.Items.Length}")]
 public sealed class ListWitness<T> : IObserver<T>
 {
     /// <summary>Immutable observer snapshot.</summary>

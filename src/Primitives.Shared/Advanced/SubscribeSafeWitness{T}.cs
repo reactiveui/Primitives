@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Observer that turns downstream <c>OnNext</c> exceptions into a terminal error and upstream disposal.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}, Observer = {_observer}")]
+[System.Diagnostics.DebuggerDisplay("SubscribeSafeWitness: Stopped = {_stopped}, Observer = {_observer}")]
 public sealed class SubscribeSafeWitness<T> : IObserver<T>, IDisposable
 {
     /// <summary>The wrapped observer.</summary>

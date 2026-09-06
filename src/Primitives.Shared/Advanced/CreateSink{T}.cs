@@ -17,7 +17,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// implementation that hands an observer to a caller-supplied subscribe delegate.
 /// </summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Stopped = {_stopped}, Observer = {_observer}")]
+[System.Diagnostics.DebuggerDisplay("CreateSink: Stopped = {_stopped}, Observer = {_observer}")]
 public sealed class CreateSink<T> : IDisposable, IObserver<T>
 {
     /// <summary>A value indicating whether a throwing downstream <c>OnNext</c> releases the subscription.</summary>

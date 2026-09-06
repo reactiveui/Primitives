@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>Coordinates outer and inner subscriptions for flat-map operations.</summary>
 /// <typeparam name="TResult">The result element type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("ActiveInnerCount = {ActiveInnerCount}, OuterCompleted = {OuterCompleted}, Disposed = {Disposed}")]
+[System.Diagnostics.DebuggerDisplay("FlatMapCoordinator: ActiveInnerCount = {ActiveInnerCount}, OuterCompleted = {OuterCompleted}, Disposed = {Disposed}")]
 public sealed class FlatMapCoordinator<TResult> : IAsyncDisposable
 {
     /// <summary>Protects mutable lifecycle state.</summary>

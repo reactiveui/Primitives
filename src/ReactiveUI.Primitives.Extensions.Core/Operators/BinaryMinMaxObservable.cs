@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <param name="left">The first source.</param>
 /// <param name="right">The second source.</param>
 /// <param name="emitMaximum"><c>true</c> to emit the maximum; <c>false</c> to emit the minimum.</param>
-[System.Diagnostics.DebuggerDisplay("Left = {_left}, Right = {_right}")]
+[System.Diagnostics.DebuggerDisplay("BinaryMinMaxObservable: Left = {_left}, Right = {_right}")]
 public sealed class BinaryMinMaxObservable<T>(IObservable<T> left, IObservable<T> right, bool emitMaximum) : IObservable<T>
     where T : struct, IComparable<T>
 {

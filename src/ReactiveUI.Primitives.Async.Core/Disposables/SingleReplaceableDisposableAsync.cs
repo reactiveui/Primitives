@@ -15,7 +15,7 @@ namespace ReactiveUI.Primitives.Async.Disposables;
 /// further disposables from being set. This class is useful for scenarios where a resource needs to be replaced or
 /// updated over time, ensuring that only one resource is active and properly disposed of at any given moment. All
 /// operations are safe to use concurrently from multiple threads.</remarks>
-[System.Diagnostics.DebuggerDisplay("Current = {_current}")]
+[System.Diagnostics.DebuggerDisplay("SingleReplaceableDisposableAsync: Current = {_current}")]
 public class SingleReplaceableDisposableAsync : IAsyncDisposable
 {
     /// <summary>The currently tracked disposable resource, or the disposed sentinel if already disposed.</summary>

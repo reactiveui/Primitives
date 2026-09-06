@@ -8,7 +8,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Observer that forwards notifications to a standard observer.</summary>
 /// <typeparam name="T">The observed value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Observer = {_observer}")]
+[System.Diagnostics.DebuggerDisplay("ForwardingWitness: Observer = {_observer}")]
 public sealed class ForwardingWitness<T> : IObserver<T>
 {
     /// <summary>Wrapped observer.</summary>

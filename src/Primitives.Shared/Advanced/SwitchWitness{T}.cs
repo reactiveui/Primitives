@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Mediates latest-inner subscription switching for <see cref="SwitchSignal{T}"/>.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Version = {_version}, IsDone = {IsDone}")]
+[System.Diagnostics.DebuggerDisplay("SwitchWitness: Version = {_version}, IsDone = {IsDone}")]
 public sealed class SwitchWitness<T> : IDisposable
 {
     /// <summary>The synchronization gate.</summary>

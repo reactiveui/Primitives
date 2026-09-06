@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <param name="onNext">The value side-effect.</param>
 /// <param name="onError">The error side-effect.</param>
 /// <param name="onCompleted">The completion side-effect.</param>
-[System.Diagnostics.DebuggerDisplay("Observer = {_observer}, Subscription = {_subscription}")]
+[System.Diagnostics.DebuggerDisplay("TapWitness: Observer = {_observer}, Subscription = {_subscription}")]
 public sealed class TapWitness<T>(
     IObserver<T> observer,
     Action<T> onNext,

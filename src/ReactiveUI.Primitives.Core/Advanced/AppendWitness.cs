@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="T">The source value type.</typeparam>
 /// <param name="observer">The downstream observer.</param>
 /// <param name="value">The appended value.</param>
-[System.Diagnostics.DebuggerDisplay("AppendedValue = {_value}, Observer = {_observer}")]
+[System.Diagnostics.DebuggerDisplay("AppendWitness: AppendedValue = {_value}, Observer = {_observer}")]
 public sealed class AppendWitness<T>(IObserver<T> observer, T value) : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>

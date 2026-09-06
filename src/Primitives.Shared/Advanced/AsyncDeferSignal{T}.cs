@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Creates a signal whose source is produced asynchronously for each subscription.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("ObservableFactory = {ObservableFactory}")]
+[System.Diagnostics.DebuggerDisplay("AsyncDeferSignal: ObservableFactory = {ObservableFactory}")]
 public sealed class AsyncDeferSignal<T> : IObservable<T>
 {
     /// <summary>Initializes a new instance of the <see cref="AsyncDeferSignal{T}"/> class.</summary>

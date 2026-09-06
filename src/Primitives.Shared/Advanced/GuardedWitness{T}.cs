@@ -16,7 +16,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// usable by any signal implementation that needs terminate-and-release semantics around a downstream observer.
 /// </summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Disposed = {_disposed}, Observer = {_observer}")]
+[System.Diagnostics.DebuggerDisplay("GuardedWitness: Disposed = {_disposed}, Observer = {_observer}")]
 public sealed class GuardedWitness<T> : IObserver<T>, IDisposable
 {
     /// <summary>Stores the downstream observer.</summary>

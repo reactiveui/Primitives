@@ -19,7 +19,7 @@ namespace ReactiveUI.Primitives.Advanced;
     "SST1803:Make record struct readonly",
     Justification =
         "Mutable dispatch-coalescing engine: holds the ready queue plus drain/post latches that mutate in place.")]
-[System.Diagnostics.DebuggerDisplay("ReadyCount = {_readyCount}, DrainPosted = {_drainPosted}")]
+[System.Diagnostics.DebuggerDisplay("DispatchSequencerState: ReadyCount = {_readyCount}, DrainPosted = {_drainPosted}")]
 public record struct DispatchSequencerState
 {
     /// <summary>Ready work items awaiting a UI-thread drain.</summary>

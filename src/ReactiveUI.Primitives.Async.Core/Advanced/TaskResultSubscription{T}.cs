@@ -6,7 +6,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>A subscription that awaits a task and emits its result.</summary>
 /// <typeparam name="T">The task result type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Task = {Task}")]
+[System.Diagnostics.DebuggerDisplay("TaskResultSubscription: Task = {Task}")]
 public sealed class TaskResultSubscription<T> : TaskSignalSubscription<T>
 {
     /// <summary>Initializes a new instance of the <see cref="TaskResultSubscription{T}"/> class.</summary>

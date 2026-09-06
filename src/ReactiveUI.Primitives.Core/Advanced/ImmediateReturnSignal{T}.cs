@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Represents the ImmediateReturnSignal class.</summary>
 /// <typeparam name="T">The T type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("Value = {_value}")]
+[System.Diagnostics.DebuggerDisplay("ImmediateReturnSignal: Value = {_value}")]
 public sealed class ImmediateReturnSignal<T> : IRequireCurrentThread<T>, IInlineSignal<T>
 {
     /// <summary>Stores state for the signal implementation.</summary>
