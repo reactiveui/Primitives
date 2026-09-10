@@ -330,12 +330,12 @@ public static partial class LinqExtensions
 #if NET8_0_OR_GREATER
             (_source is RangeSignal range ? range.Count : 0) switch
             {
-                var capacity when capacity > 0 => new(capacity, _comparer),
+                var capacity when capacity > 0 => [with(capacity, _comparer)],
                 _ when _comparer is null => [],
-                _ => new(_comparer),
+                _ => [with(_comparer)],
             };
 #else
-            new(_comparer);
+            [with(_comparer)];
 #endif
     }
 

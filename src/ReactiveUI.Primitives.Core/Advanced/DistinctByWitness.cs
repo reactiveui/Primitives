@@ -35,7 +35,7 @@ public sealed class DistinctByWitness<T, TKey> : IObserver<T>, IDisposable
     {
         _observer = observer;
         _keySelector = keySelector;
-        _seen = comparer is null ? [] : new(comparer);
+        _seen = comparer is null ? [] : [with(comparer)];
     }
 
     /// <inheritdoc/>

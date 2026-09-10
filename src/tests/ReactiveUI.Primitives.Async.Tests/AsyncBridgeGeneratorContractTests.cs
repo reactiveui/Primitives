@@ -253,7 +253,7 @@ public sealed class AsyncBridgeGeneratorContractTests
     {
         // Signal and StateSignal<> are always referenced on top of the platform assemblies.
         const int SignalReferenceCount = 2;
-        Dictionary<string, string> platformAssemblies = new(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, string> platformAssemblies = [with(StringComparer.OrdinalIgnoreCase)];
         foreach (var path in AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!.ToString()!.Split(Path.PathSeparator))
         {
             var name = Path.GetFileName(path);
@@ -263,7 +263,7 @@ public sealed class AsyncBridgeGeneratorContractTests
             }
         }
 
-        List<MetadataReference> references = new(PlatformReferenceNames.Length + SignalReferenceCount);
+        List<MetadataReference> references = [with(capacity: PlatformReferenceNames.Length + SignalReferenceCount)];
         foreach (var name in PlatformReferenceNames)
         {
             if (platformAssemblies.TryGetValue(name, out var path))

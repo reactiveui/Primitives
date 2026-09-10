@@ -79,7 +79,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            List<int> values = new(_range.Count);
+            List<int> values = [with(capacity: _range.Count)];
             for (var i = 0; i < _range.Count; i++)
             {
                 values.Add(_range.Start + i);
