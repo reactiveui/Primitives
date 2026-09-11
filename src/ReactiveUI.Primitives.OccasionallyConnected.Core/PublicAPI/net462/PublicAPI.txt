@@ -1,5 +1,14 @@
 namespace ReactiveUI.Primitives.OccasionallyConnected;
 
+[System.Diagnostics.DebuggerDisplay("Count={MaximumOperations,nq}; Bytes={MaximumBytes,nq}")]
+public record BatchingOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.BatchingOptions>
+{
+    public int MaxInFlightBatchesPerStream { get; init; }
+    public long MaximumBytes { get; init; }
+    public System.TimeSpan MaximumDwellTime { get; init; }
+    public int MaximumOperations { get; init; }
+    public void Validate() { }
+}
 public enum BufferStrategy
 {
     DropOldest = 0,
