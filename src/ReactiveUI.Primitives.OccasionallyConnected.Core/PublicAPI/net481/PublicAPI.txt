@@ -17,6 +17,13 @@ public enum BufferStrategy
     Reject = 3,
     Custom = 4,
 }
+[System.Diagnostics.DebuggerDisplay("Failures={FailureThreshold,nq}; Open={OpenDuration,nq}")]
+public record CircuitBreakerOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.CircuitBreakerOptions>
+{
+    public int FailureThreshold { get; init; }
+    public System.TimeSpan OpenDuration { get; init; }
+    public void Validate() { }
+}
 public enum ConflictPolicy
 {
     LastWriterWins = 0,
