@@ -1,5 +1,77 @@
 namespace ReactiveUI.Primitives.OccasionallyConnected;
 
+public enum BufferStrategy
+{
+    DropOldest = 0,
+    DropNewest = 1,
+    Block = 2,
+    Reject = 3,
+    Custom = 4,
+}
+public enum ConflictPolicy
+{
+    LastWriterWins = 0,
+    Merge = 1,
+    Custom = 2,
+}
+public enum DeliveryGuarantee
+{
+    AtMostOnce = 0,
+    AtLeastOnce = 1,
+    ExactlyOnce = 2,
+}
+public enum ExactlyOnceExpiryBehavior
+{
+    StopAndReport = 0,
+    FallbackToAtLeastOnce = 1,
+}
+[System.Diagnostics.DebuggerDisplay("{BufferStrategy,nq}; Count={BufferCapacity,nq}; Bytes={BufferCapacityBytes,nq}")]
+public record ObserverInputOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.ObserverInputOptions>
+{
+    public int BufferCapacity { get; init; }
+    public long BufferCapacityBytes { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.BufferStrategy BufferStrategy { get; init; }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public void Validate() { }
+    public void Validate(bool supportsCustomPolicy) { }
+}
+[System.Diagnostics.DebuggerDisplay("{Value,nq}")]
+public readonly record struct OperationId : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.OperationId>
+{
+    public OperationId(System.Guid Value) { }
+    public System.Guid Value { get; init; }
+    public static ReactiveUI.Primitives.OccasionallyConnected.OperationId New() { }
+}
+[System.Diagnostics.DebuggerDisplay("{StreamId.Value,nq}; Durable={Durable,nq}; Guarantee={DeliveryGuarantee,nq}")]
+public record RemotePublishOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.RemotePublishOptions>
+{
+    public ReactiveUI.Primitives.OccasionallyConnected.BufferStrategy AdmissionStrategy { get; init; }
+    public string? BaseVersion { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.ConflictPolicy ConflictPolicy { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.DeliveryGuarantee DeliveryGuarantee { get; init; }
+    public bool Durable { get; init; }
+    public int Priority { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.StreamId StreamId { get; init; }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public void Validate() { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public void Validate(bool supportsCustomPolicy) { }
+    public void Validate(bool supportsCustomPolicy, int minimumPriority, int maximumPriority) { }
+}
+[System.Diagnostics.DebuggerDisplay("{StreamId.Value,nq}; Subscription={SubscriptionId,nq}; Guarantee={DeliveryGuarantee,nq}")]
+public record RemoteSubscriptionOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.RemoteSubscriptionOptions>
+{
+    public int BufferCapacity { get; init; }
+    public long BufferCapacityBytes { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.BufferStrategy BufferStrategy { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.DeliveryGuarantee DeliveryGuarantee { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.StartPosition StartPosition { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.StreamId StreamId { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.SubscriptionId? SubscriptionId { get; init; }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public void Validate() { }
+    public void Validate(bool supportsCustomPolicy) { }
+}
 [System.Diagnostics.DebuggerDisplay("{Kind,nq}")]
 public record StartPosition : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.StartPosition>
 {
@@ -25,4 +97,11 @@ public readonly record struct StreamId : System.IEquatable<ReactiveUI.Primitives
     public StreamId(string value) { }
     public string Value { get; }
     public override readonly string ToString() { }
+}
+[System.Diagnostics.DebuggerDisplay("{Value,nq}")]
+public readonly record struct SubscriptionId : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.SubscriptionId>
+{
+    public SubscriptionId(System.Guid Value) { }
+    public System.Guid Value { get; init; }
+    public static ReactiveUI.Primitives.OccasionallyConnected.SubscriptionId New() { }
 }
