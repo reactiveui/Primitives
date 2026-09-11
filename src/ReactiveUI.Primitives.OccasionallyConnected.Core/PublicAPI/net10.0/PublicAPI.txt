@@ -67,6 +67,13 @@ public interface ISchemaRegistry
     System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.IPayloadUpcaster> GetUpcastChain(string contractId, int fromVersion, int toVersion) { }
     bool IsRegistered(string contractId, int schemaVersion, System.Type targetType) { }
 }
+[System.Diagnostics.DebuggerDisplay("Events={MaxEvents,nq}; Bytes={MaxBytes,nq}")]
+public record InboxOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.InboxOptions>
+{
+    public long MaxBytes { get; init; }
+    public int MaxEvents { get; init; }
+    public void Validate() { }
+}
 [System.Diagnostics.DebuggerDisplay("{BufferStrategy,nq}; Count={BufferCapacity,nq}; Bytes={BufferCapacityBytes,nq}")]
 public record ObserverInputOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.ObserverInputOptions>
 {
@@ -83,6 +90,14 @@ public readonly record struct OperationId : System.IEquatable<ReactiveUI.Primiti
     public OperationId(System.Guid Value) { }
     public System.Guid Value { get; init; }
     public static ReactiveUI.Primitives.OccasionallyConnected.OperationId New() { }
+}
+[System.Diagnostics.DebuggerDisplay("Operations={MaxOperations,nq}; Bytes={MaxBytes,nq}; BlockedPublishers={MaximumBlockedPublishers,nq}")]
+public record OutboxOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.OutboxOptions>
+{
+    public long MaxBytes { get; init; }
+    public int MaxOperations { get; init; }
+    public int MaximumBlockedPublishers { get; init; }
+    public void Validate() { }
 }
 [System.Diagnostics.DebuggerDisplay("{ContractId,nq} v{SchemaVersion,nq}")]
 public record PayloadEnvelope : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope>

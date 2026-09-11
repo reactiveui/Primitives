@@ -128,6 +128,24 @@ Linux and macOS across the four modern frameworks. Full-solution CI builds remai
   net8/net9/net10 and 338/338 on net11, with 178/178 branches on each. All eight library targets build without warnings.
 - Transport parsing limits, encrypted persistence, quarantine integration and engine projection remain later stages.
 
-The implemented identity, configuration, policy and serialization stages are verified. Adapter capability negotiation,
+### Stage 2b: bounded admission and durable capacity options
+
+- Added an internal FIFO admission queue with count and byte limits, bounded waiting producers, and reserved control
+  capacity. Block, reject, eligible oldest/newest drops and custom decisions are supported; custom policies may also block.
+- Custom callbacks run outside locks and their decisions are revalidated before commit. Cancellation before admission
+  preserves existing work; cancellation after admission cannot replace a committed result. Callback registration and
+  registration disposal run outside the queue lock. Cancelling a waiting producer drains eligible successors.
+- Data and control producers retain order within their class. Control traffic can use its reserve behind blocked data.
+  Byte arithmetic cannot overflow and eviction never invokes payload equality inside the lock. Disposal releases queued data.
+- Added finite outbox/inbox count and byte defaults of 10,000 entries and 64 MiB, plus 1,000 blocked outbox publishers.
+  These are implementation defaults; all limits must be positive.
+- Worker regression tests exposed six queue failures. Root tests then exposed cancellation, disposal and missing custom
+  blocking behavior before correction. Disabling the capacity validators caused ten tests to fail.
+- GREEN: 142 Core tests plus 161 runtime tests passed per modern framework (1,212 executions).
+- Mtpunittestmcp confirmed 100% lines and branches on each target: Core 267/267 lines and 142/142 branches; runtime
+  623/623 lines on net8, 617/617 on net9/net10 and 616/616 on net11, with 302/302 branches each. All eight library builds pass.
+- Outbox transactions, observer dispatch and engine scheduling must integrate these primitives in subsequent stages.
+
+The implemented identity, configuration, policy, serialization and admission stages are verified. Adapter capability negotiation,
 remaining contracts and integrated runtime/durability stages are still incomplete. Passing option validation alone does not establish a
 delivery guarantee or establish that a custom policy preserves durable work; the runtime must enforce both.
