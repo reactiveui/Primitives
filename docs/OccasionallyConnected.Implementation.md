@@ -162,6 +162,26 @@ Linux and macOS across the four modern frameworks. Full-solution CI builds remai
   and 190/190 branches on each target. All eight Core library targets build with zero warnings and errors.
 - Context startup, encrypted storage, replay-cache enforcement and bounded diagnostic emission remain runtime work.
 
-The implemented identity, configuration, policy, serialization and admission stages are verified. Adapter capability negotiation,
-remaining contracts and integrated runtime/durability stages are still incomplete. Passing option validation alone does not establish a
+### Stage 2c: protocol, transaction and typed projection contracts
+
+- Added immutable operation, batch, remote-event, recovery, lease, status and conflict models. Caller-owned collections
+  are copied so later list or metadata changes cannot alter a prepared operation or canonical conflict decision.
+- Defined effective persisted operation policy, lease-owned attempt barriers, restart-visible terminal/retry lookups and
+  optimistic snapshot revisions. Store contracts specify atomic rejection of stale revisions and invalid batch results.
+  Late cancellation must return an already committed local result; it must not make durable work appear rolled back.
+- Added a batch-result validator for correlation, exact membership, valid operation fields, one stream, configured priority
+  limits and increasing client sequences. Gaps from terminal operations remain valid. Negative retry hints are rejected.
+- Added typed projection and conflict resolver contracts. `ApplyRemote` receives validated, upcast `TInput` alongside event
+  metadata. Reducers are deterministic and pure; returned state becomes observable only after a successful transaction.
+- Explicit cancellation-free overloads forward through extension methods, preserving arguments, results and failures.
+- Root behavioral RED tests exposed descending-sequence and negative-retry acceptance. Four conflict ownership/null-input
+  tests failed against the initial constructors before defensive copying was implemented. Type-specific test repairs were
+  reviewed rather than accepting analyzer-failing drafts or relying on coverage percentages alone.
+- GREEN: 257 Core TUnit tests passed on each modern framework (1,028 executions). Mtpunittestmcp confirmed 772/772 lines
+  and 274/274 branches on each target. All eight Core library targets build with zero warnings and errors.
+- These contracts do not implement durable storage, network synchronization or server effects; their implementations and
+  capability conformance tests remain subsequent stages. The diagnostic fault model will be completed with its emitter.
+
+The implemented identity, configuration, policy, serialization, admission and protocol stages are verified. Adapter capability negotiation,
+remaining facade contracts and integrated runtime/durability stages are still incomplete. Passing option validation alone does not establish a
 delivery guarantee or establish that a custom policy preserves durable work; the runtime must enforce both.
