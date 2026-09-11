@@ -1,0 +1,66 @@
+name: OccasionallyConnected coverage
+
+on:
+  pull_request:
+    branches: [main, OccasionallyConnected]
+    paths:
+      - 'src/ReactiveUI.Primitives.OccasionallyConnected*/**'
+      - 'src/tests/ReactiveUI.Primitives.OccasionallyConnected*/**'
+      - 'src/Directory.*'
+      - 'src/occasionally-connected.testconfig.json'
+      - 'tools/Test-OccasionallyConnectedCoverage.ps1'
+      - '.github/workflows/occasionally-connected.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  coverage:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        framework: [net8.0, net9.0, net10.0, net11.0]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
+            11.0.x
+          dotnet-quality: preview
+      - name: Build and verify complete feature coverage
+        shell: pwsh
+        working-directory: src
+        env:
+          OC_TEST_FRAMEWORK: ${{ matrix.framework }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $testProjects = @(Get-ChildItem tests -Directory -Filter 'ReactiveUI.Primitives.OccasionallyConnected*.Tests')
+          if ($testProjects.Count -eq 0) { throw 'No OccasionallyConnected test projects found.' }
+          foreach ($testProject in $testProjects) {
+            $projectFile = Join-Path $testProject.FullName "$($testProject.Name).csproj"
+            dotnet build $projectFile -c Release -f $env:OC_TEST_FRAMEWORK --disable-build-servers -m:1
+            if ($LASTEXITCODE -ne 0) { throw "Build failed: $($testProject.Name)" }
+            $testAssembly = Join-Path $testProject.FullName "bin/Release/$env:OC_TEST_FRAMEWORK/$($testProject.Name).dll"
+            $results = Join-Path $PWD "../artifacts/occasionally-connected/$($testProject.Name)/$env:OC_TEST_FRAMEWORK"
+            dotnet $testAssembly --coverage --coverage-output-format cobertura --results-directory $results --no-progress
+            if ($LASTEXITCODE -ne 0) { throw "Tests failed: $($testProject.Name)" }
+            $reports = @(Get-ChildItem -LiteralPath $results -Filter '*.cobertura.xml')
+            if ($reports.Count -ne 1) { throw 'Expected exactly one fresh coverage report.' }
+            $packageName = $testProject.Name.Substring(0, $testProject.Name.Length - '.Tests'.Length)
+            & ../tools/Test-OccasionallyConnectedCoverage.ps1 -ReportPath $reports[0].FullName -PackageNames $packageName
+          }
+      - name: Retain coverage evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: occasionally-connected-${{ matrix.os }}-${{ matrix.framework }}
+          path: artifacts/occasionally-connected

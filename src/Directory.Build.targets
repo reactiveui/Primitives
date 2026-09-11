@@ -8,7 +8,7 @@
        preview while .NET 11 is in preview, so a stable pack of a net11-targeting package trips NU5104.
        NU5104 is a pack-time (outer-build) check; this lives in .targets so $(TargetFrameworks) is set.
        Scoped to packages that actually ship a net11 leg, so non-net11 packages still reject preview deps. -->
-  <PropertyGroup Condition="$(TargetFrameworks.Contains('net11.0'))">
+  <PropertyGroup Condition="$(TargetFrameworks.Contains('net11.0')) and !$(MSBuildProjectName.StartsWith('ReactiveUI.Primitives.OccasionallyConnected'))">
     <NoWarn>$(NoWarn);NU5104</NoWarn>
   </PropertyGroup>
 

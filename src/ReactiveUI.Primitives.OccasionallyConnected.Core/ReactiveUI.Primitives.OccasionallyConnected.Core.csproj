@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(LibraryTargetFrameworks)</TargetFrameworks>
+    <RootNamespace>ReactiveUI.Primitives.OccasionallyConnected</RootNamespace>
+    <PackageDescription>Core contracts for durable, occasionally connected reactive streams.</PackageDescription>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ReactiveUI.Primitives.Core\ReactiveUI.Primitives.Core.csproj" />
+  </ItemGroup>
+
+</Project>

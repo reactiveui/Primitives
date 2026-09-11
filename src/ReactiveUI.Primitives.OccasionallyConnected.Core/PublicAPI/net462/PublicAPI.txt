@@ -1,0 +1,28 @@
+namespace ReactiveUI.Primitives.OccasionallyConnected;
+
+[System.Diagnostics.DebuggerDisplay("{Kind,nq}")]
+public record StartPosition : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.StartPosition>
+{
+    public string? Cursor { get; }
+    public ReactiveUI.Primitives.OccasionallyConnected.StartPositionKind Kind { get; }
+    public long? Sequence { get; }
+    public System.DateTimeOffset? Timestamp { get; }
+    public static ReactiveUI.Primitives.OccasionallyConnected.StartPosition Latest { get; }
+    public static ReactiveUI.Primitives.OccasionallyConnected.StartPosition FromCursor(string cursor) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.StartPosition FromSequence(long sequence) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.StartPosition FromTimestamp(System.DateTimeOffset timestamp) { }
+}
+public enum StartPositionKind
+{
+    Latest = 0,
+    FromTimestamp = 1,
+    FromSequence = 2,
+    FromCursor = 3,
+}
+[System.Diagnostics.DebuggerDisplay("{Value,nq}")]
+public readonly record struct StreamId : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.StreamId>
+{
+    public StreamId(string value) { }
+    public string Value { get; }
+    public override readonly string ToString() { }
+}
