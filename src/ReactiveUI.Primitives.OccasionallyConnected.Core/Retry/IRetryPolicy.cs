@@ -11,8 +11,8 @@ public interface IRetryPolicy
     /// <param name="failure">The classified operation failure.</param>
     /// <param name="state">The current persisted retry state.</param>
     /// <returns>The retry decision and state to persist.</returns>
-    /// <remarks>Evaluate newly observed failures. Resume persisted decisions by their stored due time instead of drawing jitter again.</remarks>
     /// <exception cref="ArgumentNullException"><paramref name="failure"/> or <paramref name="state"/> is null.</exception>
     /// <exception cref="ArgumentException">The persisted state or server delay is invalid.</exception>
+    /// <remarks>Evaluate newly observed failures. Resume persisted decisions by their stored due time instead of drawing jitter again.</remarks>
     RetryDecision GetDecision(RetryFailure failure, RetryState state);
 }
