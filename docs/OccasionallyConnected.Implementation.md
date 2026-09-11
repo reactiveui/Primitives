@@ -146,6 +146,22 @@ Linux and macOS across the four modern frameworks. Full-solution CI builds remai
   623/623 lines on net8, 617/617 on net9/net10 and 616/616 on net11, with 302/302 branches each. All eight library builds pass.
 - Outbox transactions, observer dispatch and engine scheduling must integrate these primitives in subsequent stages.
 
+### Stage 1d: context, retention, security and diagnostics configuration
+
+- Added immutable context configuration with required nested option records and a complete shared default instance.
+  Startup is explicit by default, with four concurrent streams, three conflict-resolution rounds and priorities -10 to 10.
+- Retention defaults are one day for terminal outbox records, seven days for inbox deduplication, server idempotency and
+  snapshots, thirty days for dead letters, and hourly compaction. Retention never authorizes deleting required rebuild data.
+- Security limits default to 1 MiB payloads, 2 MiB messages and 4 MiB decompressed messages, with bounded metadata and
+  JSON depth. Nonce retention covers the configured replay window. Runtime adapters must enforce these validated limits.
+- Diagnostics default to no identifiers, 10% activity sampling, an 80% high-water mark, and both 256-fault and 64 KiB queue
+  bounds. Hashed identifiers require explicit opt-in. Authenticated encryption at rest can be required explicitly at startup.
+- Root review rejected the initial analyzer-failing draft, verified the repaired source, and independently changed the
+  high-water comparison to accept 100%; the boundary test failed before the correct implementation was restored.
+- GREEN: 182 Core TUnit tests passed on each modern framework (728 executions). Mtpunittestmcp confirmed 388/388 lines
+  and 190/190 branches on each target. All eight Core library targets build with zero warnings and errors.
+- Context startup, encrypted storage, replay-cache enforcement and bounded diagnostic emission remain runtime work.
+
 The implemented identity, configuration, policy, serialization and admission stages are verified. Adapter capability negotiation,
 remaining contracts and integrated runtime/durability stages are still incomplete. Passing option validation alone does not establish a
 delivery guarantee or establish that a custom policy preserves durable work; the runtime must enforce both.

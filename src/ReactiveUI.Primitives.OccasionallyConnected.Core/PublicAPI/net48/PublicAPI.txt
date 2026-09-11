@@ -36,6 +36,17 @@ public enum DeliveryGuarantee
     AtLeastOnce = 1,
     ExactlyOnce = 2,
 }
+[System.Diagnostics.DebuggerDisplay("Enabled={Enabled}; Sampling={ActivitySamplingRatio}; Faults={MaximumQueuedFaults}; FaultBytes={MaximumQueuedFaultBytes}")]
+public record DiagnosticsOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.DiagnosticsOptions>
+{
+    public double ActivitySamplingRatio { get; init; }
+    public bool Enabled { get; init; }
+    public double HighWaterMark { get; init; }
+    public bool IncludeHashedIdentifiers { get; init; }
+    public int MaximumQueuedFaults { get; init; }
+    public int MaximumQueuedFaultBytes { get; init; }
+    public void Validate() { }
+}
 public enum ExactlyOnceExpiryBehavior
 {
     StopAndReport = 0,
@@ -83,6 +94,26 @@ public record ObserverInputOptions : System.IEquatable<ReactiveUI.Primitives.Occ
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     public void Validate() { }
     public void Validate(bool supportsCustomPolicy) { }
+}
+[System.Diagnostics.DebuggerDisplay("AutoStart={AutoStart}; Streams={MaxConcurrentStreams}; Priority={MinimumPriority}..{MaximumPriority}")]
+public record OccasionallyConnectedOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedOptions>
+{
+    public bool AutoStart { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.BatchingOptions Batching { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.CircuitBreakerOptions CircuitBreaker { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.DiagnosticsOptions Diagnostics { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.ExactlyOnceExpiryBehavior ExactlyOnceExpiryBehavior { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.InboxOptions Inbox { get; init; }
+    public int MaxConcurrentStreams { get; init; }
+    public int MaxConflictResolutionRounds { get; init; }
+    public int MaximumPriority { get; init; }
+    public int MinimumPriority { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.OutboxOptions Outbox { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.RetentionOptions Retention { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.RetryOptions Retry { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.SecurityOptions Security { get; init; }
+    public static ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedOptions Default { get; }
+    public void Validate() { }
 }
 [System.Diagnostics.DebuggerDisplay("{Value,nq}")]
 public readonly record struct OperationId : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.OperationId>
@@ -166,6 +197,17 @@ public record RemoteSubscriptionOptions : System.IEquatable<ReactiveUI.Primitive
     public void Validate() { }
     public void Validate(bool supportsCustomPolicy) { }
 }
+[System.Diagnostics.DebuggerDisplay("Outbox={OutboxTerminalRetention}; Inbox={InboxDeduplicationRetention}; Compaction={CompactionInterval}")]
+public record RetentionOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.RetentionOptions>
+{
+    public System.TimeSpan CompactionInterval { get; init; }
+    public System.TimeSpan DeadLetterRetention { get; init; }
+    public System.TimeSpan InboxDeduplicationRetention { get; init; }
+    public System.TimeSpan OutboxTerminalRetention { get; init; }
+    public System.TimeSpan ServerIdempotencyRetention { get; init; }
+    public System.TimeSpan SnapshotRetention { get; init; }
+    public void Validate() { }
+}
 public enum RetryAuthenticationState
 {
     None = 0,
@@ -238,6 +280,20 @@ public enum RetryStopReason
     RetryAgeExhausted = 2,
     PermanentFailure = 3,
     PermanentUntilCredentialsChange = 4,
+}
+[System.Diagnostics.DebuggerDisplay("Payload={MaximumPayloadBytes,nq}; Message={MaximumMessageBytes,nq}; Decompressed={MaximumDecompressedBytes,nq}")]
+public record SecurityOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.SecurityOptions>
+{
+    public int MaximumDecompressedBytes { get; init; }
+    public int MaximumJsonDepth { get; init; }
+    public int MaximumMessageBytes { get; init; }
+    public int MaximumMetadataEntries { get; init; }
+    public int MaximumMetadataValueBytes { get; init; }
+    public int MaximumPayloadBytes { get; init; }
+    public System.TimeSpan NonceRetention { get; init; }
+    public System.TimeSpan ReplayWindow { get; init; }
+    public bool RequireAuthenticatedEncryptionAtRest { get; init; }
+    public void Validate() { }
 }
 [System.Diagnostics.DebuggerDisplay("{Kind,nq}")]
 public record StartPosition : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.StartPosition>
