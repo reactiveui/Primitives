@@ -60,6 +60,20 @@ fit a snippet.
 The installed .NET 11 SDK's native `dotnet test` handshake returned exit 5 for this TUnit application. Building the
 test project and executing its DLL directly runs the same Microsoft.Testing.Platform/TUnit application successfully.
 The coverage workflow uses that invocation on Windows, Linux and macOS, with an explicit 100% line/branch gate.
-Cross-platform CI results remain pending until the PR runs; local validation was performed on Windows.
+PR [#192](https://github.com/reactiveui/Primitives/pull/192) passed all twelve feature coverage jobs on Windows,
+Linux and macOS across the four modern frameworks. Full-solution CI builds remain a separate check.
 
-Only stage 1a is verified. Options, remaining contracts and every runtime/durability stage are still incomplete.
+### Stage 1b: publishing, subscription and observer input options
+
+- Added operation/subscription identities and immutable options with structural validation.
+- Durable publishing rejects dropping policies; exactly-once publishing requires durability; synchronous observer
+  input rejects blocking backpressure. Custom policies require explicit registration support.
+- Priority validation accepts configured inclusive bounds, with a default of -10 through 10.
+- Agent tests preceded implementation; root review added independent custom-policy, durable-guarantee and
+  per-operation override cases. Disabling validation caused 29 tests to fail.
+- GREEN: 90 tests passed on each modern framework (360 executions).
+- Release coverage independently inspected through Mtpunittestmcp: 152/152 lines and 104/104 branches per framework.
+
+Only the identities and local option validation are verified. Adapter capability negotiation, remaining contracts
+and every runtime/durability stage are still incomplete. Passing option validation alone does not establish a
+delivery guarantee or establish that a custom policy preserves durable work; the runtime must enforce both.
