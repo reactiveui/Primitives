@@ -74,6 +74,15 @@ Linux and macOS across the four modern frameworks. Full-solution CI builds remai
 - GREEN: 90 tests passed on each modern framework (360 executions).
 - Release coverage independently inspected through Mtpunittestmcp: 152/152 lines and 104/104 branches per framework.
 
+### Stage 1c: batching configuration
+
+- Added immutable count, encoded-byte, dwell-time and per-stream in-flight limits with positive-value validation.
+- Defaults match the design: 100 operations, 1 MiB, 50 ms and one in-flight batch per stream.
+- Executable RED: the compilable validation stub failed eight of the ten new tests.
+- GREEN: 100 tests passed on each modern framework (400 executions).
+- Release coverage independently inspected through Mtpunittestmcp: 165/165 lines and 112/112 branches per framework.
+- Runtime batching and enforcement of smaller negotiated server limits remain pending.
+
 Only the identities and local option validation are verified. Adapter capability negotiation, remaining contracts
 and every runtime/durability stage are still incomplete. Passing option validation alone does not establish a
 delivery guarantee or establish that a custom policy preserves durable work; the runtime must enforce both.
