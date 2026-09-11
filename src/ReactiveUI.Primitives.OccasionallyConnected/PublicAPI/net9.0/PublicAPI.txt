@@ -1,0 +1,27 @@
+namespace ReactiveUI.Primitives.OccasionallyConnected;
+[System.Diagnostics.DebuggerDisplay("{_endpoint,nq}; {_state,nq}")]
+public sealed class CircuitBreaker
+{
+    public CircuitBreaker(string endpoint) { }
+    public CircuitBreaker(string endpoint, ReactiveUI.Primitives.OccasionallyConnected.CircuitBreakerOptions options, System.TimeProvider timeProvider) { }
+    public void AbandonProbe() { }
+    public ReactiveUI.Primitives.OccasionallyConnected.CircuitBreakerSnapshot Snapshot { get; }
+    public void RecordSuccess() { }
+    public void RecordTransientFailure() { }
+    public bool TryAcquire() { }
+}
+public enum CircuitBreakerState
+{
+    Closed = 0,
+    Open = 1,
+    HalfOpen = 2,
+}
+[System.Diagnostics.DebuggerDisplay("{Endpoint,nq}; {State,nq}; Failures={ConsecutiveTransientFailures,nq}")]
+public record CircuitBreakerSnapshot : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.CircuitBreakerSnapshot>
+{
+    public CircuitBreakerSnapshot(string Endpoint, ReactiveUI.Primitives.OccasionallyConnected.CircuitBreakerState State, int ConsecutiveTransientFailures, System.DateTimeOffset? RetryAfterUtc) { }
+    public int ConsecutiveTransientFailures { get; init; }
+    public string Endpoint { get; init; }
+    public System.DateTimeOffset? RetryAfterUtc { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.CircuitBreakerState State { get; init; }
+}
