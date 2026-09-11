@@ -111,6 +111,23 @@ Linux and macOS across the four modern frameworks. Full-solution CI builds remai
 - The synchronization engine must persist decisions, respect stored due times after restart, and only invoke retry
   for an operation whose delivery guarantee permits another attempt. That integration remains pending.
 
-Identities, local option validation and the standalone circuit and retry policies are verified. Adapter capability negotiation,
+### Stage 2a: allowlisted payload serialization
+
+- Added owned payload envelopes, schema registration, explicit contiguous upcasting and a source-generated JSON adapter.
+- Payload hashes cover the exact stored UTF-8 bytes. Metadata, schema, type, encoded size and hash validation precede
+  deserialization; each upcast output is revalidated. Cancellation is observed after an upcaster returns.
+- Registry snapshots isolate a serializer from later registrations and registered JSON metadata is frozen. Reference
+  preservation and polymorphic root metadata are rejected. Missing, ambiguous and backwards upcast chains fail explicitly.
+- The JSON writer distinguishes its bounded scratch requests from the exact encoded payload limit. Scratch allocation is
+  capped at six times the payload limit plus 4 KiB, accounting for JSON escaping and fixed writer requests; committed bytes
+  cannot exceed the configured limit. Envelope length is available without allocating a payload copy.
+- Root executable RED cases exposed exact-size rejection, missing-hash handling and cancellation after upcasting before
+  the fixes. Boundary tests also cover large escaped payloads, immutable byte ownership and extreme schema-version gaps.
+- GREEN: 128 Core tests plus 110 runtime tests passed per modern framework (952 executions).
+- Mtpunittestmcp confirmed 100% lines and branches: Core 242/242 lines and 128/128 branches; runtime 339/339 lines on
+  net8/net9/net10 and 338/338 on net11, with 178/178 branches on each. All eight library targets build without warnings.
+- Transport parsing limits, encrypted persistence, quarantine integration and engine projection remain later stages.
+
+The implemented identity, configuration, policy and serialization stages are verified. Adapter capability negotiation,
 remaining contracts and integrated runtime/durability stages are still incomplete. Passing option validation alone does not establish a
 delivery guarantee or establish that a custom policy preserves durable work; the runtime must enforce both.

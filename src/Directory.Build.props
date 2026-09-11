@@ -211,7 +211,8 @@
                         or '%(Filename)' == 'Microsoft.Interop.VtableIndexStubGenerator'
                         or '%(Filename)' == 'Microsoft.Interop.JavaScript.JSImportGenerator'
                         or '%(Filename)' == 'Microsoft.Interop.LibraryImportGenerator'
-                        or '%(Filename)' == 'System.Text.Json.SourceGeneration'"/>
+                        or ('%(Filename)' == 'System.Text.Json.SourceGeneration'
+                            and '$(EnableSystemTextJsonSourceGenerator)' != 'true')"/>
     </ItemGroup>
   </Target>
 </Project>

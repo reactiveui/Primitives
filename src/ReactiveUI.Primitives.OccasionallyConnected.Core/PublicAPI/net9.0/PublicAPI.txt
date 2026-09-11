@@ -41,6 +41,19 @@ public enum ExactlyOnceExpiryBehavior
     StopAndReport = 0,
     FallbackToAtLeastOnce = 1,
 }
+public interface IPayloadSerializer
+{
+    string ContentType { get; }
+    System.Threading.Tasks.ValueTask<object> DeserializeAsync(ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope envelope, System.Type targetType, System.Threading.CancellationToken cancellationToken) { }
+    System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope> SerializeAsync<T>(string contractId, int schemaVersion, T value, System.Threading.CancellationToken cancellationToken) { }
+}
+public interface IPayloadUpcaster
+{
+    string ContractId { get; }
+    int FromVersion { get; }
+    int ToVersion { get; }
+    System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope> UpcastAsync(ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope source, System.Threading.CancellationToken cancellationToken) { }
+}
 public interface IRetryPolicy
 {
     ReactiveUI.Primitives.OccasionallyConnected.RetryDecision GetDecision(ReactiveUI.Primitives.OccasionallyConnected.RetryFailure failure, ReactiveUI.Primitives.OccasionallyConnected.RetryState state) { }
@@ -48,6 +61,11 @@ public interface IRetryPolicy
 public interface IRetryRandomSource
 {
     double NextDouble() { }
+}
+public interface ISchemaRegistry
+{
+    System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.IPayloadUpcaster> GetUpcastChain(string contractId, int fromVersion, int toVersion) { }
+    bool IsRegistered(string contractId, int schemaVersion, System.Type targetType) { }
 }
 [System.Diagnostics.DebuggerDisplay("{BufferStrategy,nq}; Count={BufferCapacity,nq}; Bytes={BufferCapacityBytes,nq}")]
 public record ObserverInputOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.ObserverInputOptions>
@@ -65,6 +83,43 @@ public readonly record struct OperationId : System.IEquatable<ReactiveUI.Primiti
     public OperationId(System.Guid Value) { }
     public System.Guid Value { get; init; }
     public static ReactiveUI.Primitives.OccasionallyConnected.OperationId New() { }
+}
+[System.Diagnostics.DebuggerDisplay("{ContractId,nq} v{SchemaVersion,nq}")]
+public record PayloadEnvelope : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope>
+{
+    public PayloadEnvelope(string contractId, int schemaVersion, string contentType, System.ReadOnlyMemory<byte> payload, string payloadHash) { }
+    public string ContentType { get; init; }
+    public string ContractId { get; init; }
+    public System.ReadOnlyMemory<byte> Payload { get; init; }
+    public string PayloadHash { get; init; }
+    public int PayloadLength { get; }
+    public int SchemaVersion { get; init; }
+}
+[System.Diagnostics.DebuggerDisplay("{Reason,nq}: {Message,nq}")]
+public sealed class PayloadSchemaException : System.Exception
+{
+    public PayloadSchemaException() { }
+    public PayloadSchemaException(string? message) { }
+    public PayloadSchemaException(ReactiveUI.Primitives.OccasionallyConnected.PayloadSchemaFailureReason reason, string message) { }
+    public PayloadSchemaException(string? message, System.Exception? innerException) { }
+    public PayloadSchemaException(ReactiveUI.Primitives.OccasionallyConnected.PayloadSchemaFailureReason reason, string message, System.Exception innerException) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.PayloadSchemaFailureReason Reason { get; }
+}
+public enum PayloadSchemaFailureReason
+{
+    UnknownContract = 0,
+    InvalidSchemaVersion = 1,
+    TypeNotAllowed = 2,
+    ContentTypeMismatch = 3,
+    PayloadHashMismatch = 4,
+    PayloadTooLarge = 5,
+    MissingUpcaster = 6,
+    AmbiguousUpcaster = 7,
+    DowncastNotSupported = 8,
+    UpcasterContractMismatch = 9,
+    DeserializationFailed = 10,
+    SerializationFailed = 11,
+    UpcasterFailed = 12,
 }
 [System.Diagnostics.DebuggerDisplay("{StreamId.Value,nq}; Durable={Durable,nq}; Guarantee={DeliveryGuarantee,nq}")]
 public record RemotePublishOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.RemotePublishOptions>

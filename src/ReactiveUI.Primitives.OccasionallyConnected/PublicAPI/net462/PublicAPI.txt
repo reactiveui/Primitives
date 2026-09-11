@@ -1,3 +1,4 @@
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.OccasionallyConnected.Tests")]
 namespace ReactiveUI.Primitives.OccasionallyConnected;
 
 [System.Diagnostics.DebuggerDisplay("{_endpoint,nq}; {_state,nq}")]
@@ -26,6 +27,20 @@ public enum CircuitBreakerState
     Open = 1,
     HalfOpen = 2,
 }
+[System.Diagnostics.DebuggerDisplay("{ContentType,nq}, MaxPayloadBytes = {_maximumPayloadBytes}")]
+public sealed class JsonPayloadSerializer : ReactiveUI.Primitives.OccasionallyConnected.IPayloadSerializer
+{
+    public JsonPayloadSerializer(ReactiveUI.Primitives.OccasionallyConnected.SchemaRegistry schemaRegistry) { }
+    public JsonPayloadSerializer(ReactiveUI.Primitives.OccasionallyConnected.SchemaRegistry schemaRegistry, int maximumPayloadBytes) { }
+    public string ContentType { get; }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public System.Threading.Tasks.ValueTask<object> DeserializeAsync(ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope envelope, System.Type targetType) { }
+    public System.Threading.Tasks.ValueTask<object> DeserializeAsync(ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope envelope, System.Type targetType, System.Threading.CancellationToken cancellationToken) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope> SerializeAsync<T>(string contractId, int schemaVersion, T value) { }
+    public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope> SerializeAsync<T>(string contractId, int schemaVersion, T value, System.Threading.CancellationToken cancellationToken) { }
+    public static string ComputePayloadHash(System.ReadOnlySpan<byte> payload) { }
+}
 [System.Diagnostics.DebuggerDisplay("MinimumDelay = {_options.MinimumDelay}, MaximumDelay = {_options.MaximumDelay}")]
 public sealed class RetryPolicy : ReactiveUI.Primitives.OccasionallyConnected.IRetryPolicy
 {
@@ -33,4 +48,15 @@ public sealed class RetryPolicy : ReactiveUI.Primitives.OccasionallyConnected.IR
     public RetryPolicy(ReactiveUI.Primitives.OccasionallyConnected.RetryOptions options) { }
     public RetryPolicy(ReactiveUI.Primitives.OccasionallyConnected.RetryOptions options, System.TimeProvider timeProvider, ReactiveUI.Primitives.OccasionallyConnected.IRetryRandomSource randomSource) { }
     public ReactiveUI.Primitives.OccasionallyConnected.RetryDecision GetDecision(ReactiveUI.Primitives.OccasionallyConnected.RetryFailure failure, ReactiveUI.Primitives.OccasionallyConnected.RetryState state) { }
+}
+[System.Diagnostics.DebuggerDisplay("SchemaRegistry")]
+public sealed class SchemaRegistry : ReactiveUI.Primitives.OccasionallyConnected.ISchemaRegistry
+{
+    public SchemaRegistry() { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.IPayloadUpcaster> GetUpcastChain(string contractId, int fromVersion, int toVersion) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public bool IsRegistered(string contractId, int schemaVersion, System.Type targetType) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.SchemaRegistry Register<T>(string contractId, int schemaVersion, System.Text.Json.Serialization.Metadata.JsonTypeInfo<T> jsonTypeInfo) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.SchemaRegistry RegisterUpcaster(ReactiveUI.Primitives.OccasionallyConnected.IPayloadUpcaster upcaster) { }
 }
