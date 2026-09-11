@@ -96,6 +96,21 @@ Linux and macOS across the four modern frameworks. Full-solution CI builds remai
   and 20/20 branches, on each modern framework.
 - Engine integration, retry persistence and endpoint fault classification remain pending.
 
-Identities, local option validation and the standalone circuit breaker are verified. Adapter capability negotiation,
+### Stage 6b: standalone retry policy
+
+- Added persisted retry state and deterministic decorrelated jitter with injected time and randomness.
+- Server retry hints are lower bounds. Scheduling stops at the retry-age or calendar limit, rather than overflowing
+  a deadline or retrying immediately. A backwards clock cannot increase the configured remaining-age budget.
+- Authentication retries require an explicit renewed credential version and allow one immediate retry per version.
+  Permanent failures stop; invalid persisted state and negative server delays are rejected.
+- Root review added executable regression tests before fixing twelve failures in the initial handoff, including
+  overflow, missing renewal evidence, invalid state and retry-age boundaries.
+- GREEN: 120 Core tests plus 49 runtime tests passed per modern framework (676 executions).
+- Mtpunittestmcp confirmed Core coverage of 216/216 lines and 128/128 branches, and runtime coverage of 139/139 lines
+  and 72/72 branches, on each modern framework. All eight library targets build with zero warnings and errors.
+- The synchronization engine must persist decisions, respect stored due times after restart, and only invoke retry
+  for an operation whose delivery guarantee permits another attempt. That integration remains pending.
+
+Identities, local option validation and the standalone circuit and retry policies are verified. Adapter capability negotiation,
 remaining contracts and integrated runtime/durability stages are still incomplete. Passing option validation alone does not establish a
 delivery guarantee or establish that a custom policy preserves durable work; the runtime must enforce both.

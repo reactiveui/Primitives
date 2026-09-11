@@ -41,6 +41,14 @@ public enum ExactlyOnceExpiryBehavior
     StopAndReport = 0,
     FallbackToAtLeastOnce = 1,
 }
+public interface IRetryPolicy
+{
+    ReactiveUI.Primitives.OccasionallyConnected.RetryDecision GetDecision(ReactiveUI.Primitives.OccasionallyConnected.RetryFailure failure, ReactiveUI.Primitives.OccasionallyConnected.RetryState state) { }
+}
+public interface IRetryRandomSource
+{
+    double NextDouble() { }
+}
 [System.Diagnostics.DebuggerDisplay("{BufferStrategy,nq}; Count={BufferCapacity,nq}; Bytes={BufferCapacityBytes,nq}")]
 public record ObserverInputOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.ObserverInputOptions>
 {
@@ -87,6 +95,79 @@ public record RemoteSubscriptionOptions : System.IEquatable<ReactiveUI.Primitive
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     public void Validate() { }
     public void Validate(bool supportsCustomPolicy) { }
+}
+public enum RetryAuthenticationState
+{
+    None = 0,
+    RenewalRetryUsed = 1,
+}
+[System.Diagnostics.DebuggerDisplay("{Kind,nq}: {StopReason,nq}")]
+public record RetryDecision : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.RetryDecision>
+{
+    public RetryDecision(ReactiveUI.Primitives.OccasionallyConnected.RetryDecisionKind Kind, ReactiveUI.Primitives.OccasionallyConnected.RetryStopReason StopReason, System.TimeSpan? Delay, System.DateTimeOffset? DueUtc, ReactiveUI.Primitives.OccasionallyConnected.RetryState NextState) { }
+    public System.TimeSpan? Delay { get; init; }
+    public System.DateTimeOffset? DueUtc { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.RetryDecisionKind Kind { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.RetryState NextState { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.RetryStopReason StopReason { get; init; }
+}
+public enum RetryDecisionKind
+{
+    Retry = 0,
+    Stop = 1,
+}
+[System.Diagnostics.DebuggerDisplay("{Kind,nq}")]
+public record RetryFailure : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.RetryFailure>
+{
+    public RetryFailure(ReactiveUI.Primitives.OccasionallyConnected.RetryFailureKind kind) { }
+    public RetryFailure(ReactiveUI.Primitives.OccasionallyConnected.RetryFailureKind kind, System.TimeSpan? retryAfter, string? credentialsVersion) { }
+    public string? CredentialsVersion { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.RetryFailureKind Kind { get; init; }
+    public System.TimeSpan? RetryAfter { get; init; }
+    public static ReactiveUI.Primitives.OccasionallyConnected.RetryFailure AuthenticationTokenRenewed(string credentialsVersion) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.RetryFailure Transient() { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.RetryFailure Transient(System.TimeSpan retryAfter) { }
+}
+public enum RetryFailureKind
+{
+    Transient = 0,
+    Authentication = 1,
+    AuthorizationDenied = 2,
+    ValidationRejected = 3,
+    SchemaIncompatible = 4,
+    PayloadTooLarge = 5,
+    DeterministicConflictRejected = 6,
+    AmbiguousTransportOutcome = 7,
+}
+[System.Diagnostics.DebuggerDisplay("MinimumDelay = {MinimumDelay}, MaximumDelay = {MaximumDelay}, MaximumRetryAttempts = {MaximumRetryAttempts}")]
+public record RetryOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.RetryOptions>
+{
+    public System.TimeSpan MaximumDelay { get; init; }
+    public System.TimeSpan MaximumRetryAge { get; init; }
+    public int MaximumRetryAttempts { get; init; }
+    public System.TimeSpan MinimumDelay { get; init; }
+    public static ReactiveUI.Primitives.OccasionallyConnected.RetryOptions Default { get; }
+    public void Validate() { }
+}
+[System.Diagnostics.DebuggerDisplay("Attempts = {TransientAttemptCount}, DueUtc = {DueUtc}")]
+public record RetryState : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.RetryState>
+{
+    public RetryState(System.DateTimeOffset StartedUtc, System.DateTimeOffset? DueUtc, System.TimeSpan? PreviousDelay, int TransientAttemptCount, ReactiveUI.Primitives.OccasionallyConnected.RetryAuthenticationState AuthenticationState, string? CredentialsVersion) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.RetryAuthenticationState AuthenticationState { get; init; }
+    public string? CredentialsVersion { get; init; }
+    public System.DateTimeOffset? DueUtc { get; init; }
+    public System.TimeSpan? PreviousDelay { get; init; }
+    public System.DateTimeOffset StartedUtc { get; init; }
+    public int TransientAttemptCount { get; init; }
+    public static ReactiveUI.Primitives.OccasionallyConnected.RetryState Start(System.DateTimeOffset startedUtc) { }
+}
+public enum RetryStopReason
+{
+    None = 0,
+    AttemptsExhausted = 1,
+    RetryAgeExhausted = 2,
+    PermanentFailure = 3,
+    PermanentUntilCredentialsChange = 4,
 }
 [System.Diagnostics.DebuggerDisplay("{Kind,nq}")]
 public record StartPosition : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.StartPosition>
