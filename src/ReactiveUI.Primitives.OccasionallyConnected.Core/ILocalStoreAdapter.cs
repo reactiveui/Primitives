@@ -1,0 +1,149 @@
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
+// ReactiveUI Association Incorporated licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for full license information.
+
+namespace ReactiveUI.Primitives.OccasionallyConnected;
+
+/// <summary>Persists local occasionally-connected stream state using transactional workflow operations.</summary>
+public interface ILocalStoreAdapter : IAsyncDisposable
+{
+    /// <summary>Gets the local store capabilities.</summary>
+    LocalStoreCapabilities Capabilities { get; }
+
+    /// <summary>Initializes the store for use by one synchronization engine.</summary>
+    /// <param name="initialization">The initialization requirements.</param>
+    /// <param name="cancellationToken">The token used to cancel initialization.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    ValueTask InitializeAsync(LocalStoreInitialization initialization, CancellationToken cancellationToken);
+
+    /// <summary>Recovers a durable stream and its pending work.</summary>
+    /// <param name="streamId">The stream identifier.</param>
+    /// <param name="subscriptionId">The durable subscription identifier.</param>
+    /// <param name="cancellationToken">The token used to cancel recovery.</param>
+    /// <returns>The recovered stream state.</returns>
+    ValueTask<RecoveredStream> RecoverStreamAsync(StreamId streamId, SubscriptionId subscriptionId, CancellationToken cancellationToken);
+
+    /// <summary>Atomically commits a local operation and optimistic snapshot mutation.</summary>
+    /// <param name="operation">The local operation to commit.</param>
+    /// <param name="snapshotMutation">The snapshot mutation to commit.</param>
+    /// <param name="cancellationToken">The token used to cancel the commit.</param>
+    /// <returns>The local commit result.</returns>
+    /// <remarks>
+    /// The operation and mutation must identify the same stream. The store verifies the next client sequence and
+    /// <see cref="SnapshotMutation.ExpectedRevision"/> before atomically updating the sequence, outbox, and snapshot.
+    /// Cancellation observed before commit leaves all three unchanged. After commit the method returns the committed
+    /// result even if cancellation is subsequently requested, so callers never mistake a durable publish for a rollback.
+    /// </remarks>
+    ValueTask<LocalCommitResult> CommitLocalOperationAsync(
+        SyncOperation operation,
+        SnapshotMutation snapshotMutation,
+        CancellationToken cancellationToken);
+
+    /// <summary>Leases pending operations for upload.</summary>
+    /// <param name="request">The lease request.</param>
+    /// <param name="cancellationToken">The token used to cancel lease enumeration.</param>
+    /// <returns>The leased operation batches.</returns>
+    IAsyncEnumerable<LeasedOperationBatch> LeasePendingOperationsAsync(OutboxLeaseRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Applies a remote synchronization result to leased operations.</summary>
+    /// <param name="leaseId">The lease identifier.</param>
+    /// <param name="result">The remote synchronization result.</param>
+    /// <param name="cancellationToken">The token used to cancel result application.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// The lease must still own every referenced operation. Before changing any operation, the store validates the
+    /// complete result against the exact leased batch, including duplicate, unknown, and omitted operation identifiers.
+    /// Validation or ownership failure leaves all operation states unchanged.
+    /// </remarks>
+    ValueTask ApplySyncResultAsync(Guid leaseId, RemoteSyncResult result, CancellationToken cancellationToken);
+
+    /// <summary>Returns remote event identifiers that have not yet been durably applied for a stream.</summary>
+    /// <param name="streamId">The stream identifier.</param>
+    /// <param name="eventIds">The candidate remote event identifiers in received order.</param>
+    /// <param name="cancellationToken">The token used to cancel inbox lookup.</param>
+    /// <returns>The candidate event identifiers that are not present in the durable inbox.</returns>
+    /// <remarks>
+    /// Engines use this method before projection so a mixed batch of duplicate and new events cannot compute a
+    /// snapshot from already-applied events. Store adapters must provide read-your-writes visibility for this lookup.
+    /// </remarks>
+    ValueTask<IReadOnlyList<Guid>> GetUnappliedEventIdsAsync(
+        StreamId streamId,
+        IReadOnlyList<Guid> eventIds,
+        CancellationToken cancellationToken);
+
+    /// <summary>Atomically applies a remote event batch and snapshot mutation.</summary>
+    /// <param name="batch">The remote event batch.</param>
+    /// <param name="snapshotMutation">The snapshot mutation to commit.</param>
+    /// <param name="cancellationToken">The token used to cancel result application.</param>
+    /// <returns>The remote apply result.</returns>
+    /// <remarks>
+    /// The batch contains events selected by <see cref="GetUnappliedEventIdsAsync(StreamId, IReadOnlyList{Guid}, CancellationToken)"/>.
+    /// Applying the events, recording inbox identifiers, advancing the cursor, and replacing the snapshot are one store
+    /// transaction. Stores must reject a mismatched <see cref="SnapshotMutation.ExpectedRevision"/> atomically with no
+    /// inbox, cursor, or snapshot effects.
+    /// </remarks>
+    ValueTask<RemoteApplyResult> ApplyRemoteBatchAsync(
+        RemoteEventBatch batch,
+        SnapshotMutation snapshotMutation,
+        CancellationToken cancellationToken);
+
+    /// <summary>Gets the latest durable status recorded for an operation.</summary>
+    /// <param name="operationId">The operation identifier.</param>
+    /// <param name="cancellationToken">The token used to cancel status lookup.</param>
+    /// <returns>The operation status, or <see langword="null"/> when the store has no record.</returns>
+    /// <remarks>
+    /// Engines use this method to complete awaiters after restart when an operation became terminal before the current
+    /// process observed its state transition.
+    /// </remarks>
+    ValueTask<SyncOperationStatus?> GetOperationStatusAsync(OperationId operationId, CancellationToken cancellationToken);
+
+    /// <summary>Gets durable retry state recorded for an operation.</summary>
+    /// <param name="operationId">The operation identifier.</param>
+    /// <param name="cancellationToken">The token used to cancel retry lookup.</param>
+    /// <returns>The retry state, or <see langword="null"/> when no retry state is recorded.</returns>
+    ValueTask<RetryState?> GetRetryStateAsync(OperationId operationId, CancellationToken cancellationToken);
+
+    /// <summary>Records a durable attempt barrier before any network I/O for an operation.</summary>
+    /// <param name="leaseId">The lease identifier that currently owns the operation.</param>
+    /// <param name="operationId">The operation identifier.</param>
+    /// <param name="nextAttempt">The attempt number about to be sent.</param>
+    /// <param name="cancellationToken">The token used to cancel barrier recording.</param>
+    /// <returns>The barrier decision.</returns>
+    /// <remarks>
+    /// Engines must call this method before sending a leased operation to the remote peer. The store must verify that
+    /// <paramref name="leaseId"/> still owns <paramref name="operationId"/> before committing the barrier. Once the
+    /// barrier commits, an ambiguous transport outcome is restart-visible. Stores must deny a later send for
+    /// at-most-once operations whose previous barrier became ambiguous, so ambiguity never turns into an implicit retry.
+    /// </remarks>
+    ValueTask<AttemptBarrierResult> TryBeginRemoteAttemptAsync(
+        Guid leaseId,
+        OperationId operationId,
+        int nextAttempt,
+        CancellationToken cancellationToken);
+
+    /// <summary>Saves durable retry state for an operation after a retryable decision or ambiguous attempt.</summary>
+    /// <param name="operationId">The operation identifier that owns the retry state.</param>
+    /// <param name="retryState">The retry state to save.</param>
+    /// <param name="cancellationToken">The token used to cancel retry state persistence.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    ValueTask SaveRetryStateAsync(OperationId operationId, RetryState retryState, CancellationToken cancellationToken);
+
+    /// <summary>Extends an outbox lease.</summary>
+    /// <param name="leaseId">The lease identifier.</param>
+    /// <param name="extension">The lease extension duration.</param>
+    /// <param name="cancellationToken">The token used to cancel renewal.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    ValueTask RenewLeaseAsync(Guid leaseId, TimeSpan extension, CancellationToken cancellationToken);
+
+    /// <summary>Releases an outbox lease.</summary>
+    /// <param name="leaseId">The lease identifier.</param>
+    /// <param name="cancellationToken">The token used to cancel release.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    ValueTask ReleaseLeaseAsync(Guid leaseId, CancellationToken cancellationToken);
+
+    /// <summary>Compacts terminal records and stale storage data.</summary>
+    /// <param name="request">The compaction request.</param>
+    /// <param name="cancellationToken">The token used to cancel compaction.</param>
+    /// <returns>The compaction result.</returns>
+    ValueTask<CompactionResult> CompactAsync(CompactionRequest request, CancellationToken cancellationToken);
+}
