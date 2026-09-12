@@ -11,7 +11,11 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
-/// <summary>Retries the source observable sequence upon error, with optional delay, retry count, and backoff.</summary>
+/// <summary>
+/// Re-subscribes the source after an error, waiting the policy's initial delay scaled by its backoff factor for each
+/// attempt and capped by its maximum, then forwards the error once the retry budget is spent. Every error reaches the
+/// policy's callback, and values forwarded before a retry are not retracted.
+/// </summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="policy">The retry / backoff configuration.</param>
@@ -46,13 +50,13 @@ internal sealed class RetryWithBackoffObservable<T>(
         /// <summary>The subscription to the source sequence.</summary>
         private readonly MutableDisposable _subscription = new();
 
-        /// <summary>The number of retries already attempted.</summary>
+        /// <summary>The number of retries attempted so far.</summary>
         private int _retries;
 
         /// <summary>Whether the sink has been disposed.</summary>
         private bool _disposed;
 
-        /// <summary>Starts the retry process.</summary>
+        /// <summary>Subscribes the source for the first attempt.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Run() => SubscribeToSource();
 

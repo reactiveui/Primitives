@@ -17,7 +17,7 @@ public partial class RxNamesTests
     /// <summary>The multiplier/state used by projection cases.</summary>
     private const int Ten = 10;
 
-    /// <summary>The divisor used to select even values.</summary>
+    /// <summary>The divisor that selects even values.</summary>
     private const int Two = 2;
 
     /// <summary>The fold/aggregate seed.</summary>

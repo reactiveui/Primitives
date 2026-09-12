@@ -6,15 +6,13 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Emits <paramref name="selector"/> applied to each source element that <paramref name="predicate"/> accepts. An
-/// exception from either delegate terminates the sequence.
-/// </summary>
+/// <summary>Emits each source element the predicate accepts, projected by the selector.</summary>
 /// <typeparam name="TIn">The source element type.</typeparam>
 /// <typeparam name="TOut">The projected element type after applying the selector.</typeparam>
 /// <param name="source">The source observable to filter and project.</param>
 /// <param name="predicate">Predicate applied to each source element; only elements returning <see langword="true"/> are forwarded through <paramref name="selector"/>.</param>
 /// <param name="selector">Projection applied to elements that pass <paramref name="predicate"/>.</param>
+/// <remarks>An exception from either delegate terminates the sequence.</remarks>
 public sealed class WhereSelectObservable<TIn, TOut>(
     IObservable<TIn> source,
     Func<TIn, bool> predicate,

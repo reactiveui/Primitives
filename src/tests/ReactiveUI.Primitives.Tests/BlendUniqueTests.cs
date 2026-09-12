@@ -68,7 +68,7 @@ public class BlendUniqueTests
         await Assert.That(completed).IsEqualTo(Once);
     }
 
-    /// <summary>Verifies that a custom comparer is used to suppress duplicates.</summary>
+    /// <summary>Verifies that a custom comparer decides which values count as duplicates.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task UsesSuppliedComparer()

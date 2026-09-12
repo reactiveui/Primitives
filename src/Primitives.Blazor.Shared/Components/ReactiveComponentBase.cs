@@ -12,6 +12,9 @@ namespace ReactiveUI.Primitives.Blazor.Components;
 #endif
 
 /// <summary>Base component that tracks reactive subscriptions and refreshes through Blazor's renderer dispatcher.</summary>
+/// <remarks>Every observed callback is marshalled onto the renderer dispatcher, so a handler can touch component state
+/// directly, and a callback that throws is dispatched to the enclosing error boundary instead of faulting a detached
+/// task. Disposing the component disposes every tracked subscription.</remarks>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public class ReactiveComponentBase : ComponentBase, IDisposable
 {
@@ -44,7 +47,7 @@ public class ReactiveComponentBase : ComponentBase, IDisposable
 
     /// <summary>Tracks a subscription so it is disposed when the component is disposed.</summary>
     /// <param name="subscription">The subscription to track.</param>
-    /// <returns>The supplied subscription, or <see cref="EmptyDisposable.Instance"/> when the component has already been disposed.</returns>
+    /// <returns>The supplied subscription, or <see cref="EmptyDisposable.Instance"/> when the component is disposed.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="subscription"/> is <see langword="null"/>.</exception>
     protected IDisposable Track(IDisposable subscription)
     {
@@ -136,7 +139,7 @@ public class ReactiveComponentBase : ComponentBase, IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected Task InvalidateAsync() => InvokeAsync(StateHasChanged);
 
-    /// <summary>Handles an unhandled subscription error.</summary>
+    /// <summary>Handles a subscription error that no <c>onError</c> callback was given for.</summary>
     /// <param name="error">The observed error.</param>
     /// <exception cref="InvalidOperationException">Always thrown to surface the subscription error.</exception>
     protected virtual void OnObservedError(Exception error)
@@ -174,7 +177,7 @@ public class ReactiveComponentBase : ComponentBase, IDisposable
         }
     }
 
-    /// <summary>Refreshes the component when requested and when it is still active.</summary>
+    /// <summary>Refreshes the component when requested and the component is undisposed.</summary>
     /// <param name="shouldRefresh">A value indicating whether refresh is requested.</param>
     private void Refresh(bool shouldRefresh)
     {

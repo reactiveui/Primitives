@@ -14,7 +14,7 @@ namespace ReactiveUI.Primitives.Blazor.Reactive.Tests;
 /// <summary>Tests for <see cref="BlazorRendererSequencer"/> as an <see cref="IScheduler"/> driven through a fake renderer delegate.</summary>
 public sealed class BlazorRendererSequencerTests
 {
-    /// <summary>Expected values produced by an immediate burst, used to verify FIFO order.</summary>
+    /// <summary>The values an immediate burst produces, in the FIFO order asserted.</summary>
     private static readonly int[] ExpectedBurst = [1, 2, 3];
 
     /// <summary>Verifies the constructor rejects a null renderer delegate.</summary>

@@ -9,6 +9,9 @@ using ReactiveUI.Primitives.Reactive.Concurrency;
 namespace ReactiveUI.Primitives.Blazor.Reactive.Concurrency;
 
 /// <summary>Scheduler that coalesces scheduled work through a Blazor renderer dispatcher delegate.</summary>
+/// <remarks>Work runs on the renderer's dispatcher, and delayed work waits on a background scheduler that marshals it
+/// back through the renderer when due. A renderer task that faults reaches
+/// <see cref="UnhandledExceptionHandler"/>.</remarks>
 /// <seealso cref="System.Reactive.Concurrency.IScheduler" />
 [System.Diagnostics.DebuggerDisplay("BlazorRendererSequencer: InvokeAsync = {_invokeAsync}, UnhandledExceptionHandler = {UnhandledExceptionHandler}")]
 public sealed class BlazorRendererSequencer : CoalescingDispatchScheduler

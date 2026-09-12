@@ -13,32 +13,32 @@ namespace ReactiveUI.Primitives.Benchmarks;
 /// <summary>Benchmarks the complete synchronous ReactiveUI.Primitives.Extensions public helper surface.</summary>
 public partial class ReactiveExtensionsComparisonBenchmarks
 {
-    /// <summary>Executes the <c>SystemReactiveAsSignal</c> benchmark helper.</summary>
-    /// <returns>The <c>SystemReactiveAsSignal</c> result.</returns>
+    /// <summary>Projects the System.Reactive range to unit values and drains it.</summary>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveAsSignal() =>
         DrainPrimitiveUnit(RxObservable.Select(RxObservable.Range(0, Count), static _ => RxVoid.Default));
 
-    /// <summary>Executes the <c>SystemReactiveCatchAndReturn</c> benchmark helper.</summary>
-    /// <returns>The <c>SystemReactiveCatchAndReturn</c> result.</returns>
+    /// <summary>Substitutes a fallback value for a System.Reactive failure.</summary>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveCatchAndReturn() =>
         DrainInt(RxObservable.Throw<int>(Boom).Catch(RxObservable.Return(Fallback)));
 
-    /// <summary>Executes the <c>SystemReactiveCatchIgnore</c> benchmark helper.</summary>
-    /// <returns>The <c>SystemReactiveCatchIgnore</c> result.</returns>
+    /// <summary>Swallows a System.Reactive failure and completes empty.</summary>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveCatchIgnore() =>
         DrainInt(RxObservable.Throw<int>(Boom).Catch(RxObservable.Empty<int>()));
 
-    /// <summary>Executes the <c>SystemReactiveCombineLatestValuesAreAllFalse</c> benchmark helper.</summary>
-    /// <returns>The <c>SystemReactiveCombineLatestValuesAreAllFalse</c> result.</returns>
+    /// <summary>Combines two false System.Reactive sources and tests that every value is false.</summary>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveCombineLatestValuesAreAllFalse() =>
         DrainBool(BoolSources(ExtensionsLibrary.ReactiveUIExtensions, false).CombineLatest(ValuesAreAllFalse));
 
-    /// <summary>Executes the <c>SystemReactiveCombineLatestValuesAreAllTrue</c> benchmark helper.</summary>
-    /// <returns>The <c>SystemReactiveCombineLatestValuesAreAllTrue</c> result.</returns>
+    /// <summary>Combines two true System.Reactive sources and tests that every value is true.</summary>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveCombineLatestValuesAreAllTrue() =>
         DrainBool(BoolSources(ExtensionsLibrary.ReactiveUIExtensions, true).CombineLatest(ValuesAreAllTrue));
@@ -75,28 +75,28 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         return true;
     }
 
-    /// <summary>Executes the <c>SystemReactiveFilter</c> benchmark helper.</summary>
-    /// <returns>The <c>SystemReactiveFilter</c> result.</returns>
+    /// <summary>Filters the System.Reactive string source by the even-digit regex.</summary>
+    /// <returns>The scenario checksum.</returns>
     private static int SystemReactiveFilter()
     {
         var regex = EvenRegex();
         return DrainString(RxObservable.Where(RxObservable.ToObservable(StringValues), value => regex.IsMatch(value)));
     }
 
-    /// <summary>Executes the <c>SystemReactiveForEach</c> benchmark helper.</summary>
-    /// <returns>The <c>SystemReactiveForEach</c> result.</returns>
+    /// <summary>Flattens a single batch of values through System.Reactive.</summary>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveForEach() =>
         DrainInt(RxObservable.Return(Values.AsEnumerable()).SelectMany(static values => values));
 
-    /// <summary>Executes the <c>SystemReactiveFromArray</c> benchmark helper.</summary>
-    /// <returns>The <c>SystemReactiveFromArray</c> result.</returns>
+    /// <summary>Drains the shared int array through System.Reactive.</summary>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveFromArray() =>
         DrainInt(RxObservable.ToObservable(Values));
 
-    /// <summary>Executes the <c>SystemReactiveGetMax</c> benchmark helper.</summary>
-    /// <returns>The <c>SystemReactiveGetMax</c> result.</returns>
+    /// <summary>Combines two System.Reactive scalars into their maximum.</summary>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveGetMax() =>
         DrainInt(RxObservable.CombineLatest(
@@ -104,8 +104,8 @@ public partial class ReactiveExtensionsComparisonBenchmarks
             RxObservable.Return(SecondValue),
             Math.Max));
 
-    /// <summary>Executes the <c>SystemReactiveGetMin</c> benchmark helper.</summary>
-    /// <returns>The <c>SystemReactiveGetMin</c> result.</returns>
+    /// <summary>Combines two System.Reactive scalars into their minimum.</summary>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveGetMin() =>
         DrainInt(RxObservable.CombineLatest(
@@ -113,14 +113,14 @@ public partial class ReactiveExtensionsComparisonBenchmarks
             RxObservable.Return(SecondValue),
             Math.Min));
 
-    /// <summary>Executes the <c>SystemReactiveNot</c> benchmark helper.</summary>
-    /// <returns>The <c>SystemReactiveNot</c> result.</returns>
+    /// <summary>Negates each boolean emitted by the System.Reactive source.</summary>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveNot() =>
         DrainBool(RxObservable.Select(RxObservable.ToObservable(BooleanValues), static value => !value));
 
-    /// <summary>Executes the <c>SystemReactivePairwise</c> benchmark helper.</summary>
-    /// <returns>The <c>SystemReactivePairwise</c> result.</returns>
+    /// <summary>Rebuilds pairwise semantics from a System.Reactive sliding buffer.</summary>
+    /// <returns>The scenario checksum.</returns>
     private static int SystemReactivePairwise()
     {
         PairWitness observer = new();
@@ -133,96 +133,96 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         return observer.Total;
     }
 
-    /// <summary>Executes the <c>SystemReactiveReturn</c> benchmark helper.</summary>
-    /// <returns>The <c>SystemReactiveReturn</c> result.</returns>
+    /// <summary>Drains a single-value System.Reactive source.</summary>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveReturn() =>
         DrainInt(RxObservable.Return(Value));
 
-    /// <summary>Executes the <c>SystemReactiveScanWithInitial</c> benchmark helper.</summary>
-    /// <returns>The <c>SystemReactiveScanWithInitial</c> result.</returns>
+    /// <summary>Accumulates the System.Reactive range from a seed value.</summary>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveScanWithInitial() =>
         DrainInt(RxObservable.Scan(RxObservable.Range(0, Count), 0, static (acc, value) => acc + value));
 
-    /// <summary>Executes the <c>SystemReactiveSelectAsyncScenario</c> benchmark helper.</summary>
-    /// <returns>The <c>SystemReactiveSelectAsyncScenario</c> result.</returns>
+    /// <summary>Projects each System.Reactive value through a completed task.</summary>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveSelectAsyncScenario() =>
         DrainInt(RxObservable.SelectMany(
             RxObservable.Range(0, Count),
             static value => RxObservable.FromAsync(() => Task.FromResult(value + 1))));
 
-    /// <summary>Executes the <c>SystemReactiveSelectConstant</c> benchmark helper.</summary>
-    /// <returns>The <c>SystemReactiveSelectConstant</c> result.</returns>
+    /// <summary>Replaces every value in the System.Reactive range with a constant.</summary>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveSelectConstant() =>
         DrainInt(RxObservable.Select(RxObservable.Range(0, Count), static _ => Value));
 
-    /// <summary>Executes the <c>SystemReactiveSelectManyThen</c> benchmark helper.</summary>
-    /// <returns>The <c>SystemReactiveSelectManyThen</c> result.</returns>
+    /// <summary>Chains two sequential System.Reactive projections.</summary>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveSelectManyThen() =>
         DrainInt(RxObservable.SelectMany(
             RxObservable.SelectMany(RxObservable.Return(Value), static value => RxObservable.Return(value + 1)),
             static value => RxObservable.Return(value + 1)));
 
-    /// <summary>Executes the <c>SystemReactiveSkipWhileNull</c> benchmark helper.</summary>
-    /// <returns>The <c>SystemReactiveSkipWhileNull</c> result.</returns>
+    /// <summary>Skips the leading nulls of the System.Reactive string source.</summary>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveSkipWhileNull() =>
         DrainString(RxObservable.Select(
             RxObservable.ToObservable(NullableStrings).SkipWhile(static value => value is null),
             static value => value!));
 
-    /// <summary>Executes the <c>SystemReactiveTakeUntil</c> benchmark helper.</summary>
-    /// <returns>The <c>SystemReactiveTakeUntil</c> result.</returns>
+    /// <summary>Truncates the System.Reactive range at the match threshold.</summary>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveTakeUntil() =>
         DrainInt(RxObservable.Range(0, Count).TakeWhile(static value => value <= Match));
 
-    /// <summary>Executes the <c>SystemReactiveToHotTask</c> benchmark helper.</summary>
-    /// <returns>The <c>SystemReactiveToHotTask</c> result.</returns>
+    /// <summary>Converts a single-value System.Reactive source to a task and waits for it.</summary>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveToHotTask() =>
         GetCompletedResult(System.Reactive.Threading.Tasks.TaskObservableExtensions.ToTask(RxObservable.Return(Value)));
 
-    /// <summary>Executes the <c>SystemReactiveWaitUntil</c> benchmark helper.</summary>
-    /// <returns>The <c>SystemReactiveWaitUntil</c> result.</returns>
+    /// <summary>Takes the first System.Reactive value that matches the threshold.</summary>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveWaitUntil() =>
         DrainInt(RxObservable.Range(0, Count).FirstAsync(static value => value == Match));
 
-    /// <summary>Executes the <c>SystemReactiveWhereFalse</c> benchmark helper.</summary>
-    /// <returns>The <c>SystemReactiveWhereFalse</c> result.</returns>
+    /// <summary>Keeps only the false values of the System.Reactive boolean source.</summary>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveWhereFalse() =>
         DrainBool(RxObservable.Where(RxObservable.ToObservable(BooleanValues), static value => !value));
 
-    /// <summary>Executes the <c>SystemReactiveWhereIsNotNull</c> benchmark helper.</summary>
-    /// <returns>The <c>SystemReactiveWhereIsNotNull</c> result.</returns>
+    /// <summary>Keeps only the non-null values of the System.Reactive string source.</summary>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveWhereIsNotNull() =>
         DrainString(RxObservable.Select(
             RxObservable.Where(RxObservable.ToObservable(NullableStrings), static value => value is not null),
             static value => value!));
 
-    /// <summary>Executes the <c>SystemReactiveWhereSelect</c> benchmark helper.</summary>
-    /// <returns>The <c>SystemReactiveWhereSelect</c> result.</returns>
+    /// <summary>Filters the System.Reactive range to even values and scales them.</summary>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveWhereSelect() =>
         DrainInt(RxObservable.Select(
             RxObservable.Where(RxObservable.Range(0, Count), static value => (value & 1) == 0),
             static value => value * ResultMultiplier));
 
-    /// <summary>Executes the <c>SystemReactiveWhereTrue</c> benchmark helper.</summary>
-    /// <returns>The <c>SystemReactiveWhereTrue</c> result.</returns>
+    /// <summary>Keeps only the true values of the System.Reactive boolean source.</summary>
+    /// <returns>The scenario checksum.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SystemReactiveWhereTrue() =>
         DrainBool(RxObservable.Where(RxObservable.ToObservable(BooleanValues), static value => value));
 
-    /// <summary>Executes the <c>R3AsSignal</c> benchmark helper.</summary>
-    /// <returns>The <c>R3AsSignal</c> result.</returns>
+    /// <summary>Projects the R3 range to a constant and drains it.</summary>
+    /// <returns>The scenario checksum.</returns>
     private static int R3AsSignal()
     {
         IntR3Witness observer = new();
@@ -231,8 +231,8 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         return observer.Total;
     }
 
-    /// <summary>Executes the <c>R3CatchAndReturn</c> benchmark helper.</summary>
-    /// <returns>The <c>R3CatchAndReturn</c> result.</returns>
+    /// <summary>Substitutes a fallback value for an R3 failure.</summary>
+    /// <returns>The scenario checksum.</returns>
     private static int R3CatchAndReturn()
     {
         IntR3Witness observer = new();
@@ -243,8 +243,8 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         return observer.Total;
     }
 
-    /// <summary>Executes the <c>R3CatchIgnore</c> benchmark helper.</summary>
-    /// <returns>The <c>R3CatchIgnore</c> result.</returns>
+    /// <summary>Swallows an R3 failure and completes empty.</summary>
+    /// <returns>The scenario checksum.</returns>
     private static int R3CatchIgnore()
     {
         IntR3Witness observer = new();
@@ -255,8 +255,8 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         return observer.Total;
     }
 
-    /// <summary>Executes the <c>R3FromArray</c> benchmark helper.</summary>
-    /// <returns>The <c>R3FromArray</c> result.</returns>
+    /// <summary>Drains the shared int array through R3.</summary>
+    /// <returns>The scenario checksum.</returns>
     private static int R3FromArray()
     {
         IntR3Witness observer = new();
@@ -264,8 +264,8 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         return observer.Total;
     }
 
-    /// <summary>Executes the <c>R3Not</c> benchmark helper.</summary>
-    /// <returns>The <c>R3Not</c> result.</returns>
+    /// <summary>Negates each boolean emitted by the R3 source.</summary>
+    /// <returns>The scenario checksum.</returns>
     private static int R3Not()
     {
         R3BoolWitness observer = new();
@@ -276,8 +276,8 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         return observer.Total;
     }
 
-    /// <summary>Executes the <c>R3Return</c> benchmark helper.</summary>
-    /// <returns>The <c>R3Return</c> result.</returns>
+    /// <summary>Drains a single-value R3 source.</summary>
+    /// <returns>The scenario checksum.</returns>
     private static int R3Return()
     {
         IntR3Witness observer = new();
@@ -285,8 +285,8 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         return observer.Total;
     }
 
-    /// <summary>Executes the <c>R3SelectConstant</c> benchmark helper.</summary>
-    /// <returns>The <c>R3SelectConstant</c> result.</returns>
+    /// <summary>Replaces every value in the R3 range with a constant.</summary>
+    /// <returns>The scenario checksum.</returns>
     private static int R3SelectConstant()
     {
         IntR3Witness observer = new();
@@ -295,8 +295,8 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         return observer.Total;
     }
 
-    /// <summary>Executes the <c>R3WhereFalse</c> benchmark helper.</summary>
-    /// <returns>The <c>R3WhereFalse</c> result.</returns>
+    /// <summary>Keeps only the false values of the R3 boolean source.</summary>
+    /// <returns>The scenario checksum.</returns>
     private static int R3WhereFalse()
     {
         R3BoolWitness observer = new();
@@ -307,8 +307,8 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         return observer.Total;
     }
 
-    /// <summary>Executes the <c>R3WhereIsNotNull</c> benchmark helper.</summary>
-    /// <returns>The <c>R3WhereIsNotNull</c> result.</returns>
+    /// <summary>Keeps only the non-null values of the R3 string source.</summary>
+    /// <returns>The scenario checksum.</returns>
     private static int R3WhereIsNotNull()
     {
         R3CountingWitness<string> observer = new();
@@ -318,8 +318,8 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         return observer.ItemCount;
     }
 
-    /// <summary>Executes the <c>R3WhereSelect</c> benchmark helper.</summary>
-    /// <returns>The <c>R3WhereSelect</c> result.</returns>
+    /// <summary>Filters the R3 range to even values and scales them.</summary>
+    /// <returns>The scenario checksum.</returns>
     private static int R3WhereSelect()
     {
         IntR3Witness observer = new();
@@ -330,8 +330,8 @@ public partial class ReactiveExtensionsComparisonBenchmarks
         return observer.Total;
     }
 
-    /// <summary>Executes the <c>R3WhereTrue</c> benchmark helper.</summary>
-    /// <returns>The <c>R3WhereTrue</c> result.</returns>
+    /// <summary>Keeps only the true values of the R3 boolean source.</summary>
+    /// <returns>The scenario checksum.</returns>
     private static int R3WhereTrue()
     {
         R3BoolWitness observer = new();

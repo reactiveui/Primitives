@@ -303,7 +303,7 @@ public class ReplaySignalTests
     }
 
     /// <summary>Checks gate ownership and ordered handover from replay to live delivery.</summary>
-    /// <param name = "factory">Factory used to create the replay signal under test.</param>
+    /// <param name = "factory">Factory that creates the replay signal under test.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     private static async Task AssertReplayAndLiveDeliveryHoldTheGate(Func<ReplaySignal<int>> factory)
     {
@@ -327,7 +327,7 @@ public class ReplaySignalTests
     }
 
     /// <summary>Creates a replay signal and disposes it immediately.</summary>
-    /// <param name = "factory">Factory used to create the signal.</param>
+    /// <param name = "factory">Factory that creates the signal.</param>
     private static void CreateAndDispose(Func<ReplaySignal<int>> factory)
     {
         using var signal = factory();

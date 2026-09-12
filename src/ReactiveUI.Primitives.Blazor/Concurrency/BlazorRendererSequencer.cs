@@ -11,6 +11,10 @@ using ReactiveUI.Primitives.Concurrency;
 namespace ReactiveUI.Primitives.Blazor.Concurrency;
 
 /// <summary>Sequencer that coalesces scheduled work through a Blazor renderer dispatcher delegate.</summary>
+/// <remarks>Work runs on the renderer's dispatcher, one batch per posted drain; scheduling from that thread queues the
+/// item for the next drain rather than running it inline. Delayed work waits on a shared timer that marshals it back
+/// through the renderer when due, and a renderer task that faults reaches
+/// <see cref="UnhandledExceptionHandler"/>.</remarks>
 /// <seealso cref="ISequencer" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class BlazorRendererSequencer : ISequencer
@@ -105,7 +109,7 @@ public sealed class BlazorRendererSequencer : ISequencer
             ExceptionDispatchInfo.Capture(exception));
     }
 
-    /// <summary>Forwards the cached drain callback to the engine.</summary>
+    /// <summary>Runs one queued batch on the coalescing engine.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void RunDrain() => _state.RunDrain();
 }

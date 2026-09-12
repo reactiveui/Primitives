@@ -14,7 +14,6 @@ namespace ReactiveUI.Primitives.ObservableEvents.Benchmarks;
 /// Allocation baselines for the generator's cold and incremental runs, with a GC-verbose trace naming the frames
 /// the allocations come from. Opt in with <c>--filter "*GcProfile*"</c>.
 /// </summary>
-/// <remarks>Profiles allocation call stacks for the largest event corpus.</remarks>
 [ShortRunJob]
 [EventPipeProfiler(EventPipeProfile.GcVerbose)]
 [System.Diagnostics.DebuggerDisplay("EventGeneratorGcProfileBenchmarks: {nameof(EventGeneratorGcProfileBenchmarks),nq}")]

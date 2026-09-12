@@ -14,7 +14,7 @@ namespace ReactiveUI.Primitives.Extensions.Internal;
 /// <summary>Periodic scheduling helpers for <see cref="ISequencer"/>.</summary>
 internal static class SequencerPeriodicExtensions
 {
-    /// <summary>Periodic scheduling helpers for a sequencer.</summary>
+    /// <summary>Repeating schedule overloads hung off a sequencer instance.</summary>
     /// <param name="scheduler">The scheduler used for each tick.</param>
     extension(ISequencer scheduler)
     {

@@ -94,7 +94,7 @@ public partial class LinqExtensionsTests
         await Assert.That(exception.ParamName).IsEqualTo("disposables");
     }
 
-    /// <summary>Verifies a container converted to a composite still disposes what System.Reactive registered on it.</summary>
+    /// <summary>Verifies a container converted to a composite disposes what System.Reactive registered on it.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task DisposeWithComposedFromAContainerDisposesWithTheContainer()

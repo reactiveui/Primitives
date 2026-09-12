@@ -77,7 +77,7 @@ public class SignalRecoverTests
         await Assert.That(((IRequireCurrentThread<int>)cleanup).IsRequiredSubscribeOnCurrentThread()).IsTrue();
     }
 
-    /// <summary>A cleanup action runs even when subscribing to the source throws, and the failure still surfaces.</summary>
+    /// <summary>A cleanup action runs when subscribing to the source throws, and the failure surfaces.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task OnCleanupRunsTheActionWhenSubscribingToTheSourceThrows()

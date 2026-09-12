@@ -39,7 +39,7 @@ public sealed class PrioritySemaphoreSignalTests
     /// <summary>The number of values queued before draining.</summary>
     private const int SeededValueCount = 12;
 
-    /// <summary>The initial capacity used to drain queued values.</summary>
+    /// <summary>The initial capacity that governs how many queued values drain.</summary>
     private const int InitialDrainCapacity = 3;
 
     /// <summary>The amount added during alternating capacity updates.</summary>

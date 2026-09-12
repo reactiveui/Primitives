@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
-/// <summary>Projection operator that emits <see cref="RxVoid.Default"/> for every source element without allocating a projection closure.</summary>
+/// <summary>Replaces each source element with <see cref="RxVoid.Default"/>, leaving error and completion untouched.</summary>
 /// <typeparam name="T">The element type of the source observable (ignored).</typeparam>
 /// <param name="source">The source observable whose values are ignored.</param>
 internal sealed class AsSignalObservable<T>(IObservable<T> source) : IObservable<RxVoid>

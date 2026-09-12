@@ -36,14 +36,14 @@ internal static class GeneratorHarness
 
     /// <summary>Runs the generator with unchanged inputs to measure cache reuse.</summary>
     /// <param name="size">The corpus size.</param>
-    /// <returns>The unchanged compilation and a driver that has already generated once.</returns>
+    /// <returns>The unchanged compilation and the primed driver.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static (Compilation Compilation, CSharpGeneratorDriver Driver) CreateUnchangedState(CorpusSize size) =>
         RunOnce(size);
 
     /// <summary>Runs the generator after editing a file unrelated to event activation.</summary>
     /// <param name="size">The corpus size.</param>
-    /// <returns>The edited compilation and a driver that has already generated once.</returns>
+    /// <returns>The edited compilation and the primed driver.</returns>
     internal static (Compilation Compilation, CSharpGeneratorDriver Driver) CreateUnrelatedEditState(CorpusSize size)
     {
         var primed = RunOnce(size);
@@ -54,7 +54,7 @@ internal static class GeneratorHarness
 
     /// <summary>Runs the generator after changing one host's event declarations.</summary>
     /// <param name="size">The corpus size.</param>
-    /// <returns>The edited compilation and a driver that has already generated once.</returns>
+    /// <returns>The edited compilation and the primed driver.</returns>
     internal static (Compilation Compilation, CSharpGeneratorDriver Driver) CreateEventEditState(CorpusSize size)
     {
         var primed = RunOnce(size);

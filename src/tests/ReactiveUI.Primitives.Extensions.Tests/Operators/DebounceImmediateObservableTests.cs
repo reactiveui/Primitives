@@ -6,8 +6,7 @@ using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Tests for <c>DebounceImmediateObservable</c> covering the after-terminal guards
-/// on the sink that fire only when an upstream pushes events past its own completion.</summary>
+/// <summary>Tests for <c>DebounceImmediateObservable</c> under an upstream that notifies past its terminal.</summary>
 public class DebounceImmediateObservableTests
 {
     /// <summary>Tick window for the debounce.</summary>

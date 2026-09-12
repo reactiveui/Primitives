@@ -269,7 +269,7 @@ public partial class SignalFactoriesTests
             static _ => { })).Throws<ArgumentNullException>();
     }
 
-    /// <summary>A sender used to check the typed-sender event pattern keeps its static type.</summary>
+    /// <summary>A sender whose static type the typed-sender event pattern must preserve.</summary>
     [System.Diagnostics.DebuggerDisplay("EventBroadcaster: Id = {Id}")]
     public sealed class EventBroadcaster
     {

@@ -25,7 +25,7 @@ internal static class MinimalVirtualClock
     internal static VirtualTimeSequencer<long, long> Create() => Create(Comparer<long>.Default);
 
     /// <summary>Creates a tick-based virtual sequencer ordered by the supplied comparer.</summary>
-    /// <param name="comparer">The comparer used to order scheduled times.</param>
+    /// <param name="comparer">The comparer that orders scheduled times.</param>
     /// <returns>The virtual sequencer.</returns>
     internal static VirtualTimeSequencer<long, long> Create(IComparer<long> comparer) =>
         new(0L, comparer, Adder, ToDateTimeOffset, ToRelative);

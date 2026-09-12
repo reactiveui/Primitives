@@ -50,7 +50,6 @@ public partial class ObservableSubscriptionExtensionsTests
     {
         Observable.Return(RxVoid.Default).WaitForCompletion(ImmediateSequencer.Instance);
 
-        // Sentinel follow-up to give TUnit a real assertion.
         var sentinel = Observable.Return(SchedulerSentinelValue).SubscribeGetValue();
         await Assert.That(sentinel).IsEqualTo(SchedulerSentinelValue);
     }

@@ -44,7 +44,7 @@ internal sealed class BufferUntilIdleObservable<T>(
         /// <summary>The gate protecting state transitions and downstream notification.</summary>
         private readonly Lock _gate = new();
 
-        /// <summary>Shared timer / done-flag plumbing.</summary>
+        /// <summary>The timer slot and terminal-state flag shared with the operator's handlers.</summary>
         private readonly TimerSinkState<IList<T>> _state = new(downstream);
 
         /// <summary>The current buffer of elements.</summary>
@@ -94,7 +94,7 @@ internal sealed class BufferUntilIdleObservable<T>(
             }
         }
 
-        /// <summary>Schedules a flush after the idle period.</summary>
+        /// <summary>Replaces any pending flush with one scheduled a further idle period ahead.</summary>
         private void ScheduleFlush() => _state.Timer.Disposable = scheduler.Schedule(idleTime, Flush);
 
         /// <summary>Flushes the current buffer to the downstream observer.</summary>

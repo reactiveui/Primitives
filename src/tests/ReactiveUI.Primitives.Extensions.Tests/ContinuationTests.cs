@@ -6,12 +6,10 @@ using System.Reactive;
 
 namespace ReactiveUI.Primitives.Extensions.Tests;
 
-/// <summary>Tests for <see cref="Continuation"/> — the phase-barrier lock used to serialise emissions,
-/// covering both the <see cref="Continuation.Lock{T}"/> (Task) and <see cref="Continuation.LockValueTask{T}"/>
-/// (ValueTask) entry points plus the already-locked short-circuit.</summary>
+/// <summary>Tests for <see cref="Continuation"/>, the phase-barrier lock that serialises emissions.</summary>
 public class ContinuationTests
 {
-    /// <summary>Item pushed while the continuation is already locked; the barrier is expected to drop it.</summary>
+    /// <summary>Item pushed while the continuation holds the lock, which the barrier drops.</summary>
     private const int DroppedItem = 2;
 
     /// <summary>Verifies <see cref="Continuation.LockValueTask{T}"/> pushes the item downstream, locks, and completes once the phase is signalled by an unlock.</summary>
@@ -34,7 +32,7 @@ public class ContinuationTests
         await Assert.That(continuation.CompletedPhases).IsGreaterThanOrEqualTo(1);
     }
 
-    /// <summary>Verifies a second <see cref="Continuation.LockValueTask{T}"/> while already locked returns a completed default value task and does not push the item downstream.</summary>
+    /// <summary>Verifies a second <see cref="Continuation.LockValueTask{T}"/> taken under the lock returns a completed default value task and drops the item.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenLockValueTaskAlreadyLocked_ThenReturnsDefaultAndDropsItem()
@@ -75,7 +73,7 @@ public class ContinuationTests
         await Assert.That(values.Count).IsEqualTo(1);
     }
 
-    /// <summary>Verifies a second <see cref="Continuation.Lock{T}"/> while already locked returns a completed task and drops the item.</summary>
+    /// <summary>Verifies a second <see cref="Continuation.Lock{T}"/> taken under the lock returns a completed task and drops the item.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenLockAlreadyLocked_ThenReturnsCompletedAndDropsItem()

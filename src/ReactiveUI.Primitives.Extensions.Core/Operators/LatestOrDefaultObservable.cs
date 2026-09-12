@@ -6,13 +6,11 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Emits <paramref name="defaultValue"/> on subscribe, then each source value that differs from the one emitted before
-/// it under <see cref="EqualityComparer{T}.Default"/>.
-/// </summary>
+/// <summary>Emits the default value on subscribe, then each source value that differs from the one before it.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="defaultValue">The value to emit initially.</param>
+/// <remarks>Equality is decided by <see cref="EqualityComparer{T}.Default"/>.</remarks>
 public sealed class LatestOrDefaultObservable<T>(
     IObservable<T> source,
     T defaultValue) : IObservable<T>

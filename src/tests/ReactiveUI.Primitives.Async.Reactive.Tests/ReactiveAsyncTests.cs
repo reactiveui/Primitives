@@ -7,13 +7,13 @@ using System.Reactive.Concurrency;
 
 namespace ReactiveUI.Primitives.Async.Reactive.Tests;
 
-/// <summary>Smoke tests confirming the Reactive async leaf's recompiled shared source behaves correctly.</summary>
+/// <summary>Smoke tests for the shared async source as recompiled into the Reactive async leaf.</summary>
 public class ReactiveAsyncTests
 {
     /// <summary>Sentinel value used by the tests.</summary>
     private const int Sentinel = 42;
 
-    /// <summary>The Core engine compiled into the leaf still emits values through the async subscribe path.</summary>
+    /// <summary>The Core engine compiled into the leaf emits values through the async subscribe path.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task Return_EmitsValueAndCompletes()

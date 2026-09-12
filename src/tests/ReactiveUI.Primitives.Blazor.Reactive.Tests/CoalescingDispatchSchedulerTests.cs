@@ -122,7 +122,7 @@ public sealed class CoalescingDispatchSchedulerTests
         await Assert.That(scheduler.PostCount).IsEqualTo(0);
     }
 
-    /// <summary>A second schedule coalesces onto the drain already posted for the first.</summary>
+    /// <summary>A second schedule coalesces onto the drain posted for the first.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ASecondScheduleCoalescesOntoThePendingDrain()

@@ -23,8 +23,7 @@ internal sealed class ObserveOnObservable<T>(IObservable<T> source, ISequencer s
         InvalidOperationExceptionHelper.ThrowIfNull(scheduler);
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        // The immediate scheduler runs scheduled work inline on the calling thread, so the
-        // queue-and-drain machinery would be pure overhead: forward straight through.
+        // The immediate sequencer runs scheduled work inline, so queue-and-drain would change nothing.
         if (ReferenceEquals(scheduler, Sequencer.Immediate))
         {
             return source.Subscribe(observer);
@@ -44,7 +43,7 @@ internal sealed class ObserveOnObservable<T>(IObservable<T> source, ISequencer s
         /// <summary>The gate protecting the queue and terminal state.</summary>
         private readonly Lock _gate = new();
 
-        /// <summary>Shared queue / scheduled-drain machinery.</summary>
+        /// <summary>The notification queue and scheduled-drain bookkeeping shared with the drain loop.</summary>
         private readonly ScheduledDrainState<T> _state;
 
         /// <summary>Initializes a new instance of the <see cref="ObserveOnSink"/> class.</summary>
@@ -104,7 +103,7 @@ internal sealed class ObserveOnObservable<T>(IObservable<T> source, ISequencer s
 
                     default:
                         {
-                            // DrainNotificationKind has only three values; the discard arm absorbs Completed.
+                            // Completed is the only remaining kind; this arm keeps the switch exhaustive.
                             _state.Terminate();
                             _downstream.OnCompleted();
                             return;

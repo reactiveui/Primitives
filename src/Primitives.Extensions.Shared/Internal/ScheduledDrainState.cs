@@ -36,17 +36,17 @@ internal sealed class ScheduledDrainState<T>(ISequencer scheduler, IDrainTarget 
     /// <summary>Gets a value indicating whether the sink has reached a terminal state; read it inside the sink's gate.</summary>
     internal bool Done => _done;
 
-    /// <summary>Enqueues an OnNext notification and schedules a drain pass if one isn't already running.</summary>
+    /// <summary>Enqueues an OnNext notification and schedules a drain pass when none is in flight.</summary>
     /// <param name="value">The value to forward downstream.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void EnqueueNext(T value) => Enqueue(new(DrainNotificationKind.Next, value, null));
 
-    /// <summary>Enqueues an OnError notification and schedules a drain pass if one isn't already running.</summary>
+    /// <summary>Enqueues an OnError notification and schedules a drain pass when none is in flight.</summary>
     /// <param name="error">The error to forward downstream.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void EnqueueError(Exception error) => Enqueue(new(DrainNotificationKind.Error, default!, error));
 
-    /// <summary>Enqueues an OnCompleted notification and schedules a drain pass if one isn't already running.</summary>
+    /// <summary>Enqueues an OnCompleted notification and schedules a drain pass when none is in flight.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void EnqueueCompleted() => Enqueue(new(DrainNotificationKind.Completed, default!, null));
 
@@ -85,7 +85,7 @@ internal sealed class ScheduledDrainState<T>(ISequencer scheduler, IDrainTarget 
         }
     }
 
-    /// <summary>Marks the sink done, clears queued notifications, and returns its upstream handle; the caller must hold the gate.</summary>
+    /// <summary>Marks the sink done and drops every queued notification, taking the gate itself.</summary>
     internal void Terminate()
     {
         lock (_gate)
@@ -95,7 +95,7 @@ internal sealed class ScheduledDrainState<T>(ISequencer scheduler, IDrainTarget 
         }
     }
 
-    /// <summary>Marks the sink done, clears queued notifications, and returns its upstream handle; the caller must hold the gate.</summary>
+    /// <summary>Marks the sink done, leaving the queue untouched; the caller must hold the gate.</summary>
     internal void MarkDoneLocked() => _done = true;
 
     /// <summary>Begins disposal under the gate, returning the upstream subscription so the caller disposes it outside the gate, or <see langword="null"/> when the sink has terminated.</summary>
@@ -119,7 +119,7 @@ internal sealed class ScheduledDrainState<T>(ISequencer scheduler, IDrainTarget 
         return subscription;
     }
 
-    /// <summary>Enqueues a notification; claims and schedules a single drain pass if one isn't running.</summary>
+    /// <summary>Enqueues a notification and claims the single drain pass when none is in flight.</summary>
     /// <param name="notification">The notification to forward to the drain loop.</param>
     private void Enqueue(in Notification notification)
     {

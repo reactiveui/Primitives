@@ -698,7 +698,7 @@ public partial class SignalTests
                 .Subscribe((IObserver<int>)null!));
     }
 
-    /// <summary>A minimal <see cref="IRequireCurrentThread{T}"/> probe used to exercise the subscription routing.</summary>
+    /// <summary>A minimal <see cref="IRequireCurrentThread{T}"/> probe that reports how a subscription was routed.</summary>
     /// <typeparam name="T">The type of the signal sequence elements.</typeparam>
     private sealed class SignalsBaseProbe<T> : IRequireCurrentThread<T>
     {
@@ -723,7 +723,7 @@ public partial class SignalTests
 
         /// <summary>Performs the core subscription by returning an empty disposable.</summary>
         /// <param name="observer">The observer to subscribe.</param>
-        /// <param name="cancel">The disposable used to cancel the subscription.</param>
+        /// <param name="cancel">The disposable that cancels the subscription.</param>
         /// <returns>An empty disposable.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [SuppressMessage("Maintainability", "SST1461:Remove unread private parameters", Justification = "The signature is fixed by the delegate SignalSubscription.Subscribe expects.")]

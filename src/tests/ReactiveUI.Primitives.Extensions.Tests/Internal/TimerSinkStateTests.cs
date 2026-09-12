@@ -6,8 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Internal;
 
-/// <summary>Direct RxVoid tests for <see cref="TimerSinkState{T}"/> — covers the terminal
-/// idempotency guards across <c>HandleErrorLocked</c>, <c>HandleCompletedLocked</c>, and <c>HandleDisposeLocked</c>.</summary>
+/// <summary>Tests for <see cref="TimerSinkState{T}"/>, the shared timer sink state.</summary>
 public class TimerSinkStateTests
 {
     /// <summary>Verifies <c>HandleErrorLocked</c> forwards the error then marks the state done.</summary>
@@ -40,8 +39,7 @@ public class TimerSinkStateTests
         await Assert.That(observer.Completions).IsEqualTo(1);
     }
 
-    /// <summary>Exercises the <c>HandleCompletedLocked</c> idempotency guard — once the state is
-    /// already terminal, a second call returns without re-forwarding to the downstream.</summary>
+    /// <summary>Verifies <c>HandleCompletedLocked</c> forwards nothing once the state is terminal.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenHandleCompletedLockedAfterError_ThenNoOp()
@@ -56,8 +54,7 @@ public class TimerSinkStateTests
         await Assert.That(observer.Errors).Count().IsEqualTo(1);
     }
 
-    /// <summary>Exercises the <c>HandleErrorLocked</c> idempotency guard — once the state is
-    /// already terminal, a second call returns without re-forwarding.</summary>
+    /// <summary>Verifies <c>HandleErrorLocked</c> forwards nothing once the state is terminal.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenHandleErrorLockedAfterCompleted_ThenNoOp()

@@ -8,6 +8,9 @@ using Avalonia.Threading;
 namespace ReactiveUI.Primitives.Reactive.Concurrency;
 
 /// <summary>Avalonia UI-thread scheduler that coalesces scheduled work onto a dispatcher drain.</summary>
+/// <remarks>Work runs on the dispatcher's thread at <see cref="Priority"/> and delayed work fires on a
+/// <see cref="DispatcherTimer"/>, so disposing the returned subscription stops that timer as well as suppressing work
+/// that has not started.</remarks>
 /// <seealso cref="System.Reactive.Concurrency.IScheduler" />
 [System.Diagnostics.DebuggerDisplay("AvaloniaScheduler: Dispatcher = {Dispatcher}, Priority = {Priority}")]
 public sealed class AvaloniaScheduler : CoalescingDispatchScheduler

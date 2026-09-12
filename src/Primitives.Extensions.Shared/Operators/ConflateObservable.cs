@@ -11,7 +11,12 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
-/// <summary>Conflates an observable stream by delaying updates that occur within a minimum period.</summary>
+/// <summary>
+/// Delivers notifications on <paramref name="scheduler"/> and keeps emissions at least
+/// <paramref name="minimumUpdatePeriod"/> apart: a value arriving inside that window is deferred to the end of it and a
+/// newer value takes the deferred one's place. Completion waits for a deferred value to land, while an error is
+/// forwarded at once and discards it.
+/// </summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="minimumUpdatePeriod">The minimum period between emissions.</param>
@@ -48,7 +53,7 @@ internal sealed class ConflateObservable<T>(
         /// <summary>The gate protecting the queue, throttle window, and downstream notification.</summary>
         private readonly Lock _gate = new();
 
-        /// <summary>Shared queue / scheduled-drain machinery.</summary>
+        /// <summary>The notification queue and scheduled-drain bookkeeping shared with the drain loop.</summary>
         private readonly ScheduledDrainState<T> _state;
 
         /// <summary>The disposable tracking a scheduled deferred emission.</summary>
@@ -57,7 +62,7 @@ internal sealed class ConflateObservable<T>(
         /// <summary>Wall-clock timestamp of the last emission forwarded downstream.</summary>
         private DateTimeOffset _lastUpdateTime = DateTimeOffset.MinValue;
 
-        /// <summary>Set to <see langword="true"/> when an upstream OnCompleted is queued but a deferred emission is still pending; the completion fires after that emission lands.</summary>
+        /// <summary>Set when an upstream OnCompleted arrives while a deferred emission is pending, so the completion fires once that emission lands.</summary>
         private bool _completionRequested;
 
         /// <summary>Initializes a new instance of the <see cref="ConflateSink"/> class.</summary>
@@ -128,8 +133,7 @@ internal sealed class ConflateObservable<T>(
 
                     default:
                         {
-                            // DrainNotificationKind has only three values; the discard arm absorbs
-                            // Completed so the compiler sees an exhaustive switch.
+                            // Completed is the only remaining kind; this arm keeps the switch exhaustive.
                             ForwardCompleted();
                             return;
                         }

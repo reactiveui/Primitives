@@ -54,7 +54,7 @@ public partial class SignalFactoriesTests
     /// <summary>The fourth projected value after applying the projection multiplier.</summary>
     private const int ProjectedFourthValue = 21;
 
-    /// <summary>A peer value used to verify distinct-by bucketing.</summary>
+    /// <summary>A peer value that shares a distinct-by bucket.</summary>
     private const int ProjectedSecondBucketPeerValue = 12;
 
     /// <summary>The zip result expected from the first pair.</summary>

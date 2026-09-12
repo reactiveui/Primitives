@@ -109,7 +109,7 @@ public class ContainerDisposableTests
         await Assert.That(exception.ParamName).IsEqualTo("container");
     }
 
-    /// <summary>Verifies the container still behaves as a group of disposables in its own right.</summary>
+    /// <summary>Verifies the container behaves as a group of disposables in its own right.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ContainerTracksItsOwnRegistrationsAlongsideTheComposite()

@@ -64,7 +64,7 @@ public sealed class MauiDispatcherSequencer : ISequencer
             DispatchSequencerState.DelayUntil(dueTimestamp),
             () => DispatchSequencerState.RunIfActive(item));
 
-    /// <summary>Forwards the cached drain callback to the engine.</summary>
+    /// <summary>Runs one queued batch on the coalescing engine.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void RunDrain() => _state.RunDrain();
 }

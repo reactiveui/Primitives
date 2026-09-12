@@ -768,7 +768,7 @@ public partial class SignalOperatorMixinsTests
     }
 
     /// <summary>Asserts the prepend, observe-on, subscribe-on, and tap argument guards.</summary>
-    /// <param name="source">A non-null source used to exercise instance guards.</param>
+    /// <param name="source">A non-null source for the instance overloads.</param>
     private static void AssertPrependObserveTapGuards(IObservable<int> source)
     {
         _ = Assert.Throws<ArgumentNullException>(static () => LinqExtensions.Prepend(null!, One, Two));
@@ -786,7 +786,7 @@ public partial class SignalOperatorMixinsTests
     }
 
     /// <summary>Asserts the aggregate, flat-map, and timing operator argument guards.</summary>
-    /// <param name="source">A non-null source used to exercise instance guards.</param>
+    /// <param name="source">A non-null source for the instance overloads.</param>
     private static void AssertAggregateAndTimingGuards(IObservable<int> source)
     {
         _ = Assert.Throws<ArgumentNullException>(static () => LinqExtensions.IgnoreValues<int>(null!));

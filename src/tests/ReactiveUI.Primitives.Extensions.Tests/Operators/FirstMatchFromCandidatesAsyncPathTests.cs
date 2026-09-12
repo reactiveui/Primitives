@@ -43,8 +43,7 @@ public class FirstMatchFromCandidatesAsyncPathTests
         await Assert.That(completed).IsTrue();
     }
 
-    /// <summary>Verifies that an async projection whose value matches the predicate emits the
-    /// matching value and completes — exercises the <c>AsyncSink.OnNext</c> match path.</summary>
+    /// <summary>Verifies an async projection whose value matches the predicate emits it and completes.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAsyncProjectionMatches_ThenEmitsMatch()
@@ -66,8 +65,7 @@ public class FirstMatchFromCandidatesAsyncPathTests
         await Assert.That(results).IsCollectionEqualTo([HitKey]);
     }
 
-    /// <summary>Verifies that an async projection that never matches falls through to the
-    /// fallback when its source completes — exercises the async <c>OnCompleted</c> path.</summary>
+    /// <summary>Verifies an async projection that completes without a match falls through to the fallback.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAsyncProjectionNeverMatches_ThenFallback()
@@ -88,8 +86,7 @@ public class FirstMatchFromCandidatesAsyncPathTests
         await Assert.That(results).IsCollectionEqualTo([Fallback]);
     }
 
-    /// <summary>Verifies that an async projection error is swallowed and the walk continues
-    /// to the next candidate — exercises the async <c>OnError</c> path.</summary>
+    /// <summary>Verifies an async projection error is swallowed and the walk moves to the next candidate.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAsyncProjectionErrors_ThenSkipsToNextCandidate()
@@ -133,8 +130,7 @@ public class FirstMatchFromCandidatesAsyncPathTests
         await Assert.That(completed).IsFalse();
     }
 
-    /// <summary>Verifies that when the synchronous transform throws for one candidate the next
-    /// candidate is tried — exercises the <c>catch { continue; }</c> path in the sync fast path.</summary>
+    /// <summary>Verifies a synchronous transform that throws for one candidate lets the next be tried.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSyncTransformThrows_ThenContinuesToNextCandidate()
@@ -151,10 +147,7 @@ public class FirstMatchFromCandidatesAsyncPathTests
         await Assert.That(completed).IsTrue();
     }
 
-    /// <summary>Verifies that a candidate whose projected observable synchronously calls
-    /// <c>OnError</c> on the sink during its <c>Subscribe</c> call hits the
-    /// <c>if (_looping) return;</c> re-entrancy guard in <c>AsyncSink.OnError</c> and
-    /// proceeds to the next candidate.</summary>
+    /// <summary>Verifies a candidate that errors from inside its own <c>Subscribe</c> gives way to the next.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAsyncCandidateProjectionSyncErrors_ThenLoopingGuardSkipsToNextCandidate()
@@ -176,10 +169,7 @@ public class FirstMatchFromCandidatesAsyncPathTests
         await Assert.That(completed).IsTrue();
     }
 
-    /// <summary>Verifies that a candidate whose projected observable synchronously calls
-    /// <c>OnCompleted</c> on the sink during its <c>Subscribe</c> call hits the
-    /// <c>if (_looping) return;</c> re-entrancy guard in <c>AsyncSink.OnCompleted</c> and
-    /// proceeds to the next candidate.</summary>
+    /// <summary>Verifies a candidate that completes from inside its own <c>Subscribe</c> gives way to the next.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAsyncCandidateProjectionSyncCompletes_ThenLoopingGuardSkipsToNextCandidate()
@@ -197,8 +187,7 @@ public class FirstMatchFromCandidatesAsyncPathTests
         await Assert.That(completed).IsTrue();
     }
 
-    /// <summary>Verifies that a second async candidate emission arriving after a match has already
-    /// fired is silently dropped via the <c>_done</c> guard in <c>AsyncSink.OnNext</c>.</summary>
+    /// <summary>Verifies candidate notifications arriving after the match has fired are silently dropped.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAsyncCandidateEmitsAfterMatch_ThenDroppedByDoneGuard()
@@ -218,14 +207,11 @@ public class FirstMatchFromCandidatesAsyncPathTests
         await Assert.That(results).IsCollectionEqualTo([HitKey]);
     }
 
-    /// <summary>Drives <c>AsyncSink.TryNext</c> through a candidate whose projection
-    /// synchronously errors — that path enters <c>AsyncSink.OnError</c> while <c>_looping == true</c>
-    /// (inside <c>TryNext</c>), exercising the <c>if (_looping) return;</c> guard.</summary>
+    /// <summary>Verifies a mid-walk candidate that errors from inside <c>Subscribe</c> lets the walk reach the match.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAsyncSinkWalkHitsSyncErroringCandidate_ThenLoopingGuardSkipsAhead()
     {
-        // The second candidate errors synchronously after the first asynchronous candidate completes.
         string[] keys = [AsyncKey, SyncErrorKey, HitKey];
         Subject<string> asyncSubject = new();
         List<string> results = [];
@@ -241,15 +227,13 @@ public class FirstMatchFromCandidatesAsyncPathTests
             static value => value == HitKey,
             Fallback).Subscribe(results.Add, () => completed.TrySetResult());
 
-        // Completing the first candidate starts the synchronously failing candidate.
+        // Completing the first candidate is what advances the walk onto the re-entrant one.
         asyncSubject.OnCompleted();
         await completed.Task;
         await Assert.That(results).IsCollectionEqualTo([HitKey]);
     }
 
-    /// <summary>Same shape as the looping-error case but the intermediate candidate
-    /// synchronously completes instead of erroring, exercising
-    /// <c>AsyncSink.OnCompleted</c>'s <c>_looping</c> guard.</summary>
+    /// <summary>Verifies a mid-walk candidate that completes from inside <c>Subscribe</c> lets the walk reach the match.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAsyncSinkWalkHitsSyncCompletingCandidate_ThenLoopingGuardSkipsAhead()
@@ -273,8 +257,7 @@ public class FirstMatchFromCandidatesAsyncPathTests
         await Assert.That(results).IsCollectionEqualTo([HitKey]);
     }
 
-    /// <summary>Observable that synchronously calls <c>OnError</c> on the subscriber from inside
-    /// its <c>Subscribe</c> method — used to exercise the re-entrancy <c>_looping</c> guard.</summary>
+    /// <summary>Observable that calls <c>OnError</c> on its subscriber from inside <c>Subscribe</c>.</summary>
     /// <typeparam name = "T">The element type.</typeparam>
     /// <param name = "error">The exception to deliver to the subscriber.</param>
     private sealed class SyncErroringObservable<T>(Exception error) : IObservable<T>
@@ -287,9 +270,7 @@ public class FirstMatchFromCandidatesAsyncPathTests
         }
     }
 
-    /// <summary>Observable that synchronously calls <c>OnCompleted</c> on the subscriber from
-    /// inside its <c>Subscribe</c> method — used to exercise the re-entrancy <c>_looping</c>
-    /// guard.</summary>
+    /// <summary>Observable that calls <c>OnCompleted</c> on its subscriber from inside <c>Subscribe</c>.</summary>
     /// <typeparam name = "T">The element type.</typeparam>
     private sealed class SyncCompletingObservable<T> : IObservable<T>
     {

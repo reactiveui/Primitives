@@ -8,13 +8,10 @@ using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Maui.Tests;
 
-/// <summary>
-/// Tests for <see cref="MauiDispatcherSequencer"/>, exercised through a fake <see cref="IDispatcher"/>
-/// so the immediate and time-based dispatch paths run deterministically on any platform.
-/// </summary>
+/// <summary>Tests <see cref="MauiDispatcherSequencer"/>'s immediate and time-based dispatch paths through a fake <see cref="IDispatcher"/>.</summary>
 public sealed class MauiDispatcherSequencerTests
 {
-    /// <summary>Expected values produced by an immediate burst, used to verify FIFO order.</summary>
+    /// <summary>The values an immediate burst produces, in the FIFO order asserted.</summary>
     private static readonly int[] ExpectedBurst = [1, 2, 3];
 
     /// <summary>Verifies the constructor rejects a null dispatcher.</summary>
@@ -53,10 +50,7 @@ public sealed class MauiDispatcherSequencerTests
         await Assert.That(dispatcher.DispatchDelayedCount).IsEqualTo(0);
     }
 
-    /// <summary>
-    /// Verifies work due in the future routes through <see cref="IDispatcher.DispatchDelayed(TimeSpan, Action)"/>
-    /// with a positive delay, and runs on the dispatcher without the thread-pool marshal hop.
-    /// </summary>
+    /// <summary>Verifies future work routes through <see cref="IDispatcher.DispatchDelayed(TimeSpan, Action)"/> with a positive delay.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task DelayedScheduleUsesDispatchDelayed()
@@ -72,7 +66,7 @@ public sealed class MauiDispatcherSequencerTests
         await Assert.That(dispatcher.LastDelay).IsGreaterThan(TimeSpan.Zero);
     }
 
-    /// <summary>Verifies a due timestamp at or before now takes the immediate path rather than the delayed timer.</summary>
+    /// <summary>Verifies a due timestamp that is not in the future takes the immediate path rather than the delayed timer.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task PastDueTimestampUsesImmediatePath()

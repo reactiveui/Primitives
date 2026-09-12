@@ -20,7 +20,7 @@ public sealed class WitnessOnSignalTests
     /// <summary>The second value pushed through the dispatch queue.</summary>
     private const int Second = 2;
 
-    /// <summary>A single virtual tick used to drain the sequencer queue.</summary>
+    /// <summary>A single virtual tick, enough to drain the sequencer queue.</summary>
     private static readonly TimeSpan SingleTick = TimeSpan.FromTicks(1);
 
     /// <summary>The values expected when only the first queued notification is delivered.</summary>

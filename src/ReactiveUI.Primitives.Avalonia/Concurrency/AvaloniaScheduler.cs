@@ -9,6 +9,9 @@ using ReactiveUI.Primitives.Advanced;
 namespace ReactiveUI.Primitives.Concurrency;
 
 /// <summary>Avalonia UI-thread scheduler that coalesces scheduled work onto a dispatcher drain.</summary>
+/// <remarks>Work runs on the dispatcher's thread at <see cref="Priority"/>, one batch per posted drain; scheduling from
+/// that thread queues the item for the next drain rather than running it inline. Delayed work fires on a
+/// <see cref="DispatcherTimer"/>, and an item cancelled before its drain reaches it is skipped.</remarks>
 /// <seealso cref="ISequencer" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class AvaloniaScheduler : ISequencer
@@ -89,7 +92,7 @@ public sealed class AvaloniaScheduler : ISequencer
         timer.Start();
     }
 
-    /// <summary>Forwards the cached drain callback to the engine.</summary>
+    /// <summary>Runs one queued batch on the coalescing engine.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void RunDrain() => _state.RunDrain();
 }

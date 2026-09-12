@@ -7,7 +7,7 @@ using ReactiveUI.Primitives.Reactive.Concurrency;
 
 namespace ReactiveUI.Primitives.Extensions.Reactive.Tests;
 
-/// <summary>Tests scheduling overloads. Fully qualified scheduler names avoid ambiguous System.Reactive extension methods.</summary>
+/// <summary>Tests the scheduling overloads the seam adds to a System.Reactive scheduler.</summary>
 public class SequencerSchedulingExtensionsTests
 {
     /// <summary>State threaded through the closure-free stateful overloads.</summary>
@@ -19,11 +19,12 @@ public class SequencerSchedulingExtensionsTests
     /// <summary>How many times the recursive overload reschedules itself before it stops.</summary>
     private const int ExpectedRecursiveRuns = 3;
 
+    // Fully qualified: an unqualified IScheduler makes the seam's overloads ambiguous with System.Reactive's own.
     /// <summary>The scheduler the seam forwards to, typed as the interface the seam extends.</summary>
     private static readonly System.Reactive.Concurrency.IScheduler InlineScheduler =
         System.Reactive.Concurrency.ImmediateScheduler.Instance;
 
-    /// <summary>A due time that has already passed, so absolute scheduling runs inline.</summary>
+    /// <summary>A due time in the past, so absolute scheduling runs inline.</summary>
     private static readonly DateTimeOffset ElapsedDueTime = DateTimeOffset.UnixEpoch;
 
     /// <summary>The state both stateful overloads must hand back, once each.</summary>

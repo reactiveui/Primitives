@@ -19,7 +19,7 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <param name="transform">Synchronous transform applied to each raw value to produce the result.</param>
 /// <param name="predicate">Returns <see langword="true"/> when a transformed value is a match.</param>
 /// <param name="fallback">Value emitted when no candidate matches.</param>
-/// <remarks>Synchronous projections run on the caller's thread. Asynchronous projections retain their state until callbacks complete.</remarks>
+/// <remarks>A projection that completes synchronously runs on the subscribing thread; one that does not keeps the walk alive until its callbacks arrive.</remarks>
 public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
     IReadOnlyList<TKey> candidates,
     Func<TKey, IObservable<TRaw>> project,
@@ -46,12 +46,11 @@ public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
         return TrySyncLoop(observer);
     }
 
-    /// <summary>Tries a synchronous fast-path: each candidate's projected observable is.</summary>
+    /// <summary>Walks the candidates inline, handing over to an asynchronous sink at the first projection that does not complete synchronously.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <returns>The subscription disposable.</returns>
     internal IDisposable TrySyncLoop(IObserver<TResult> observer)
     {
-        // The thread-local probe is reset between subscriptions.
         var probe = SyncProbe.RentForCurrentThread();
 
         for (var i = 0; i < candidates.Count; i++)
@@ -104,15 +103,11 @@ public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
         return EmptyDisposable.Instance;
     }
 
-    /// <summary>
-    /// Lightweight observer used by the synchronous fast-path to capture the result
-    /// of a one-shot projection. Cheaper than <see cref="AsyncSink"/> because it
-    /// carries no downstream observer, candidate list, or delegate references.
-    /// </summary>
+    /// <summary>Observer that records one candidate projection's synchronous outcome — value, error and termination — for the inline walk.</summary>
     [System.Diagnostics.DebuggerDisplay("SyncProbe: Completed = {Completed}, HasValue = {HasValue}, Value = {Value}")]
     public sealed class SyncProbe : IObserver<TRaw>
     {
-        /// <summary>Per-thread cached instance; rented on entry to <c>TrySyncLoop</c> and returned on exit. Eliminates the per-subscribe allocation on the fast path.</summary>
+        /// <summary>Per-thread cached instance, rented on entry to the inline walk and returned on exit.</summary>
         [ThreadStatic]
         private static SyncProbe? _cached;
 
@@ -174,7 +169,7 @@ public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
         }
     }
 
-    /// <summary>Heap-allocated observer used when a projection does not complete synchronously. Walks the remaining candidates via async callbacks.</summary>
+    /// <summary>Observer that walks the remaining candidates through asynchronous callbacks once a projection defers.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="candidates">The candidate list.</param>
     /// <param name="project">The projection delegate.</param>
@@ -200,7 +195,7 @@ public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
         /// <summary>One once the sink has reached a terminal state; otherwise zero.</summary>
         private int _done;
 
-        /// <summary>Whether the sink is currently looping through candidates.</summary>
+        /// <summary>Set while <see cref="TryNext"/> walks candidates, so a terminal callback from the inline subscription does not advance the walk re-entrantly.</summary>
         private bool _looping;
 
         /// <inheritdoc/>
@@ -245,7 +240,7 @@ public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
 
             if (_looping)
             {
-                // Sync-completion is captured by the probe in TryNext; nothing more to do here.
+                // The walk in TryNext reads this terminal notification off the probe instead.
                 return;
             }
 
@@ -257,10 +252,7 @@ public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
             "Design",
             "SST2318:Members should not have identical bodies",
             Justification =
-                "A candidate that completes and a candidate that errors both mean the same thing to this operator: that "
-                + "candidate produced no match, so advance to the next one. OnError and OnCompleted are distinct "
-                + "IObserver<T> channels that deliberately share this advance logic; collapsing them would lose the "
-                + "ability to give candidate errors their own policy later.")]
+                "A candidate that errors and a candidate that completes both mean no match, so both channels advance the walk.")]
         public void OnCompleted()
         {
             if (Volatile.Read(ref _done) != 0)
@@ -270,7 +262,7 @@ public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
 
             if (_looping)
             {
-                // Sync-completion is captured by the probe in TryNext; nothing more to do here.
+                // The walk in TryNext reads this terminal notification off the probe instead.
                 return;
             }
 

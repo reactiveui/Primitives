@@ -108,7 +108,7 @@ public class DisposableBagTests
         await Assert.That(late.DisposeCount).IsEqualTo(1);
     }
 
-    /// <summary>Tracking disposable used to count dispose invocations.</summary>
+    /// <summary>Tracking disposable that counts its dispose invocations.</summary>
     private sealed class CountedDisposable : IDisposable
     {
         /// <summary>Gets the number of times <see cref="Dispose"/> has been invoked.</summary>

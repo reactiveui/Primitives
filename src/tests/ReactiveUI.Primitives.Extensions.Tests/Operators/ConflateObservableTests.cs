@@ -24,7 +24,7 @@ public class ConflateObservableTests
     /// <summary>Half of the update-period window.</summary>
     private const int HalfWindowTicks = 50;
 
-    /// <summary>Sentinel values.</summary>
+    /// <summary>First sentinel value.</summary>
     private const int First = 1;
 
     /// <summary>Second sentinel value.</summary>
@@ -166,7 +166,7 @@ public class ConflateObservableTests
         await Assert.That(completed).IsFalse();
     }
 
-    /// <summary>Verifies disposal suppresses queued notifications and callbacks already removed from the queue.</summary>
+    /// <summary>Verifies disposal suppresses both queued notifications and callbacks taken off the queue.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSinkEnqueuedAfterDispose_ThenSilentlyDropped()

@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Reactive.Tests;
 /// <summary>Tests for <see cref="WasmScheduler"/>.</summary>
 public sealed class WasmSchedulerTests
 {
-    /// <summary>State payload used to verify state threading.</summary>
+    /// <summary>State payload threaded through the scheduled action.</summary>
     private const int StatePayload = 42;
 
     /// <summary>Periodic ticks a test drives before disposing; more than one, so threaded state is observable.</summary>
@@ -23,7 +23,7 @@ public sealed class WasmSchedulerTests
     /// <summary>Sentinel <see cref="Array.FindIndex{T}(T[], Predicate{T})"/> returns when no element matches.</summary>
     private const int NoMatch = -1;
 
-    /// <summary>Expected values produced by an immediate burst, used to verify FIFO order.</summary>
+    /// <summary>The values an immediate burst produces, in the FIFO order asserted.</summary>
     private static readonly int[] ExpectedBurst = [1, 2, 3];
 
     /// <summary>Due time of a work item that is expected to run after its delay elapses.</summary>
@@ -119,7 +119,7 @@ public sealed class WasmSchedulerTests
         await Assert.That(values).IsEquivalentTo(ExpectedBurst, EqualityComparer<int>.Default, TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 
-    /// <summary>Verifies an item disposed while it waits in the ready queue is skipped while later work still runs.</summary>
+    /// <summary>Verifies an item disposed while it waits in the ready queue is skipped and later work runs.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task DisposedImmediateItemIsSkipped()
@@ -194,7 +194,7 @@ public sealed class WasmSchedulerTests
 
         subscription.Dispose();
 
-        // The due time never elapses on its own, so this is the run a timer callback already in flight would deliver.
+        // The due time never elapses on its own, so this stands in for a timer callback in flight.
         subscription.Run();
 
         await Assert.That(subscription.IsDisposed).IsTrue();
@@ -294,7 +294,7 @@ public sealed class WasmSchedulerTests
         await Assert.That(subscription.Dispose).ThrowsNothing();
     }
 
-    /// <summary>Verifies an action that cancels its own item before returning still has its returned disposable released.</summary>
+    /// <summary>Verifies an action that cancels its own item before returning has its returned disposable released.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task SelfCancellingImmediateActionDisposesReturnedDisposable()
@@ -321,27 +321,27 @@ public sealed class WasmSchedulerTests
         await Assert.That(returned.IsDisposed).IsTrue();
     }
 
-    /// <summary>Verifies that scheduling with a null action returns proper exception.</summary>
+    /// <summary>Verifies the shared scheduler's immediate overload rejects a null action.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task ScheduleWithNullActionThrows() =>
         await Assert.That(static () => WasmScheduler.Default.Schedule(0, null!)).Throws<ArgumentNullException>();
 
-    /// <summary>Verifies that scheduling delayed with a null action returns proper exception.</summary>
+    /// <summary>Verifies the shared scheduler's delayed overload rejects a null action.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task ScheduleDelayedWithNullActionThrows() => await Assert
         .That(static () => WasmScheduler.Default.Schedule(0, ValidInterval, null!))
         .Throws<ArgumentNullException>();
 
-    /// <summary>Verifies that scheduling periodic with negative period throws.</summary>
+    /// <summary>Verifies the shared scheduler's periodic overload rejects a negative period.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task SchedulePeriodicWithNegativePeriodThrows() => await Assert
         .That(static () => WasmScheduler.Default.SchedulePeriodic(0, TimeSpan.FromMilliseconds(-1), static s => s))
         .Throws<ArgumentOutOfRangeException>();
 
-    /// <summary>Verifies that scheduling periodic with null action returns proper exception.</summary>
+    /// <summary>Verifies the shared scheduler's periodic overload rejects a null action.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task SchedulePeriodicWithNullActionThrows() => await Assert
@@ -379,10 +379,7 @@ public sealed class WasmSchedulerTests
         await Assert.That(ran).IsEqualTo(0);
     }
 
-    /// <summary>
-    /// Verifies disposing the scheduler cancels work still waiting in the ready queue while a drain is in flight:
-    /// the queued item is released, not left for the resuming drain to run against a scheduler that is already gone.
-    /// </summary>
+    /// <summary>Verifies disposing the scheduler releases a queued item rather than leaving it for a resuming drain to run.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task DisposeCancelsWorkTheInFlightDrainHasNotReachedYet()
@@ -395,7 +392,7 @@ public sealed class WasmSchedulerTests
             return Disposable.Empty;
         });
 
-        // Queue without arming a drain, so the item is provably still waiting when the disposal runs.
+        // Queue without arming a drain, so the item sits unclaimed in the queue when the disposal runs.
         scheduler.QueueReady(queued);
 
         scheduler.Dispose();
@@ -474,7 +471,7 @@ public sealed class WasmSchedulerTests
 
         scheduler.Dispose();
 
-        // The enqueue that was already past Schedule's disposed check when the disposal drained the ready queue.
+        // Models an enqueue that passed Schedule's disposed check before the disposal drained the ready queue.
         scheduler.Enqueue(item);
 
         await Assert.That(item.IsDisposed).IsTrue();
@@ -485,10 +482,7 @@ public sealed class WasmSchedulerTests
         await Assert.That(ran).IsEqualTo(0);
     }
 
-    /// <summary>
-    /// Verifies a drain pass dispatches every queued item exactly once: an item the batch skips would be stranded,
-    /// and one it claims twice would run its action twice.
-    /// </summary>
+    /// <summary>Verifies a drain pass dispatches every queued item exactly once.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task DrainDispatchesEveryQueuedItemExactlyOnce()

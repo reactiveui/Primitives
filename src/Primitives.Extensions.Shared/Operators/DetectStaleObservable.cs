@@ -11,7 +11,11 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
-/// <summary>Detects when a sequence becomes stale (no emissions for a specified period).</summary>
+/// <summary>
+/// Wraps each source value as an update and emits a staleness marker when <paramref name="stalenessPeriod"/> passes
+/// without one, measured from subscription. The window re-arms on every value, so a single quiet stretch yields one
+/// marker.
+/// </summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="stalenessPeriod">The period after which the sequence is considered stale.</param>
@@ -46,7 +50,7 @@ internal sealed class DetectStaleObservable<T>(
         /// <summary>The gate protecting state transitions and downstream notification.</summary>
         private readonly Lock _gate = new();
 
-        /// <summary>Shared timer / done-flag plumbing.</summary>
+        /// <summary>The timer slot and terminal-state flag shared with the operator's handlers.</summary>
         private readonly TimerSinkState<Stale<T>> _state = new(downstream);
 
         /// <summary>Upstream subscription handle, set once via <see cref="AttachSourceSubscription"/> and disposed with the sink.</summary>
@@ -68,7 +72,7 @@ internal sealed class DetectStaleObservable<T>(
             }
         }
 
-        /// <summary>Initializes the staleness timer.</summary>
+        /// <summary>Arms the first staleness window, which the caller does at subscribe time.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Initialize() => ScheduleStale();
 
@@ -116,7 +120,7 @@ internal sealed class DetectStaleObservable<T>(
             Interlocked.Exchange(ref _sourceSubscription, null)?.Dispose();
         }
 
-        /// <summary>Arms the staleness timer, which re-arms on every upstream emission without allocating a per-arm closure.</summary>
+        /// <summary>Arms the staleness timer, replacing any window that is counting down.</summary>
         private void ScheduleStale() =>
             _state.Timer.Disposable =
                 scheduler.Schedule(this, stalenessPeriod, static (_, self) => self.OnStaleTimer());

@@ -101,7 +101,7 @@ public partial class CurrentValueSubjectTests
         await Assert.That(completedFirst).IsTrue();
         await Assert.That(completedLate).IsTrue();
 
-        // Late subscriber still sees the replayed value before completion.
+        // A late subscriber receives the replayed value ahead of the completion.
         await Assert.That(lateValues).IsCollectionEqualTo([InitialValue]);
     }
 
@@ -152,7 +152,7 @@ public partial class CurrentValueSubjectTests
         await Assert.That(error).IsTypeOf<ObjectDisposedException>();
     }
 
-    /// <summary>Verifies that AsObservable returns a hide-the-observer view that still delivers values.</summary>
+    /// <summary>Verifies that AsObservable returns a hide-the-observer view that delivers values.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAsObservable_ThenDeliversValuesButHidesObserverApi()

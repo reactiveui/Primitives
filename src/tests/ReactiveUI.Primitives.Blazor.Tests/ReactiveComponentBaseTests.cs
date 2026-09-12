@@ -11,12 +11,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Blazor.Tests;
 
-/// <summary>
-/// Tests for <see cref="ReactiveComponentBase"/>'s observation, refresh, and disposal behaviour. Each test
-/// attaches the component to an <see cref="HtmlRenderer"/> so its renderer-dispatcher-bound work (the guarded
-/// invoke and <c>StateHasChanged</c>) actually runs, and drives the source on the dispatcher so the
-/// notifications complete synchronously.
-/// </summary>
+/// <summary>Tests <see cref="ReactiveComponentBase"/> observation, refresh, and disposal against a component attached to an <see cref="HtmlRenderer"/>.</summary>
 public sealed class ReactiveComponentBaseTests
 {
     /// <summary>The first value pushed to a source.</summary>
@@ -99,7 +94,7 @@ public sealed class ReactiveComponentBaseTests
         await Assert.That(completed).IsTrue();
     }
 
-    /// <summary>Verifies suppressing the refresh still delivers the value.</summary>
+    /// <summary>Verifies an observation with the refresh suppressed delivers the value to the callback.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ObservationWithoutRefreshStillDeliversTheValue()

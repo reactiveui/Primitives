@@ -15,11 +15,10 @@ public class ObserveOnObservableTests
     /// <summary>Synthetic error message attached to source errors.</summary>
     private const string SourceErrorMessage = "source error";
 
-    /// <summary>Second sentinel value (kept as a constant to satisfy the no-magic-number rule).</summary>
+    /// <summary>Second sentinel value.</summary>
     private const int SecondValue = 2;
 
-    /// <summary>Verifies the immediate scheduler is special-cased to forward straight through the source
-    /// subscription without the queue-and-drain machinery.</summary>
+    /// <summary>Verifies the immediate scheduler forwards straight through, without queue-and-drain.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenImmediateScheduler_ThenForwardsDirectly()
@@ -103,9 +102,7 @@ public class ObserveOnObservableTests
         await Assert.That(values).IsEmpty();
     }
 
-    /// <summary>Verifies the upstream subscription is disposed when the source terminates synchronously during
-    /// subscribe — the drain runs inline (terminating the sink) before <c>AttachSourceSubscription</c> records
-    /// the handle, so the late attach disposes it instead.</summary>
+    /// <summary>Verifies the upstream handle is disposed when the source terminates during subscribe, before the sink records it.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSourceTerminatesDuringSubscribe_ThenLateAttachDisposesSubscription()
@@ -120,17 +117,13 @@ public class ObserveOnObservableTests
         await Assert.That(source.Subscription.IsDisposed).IsTrue();
     }
 
-    /// <summary>Observable that synchronously errors during <c>Subscribe</c> and exposes the subscription
-    /// handle it returned so tests can assert it was disposed.</summary>
+    /// <summary>Observable that errors during <c>Subscribe</c> and exposes the handle it returned.</summary>
     /// <typeparam name = "T">The element type.</typeparam>
     /// <param name = "error">The exception to emit synchronously.</param>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2315:A type that owns a disposable should be disposable",
-        Justification =
-            "Test double that returns and exposes the BooleanDisposable subscription handle so the test can assert the "
-            + "operator under test disposed it. The operator owns disposal; making this double IDisposable would "
-            + "misattribute ownership, and the object's lifetime is the test's.")]
+        Justification = "The operator under test owns disposal of the exposed handle; this double only hands it back.")]
     private sealed class SyncErroringObservable<T>(Exception error) : IObservable<T>
     {
         /// <summary>Gets the subscription handle returned from the most recent subscribe.</summary>
@@ -162,10 +155,7 @@ public class ObserveOnObservableTests
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
             "Design",
             "SST2318:Members should not have identical bodies",
-            Justification =
-                "The relative and absolute Schedule overloads of this test-double sequencer intentionally behave the "
-                + "same way; both are required by the ISequencer contract and, as distinct interface overloads, cannot "
-                + "forward to one another.")]
+            Justification = "Both ISequencer Schedule overloads must exist and run inline; neither can forward to the other.")]
         public void Schedule(IWorkItem item, long dueTimestamp) => item.Execute();
     }
 }

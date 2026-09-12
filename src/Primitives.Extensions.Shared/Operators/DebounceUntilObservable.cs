@@ -10,7 +10,11 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
-/// <summary>Debounces a sequence until a condition becomes true for an element.</summary>
+/// <summary>
+/// Forwards a value inline when <paramref name="condition"/> holds for it, cancelling any pending emission, and
+/// otherwise emits it once <paramref name="debounce"/> elapses with no newer value. An error or completion drops a
+/// pending value.
+/// </summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="debounce">The debounce duration.</param>
@@ -49,7 +53,7 @@ internal sealed class DebounceUntilObservable<T>(
         /// <summary>The gate protecting state transitions and downstream notification.</summary>
         private readonly Lock _gate = new();
 
-        /// <summary>Shared timer / done-flag plumbing.</summary>
+        /// <summary>The timer slot and terminal-state flag shared with the operator's handlers.</summary>
         private readonly TimerSinkState<T> _state = new(downstream);
 
         /// <inheritdoc/>
@@ -104,7 +108,7 @@ internal sealed class DebounceUntilObservable<T>(
             }
         }
 
-        /// <summary>Emits a debounced value when the sink is still active.</summary>
+        /// <summary>Emits the debounced value unless the sink has terminated.</summary>
         /// <param name="value">The debounced value.</param>
         private void EmitDebounced(T value)
         {

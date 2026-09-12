@@ -82,7 +82,7 @@ public class MinMaxObservableTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Verifies <c>GetMax</c> with no additional sources still emits the source's own values verbatim.</summary>
+    /// <summary>Verifies <c>GetMax</c> with no additional sources emits the source's own values verbatim.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenGetMaxSingleSource_ThenEmitsSourceValues()
@@ -96,7 +96,7 @@ public class MinMaxObservableTests
         await Assert.That(results).IsCollectionEqualTo([LowValue, MidValue, HighValue]);
     }
 
-    /// <summary>Verifies <c>GetMin</c> with no additional sources still emits the source's own values verbatim.</summary>
+    /// <summary>Verifies <c>GetMin</c> with no additional sources emits the source's own values verbatim.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenGetMinSingleSource_ThenEmitsSourceValues()

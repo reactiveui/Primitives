@@ -20,7 +20,7 @@ public class ChooseSwitchSelectTests
     /// <summary>The value twenty.</summary>
     private const int Twenty = 20;
 
-    /// <summary>The divisor used to select even values in the Choose test.</summary>
+    /// <summary>The divisor that selects even values in the Choose test.</summary>
     private const int Two = 2;
 
     /// <summary>The expected single-occurrence count.</summary>

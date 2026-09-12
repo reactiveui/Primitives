@@ -10,10 +10,10 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
-/// <summary>Flattening operator that subscribes to an upstream sequence of <see cref="IEnumerable{T}"/> batches and emits each contained element individually.</summary>
+/// <summary>Emits each element of every <see cref="IEnumerable{T}"/> the source produces, in order, ignoring a null batch.</summary>
 /// <typeparam name="T">The element type emitted to the downstream observer.</typeparam>
 /// <param name="source">The source observable of enumerables.</param>
-/// <param name="scheduler">An optional scheduler used to marshal source notifications onto.</param>
+/// <param name="scheduler">An optional scheduler that source notifications are marshalled onto.</param>
 internal sealed class ForEachObservable<T>(
     IObservable<IEnumerable<T>> source,
     ISequencer? scheduler) : IObservable<T>

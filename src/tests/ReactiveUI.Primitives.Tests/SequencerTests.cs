@@ -616,7 +616,7 @@ public partial class SequencerTests
     /// <summary>Completes a task completion source, rejecting a second completion.</summary>
     /// <param name="completion">The completion source to update.</param>
     /// <param name="state">The value to set.</param>
-    /// <exception cref="InvalidOperationException"><paramref name="completion"/> was already completed.</exception>
+    /// <exception cref="InvalidOperationException"><paramref name="completion"/> has completed.</exception>
     private static void SetCompletion(TaskCompletionSource<int> completion, int state)
     {
         if (completion.TrySetResult(state))

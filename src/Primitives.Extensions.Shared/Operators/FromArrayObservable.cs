@@ -13,7 +13,7 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <summary>Factory operator that emits each element of an <see cref="IEnumerable{T}"/> to a single subscriber and then completes, optionally marshalling the emission through a scheduler.</summary>
 /// <typeparam name="T">The element type emitted to the downstream observer.</typeparam>
 /// <param name="source">The source enumerable whose elements are pumped on subscription.</param>
-/// <param name="scheduler">An optional scheduler used to dispatch the pump.</param>
+/// <param name="scheduler">An optional scheduler that dispatches the pump.</param>
 internal sealed class FromArrayObservable<T>(
     IEnumerable<T> source,
     ISequencer? scheduler) : IObservable<T>

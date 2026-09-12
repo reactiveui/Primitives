@@ -10,7 +10,10 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
-/// <summary>Runs the function once — inline when no scheduler is supplied, otherwise on the scheduler — emits the result, then completes.</summary>
+/// <summary>
+/// Runs the function once per subscription, inline or on <paramref name="scheduler"/>, then emits the result and
+/// completes. An exception from the function is forwarded as an error instead.
+/// </summary>
 /// <typeparam name="TResult">Result type.</typeparam>
 /// <param name="function">Function to run.</param>
 /// <param name="scheduler">Optional scheduler; null runs inline.</param>

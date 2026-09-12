@@ -84,8 +84,7 @@ public class ObserveOnIfObservableTests
         await Assert.That(completed).IsTrue();
     }
 
-    /// <summary>Verifies that the single-scheduler overload defaults the false branch to
-    /// <see cref = "Sequencer.Immediate"/> by emitting synchronously when the condition is false.</summary>
+    /// <summary>Verifies the single-scheduler overload emits synchronously while the condition is false.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenObserveOnIfSingleSchedulerConditionFalse_ThenImmediate()
@@ -123,10 +122,7 @@ public class ObserveOnIfObservableTests
         await Assert.That(values).IsEmpty();
     }
 
-    /// <summary>Exercises the <c>_done</c> guard inside the scheduled callback —
-    /// when the source completes between <c>OnNext</c>'s schedule call and the scheduler firing
-    /// the queued callback, the callback observes <c>_done == true</c> and returns without
-    /// forwarding to downstream.</summary>
+    /// <summary>Verifies a queued emission is dropped when the source completes before the callback fires.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenScheduledCallbackFiresAfterSourceCompleted_ThenDroppedByDoneGuard()
@@ -139,22 +135,16 @@ public class ObserveOnIfObservableTests
         using var sub = source.ObserveOnIf(condition, scheduler, scheduler)
             .Subscribe(values.Add, () => completedCount++);
 
-        // First emission queues the forward-to-downstream callback on the VirtualClock.
+        // The emission is queued on the clock, so the completion below lands ahead of it.
         source.Observer.OnNext(1);
-
-        // Source completes synchronously, flipping _done = true before the queued callback runs.
         source.Observer.OnCompleted();
 
-        // Advance the scheduler so the queued callback fires; it observes _done == true and
-        // returns at the in-callback guard rather than calling downstream.OnNext.
         scheduler.AdvanceBy(1);
         await Assert.That(completedCount).IsEqualTo(1);
         await Assert.That(values).IsEmpty();
     }
 
-    /// <summary>Verifies the condition observer's duplicate-value short-circuit — emitting the
-    /// same condition value twice in a row hits the <c>_hasCondition &amp; &amp; _lastCondition == c</c>
-    /// guard and returns silently without re-assigning the current scheduler.</summary>
+    /// <summary>Verifies a repeated condition value is ignored and leaves the selected scheduler in place.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenObserveOnIfConditionDuplicate_ThenSilentlyShortCircuits()
@@ -166,15 +156,10 @@ public class ObserveOnIfObservableTests
         List<int> values = [];
         using var sub = source.ObserveOnIf(condition, trueScheduler, falseScheduler).Subscribe(values.Add);
 
-        // First emission seeds the gate (_hasCondition transitions from false to true).
         condition.OnNext(true);
-
-        // Second identical emission hits the duplicate-value guard and returns early.
         condition.OnNext(true);
         source.OnNext(1);
 
-        // Sanity: subsequent value still routes through the true-scheduler (the duplicate did
-        // not corrupt the captured state).
         await Assert.That(values).IsCollectionEqualTo([1]);
     }
 

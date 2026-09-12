@@ -134,7 +134,7 @@ public class DisposableSlotHelperTests
         await Assert.That(incoming.DisposeCount).IsEqualTo(0);
     }
 
-    /// <summary>Disposable used to verify dispose counts.</summary>
+    /// <summary>Disposable that records its dispose count.</summary>
     private sealed class CountingDisposable : IDisposable
     {
         /// <summary>Gets the number of times <see cref="Dispose"/> has been invoked.</summary>

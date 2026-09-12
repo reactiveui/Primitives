@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Tests;
 /// <summary>Repeat operator parity tests for System.Reactive-compatible names.</summary>
 public partial class RxNamesTests
 {
-    /// <summary>The value four, used to bound the infinite repeat test.</summary>
+    /// <summary>The value four, which bounds the infinite repeat test.</summary>
     private const int Four = 4;
 
     /// <summary>The expected values when a two-value source is repeated twice.</summary>

@@ -7,8 +7,7 @@ using ReactiveUI.Primitives.Extensions.Operators;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Tests for <see cref = "LogErrorsObservable{T}"/> — verifies the logger is tapped on
-/// the error path, never on the success path, and that the null-observer subscribe guard fires.</summary>
+/// <summary>Tests for <see cref = "LogErrorsObservable{T}"/> — when the logger is tapped, and the null-observer guard.</summary>
 public class LogErrorsObservableTests
 {
     /// <summary>Sentinel value flowing through the success path.</summary>

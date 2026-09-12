@@ -655,7 +655,7 @@ public class SinkObserverTests
     }
 
     /// <summary>Asserts a sink rethrows the observer's failure and releases its upstream subscription.</summary>
-    /// <param name = "sink">The sink under test, already holding <paramref name = "subscription"/>.</param>
+    /// <param name = "sink">The sink under test, holding <paramref name = "subscription"/>.</param>
     /// <param name = "subscription">The upstream subscription the sink must release.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     private static async Task AssertObserverFailureReleasesUpstream(

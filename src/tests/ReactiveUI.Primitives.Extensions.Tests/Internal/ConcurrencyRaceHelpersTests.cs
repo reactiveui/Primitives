@@ -6,8 +6,7 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Internal;
 
-/// <summary>Direct RxVoid tests for <see cref="ConcurrencyRaceHelpers"/> — both race-claim
-/// primitives are pure functions over their inputs and every branch is exercised here.</summary>
+/// <summary>Tests for <see cref="ConcurrencyRaceHelpers"/>, the race-claim primitives.</summary>
 public class ConcurrencyRaceHelpersTests
 {
     /// <summary>Sentinel for the "not yet claimed" state in the tests.</summary>
@@ -29,7 +28,7 @@ public class ConcurrencyRaceHelpersTests
         await Assert.That(state).IsEqualTo(Claimed);
     }
 
-    /// <summary>Verifies <see cref="ConcurrencyRaceHelpers.TryClaim"/> returns false when the state is already claimed and does not mutate it further.</summary>
+    /// <summary>Verifies <see cref="ConcurrencyRaceHelpers.TryClaim"/> returns false against a claimed state and leaves it unchanged.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTryClaimAlreadyClaimed_ThenReturnsFalse()

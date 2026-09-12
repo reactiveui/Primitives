@@ -16,8 +16,7 @@ public class DetectStaleObservableTests
     /// <summary>Synthetic error message attached to source errors.</summary>
     private const string SourceErrorMessage = "source error";
 
-    /// <summary>Verifies that a source erroring synchronously during subscribe forwards the error and
-    /// disposes the upstream handle through the attach-after-terminated branch.</summary>
+    /// <summary>Verifies a source erroring during subscribe forwards the error and disposes the upstream handle.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSourceTerminatesDuringSubscribe_ThenLateAttachDisposesSubscription()
@@ -33,17 +32,13 @@ public class DetectStaleObservableTests
         await Assert.That(source.Subscription.IsDisposed).IsTrue();
     }
 
-    /// <summary>Observable that synchronously errors during <c>Subscribe</c> and exposes the subscription
-    /// handle it returned so tests can assert it was disposed.</summary>
+    /// <summary>Observable that errors during <c>Subscribe</c> and exposes the handle it returned.</summary>
     /// <typeparam name = "T">The element type.</typeparam>
     /// <param name = "error">The exception to emit synchronously.</param>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2315:A type that owns a disposable should be disposable",
-        Justification =
-            "Test double that returns and exposes the BooleanDisposable subscription handle so the test can assert the "
-            + "operator under test disposed it. The operator owns disposal; making this double IDisposable would "
-            + "misattribute ownership, and the object's lifetime is the test's.")]
+        Justification = "The operator under test owns disposal of the exposed handle; this double only hands it back.")]
     private sealed class SyncErroringObservable<T>(Exception error) : IObservable<T>
     {
         /// <summary>Gets the subscription handle returned from the most recent subscribe.</summary>

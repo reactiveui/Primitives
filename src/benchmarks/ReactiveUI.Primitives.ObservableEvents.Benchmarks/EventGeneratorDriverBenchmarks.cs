@@ -10,8 +10,7 @@ using Microsoft.CodeAnalysis.CSharp;
 
 namespace ReactiveUI.Primitives.ObservableEvents.Benchmarks;
 
-/// <summary>What the observable-event generator itself costs on a build and on a keystroke.</summary>
-/// <remarks>Measures generator execution for cold, unchanged, unrelated-edit, and event-edit inputs, excluding compilation updates.</remarks>
+/// <summary>Generator execution for cold, unchanged, unrelated-edit, and event-edit inputs, excluding compilation updates.</summary>
 [System.Diagnostics.DebuggerDisplay("EventGeneratorDriverBenchmarks: {Size}")]
 [SimpleJob(warmupCount: 5, iterationCount: 15)]
 [EventPipeProfiler(EventPipeProfile.CpuSampling)]

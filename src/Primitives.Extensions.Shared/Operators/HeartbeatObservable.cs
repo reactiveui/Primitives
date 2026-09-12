@@ -11,7 +11,10 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
-/// <summary>Injects heartbeat values into the sequence when the source remains quiet for a specified period.</summary>
+/// <summary>
+/// Wraps each source value as an update and emits a heartbeat every <paramref name="heartbeatPeriod"/> that the source
+/// stays quiet, restarting the timer on each value.
+/// </summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="heartbeatPeriod">The period between heartbeats.</param>
@@ -71,7 +74,7 @@ internal sealed class HeartbeatObservable<T>(
             }
         }
 
-        /// <summary>Initializes the heartbeat timer.</summary>
+        /// <summary>Starts the heartbeat timer, which the caller does at subscribe time.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Initialize() => ScheduleHeartbeats();
 
@@ -137,7 +140,7 @@ internal sealed class HeartbeatObservable<T>(
             subscription?.Dispose();
         }
 
-        /// <summary>Schedules the next heartbeat.</summary>
+        /// <summary>Restarts the periodic heartbeat timer, dropping the one it replaces.</summary>
         private void ScheduleHeartbeats()
         {
             lock (_gate)

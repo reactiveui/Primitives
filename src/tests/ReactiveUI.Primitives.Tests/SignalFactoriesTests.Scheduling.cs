@@ -181,7 +181,7 @@ public partial class SignalFactoriesTests
         await Assert.That(witness.Completed).IsEqualTo(1);
     }
 
-    /// <summary>A loop subscription that is already torn down never emits.</summary>
+    /// <summary>A loop subscription torn down before the loop runs never emits.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task LoopEmitsNothingWhenTheSubscriptionIsDisposedBeforeItRuns()

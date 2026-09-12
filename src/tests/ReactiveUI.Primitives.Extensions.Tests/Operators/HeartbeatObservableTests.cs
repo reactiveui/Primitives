@@ -91,8 +91,7 @@ public class HeartbeatObservableTests
         await Assert.That(updates).IsCollectionEqualTo([Value]);
     }
 
-    /// <summary>Verifies that <c>OnNext</c>, <c>OnError</c> and a duplicate <c>OnCompleted</c>
-    /// arriving after the source has already completed are silently dropped.</summary>
+    /// <summary>Verifies notifications arriving after the source completes are silently dropped.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenEventsAfterCompleted_ThenDropped()
