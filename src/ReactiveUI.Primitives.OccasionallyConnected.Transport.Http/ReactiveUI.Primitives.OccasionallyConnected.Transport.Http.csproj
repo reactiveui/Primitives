@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(LibraryTargetFrameworks)</TargetFrameworks>
+    <RootNamespace>ReactiveUI.Primitives.OccasionallyConnected.Transport.Http</RootNamespace>
+    <PackageDescription>HTTP transport primitives for occasionally connected synchronization.</PackageDescription>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="$(AssemblyName).Tests" />
+  </ItemGroup>
+
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
+    <Reference Include="System.Net.Http" />
+    <PackageReference Include="System.ValueTuple" />
+  </ItemGroup>
+
+</Project>

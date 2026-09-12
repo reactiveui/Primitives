@@ -47,6 +47,7 @@
         <Project Path="tests/ReactiveUI.Primitives.ObservableEvents.Tests/ReactiveUI.Primitives.ObservableEvents.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Core.Tests/ReactiveUI.Primitives.OccasionallyConnected.Core.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Server.Tests/ReactiveUI.Primitives.OccasionallyConnected.Server.Tests.csproj" />
+        <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.Tests/ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Tests/ReactiveUI.Primitives.OccasionallyConnected.Tests.csproj" />
     </Folder>
@@ -77,6 +78,7 @@
     <Project Path="ReactiveUI.Primitives.Core/ReactiveUI.Primitives.Core.csproj" />
     <Project Path="ReactiveUI.Primitives.OccasionallyConnected.Core/ReactiveUI.Primitives.OccasionallyConnected.Core.csproj" />
     <Project Path="ReactiveUI.Primitives.OccasionallyConnected.Server/ReactiveUI.Primitives.OccasionallyConnected.Server.csproj" />
+    <Project Path="ReactiveUI.Primitives.OccasionallyConnected.Transport.Http/ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.csproj" />
     <Project Path="ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite/ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.csproj" />
     <Project Path="ReactiveUI.Primitives.OccasionallyConnected/ReactiveUI.Primitives.OccasionallyConnected.csproj" />
     <Project Path="ReactiveUI.Primitives.ObservableEvents/ReactiveUI.Primitives.ObservableEvents.csproj" />
