@@ -11,6 +11,12 @@ public sealed class CircuitBreaker
     public void RecordTransientFailure() { }
     public bool TryAcquire() { }
 }
+public enum CircuitBreakerState
+{
+    Closed = 0,
+    Open = 1,
+    HalfOpen = 2,
+}
 [System.Diagnostics.DebuggerDisplay("{Endpoint,nq}; {State,nq}; Failures={ConsecutiveTransientFailures,nq}")]
 public record CircuitBreakerSnapshot : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.CircuitBreakerSnapshot>
 {
