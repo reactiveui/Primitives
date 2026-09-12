@@ -32,5 +32,62 @@ public sealed class OccasionallyConnectedFaultTests
         await Assert.That(fault.StreamId).IsEqualTo(streamId);
         await Assert.That(fault.OperationId).IsEqualTo(operationId);
         await Assert.That(fault.Exception).IsSameReferenceAs(exception);
+        await Assert.That(fault.Category).IsEqualTo(FaultCategory.InternalInvariant);
+        await Assert.That(fault.Severity).IsEqualTo(FaultSeverity.Error);
+        await Assert.That(fault.IsTransient).IsFalse();
+        fault.Validate();
+    }
+
+    /// <summary>Verifies an authentication fault retains actionable category and recovery information.</summary>
+    /// <returns>A task representing the assertions.</returns>
+    [Test]
+    public async Task AuthenticationFaultPreservesRetryClassification()
+    {
+        var fault = new OccasionallyConnectedFault("OC.CredentialsExpired", "Renew credentials.", DateTimeOffset.UnixEpoch, null, null, null)
+        {
+            Category = FaultCategory.Authentication,
+            Severity = FaultSeverity.Warning,
+            IsTransient = true,
+        };
+        fault.Validate();
+        await Assert.That(fault.Category).IsEqualTo(FaultCategory.Authentication);
+        await Assert.That(fault.Severity).IsEqualTo(FaultSeverity.Warning);
+        await Assert.That(fault.IsTransient).IsTrue();
+        await Assert.That(fault.StreamId).IsNull();
+        await Assert.That(fault.OperationId).IsNull();
+        await Assert.That(fault.Exception).IsNull();
+    }
+
+    /// <summary>Verifies malformed faults cannot enter a diagnostic stream.</summary>
+    /// <param name="scenario">The malformed field.</param>
+    /// <returns>A task representing the assertions.</returns>
+    [Test]
+    [Arguments("empty-code")]
+    [Arguments("whitespace-code")]
+    [Arguments("null-code")]
+    [Arguments("null-message")]
+    [Arguments("category")]
+    [Arguments("category-high")]
+    [Arguments("severity")]
+    [Arguments("severity-high")]
+    [Arguments("stream")]
+    [Arguments("operation")]
+    public async Task RejectsInvalidDiagnosticRecord(string scenario)
+    {
+        var fault = new OccasionallyConnectedFault("OC.Invalid", string.Empty, DateTimeOffset.UnixEpoch, null, null, null);
+        fault = scenario switch
+        {
+            "empty-code" => fault with { Code = string.Empty },
+            "whitespace-code" => fault with { Code = " " },
+            "null-code" => fault with { Code = null! },
+            "null-message" => fault with { Message = null! },
+            "category" => fault with { Category = (FaultCategory)(-1) },
+            "category-high" => fault with { Category = (FaultCategory)int.MaxValue },
+            "severity" => fault with { Severity = (FaultSeverity)(-1) },
+            "severity-high" => fault with { Severity = (FaultSeverity)int.MaxValue },
+            "stream" => fault with { StreamId = default(StreamId) },
+            _ => fault with { OperationId = default(OperationId) },
+        };
+        await Assert.That(fault.Validate).Throws<InvalidOperationException>();
     }
 }
