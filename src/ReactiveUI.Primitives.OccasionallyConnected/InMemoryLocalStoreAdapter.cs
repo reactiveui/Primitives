@@ -35,7 +35,7 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
     private readonly Dictionary<Guid, LeaseRecord> _leases = [];
 
     /// <summary>The inbox deduplication entries in this instance.</summary>
-    private readonly HashSet<InboxKey> _inbox = [];
+    private readonly Dictionary<InboxKey, DateTimeOffset> _inbox = [];
 
     /// <summary>The time provider used for local timestamps.</summary>
     private readonly TimeProvider _timeProvider;
@@ -329,7 +329,7 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
             for (var index = 0; index < eventIds.Count; index++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (!_inbox.Contains(new(streamId, eventIds[index])))
+                if (!_inbox.ContainsKey(new(streamId, eventIds[index])))
                 {
                     unapplied.Add(eventIds[index]);
                 }
@@ -369,7 +369,7 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
             }
 
             EnsureCapacityFor(capacity);
-            AddInboxEntries(batch);
+            AddInboxEntries(batch, committedAtUtc);
             ApplyCapacity(capacity);
             stream.Snapshot = nextSnapshot;
             stream.ServerCursor = batch.NextCursor;
@@ -543,7 +543,11 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
             ThrowIfReady(cancellationToken);
             var removable = GetCompactableOperations(request, nowUtc);
             removable.Sort(CompareTerminalTime);
+            var expiredInbox = GetExpiredInboxKeys(request, nowUtc);
+            cancellationToken.ThrowIfCancellationRequested();
             result = RemoveCompactedOperations(removable, request);
+            var inboxResult = RemoveExpiredInboxEntries(expiredInbox);
+            result = new(result.RecordsRemoved + inboxResult.RecordsRemoved, result.BytesReclaimed + inboxResult.BytesReclaimed);
         }
 
         return new(result);

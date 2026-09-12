@@ -529,3 +529,12 @@ Conflict resolution retained the current Core APIs, SQLite registration, impleme
 - The adapter is internal and ephemeral. Its inbox is capacity-bounded but does not yet prune by age. Engine transitions
   for dead letters and expired guarantees, explicit reconciliation, public construction and integration remain tracked work.
   Terminal compaction preserves snapshots and unresolved stream history; this component makes no restart durability claim.
+### Stage 3l: in-memory inbox retention
+
+- Inbox entries now retain local receipt timestamps within the encoded byte budget. Compaction prunes expired entries
+  independently of the terminal history cutoff and advisory byte target, preserving current snapshots and receive cursors.
+- Unresolved stream intent protects its inbox. Stream selection and the exact retention boundary are honored; pruning
+  releases record and encoded-byte capacity so subsequent remote commits can be admitted.
+- Root first reproduced the full-store regression with no expired entries reclaimed, then implemented receipt-time
+  retention. All 393 runtime TUnit tests pass on each modern target with 100% line and branch coverage: 2365 lines on
+  net8, 2335 on net9/net10, 2334 on net11 and 1102 branches throughout. All eight library targets build cleanly.
