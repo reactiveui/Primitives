@@ -182,6 +182,25 @@ Linux and macOS across the four modern frameworks. Full-solution CI builds remai
 - These contracts do not implement durable storage, network synchronization or server effects; their implementations and
   capability conformance tests remain subsequent stages. The diagnostic fault model will be completed with its emitter.
 
-The implemented identity, configuration, policy, serialization, admission and protocol stages are verified. Adapter capability negotiation,
+### Stage 2d: capability negotiation
+
+- Added internal startup negotiation that intersects authenticated peer offers with transport support and known runtime
+  features. It selects protocol 1.0, rejects incompatible major versions, and intersects local and peer count/byte limits.
+  Without batch support, the operation limit is one; unknown optional feature bits are never advertised by the runtime.
+- Durable publishing requires atomic local commit. At-least-once publishing requires server idempotency. Exactly-once
+  additionally requires atomic remote apply, durable inbox, atomic server effect/acknowledgement and receive acknowledgements.
+- Cursor recovery, concurrent draining, multiple writer processes and required encryption each validate the corresponding
+  capabilities. A peer-required inbox retention window needs both sufficient configured retention and a durable inbox.
+- Exposed the effective exactly-once window as the shorter client inbox/server idempotency retention. Other delivery
+  guarantees clear this field, including an untrusted peer claim. Missing or invalid required retention fails negotiation.
+- Executable TDD produced 35 failures against the initial stub. A further failing regression exposed a peer inbox-retention
+  promise without durable inbox storage; the corrected validator rejects it before synchronization.
+- GREEN: 257 Core and 198 runtime tests passed on each modern framework (1,820 executions). Mtpunittestmcp confirmed
+  Core 772/772 lines and 274/274 branches; runtime 699/699 lines on net8, 693/693 on net9/net10, and 692/692 on net11,
+  with 348/348 branches on each. All eight Core and runtime library targets build without warnings or errors.
+- Adapter conformance, authenticated handshakes, context startup integration and runtime guarantee-expiry enforcement
+  remain subsequent work. Negotiation validates declared capabilities; it does not itself implement those guarantees.
+
+The implemented identity, configuration, policy, serialization, admission, protocol and negotiation stages are verified. Adapter conformance,
 remaining facade contracts and integrated runtime/durability stages are still incomplete. Passing option validation alone does not establish a
 delivery guarantee or establish that a custom policy preserves durable work; the runtime must enforce both.
