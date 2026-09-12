@@ -605,3 +605,14 @@ Conflict resolution retained the current Core APIs, SQLite registration, impleme
 - All 325 Core TUnit tests pass on each modern target with MTP-confirmed 100% line and branch coverage: 875 lines and
   318 branches throughout. All eight Core library targets build with zero warnings and errors.
 - This stage defines the server boundary. Durable server acknowledgement storage and transport integration remain work.
+
+### Stage 5c: deterministic server write ordering
+
+- Added internal server write stamps and last-writer-wins ordering by server commit instant, ordinal authenticated
+  client identity, then operation identity. Equal stamps do not replace one another; time zone offsets do not alter order.
+- A failing test first demonstrated incorrect timestamp precedence. Tests now cover both comparison directions, each
+  tie-breaker, equivalent instants, and convergence across all arrival permutations of competing writes.
+- All 28 Server TUnit tests pass on each modern target with MTP-confirmed 100% line and branch coverage: 116 lines on
+  net8, 115 on net9/net10/net11 and 58 branches throughout. All eight Server library targets build cleanly.
+- This is an internal ordering primitive. The concrete resolver, authenticated stamp creation and atomic server commit
+  integration remain subsequent work; the primitive itself does not authenticate identities or persist timestamps.
