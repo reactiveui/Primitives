@@ -742,3 +742,14 @@ Conflict resolution retained the current Core APIs, SQLite registration, impleme
   (935 lines, 372 branches) on each target. All eight Core library targets build with zero warnings and errors.
 - Store inclusion, receive paging and committer integration remain required; the DTO and validator do not implement
   reconciliation or authenticate a completion declaration by themselves.
+
+### Stage 3: atomic volatile publishing
+
+- The local committer now accepts explicitly volatile policies when the store advertises atomic local commit.
+  Durable policies still require both atomic and durable local commit; volatile publishing never grants a durable
+  capability or silently changes the persisted operation policy.
+- Root added an executed failing public in-memory adapter regression before changing the capability gate. Tests also
+  cover volatile publishing through a durable store and rejection by stores that lack atomic commits.
+- All 469 runtime TUnit tests pass in Release on net8/net9/net10/net11, with MTP-confirmed 100% matching package line
+  and branch coverage (2646/2610/2610/2609 lines, 1258 branches). All eight runtime library targets build with zero
+  warnings and errors. Observer admission and the complete publish/receive pipeline remain subsequent work.
