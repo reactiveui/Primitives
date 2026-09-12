@@ -30,6 +30,34 @@ internal static class OccasionallyConnectedOptionsValidation
         throw new InvalidOperationException($"{optionName} must be a non-default stream identifier.");
     }
 
+    /// <summary>Validates a stable wire contract identifier without normalizing it.</summary>
+    /// <param name="contractId">The wire contract identifier.</param>
+    /// <param name="optionName">The option property name.</param>
+    /// <exception cref="InvalidOperationException"><paramref name="contractId"/> is null, empty, or whitespace.</exception>
+    internal static void ValidateContractId(string contractId, string optionName)
+    {
+        if (!string.IsNullOrWhiteSpace(contractId))
+        {
+            return;
+        }
+
+        throw new InvalidOperationException($"{optionName} must be non-empty and non-whitespace.");
+    }
+
+    /// <summary>Validates that a version is positive.</summary>
+    /// <param name="version">The configured version.</param>
+    /// <param name="optionName">The option property name.</param>
+    /// <exception cref="InvalidOperationException"><paramref name="version"/> is not positive.</exception>
+    internal static void ValidatePositiveVersion(int version, string optionName)
+    {
+        if (version > 0)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException($"{optionName} must be positive.");
+    }
+
     /// <summary>Validates a bounded queue capacity pair.</summary>
     /// <param name="bufferCapacity">The maximum item count.</param>
     /// <param name="bufferCapacityBytes">The maximum byte count.</param>
