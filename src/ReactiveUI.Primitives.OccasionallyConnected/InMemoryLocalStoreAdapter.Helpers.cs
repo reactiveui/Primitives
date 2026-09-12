@@ -766,17 +766,12 @@ internal sealed partial class InMemoryLocalStoreAdapter
 
     /// <summary>Determines whether an unbound in-memory partition contains state beyond empty subscription mappings.</summary>
     /// <returns>Whether the partition contains mutable state.</returns>
+    /// <remarks>Every local or remote commit creates a snapshot atomically. Compaction always retains that snapshot.</remarks>
     private bool HasMutablePartitionState()
     {
-        if (_operations.Count != 0 || _leases.Count != 0 || _inbox.Count != 0)
-        {
-            return true;
-        }
-
         foreach (var pair in _streams)
         {
-            var stream = pair.Value;
-            if (stream.NextClientSequence != 1 || stream.ServerCursor is not null || stream.Snapshot is not null)
+            if (pair.Value.Snapshot is not null)
             {
                 return true;
             }

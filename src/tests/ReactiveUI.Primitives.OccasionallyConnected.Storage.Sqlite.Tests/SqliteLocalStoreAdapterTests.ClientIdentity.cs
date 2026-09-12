@@ -32,6 +32,12 @@ public sealed partial class SqliteLocalStoreAdapterTests
         {
             await adapter.InitializeAsync(new(StoreIdentity, SchemaVersion, false) { ClientId = ClientId }, CancellationToken.None);
             subscriptionId = await adapter.GetOrCreateSubscriptionIdAsync(Stream, null, CancellationToken.None);
+            await adapter.InitializeAsync(new(StoreIdentity, SchemaVersion, false) { ClientId = ClientId }, CancellationToken.None);
+            Func<Task> omitIdentity = () => adapter.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None).AsTask();
+            Func<Task> changeIdentity = () => adapter.InitializeAsync(new(StoreIdentity, SchemaVersion, false) { ClientId = OtherClientId }, CancellationToken.None).AsTask();
+            await Assert.That(omitIdentity).ThrowsExactly<InvalidOperationException>();
+            await Assert.That(changeIdentity).ThrowsExactly<InvalidOperationException>();
+            await Assert.That(await adapter.GetOrCreateSubscriptionIdAsync(Stream, null, CancellationToken.None)).IsEqualTo(subscriptionId);
         }
 
         await using (var sameClient = CreateAdapter(database.Path))

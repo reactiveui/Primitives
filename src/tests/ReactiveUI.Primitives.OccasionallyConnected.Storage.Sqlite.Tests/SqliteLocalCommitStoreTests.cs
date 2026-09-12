@@ -468,13 +468,13 @@ public sealed partial class SqliteLocalCommitStoreTests
     {
         using var database = TempDatabase.Create();
         using var store = new SqliteLocalCommitStore(database.Path);
-        LocalStoreInitialization missingInitialization = null!;
-
-        Action missing = () => store.Initialize(missingInitialization, CancellationToken.None);
+        Action<LocalStoreInitialization> initialize = value => store.Initialize(value, CancellationToken.None);
+        Action missing = () => initialize.DynamicInvoke([null]);
         Action unsupported = () => store.Initialize(new(StoreIdentity, IdentitySchemaVersion, false), CancellationToken.None);
         Action blank = () => store.Initialize(new(" ", SchemaVersion, false), CancellationToken.None);
 
-        await Assert.That(missing).ThrowsExactly<ArgumentNullException>();
+        var missingException = Assert.ThrowsExactly<System.Reflection.TargetInvocationException>(missing);
+        await Assert.That(missingException.InnerException).IsTypeOf<ArgumentNullException>();
         await Assert.That(unsupported).ThrowsExactly<InvalidOperationException>();
         await Assert.That(blank).ThrowsExactly<ArgumentException>();
 
@@ -491,12 +491,14 @@ public sealed partial class SqliteLocalCommitStoreTests
         Action memory = static () => _ = new SqliteLocalCommitStore(":memory:");
         Action uri = static () => _ = new SqliteLocalCommitStore("file:local.db");
         Action blank = static () => _ = new SqliteLocalCommitStore(" ");
-        Action missingPath = static () => _ = new SqliteLocalCommitStore(null!);
+        Func<string, SqliteLocalCommitStore> constructor = static path => new(path);
+        Action missingPath = () => constructor.DynamicInvoke([null]);
 
         await Assert.That(memory).ThrowsExactly<ArgumentException>();
         await Assert.That(uri).ThrowsExactly<ArgumentException>();
         await Assert.That(blank).ThrowsExactly<ArgumentException>();
-        await Assert.That(missingPath).ThrowsExactly<ArgumentNullException>();
+        var missingException = Assert.ThrowsExactly<System.Reflection.TargetInvocationException>(missingPath);
+        await Assert.That(missingException.InnerException).IsTypeOf<ArgumentNullException>();
     }
 
     /// <summary>Verifies invalid commit identity inputs are rejected before durable state changes.</summary>
@@ -507,18 +509,11 @@ public sealed partial class SqliteLocalCommitStoreTests
         using var database = TempDatabase.Create();
         using var store = CreateInitializedStore(database.Path);
         var subscriptionId = store.GetOrCreateSubscriptionId(Stream, SubscriptionId.New(), CancellationToken.None);
-        SyncOperation missingOperation = null!;
-        SnapshotMutation missingSnapshot = null!;
+        Func<SyncOperation, SnapshotMutation, LocalCommitResult> commit = (operation, snapshot) => store.CommitLocalOperation(operation, snapshot, CancellationToken.None);
         var otherStream = new StreamId("sensor/humidity");
 
-        Action missingOperationAction = () => store.CommitLocalOperation(
-            missingOperation,
-            CreateSnapshotMutation(expectedRevision: 0),
-            CancellationToken.None);
-        Action missingSnapshotAction = () => store.CommitLocalOperation(
-            CreateOperation(clientSequence: 1),
-            missingSnapshot,
-            CancellationToken.None);
+        Action missingOperationAction = () => commit.DynamicInvoke([null, CreateSnapshotMutation(expectedRevision: 0)]);
+        Action missingSnapshotAction = () => commit.DynamicInvoke([CreateOperation(clientSequence: 1), null]);
         Action mismatchedStreamAction = () => store.CommitLocalOperation(
             CreateOperation(clientSequence: 1) with { StreamId = otherStream },
             CreateSnapshotMutation(expectedRevision: 0),
@@ -536,8 +531,10 @@ public sealed partial class SqliteLocalCommitStoreTests
             CreateSnapshotMutation(expectedRevision: 0),
             CancellationToken.None);
 
-        await Assert.That(missingOperationAction).ThrowsExactly<ArgumentNullException>();
-        await Assert.That(missingSnapshotAction).ThrowsExactly<ArgumentNullException>();
+        var operationException = Assert.ThrowsExactly<System.Reflection.TargetInvocationException>(missingOperationAction);
+        var snapshotException = Assert.ThrowsExactly<System.Reflection.TargetInvocationException>(missingSnapshotAction);
+        await Assert.That(operationException.InnerException).IsTypeOf<ArgumentNullException>();
+        await Assert.That(snapshotException.InnerException).IsTypeOf<ArgumentNullException>();
         await Assert.That(mismatchedStreamAction).ThrowsExactly<ArgumentException>();
         await Assert.That(nonPositiveSequenceAction).ThrowsExactly<ArgumentOutOfRangeException>();
         await Assert.That(emptyOperationIdAction).ThrowsExactly<ArgumentException>();
@@ -581,8 +578,10 @@ public sealed partial class SqliteLocalCommitStoreTests
             CreateOperation(clientSequence: 1) with { Metadata = new Dictionary<string, string> { [string.Empty] = "value" } },
             CreateSnapshotMutation(expectedRevision: 0),
             CancellationToken.None);
+        Dictionary<string, string> nullValueMetadata = [];
+        ((System.Collections.IDictionary)nullValueMetadata).Add("key", null);
         Action nullMetadataValueAction = () => store.CommitLocalOperation(
-            CreateOperation(clientSequence: 1) with { Metadata = new Dictionary<string, string> { ["key"] = null! } },
+            CreateOperation(clientSequence: 1) with { Metadata = nullValueMetadata },
             CreateSnapshotMutation(expectedRevision: 0),
             CancellationToken.None);
         Action negativeSnapshotRevisionAction = () => store.CommitLocalOperation(

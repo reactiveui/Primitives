@@ -46,6 +46,29 @@ public sealed partial class SqliteLocalCommitStoreTests
         await Assert.That(conflict).ThrowsExactly<InvalidOperationException>();
     }
 
+    /// <summary>Verifies a malformed durable binding cannot be interpreted as a legacy unbound partition.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task CorruptClientBindingRejectsLegacyInitialization()
+    {
+        using var database = TempDatabase.Create();
+        using (var bound = new SqliteLocalCommitStore(database.Path))
+        {
+            bound.Initialize(new(StoreIdentity, SchemaVersion, false) { ClientId = FirstBindingClientId }, CancellationToken.None);
+        }
+
+        await using (var connection = OpenRawConnection(database.Path))
+        await using (var command = connection.CreateCommand())
+        {
+            command.CommandText = "UPDATE oc_metadata SET value = X'00' WHERE key LIKE 'rxui.localstore.client_id:%';";
+            await Assert.That(command.ExecuteNonQuery()).IsEqualTo(1);
+        }
+
+        using var legacy = new SqliteLocalCommitStore(database.Path);
+        Action initialize = () => legacy.Initialize(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
+        await Assert.That(initialize).ThrowsExactly<InvalidOperationException>();
+    }
+
     /// <summary>Initializes a store after the race gate opens.</summary>
     /// <param name="path">The SQLite database path.</param>
     /// <param name="clientId">The client identity.</param>
