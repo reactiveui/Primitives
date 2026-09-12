@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
+using System.Text;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected;
 
@@ -13,6 +14,9 @@ internal sealed class LocalStreamCommitter<TState, TInput>
 {
     /// <summary>The message used when an async operation overlaps another one.</summary>
     private const string BusyMessage = "A local stream transaction is already in progress.";
+
+    /// <summary>The maximum encoded server cursor size accepted by the local remote receive path.</summary>
+    private const int MaximumCursorUtf8Bytes = 4096;
 
     /// <summary>The immutable committer options.</summary>
     private readonly LocalStreamCommitterOptions<TState, TInput> _options;
@@ -155,6 +159,42 @@ internal sealed class LocalStreamCommitter<TState, TInput>
         }
     }
 
+    /// <summary>Applies a remote batch atomically with inbox deduplication and cursor advancement.</summary>
+    /// <param name="batch">The received remote batch.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The remote commit result.</returns>
+    internal async ValueTask<RemoteStreamCommitResult<TState, TInput>> ApplyRemoteBatchAsync(
+        RemoteEventBatch batch,
+        CancellationToken cancellationToken)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(batch);
+        EnterExclusive();
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            ThrowIfNotRecovered();
+            var observed = Current;
+            ValidateRemoteBatchHeader(batch);
+            var allEventIds = GetRemoteEventIds(batch);
+            var unappliedLookupResult = await _options.Dependencies.Store
+                .GetUnappliedEventIdsAsync(_options.StreamId, allEventIds, cancellationToken)
+                .ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            var unappliedEventIds = CreateUnappliedEventIdSnapshot(allEventIds, unappliedLookupResult);
+
+            var filteredEvents = FilterUnappliedEvents(batch.Events, unappliedEventIds);
+            var duplicateCount = checked(batch.Events.Count - filteredEvents.Count);
+            return TryGetDuplicateReplayCursor(batch, observed.ServerCursor, filteredEvents, out var replayCursor)
+                ? CreateDuplicateRemoteResult(batch, observed, replayCursor, duplicateCount)
+                : await CommitFilteredRemoteBatchAsync(batch, observed, filteredEvents, duplicateCount, cancellationToken)
+                    .ConfigureAwait(false);
+        }
+        finally
+        {
+            ExitExclusive();
+        }
+    }
+
     /// <summary>Rejects client sequence overflow before store mutation.</summary>
     /// <param name="nextClientSequence">The next sequence.</param>
     /// <exception cref="InvalidOperationException">The next sequence cannot be incremented after commit.</exception>
@@ -179,6 +219,109 @@ internal sealed class LocalStreamCommitter<TState, TInput>
         }
 
         throw new InvalidOperationException("Snapshot revision overflow would make the commit unrecoverable.");
+    }
+
+    /// <summary>Creates the received remote event identifier list.</summary>
+    /// <param name="batch">The remote batch.</param>
+    /// <returns>The event identifiers.</returns>
+    /// <exception cref="InvalidOperationException">The batch contains duplicate event identifiers.</exception>
+    private static List<Guid> GetRemoteEventIds(RemoteEventBatch batch)
+    {
+        List<Guid> eventIds = new(batch.Events.Count);
+        HashSet<Guid> seen = [];
+        for (var index = 0; index < batch.Events.Count; index++)
+        {
+            var eventId = batch.Events[index].EventId;
+            if (!seen.Add(eventId))
+            {
+                throw new InvalidOperationException("Remote batch contains duplicate event identifiers.");
+            }
+
+            eventIds.Add(eventId);
+        }
+
+        return eventIds;
+    }
+
+    /// <summary>Filters events to the store-selected unapplied identifiers while preserving received order.</summary>
+    /// <param name="events">The received events.</param>
+    /// <param name="unappliedEventIds">The selected identifiers.</param>
+    /// <returns>The filtered events.</returns>
+    private static List<RemoteEvent> FilterUnappliedEvents(
+        IReadOnlyList<RemoteEvent> events,
+        List<Guid> unappliedEventIds)
+    {
+        HashSet<Guid> unapplied = new(unappliedEventIds);
+        List<RemoteEvent> filtered = new(unappliedEventIds.Count);
+        for (var index = 0; index < events.Count; index++)
+        {
+            var remoteEvent = events[index];
+            if (unapplied.Contains(remoteEvent.EventId))
+            {
+                filtered.Add(remoteEvent);
+            }
+        }
+
+        return filtered;
+    }
+
+    /// <summary>Validates the previous cursor for batches that contain new events.</summary>
+    /// <param name="batch">The remote batch.</param>
+    /// <param name="currentCursor">The current durable cursor.</param>
+    /// <exception cref="InvalidOperationException">The batch does not follow the current cursor.</exception>
+    private static void ValidateRemoteCursor(RemoteEventBatch batch, string? currentCursor)
+    {
+        if (string.Equals(batch.PreviousCursor, currentCursor, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        throw new InvalidOperationException("Remote batch previous cursor does not match the current stream cursor.");
+    }
+
+    /// <summary>Determines whether a duplicate-only batch is an old replay.</summary>
+    /// <param name="batch">The original batch.</param>
+    /// <param name="currentCursor">The current cursor.</param>
+    /// <param name="filteredEvents">The filtered new events.</param>
+    /// <param name="replayCursor">The durable cursor to report for an old replay.</param>
+    /// <returns><see langword="true"/> when the batch is a replay that must not advance state.</returns>
+    /// <exception cref="InvalidOperationException">A duplicate replay cannot be verified without a current cursor.</exception>
+    private static bool TryGetDuplicateReplayCursor(
+        RemoteEventBatch batch,
+        string? currentCursor,
+        List<RemoteEvent> filteredEvents,
+        out string replayCursor)
+    {
+        replayCursor = string.Empty;
+        if (batch.Events.Count == 0 || filteredEvents.Count > 0 || string.Equals(batch.PreviousCursor, currentCursor, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (currentCursor is { Length: > 0 })
+        {
+            replayCursor = currentCursor;
+            return true;
+        }
+
+        throw new InvalidOperationException("Remote duplicate replay cannot be verified without a current stream cursor.");
+    }
+
+    /// <summary>Creates a no-op result for a fully duplicate replay.</summary>
+    /// <param name="batch">The original batch.</param>
+    /// <param name="observed">The observed state.</param>
+    /// <param name="currentCursor">The current durable cursor.</param>
+    /// <param name="duplicateCount">The duplicate count.</param>
+    /// <returns>The no-op remote commit result.</returns>
+    private static RemoteStreamCommitResult<TState, TInput> CreateDuplicateRemoteResult(
+        RemoteEventBatch batch,
+        LocalStreamCommitterState<TState> observed,
+        string currentCursor,
+        int duplicateCount)
+    {
+        var receipt = new RemoteApplyResult(currentCursor, 0, duplicateCount, observed.Revision);
+        var filteredBatch = new RemoteEventBatch(batch.BatchId, batch.StreamId, batch.PreviousCursor, batch.NextCursor, []);
+        return new(receipt, filteredBatch, new System.Collections.ObjectModel.ReadOnlyCollection<TInput>([]), observed);
     }
 
     /// <summary>Rejects default operation identifiers before persistence.</summary>
@@ -229,6 +372,81 @@ internal sealed class LocalStreamCommitter<TState, TInput>
             Revision: 0,
             NextClientSequence: 1,
             ServerCursor: null);
+
+    /// <summary>Validates the final event cursor matches the batch next cursor.</summary>
+    /// <param name="batch">The remote batch.</param>
+    /// <exception cref="InvalidOperationException">The final event cursor does not match the batch cursor.</exception>
+    private static void ValidateFinalEventCursor(RemoteEventBatch batch)
+    {
+        if (batch.Events.Count == 0)
+        {
+            return;
+        }
+
+        var finalEvent = batch.Events[batch.Events.Count - 1];
+        if (string.Equals(finalEvent.ServerCursor, batch.NextCursor, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        throw new InvalidOperationException("Remote batch next cursor must match the last event cursor.");
+    }
+
+    /// <summary>Validates an optional server cursor.</summary>
+    /// <param name="cursor">The cursor.</param>
+    /// <param name="displayName">The display name used in the exception.</param>
+    /// <exception cref="InvalidOperationException">The cursor is malformed.</exception>
+    private static void ValidateOptionalCursor(string? cursor, string displayName)
+    {
+        if (cursor is null)
+        {
+            return;
+        }
+
+        ValidateCursor(cursor, displayName);
+    }
+
+    /// <summary>Validates a required server cursor.</summary>
+    /// <param name="cursor">The cursor.</param>
+    /// <param name="displayName">The display name used in the exception.</param>
+    /// <exception cref="InvalidOperationException">The cursor is malformed.</exception>
+    private static void ValidateCursor(string? cursor, string displayName)
+    {
+        if (cursor is { Length: > 0 }
+            && IsWellFormedUnicode(cursor)
+            && Encoding.UTF8.GetByteCount(cursor) <= MaximumCursorUtf8Bytes)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException($"{displayName} must be non-empty, well-formed Unicode, and no more than 4096 UTF-8 bytes.");
+    }
+
+    /// <summary>Determines whether a string contains only well-formed UTF-16 surrogate pairs.</summary>
+    /// <param name="value">The value to validate.</param>
+    /// <returns><see langword="true"/> when the value is well-formed; otherwise, <see langword="false"/>.</returns>
+    private static bool IsWellFormedUnicode(string value)
+    {
+        for (var index = 0; index < value.Length; index++)
+        {
+            var character = value[index];
+            if (char.IsHighSurrogate(character))
+            {
+                if (index == value.Length - 1 || !char.IsLowSurrogate(value[index + 1]))
+                {
+                    return false;
+                }
+
+                index++;
+            }
+            else if (char.IsLowSurrogate(character))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     /// <summary>Enters the exclusive asynchronous call lane.</summary>
     /// <exception cref="InvalidOperationException">The committer is busy or poisoned.</exception>
@@ -395,6 +613,110 @@ internal sealed class LocalStreamCommitter<TState, TInput>
         return typed;
     }
 
+    /// <summary>Decodes filtered remote event inputs.</summary>
+    /// <param name="events">The remote events to decode.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The decoded inputs.</returns>
+    private async ValueTask<IReadOnlyList<TInput>> DecodeRemoteInputsAsync(
+        IReadOnlyList<RemoteEvent> events,
+        CancellationToken cancellationToken)
+    {
+        List<TInput> decodedInputs = new(events.Count);
+        foreach (var remoteEvent in events)
+        {
+            var decoded = await DecodeInputAsync(remoteEvent.Payload, cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            decodedInputs.Add(decoded);
+        }
+
+        return new System.Collections.ObjectModel.ReadOnlyCollection<TInput>(decodedInputs);
+    }
+
+    /// <summary>Applies filtered remote events to a projected state.</summary>
+    /// <param name="state">The starting state.</param>
+    /// <param name="events">The remote events.</param>
+    /// <param name="inputs">The decoded inputs.</param>
+    /// <returns>The projected state.</returns>
+    private TState ApplyRemoteProjection(
+        TState state,
+        IReadOnlyList<RemoteEvent> events,
+        IReadOnlyList<TInput> inputs)
+    {
+        var current = state;
+        for (var index = 0; index < events.Count; index++)
+        {
+            current = _options.Dependencies.Projection.ApplyRemote(current, inputs[index], events[index]);
+        }
+
+        return current;
+    }
+
+    /// <summary>Commits the filtered remote batch once inbox and cursor checks pass.</summary>
+    /// <param name="batch">The original remote batch.</param>
+    /// <param name="observed">The observed committer state.</param>
+    /// <param name="filteredEvents">The events selected by durable inbox lookup.</param>
+    /// <param name="duplicateCount">The duplicate count from the original batch.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The remote commit result.</returns>
+    /// <exception cref="InvalidOperationException">The remote cursor or store receipt violates the transaction contract.</exception>
+    private async ValueTask<RemoteStreamCommitResult<TState, TInput>> CommitFilteredRemoteBatchAsync(
+        RemoteEventBatch batch,
+        LocalStreamCommitterState<TState> observed,
+        IReadOnlyList<RemoteEvent> filteredEvents,
+        int duplicateCount,
+        CancellationToken cancellationToken)
+    {
+        ValidateRemoteCursor(batch, observed.ServerCursor);
+        ThrowIfRevisionOverflow(observed.Revision);
+        var decodedInputs = await DecodeRemoteInputsAsync(filteredEvents, cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        var nextStateValue = ApplyRemoteProjection(observed.State, filteredEvents, decodedInputs);
+        cancellationToken.ThrowIfCancellationRequested();
+        var nextStatePayload = await _options.Dependencies.Serializer
+            .SerializeAsync(_options.Contracts.StateContractId, _options.Contracts.StateSchemaVersion, nextStateValue, cancellationToken)
+            .ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var filteredBatch = new RemoteEventBatch(batch.BatchId, batch.StreamId, batch.PreviousCursor, batch.NextCursor, filteredEvents);
+        var storeResult = await ApplyRemoteStoreTransactionAsync(filteredBatch, nextStatePayload, observed.Revision, cancellationToken)
+            .ConfigureAwait(false);
+        var nextState = new LocalStreamCommitterState<TState>(
+            _options.StreamId,
+            observed.SubscriptionId,
+            nextStateValue,
+            storeResult.SnapshotRevision,
+            observed.NextClientSequence,
+            storeResult.NextCursor);
+        SwapCurrent(nextState);
+        var receipt = storeResult with { DuplicateCount = duplicateCount };
+        return new(receipt, filteredBatch, decodedInputs, nextState);
+    }
+
+    /// <summary>Applies the filtered remote batch to the local store.</summary>
+    /// <param name="filteredBatch">The filtered remote batch.</param>
+    /// <param name="nextStatePayload">The serialized next state.</param>
+    /// <param name="expectedRevision">The expected prior revision.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The remote apply receipt.</returns>
+    /// <exception cref="InvalidOperationException">The store receipt violates the transaction contract.</exception>
+    private async ValueTask<RemoteApplyResult> ApplyRemoteStoreTransactionAsync(
+        RemoteEventBatch filteredBatch,
+        PayloadEnvelope nextStatePayload,
+        long expectedRevision,
+        CancellationToken cancellationToken)
+    {
+        var mutation = new SnapshotMutation(
+            _options.StreamId,
+            nextStatePayload,
+            _options.Contracts.SnapshotFormatVersion,
+            expectedRevision);
+        var storeResult = await _options.Dependencies.Store
+            .ApplyRemoteBatchAsync(filteredBatch, mutation, cancellationToken)
+            .ConfigureAwait(false);
+        ValidateRemoteStoreResult(storeResult, filteredBatch.NextCursor, filteredBatch.Events.Count, expectedRevision);
+        return storeResult;
+    }
+
     /// <summary>Creates an immutable local operation.</summary>
     /// <param name="policy">The operation policy.</param>
     /// <param name="clientSequence">The assigned client sequence.</param>
@@ -452,6 +774,141 @@ internal sealed class LocalStreamCommitter<TState, TInput>
 
         _poisoned = true;
         throw new InvalidOperationException("The local store returned a malformed commit receipt.");
+    }
+
+    /// <summary>Validates remote batch metadata that does not require durable inbox state.</summary>
+    /// <param name="batch">The remote batch.</param>
+    /// <exception cref="InvalidOperationException">The batch metadata is invalid.</exception>
+    private void ValidateRemoteBatchHeader(RemoteEventBatch batch)
+    {
+        if (batch.BatchId == Guid.Empty)
+        {
+            throw new InvalidOperationException("Remote batch identifier must be non-empty.");
+        }
+
+        if (batch.StreamId != _options.StreamId)
+        {
+            throw new InvalidOperationException("Remote batch belongs to a different stream.");
+        }
+
+        ValidateCursor(batch.NextCursor, "Remote batch next cursor");
+        ValidateOptionalCursor(batch.PreviousCursor, "Remote batch previous cursor");
+
+        for (var index = 0; index < batch.Events.Count; index++)
+        {
+            ValidateRemoteEvent(batch.Events[index]);
+        }
+
+        ValidateFinalEventCursor(batch);
+    }
+
+    /// <summary>Validates a remote event before inbox lookup.</summary>
+    /// <param name="remoteEvent">The remote event.</param>
+    /// <exception cref="InvalidOperationException">The remote event metadata is invalid.</exception>
+    private void ValidateRemoteEvent(RemoteEvent? remoteEvent)
+    {
+        if (remoteEvent is null)
+        {
+            throw new InvalidOperationException("Remote batch contains a missing event.");
+        }
+
+        if (remoteEvent.EventId == Guid.Empty)
+        {
+            throw new InvalidOperationException("Remote event identifier must be non-empty.");
+        }
+
+        if (remoteEvent.StreamId != _options.StreamId)
+        {
+            throw new InvalidOperationException("Remote event belongs to a different stream.");
+        }
+
+        ValidateCursor(remoteEvent.ServerCursor, "Remote event cursor");
+        if (remoteEvent.CausedByOperationId.HasValue && remoteEvent.CausedByOperationId.Value.Value == Guid.Empty)
+        {
+            throw new InvalidOperationException("Remote event causal operation identifier must be non-empty.");
+        }
+
+        ValidateRemotePayload(remoteEvent.Payload);
+    }
+
+    /// <summary>Validates a remote event payload before it is decoded.</summary>
+    /// <param name="payload">The payload.</param>
+    /// <exception cref="InvalidOperationException">The payload is missing or does not match the input contract.</exception>
+    private void ValidateRemotePayload(PayloadEnvelope? payload)
+    {
+        if (payload is null)
+        {
+            throw new InvalidOperationException("Remote event payload is missing.");
+        }
+
+        var contractMatches = string.Equals(payload.ContractId, _options.Contracts.InputContractId, StringComparison.Ordinal)
+            && payload.SchemaVersion > 0
+            && payload.SchemaVersion <= _options.Contracts.InputSchemaVersion;
+        if (contractMatches)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException("Remote event contract does not match the configured input contract.");
+    }
+
+    /// <summary>Validates that the store returned an exact subset of the received identifiers.</summary>
+    /// <param name="candidateEventIds">The received event identifiers.</param>
+    /// <param name="unappliedEventIds">The store-selected identifiers.</param>
+    /// <returns>An owned snapshot of the store-selected event identifiers.</returns>
+    /// <exception cref="InvalidOperationException">The store lookup result violates the inbox contract.</exception>
+    private List<Guid> CreateUnappliedEventIdSnapshot(
+        IReadOnlyList<Guid> candidateEventIds,
+        IReadOnlyList<Guid>? unappliedEventIds)
+    {
+        if (unappliedEventIds is null)
+        {
+            _poisoned = true;
+            throw new InvalidOperationException("The local store returned no remote inbox lookup result.");
+        }
+
+        HashSet<Guid> candidates = new(candidateEventIds);
+        HashSet<Guid> seen = [];
+        List<Guid> snapshot = new(unappliedEventIds.Count);
+        for (var index = 0; index < unappliedEventIds.Count; index++)
+        {
+            var eventId = unappliedEventIds[index];
+            if (candidates.Contains(eventId) && seen.Add(eventId))
+            {
+                snapshot.Add(eventId);
+                continue;
+            }
+
+            _poisoned = true;
+            throw new InvalidOperationException("The local store returned a malformed remote inbox lookup result.");
+        }
+
+        return snapshot;
+    }
+
+    /// <summary>Validates the store result before making remote state visible.</summary>
+    /// <param name="result">The remote apply result.</param>
+    /// <param name="nextCursor">The expected cursor.</param>
+    /// <param name="appliedCount">The expected applied count.</param>
+    /// <param name="expectedRevision">The expected prior revision.</param>
+    /// <exception cref="InvalidOperationException">The store result violates the transaction contract.</exception>
+    private void ValidateRemoteStoreResult(
+        RemoteApplyResult? result,
+        string nextCursor,
+        int appliedCount,
+        long expectedRevision)
+    {
+        if (result is not null
+            && string.Equals(result.NextCursor, nextCursor, StringComparison.Ordinal)
+            && result.AppliedCount == appliedCount
+            && result.DuplicateCount == 0
+            && result.SnapshotRevision == expectedRevision + 1)
+        {
+            return;
+        }
+
+        _poisoned = true;
+        throw new InvalidOperationException("The local store returned a malformed remote apply receipt.");
     }
 
     /// <summary>Rejects commits before recovery completes.</summary>

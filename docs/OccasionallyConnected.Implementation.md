@@ -301,6 +301,22 @@ Linux and macOS across the four modern frameworks. Full-solution CI builds remai
 - All 300 Core tests pass on each modern framework. Mtpunittestmcp confirms 858/858 lines and 318/318 branches on each
   target. All eight Core library targets build with zero warnings and errors. These overloads add no server implementation.
 
-The implemented identity, configuration, policy, serialization, admission, protocol, negotiation, observer, fault-model, stream-definition and local-commit stages are verified. Adapter conformance,
+### Stage 3e: atomic remote receive kernel
+
+- Added remote batch application to the same exclusive transaction owner as local commits and recovery. Validates stream,
+  event identities, bounded Unicode cursors and input contracts before taking one owned inbox lookup snapshot. Only new
+  events are decoded and projected, preserving their received order.
+- Persists the filtered inbox batch, cursor and projected snapshot together using the expected revision. Visible state
+  changes only after the adapter returns an exact valid receipt. Malformed receipts or lookup results poison that instance;
+  cancellation after a successful commit still returns the committed result.
+- Old duplicate replays cannot roll back the cursor; duplicate-only batches continuing the current cursor still commit
+  cursor advancement. Empty batches must preserve cursor continuity. A stale writer must recover before retrying.
+- Root review added tests for each receipt invariant, failed storage followed by retry and restart, overlapping local and
+  remote transactions, cancellation after serialization and repeated inbox lookup identifiers. Inverting deduplication
+  caused 11 executable failures before restoration. All 298 runtime tests pass on each modern target, with 100% matching
+  line and branch coverage (602 branches per target). All eight runtime library targets build without warnings or errors.
+- Transport acknowledgements, bounded receive admission and observer publication remain subsequent integration work.
+
+The implemented identity, configuration, policy, serialization, admission, protocol, negotiation, observer, fault-model, stream-definition and transaction-kernel stages are verified. Adapter conformance,
 remaining facade contracts and integrated runtime/durability stages are still incomplete. Passing option validation alone does not establish a
 delivery guarantee or establish that a custom policy preserves durable work; the runtime must enforce both.

@@ -589,6 +589,9 @@ public sealed partial class LocalStreamCommitterTests
         /// <summary>Gets or sets a value indicating whether state deserialization returns an input.</summary>
         public bool DeserializeStateAsInput { get; set; }
 
+        /// <summary>Gets the number of remote input payloads decoded.</summary>
+        public int RemoteInputDeserializeCount { get; private set; }
+
         /// <inheritdoc/>
         public ValueTask<PayloadEnvelope> SerializeAsync<T>(
             string contractId,
@@ -627,6 +630,11 @@ public sealed partial class LocalStreamCommitterTests
             var value = int.Parse(text, CultureInfo.InvariantCulture);
             if (targetType == typeof(MutableReading))
             {
+                if (envelope.ContractId == InputContract)
+                {
+                    RemoteInputDeserializeCount++;
+                }
+
                 return DeserializeInputAsState
                     ? ValueTask.FromResult<object>(new ReadingState(value))
                     : ValueTask.FromResult<object>(new MutableReading { Value = value });
@@ -650,6 +658,9 @@ public sealed partial class LocalStreamCommitterTests
     /// <summary>A scripted fake atomic store.</summary>
     private sealed class ScriptedLocalStore : ILocalStoreAdapter
     {
+        /// <summary>The event identifiers recorded in the durable inbox.</summary>
+        private readonly HashSet<Guid> _appliedEventIds = [];
+
         /// <inheritdoc/>
         public LocalStoreCapabilities Capabilities { get; } =
             LocalStoreCapabilities.AtomicLocalCommit
@@ -666,17 +677,41 @@ public sealed partial class LocalStreamCommitterTests
         /// <summary>Gets or sets asynchronous work to run before commit.</summary>
         public Func<Task>? BeforeCommitAsync { get; set; }
 
+        /// <summary>Gets or sets asynchronous work before the remote transaction.</summary>
+        public Func<Task>? BeforeRemoteCommitAsync { get; set; }
+
+        /// <summary>Gets or sets a remote transaction failure before persistence.</summary>
+        public Exception? RemoteCommitException { get; set; }
+
+        /// <summary>Gets or sets a transformation simulating a malformed adapter receipt.</summary>
+        public Func<RemoteApplyResult, RemoteApplyResult>? TransformRemoteReceipt { get; set; }
+
         /// <summary>Gets or sets asynchronous work to run before recovery.</summary>
         public Func<Task>? BeforeRecoveryAsync { get; set; }
 
         /// <summary>Gets or sets the token source canceled after successful commit.</summary>
         public CancellationTokenSource? CancelAfterSuccessfulCommit { get; set; }
 
+        /// <summary>Gets or sets the token source canceled after successful remote apply.</summary>
+        public CancellationTokenSource? CancelAfterSuccessfulRemoteApply { get; set; }
+
         /// <summary>Gets or sets the sequence offset applied to the returned receipt.</summary>
         public long ReceiptSequenceOffset { get; set; }
 
+        /// <summary>Gets or sets the revision offset applied to the returned remote receipt.</summary>
+        public long RemoteReceiptRevisionOffset { get; set; }
+
         /// <summary>Gets or sets a value indicating whether commit returns a null receipt.</summary>
         public bool ReturnNullCommitResult { get; set; }
+
+        /// <summary>Gets or sets a value indicating whether remote apply returns a null receipt.</summary>
+        public bool ReturnNullRemoteApplyResult { get; set; }
+
+        /// <summary>Gets or sets the event identifiers returned by the inbox lookup.</summary>
+        public IReadOnlyList<Guid>? UnappliedEventIdsOverride { get; set; }
+
+        /// <summary>Gets or sets a value indicating whether the inbox lookup returns no result.</summary>
+        public bool ReturnNullUnappliedLookupResult { get; set; }
 
         /// <summary>Gets the last committed operation.</summary>
         public SyncOperation? CommittedOperation { get; private set; }
@@ -684,8 +719,26 @@ public sealed partial class LocalStreamCommitterTests
         /// <summary>Gets the last committed snapshot mutation.</summary>
         public SnapshotMutation? CommittedSnapshot { get; private set; }
 
+        /// <summary>Gets the last applied remote batch.</summary>
+        public RemoteEventBatch? AppliedRemoteBatch { get; private set; }
+
+        /// <summary>Gets the last applied remote snapshot mutation.</summary>
+        public SnapshotMutation? AppliedRemoteSnapshot { get; private set; }
+
         /// <summary>Gets the commit call count.</summary>
         public int CommitCallCount { get; private set; }
+
+        /// <summary>Gets the unapplied inbox lookup call count.</summary>
+        public int UnappliedLookupCallCount { get; private set; }
+
+        /// <summary>Gets the remote apply call count.</summary>
+        public int RemoteApplyCallCount { get; private set; }
+
+        /// <summary>Marks a remote event identifier as already applied.</summary>
+        /// <param name="eventId">The remote event identifier.</param>
+        /// <returns><see langword="true"/> when the identifier was not already present.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool MarkEventApplied(Guid eventId) => _appliedEventIds.Add(eventId);
 
         /// <inheritdoc/>
         public ValueTask<SubscriptionId> GetOrCreateSubscriptionIdAsync(
@@ -777,15 +830,76 @@ public sealed partial class LocalStreamCommitterTests
         public ValueTask<IReadOnlyList<Guid>> GetUnappliedEventIdsAsync(
             StreamId streamId,
             IReadOnlyList<Guid> eventIds,
-            CancellationToken cancellationToken) =>
-            ValueTask.FromResult<IReadOnlyList<Guid>>(new ReadOnlyCollection<Guid>([]));
+            CancellationToken cancellationToken)
+        {
+            UnappliedLookupCallCount++;
+            cancellationToken.ThrowIfCancellationRequested();
+            if (ReturnNullUnappliedLookupResult)
+            {
+                return ValueTask.FromResult<IReadOnlyList<Guid>>(null!);
+            }
+
+            if (UnappliedEventIdsOverride is not null)
+            {
+                return ValueTask.FromResult(UnappliedEventIdsOverride);
+            }
+
+            List<Guid> unapplied = [];
+            for (var index = 0; index < eventIds.Count; index++)
+            {
+                var eventId = eventIds[index];
+                if (!_appliedEventIds.Contains(eventId))
+                {
+                    unapplied.Add(eventId);
+                }
+            }
+
+            return ValueTask.FromResult<IReadOnlyList<Guid>>(new ReadOnlyCollection<Guid>(unapplied));
+        }
 
         /// <inheritdoc/>
-        public ValueTask<RemoteApplyResult> ApplyRemoteBatchAsync(
+        public async ValueTask<RemoteApplyResult> ApplyRemoteBatchAsync(
             RemoteEventBatch batch,
             SnapshotMutation snapshotMutation,
-            CancellationToken cancellationToken) =>
-            throw new NotSupportedException();
+            CancellationToken cancellationToken)
+        {
+            RemoteApplyCallCount++;
+            if (BeforeRemoteCommitAsync is not null)
+            {
+                await BeforeRemoteCommitAsync();
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            if (RemoteCommitException is not null)
+            {
+                throw RemoteCommitException;
+            }
+
+            if (batch.StreamId != Stream
+                || !string.Equals(batch.PreviousCursor, Recovery.ServerCursor, StringComparison.Ordinal)
+                || snapshotMutation.ExpectedRevision != (Recovery.Snapshot?.Revision ?? 0))
+            {
+                throw new InvalidOperationException("The stream cursor or snapshot revision is stale.");
+            }
+
+            AppliedRemoteBatch = batch;
+            AppliedRemoteSnapshot = snapshotMutation;
+            for (var index = 0; index < batch.Events.Count; index++)
+            {
+                _ = _appliedEventIds.Add(batch.Events[index].EventId);
+            }
+
+            var snapshot = new LocalSnapshot(
+                batch.StreamId,
+                snapshotMutation.FormatVersion,
+                batch.NextCursor,
+                snapshotMutation.State,
+                snapshotMutation.ExpectedRevision + 1,
+                CommittedUtc);
+            Recovery = new(Subscription, batch.NextCursor, snapshot, Recovery.PendingOperations, Recovery.DeadLetters, Recovery.NextClientSequence);
+            _ = CancelAfterSuccessfulRemoteApply?.CancelAsync();
+            return CreateRemoteReceipt(batch, snapshotMutation.ExpectedRevision);
+        }
 
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -827,5 +941,21 @@ public sealed partial class LocalStreamCommitterTests
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+
+        /// <summary>Creates the configurable remote receipt after persistence.</summary>
+        /// <param name="batch">The persisted batch.</param>
+        /// <param name="expectedRevision">The preceding revision.</param>
+        /// <returns>The configured adapter receipt.</returns>
+        private RemoteApplyResult CreateRemoteReceipt(RemoteEventBatch batch, long expectedRevision)
+        {
+            var receipt = ReturnNullRemoteApplyResult
+                ? null!
+                : new RemoteApplyResult(
+                    batch.NextCursor,
+                    batch.Events.Count,
+                    DuplicateCount: 0,
+                    expectedRevision + 1 + RemoteReceiptRevisionOffset);
+            return TransformRemoteReceipt is null ? receipt : TransformRemoteReceipt(receipt);
+        }
     }
 }
