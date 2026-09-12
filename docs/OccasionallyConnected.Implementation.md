@@ -266,6 +266,20 @@ Linux and macOS across the four modern frameworks. Full-solution CI builds remai
 - This stage implements the transaction orchestration kernel. Concrete durable-store conformance, bounded ordered admission,
   context lifecycle, remote apply and notification integration remain subsequent work.
 
+### Stage 3b: durable subscription identity contract
+
+- Added store lookup/creation of a stable subscription identifier scoped to the initialized store and stream. Existing
+  identifiers survive omitted preferences; explicit mismatches fail without changing the mapping. Concurrent calls use
+  the first committed mapping, and cancellation cannot delete an existing or concurrently committed identity.
+- Added the explicit no-cancellation overload and tests for exact argument/result forwarding, omitted preferences and
+  adapter failure propagation. Root mutation testing replaced a supplied preference with null and observed an executable
+  failure before restoring the implementation. The local-commit test double explicitly rejects this unused adapter member.
+- All 291 Core tests and 263 runtime tests pass on each modern framework. Mtpunittestmcp confirms Core coverage of
+  847/847 lines and 314/314 branches on each target; runtime coverage remains 100% for lines and branches.
+  All eight Core library targets build with zero warnings and errors.
+- This defines the adapter contract. Persistent mapping implementations, concurrent store conformance and engine startup
+  integration remain subsequent work; forwarding tests do not establish durable storage behavior.
+
 The implemented identity, configuration, policy, serialization, admission, protocol, negotiation, observer, fault-model, stream-definition and local-commit stages are verified. Adapter conformance,
 remaining facade contracts and integrated runtime/durability stages are still incomplete. Passing option validation alone does not establish a
 delivery guarantee or establish that a custom policy preserves durable work; the runtime must enforce both.

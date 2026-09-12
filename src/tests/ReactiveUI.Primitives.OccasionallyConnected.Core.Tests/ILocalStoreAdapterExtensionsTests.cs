@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
 public sealed class ILocalStoreAdapterExtensionsTests
 {
     /// <summary>The number of adapter calls expected by the forwarding test.</summary>
-    private const int AdapterCallCount = 14;
+    private const int AdapterCallCount = 15;
 
     /// <summary>The attempted send count.</summary>
     private const int AttemptNumber = 3;
@@ -32,6 +32,9 @@ public sealed class ILocalStoreAdapterExtensionsTests
     /// <summary>The renewal duration in minutes.</summary>
     private const int RenewalMinutes = 2;
 
+    /// <summary>The stream name used by forwarding assertions.</summary>
+    private const string StreamName = "sensor/temperature";
+
     /// <summary>The committed snapshot revision.</summary>
     private const int SnapshotRevision = 0;
 
@@ -45,6 +48,7 @@ public sealed class ILocalStoreAdapterExtensionsTests
         var mutation = CreateMutation(operation);
         var initialization = CreateInitialization();
         var subscription = SubscriptionId.New();
+        var preferredSubscription = SubscriptionId.New();
         var request = CreateLeaseRequest(operation);
         var leaseId = Guid.NewGuid();
         var result = new RemoteSyncResult(Guid.NewGuid(), [], null, null);
@@ -54,6 +58,7 @@ public sealed class ILocalStoreAdapterExtensionsTests
         var compact = new CompactionRequest(operation.StreamId, DateTimeOffset.UnixEpoch, MaximumBytes);
 
         await adapter.InitializeAsync(initialization);
+        var storedSubscription = await adapter.GetOrCreateSubscriptionIdAsync(operation.StreamId, preferredSubscription);
         var recovered = await adapter.RecoverStreamAsync(operation.StreamId, subscription);
         var committed = await adapter.CommitLocalOperationAsync(operation, mutation);
         var leases = new List<LeasedOperationBatch>();
@@ -73,6 +78,7 @@ public sealed class ILocalStoreAdapterExtensionsTests
         await adapter.ReleaseLeaseAsync(leaseId);
         var compaction = await adapter.CompactAsync(compact);
 
+        await Assert.That(storedSubscription).IsEqualTo(preferredSubscription);
         await Assert.That(recovered.SubscriptionId).IsEqualTo(subscription);
         await Assert.That(committed.OperationId).IsEqualTo(operation.OperationId);
         await Assert.That(leases).Count().IsEqualTo(1);
@@ -83,9 +89,23 @@ public sealed class ILocalStoreAdapterExtensionsTests
         await Assert.That(barrier.OperationId).IsEqualTo(operation.OperationId);
         await Assert.That(compaction).IsEqualTo(new(0, 0));
         await Assert.That(adapter.Calls).Count().IsEqualTo(AdapterCallCount);
-        await AssertSetupCalls(adapter, initialization, operation, mutation, subscription, request);
+        await AssertSetupCalls(adapter, initialization, operation, mutation, preferredSubscription, subscription, request);
         await AssertResultCalls(adapter, operation, leaseId, result, ids, batch, mutation);
         await AssertLeaseCalls(adapter, operation, leaseId, retry, compact);
+    }
+
+    /// <summary>Verifies the get-or-create overload forwards an omitted preferred identifier.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task GetOrCreateSubscriptionIdAsyncForwardsNullPreferredId()
+    {
+        var adapter = new RecordingAdapter();
+        var streamId = new StreamId(StreamName);
+        var subscriptionId = await adapter.GetOrCreateSubscriptionIdAsync(streamId, null);
+
+        await Assert.That(subscriptionId).IsEqualTo(adapter.ResolvedSubscriptionId);
+        await Assert.That(adapter.Calls).Count().IsEqualTo(1);
+        await AssertCall(adapter.Calls[0], streamId, null);
     }
 
     /// <summary>Verifies the initialize overload propagates adapter failures.</summary>
@@ -101,11 +121,26 @@ public sealed class ILocalStoreAdapterExtensionsTests
         await Assert.That(adapter.Calls).Count().IsEqualTo(1);
     }
 
+    /// <summary>Verifies the get-or-create overload propagates adapter failures.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task GetOrCreateSubscriptionIdAsyncPropagatesAdapterFailure()
+    {
+        var error = new InvalidOperationException("failure");
+        var adapter = new RecordingAdapter { Error = error };
+        Func<Task> action =
+            async () => await adapter.GetOrCreateSubscriptionIdAsync(new(StreamName), SubscriptionId.New());
+        var thrown = await Assert.That(action).ThrowsExactly<InvalidOperationException>();
+        await Assert.That(thrown).IsSameReferenceAs(error);
+        await Assert.That(adapter.Calls).Count().IsEqualTo(1);
+    }
+
     /// <summary>Asserts the setup-related recorded adapter calls.</summary>
     /// <param name="adapter">The recording adapter.</param>
     /// <param name="initialization">The initialization request.</param>
     /// <param name="operation">The synchronization operation.</param>
     /// <param name="mutation">The snapshot mutation.</param>
+    /// <param name="preferredSubscription">The preferred subscription identifier.</param>
     /// <param name="subscription">The subscription identifier.</param>
     /// <param name="request">The lease request.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
@@ -114,13 +149,15 @@ public sealed class ILocalStoreAdapterExtensionsTests
         LocalStoreInitialization initialization,
         SyncOperation operation,
         SnapshotMutation mutation,
+        SubscriptionId preferredSubscription,
         SubscriptionId subscription,
         OutboxLeaseRequest request)
     {
         await AssertCall(adapter.Calls[0], initialization);
-        await AssertCall(adapter.Calls[1], operation.StreamId, subscription);
-        await AssertCall(adapter.Calls[2], operation, mutation);
-        await AssertCall(adapter.Calls[3], request);
+        await AssertCall(adapter.Calls[1], operation.StreamId, preferredSubscription);
+        await AssertCall(adapter.Calls[2], operation.StreamId, subscription);
+        await AssertCall(adapter.Calls[3], operation, mutation);
+        await AssertCall(adapter.Calls[4], request);
     }
 
     /// <summary>Asserts the result-related recorded adapter calls.</summary>
@@ -141,11 +178,11 @@ public sealed class ILocalStoreAdapterExtensionsTests
         RemoteEventBatch batch,
         SnapshotMutation mutation)
     {
-        await AssertCall(adapter.Calls[4], leaseId, result);
-        await AssertCall(adapter.Calls[5], operation.StreamId, ids);
-        await AssertCall(adapter.Calls[6], batch, mutation);
-        await AssertCall(adapter.Calls[7], operation.OperationId);
+        await AssertCall(adapter.Calls[5], leaseId, result);
+        await AssertCall(adapter.Calls[6], operation.StreamId, ids);
+        await AssertCall(adapter.Calls[7], batch, mutation);
         await AssertCall(adapter.Calls[8], operation.OperationId);
+        await AssertCall(adapter.Calls[9], operation.OperationId);
     }
 
     /// <summary>Asserts the lease-related recorded adapter calls.</summary>
@@ -162,11 +199,11 @@ public sealed class ILocalStoreAdapterExtensionsTests
         RetryState retry,
         CompactionRequest compact)
     {
-        await AssertCall(adapter.Calls[9], leaseId, operation.OperationId, AttemptNumber);
-        await AssertCall(adapter.Calls[10], operation.OperationId, retry);
-        await AssertCall(adapter.Calls[11], leaseId, TimeSpan.FromMinutes(RenewalMinutes));
-        await AssertCall(adapter.Calls[12], leaseId);
-        await AssertCall(adapter.Calls[13], compact);
+        await AssertCall(adapter.Calls[10], leaseId, operation.OperationId, AttemptNumber);
+        await AssertCall(adapter.Calls[11], operation.OperationId, retry);
+        await AssertCall(adapter.Calls[12], leaseId, TimeSpan.FromMinutes(RenewalMinutes));
+        await AssertCall(adapter.Calls[13], leaseId);
+        await AssertCall(adapter.Calls[14], compact);
     }
 
     /// <summary>Asserts that one recorded call matches the expected arguments and default token.</summary>
@@ -207,7 +244,7 @@ public sealed class ILocalStoreAdapterExtensionsTests
         new()
         {
             OperationId = OperationId.New(),
-            StreamId = new("sensor/temperature"),
+            StreamId = new(StreamName),
             ClientSequence = ExpectedRevision,
             TimestampUtc = DateTimeOffset.UnixEpoch,
             Type = SyncOperationType.Append,
@@ -225,6 +262,9 @@ public sealed class ILocalStoreAdapterExtensionsTests
         /// <summary>Gets the exception to throw from failing members.</summary>
         public Exception? Error { get; init; }
 
+        /// <summary>Gets the stable identifier returned when no preference is supplied.</summary>
+        public SubscriptionId ResolvedSubscriptionId { get; } = SubscriptionId.New();
+
         /// <summary>Gets the local store capabilities.</summary>
         public LocalStoreCapabilities Capabilities => LocalStoreCapabilities.None;
 
@@ -233,6 +273,16 @@ public sealed class ILocalStoreAdapterExtensionsTests
         {
             Calls.Add([initialization, cancellationToken]);
             return Error is null ? ValueTask.CompletedTask : ValueTask.FromException(Error);
+        }
+
+        /// <inheritdoc />
+        public ValueTask<SubscriptionId> GetOrCreateSubscriptionIdAsync(
+            StreamId streamId,
+            SubscriptionId? preferredId,
+            CancellationToken cancellationToken)
+        {
+            Calls.Add([streamId, preferredId, cancellationToken]);
+            return Error is null ? new(preferredId ?? ResolvedSubscriptionId) : ValueTask.FromException<SubscriptionId>(Error);
         }
 
         /// <inheritdoc />
