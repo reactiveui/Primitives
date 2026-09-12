@@ -356,6 +356,16 @@ Linux and macOS across the four modern frameworks. Full-solution CI builds remai
   on every target. All eight Core library targets build with zero warnings and errors.
 - Concrete stream startup, shutdown, bounded publication and transaction integration remain subsequent work.
 
+### Stage 3h: context facade contract
+
+- Added the context interface connecting its synchronization engine, lifecycle state stream and typed stream factory.
+  Parameterless lifecycle extensions preserve the underlying asynchronous operation and use no cancellation token.
+- Tests exercise the interface surface, exact lifecycle call counts, incomplete operations and unwrapped failures.
+  Root redirected startup to shutdown and observed three executable failures before restoring the implementation.
+- All 319 Core tests pass on each modern framework with 873/873 lines and 318/318 branches covered. All eight Core
+  library targets build with zero warnings and errors. These interface tests do not establish concrete context behavior.
+- Context ownership, compatible stream caching and integrated startup/shutdown remain subsequent implementation work.
+
 The implemented identity, configuration, policy, serialization, admission, protocol, negotiation, observer, fault-model, stream-definition and transaction-kernel stages are verified. Adapter conformance,
 remaining facade contracts and integrated runtime/durability stages are still incomplete. Passing option validation alone does not establish a
 delivery guarantee or establish that a custom policy preserves durable work; the runtime must enforce both.
