@@ -742,21 +742,25 @@ internal sealed class LocalStreamCommitter<TState, TInput>
             Metadata = new Dictionary<string, string>(),
         };
 
-    /// <summary>Validates a policy for this durable atomic kernel.</summary>
+    /// <summary>Validates the atomicity and durability required by the operation policy.</summary>
     /// <param name="policy">The policy.</param>
     /// <exception cref="InvalidOperationException">The policy is not supported.</exception>
     private void ValidatePolicy(OperationPolicy policy)
     {
         ArgumentExceptionHelper.ThrowIfNull(policy);
         policy.Validate(_options.MinimumPriority, _options.MaximumPriority);
-        const LocalStoreCapabilities RequiredCapabilities = LocalStoreCapabilities.AtomicLocalCommit | LocalStoreCapabilities.DurableLocalCommit;
-        if (policy.Durability == OperationDurability.Durable
-            && (_options.Dependencies.Store.Capabilities & RequiredCapabilities) == RequiredCapabilities)
+        var requiredCapabilities = LocalStoreCapabilities.AtomicLocalCommit;
+        if (policy.Durability == OperationDurability.Durable)
+        {
+            requiredCapabilities |= LocalStoreCapabilities.DurableLocalCommit;
+        }
+
+        if ((_options.Dependencies.Store.Capabilities & requiredCapabilities) == requiredCapabilities)
         {
             return;
         }
 
-        throw new InvalidOperationException("Local stream commits require a durable operation policy and an atomic, durable local store.");
+        throw new InvalidOperationException("Local stream commits require atomic storage and the durability requested by the operation policy.");
     }
 
     /// <summary>Validates the store result before making state visible.</summary>

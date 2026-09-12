@@ -324,18 +324,20 @@ public sealed partial class LocalStreamCommitterTests
         await Assert.That(store.CommitCallCount).IsEqualTo(InitialCommitCallCount);
     }
 
-    /// <summary>Verifies durable publishing rejects volatile operation policies.</summary>
+    /// <summary>Verifies a durable store can also accept an explicitly volatile operation policy.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task CommitAsyncRejectsVolatilePolicy()
+    public async Task CommitAsyncAcceptsVolatilePolicyWithDurableStore()
     {
-        var committer = CreateCommitter(new());
+        var store = new ScriptedLocalStore();
+        var committer = await CreateRecoveredCommitterAsync(store);
         var policy = OperationPolicy.Default with { Durability = OperationDurability.Volatile };
 
-        var exception = await Assert.ThrowsExactlyAsync<InvalidOperationException>(
-            () => committer.CommitAsync(new MutableReading { Value = 1 }, policy, CancellationToken.None).AsTask());
+        var committed = await committer.CommitAsync(new MutableReading { Value = FirstReadingValue }, policy, CancellationToken.None);
 
-        await Assert.That(exception?.Message).Contains("durable");
+        await Assert.That(committed.Operation.Policy.Durability).IsEqualTo(OperationDurability.Volatile);
+        await Assert.That(store.CommitCallCount).IsEqualTo(1);
+        await Assert.That(committer.Current.State.Sum).IsEqualTo(FirstReadingValue);
     }
 
     /// <summary>Verifies malformed committer options fail during construction.</summary>
