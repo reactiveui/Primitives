@@ -212,6 +212,13 @@ public sealed partial class SqliteLocalCommitStoreTests
             transaction.Commit();
         }
 
+        using (var bound = new SqliteLocalCommitStore(database.Path))
+        {
+            Action initialize = () => bound.Initialize(new(StoreIdentity, SchemaVersion, false) { ClientId = FirstBindingClientId }, CancellationToken.None);
+            await Assert.That(initialize).ThrowsExactly<InvalidOperationException>();
+            await Assert.That(ReadUserVersion(database.Path)).IsEqualTo(SqliteStoreSchema.PreAuthoritativeLocalCommitSchemaVersion);
+        }
+
         using var store = CreateInitializedStore(database.Path);
         var recovery = store.RecoverStream(Stream, subscriptionId, CancellationToken.None);
         var duplicate = store.CommitLocalOperation(operation, snapshot, CancellationToken.None);

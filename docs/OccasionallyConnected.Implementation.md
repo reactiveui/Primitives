@@ -706,3 +706,23 @@ Conflict resolution retained the current Core APIs, SQLite registration, impleme
 - All 454 runtime TUnit tests pass in Release on net8/net9/net10/net11 with MTP-confirmed 100% matching package line
   and branch coverage (2587/2551/2551/2550 lines and 1220 branches). All eight library targets build without warnings
   or errors. The planner is ready for engine integration; it does not claim an implemented upload pipeline.
+
+### Stage 4: authoritative snapshots and client identity binding
+
+- Local snapshots now retain separate authoritative and optimistic payloads under the same revision and cursor.
+  An omitted authoritative mutation preserves the existing value; a recovered null remains unknown. Original duplicate
+  operation intent includes authoritative mutation presence and content, independently of the current snapshot.
+- SQLite schema six adds transactional sidecars and migrates historical schemas without inventing authoritative state.
+  Tests use an independent schema-five fixture and verify pending operations, inbox entries and leases survive migration.
+  A rejected first client binding on historical pending work rolls back the migration before a legacy reopen succeeds.
+- Both stores support ordinal client identity binding. A first binding requires a pristine partition; reopening an
+  existing binding with another client or without its identity fails. Empty subscription mappings remain compatible.
+  Root added an executed failing regression for malformed SQLite binding values before fixing their interpretation.
+- Logical admission includes authoritative payloads and client identities. Root verified an executed failing public
+  SQLite regression for a large Unicode event origin, then integrated its byte-accounting fix.
+- Root independently reviewed and corrected the implementation, retained existing compaction timestamp validation,
+  and removed remaining null-forgiving fixtures using public reflection or typed delegates without suppressions.
+- Release TUnit suites pass on net8/net9/net10/net11: Core 335, runtime 466, SQLite 244 tests per target. MTP confirms
+  100% matching package line and branch coverage: Core 891 lines/328 branches; runtime 2644/2608/2608/2607 lines and
+  1258 branches; SQLite 2820/2804/2804/2805 lines and 697 branches. All eight affected library targets build with
+  zero warnings and errors. These component checks do not establish complete client reconciliation or synchronization.
