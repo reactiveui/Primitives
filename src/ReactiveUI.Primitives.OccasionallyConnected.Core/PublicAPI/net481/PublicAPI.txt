@@ -337,6 +337,7 @@ public interface ISchemaRegistry
 public interface IServerStreamHub
 {
     System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.ServerSyncResult> ApplyOperationsAsync(ReactiveUI.Primitives.OccasionallyConnected.SyncBatch batch, ReactiveUI.Primitives.OccasionallyConnected.ClientIdentity client, System.Threading.CancellationToken cancellationToken) { }
+    System.Threading.Tasks.ValueTask AcknowledgeAsync(ReactiveUI.Primitives.OccasionallyConnected.ReceiveAcknowledgement acknowledgement, ReactiveUI.Primitives.OccasionallyConnected.ClientIdentity client, System.Threading.CancellationToken cancellationToken) { }
     System.Collections.Generic.IAsyncEnumerable<ReactiveUI.Primitives.OccasionallyConnected.RemoteEventBatch> SubscribeStreamAsync(ReactiveUI.Primitives.OccasionallyConnected.RemoteSubscribeRequest request, ReactiveUI.Primitives.OccasionallyConnected.ClientIdentity client, System.Threading.CancellationToken cancellationToken) { }
 }
 public static class IServerStreamHubExtensions
@@ -345,6 +346,8 @@ public static class IServerStreamHubExtensions
     {
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.ServerSyncResult> ApplyOperationsAsync(ReactiveUI.Primitives.OccasionallyConnected.SyncBatch batch, ReactiveUI.Primitives.OccasionallyConnected.ClientIdentity client) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask AcknowledgeAsync(ReactiveUI.Primitives.OccasionallyConnected.ReceiveAcknowledgement acknowledgement, ReactiveUI.Primitives.OccasionallyConnected.ClientIdentity client) { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public System.Collections.Generic.IAsyncEnumerable<ReactiveUI.Primitives.OccasionallyConnected.RemoteEventBatch> SubscribeStreamAsync(ReactiveUI.Primitives.OccasionallyConnected.RemoteSubscribeRequest request, ReactiveUI.Primitives.OccasionallyConnected.ClientIdentity client) { }
     }

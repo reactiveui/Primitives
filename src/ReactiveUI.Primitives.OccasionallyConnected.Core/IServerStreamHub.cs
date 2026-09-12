@@ -17,6 +17,21 @@ public interface IServerStreamHub
         ClientIdentity client,
         CancellationToken cancellationToken);
 
+    /// <summary>Persists a receive acknowledgement for an authorized client.</summary>
+    /// <param name="acknowledgement">The acknowledgement for a durably applied receive cursor.</param>
+    /// <param name="client">The authenticated client identity.</param>
+    /// <param name="cancellationToken">The token used to cancel acknowledgement persistence.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// Successful completion means the authorized acknowledgement was durably persisted, or an identical duplicate was
+    /// already persisted. Rejection or persistence failure faults the returned task. This contract alone makes no
+    /// capability claim.
+    /// </remarks>
+    ValueTask AcknowledgeAsync(
+        ReceiveAcknowledgement acknowledgement,
+        ClientIdentity client,
+        CancellationToken cancellationToken);
+
     /// <summary>Subscribes a client to remote stream batches.</summary>
     /// <param name="request">The remote subscription request.</param>
     /// <param name="client">The authenticated client identity.</param>
