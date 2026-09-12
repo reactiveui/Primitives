@@ -693,3 +693,16 @@ Conflict resolution retained the current Core APIs, SQLite registration, impleme
 - All 431 runtime TUnit tests pass in Release on net8/net9/net10/net11, with MTP-confirmed 100% matching package line
   and branch coverage (2553/2517/2517/2516 lines and 1192 branches). All eight library targets build without warnings
   or errors. Volatile publishing and full engine integration remain subsequent work.
+
+### Stage 3: bounded FIFO batch selection
+
+- Added a pure internal planner for the next ordered batch prefix. It applies the smaller local and negotiated count
+  and byte ceilings, includes caller-supplied encoded envelope costs, and uses subtraction to avoid overflow.
+- Partial batches wait for the caller-sampled monotonic dwell deadline. Full batches and prefixes blocked by the next
+  item's size flush immediately. An oversized head is reported without skipping it. Only a bounded prefix is inspected;
+  transport encoding, queue ownership, timers and in-flight coordination remain engine/transport responsibilities.
+- Root completed the draft after the initial agent stopped on analyzer errors. Five executed tests failed against the
+  compiling stub, then passed after implementation. Root added limit, sequence-gap and maximum-integer tests.
+- All 454 runtime TUnit tests pass in Release on net8/net9/net10/net11 with MTP-confirmed 100% matching package line
+  and branch coverage (2587/2551/2551/2550 lines and 1220 branches). All eight library targets build without warnings
+  or errors. The planner is ready for engine integration; it does not claim an implemented upload pipeline.
