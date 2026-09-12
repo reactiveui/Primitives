@@ -195,15 +195,18 @@ public sealed record PayloadEnvelope(
     ReadOnlyMemory<byte> Payload,
     string PayloadHash);
 
-public sealed record SyncOperation(
-    OperationId OperationId,
-    StreamId StreamId,
-    long ClientSequence,
-    DateTimeOffset TimestampUtc,
-    string? BaseVersion,
-    SyncOperationType Type,
-    PayloadEnvelope Payload,
-    IReadOnlyDictionary<string, string> Metadata);
+public sealed record SyncOperation
+{
+    public required OperationId OperationId { get; init; }
+    public required StreamId StreamId { get; init; }
+    public required long ClientSequence { get; init; }
+    public required DateTimeOffset TimestampUtc { get; init; }
+    public string? BaseVersion { get; init; }
+    public required SyncOperationType Type { get; init; }
+    public required PayloadEnvelope Payload { get; init; }
+    public OperationPolicy Policy { get; init; } = OperationPolicy.Default;
+    public IReadOnlyDictionary<string, string> Metadata { get; init; }
+}
 
 public sealed record RemoteEvent(
     Guid EventId,
@@ -222,6 +225,8 @@ public enum SyncOperationType
     Custom
 }
 ```
+
+The `SyncOperation` snippet shows the approved required-init API shape. The implementation defaults metadata to an empty owned dictionary and copies supplied metadata; `Policy` is persisted with the operation. Projection receives the decoded, validated `TInput` after schema upcasting and inbox filtering.
 
 `StreamId` MUST be non-empty, normalized to Unicode NFC, at most 256 UTF-8 bytes, and restricted by default to letters, digits, `/`, `.`, `_`, and `-`. It MUST NOT contain `..`, empty path segments, control characters, a leading slash, or a trailing slash. Adapters MUST treat it as data, never as a file path or SQL fragment.
 
@@ -382,7 +387,7 @@ public interface ILocalProjection<TState, in TInput>
 {
     TState InitialState { get; }
     TState ApplyLocal(TState state, TInput input, SyncOperation operation);
-    TState ApplyRemote(TState state, RemoteEvent remoteEvent);
+    TState ApplyRemote(TState state, TInput input, RemoteEvent remoteEvent);
     TState Reconcile(TState state, ConflictResolutionResult result);
 }
 
