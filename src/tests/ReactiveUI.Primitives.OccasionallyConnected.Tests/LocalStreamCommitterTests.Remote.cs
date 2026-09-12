@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Globalization;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.OccasionallyConnected;
 
@@ -441,7 +442,7 @@ public sealed partial class LocalStreamCommitterTests
     {
         var store = new ScriptedLocalStore();
         var committer = await CreateRecoveredCommitterAsync(store);
-        var batch = new RemoteEventBatch(Guid.NewGuid(), Stream, null, NextRemoteCursor, [null!]);
+        var batch = new RemoteEventBatch(Guid.NewGuid(), Stream, null, NextRemoteCursor, new RemoteEvent[1]);
 
         _ = await Assert.ThrowsExactlyAsync<InvalidOperationException>(
             () => committer.ApplyRemoteBatchAsync(batch, CancellationToken.None).AsTask());
@@ -486,7 +487,8 @@ public sealed partial class LocalStreamCommitterTests
     {
         var store = new ScriptedLocalStore();
         var committer = await CreateRecoveredCommitterAsync(store);
-        var remoteEvent = new RemoteEvent(Guid.NewGuid(), Stream, NextRemoteCursor, CommittedUtc, null, null!, new Dictionary<string, string>());
+        var constructor = typeof(RemoteEvent).GetConstructors().Single();
+        var remoteEvent = (RemoteEvent)constructor.Invoke([Guid.NewGuid(), Stream, NextRemoteCursor, CommittedUtc, null, null, new Dictionary<string, string>()]);
 
         _ = await Assert.ThrowsExactlyAsync<InvalidOperationException>(
             () => committer.ApplyRemoteBatchAsync(CreateRemoteBatch(null, NextRemoteCursor, [remoteEvent]), CancellationToken.None).AsTask());

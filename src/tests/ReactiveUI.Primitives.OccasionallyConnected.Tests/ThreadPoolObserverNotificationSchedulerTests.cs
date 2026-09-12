@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Concurrency;
 
@@ -18,7 +19,9 @@ public sealed class ThreadPoolObserverNotificationSchedulerTests
         var scheduler = new ThreadPoolObserverNotificationScheduler(static (_, _) => false);
 
         await Assert.That(() => scheduler.Schedule(new NoOpWorkItem())).ThrowsExactly<InvalidOperationException>();
-        await Assert.That(() => scheduler.Schedule(null!)).ThrowsExactly<ArgumentNullException>();
+        var schedule = typeof(ThreadPoolObserverNotificationScheduler).GetMethod(nameof(ThreadPoolObserverNotificationScheduler.Schedule));
+        ArgumentNullException.ThrowIfNull(schedule);
+        await Assert.That(() => schedule.Invoke(scheduler, BindingFlags.DoNotWrapExceptions, null, [null], null)).ThrowsExactly<ArgumentNullException>();
     }
 
     /// <summary>Verifies the thread pool scheduler invokes a queued work item through its callback.</summary>

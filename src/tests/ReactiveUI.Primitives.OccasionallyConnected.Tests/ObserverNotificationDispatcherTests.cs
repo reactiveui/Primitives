@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Concurrency;
 
@@ -486,7 +487,9 @@ public sealed class ObserverNotificationDispatcherTests
         await Assert.That(result).IsEqualTo(ObserverNotificationPublishResult.Queued);
         await Assert.That(stopped).IsEqualTo(ObserverNotificationPublishResult.Stopped);
         await Assert.That(observer.Error).IsSameReferenceAs(error);
-        await Assert.That(() => dispatcher.Fault(null!)).ThrowsExactly<ArgumentNullException>();
+        Func<Exception, ObserverNotificationPublishResult> fault = dispatcher.Fault;
+        var exception = Assert.ThrowsExactly<TargetInvocationException>(() => fault.DynamicInvoke([null]));
+        await Assert.That(exception.InnerException).IsTypeOf<ArgumentNullException>();
     }
 
     /// <summary>Verifies a subscription disposed during publication receives no notification.</summary>
