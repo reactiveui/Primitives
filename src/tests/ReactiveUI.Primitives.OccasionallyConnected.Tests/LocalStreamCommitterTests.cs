@@ -688,6 +688,12 @@ public sealed partial class LocalStreamCommitterTests
         public int CommitCallCount { get; private set; }
 
         /// <inheritdoc/>
+        public ValueTask<SubscriptionId> GetOrCreateSubscriptionIdAsync(
+            StreamId streamId,
+            SubscriptionId? preferredId,
+            CancellationToken cancellationToken) => throw new NotSupportedException();
+
+        /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask InitializeAsync(LocalStoreInitialization initialization, CancellationToken cancellationToken) =>
             ValueTask.CompletedTask;

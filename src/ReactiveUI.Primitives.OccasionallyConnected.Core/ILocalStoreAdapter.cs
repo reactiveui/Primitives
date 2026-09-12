@@ -16,6 +16,33 @@ public interface ILocalStoreAdapter : IAsyncDisposable
     /// <returns>A task representing the asynchronous operation.</returns>
     ValueTask InitializeAsync(LocalStoreInitialization initialization, CancellationToken cancellationToken);
 
+    /// <summary>Gets or creates the durable subscription identifier assigned to a stream.</summary>
+    /// <param name="streamId">The stream identifier.</param>
+    /// <param name="preferredId">
+    /// The preferred durable subscription identifier, or <see langword="null"/> to use the stored or generated
+    /// identifier.
+    /// </param>
+    /// <param name="cancellationToken">The token used to cancel identity lookup before persistence commits.</param>
+    /// <returns>The durable subscription identifier stored for the initialized store partition and stream.</returns>
+    /// <remarks>
+    /// The mapping is scoped by the initialized <see cref="LocalStoreInitialization.StoreIdentity"/> and
+    /// <paramref name="streamId"/>. If a mapping already exists, stores return it when
+    /// <paramref name="preferredId"/> is omitted or matches the stored identifier. If an existing mapping differs from
+    /// an explicit <paramref name="preferredId"/>, stores throw and leave the mapping unchanged. When no mapping
+    /// exists, stores persist <paramref name="preferredId"/> when supplied, otherwise persist one newly generated
+    /// <see cref="SubscriptionId"/>. Concurrent compatible calls must be linearizable and return the same committed
+    /// identifier. Concurrent incompatible calls use first committed write wins semantics; the losing explicit mismatch
+    /// throws. Successful initialization is required before lookup. Cancellation observed before commit leaves the
+    /// mapping unchanged by that call; it must not remove an existing mapping or one committed by another caller.
+    /// Cancellation requested after commit returns the committed identifier. Stores must reject a default <paramref name="streamId"/> and a
+    /// <paramref name="preferredId"/> whose <see cref="SubscriptionId.Value"/> is <see cref="Guid.Empty"/>. Tenant
+    /// hints must not be trusted for partitioning; the initialized store identity defines the partition.
+    /// </remarks>
+    ValueTask<SubscriptionId> GetOrCreateSubscriptionIdAsync(
+        StreamId streamId,
+        SubscriptionId? preferredId,
+        CancellationToken cancellationToken);
+
     /// <summary>Recovers a durable stream and its pending work.</summary>
     /// <param name="streamId">The stream identifier.</param>
     /// <param name="subscriptionId">The durable subscription identifier.</param>

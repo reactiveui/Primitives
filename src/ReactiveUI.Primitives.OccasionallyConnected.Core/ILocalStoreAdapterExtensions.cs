@@ -20,6 +20,19 @@ public static class ILocalStoreAdapterExtensions
         public ValueTask InitializeAsync(LocalStoreInitialization initialization) =>
             adapter.InitializeAsync(initialization, CancellationToken.None);
 
+        /// <summary>Gets or creates the durable subscription identifier assigned to a stream.</summary>
+        /// <param name="streamId">The stream identifier.</param>
+        /// <param name="preferredId">
+        /// The preferred durable subscription identifier, or <see langword="null"/> to use the stored or generated
+        /// identifier.
+        /// </param>
+        /// <returns>The durable subscription identifier stored for the initialized store partition and stream.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask<SubscriptionId> GetOrCreateSubscriptionIdAsync(
+            StreamId streamId,
+            SubscriptionId? preferredId) =>
+            adapter.GetOrCreateSubscriptionIdAsync(streamId, preferredId, CancellationToken.None);
+
         /// <summary>Recovers a durable stream and its pending work.</summary>
         /// <param name="streamId">The stream identifier.</param>
         /// <param name="subscriptionId">The durable subscription identifier.</param>
