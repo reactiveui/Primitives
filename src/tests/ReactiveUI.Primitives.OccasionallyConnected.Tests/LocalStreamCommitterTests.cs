@@ -4,6 +4,7 @@
 
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.OccasionallyConnected;
 
@@ -352,10 +353,16 @@ public sealed partial class LocalStreamCommitterTests
                 MinimumPriority = InvalidMinimumPriority,
                 MaximumPriority = InvalidMaximumPriority,
             })).ThrowsExactly<InvalidOperationException>();
-        await Assert.That(static () => CreateLocalCommitter(
-            CreateOptions(new(), new()) with { Contracts = null! })).ThrowsExactly<InvalidOperationException>();
-        await Assert.That(static () => CreateLocalCommitter(
-            CreateOptions(new(), new()) with { Dependencies = null! })).ThrowsExactly<InvalidOperationException>();
+        var optionsWithNullContracts = CreateOptions(new(), new()) with { };
+        var contracts = typeof(LocalStreamCommitterOptions<ReadingState, MutableReading>).GetProperty(nameof(LocalStreamCommitterOptions<,>.Contracts));
+        ArgumentNullException.ThrowIfNull(contracts);
+        contracts.SetValue(optionsWithNullContracts, null);
+        await Assert.That(() => CreateLocalCommitter(optionsWithNullContracts)).ThrowsExactly<InvalidOperationException>();
+        var optionsWithNullDependencies = CreateOptions(new(), new()) with { };
+        var dependencies = typeof(LocalStreamCommitterOptions<ReadingState, MutableReading>).GetProperty(nameof(LocalStreamCommitterOptions<,>.Dependencies));
+        ArgumentNullException.ThrowIfNull(dependencies);
+        dependencies.SetValue(optionsWithNullDependencies, null);
+        await Assert.That(() => CreateLocalCommitter(optionsWithNullDependencies)).ThrowsExactly<InvalidOperationException>();
         await Assert.That(static () => CreateLocalCommitter(
             CreateOptions(new(), new()) with
             {
@@ -366,11 +373,12 @@ public sealed partial class LocalStreamCommitterTests
             {
                 Contracts = CreateContracts() with { InputSchemaVersion = InitialSum },
             })).ThrowsExactly<InvalidOperationException>();
-        await Assert.That(static () => CreateLocalCommitter(
-            CreateOptions(new(), new()) with
-            {
-                Dependencies = CreateDependencies(new(), new(), null) with { Store = null! },
-            })).ThrowsExactly<InvalidOperationException>();
+        var dependenciesWithNullStore = CreateDependencies(new(), new(), null) with { };
+        var store = typeof(LocalStreamCommitterDependencies<ReadingState, MutableReading>).GetProperty(nameof(LocalStreamCommitterDependencies<,>.Store));
+        ArgumentNullException.ThrowIfNull(store);
+        store.SetValue(dependenciesWithNullStore, null);
+        await Assert.That(() => CreateLocalCommitter(
+            CreateOptions(new(), new()) with { Dependencies = dependenciesWithNullStore })).ThrowsExactly<InvalidOperationException>();
     }
 
     /// <summary>Creates a local committer.</summary>
@@ -804,7 +812,7 @@ public sealed partial class LocalStreamCommitterTests
             Recovery = new(Subscription, Recovery.ServerCursor, snapshot, pending, Recovery.DeadLetters, operation.ClientSequence + 1);
             _ = CancelAfterSuccessfulCommit?.CancelAsync();
             return ReturnNullCommitResult
-                ? null!
+                ? await default(ValueTask<LocalCommitResult>)
                 : new(
                 operation.OperationId,
                 operation.ClientSequence + ReceiptSequenceOffset,
@@ -837,7 +845,7 @@ public sealed partial class LocalStreamCommitterTests
             cancellationToken.ThrowIfCancellationRequested();
             if (ReturnNullUnappliedLookupResult)
             {
-                return ValueTask.FromResult<IReadOnlyList<Guid>>(null!);
+                return default;
             }
 
             if (UnappliedEventIdsOverride is not null)
@@ -899,7 +907,7 @@ public sealed partial class LocalStreamCommitterTests
                 CommittedUtc);
             Recovery = new(Subscription, batch.NextCursor, snapshot, Recovery.PendingOperations, Recovery.DeadLetters, Recovery.NextClientSequence);
             _ = CancelAfterSuccessfulRemoteApply?.CancelAsync();
-            return CreateRemoteReceipt(batch, snapshotMutation.ExpectedRevision);
+            return await CreateRemoteReceiptAsync(batch, snapshotMutation.ExpectedRevision);
         }
 
         /// <inheritdoc/>
@@ -947,10 +955,10 @@ public sealed partial class LocalStreamCommitterTests
         /// <param name="batch">The persisted batch.</param>
         /// <param name="expectedRevision">The preceding revision.</param>
         /// <returns>The configured adapter receipt.</returns>
-        private RemoteApplyResult CreateRemoteReceipt(RemoteEventBatch batch, long expectedRevision)
+        private async ValueTask<RemoteApplyResult> CreateRemoteReceiptAsync(RemoteEventBatch batch, long expectedRevision)
         {
             var receipt = ReturnNullRemoteApplyResult
-                ? null!
+                ? await default(ValueTask<RemoteApplyResult>)
                 : new RemoteApplyResult(
                     batch.NextCursor,
                     batch.Events.Count,

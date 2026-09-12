@@ -510,7 +510,7 @@ public sealed partial class JsonPayloadSerializerTests
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<PayloadEnvelope> UpcastAsync(PayloadEnvelope source, CancellationToken cancellationToken) =>
-            ValueTask.FromResult<PayloadEnvelope>(null!);
+            default;
     }
 
     /// <summary>Throws a schema exception when asked to upcast a reading.</summary>

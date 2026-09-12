@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 
@@ -148,7 +149,9 @@ public sealed partial class SchemaRegistryTests
     {
         var registry = new SchemaRegistry();
 
-        var exception = Assert.ThrowsExactly<ArgumentNullException>(() => registry.RegisterUpcaster(null!));
+        var registerUpcaster = typeof(SchemaRegistry).GetMethod(nameof(SchemaRegistry.RegisterUpcaster));
+        ArgumentNullException.ThrowIfNull(registerUpcaster);
+        var exception = Assert.ThrowsExactly<ArgumentNullException>(() => registerUpcaster.Invoke(registry, BindingFlags.DoNotWrapExceptions, null, [null], null));
 
         await Assert.That(exception.ParamName).IsEqualTo("upcaster");
     }
