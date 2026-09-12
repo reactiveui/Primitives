@@ -109,10 +109,10 @@ public sealed partial class LocalStreamCommitterTests
         await Assert.That(result.State.State.Sum).IsEqualTo(FirstReadingValue);
         await Assert.That(result.State.Revision).IsEqualTo(1);
         await Assert.That(committer.Current.State.Sum).IsEqualTo(FirstReadingValue);
-        await Assert.That(store.CommittedSnapshot!.State.ContractId).IsEqualTo(StateContract);
-        await Assert.That(store.CommittedSnapshot.State.SchemaVersion).IsEqualTo(StateSchemaVersion);
-        await Assert.That(store.CommittedSnapshot.FormatVersion).IsEqualTo(SnapshotFormatVersion);
-        await Assert.That(store.CommittedSnapshot.ExpectedRevision).IsEqualTo(0);
+        await Assert.That(store.CommittedSnapshot?.State.ContractId).IsEqualTo(StateContract);
+        await Assert.That(store.CommittedSnapshot?.State.SchemaVersion).IsEqualTo(StateSchemaVersion);
+        await Assert.That(store.CommittedSnapshot?.FormatVersion).IsEqualTo(SnapshotFormatVersion);
+        await Assert.That(store.CommittedSnapshot?.ExpectedRevision).IsEqualTo(0);
     }
 
     /// <summary>Verifies the default operation identifier source produces durable operation identifiers.</summary>
@@ -145,7 +145,7 @@ public sealed partial class LocalStreamCommitterTests
             var exception = await Assert.ThrowsExactlyAsync<InvalidOperationException>(
                 () => committer.CommitAsync(new MutableReading { Value = SecondReadingValue }, OperationPolicy.Default, CancellationToken.None).AsTask());
 
-            await Assert.That(exception!.Message).Contains("already in progress");
+            await Assert.That(exception?.Message).Contains("already in progress");
             await Assert.That(first.IsCompleted).IsFalse();
             await Assert.That(committer.Current.State.Sum).IsEqualTo(InitialSum);
         }
@@ -192,7 +192,7 @@ public sealed partial class LocalStreamCommitterTests
         var exception = await Assert.ThrowsExactlyAsync<OperationCanceledException>(
             () => committer.CommitAsync(new MutableReading { Value = CanceledCommitValue }, OperationPolicy.Default, source.Token).AsTask());
 
-        await Assert.That(exception!.CancellationToken).IsEqualTo(source.Token);
+        await Assert.That(exception?.CancellationToken).IsEqualTo(source.Token);
         await Assert.That(store.CommitCallCount).IsEqualTo(0);
         await Assert.That(committer.Current.State.Sum).IsEqualTo(InitialSum);
         await Assert.That(committer.Current.NextClientSequence).IsEqualTo(1);
@@ -229,7 +229,7 @@ public sealed partial class LocalStreamCommitterTests
         var exception = await Assert.ThrowsExactlyAsync<InvalidOperationException>(
             () => committer.CommitAsync(new MutableReading { Value = SecondReadingValue }, OperationPolicy.Default, CancellationToken.None).AsTask());
 
-        await Assert.That(exception!.Message).Contains("poisoned");
+        await Assert.That(exception?.Message).Contains("poisoned");
     }
 
     /// <summary>Verifies a null store receipt poisons the committer.</summary>
@@ -246,7 +246,7 @@ public sealed partial class LocalStreamCommitterTests
         var exception = await Assert.ThrowsExactlyAsync<InvalidOperationException>(
             () => committer.CommitAsync(new MutableReading { Value = SecondReadingValue }, OperationPolicy.Default, CancellationToken.None).AsTask());
 
-        await Assert.That(exception!.Message).Contains("poisoned");
+        await Assert.That(exception?.Message).Contains("poisoned");
     }
 
     /// <summary>Verifies default operation identifiers are rejected before persistence.</summary>
@@ -288,7 +288,7 @@ public sealed partial class LocalStreamCommitterTests
         var exception = await Assert.ThrowsExactlyAsync<InvalidOperationException>(
             () => committer.CommitAsync(new MutableReading { Value = FirstReadingValue }, OperationPolicy.Default, CancellationToken.None).AsTask());
 
-        await Assert.That(exception!.Message).Contains("RecoverAsync");
+        await Assert.That(exception?.Message).Contains("RecoverAsync");
     }
 
     /// <summary>Verifies sequence overflow is rejected before any store transaction.</summary>
@@ -334,7 +334,7 @@ public sealed partial class LocalStreamCommitterTests
         var exception = await Assert.ThrowsExactlyAsync<InvalidOperationException>(
             () => committer.CommitAsync(new MutableReading { Value = 1 }, policy, CancellationToken.None).AsTask());
 
-        await Assert.That(exception!.Message).Contains("durable");
+        await Assert.That(exception?.Message).Contains("durable");
     }
 
     /// <summary>Verifies malformed committer options fail during construction.</summary>

@@ -89,7 +89,7 @@ public sealed partial class BoundedAdmissionQueueTests
         var waiting = queue.EnqueueAsync(CancelledValue, OneByte, durable: true, control: false, BufferStrategy.Block, cancellation.Token);
         await cancellation.CancelAsync();
         var exception = await Assert.ThrowsExactlyAsync<TaskCanceledException>(() => waiting);
-        await Assert.That(exception!.CancellationToken).IsEqualTo(cancellation.Token);
+        await Assert.That(exception?.CancellationToken).IsEqualTo(cancellation.Token);
         await Assert.That(queue.Count).IsEqualTo(OneItem);
     }
 }
