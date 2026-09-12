@@ -656,3 +656,18 @@ Conflict resolution retained the current Core APIs, SQLite registration, impleme
 - All 18 HTTP TUnit tests pass in Release on net8/net9/net10/net11. MTP confirms 100% matching package line and branch
   coverage (11 lines and 12 branches). All eight library targets build without warnings or errors.
 - The authenticated HTTP adapter, bounded response decoding and receive protocol remain subsequent work.
+
+### Stage 5e: atomic process-local server commit journal
+
+- Added a bounded internal journal that atomically records canonical state, terminal per-operation replay results,
+  conflicts, events, cursor and revision. Tenant/stream/client keys isolate replay; stale revisions and duplicate races
+  reject the entire prepared plan before effects become visible. It does not advertise durable server idempotency.
+- Prepared collections are owned and count-bounded. Retained logical bytes include payloads, response metadata, write
+  stamps and the final cursor even after event rows expire. Per-call capture bounds do not claim global admission limits.
+- Root review required fixes for integer widening, capacity arithmetic and retained cursor accounting. Executed failing
+  regressions demonstrated overflow and undercounting before correction. Root added a blocked clock/compaction test
+  proving callbacks do not hold the gate and a later retention watermark governs the eventual commit.
+- All 81 Server TUnit tests pass in Release on net8/net9/net10/net11 with MTP-confirmed 100% matching package line and
+  branch coverage (747/743/743/743 lines and 300 branches). All eight library targets build without warnings or errors.
+- Authorization, concrete server effects/resolvers, durable journal storage, receive/ACK integration and global admission
+  remain subsequent work. This journal is explicitly process-local.
