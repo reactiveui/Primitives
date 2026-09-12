@@ -11,8 +11,11 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests;
 /// <summary>Tests for <see cref="SqliteLocalCommitStore"/>.</summary>
 public sealed partial class SqliteLocalCommitStoreTests
 {
-    /// <summary>The local commit schema version.</summary>
-    private const int SchemaVersion = 2;
+    /// <summary>The current local commit schema version.</summary>
+    private const int SchemaVersion = 3;
+
+    /// <summary>The legacy local commit schema version without a remote inbox.</summary>
+    private const int LegacyLocalCommitSchemaVersion = 2;
 
     /// <summary>The identity-only schema version.</summary>
     private const int IdentitySchemaVersion = 1;
@@ -64,6 +67,9 @@ public sealed partial class SqliteLocalCommitStoreTests
 
     /// <summary>The SQLite stream id parameter name.</summary>
     private const string StreamIdParameter = "$streamId";
+
+    /// <summary>The SQLite server cursor parameter name.</summary>
+    private const string ServerCursorParameter = "$serverCursor";
 
     /// <summary>A representative stream identity.</summary>
     private static readonly StreamId Stream = new("sensor/temperature");

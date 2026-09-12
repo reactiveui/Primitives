@@ -8,7 +8,7 @@ using ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests;
 
 /// <summary>Tests for <see cref="SqliteStoreSchema"/>.</summary>
-public sealed class SqliteStoreSchemaTests
+public sealed partial class SqliteStoreSchemaTests
 {
     /// <summary>Verifies local commit schema validation rejects stale metadata version drift.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
@@ -22,6 +22,22 @@ public sealed class SqliteStoreSchemaTests
         SetMetadataVersion(connection, transaction, SqliteStoreSchema.IdentitySchemaVersion);
 
         Action action = () => SqliteStoreSchema.ValidateLocalCommitSchema(connection, transaction);
+
+        await Assert.That(action).ThrowsExactly<InvalidOperationException>();
+    }
+
+    /// <summary>Verifies legacy local commit schema validation rejects current metadata version drift.</summary>
+    /// <returns>A task that represents the asynchronous test.</returns>
+    [Test]
+    public async Task WhenLegacyLocalCommitMetadataVersionDrifts_ThenValidationFailsClosed()
+    {
+        using var database = TempDatabase.Create();
+        await using var connection = OpenRawConnection(database.Path);
+        await using var transaction = connection.BeginTransaction();
+        CreateLegacyLocalCommitSchema(connection, transaction);
+        SetMetadataVersion(connection, transaction, SqliteStoreSchema.LocalCommitSchemaVersion);
+
+        Action action = () => SqliteStoreSchema.ValidateLegacyLocalCommitSchema(connection, transaction);
 
         await Assert.That(action).ThrowsExactly<InvalidOperationException>();
     }

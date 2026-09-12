@@ -60,7 +60,7 @@ internal sealed class SqliteLocalCommitStore : IDisposable
         }
     }
 
-    /// <summary>Initializes schema version two explicitly.</summary>
+    /// <summary>Initializes schema version three explicitly.</summary>
     /// <param name="initialization">The initialization requirements.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <exception cref="ArgumentNullException">The initialization requirements are null.</exception>
@@ -99,6 +99,10 @@ internal sealed class SqliteLocalCommitStore : IDisposable
             else if (userVersion == SqliteStoreSchema.IdentitySchemaVersion)
             {
                 SqliteStoreSchema.MigrateIdentityToLocalCommit(connection, transaction);
+            }
+            else if (userVersion == SqliteStoreSchema.LegacyLocalCommitSchemaVersion)
+            {
+                SqliteStoreSchema.MigrateLegacyLocalCommitToCurrent(connection, transaction);
             }
             else
             {
@@ -259,6 +263,105 @@ internal sealed class SqliteLocalCommitStore : IDisposable
             cancellationToken.ThrowIfCancellationRequested();
             transaction.Commit();
             return new(subscriptionId, stream.ServerCursor, snapshot, pending, [], stream.NextClientSequence);
+        }
+    }
+
+    /// <summary>Returns remote event identifiers that are not in the durable inbox for the stream.</summary>
+    /// <param name="streamId">The stream identifier.</param>
+    /// <param name="eventIds">The candidate remote event identifiers.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The unapplied event identifiers in candidate order.</returns>
+    /// <exception cref="ArgumentException">The stream or event identifiers are invalid.</exception>
+    /// <exception cref="InvalidOperationException">The store has not been initialized or stored inbox data is invalid.</exception>
+    /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
+    /// <exception cref="OperationCanceledException">The operation is canceled before lookup completes.</exception>
+    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    internal IReadOnlyList<Guid> GetUnappliedEventIds(
+        StreamId streamId,
+        IReadOnlyList<Guid> eventIds,
+        CancellationToken cancellationToken)
+    {
+        SqliteLocalCommitValidation.ValidateInboxLookupInput(streamId, eventIds);
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (_gate)
+        {
+            ThrowIfDisposed();
+            var storeIdentity = GetInitializedStoreIdentity();
+            cancellationToken.ThrowIfCancellationRequested();
+            using var connection = SqliteLocalCommitConnection.OpenConnection(_databasePath);
+            SqliteLocalCommitConnection.ConfigureLockPolling(connection);
+            SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+            using var transaction = connection.BeginTransaction(IsolationLevel.Serializable, deferred: true);
+            List<Guid> unapplied = [with(capacity: eventIds.Count)];
+            for (var index = 0; index < eventIds.Count; index++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var eventId = eventIds[index];
+                if (!SqliteLocalCommitSql.IsInboxEventApplied(connection, transaction, storeIdentity, streamId, eventId))
+                {
+                    unapplied.Add(eventId);
+                }
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            transaction.Commit();
+            return unapplied;
+        }
+    }
+
+    /// <summary>Atomically applies a remote batch, records inbox identifiers, advances the cursor, and stores a snapshot.</summary>
+    /// <param name="batch">The remote event batch.</param>
+    /// <param name="snapshotMutation">The snapshot mutation.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The remote apply result.</returns>
+    /// <exception cref="ArgumentException">The batch or mutation is invalid.</exception>
+    /// <exception cref="InvalidOperationException">The store has not been initialized or the durable stream state rejects the apply.</exception>
+    /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
+    /// <exception cref="OperationCanceledException">The operation is canceled before the transaction commits.</exception>
+    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    internal RemoteApplyResult ApplyRemoteBatch(
+        RemoteEventBatch batch,
+        SnapshotMutation snapshotMutation,
+        CancellationToken cancellationToken)
+    {
+        SqliteLocalCommitValidation.ValidateRemoteApplyInput(batch, snapshotMutation);
+        cancellationToken.ThrowIfCancellationRequested();
+        var committedAtUtc = _timeProvider.GetUtcNow();
+        lock (_gate)
+        {
+            ThrowIfDisposed();
+            var storeIdentity = GetInitializedStoreIdentity();
+            cancellationToken.ThrowIfCancellationRequested();
+            using var connection = SqliteLocalCommitConnection.OpenConnection(_databasePath);
+            SqliteLocalCommitConnection.ConfigureLockPolling(connection);
+            SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+            using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
+            var subscriptionId = SqliteLocalCommitSql.SelectSubscriptionId(connection, transaction, storeIdentity, batch.StreamId);
+            SqliteLocalCommitSql.EnsureStreamRow(connection, transaction, storeIdentity, batch.StreamId, subscriptionId);
+            var stream = SqliteLocalCommitSql.ReadStreamState(connection, transaction, storeIdentity, batch.StreamId);
+            if (!string.Equals(stream.ServerCursor, batch.PreviousCursor, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException("The SQLite stream cursor does not match the remote batch previous cursor.");
+            }
+
+            var currentRevision = SqliteLocalCommitSql.ReadSnapshotRevision(connection, transaction, storeIdentity, batch.StreamId);
+            if (currentRevision != snapshotMutation.ExpectedRevision)
+            {
+                throw new InvalidOperationException("The snapshot revision does not match the expected revision.");
+            }
+
+            var nextRevision = snapshotMutation.ExpectedRevision + 1;
+            for (var index = 0; index < batch.Events.Count; index++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                SqliteLocalCommitSql.InsertInboxEvent(connection, transaction, storeIdentity, batch.Events[index], committedAtUtc);
+            }
+
+            SqliteLocalCommitSql.UpsertSnapshot(connection, transaction, storeIdentity, snapshotMutation, nextRevision, batch.NextCursor, committedAtUtc);
+            SqliteLocalCommitSql.UpdateServerCursor(connection, transaction, storeIdentity, batch.StreamId, batch.PreviousCursor, batch.NextCursor);
+            cancellationToken.ThrowIfCancellationRequested();
+            transaction.Commit();
+            return new(batch.NextCursor, batch.Events.Count, 0, nextRevision);
         }
     }
 
