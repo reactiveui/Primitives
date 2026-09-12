@@ -12,4 +12,8 @@ namespace ReactiveUI.Primitives.OccasionallyConnected;
 public sealed record LocalStoreInitialization(
     string StoreIdentity,
     int RequiredSchemaVersion,
-    bool RequireAuthenticatedEncryptionAtRest);
+    bool RequireAuthenticatedEncryptionAtRest)
+{
+    /// <summary>Gets the optional client identity bound to this local store partition.</summary>
+    public string? ClientId { get; init; }
+}

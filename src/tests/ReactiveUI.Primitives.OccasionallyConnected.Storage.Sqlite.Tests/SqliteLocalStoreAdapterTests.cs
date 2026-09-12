@@ -102,6 +102,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
         await Assert.That((adapter.Capabilities & LocalStoreCapabilities.AtomicRemoteApply) != 0).IsTrue();
         await Assert.That((adapter.Capabilities & LocalStoreCapabilities.DurableInbox) != 0).IsTrue();
         await Assert.That((adapter.Capabilities & LocalStoreCapabilities.LeasedOutbox) != 0).IsTrue();
+        await Assert.That((adapter.Capabilities & LocalStoreCapabilities.ClientIdentityBinding) != 0).IsTrue();
         await Assert.That((adapter.Capabilities & LocalStoreCapabilities.MultiProcessCoordination) != 0).IsFalse();
         await Assert.That((adapter.Capabilities & LocalStoreCapabilities.AuthenticatedEncryptionAtRest) != 0).IsFalse();
         await Assert.That(invalidCount).ThrowsExactly<ArgumentOutOfRangeException>();

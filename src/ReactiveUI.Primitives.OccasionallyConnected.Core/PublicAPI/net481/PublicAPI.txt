@@ -427,11 +427,13 @@ public enum LocalStoreCapabilities
     MultiProcessCoordination = 16,
     AuthenticatedEncryptionAtRest = 32,
     DurableLocalCommit = 64,
+    ClientIdentityBinding = 128,
 }
 [System.Diagnostics.DebuggerDisplay("{StoreIdentity,nq}")]
 public record LocalStoreInitialization : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.LocalStoreInitialization>
 {
     public LocalStoreInitialization(string StoreIdentity, int RequiredSchemaVersion, bool RequireAuthenticatedEncryptionAtRest) { }
+    public string? ClientId { get; init; }
     public bool RequireAuthenticatedEncryptionAtRest { get; init; }
     public int RequiredSchemaVersion { get; init; }
     public string StoreIdentity { get; init; }

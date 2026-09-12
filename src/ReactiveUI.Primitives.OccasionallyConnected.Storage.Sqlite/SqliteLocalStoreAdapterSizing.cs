@@ -65,7 +65,8 @@ internal sealed class SqliteLocalStoreAdapterSizing
     internal long InitializationBytes(LocalStoreInitialization initialization)
     {
         ArgumentExceptionHelper.ThrowIfNull(initialization);
-        return Add(ObjectHeaderBytes, Add(StringBytes(initialization.StoreIdentity), IntBytes + NullableMarkerBytes));
+        var bytes = Add(ObjectHeaderBytes, Add(StringBytes(initialization.StoreIdentity), IntBytes + NullableMarkerBytes));
+        return Add(bytes, StringBytes(initialization.ClientId));
     }
 
     /// <summary>Computes retained input bytes for subscription lookup.</summary>
