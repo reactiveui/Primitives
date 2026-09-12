@@ -48,7 +48,6 @@ public partial class SignalOperatorMixinsTests
     /// <summary>The number of threads that rendezvous before the disposal race starts.</summary>
     private const int RacingThreadCount = 2;
 
-    /// <summary>The completion guard for asynchronously scheduled enumeration on instrumented CI hosts.</summary>
     /// <summary>A fixed deterministic timestamp used in place of the current time.</summary>
     private static readonly DateTimeOffset FixedTimestamp = new(2024, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
