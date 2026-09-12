@@ -14,9 +14,6 @@ internal static class SqliteClientIdentityBinding
     /// <summary>The maximum client identity length in UTF-16 code units.</summary>
     private const int MaximumClientIdLength = 256;
 
-    /// <summary>The first valid client sequence.</summary>
-    private const int FirstClientSequence = 1;
-
     /// <summary>The hex characters needed for one UTF-16 code unit.</summary>
     private const int HexCharactersPerUtf16CodeUnit = 4;
 
@@ -117,7 +114,7 @@ internal static class SqliteClientIdentityBinding
     }
 #endif
 
-    /// <summary>Creates a collision-free metadata key; schema 6 integration must make schema 5 readers reject this key.</summary>
+    /// <summary>Creates a collision-free metadata key within the versioned local store schema.</summary>
     /// <param name="storeIdentity">The store identity partition.</param>
     /// <returns>The metadata key.</returns>
     private static string MetadataKeyForStoreIdentity(string storeIdentity)
@@ -137,13 +134,19 @@ internal static class SqliteClientIdentityBinding
     /// <param name="transaction">The current transaction.</param>
     /// <param name="key">The metadata key.</param>
     /// <returns>The existing binding, if one exists.</returns>
+    /// <exception cref="InvalidOperationException">The stored binding has an invalid SQLite value type.</exception>
     private static string? SelectBinding(SqliteConnection connection, SqliteTransaction transaction, string key)
     {
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = "SELECT value FROM oc_metadata WHERE key = $key;";
         _ = command.Parameters.AddWithValue("$key", key);
-        return command.ExecuteScalar() is string value ? value : null;
+        return command.ExecuteScalar() switch
+        {
+            null => null,
+            string value => value,
+            _ => throw new InvalidOperationException("The SQLite client identity binding is not text."),
+        };
     }
 
     /// <summary>Inserts a client identity binding.</summary>
@@ -178,11 +181,13 @@ internal static class SqliteClientIdentityBinding
                 (SELECT COUNT(*) FROM oc_inbox WHERE store_identity = $storeIdentity) +
                 (SELECT COUNT(*) FROM oc_outbox_leases WHERE store_identity = $storeIdentity) +
                 (SELECT COUNT(*) FROM oc_outbox_operation_states WHERE store_identity = $storeIdentity) +
+                (SELECT COUNT(*) FROM oc_snapshot_authoritative_states WHERE store_identity = $storeIdentity) +
+                (SELECT COUNT(*) FROM oc_outbox_authoritative_mutations WHERE store_identity = $storeIdentity) +
                 (SELECT COUNT(*) FROM oc_streams
                     WHERE store_identity = $storeIdentity
                     AND (next_client_sequence <> 1 OR server_cursor IS NOT NULL));
             """;
         _ = command.Parameters.AddWithValue("$storeIdentity", storeIdentity);
-        return command.ExecuteScalar() is long count && count != 0;
+        return Convert.ToInt64(command.ExecuteScalar(), CultureInfo.InvariantCulture) != 0;
     }
 }

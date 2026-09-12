@@ -139,6 +139,41 @@ public sealed partial class InMemoryLocalStoreAdapterTests
         await Assert.That(await store.GetOrCreateSubscriptionIdAsync(Stream, null, CancellationToken.None)).IsEqualTo(subscription);
     }
 
+    /// <summary>Verifies compaction cannot make existing local state eligible for reassignment.</summary>
+    /// <returns>The asynchronous test.</returns>
+    [Test]
+    public async Task CompactedUnboundStateRejectsFirstClientBinding()
+    {
+        var clock = new ManualTimeProvider(DateTimeOffset.UnixEpoch);
+        await using var store = await CreateInitializedStoreAsync(clock);
+        var operation = await CommitOperationAsync(store, Stream, FirstClientSequence, OperationPayloadText);
+        await SetServerResultAsync(store, operation, OperationResultKind.Accepted);
+        clock.Advance(TimeSpan.FromDays(CompactionAdvanceDays));
+        var compacted = await store.CompactAsync(new(Stream, clock.GetUtcNow(), 0), CancellationToken.None);
+        await Assert.That(compacted.RecordsRemoved).IsEqualTo(1);
+        Func<Task> bind = () => store.InitializeAsync(new(StoreIdentity, SchemaVersion, false) { ClientId = ClientId }, CancellationToken.None).AsTask();
+        await Assert.That(bind).ThrowsExactly<InvalidOperationException>();
+        var subscription = await store.GetOrCreateSubscriptionIdAsync(Stream, null, CancellationToken.None);
+        var recovery = await store.RecoverStreamAsync(Stream, subscription, CancellationToken.None);
+        await Assert.That(recovery.NextClientSequence).IsEqualTo(SecondClientSequence);
+        await Assert.That(recovery.Snapshot).IsNotNull();
+    }
+
+    /// <summary>Verifies a receive-only checkpoint is retained as prior client history.</summary>
+    /// <returns>The asynchronous test.</returns>
+    [Test]
+    public async Task ReceiveOnlyCheckpointRejectsFirstClientBinding()
+    {
+        await using var store = await CreateInitializedStoreAsync();
+        var subscription = await store.GetOrCreateSubscriptionIdAsync(Stream, null, CancellationToken.None);
+        _ = await store.ApplyRemoteBatchAsync(CreateRemoteBatch(null, RemoteCursor, []), CreateSnapshotMutation(expectedRevision: 0), CancellationToken.None);
+        Func<Task> bind = () => store.InitializeAsync(new(StoreIdentity, SchemaVersion, false) { ClientId = ClientId }, CancellationToken.None).AsTask();
+        await Assert.That(bind).ThrowsExactly<InvalidOperationException>();
+        var recovery = await store.RecoverStreamAsync(Stream, subscription, CancellationToken.None);
+        await Assert.That(recovery.ServerCursor).IsEqualTo(RemoteCursor);
+        await Assert.That(recovery.NextClientSequence).IsEqualTo(FirstClientSequence);
+    }
+
     /// <summary>Verifies malformed and oversized client identities fail before the store is initialized.</summary>
     /// <returns>The asynchronous test.</returns>
     [Test]

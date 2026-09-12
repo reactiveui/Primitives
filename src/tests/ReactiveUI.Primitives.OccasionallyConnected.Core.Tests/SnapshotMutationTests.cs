@@ -26,7 +26,7 @@ public sealed class SnapshotMutationTests
         await Assert.That(mutation.FormatVersion).IsEqualTo(1);
         await Assert.That(mutation.ExpectedRevision).IsEqualTo(ExpectedRevision);
         await Assert.That(mutation.AuthoritativeState).IsNull();
-        var confirmed = new PayloadEnvelope("reading", 1, "application/json", new byte[] { 1 }, "confirmed");
+        var confirmed = new PayloadEnvelope("reading", 1, "application/json", ReadOnlyMemory<byte>.Empty, "confirmed");
         var updated = mutation with { AuthoritativeState = confirmed };
         await Assert.That(updated.AuthoritativeState).IsSameReferenceAs(confirmed);
         await Assert.That(updated.State).IsSameReferenceAs(payload);

@@ -425,13 +425,18 @@ public sealed class SqliteSubscriptionIdentityStoreTests
 
     /// <summary>Verifies a null store identity is rejected by validation instead of leaking a null reference failure.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
+    /// <exception cref="InvalidOperationException">The initialization store identity property was not found.</exception>
     [Test]
     public async Task WhenStoreIdentityIsNull_ThenInitializeThrowsArgumentNullException()
     {
         using var database = TempDatabase.Create();
         using var store = new SqliteSubscriptionIdentityStore(database.Path);
 
-        Action action = () => store.Initialize(new(null!, SchemaVersion, false), CancellationToken.None);
+        var initialization = new LocalStoreInitialization(StoreIdentity, SchemaVersion, false);
+        var identity = typeof(LocalStoreInitialization).GetProperty(nameof(LocalStoreInitialization.StoreIdentity))
+            ?? throw new InvalidOperationException("The initialization store identity property was not found.");
+        identity.SetValue(initialization, null);
+        Action action = () => store.Initialize(initialization, CancellationToken.None);
 
         await Assert.That(action).ThrowsExactly<ArgumentNullException>();
         await Assert.That(File.Exists(database.Path)).IsFalse();
