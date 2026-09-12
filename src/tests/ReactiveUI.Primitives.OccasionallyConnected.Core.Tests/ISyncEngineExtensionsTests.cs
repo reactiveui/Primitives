@@ -15,7 +15,7 @@ public sealed class ISyncEngineExtensionsTests
     private const int ClientSequence = 1;
 
     /// <summary>The expected recorded token count.</summary>
-    private const int TokenCount = 4;
+    private const int TokenCount = 5;
 
     /// <summary>Verifies engine convenience overloads forward their arguments and cancellation token exactly once.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
@@ -35,11 +35,14 @@ public sealed class ISyncEngineExtensionsTests
             Metadata = new Dictionary<string, string>(),
         };
         var receipt = await engine.EnqueueOperationAsync(operation);
+        var status = await engine.GetOperationStatusAsync(operation.OperationId);
         await engine.StartAsync();
         await engine.TriggerSyncAsync();
         await engine.StopAsync();
         await Assert.That(receipt.OperationId).IsEqualTo(operation.OperationId);
+        await Assert.That(status).IsNull();
         await Assert.That(engine.Operation).IsSameReferenceAs(operation);
+        await Assert.That(engine.StatusOperationId).IsEqualTo(operation.OperationId);
         await Assert.That(engine.EnqueueCalls).IsEqualTo(1);
         await Assert.That(engine.StartCalls).IsEqualTo(1);
         await Assert.That(engine.TriggerCalls).IsEqualTo(1);
@@ -64,6 +67,43 @@ public sealed class ISyncEngineExtensionsTests
         await Assert.That(engine.StartCalls).IsEqualTo(1);
     }
 
+    /// <summary>Verifies the status overload preserves an incomplete engine value task.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task GetOperationStatusAsyncPreservesIncompleteEngineValueTask()
+    {
+        var completion = new TaskCompletionSource<SyncOperationStatus?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var operationId = OperationId.New();
+        var engine = new Engine { StatusTask = completion.Task };
+
+        var status = engine.GetOperationStatusAsync(operationId);
+
+        await Assert.That(status.IsCompleted).IsFalse();
+        await Assert.That(engine.GetStatusCalls).IsEqualTo(1);
+        await Assert.That(engine.StatusOperationId).IsEqualTo(operationId);
+        await Assert.That(engine.Tokens).Count().IsEqualTo(1);
+        await Assert.That(engine.Tokens[0]).IsEqualTo(CancellationToken.None);
+
+        var persisted = new SyncOperationStatus(operationId, new("orders"), SyncOperationState.Synchronized, 1, DateTimeOffset.UnixEpoch, null);
+        completion.SetResult(persisted);
+        await Assert.That(await status).IsSameReferenceAs(persisted);
+    }
+
+    /// <summary>Verifies the status overload propagates the original engine failure.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task GetOperationStatusAsyncPropagatesEngineFailure()
+    {
+        var error = new InvalidOperationException("failure");
+        var engine = new Engine { StatusError = error };
+        Func<Task> action = async () => await engine.GetOperationStatusAsync(OperationId.New());
+
+        var thrown = await Assert.That(action).ThrowsExactly<InvalidOperationException>();
+
+        await Assert.That(thrown).IsSameReferenceAs(error);
+        await Assert.That(engine.GetStatusCalls).IsEqualTo(1);
+    }
+
     /// <summary>Records synchronization engine calls.</summary>
     private sealed class Engine : ISyncEngine
     {
@@ -82,11 +122,23 @@ public sealed class ISyncEngineExtensionsTests
         /// <summary>Gets the trigger call count.</summary>
         public int TriggerCalls { get; private set; }
 
+        /// <summary>Gets the status lookup call count.</summary>
+        public int GetStatusCalls { get; private set; }
+
         /// <summary>Gets the enqueued operation.</summary>
         public SyncOperation? Operation { get; private set; }
 
+        /// <summary>Gets the operation identifier supplied to status lookup.</summary>
+        public OperationId StatusOperationId { get; private set; }
+
         /// <summary>Gets the exception to throw from start.</summary>
         public Exception? Error { get; init; }
+
+        /// <summary>Gets the exception to throw from status lookup.</summary>
+        public Exception? StatusError { get; init; }
+
+        /// <summary>Gets the task used to complete status lookup.</summary>
+        public Task<SyncOperationStatus?>? StatusTask { get; init; }
 
         /// <inheritdoc />
         public IObservable<SyncState> SyncStates => throw new NotSupportedException();
@@ -111,6 +163,22 @@ public sealed class ISyncEngineExtensionsTests
                     operation.ClientSequence,
                     SyncOperationState.SavedLocally,
                     DateTimeOffset.UnixEpoch));
+        }
+
+        /// <inheritdoc />
+        public ValueTask<SyncOperationStatus?> GetOperationStatusAsync(
+            OperationId operationId,
+            CancellationToken cancellationToken)
+        {
+            GetStatusCalls++;
+            StatusOperationId = operationId;
+            Tokens.Add(cancellationToken);
+            if (StatusError is not null)
+            {
+                return ValueTask.FromException<SyncOperationStatus?>(StatusError);
+            }
+
+            return StatusTask is not null ? new(StatusTask) : new((SyncOperationStatus?)null);
         }
 
         /// <inheritdoc />

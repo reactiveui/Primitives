@@ -355,6 +355,7 @@ public interface ISyncEngine : System.IAsyncDisposable
     System.IObservable<ReactiveUI.Primitives.OccasionallyConnected.SyncOperationStatus> OperationStates { get; }
     System.IObservable<ReactiveUI.Primitives.OccasionallyConnected.SyncState> SyncStates { get; }
     System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.PublishReceipt> EnqueueOperationAsync(ReactiveUI.Primitives.OccasionallyConnected.SyncOperation operation, System.Threading.CancellationToken cancellationToken) { }
+    System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.SyncOperationStatus?> GetOperationStatusAsync(ReactiveUI.Primitives.OccasionallyConnected.OperationId operationId, System.Threading.CancellationToken cancellationToken) { }
     System.Threading.Tasks.ValueTask StartAsync(System.Threading.CancellationToken cancellationToken) { }
     System.Threading.Tasks.ValueTask StopAsync(System.Threading.CancellationToken cancellationToken) { }
     System.Threading.Tasks.ValueTask TriggerSyncAsync(System.Threading.CancellationToken cancellationToken) { }
@@ -365,6 +366,8 @@ public static class ISyncEngineExtensions
     {
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.PublishReceipt> EnqueueOperationAsync(ReactiveUI.Primitives.OccasionallyConnected.SyncOperation operation) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.SyncOperationStatus?> GetOperationStatusAsync(ReactiveUI.Primitives.OccasionallyConnected.OperationId operationId) { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public System.Threading.Tasks.ValueTask StartAsync() { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
