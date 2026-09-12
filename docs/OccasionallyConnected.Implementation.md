@@ -595,3 +595,13 @@ Conflict resolution retained the current Core APIs, SQLite registration, impleme
 - This crash test covers an acknowledged receipt followed by process termination. The remaining crash-point matrix,
   disk-full and corruption cases, encryption, process ownership and engine integration remain tracked work. Logical byte
   accounting does not measure exact managed heap consumption or physical SQLite file size.
+
+### Stage 5b: server receive acknowledgement contract
+
+- Added explicit-cancellation and convenience acknowledgement overloads to the server hub contract. Successful completion
+  means an authorized acknowledgement was persisted or an identical duplicate was already persisted; failures propagate.
+- Root reviewed the API and strengthened tests for deferred completion, immediate and deferred failure, cancellation
+  identity, exact arguments and single invocation. The extension preserves the hub's asynchronous operation.
+- All 325 Core TUnit tests pass on each modern target with MTP-confirmed 100% line and branch coverage: 875 lines and
+  318 branches throughout. All eight Core library targets build with zero warnings and errors.
+- This stage defines the server boundary. Durable server acknowledgement storage and transport integration remain work.

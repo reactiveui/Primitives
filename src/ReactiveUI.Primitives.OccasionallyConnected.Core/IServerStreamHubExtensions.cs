@@ -21,6 +21,14 @@ public static class IServerStreamHubExtensions
         public ValueTask<ServerSyncResult> ApplyOperationsAsync(SyncBatch batch, ClientIdentity client) =>
             hub.ApplyOperationsAsync(batch, client, CancellationToken.None);
 
+        /// <summary>Persists a receive acknowledgement.</summary>
+        /// <param name="acknowledgement">The acknowledgement for a durably applied receive cursor.</param>
+        /// <param name="client">The client identity.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask AcknowledgeAsync(ReceiveAcknowledgement acknowledgement, ClientIdentity client) =>
+            hub.AcknowledgeAsync(acknowledgement, client, CancellationToken.None);
+
         /// <summary>Subscribes a client to remote stream batches.</summary>
         /// <param name="request">The remote subscription request.</param>
         /// <param name="client">The client identity.</param>
