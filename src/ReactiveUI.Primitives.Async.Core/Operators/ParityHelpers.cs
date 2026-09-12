@@ -354,6 +354,10 @@ public static partial class SignalAsyncExtensions
             var allSources = new IObservableAsync<T>[sources.Length + 1];
             allSources[0] = source;
             sources.CopyTo(allSources, 1);
+#if NET11_0_OR_GREATER
+            // The coordinator supplies its reusable array without copying it.
+            return new SyncLatestEnumerableSignal<T, T>(allSources, static values => ((ReadOnlySpan<T>)(T[])values).Min());
+#else
             return new SyncLatestEnumerableSignal<T, T>(allSources, static values =>
             {
                 var min = values[0];
@@ -367,6 +371,7 @@ public static partial class SignalAsyncExtensions
 
                 return min;
             });
+#endif
         }
 
         /// <summary>Returns the maximum of the latest values from the supplied source sequences.</summary>
@@ -380,6 +385,10 @@ public static partial class SignalAsyncExtensions
             var allSources = new IObservableAsync<T>[sources.Length + 1];
             allSources[0] = source;
             sources.CopyTo(allSources, 1);
+#if NET11_0_OR_GREATER
+            // The coordinator supplies its reusable array without copying it.
+            return new SyncLatestEnumerableSignal<T, T>(allSources, static values => ((ReadOnlySpan<T>)(T[])values).Max());
+#else
             return new SyncLatestEnumerableSignal<T, T>(allSources, static values =>
             {
                 var max = values[0];
@@ -393,6 +402,7 @@ public static partial class SignalAsyncExtensions
 
                 return max;
             });
+#endif
         }
     }
 

@@ -6,7 +6,6 @@
     <TargetFrameworks>$(LibraryTargetFrameworks)</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <LangVersion>preview</LangVersion>
     <PackageDescription>ReactiveUI.Primitives.Async recompiled against System.Reactive's Unit and IScheduler for seamless interop with System.Reactive consumers.</PackageDescription>
   </PropertyGroup>
 
