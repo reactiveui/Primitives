@@ -41,6 +41,19 @@ public sealed class JsonPayloadSerializer : ReactiveUI.Primitives.OccasionallyCo
     public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope> SerializeAsync<T>(string contractId, int schemaVersion, T value, System.Threading.CancellationToken cancellationToken) { }
     public static string ComputePayloadHash(System.ReadOnlySpan<byte> payload) { }
 }
+public static class OccasionallyConnectedExtensions
+{
+    extension(ReactiveUI.Primitives.OccasionallyConnected.ISyncEngine engine)
+    {
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask AwaitSynchronizedAsync(ReactiveUI.Primitives.OccasionallyConnected.OperationId operationId, System.TimeSpan timeout) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask AwaitSynchronizedAsync(ReactiveUI.Primitives.OccasionallyConnected.OperationId operationId, System.TimeSpan timeout, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask AwaitSynchronizedAsync(ReactiveUI.Primitives.OccasionallyConnected.OperationId operationId, System.TimeSpan timeout, System.TimeProvider timeProvider) { }
+        public System.Threading.Tasks.ValueTask AwaitSynchronizedAsync(ReactiveUI.Primitives.OccasionallyConnected.OperationId operationId, System.TimeSpan timeout, System.TimeProvider timeProvider, System.Threading.CancellationToken cancellationToken) { }
+    }
+}
 [System.Diagnostics.DebuggerDisplay("MinimumDelay = {_options.MinimumDelay}, MaximumDelay = {_options.MaximumDelay}")]
 public sealed class RetryPolicy : ReactiveUI.Primitives.OccasionallyConnected.IRetryPolicy
 {
