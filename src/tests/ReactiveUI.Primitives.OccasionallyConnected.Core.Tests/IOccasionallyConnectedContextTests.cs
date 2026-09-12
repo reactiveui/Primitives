@@ -170,6 +170,12 @@ public sealed class IOccasionallyConnectedContextTests
 
         /// <inheritdoc />
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask<SyncOperationStatus?> GetOperationStatusAsync(
+            OperationId operationId,
+            CancellationToken cancellationToken) => new((SyncOperationStatus?)null);
+
+        /// <inheritdoc />
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask StartAsync(CancellationToken cancellationToken) => ValueTask.CompletedTask;
 
         /// <inheritdoc />

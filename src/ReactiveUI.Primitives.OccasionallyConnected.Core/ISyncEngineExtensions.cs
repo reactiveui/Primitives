@@ -20,6 +20,13 @@ public static class ISyncEngineExtensions
         public ValueTask<PublishReceipt> EnqueueOperationAsync(SyncOperation operation) =>
             engine.EnqueueOperationAsync(operation, CancellationToken.None);
 
+        /// <summary>Gets the latest durable status recorded for an operation.</summary>
+        /// <param name="operationId">The operation identifier.</param>
+        /// <returns>The operation status, or <see langword="null"/> when no status is known.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask<SyncOperationStatus?> GetOperationStatusAsync(OperationId operationId) =>
+            engine.GetOperationStatusAsync(operationId, CancellationToken.None);
+
         /// <summary>Starts synchronization work.</summary>
         /// <returns>A task representing the asynchronous operation.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

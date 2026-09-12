@@ -24,6 +24,18 @@ public interface ISyncEngine : IAsyncDisposable
         SyncOperation operation,
         CancellationToken cancellationToken);
 
+    /// <summary>Gets the latest durable status recorded for an operation.</summary>
+    /// <param name="operationId">The operation identifier.</param>
+    /// <param name="cancellationToken">The token used to cancel status lookup.</param>
+    /// <returns>The operation status, or <see langword="null"/> when no status is known.</returns>
+    /// <remarks>
+    /// This lookup supports restart-safe awaiting when an operation became terminal before the current process observed
+    /// its state transition. Cancelling the lookup must not cancel the durable operation.
+    /// </remarks>
+    ValueTask<SyncOperationStatus?> GetOperationStatusAsync(
+        OperationId operationId,
+        CancellationToken cancellationToken);
+
     /// <summary>Starts synchronization work.</summary>
     /// <param name="cancellationToken">The token used to cancel startup.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
