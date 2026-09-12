@@ -329,6 +329,7 @@ public record NegotiatedCapabilities : System.IEquatable<ReactiveUI.Primitives.O
 {
     public NegotiatedCapabilities(System.Version ProtocolVersion, ReactiveUI.Primitives.OccasionallyConnected.RemoteTransportCapabilities Features, int MaximumBatchOperations, long MaximumBatchBytes, System.TimeSpan? ServerIdempotencyRetention, System.TimeSpan? ClientInboxRetentionRequired) { }
     public System.TimeSpan? ClientInboxRetentionRequired { get; init; }
+    public System.TimeSpan? EffectiveExactlyOnceWindow { get; init; }
     public ReactiveUI.Primitives.OccasionallyConnected.RemoteTransportCapabilities Features { get; init; }
     public long MaximumBatchBytes { get; init; }
     public int MaximumBatchOperations { get; init; }

@@ -18,4 +18,8 @@ public sealed record NegotiatedCapabilities(
     int MaximumBatchOperations,
     long MaximumBatchBytes,
     TimeSpan? ServerIdempotencyRetention,
-    TimeSpan? ClientInboxRetentionRequired);
+    TimeSpan? ClientInboxRetentionRequired)
+{
+    /// <summary>Gets the finite exactly-once effect window, or <see langword="null"/> when exactly-once delivery was not negotiated.</summary>
+    public TimeSpan? EffectiveExactlyOnceWindow { get; init; }
+}

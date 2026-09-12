@@ -43,5 +43,9 @@ public sealed class NegotiatedCapabilitiesTests
         await Assert.That(capabilities.MaximumBatchBytes).IsEqualTo(MaximumBytes);
         await Assert.That(capabilities.ServerIdempotencyRetention).IsEqualTo(serverRetention);
         await Assert.That(capabilities.ClientInboxRetentionRequired).IsEqualTo(inboxRetention);
+        await Assert.That(capabilities.EffectiveExactlyOnceWindow).IsNull();
+        var negotiated = capabilities with { EffectiveExactlyOnceWindow = serverRetention };
+        await Assert.That(negotiated.EffectiveExactlyOnceWindow).IsEqualTo(serverRetention);
+        await Assert.That(capabilities.EffectiveExactlyOnceWindow).IsNull();
     }
 }
