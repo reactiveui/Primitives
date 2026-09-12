@@ -22,6 +22,25 @@ public sealed class ControlSequencerTests
     public async Task ConstructorRejectsNullControl() =>
         await Assert.That(static () => new ControlSequencer(null!)).ThrowsExactly<ArgumentNullException>();
 
+    /// <summary>The public constructor retains the control and exposes its clock without creating a handle.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Constructor_RetainsControlWithoutCreatingHandle()
+    {
+        using var control = CreateControl();
+        ControlSequencer sequencer = new(control);
+        var before = System.Diagnostics.Stopwatch.GetTimestamp();
+        var timestamp = sequencer.Timestamp;
+        var after = System.Diagnostics.Stopwatch.GetTimestamp();
+
+        await Assert.That(sequencer.Control).IsSameReferenceAs(control);
+        await Assert.That(control.IsHandleCreated).IsFalse();
+        await Assert.That(sequencer.Now.Offset).IsEqualTo(TimeSpan.Zero);
+        await Assert.That(timestamp).IsGreaterThanOrEqualTo(before);
+        await Assert.That(timestamp).IsLessThanOrEqualTo(after);
+        await Assert.That(GetDebuggerDisplay(sequencer)).IsEqualTo(sequencer.ToString());
+    }
+
     /// <summary>Work rejected before handle creation is retried in order when the handle becomes ready.</summary>
     /// <returns>The test operation.</returns>
     [Test]
@@ -162,6 +181,12 @@ public sealed class ControlSequencerTests
         DispatchSequencerState.RunIfActive(pending.Item);
         await Assert.That(calls).IsEqualTo(cancel ? 0 : 1);
     }
+
+    /// <summary>Invokes the getter used by the debugger without reflection.</summary>
+    /// <param name="sequencer">The sequencer to display.</param>
+    /// <returns>The debugger display text.</returns>
+    [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "get_DebuggerDisplay")]
+    private static extern string GetDebuggerDisplay(ControlSequencer sequencer);
 
     /// <summary>Creates a control without changing the caller's synchronization context.</summary>
     /// <returns>The control.</returns>

@@ -59,6 +59,88 @@ public sealed class FromAsyncSubscription<T> : IDisposable
         ExternalCancellation.Dispose();
     }
 
+    /// <summary>Forwards a successful task result.</summary>
+    /// <param name="value">The task result.</param>
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="lifetime">The subscription lifetime.</param>
+    /// <param name="externalCancellation">The external cancellation forwarder.</param>
+    /// <param name="linkedSource">The linked token source, when an external token was supplied.</param>
+    /// <returns><see langword="true"/> because the task was completed synchronously.</returns>
+    internal static bool CompleteSynchronously(
+        T value,
+        IObserver<T> observer,
+        AsyncSubscriptionLifetime lifetime,
+        FromAsyncExternalCancellation<T> externalCancellation,
+        CancellationTokenSource? linkedSource)
+    {
+        linkedSource?.Dispose();
+        externalCancellation.Dispose();
+        if (!lifetime.TryComplete())
+        {
+            return true;
+        }
+
+        observer.OnNext(value);
+        observer.OnCompleted();
+        return true;
+    }
+
+    /// <summary>Forwards a canceled task result.</summary>
+    /// <param name="task">The canceled task to observe.</param>
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="lifetime">The subscription lifetime.</param>
+    /// <param name="externalCancellation">The external cancellation forwarder.</param>
+    /// <param name="linkedSource">The linked token source, when an external token was supplied.</param>
+    /// <returns><see langword="true"/> because the task was completed synchronously.</returns>
+    internal static bool CancelSynchronously(
+        Task<T> task,
+        IObserver<T> observer,
+        AsyncSubscriptionLifetime lifetime,
+        FromAsyncExternalCancellation<T> externalCancellation,
+        CancellationTokenSource? linkedSource)
+    {
+        linkedSource?.Dispose();
+        if (externalCancellation.TryForwardCancellation())
+        {
+            externalCancellation.Dispose();
+            return true;
+        }
+
+        externalCancellation.Dispose();
+        if (!lifetime.TryComplete())
+        {
+            return true;
+        }
+
+        observer.OnError(new TaskCanceledException(task));
+        return true;
+    }
+
+    /// <summary>Forwards a faulted task result.</summary>
+    /// <param name="task">The faulted task to observe.</param>
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="lifetime">The subscription lifetime.</param>
+    /// <param name="externalCancellation">The external cancellation forwarder.</param>
+    /// <param name="linkedSource">The linked token source, when an external token was supplied.</param>
+    /// <returns><see langword="true"/> because the task was completed synchronously.</returns>
+    internal static bool FaultSynchronously(
+        Task<T> task,
+        IObserver<T> observer,
+        AsyncSubscriptionLifetime lifetime,
+        FromAsyncExternalCancellation<T> externalCancellation,
+        CancellationTokenSource? linkedSource)
+    {
+        linkedSource?.Dispose();
+        externalCancellation.Dispose();
+        if (!lifetime.TryComplete())
+        {
+            return true;
+        }
+
+        observer.OnError(task.Exception!.InnerException!);
+        return true;
+    }
+
     /// <summary>Starts the task factory and returns the active subscription lifetime.</summary>
     /// <returns>The active subscription, or an empty disposable when the task completed synchronously.</returns>
     internal IDisposable Start()
@@ -150,95 +232,5 @@ public sealed class FromAsyncSubscription<T> : IDisposable
         return task.IsCanceled
             ? CancelSynchronously(task, observer, lifetime, externalCancellation, linkedSource)
             : task.IsFaulted && FaultSynchronously(task, observer, lifetime, externalCancellation, linkedSource);
-    }
-
-    /// <summary>Forwards a successful task result.</summary>
-    /// <param name="value">The task result.</param>
-    /// <param name="observer">The downstream observer.</param>
-    /// <param name="lifetime">The subscription lifetime.</param>
-    /// <param name="externalCancellation">The external cancellation forwarder.</param>
-    /// <param name="linkedSource">The linked token source, when an external token was supplied.</param>
-    /// <returns><see langword="true"/> because the task was completed synchronously.</returns>
-    private static bool CompleteSynchronously(
-        T value,
-        IObserver<T> observer,
-        AsyncSubscriptionLifetime lifetime,
-        FromAsyncExternalCancellation<T> externalCancellation,
-        CancellationTokenSource? linkedSource)
-    {
-        linkedSource?.Dispose();
-        externalCancellation.Dispose();
-        if (!lifetime.TryComplete())
-        {
-            return true;
-        }
-
-        observer.OnNext(value);
-        observer.OnCompleted();
-        return true;
-    }
-
-    /// <summary>Forwards a canceled task result.</summary>
-    /// <param name="task">The task to observe.</param>
-    /// <param name="observer">The downstream observer.</param>
-    /// <param name="lifetime">The subscription lifetime.</param>
-    /// <param name="externalCancellation">The external cancellation forwarder.</param>
-    /// <param name="linkedSource">The linked token source, when an external token was supplied.</param>
-    /// <returns><see langword="true"/> because the task was completed synchronously.</returns>
-    private static bool CancelSynchronously(
-        Task<T> task,
-        IObserver<T> observer,
-        AsyncSubscriptionLifetime lifetime,
-        FromAsyncExternalCancellation<T> externalCancellation,
-        CancellationTokenSource? linkedSource)
-    {
-        linkedSource?.Dispose();
-        if (externalCancellation.TryForwardCancellation())
-        {
-            externalCancellation.Dispose();
-            return true;
-        }
-
-        externalCancellation.Dispose();
-        if (!lifetime.TryComplete())
-        {
-            return true;
-        }
-
-        observer.OnError(new TaskCanceledException(task));
-        return true;
-    }
-
-    /// <summary>Forwards a faulted task result.</summary>
-    /// <param name="task">The task to observe.</param>
-    /// <param name="observer">The downstream observer.</param>
-    /// <param name="lifetime">The subscription lifetime.</param>
-    /// <param name="externalCancellation">The external cancellation forwarder.</param>
-    /// <param name="linkedSource">The linked token source, when an external token was supplied.</param>
-    /// <returns><see langword="true"/> because the task was completed synchronously.</returns>
-    private static bool FaultSynchronously(
-        Task<T> task,
-        IObserver<T> observer,
-        AsyncSubscriptionLifetime lifetime,
-        FromAsyncExternalCancellation<T> externalCancellation,
-        CancellationTokenSource? linkedSource)
-    {
-        linkedSource?.Dispose();
-        externalCancellation.Dispose();
-        if (!lifetime.TryComplete())
-        {
-            return true;
-        }
-
-        if (task.Exception is { InnerException: { } innerException })
-        {
-            observer.OnError(innerException);
-        }
-        else if (task.Exception is { } exception)
-        {
-            observer.OnError(exception);
-        }
-
-        return true;
     }
 }

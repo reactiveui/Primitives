@@ -32,6 +32,29 @@ public sealed class DispatcherQueueSequencerTests
             .ThrowsExactly<ArgumentNullException>();
     }
 
+    /// <summary>Public constructors retain a live queue and the selected priority.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Constructors_RetainDispatcherQueueAndPriority()
+    {
+        var controller = DispatcherQueueController.CreateOnDedicatedThread();
+        try
+        {
+            var queue = controller.DispatcherQueue;
+            DispatcherQueueSequencer defaults = new(queue);
+            DispatcherQueueSequencer selected = new(queue, DispatcherQueuePriority.High);
+
+            await Assert.That(defaults.DispatcherQueue).IsSameReferenceAs(queue);
+            await Assert.That(defaults.Priority).IsEqualTo(DispatcherQueuePriority.Normal);
+            await Assert.That(selected.DispatcherQueue).IsSameReferenceAs(queue);
+            await Assert.That(selected.Priority).IsEqualTo(DispatcherQueuePriority.High);
+        }
+        finally
+        {
+            await controller.ShutdownQueueAsync();
+        }
+    }
+
     /// <summary>Queued actions preserve order and cancellation until the drain runs.</summary>
     /// <returns>The test operation.</returns>
     [Test]

@@ -91,4 +91,27 @@ public partial class SignalFactoriesTests
         sequencer.RunPending();
         await Assert.That(witness.Values.SequenceEqual([0L, 1L])).IsTrue();
     }
+
+    /// <summary>The recurring factory without a scheduler creates a lazy thread-pool signal.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Every_WithoutScheduler_CreatesLazyRecurringSignal()
+    {
+        var signal = await Assert.That(Signal.Every(ShortExpiry)).IsTypeOf<EverySignal>().And.IsNotNull();
+
+        await Assert.That(signal.IsRequiredSubscribeOnCurrentThread()).IsFalse();
+    }
+
+    /// <summary>The expiry factory without a scheduler validates its source and preserves lazy subscription.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Expire_WithoutScheduler_CreatesLazyTimeoutSignal()
+    {
+        using Signal<int> source = new();
+        var signal = await Assert.That(Signal.Expire(source, ShortExpiry)).IsTypeOf<ExpireSignal<int>>().And.IsNotNull();
+
+        await Assert.That(signal.IsRequiredSubscribeOnCurrentThread()).IsFalse();
+        await Assert.That(source.HasObservers).IsFalse();
+        await Assert.That(static () => Signal.Expire<int>(null!, ShortExpiry)).ThrowsExactly<ArgumentNullException>();
+    }
 }

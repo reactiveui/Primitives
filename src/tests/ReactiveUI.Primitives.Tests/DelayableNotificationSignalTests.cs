@@ -103,6 +103,32 @@ public sealed class DelayableNotificationSignalTests
         await Assert.That(signal.IsDisposed).IsTrue();
     }
 
+    /// <summary>Completion drops a pending batch, ignores repeated terminals, and is replayed to late subscribers.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task OnCompleted_Repeated_DropsBufferAndCompletesLateSubscribers()
+    {
+        using DelayableNotificationSignal<int> signal = new(static () => true, static items => items);
+        RecordingWitness<int> observer = new();
+        using var subscription = signal.Subscribe(observer);
+        signal.Flush();
+        signal.OnNext(1);
+        signal.OnCompleted();
+
+        signal.OnCompleted();
+        signal.OnError(new InvalidOperationException("late"));
+        signal.Flush();
+        RecordingWitness<int> late = new();
+        using var lateSubscription = signal.Subscribe(late);
+
+        await Assert.That(observer.Values.Count).IsEqualTo(0);
+        await Assert.That(observer.Completed).IsEqualTo(1);
+        await Assert.That(observer.Errors.Count).IsEqualTo(0);
+        await Assert.That(late.Values.Count).IsEqualTo(0);
+        await Assert.That(late.Completed).IsEqualTo(1);
+        await Assert.That(late.Errors.Count).IsEqualTo(0);
+    }
+
     /// <summary>The factory helpers build working signal instances.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]

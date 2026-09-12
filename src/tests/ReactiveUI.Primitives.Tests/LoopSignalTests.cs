@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using ReactiveUI.Primitives.Advanced;
+using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
@@ -30,5 +32,25 @@ public sealed class LoopSignalTests
             .Subscribe(values.Add, static _ => { }, () => completions++);
         await Assert.That(values.SequenceEqual(ExpectedValues)).IsTrue();
         await Assert.That(completions).IsEqualTo(1);
+    }
+
+    /// <summary>A direct subscription stops recursion when its observer disposes it during the first value.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Subscribe_DisposedDuringValue_StopsRecursiveLoop()
+    {
+        List<int> values = [];
+        IDisposable? subscription = null;
+        using var scheduled = Sequencer.CurrentThread.Schedule(() =>
+        {
+            subscription = new LoopSignal<int>(RepeatedValue).Subscribe(Witness.Create<int>(value =>
+            {
+                values.Add(value);
+                subscription!.Dispose();
+            }));
+        });
+        using var cleanup = subscription;
+
+        await Assert.That(values.SequenceEqual([RepeatedValue])).IsTrue();
     }
 }

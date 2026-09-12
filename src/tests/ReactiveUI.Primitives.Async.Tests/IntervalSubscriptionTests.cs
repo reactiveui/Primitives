@@ -7,6 +7,32 @@ namespace ReactiveUI.Primitives.Async.Tests;
 /// <summary>Tests interval cancellation and notification ordering with a controlled clock.</summary>
 public sealed class IntervalSubscriptionTests
 {
+    /// <summary>A zero period uses the system-clock path without waiting for wall-clock time.</summary>
+    /// <param name="explicitSystemProvider">Whether the system provider is supplied explicitly.</param>
+    /// <returns>The test operation.</returns>
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task ExecuteAsync_ZeroPeriod_StopsAfterObserverCancellation(bool explicitSystemProvider)
+    {
+        using CancellationTokenSource cancellation = new();
+        List<long> ticks = [];
+        CallbackWitnessAsync<long> observer = new((tick, _) =>
+        {
+            ticks.Add(tick);
+            cancellation.Cancel();
+            return default;
+        });
+        await using IntervalSubscription subscription = new(
+            observer,
+            TimeSpan.Zero,
+            explicitSystemProvider ? TimeProvider.System : null);
+
+        await subscription.ExecuteAsync(cancellation.Token);
+
+        await Assert.That(ticks).IsCollectionEqualTo([1L]);
+    }
+
     /// <summary>Cancellation while waiting prevents the pending tick from being delivered.</summary>
     /// <returns>The test operation.</returns>
     [Test]

@@ -31,20 +31,7 @@ public sealed class EverySignal(TimeSpan period, ISequencer scheduler) : IRequir
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
         EveryCoordinator coordinator = new(observer, _scheduler, _period);
-        if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
-        {
-            return coordinator.Run();
-        }
-
-        SingleDisposable subscription = new();
-        _ = Sequencer.CurrentThread.Schedule(
-            (subscription, coordinator),
-            static (_, s) =>
-            {
-                s.subscription.Create(s.coordinator.Run());
-                return EmptyDisposable.Instance;
-            });
-        return subscription;
+        return coordinator.Run();
     }
 
     /// <summary>Emits each tick and re-arms the schedule for the following one.</summary>

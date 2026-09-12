@@ -60,7 +60,7 @@ public static partial class SignalAsyncExtensions
                     return default;
                 });
 
-                await using var subscription = await source.SubscribeAsync(
+                var subscription = await source.SubscribeAsync(
                     channel.Writer.WriteAsync,
                     onErrorResumeAsync,
                     result =>
@@ -70,9 +70,19 @@ public static partial class SignalAsyncExtensions
                     },
                     cancellationToken).ConfigureAwait(false);
 
-                await foreach (var x in channel.Reader.ReadAllAsync(cancellationToken))
+                try
                 {
-                    yield return x;
+                    await foreach (var x in channel.Reader.ReadAllAsync(cancellationToken))
+                    {
+                        yield return x;
+                    }
+                }
+                finally
+                {
+                    if (subscription is not null)
+                    {
+                        await subscription.DisposeAsync().ConfigureAwait(false);
+                    }
                 }
             }
         }

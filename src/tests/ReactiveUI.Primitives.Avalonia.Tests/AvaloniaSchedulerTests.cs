@@ -43,6 +43,21 @@ public sealed class AvaloniaSchedulerTests
         await Assert.That(AvaloniaScheduler.Instance.Priority).IsEqualTo(DispatcherPriority.Background);
     }
 
+    /// <summary>The scheduler exposes UTC time and the shared monotonic timestamp scale.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task ClockProperties_UseSharedSequencerClock()
+    {
+        AvaloniaScheduler scheduler = new(Dispatcher.UIThread);
+        var before = System.Diagnostics.Stopwatch.GetTimestamp();
+        var timestamp = scheduler.Timestamp;
+        var after = System.Diagnostics.Stopwatch.GetTimestamp();
+
+        await Assert.That(scheduler.Now.Offset).IsEqualTo(TimeSpan.Zero);
+        await Assert.That(timestamp).IsGreaterThanOrEqualTo(before);
+        await Assert.That(timestamp).IsLessThanOrEqualTo(after);
+    }
+
     /// <summary>Immediate and already-due items share an ordered batch that skips cancelled work.</summary>
     /// <returns>The test operation.</returns>
     [Test]

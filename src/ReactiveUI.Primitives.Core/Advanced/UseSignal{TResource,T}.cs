@@ -75,18 +75,13 @@ public sealed class UseSignal<TResource, T>(
         /// <summary>Non-zero once stopped.</summary>
         private int _stopped;
 
-        /// <summary>Stores the inner subscription, disposing it when the sink has stopped or holds one.</summary>
+        /// <summary>Publishes the single inner subscription, disposing it if the sink has already stopped.</summary>
         /// <param name="subscription">Inner subscription.</param>
         public void SetSubscription(IDisposable subscription)
         {
             ArgumentExceptionHelper.ThrowIfNull(subscription);
 
-            if (Interlocked.CompareExchange(ref _subscription, subscription, null) is not null)
-            {
-                subscription.Dispose();
-                return;
-            }
-
+            Volatile.Write(ref _subscription, subscription);
             if (Volatile.Read(ref _stopped) == 0)
             {
                 return;

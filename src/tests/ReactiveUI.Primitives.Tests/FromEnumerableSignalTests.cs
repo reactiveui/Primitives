@@ -69,6 +69,25 @@ public class FromEnumerableSignalTests
         _ = Assert.Throws<ArgumentNullException>(() => arraySignal.Subscribe(static _ => { }, static ex => { }, null!));
     }
 
+    /// <summary>A cancelled enumeration delivers neither values nor completion and cannot expose an uncancellable fast path.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Subscribe_CancelledToken_StopsBeforeFirstValue()
+    {
+        using CancellationTokenSource cancellation = new();
+        await cancellation.CancelAsync();
+        FromEnumerableSignal<int> signal = new(ExpectedOneTwo, cancellation.Token);
+        RecordingWitness<int> observer = new();
+
+        using var subscription = signal.Subscribe(observer);
+        var canReadDirectly = signal.TryGetReadOnlyValues(out var values);
+
+        await Assert.That(observer.Values.Count).IsEqualTo(0);
+        await Assert.That(observer.Completed).IsEqualTo(0);
+        await Assert.That(canReadDirectly).IsFalse();
+        await Assert.That(values.Count).IsEqualTo(0);
+    }
+
     /// <summary>Creates an iterator-backed enumerable that cannot be indexed.</summary>
     /// <returns>The yielded values.</returns>
     private static IEnumerable<int> YieldValues()

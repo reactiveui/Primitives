@@ -23,19 +23,26 @@ public sealed class TaskResultCompletionSource<T>(CancellationToken cancellation
     /// <returns>The terminal result value.</returns>
     public async ValueTask<T> AwaitResultAsync(IAsyncDisposable owner)
     {
+        CancellationTokenRegistration cancellationRegistration = default;
         try
         {
-#if NET8_0_OR_GREATER
-            await using var cancellationRegistration = RegisterCancellation();
-#else
-            using var cancellationRegistration = RegisterCancellation();
-#endif
-
+            cancellationRegistration = RegisterCancellation();
             return await _taskSource.Task.ConfigureAwait(false);
         }
         finally
         {
-            await owner.DisposeAsync().ConfigureAwait(false);
+            try
+            {
+#if NET8_0_OR_GREATER
+                await cancellationRegistration.DisposeAsync().ConfigureAwait(false);
+#else
+                cancellationRegistration.Dispose();
+#endif
+            }
+            finally
+            {
+                await owner.DisposeAsync().ConfigureAwait(false);
+            }
         }
     }
 

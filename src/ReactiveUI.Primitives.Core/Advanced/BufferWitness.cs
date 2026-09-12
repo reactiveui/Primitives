@@ -121,17 +121,12 @@ public sealed class BufferWitness<T>(IObserver<IList<T>> observer, int count, in
         SinkSubscription.Dispose(ref _subscription);
     }
 
-    /// <summary>Returns the window array, copying to an exact-size array only for a partial trailing window.</summary>
+    /// <summary>Copies the partial trailing window into an exact-size array.</summary>
     /// <param name="buffer">The window buffer.</param>
     /// <param name="length">The number of filled elements.</param>
     /// <returns>The window array.</returns>
     private static T[] Trim(T[] buffer, int length)
     {
-        if (length == buffer.Length)
-        {
-            return buffer;
-        }
-
         var exact = new T[length];
         Array.Copy(buffer, exact, length);
         return exact;

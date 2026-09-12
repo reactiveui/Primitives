@@ -98,6 +98,7 @@ public sealed class OnceDisposable : ReactiveUI.Primitives.Disposables.IsDispose
     public System.IDisposable? Disposable { get; set; }
     public bool IsAssigned { get; }
     public bool IsDisposed { get; }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     public void Dispose() { }
 }
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]

@@ -110,10 +110,10 @@ public sealed class CurrentThreadSequencer : ISequencer
         {
             SetRunning(true);
 
-            WaitIfNeeded(Sequencer.TimeUntil(dueTimestamp), Wait);
-
             try
             {
+                WaitIfNeeded(Sequencer.TimeUntil(dueTimestamp), Wait);
+
                 if (!Sequencer.IsCancelled(item))
                 {
                     item.Execute();

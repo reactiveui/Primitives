@@ -34,6 +34,17 @@ public class StateSignalTests
     /// <summary>Expected projected read-only state values.</summary>
     private static readonly string[] ExpectedReadOnlyValues = ["v:10", "v:11", "v:11"];
 
+    /// <summary>The debugger display leaves the latest value and observer set intact.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task DebuggerDisplay_PreservesSignalState()
+    {
+        using StateSignal<int> signal = new(InitialStateValue);
+        await Assert.That(GetDebuggerDisplay(signal)).IsEqualTo(signal.ToString());
+        await Assert.That(signal.Value).IsEqualTo(InitialStateValue);
+        await Assert.That(signal.HasObservers).IsFalse();
+    }
+
     /// <summary>A read-only projection rejects a null error.</summary>
     [Test]
     public void ReadOnlyStateProjectionValidatesError()
@@ -222,6 +233,28 @@ public class StateSignalTests
         source.Value = UpdatedStateValue;
         await Assert.That(source.Value).IsEqualTo(UpdatedStateValue);
     }
+
+    /// <summary>Invokes the getter used by the debugger without reflection.</summary>
+    /// <param name="signal">The instance to display.</param>
+    /// <returns>The debugger display text.</returns>
+#if NET9_0_OR_GREATER
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static string GetDebuggerDisplay(StateSignal<int> signal) => DebuggerAccessor<int>.Read(signal);
+
+    /// <summary>Matches the target type's generic context required by .NET 9 and later.</summary>
+    /// <typeparam name="T">The signal's value type.</typeparam>
+    private static class DebuggerAccessor<T>
+    {
+        /// <summary>Invokes the getter evaluated by the debugger.</summary>
+        /// <param name="signal">The signal to display.</param>
+        /// <returns>The debugger text.</returns>
+        [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "get_DebuggerDisplay")]
+        internal static extern string Read(StateSignal<T> signal);
+    }
+#else
+    [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "get_DebuggerDisplay")]
+    private static extern string GetDebuggerDisplay(StateSignal<int> signal);
+#endif
 
     /// <summary>Records observer notifications.</summary>
     /// <typeparam name="T">The observed value type.</typeparam>

@@ -54,6 +54,39 @@ public sealed class BlazorRendererSequencerTests
         await Assert.That(renderer.InvokeCount).IsEqualTo(1);
     }
 
+    /// <summary>Already-due timestamp work is delivered through the renderer with the shared clock scale.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Schedule_AlreadyDueTimestamp_UsesRendererDispatch()
+    {
+        FakeRenderer renderer = new();
+        BlazorRendererSequencer sequencer = new(renderer);
+        var before = Sequencer.Timestamp;
+        var timestamp = sequencer.Timestamp;
+        var after = Sequencer.Timestamp;
+        var calls = 0;
+
+        sequencer.Schedule(new DelegateWorkItem(() => calls++), timestamp);
+
+        await Assert.That(calls).IsEqualTo(1);
+        await Assert.That(renderer.InvokeCount).IsEqualTo(1);
+        await Assert.That(sequencer.Now.Offset).IsEqualTo(TimeSpan.Zero);
+        await Assert.That(timestamp).IsGreaterThanOrEqualTo(before);
+        await Assert.That(timestamp).IsLessThanOrEqualTo(after);
+    }
+
+    /// <summary>The debugger identifies the renderer sequencer without posting renderer work.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task DebuggerDisplay_IdentifiesSequencerWithoutDispatch()
+    {
+        FakeRenderer renderer = new();
+        BlazorRendererSequencer sequencer = new(renderer);
+
+        await Assert.That(GetDebuggerDisplay(sequencer)).IsEqualTo(sequencer.ToString());
+        await Assert.That(renderer.InvokeCount).IsEqualTo(0);
+    }
+
     /// <summary>Verifies renderer-task faults reach the unhandled-exception handler instead of vanishing.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
@@ -238,6 +271,12 @@ public sealed class BlazorRendererSequencerTests
 
         await Assert.That(values).IsEquivalentTo(ExpectedBurst, EqualityComparer<int>.Default, TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
+
+    /// <summary>Invokes the getter used by the debugger without reflection.</summary>
+    /// <param name="sequencer">The sequencer to display.</param>
+    /// <returns>The debugger display text.</returns>
+    [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "get_DebuggerDisplay")]
+    private static extern string GetDebuggerDisplay(BlazorRendererSequencer sequencer);
 
     /// <summary>Work item that invokes a delegate when executed.</summary>
     private sealed class DelegateWorkItem : IWorkItem

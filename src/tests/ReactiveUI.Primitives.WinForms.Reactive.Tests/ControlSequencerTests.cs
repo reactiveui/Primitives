@@ -22,6 +22,18 @@ public sealed class ControlSequencerTests
     public async Task ConstructorRejectsNullControl() =>
         await Assert.That(static () => new ControlSequencer(null!)).ThrowsExactly<ArgumentNullException>();
 
+    /// <summary>The public constructor retains the control without creating its native window handle.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Constructor_RetainsControlWithoutCreatingHandle()
+    {
+        using var control = CreateControl();
+        ControlSequencer scheduler = new(control);
+
+        await Assert.That(scheduler.Control).IsSameReferenceAs(control);
+        await Assert.That(control.IsHandleCreated).IsFalse();
+    }
+
     /// <summary>Work rejected before handle creation is retried in order when the handle becomes ready.</summary>
     /// <returns>The test operation.</returns>
     [Test]

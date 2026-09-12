@@ -17,6 +17,18 @@ public sealed class ReactiveComponentBaseTests
     /// <summary>The first value pushed to a source.</summary>
     private const int FirstValue = 1;
 
+    /// <summary>The debugger reflects disposal without attaching the component to a renderer.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task DebuggerDisplay_ReportsCurrentDisposalState()
+    {
+        HarnessComponent component = new();
+
+        await Assert.That(GetDebuggerDisplay(component)).IsEqualTo("IsDisposed = False");
+        component.Dispose();
+        await Assert.That(GetDebuggerDisplay(component)).IsEqualTo("IsDisposed = True");
+    }
+
     /// <summary>Verifies an observed value reaches the callback and refreshes the component.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
@@ -138,6 +150,12 @@ public sealed class ReactiveComponentBaseTests
 
         await Assert.That(component.IsDisposedState).IsTrue();
     }
+
+    /// <summary>Invokes the getter used by the debugger without reflection.</summary>
+    /// <param name="component">The component to display.</param>
+    /// <returns>The debugger display text.</returns>
+    [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "get_DebuggerDisplay")]
+    private static extern string GetDebuggerDisplay(ReactiveComponentBase component);
 
     /// <summary>A source whose observer the test drives directly.</summary>
     /// <typeparam name="T">The value type.</typeparam>

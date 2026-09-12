@@ -44,6 +44,48 @@ public class FromAsyncTaskObservationTests
         await Assert.That(observer.Error).IsNull();
     }
 
+    /// <summary>A task fault is forwarded once and completes the subscription lifetime.</summary>
+    /// <param name="aggregate">Whether the supplied failure is an aggregate with no inner exceptions.</param>
+    /// <returns>The asynchronous test.</returns>
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task Observe_FaultedTask_ForwardsOriginalFailure(bool aggregate)
+    {
+        using AsyncSubscriptionLifetime lifetime = new();
+        RecordingWitness<int> observer = new();
+        using FromAsyncExternalCancellation<int> cancellation = new(observer, lifetime, CancellationToken.None);
+        FromAsyncTaskObservation<int> observation = new(observer, lifetime, cancellation, null);
+        Exception expected = aggregate ? new AggregateException() : new InvalidOperationException("task failed");
+
+        observation.Observe(Task.FromException<int>(expected));
+
+        await Assert.That(observer.Values).IsEmpty();
+        await Assert.That(observer.Completed).IsEqualTo(0);
+        await Assert.That(observer.Errors).Count().IsEqualTo(1);
+        await Assert.That(observer.Errors[0]).IsSameReferenceAs(expected);
+        await Assert.That(lifetime.IsCompleted).IsTrue();
+    }
+
+    /// <summary>A fault arriving after disposal does not notify the canceled observer.</summary>
+    /// <returns>The asynchronous test.</returns>
+    [Test]
+    public async Task Observe_DisposedLifetime_DropsTaskFailure()
+    {
+        AsyncSubscriptionLifetime lifetime = new();
+        RecordingWitness<int> observer = new();
+        using FromAsyncExternalCancellation<int> cancellation = new(observer, lifetime, CancellationToken.None);
+        FromAsyncTaskObservation<int> observation = new(observer, lifetime, cancellation, null);
+        lifetime.Dispose();
+
+        observation.Observe(Task.FromException<int>(new InvalidOperationException("task failed")));
+
+        await Assert.That(observer.Values).IsEmpty();
+        await Assert.That(observer.Errors).IsEmpty();
+        await Assert.That(observer.Completed).IsEqualTo(0);
+        await Assert.That(lifetime.IsCompleted).IsTrue();
+    }
+
     /// <summary>Throws after recording a value and optionally disposing its lifetime.</summary>
     /// <param name="lifetime">The subscription lifetime.</param>
     /// <param name="dispose">Whether to dispose before throwing.</param>

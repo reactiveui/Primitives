@@ -41,6 +41,20 @@ public sealed class DispatcherSequencerTests
         await Assert.That(sequencer.DebuggerDisplay).IsEqualTo(typeof(DispatcherSequencer).FullName);
     }
 
+    /// <summary>The dispatcher sequencer shares the monotonic timestamp scale used by scheduled work.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Timestamp_UsesSharedSequencerClock()
+    {
+        DispatcherSequencer sequencer = new(Dispatcher.CurrentDispatcher);
+        var before = System.Diagnostics.Stopwatch.GetTimestamp();
+        var timestamp = sequencer.Timestamp;
+        var after = System.Diagnostics.Stopwatch.GetTimestamp();
+
+        await Assert.That(timestamp).IsGreaterThanOrEqualTo(before);
+        await Assert.That(timestamp).IsLessThanOrEqualTo(after);
+    }
+
     /// <summary>A posted batch preserves order and skips cancelled work.</summary>
     /// <returns>The test operation.</returns>
     [Test]

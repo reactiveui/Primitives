@@ -54,16 +54,8 @@ public sealed class OnceDisposable : IsDisposed
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <inheritdoc/>
-    public void Dispose()
-    {
-        var previous = Interlocked.Exchange(ref _current, DisposedSentinel);
-        if (previous is null || ReferenceEquals(previous, DisposedSentinel))
-        {
-            return;
-        }
-
-        previous.Dispose();
-    }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public void Dispose() => Interlocked.Exchange(ref _current, DisposedSentinel)?.Dispose();
 
     /// <summary>Disposable marker for disposed instances.</summary>
     private sealed class DisposedMarker : IDisposable

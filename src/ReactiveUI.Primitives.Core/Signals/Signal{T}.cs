@@ -485,16 +485,9 @@ public class Signal<T> : ISignal<T>
     /// <summary>Removes a subscription from its owning slot array.</summary>
     /// <param name="slots">The active slot array.</param>
     /// <param name="subscription">The subscription to clear.</param>
-    private void RemoveFromSlotsLocked(SignalSubscription?[] slots, SignalSubscription subscription)
-    {
-        var index = Array.IndexOf(slots, subscription);
-        if (index < 0)
-        {
-            return;
-        }
-
-        ClearSlotLocked(slots, index);
-    }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    private void RemoveFromSlotsLocked(SignalSubscription?[] slots, SignalSubscription subscription) =>
+        ClearSlotLocked(slots, Array.IndexOf(slots, subscription));
 
     /// <summary>Vacates one slot and drops back to the empty shape when it was the last live subscription.</summary>
     /// <param name="slots">The active slot array.</param>

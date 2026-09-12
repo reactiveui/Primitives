@@ -60,6 +60,7 @@ public partial class SequencerTests
 
         item.Execute();
         item.Dispose();
+        item.Dispose();
         item.Execute();
 
         await Assert.That(ran).IsEqualTo(1);
