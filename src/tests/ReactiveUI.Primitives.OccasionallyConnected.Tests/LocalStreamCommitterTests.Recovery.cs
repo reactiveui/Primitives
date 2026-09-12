@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Globalization;
+using System.Reflection;
 using ReactiveUI.Primitives.OccasionallyConnected;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
@@ -200,7 +201,10 @@ public sealed partial class LocalStreamCommitterTests
     [Test]
     public async Task RecoverAsyncNullStoreResultFailsClosed()
     {
-        var store = new ScriptedLocalStore { Recovery = null! };
+        var store = new ScriptedLocalStore();
+        var recovery = typeof(ScriptedLocalStore).GetProperty(nameof(ScriptedLocalStore.Recovery));
+        ArgumentNullException.ThrowIfNull(recovery);
+        recovery.SetValue(store, null);
         var committer = CreateCommitter(store);
 
         var exception = await Assert.ThrowsExactlyAsync<InvalidOperationException>(
@@ -229,13 +233,10 @@ public sealed partial class LocalStreamCommitterTests
     [Test]
     public async Task RecoverAsyncNullSnapshotStateFailsClosed()
     {
-        var snapshot = new LocalSnapshot(
-            Stream,
-            SnapshotFormatVersion,
-            RecoveryCursor,
-            State: null!,
-            RecoveredSnapshotRevision,
-            CommittedUtc);
+        var snapshot = await CreateSnapshotAsync(new(RecoveredSnapshotSum));
+        var state = typeof(LocalSnapshot).GetProperty(nameof(LocalSnapshot.State));
+        ArgumentNullException.ThrowIfNull(state);
+        state.SetValue(snapshot, null);
         var store = new ScriptedLocalStore { Recovery = CreateRecoveredStream(snapshot, [], RecoveredNextSequence) };
         var committer = CreateCommitter(store);
 
@@ -300,13 +301,10 @@ public sealed partial class LocalStreamCommitterTests
     public async Task RecoverAsyncFailureAfterSuccessRequiresSuccessfulRetryBeforeCommit()
     {
         var recoveredSnapshot = await CreateSnapshotAsync(new(RecoveredSnapshotSum));
-        var corruptSnapshot = new LocalSnapshot(
-            Stream,
-            SnapshotFormatVersion,
-            RecoveryCursor,
-            State: null!,
-            RecoveredSnapshotRevision,
-            CommittedUtc);
+        var corruptSnapshot = await CreateSnapshotAsync(new(RecoveredSnapshotSum));
+        var state = typeof(LocalSnapshot).GetProperty(nameof(LocalSnapshot.State));
+        ArgumentNullException.ThrowIfNull(state);
+        state.SetValue(corruptSnapshot, null);
         var store = new ScriptedLocalStore { Recovery = CreateRecoveredStream(recoveredSnapshot, [], RecoveredNextSequence) };
         var committer = CreateCommitter(store);
         _ = await committer.RecoverAsync(CancellationToken.None);
