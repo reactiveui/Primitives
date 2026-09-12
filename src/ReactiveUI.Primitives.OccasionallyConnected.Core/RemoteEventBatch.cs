@@ -42,4 +42,11 @@ public sealed record RemoteEventBatch
 
     /// <summary>Gets the events in this batch.</summary>
     public IReadOnlyList<RemoteEvent> Events { get; }
+
+    /// <summary>Gets the operations whose complete effects are included at the next cursor.</summary>
+    public IReadOnlyList<RemoteOperationCompletion> CompletedOperations
+    {
+        get;
+        init => field = CollectionCopy.List(value);
+    } = Array.Empty<RemoteOperationCompletion>();
 }
