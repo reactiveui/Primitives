@@ -14,8 +14,8 @@ public sealed class WasmSequencerTests
     /// <summary>Expected values produced by an immediate burst, used to verify FIFO order.</summary>
     private static readonly int[] ExpectedBurst = [1, 2, 3];
 
-    /// <summary>Longest a test waits for scheduled work before failing.</summary>
-    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(5);
+    /// <summary>Completion guard allowing for shared timer and thread-pool contention on instrumented runners.</summary>
+    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(30);
 
     /// <summary>How far in the future delayed work is scheduled.</summary>
     private static readonly TimeSpan ScheduleDelay = TimeSpan.FromMilliseconds(50);
@@ -104,13 +104,12 @@ public sealed class WasmSequencerTests
     {
         var sequencer = WasmSequencer.Default;
         TaskCompletionSource<long> executed = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        var start = sequencer.Timestamp;
-        var due = Sequencer.AddTimestamp(start, ScheduleDelay);
+        var due = Sequencer.AddTimestamp(sequencer.Timestamp, ScheduleDelay);
 
         sequencer.Schedule(new DelegateWorkItem(() => executed.TrySetResult(sequencer.Timestamp)), due);
 
         var executedAt = await executed.Task.WaitAsync(WaitTimeout);
-        await Assert.That(executedAt).IsGreaterThanOrEqualTo(start);
+        await Assert.That(executedAt).IsGreaterThanOrEqualTo(due);
     }
 
     /// <summary>Verifies a past-due timestamp executes promptly through the immediate path.</summary>
