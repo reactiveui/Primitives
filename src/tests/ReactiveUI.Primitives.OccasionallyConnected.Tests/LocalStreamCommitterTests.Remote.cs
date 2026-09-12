@@ -50,6 +50,30 @@ public sealed partial class LocalStreamCommitterTests
     /// <summary>A cursor length above the UTF-8 byte limit.</summary>
     private const int CursorLengthAboveUtf8ByteLimit = RemoteCursorUtf8ByteLimit + 1;
 
+    /// <summary>Verifies a server echo replaces the optimistic effect instead of adding it again.</summary>
+    /// <param name="authoritativeValue">The original or server-transformed mutation.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    [Arguments(FirstReadingValue)]
+    [Arguments(FirstRemoteValue)]
+    public async Task ApplyRemoteBatchAsyncLocalEchoDoesNotDuplicateOptimisticMutation(int authoritativeValue)
+    {
+        var store = new ScriptedLocalStore();
+        var committer = await CreateRecoveredCommitterAsync(store);
+        var local = await committer.CommitAsync(new MutableReading { Value = FirstReadingValue }, OperationPolicy.Default, CancellationToken.None);
+        var echoed = CreateRemoteEvent(authoritativeValue, causedByOperationId: local.Operation.OperationId) with
+        {
+            Origin = new(ReconciliationClientId, local.Operation.OperationId),
+        };
+
+        var remote = await committer.ApplyRemoteBatchAsync(CreateRemoteBatch(null, NextRemoteCursor, [echoed]), CancellationToken.None);
+
+        await Assert.That(remote.State.State.Sum).IsEqualTo(authoritativeValue);
+        await Assert.That(remote.Receipt.AppliedCount).IsEqualTo(1);
+        await Assert.That(remote.Inputs[0].Value).IsEqualTo(authoritativeValue);
+        await Assert.That(remote.State.ServerCursor).IsEqualTo(NextRemoteCursor);
+    }
+
     /// <summary>Verifies a mixed remote batch filters duplicates before projection and commits the new events atomically.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
