@@ -484,3 +484,19 @@ Conflict resolution retained the current Core APIs, SQLite registration, impleme
 - This registry is process-local and stores fingerprints rather than protocol responses. The complete server still needs
   authorization, transactional effect/idempotency storage, response replay and restart protection before any corresponding
   capability can be advertised. The retained byte counter measures encoded records, not exact managed heap consumption.
+
+### Stage 4f: durable SQLite operation state and upload barrier
+
+- Schema version five persists operation status, attempts and retry scheduling, with transactional migration and a frozen
+  version-four fixture. Initial local commits persist queued state in the same transaction as their receipt and snapshot.
+- The attempt barrier checks complete current lease ownership and samples expiry after acquiring the SQLite writer
+  transaction. At-most-once operations with an existing attempt cannot receive permission to send again. Remote results
+  must match the original lease identifier and exact operation membership before any status changes are committed.
+- Recovery preserves unresolved conflicts, expired guarantees and ambiguous operations while leasing keeps blocked stream
+  heads in place. Missing or invalid persisted status fails recovery instead of silently omitting local intent.
+- Root reproduced seven database regressions, including ignored state writes granting send permission or returning a local
+  receipt, then required successful state persistence before transaction completion. SQLite triggers verify rollback.
+- All 166 SQLite TUnit tests pass on each modern target with 100% line and branch coverage: 2008 lines on net8,
+  1994 on net9-net11 and 505 branches throughout. All eight library targets build without warnings or errors.
+- Public adapter integration, compaction, encryption and crash conformance remain subsequent work. These synchronous
+  internal operations require the bounded worker adapter to coordinate admission and drain operations during disposal.

@@ -307,10 +307,31 @@ public sealed partial class SqliteLocalCommitStoreTests
     /// <param name="clientSequence">The client sequence.</param>
     /// <param name="payloadText">The payload text.</param>
     /// <returns>The committed operation.</returns>
-    private static SyncOperation CommitOperation(SqliteLocalCommitStore store, StreamId streamId, long clientSequence, string payloadText)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static SyncOperation CommitOperation(SqliteLocalCommitStore store, StreamId streamId, long clientSequence, string payloadText) =>
+        CommitOperation(store, streamId, clientSequence, payloadText, DeliveryGuarantee.AtLeastOnce);
+
+    /// <summary>Commits one operation for a lease test.</summary>
+    /// <param name="store">The store.</param>
+    /// <param name="streamId">The stream identifier.</param>
+    /// <param name="clientSequence">The client sequence.</param>
+    /// <param name="payloadText">The payload text.</param>
+    /// <param name="deliveryGuarantee">The delivery guarantee.</param>
+    /// <returns>The committed operation.</returns>
+    private static SyncOperation CommitOperation(
+        SqliteLocalCommitStore store,
+        StreamId streamId,
+        long clientSequence,
+        string payloadText,
+        DeliveryGuarantee deliveryGuarantee)
     {
         _ = store.GetOrCreateSubscriptionId(streamId, null, CancellationToken.None);
-        var operation = CreateOperation(clientSequence) with { StreamId = streamId, Payload = CreatePayload(payloadText) };
+        var operation = CreateOperation(clientSequence) with
+        {
+            StreamId = streamId,
+            Payload = CreatePayload(payloadText),
+            Policy = new(deliveryGuarantee, OperationDurability.Durable, Priority: 1, ConflictPolicy.Merge),
+        };
         _ = store.CommitLocalOperation(operation, new(streamId, CreatePayload($"snapshot-{payloadText}"), FormatVersion: 1, clientSequence - 1), CancellationToken.None);
         return operation;
     }
