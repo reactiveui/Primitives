@@ -317,6 +317,24 @@ Linux and macOS across the four modern frameworks. Full-solution CI builds remai
   line and branch coverage (602 branches per target). All eight runtime library targets build without warnings or errors.
 - Transport acknowledgements, bounded receive admission and observer publication remain subsequent integration work.
 
+### Stage 4a: SQLite subscription identity persistence
+
+- Added the SQLite library and test projects with an internal file-backed identity component. A serializable transaction
+  persists the first subscription assigned to each store partition and stream. Reopening reuses that mapping, competing
+  explicit identities reject the loser, and independent streams can share an explicitly chosen subscription identifier.
+- Validates schema ownership and definitions before changing journal mode, verifies WAL and FULL synchronous settings,
+  uses parameterized SQL and closes each connection. Rejects unsupported encryption requirements before plaintext writes,
+  malformed stored identities, invalid initialization and attempts to switch an initialized instance's partition.
+- Real file tests cover close/reopen, concurrent instances, malformed schemas, cancellation behind a database writer and
+  lifecycle failures. Root restored the invalid cross-stream uniqueness constraint and observed an executable regression
+  before restoring the implementation. All 37 tests pass on each modern target with 100% matching line and branch coverage
+  (78 branches per target). All eight library targets build cleanly and appear in the generated package.
+- Uses Microsoft.Data.Sqlite 10.0.12 with SQLitePCLRaw.bundle_e_sqlite3 2.1.13 to obtain the corrected native-asset packaging
+  described in [SQLitePCLRaw #678](https://github.com/ericsink/SQLitePCL.raw/issues/678). API tracking and runtime dependency
+  assets remain enabled. Root verified separate coverage reports for each target and the packed dependency groups.
+- This is the identity persistence component, not the complete local store adapter. Outbox/inbox transactions, leases,
+  compaction, encryption, migrations beyond schema v1 and process-crash conformance remain subsequent work.
+
 The implemented identity, configuration, policy, serialization, admission, protocol, negotiation, observer, fault-model, stream-definition and transaction-kernel stages are verified. Adapter conformance,
 remaining facade contracts and integrated runtime/durability stages are still incomplete. Passing option validation alone does not establish a
 delivery guarantee or establish that a custom policy preserves durable work; the runtime must enforce both.
