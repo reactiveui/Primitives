@@ -574,3 +574,24 @@ Conflict resolution retained the current Core APIs, SQLite registration, impleme
   net8, 2516 on net9/net10, 2515 on net11 and 1190 branches throughout. All eight library targets build cleanly.
 - This component schedules bounded metadata only. Concrete engine integration, transport dispatch and end-to-end fairness
   remain subsequent work; encoded metadata counters do not measure exact managed heap consumption.
+
+### Stage 4h: public bounded SQLite adapter and acknowledged crash receipt
+
+- Added the public SQLite local-store adapter by composing the synchronous transactional backend with its bounded worker.
+  Public options configure command count, logical input bytes, retention and the clock. Required schema versions are
+  positive minimum requirements; future versions and unsupported authenticated encryption fail before initialization.
+- Event lookup reserves bounded capture capacity before copying caller identifiers once outside the capture gate. The
+  worker and capture stages have separate finite budgets. Input sizing checks each addition against capacity, including
+  payloads, metadata and retry state. Disposal closes both admissions, rejects queued commands and joins active work.
+- The adapter advertises atomic local/remote commits, durable local commits and inbox records, and leased outbox support.
+  It does not advertise encryption at rest or multi-process coordination. All eight public API baselines are enabled.
+- Root strengthened causal capacity tests, verified retry scheduling after reopen, replaced timing-based disposal checks
+  with explicit worker entry signals, and tested cancellation and ownership when lease enumeration ends early.
+- A real child-process test commits through the public adapter and publishes a signal only after the receipt returns.
+  The parent terminates its own child, reopens the database and verifies the operation, snapshot, subscription, sequence
+  and original duplicate receipt. Replaying the operation does not apply optimistic state twice.
+- All 206 SQLite TUnit tests pass on each modern target with MTP-confirmed 100% line and branch coverage: 2498 lines on
+  net8, 2482 on net9/net10, 2483 on net11 and 599 branches throughout. All eight library targets build cleanly.
+- This crash test covers an acknowledged receipt followed by process termination. The remaining crash-point matrix,
+  disk-full and corruption cases, encryption, process ownership and engine integration remain tracked work. Logical byte
+  accounting does not measure exact managed heap consumption or physical SQLite file size.
