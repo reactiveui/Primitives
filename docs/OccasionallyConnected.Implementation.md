@@ -345,6 +345,17 @@ Linux and macOS across the four modern frameworks. Full-solution CI builds remai
   an executable failure before restoration. All 308 Core tests pass on each modern framework with 100% matching coverage
   (866 lines and 318 branches per target). All eight Core library targets build without warnings or errors.
 - Concrete remote facades and their transaction, queue and lifecycle integration remain subsequent work.
+### Stage 3g: local-first stream facade contracts
+
+- Added the two-type local-first stream interface, its single-type alias and explicit publish/start/stop convenience
+  overloads. The contracts describe committed local replay, remote delivery and producer-local input notifications.
+- Tests verify separate state/input types, reference input and receipt identity, exact options and cancellation forwarding,
+  lifecycle calls and unwrapped failures. These contract fakes do not establish concrete stream runtime behavior.
+- Root replaced cancellation forwarding with `CancellationToken.None` and observed an executable regression before
+  restoration. All 315 Core tests pass on each modern framework; Mtpunittestmcp confirms 871/871 lines and 318/318 branches
+  on every target. All eight Core library targets build with zero warnings and errors.
+- Concrete stream startup, shutdown, bounded publication and transaction integration remain subsequent work.
+
 The implemented identity, configuration, policy, serialization, admission, protocol, negotiation, observer, fault-model, stream-definition and transaction-kernel stages are verified. Adapter conformance,
 remaining facade contracts and integrated runtime/durability stages are still incomplete. Passing option validation alone does not establish a
 delivery guarantee or establish that a custom policy preserves durable work; the runtime must enforce both.

@@ -218,6 +218,39 @@ public interface IPayloadUpcaster
     int ToVersion { get; }
     System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope> UpcastAsync(ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope source, System.Threading.CancellationToken cancellationToken) { }
 }
+public interface IOccasionallyConnectedStream<T> : ReactiveUI.Primitives.OccasionallyConnected.IOccasionallyConnectedStream<T, T>
+{
+}
+public interface IOccasionallyConnectedStream<TState, TInput> : System.IAsyncDisposable
+{
+    ReactiveUI.Primitives.OccasionallyConnected.StreamId StreamId { get; }
+    ReactiveUI.Primitives.OccasionallyConnected.SubscriptionId SubscriptionId { get; }
+    System.IObservable<TState> Local { get; }
+    System.IObservable<ReactiveUI.Primitives.OccasionallyConnected.RemoteMessage<TInput>> Remote { get; }
+    System.IObservable<ReactiveUI.Primitives.OccasionallyConnected.SyncState> SyncStates { get; }
+    System.IObservable<ReactiveUI.Primitives.OccasionallyConnected.SyncOperationStatus> OperationStates { get; }
+    System.IObservable<ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedFault> Faults { get; }
+    System.IObserver<TInput> Input { get; }
+    System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.PublishReceipt> PublishAsync(TInput value, ReactiveUI.Primitives.OccasionallyConnected.RemotePublishOptions? options, System.Threading.CancellationToken cancellationToken) { }
+    System.Threading.Tasks.ValueTask StartAsync(System.Threading.CancellationToken cancellationToken) { }
+    System.Threading.Tasks.ValueTask StopAsync(System.Threading.CancellationToken cancellationToken) { }
+}
+public static class IOccasionallyConnectedStreamExtensions
+{
+    extension<TState, TInput>(ReactiveUI.Primitives.OccasionallyConnected.IOccasionallyConnectedStream<TState, TInput> stream)
+    {
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.PublishReceipt> PublishAsync(TInput value) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.PublishReceipt> PublishAsync(TInput value, ReactiveUI.Primitives.OccasionallyConnected.RemotePublishOptions? options) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.PublishReceipt> PublishAsync(TInput value, System.Threading.CancellationToken cancellationToken) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask StartAsync() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask StopAsync() { }
+    }
+}
 public interface IRemoteObservable<T>
 {
     System.IObservable<ReactiveUI.Primitives.OccasionallyConnected.RemoteMessage<T>> SubscribeRemote(ReactiveUI.Primitives.OccasionallyConnected.RemoteSubscriptionOptions options) { }
