@@ -157,6 +157,28 @@ internal static class SqliteLocalCommitValidation
         ThrowIfNotPositive(request.LeaseDuration, nameof(request), "LeaseDuration must be positive.");
     }
 
+    /// <summary>Validates compaction input.</summary>
+    /// <param name="request">The compaction request.</param>
+    /// <param name="retention">The retention policy.</param>
+    /// <exception cref="ArgumentNullException">A required value is null.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">A numeric value is outside the supported range.</exception>
+    internal static void ValidateCompactionInput(CompactionRequest request, RetentionOptions retention)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(request);
+        ArgumentExceptionHelper.ThrowIfNull(retention);
+        if (request.StreamId is { } streamId)
+        {
+            ValidateStreamId(streamId, nameof(request));
+        }
+
+        if (request.TargetBytes < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(request), request.TargetBytes, "TargetBytes must not be negative.");
+        }
+
+        retention.Validate();
+    }
+
     /// <summary>Validates a lease renewal request.</summary>
     /// <param name="leaseId">The lease identifier.</param>
     /// <param name="extension">The extension duration.</param>
