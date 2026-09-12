@@ -24,4 +24,7 @@ public sealed record SnapshotMutation(
         : this(streamId, state, formatVersion, ExpectedRevision: 0)
     {
     }
+
+    /// <summary>Gets the serialized authoritative checkpoint replacement, or null to preserve the stored authoritative state.</summary>
+    public PayloadEnvelope? AuthoritativeState { get; init; }
 }

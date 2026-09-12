@@ -193,6 +193,7 @@ internal sealed class SqliteLocalStoreAdapterSizing
     {
         var bytes = Add(ObjectHeaderBytes, StreamIdBytes(snapshotMutation.StreamId));
         bytes = Add(bytes, PayloadBytes(snapshotMutation.State));
+        bytes = Add(bytes, snapshotMutation.AuthoritativeState is null ? NullableMarkerBytes : PayloadBytes(snapshotMutation.AuthoritativeState));
         return Add(bytes, IntBytes + LongBytes);
     }
 

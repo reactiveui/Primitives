@@ -118,6 +118,10 @@ internal static partial class SqliteLocalCommitSql
         command.CommandText = """
             SELECT COALESCE(SUM(
                 length(outbox.payload) + COALESCE((
+                    SELECT length(authoritative.payload)
+                    FROM oc_outbox_authoritative_mutations AS authoritative
+                    WHERE authoritative.store_identity = outbox.store_identity
+                        AND authoritative.operation_id = outbox.operation_id), 0) + COALESCE((
                     SELECT SUM(length(CAST(metadata.key AS BLOB)) + length(CAST(metadata.value AS BLOB)))
                     FROM oc_outbox_metadata AS metadata
                     WHERE metadata.store_identity = outbox.store_identity
@@ -206,9 +210,12 @@ internal static partial class SqliteLocalCommitSql
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = """
-            SELECT outbox.operation_id,
-                   state.changed_at_utc,
+            SELECT outbox.operation_id, state.changed_at_utc,
                    length(outbox.payload) + COALESCE((
+                       SELECT length(authoritative.payload)
+                       FROM oc_outbox_authoritative_mutations AS authoritative
+                       WHERE authoritative.store_identity = outbox.store_identity
+                           AND authoritative.operation_id = outbox.operation_id), 0) + COALESCE((
                        SELECT SUM(length(CAST(metadata.key AS BLOB)) + length(CAST(metadata.value AS BLOB)))
                        FROM oc_outbox_metadata AS metadata
                        WHERE metadata.store_identity = outbox.store_identity

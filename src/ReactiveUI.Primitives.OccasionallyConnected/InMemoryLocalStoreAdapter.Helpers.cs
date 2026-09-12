@@ -210,6 +210,7 @@ internal sealed partial class InMemoryLocalStoreAdapter
                     + Int32EncodedBytes
                     + StringBytes(snapshot.ServerCursor)
                     + PayloadCapacityBytes(snapshot.State)
+                    + OptionalPayloadCapacityBytes(snapshot.AuthoritativeState)
                     + Int64EncodedBytes
                     + DateTimeOffsetEncodedBytes));
 
@@ -269,6 +270,13 @@ internal sealed partial class InMemoryLocalStoreAdapter
     /// <returns>The encoded byte count.</returns>
     private static long PayloadCapacityBytes(PayloadEnvelope payload) =>
         checked(StringBytes(payload.ContractId) + Int32EncodedBytes + StringBytes(payload.ContentType) + Int32EncodedBytes + payload.PayloadLength + StringBytes(payload.PayloadHash));
+
+    /// <summary>Returns the retained optional payload envelope byte count.</summary>
+    /// <param name="payload">The optional payload.</param>
+    /// <returns>The encoded byte count.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static long OptionalPayloadCapacityBytes(PayloadEnvelope? payload) =>
+        payload is null ? 0 : PayloadCapacityBytes(payload);
 
     /// <summary>Returns the retained retry state capacity.</summary>
     /// <param name="retryState">The retry state.</param>
@@ -350,7 +358,12 @@ internal sealed partial class InMemoryLocalStoreAdapter
     /// <param name="snapshotMutation">The snapshot mutation.</param>
     /// <returns>The encoded byte count.</returns>
     private static long SnapshotMutationCapacityBytes(SnapshotMutation snapshotMutation) =>
-        checked(StreamIdBytes(snapshotMutation.StreamId) + PayloadCapacityBytes(snapshotMutation.State) + Int32EncodedBytes + Int64EncodedBytes);
+        checked(
+            StreamIdBytes(snapshotMutation.StreamId)
+            + PayloadCapacityBytes(snapshotMutation.State)
+            + OptionalPayloadCapacityBytes(snapshotMutation.AuthoritativeState)
+            + Int32EncodedBytes
+            + Int64EncodedBytes);
 
     /// <summary>Returns the encoded byte count for an operation status.</summary>
     /// <param name="status">The operation status.</param>

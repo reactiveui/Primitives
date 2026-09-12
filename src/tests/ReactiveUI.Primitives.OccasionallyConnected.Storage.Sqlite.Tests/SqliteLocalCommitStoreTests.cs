@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests;
 public sealed partial class SqliteLocalCommitStoreTests
 {
     /// <summary>The current local commit schema version.</summary>
-    private const int SchemaVersion = 5;
+    private const int SchemaVersion = 6;
 
     /// <summary>The legacy local commit schema version without a remote inbox.</summary>
     private const int LegacyLocalCommitSchemaVersion = 2;

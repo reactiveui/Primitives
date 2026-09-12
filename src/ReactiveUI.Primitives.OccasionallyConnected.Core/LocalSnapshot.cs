@@ -35,4 +35,7 @@ public sealed record LocalSnapshot(
         : this(streamId, formatVersion, serverCursor, state, Revision: 0, savedAtUtc)
     {
     }
+
+    /// <summary>Gets the serialized authoritative checkpoint state, or null when no authoritative checkpoint is known.</summary>
+    public PayloadEnvelope? AuthoritativeState { get; init; }
 }
