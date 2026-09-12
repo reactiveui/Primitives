@@ -28,4 +28,7 @@ public enum LocalStoreCapabilities
 
     /// <summary>The store supports authenticated encryption at rest.</summary>
     AuthenticatedEncryptionAtRest = 1 << 5,
+
+    /// <summary>The store persists acknowledged local operation and snapshot commits across process restarts.</summary>
+    DurableLocalCommit = 1 << 6,
 }

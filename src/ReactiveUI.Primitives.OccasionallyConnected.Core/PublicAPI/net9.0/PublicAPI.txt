@@ -423,6 +423,7 @@ public enum LocalStoreCapabilities
     LeasedOutbox = 8,
     MultiProcessCoordination = 16,
     AuthenticatedEncryptionAtRest = 32,
+    DurableLocalCommit = 64,
 }
 [System.Diagnostics.DebuggerDisplay("{StoreIdentity,nq}")]
 public record LocalStoreInitialization : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.LocalStoreInitialization>

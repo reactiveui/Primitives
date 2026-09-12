@@ -25,7 +25,7 @@ internal static class CapabilityNegotiator
 
     /// <summary>The store capabilities necessary for exactly-once effect.</summary>
     private const LocalStoreCapabilities ExactlyOnceStoreFeatures = LocalStoreCapabilities.AtomicLocalCommit
-        | LocalStoreCapabilities.AtomicRemoteApply | LocalStoreCapabilities.DurableInbox;
+        | LocalStoreCapabilities.AtomicRemoteApply | LocalStoreCapabilities.DurableInbox | LocalStoreCapabilities.DurableLocalCommit;
 
     /// <summary>Negotiates one stream before any synchronization work starts.</summary>
     /// <param name="request">The stream requirements and capability offers.</param>
@@ -92,7 +92,7 @@ internal static class CapabilityNegotiator
         var required = LocalStoreCapabilities.None;
         if (request.Policy.Durability == OperationDurability.Durable)
         {
-            required |= LocalStoreCapabilities.AtomicLocalCommit;
+            required |= LocalStoreCapabilities.AtomicLocalCommit | LocalStoreCapabilities.DurableLocalCommit;
         }
 
         if (request.Policy.DeliveryGuarantee == DeliveryGuarantee.ExactlyOnce)
