@@ -187,7 +187,7 @@ internal sealed partial class InMemoryLocalStoreAdapter
     /// <param name="key">The inbox key.</param>
     /// <returns>The retained capacity.</returns>
     private static CapacityUsage InboxKeyCapacity(InboxKey key) =>
-        new(1, checked(StreamIdBytes(key.StreamId) + GuidEncodedBytes));
+        new(1, checked(StreamIdBytes(key.StreamId) + GuidEncodedBytes + DateTimeOffsetEncodedBytes));
 
     /// <summary>Returns the retained lease capacity.</summary>
     /// <param name="lease">The lease record.</param>
@@ -456,11 +456,12 @@ internal sealed partial class InMemoryLocalStoreAdapter
 
     /// <summary>Records remote event identifiers in the inbox.</summary>
     /// <param name="batch">The applied remote batch.</param>
-    private void AddInboxEntries(RemoteEventBatch batch)
+    /// <param name="committedAtUtc">The sampled local receipt timestamp.</param>
+    private void AddInboxEntries(RemoteEventBatch batch, DateTimeOffset committedAtUtc)
     {
         for (var index = 0; index < batch.Events.Count; index++)
         {
-            _ = _inbox.Add(new(batch.StreamId, batch.Events[index].EventId));
+            _inbox.Add(new(batch.StreamId, batch.Events[index].EventId), committedAtUtc);
         }
     }
 
@@ -660,7 +661,7 @@ internal sealed partial class InMemoryLocalStoreAdapter
     {
         for (var index = 0; index < batch.Events.Count; index++)
         {
-            if (_inbox.Contains(new(batch.StreamId, batch.Events[index].EventId)))
+            if (_inbox.ContainsKey(new(batch.StreamId, batch.Events[index].EventId)))
             {
                 throw new InvalidOperationException("The remote event has already been applied.");
             }
