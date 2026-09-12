@@ -67,7 +67,11 @@ public sealed partial class LocalStreamCommitterTests
             Origin = new(ReconciliationClientId, local.Operation.OperationId),
         };
 
-        var remote = await committer.ApplyRemoteBatchAsync(CreateRemoteBatch(null, NextRemoteCursor, [echoed]), CancellationToken.None);
+        var batch = CreateRemoteBatch(null, NextRemoteCursor, [echoed]) with
+        {
+            CompletedOperations = [new(new(ReconciliationClientId, local.Operation.OperationId), [echoed.EventId])],
+        };
+        var remote = await committer.ApplyRemoteBatchAsync(batch, CancellationToken.None);
 
         await Assert.That(remote.State.State.Sum).IsEqualTo(authoritativeValue);
         await Assert.That(remote.Receipt.AppliedCount).IsEqualTo(1);
