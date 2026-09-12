@@ -46,7 +46,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(inner.HasObservers).IsFalse();
     }
 
-    /// <summary>Verifies <c>Shift</c> drops values a source delivers after it has already completed.</summary>
+    /// <summary>Verifies <c>Shift</c> drops the values a source delivers after its completion.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ShiftDropsValuesDeliveredAfterTheSourceCompletes()
@@ -77,7 +77,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(values.SequenceEqual([One, Two])).IsTrue();
     }
 
-    /// <summary>Verifies a stale <c>Calm</c> timer tick does not re-emit the value it already delivered.</summary>
+    /// <summary>Verifies a stale <c>Calm</c> timer tick does not re-emit the value it delivered.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task CalmIgnoresAStaleTimerTickAndPostTerminalNotifications()

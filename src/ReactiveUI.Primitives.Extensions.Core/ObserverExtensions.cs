@@ -13,11 +13,9 @@ public static class ObserverExtensions
     extension<T>(IObserver<T> observer)
     {
         /// <summary>
-        /// Emits each element from <paramref name="source"/> to the observer
-        /// via <see cref="IObserver{T}.OnNext(T)"/> using a fast-path iteration for known
-        /// concrete collection types (<see cref="List{T}"/>, arrays, <see cref="IList{T}"/>).
-        /// Avoids the per-iteration enumerator allocation that <c>foreach</c> over a bare
-        /// <see cref="IEnumerable{T}"/> would incur on these common shapes.
+        /// Emits every element of <paramref name="source"/> to the observer in order through
+        /// <see cref="IObserver{T}.OnNext(T)"/>, indexing arrays, <see cref="List{T}"/> and the list interfaces directly
+        /// and enumerating anything else.
         /// </summary>
         /// <param name="source">The source collection to iterate.</param>
         public void FastForEach(IEnumerable<T> source)

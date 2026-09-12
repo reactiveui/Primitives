@@ -299,7 +299,7 @@ public sealed class PrioritySemaphoreSignalTests
         await Assert.That(overlap).IsFalse();
     }
 
-    /// <summary>A terminal notification arriving after the signal is already terminal is ignored.</summary>
+    /// <summary>A second error notification after the signal has terminated is ignored.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task OnErrorAfterTerminalIsIgnored()
@@ -316,7 +316,7 @@ public sealed class PrioritySemaphoreSignalTests
         await Assert.That(observer.Errors[0]).IsSameReferenceAs(first);
     }
 
-    /// <summary>A throwing delivery still releases drain ownership so a later release can drain again.</summary>
+    /// <summary>A throwing delivery releases drain ownership so a later release drains again.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task DrainReleasesOwnershipWhenDeliveryThrows()
@@ -333,14 +333,14 @@ public sealed class PrioritySemaphoreSignalTests
             static _ => { },
             static () => { });
 
-        // Delivery throws out of the drain loop; the finally path must still release ownership.
+        // Delivery throws out of the drain loop; the finally path releases ownership.
         var first = Assert.Throws<InvalidOperationException>(() => signal.OnNext(FirstValue));
         await Assert.That(first).IsSameReferenceAs(failure);
 
-        // Capacity is now exhausted, so this value only enqueues.
+        // Capacity is exhausted, so this value only enqueues.
         signal.OnNext(SecondValue);
 
-        // Releasing frees capacity and must begin a fresh drain, proving ownership was released.
+        // Releasing frees capacity and begins a fresh drain, so the delivery throws again.
         var second = Assert.Throws<InvalidOperationException>(signal.Release);
         await Assert.That(second).IsSameReferenceAs(failure);
         await Assert.That(deliveries).IsEqualTo(FirstDrainCount);

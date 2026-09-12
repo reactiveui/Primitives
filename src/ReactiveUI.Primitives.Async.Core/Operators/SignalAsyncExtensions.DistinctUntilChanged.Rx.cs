@@ -44,6 +44,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="keySelector">A function that extracts the comparison key from each element in the source sequence.</param>
         /// <returns>An observable sequence that contains only the elements from the source sequence that are not consecutive
         /// duplicates according to the specified key.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="keySelector"/> is <see langword="null"/>.</exception>
         public IObservableAsync<T> DistinctUntilChangedBy<TKey>(Func<T, TKey> keySelector)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);

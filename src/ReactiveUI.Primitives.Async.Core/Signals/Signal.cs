@@ -17,19 +17,18 @@ public static class Signal
     [SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
-        Justification = "Public factory API — caller specifies T explicitly: Signal.Create<int>().")]
+        Justification = "There are no parameters to infer from; the caller states the element type: Signal.Create<int>().")]
     public static ISignalAsync<T> Create<T>() => new SerialSignalAsync<T>();
 
     /// <summary>Creates a new asynchronous Signal instance with the specified publishing and state options.</summary>
     /// <typeparam name="T">The type of elements processed by the Signal.</typeparam>
-    /// <param name="options">The options that configure the publishing behavior and statefulness of the Signal. Must specify valid values
-    /// for publishing and statelessness.</param>
+    /// <param name="options">The publishing order and statelessness to build the signal with.</param>
     /// <returns>An asynchronous Signal instance configured according to the specified options.</returns>
     /// <exception cref="ArgumentOutOfRangeException">Thrown if the specified combination of publishing and statelessness options is not supported.</exception>
     [SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
-        Justification = "Public factory API — caller specifies T explicitly: Signal.Create<int>(options).")]
+        Justification = "The options carry no element type to infer from; the caller states it: Signal.Create<int>(options).")]
     public static ISignalAsync<T> Create<T>(SignalCreationOptions? options) =>
         (options?.PublishingOption, options?.IsStateless) switch
         {
@@ -76,20 +75,20 @@ public static class Signal
     [SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
-        Justification = "Public factory API — caller specifies T explicitly: Signal.CreateReplayLatest<int>().")]
+        Justification = "There are no parameters to infer from; the caller states the element type: Signal.CreateReplayLatest<int>().")]
     public static ISignalAsync<T> CreateReplayLatest<T>() =>
         new SerialReplayLatestSignalAsync<T>(Optional<T>.Empty);
 
     /// <summary>Creates a new asynchronous Signal that replays the latest value to new subscribers, with configuration options for publishing behavior and statefulness.</summary>
     /// <typeparam name="T">The type of the elements processed by the Signal.</typeparam>
-    /// <param name="options">The options that specify the publishing mode and whether the Signal maintains state. Cannot be null.</param>
+    /// <param name="options">The publishing order and statelessness to build the signal with. Cannot be null.</param>
     /// <returns>An asynchronous Signal that replays the latest value to new subscribers, configured according to the specified
     /// options.</returns>
     /// <exception cref="ArgumentOutOfRangeException">Thrown if the combination of options specified in the <paramref name="options"/> parameter is not supported.</exception>
     [SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
-        Justification = "Public factory API — caller specifies T explicitly: Signal.CreateReplayLatest<int>(options).")]
+        Justification = "The options carry no element type to infer from; the caller states it: Signal.CreateReplayLatest<int>(options).")]
     public static ISignalAsync<T> CreateReplayLatest<T>(ReplayLatestSignalCreationOptions? options) =>
         (options?.PublishingOption, options?.IsStateless) switch
         {

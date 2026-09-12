@@ -44,9 +44,6 @@ public class SingleReplaceableDisposable : IsDisposed
     }
 
     /// <summary>Gets a value indicating whether this instance is disposed.</summary>
-    /// <value>
-    ///   <c>true</c> if this instance is disposed; otherwise, <c>false</c>.
-    /// </value>
     public bool IsDisposed => ReferenceEquals(Volatile.Read(ref _disposable), DisposedSentinel);
 
     /// <summary>Gets the debugger display text.</summary>
@@ -54,8 +51,8 @@ public class SingleReplaceableDisposable : IsDisposed
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
-    /// <summary>Creates the specified disposable.</summary>
-    /// <param name="disposable">The disposable.</param>
+    /// <summary>Assigns the inner disposable and disposes the value it displaces; once this slot is disposed the incoming value is disposed instead.</summary>
+    /// <param name="disposable">The disposable to take as the new inner value.</param>
     /// <exception cref="ArgumentExceptionHelper"><paramref name="disposable"/> is <see langword="null"/>.</exception>
     public void Create(IDisposable disposable)
     {
@@ -81,16 +78,15 @@ public class SingleReplaceableDisposable : IsDisposed
         }
     }
 
-    /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
+    /// <summary>Disposes the inner value and blocks further assignments; repeated calls have no further effect.</summary>
     public void Dispose()
     {
-        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(true);
         GC.SuppressFinalize(this);
     }
 
-    /// <summary>Releases unmanaged and - optionally - managed resources.</summary>
-    /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
+    /// <summary>Disposes the inner value and then invokes the constructor-supplied action, once.</summary>
+    /// <param name="disposing"><see langword="true"/> when invoked from <see cref="Dispose()"/>.</param>
     protected virtual void Dispose(bool disposing)
     {
         var old = Interlocked.Exchange(ref _disposable, DisposedSentinel);
@@ -110,8 +106,8 @@ public class SingleReplaceableDisposable : IsDisposed
         /// <inheritdoc/>
         public void Dispose()
         {
-            // Intentionally empty: a reference-identity sentinel marking an already-disposed slot. It is only
-            // ever compared with ReferenceEquals and never itself disposed, so this body is unreachable.
+            // Intentionally empty: a reference-identity sentinel marking a disposed slot. It is only ever
+            // compared with ReferenceEquals and never itself disposed, so this body is unreachable.
         }
     }
 }

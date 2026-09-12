@@ -8,14 +8,14 @@ using System.Threading.Tasks.Sources;
 namespace ReactiveUI.Primitives.Extensions;
 
 /// <summary>
-/// <see cref="ValueTask{T}"/>-returning counterpart to <see cref="FirstAsTaskHelper"/>. Backs the
-/// <c>ToHotValueTask</c> extension with a pooled <see cref="IValueTaskSource{T}"/> implementation
-/// so steady-state callers pay zero allocations after the pool warms up.
+/// <see cref="ValueTask{T}"/>-returning counterpart to <see cref="FirstAsTaskHelper"/>. The returned value task is
+/// backed by a pooled <see cref="IValueTaskSource{T}"/>, so each one must be consumed exactly once: awaiting it twice,
+/// or reading its result after the backing instance returns to the pool, observes another caller's outcome.
 /// </summary>
 /// <typeparam name="T">The element type.</typeparam>
 public static class FirstAsValueTaskHelper<T>
 {
-    /// <summary>Single-slot pool. <c>null</c> when the previous instance is in flight.</summary>
+    /// <summary>Single-slot pool holding the idle witness; <see langword="null"/> while the witness is in flight.</summary>
     private static PooledFirstWitness? _pooled;
 
     /// <summary>Subscribes once and resolves a <see cref="ValueTask{T}"/> with the first value.</summary>
@@ -29,13 +29,13 @@ public static class FirstAsValueTaskHelper<T>
         return inst.Begin(source);
     }
 
-    /// <summary>Pooled combined <see cref="IValueTaskSource{T}"/> + <see cref="IObserver{T}"/>.</summary>
+    /// <summary>Observer that settles a reusable value-task source from the first notification, then returns itself to the pool once the result is read.</summary>
     private sealed class PooledFirstWitness : IValueTaskSource<T>, IObserver<T>
     {
         /// <summary>The reset-able backing store for the <see cref="ValueTask{T}"/> machinery.</summary>
         private ManualResetValueTaskSourceCore<T> _core = new() { RunContinuationsAsynchronously = true };
 
-        /// <summary>Latches to <c>1</c> once the source has been settled so subsequent callbacks no-op.</summary>
+        /// <summary>Latches to <c>1</c> when the source is settled so later callbacks no-op.</summary>
         private int _settled;
 
         /// <summary>The upstream subscription, retained so <see cref="OnNext"/> can cancel it on first match.</summary>

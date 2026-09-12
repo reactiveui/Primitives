@@ -14,7 +14,7 @@ internal static class ObservableSubscribeExtensions
     /// <param name="source">The source observable.</param>
     extension<T>(IObservable<T> source)
     {
-        /// <summary>Subscribes delegate callbacks through the core sink; the distinct name avoids ambiguity with System.Reactive extensions.</summary>
+        /// <summary>Subscribes the three delegate callbacks to the source through the core sink.</summary>
         /// <param name="onNext">Per-value callback.</param>
         /// <param name="onError">Error callback.</param>
         /// <param name="onCompleted">Completion callback.</param>

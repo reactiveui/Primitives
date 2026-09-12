@@ -6,11 +6,7 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Tests for the <c>HandleCancellation</c> operators on an observable source, which await the source through a
-/// cancellable task and either return its value or, on cancellation, run the cleanup action and return the
-/// default.
-/// </summary>
+/// <summary>Tests the <c>HandleCancellation</c> operators on an observable source.</summary>
 public sealed class ObservableCancellationHandlingTests
 {
     /// <summary>The value emitted by the source observable.</summary>
@@ -26,7 +22,7 @@ public sealed class ObservableCancellationHandlingTests
         await Assert.That(result).IsEqualTo(SourceValue);
     }
 
-    /// <summary>Verifies an already-cancelled token runs the cleanup action and yields the default value.</summary>
+    /// <summary>Verifies a pre-cancelled token runs the cleanup action and yields the default value.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task HandleCancellationRunsTheCleanupActionAndReturnsDefaultWhenCancelled()

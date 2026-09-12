@@ -237,7 +237,7 @@ internal sealed class PooledStringBuilder
         _pooledCount++;
     }
 
-    /// <summary>Grows the buffer when the requested length no longer fits.</summary>
+    /// <summary>Grows the buffer when the requested length exceeds its capacity.</summary>
     /// <param name="required">The total capacity required.</param>
     private void EnsureCapacity(int required)
     {

@@ -20,7 +20,7 @@ public partial class TaskSignalTests
     /// <summary>Exception message used by user exception tests.</summary>
     private const string BreakExecutionMessage = "break execution";
 
-    /// <summary>Covers from-task cancellation callback argument validation.</summary>
+    /// <summary>A null cancellation callback is rejected.</summary>
     [Test]
     public void FromTaskValidatesCancellationCallback()
     {
@@ -35,7 +35,7 @@ public partial class TaskSignalTests
         }
     }
 
-    /// <summary>Covers from-task result emission and completion.</summary>
+    /// <summary>A from-task signal emits the task result and completes.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task FromTaskEmitsResult()

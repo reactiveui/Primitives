@@ -181,7 +181,7 @@ public sealed class OnErrorResumeNextSignalTests
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
 
-    /// <summary>Enumerable that returns a null enumerator to cover the defensive null path.</summary>
+    /// <summary>Enumerable that returns a null enumerator.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     /// <param name="returnsNull">Whether <see cref="IEnumerable{T}.GetEnumerator"/> returns null.</param>
     private sealed class NullEnumeratorEnumerable<T>(bool returnsNull) : IEnumerable<IObservable<T>>

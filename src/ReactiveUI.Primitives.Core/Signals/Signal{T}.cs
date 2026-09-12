@@ -9,11 +9,11 @@ using ReactiveUI.Primitives.Disposables;
 namespace ReactiveUI.Primitives.Signals;
 
 /// <summary>A signal that is both an observer and observable of values.</summary>
-/// <typeparam name="T">The Type.</typeparam>
+/// <typeparam name="T">The value type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public class Signal<T> : ISignal<T>
 {
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The number of slots the subscription array starts with.</summary>
     private const int InitialSubscriptionCapacity = 4;
 
     /// <summary>The factor the subscription array grows by when it fills.</summary>
@@ -28,7 +28,7 @@ public class Signal<T> : ISignal<T>
     /// <summary>Serializes observer-set and terminal-state mutations; dispatch reads the published target without this gate.</summary>
     private readonly Lock _observerLock = new();
 
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The terminal error, when the signal faulted.</summary>
     private Exception? _exception;
 
     /// <summary>Atomically published dispatch target: empty, one subscription, a slot array, or a terminal marker.</summary>
@@ -37,19 +37,19 @@ public class Signal<T> : ISignal<T>
     /// <summary>The reusable slot array backing the multi-subscriber shape, kept across an empty period.</summary>
     private SignalSubscription?[]? _slots;
 
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The number of occupied slots in the slot array.</summary>
     private int _subscriptionCount;
 
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The exclusive upper bound of slots that have been handed out, so a scan for a free slot stops there.</summary>
     private int _subscriptionTail;
 
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>Whether the signal has been disposed.</summary>
     private bool _isDisposed;
 
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>Whether a terminal notification has been delivered.</summary>
     private bool _isStopped;
 
-    /// <summary>Gets a value indicating whether indicates whether the subject has observers subscribed to it.</summary>
+    /// <summary>Gets a value indicating whether any observer is subscribed to the signal.</summary>
     public virtual bool HasObservers
     {
         get
@@ -60,7 +60,7 @@ public class Signal<T> : ISignal<T>
         }
     }
 
-    /// <summary>Gets a value indicating whether indicates whether the subject has been disposed.</summary>
+    /// <summary>Gets a value indicating whether the signal has been disposed.</summary>
     public virtual bool IsDisposed => _isDisposed;
 
     /// <summary>Gets the debugger display text.</summary>
@@ -68,14 +68,14 @@ public class Signal<T> : ISignal<T>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
-    /// <summary>Releases unmanaged and - optionally - managed resources.</summary>
+    /// <summary>Detaches every subscription and makes later notifications throw.</summary>
     public void Dispose()
     {
         Dispose(true);
         GC.SuppressFinalize(this);
     }
 
-    /// <summary>Called when [completed].</summary>
+    /// <summary>Completes the current observers and stops the signal, so later notifications are ignored.</summary>
     public void OnCompleted()
     {
         object? observers;
@@ -95,8 +95,8 @@ public class Signal<T> : ISignal<T>
         Completed(observers);
     }
 
-    /// <summary>Called when [error].</summary>
-    /// <param name="error">The error.</param>
+    /// <summary>Faults the current observers and stops the signal, rethrowing to the caller when a value-only callback is subscribed.</summary>
+    /// <param name="error">The terminal error.</param>
     public void OnError(Exception error)
     {
         ArgumentExceptionHelper.ThrowIfNull(error);
@@ -125,9 +125,9 @@ public class Signal<T> : ISignal<T>
         ExceptionDispatchInfo.Capture(error).Throw();
     }
 
-    /// <summary>Called when [next].</summary>
-    /// <param name="value">The value.</param>
-    /// <remarks>Emission reads the published observer state without locking. Terminal signals ignore subsequent values; disposed signals throw.</remarks>
+    /// <summary>Emits a value to the current observers; a stopped signal drops it and a disposed signal throws <see cref="ObjectDisposedException"/>.</summary>
+    /// <param name="value">The value to emit.</param>
+    /// <remarks>Dispatch reads the published observer set without taking the lock, so concurrent calls are not serialized against each other.</remarks>
     public void OnNext(T value)
     {
         var observers = Volatile.Read(ref _observers);
@@ -151,11 +151,9 @@ public class Signal<T> : ISignal<T>
         throw Disposed();
     }
 
-    /// <summary>Subscribes the specified observer.</summary>
-    /// <param name="observer">The observer.</param>
-    /// <returns>
-    /// A IDisposable.
-    /// </returns>
+    /// <summary>Subscribes an observer, delivering the stored terminal notification immediately when the signal has stopped.</summary>
+    /// <param name="observer">The observer to subscribe.</param>
+    /// <returns>A handle that detaches the observer when disposed.</returns>
     public IDisposable Subscribe(IObserver<T> observer)
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
@@ -193,9 +191,9 @@ public class Signal<T> : ISignal<T>
         return EmptyDisposable.Instance;
     }
 
-    /// <summary>Registers a value callback, or rethrows the stored error if the signal has already failed.</summary>
-    /// <param name="onNext">The onNext value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Registers a value-only callback, rethrowing the stored error when the signal has faulted.</summary>
+    /// <param name="onNext">The callback invoked for each value.</param>
+    /// <returns>A handle that detaches the callback when disposed.</returns>
     public IDisposable SubscribeAction(Action<T> onNext)
     {
         ArgumentExceptionHelper.ThrowIfNull(onNext);
@@ -229,7 +227,7 @@ public class Signal<T> : ISignal<T>
         return EmptyDisposable.Instance;
     }
 
-    /// <summary>Releases unmanaged and - optionally - managed resources.</summary>
+    /// <summary>Publishes the disposed marker and detaches the subscriptions it replaced.</summary>
     /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
     protected virtual void Dispose(bool disposing)
     {
@@ -262,7 +260,7 @@ public class Signal<T> : ISignal<T>
     private static ObjectDisposedException Disposed() => new(string.Empty);
 
     /// <summary>Forwards completion to each subscription in the captured observer snapshot.</summary>
-    /// <param name="observers">The observer shape captured while the signal was still running.</param>
+    /// <param name="observers">The observer shape the terminal marker replaced.</param>
     private static void Completed(object? observers)
     {
         if (observers is SignalSubscription single)
@@ -283,8 +281,8 @@ public class Signal<T> : ISignal<T>
     }
 
     /// <summary>Forwards an error to each subscription in the captured observer snapshot.</summary>
-    /// <param name="observers">The observer shape captured while the signal was still running.</param>
-    /// <param name="exception">The exception value.</param>
+    /// <param name="observers">The observer shape the terminal marker replaced.</param>
+    /// <param name="exception">The error to forward.</param>
     private static void Error(object? observers, Exception exception)
     {
         if (observers is SignalSubscription single)
@@ -305,8 +303,8 @@ public class Signal<T> : ISignal<T>
     }
 
     /// <summary>Checks whether the captured snapshot contains any value-only callback subscriptions.</summary>
-    /// <param name="observers">The observer shape captured while the signal was still running.</param>
-    /// <returns>The result.</returns>
+    /// <param name="observers">The observer shape the terminal marker replaced.</param>
+    /// <returns><see langword="true"/> when at least one subscription holds a value-only callback.</returns>
     private static bool HasActionSubscribers(object? observers)
     {
         if (observers is SignalSubscription single)
@@ -352,8 +350,8 @@ public class Signal<T> : ISignal<T>
     }
 
     /// <summary>Forwards a value to each occupied subscription slot.</summary>
-    /// <param name="subscriptions">The subscription snapshot, which the observer field only ever holds non-null.</param>
-    /// <param name="value">The value.</param>
+    /// <param name="subscriptions">The slot array to walk.</param>
+    /// <param name="value">The value to forward.</param>
     private static void DispatchSubscriptions(SignalSubscription?[] subscriptions, T value)
     {
         for (var i = 0; i < subscriptions.Length; i++)
@@ -370,7 +368,7 @@ public class Signal<T> : ISignal<T>
 
     /// <summary>Dispatches to every live slot, then reports a disposal that raced the dispatch.</summary>
     /// <param name="subscriptions">The slot array this dispatch captured.</param>
-    /// <param name="value">The value.</param>
+    /// <param name="value">The value to forward.</param>
     private void DispatchToSlots(SignalSubscription?[] subscriptions, T value)
     {
         DispatchSubscriptions(subscriptions, value);
@@ -394,7 +392,7 @@ public class Signal<T> : ISignal<T>
     }
 
     /// <summary>Adds a subscription and publishes the resulting observer shape.</summary>
-    /// <param name="subscription">The subscription value.</param>
+    /// <param name="subscription">The subscription to add.</param>
     private void AddSubscriptionLocked(SignalSubscription subscription)
     {
         if (_observers is null)
@@ -415,8 +413,8 @@ public class Signal<T> : ISignal<T>
     }
 
     /// <summary>Places a subscription in the reusable slot array, growing it when every slot is taken.</summary>
-    /// <param name="subscription">The subscription value.</param>
-    /// <returns>The slot array the subscription now lives in.</returns>
+    /// <param name="subscription">The subscription to store.</param>
+    /// <returns>The slot array holding the subscription.</returns>
     private SignalSubscription?[] AddToSlotsLocked(SignalSubscription subscription)
     {
         var slots = _slots;
@@ -466,7 +464,7 @@ public class Signal<T> : ISignal<T>
     }
 
     /// <summary>Removes a subscription while holding the observer lock.</summary>
-    /// <param name="subscription">The subscription value.</param>
+    /// <param name="subscription">The subscription to remove.</param>
     private void Remove(SignalSubscription subscription)
     {
         lock (_observerLock)
@@ -487,7 +485,7 @@ public class Signal<T> : ISignal<T>
 
     /// <summary>Removes a subscription from its owning slot array.</summary>
     /// <param name="slots">The active slot array.</param>
-    /// <param name="subscription">The subscription value.</param>
+    /// <param name="subscription">The subscription to clear.</param>
     private void RemoveFromSlotsLocked(SignalSubscription?[] slots, SignalSubscription subscription)
     {
         var index = Array.IndexOf(slots, subscription);
@@ -516,7 +514,7 @@ public class Signal<T> : ISignal<T>
         Volatile.Write(ref _observers, null);
     }
 
-    /// <summary>Represents the SignalSubscription class.</summary>
+    /// <summary>One subscription's handle, holding either an observer or a value-only callback.</summary>
     private sealed class SignalSubscription : IDisposable
     {
         /// <summary>The observer target, or <see langword="null"/> when this subscription stores an action callback.</summary>
@@ -525,12 +523,12 @@ public class Signal<T> : ISignal<T>
         /// <summary>The action target, or <see langword="null"/> when this subscription stores an observer.</summary>
         private readonly Action<T>? _action;
 
-        /// <summary>Stores state for the signal implementation.</summary>
+        /// <summary>The owning signal, cleared by the first disposal.</summary>
         private Signal<T>? _subject;
 
         /// <summary>Initializes a new instance of the <see cref="SignalSubscription"/> class.</summary>
-        /// <param name="subject">The subject value.</param>
-        /// <param name="observer">The observer value.</param>
+        /// <param name="subject">The owning signal.</param>
+        /// <param name="observer">The subscribed observer.</param>
         public SignalSubscription(Signal<T> subject, IObserver<T> observer)
         {
             _subject = subject;
@@ -538,8 +536,8 @@ public class Signal<T> : ISignal<T>
         }
 
         /// <summary>Initializes a new instance of the <see cref="SignalSubscription"/> class.</summary>
-        /// <param name="subject">The subject value.</param>
-        /// <param name="onNext">The onNext value.</param>
+        /// <param name="subject">The owning signal.</param>
+        /// <param name="onNext">The callback invoked for each value.</param>
         public SignalSubscription(Signal<T> subject, Action<T> onNext)
         {
             _subject = subject;
@@ -549,8 +547,8 @@ public class Signal<T> : ISignal<T>
         /// <summary>Gets a value indicating whether this subscription stores an action callback.</summary>
         public bool IsAction => _action is not null;
 
-        /// <summary>Sends a value to the subscription target.</summary>
-        /// <param name="value">The value.</param>
+        /// <summary>Sends a value to the observer or the callback, whichever this subscription holds.</summary>
+        /// <param name="value">The value to send.</param>
         public void OnNext(T value)
         {
             var observer = _observer;
@@ -563,12 +561,12 @@ public class Signal<T> : ISignal<T>
             _action!(value);
         }
 
-        /// <summary>Sends an error to observer subscriptions.</summary>
-        /// <param name="exception">The exception.</param>
+        /// <summary>Sends an error to the observer; a value-only callback receives nothing.</summary>
+        /// <param name="exception">The error to send.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnError(Exception exception) => _observer?.OnError(exception);
 
-        /// <summary>Sends completion to observer subscriptions.</summary>
+        /// <summary>Sends completion to the observer; a value-only callback receives nothing.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnCompleted() => _observer?.OnCompleted();
 

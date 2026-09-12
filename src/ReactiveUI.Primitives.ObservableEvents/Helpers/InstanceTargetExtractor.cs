@@ -52,7 +52,7 @@ internal static class InstanceTargetExtractor
             : null;
     }
 
-    /// <summary>Extracts a host's original generic definition for a shared wrapper.</summary>
+    /// <summary>Builds the wrapper model for a host, collecting its events and any diagnostics they raise.</summary>
     /// <param name="host">The host to wrap, reduced to its original definition.</param>
     /// <param name="location">The call site, for diagnostics.</param>
     /// <param name="supportsNullableAnnotations">Whether the consumer's language can express an annotation.</param>

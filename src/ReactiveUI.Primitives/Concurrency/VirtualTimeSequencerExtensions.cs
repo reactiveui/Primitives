@@ -60,10 +60,7 @@ public static class VirtualTimeSequencerExtensions
 
             ArgumentExceptionHelper.ThrowIfNull(action);
 
-            // As stated in Sequencer.Simple.cs,
-            // an anonymous delegate will allow delegate caching.
-            // Watch https://github.com/dotnet/roslyn/issues/5835 for compiler
-            // support for caching delegates from method groups.
+            // A static lambda rather than a method group, so the compiler caches the delegate.
             return scheduler.ScheduleRelative(action, dueTime, static (_, a) => Invoke(a));
         }
 

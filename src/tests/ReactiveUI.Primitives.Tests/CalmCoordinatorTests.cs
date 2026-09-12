@@ -4,10 +4,7 @@
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Tests for the quiet-period coordinator behind <c>Calm</c> and its <c>Throttle</c> alias, whose completion
-/// has to deliver the value still waiting inside the quiet window instead of discarding it.
-/// </summary>
+/// <summary>Tests for the quiet-period coordinator behind <c>Calm</c> and its <c>Throttle</c> alias.</summary>
 public sealed class CalmCoordinatorTests
 {
     /// <summary>The integer constant one.</summary>
@@ -22,10 +19,10 @@ public sealed class CalmCoordinatorTests
     /// <summary>The marker for a completion that has not been observed yet.</summary>
     private const int NoCompletionObserved = -1;
 
-    /// <summary>The quiet period used by these tests; its timer only fires when the test runs it.</summary>
+    /// <summary>The quiet period used by these tests.</summary>
     private static readonly TimeSpan QuietPeriod = TimeSpan.FromMilliseconds(50);
 
-    /// <summary>Verifies each new value extends the quiet period without emitting the previous value.</summary>
+    /// <summary>Verifies each new value extends the quiet period without emitting the earlier value.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ThrottleWaitsForTheQuietPeriodAfterTheLatestValue()
@@ -118,7 +115,7 @@ public sealed class CalmCoordinatorTests
         await Assert.That(witness.Completed).IsEqualTo(1);
     }
 
-    /// <summary>Verifies completion does not repeat a value the quiet-period timer has already delivered.</summary>
+    /// <summary>Verifies completion does not repeat a value the quiet-period timer delivered.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task CompletionDoesNotRepeatAValueTheTimerAlreadyDelivered()

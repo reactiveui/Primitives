@@ -75,7 +75,7 @@ public static class DisposableAsyncSlot
     /// <summary>Retries a swap when the slot changed after the caller's observation.</summary>
     /// <param name="slot">The slot to replace.</param>
     /// <param name="value">The incoming disposable.</param>
-    /// <param name="current">The previously observed slot value.</param>
+    /// <param name="current">The slot value the caller observed.</param>
     /// <returns>Disposal of the replaced value, or the incoming value when the slot is closed.</returns>
     internal static ValueTask SwapObservedAsync(ref IAsyncDisposable? slot, IAsyncDisposable? value, IAsyncDisposable? current)
     {
@@ -101,7 +101,7 @@ public static class DisposableAsyncSlot
     internal static InvalidOperationException CreateAlreadyAssignedException() =>
         new("Disposable is already assigned.");
 
-    /// <summary>Singleton no-op disposable used to mark closed async-disposable slots.</summary>
+    /// <summary>Sentinel no-op disposable that marks a closed slot.</summary>
     private sealed class DisposedAsyncDisposable : IAsyncDisposable
     {
         /// <inheritdoc/>

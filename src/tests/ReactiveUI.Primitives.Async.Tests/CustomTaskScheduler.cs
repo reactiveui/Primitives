@@ -6,10 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>
-/// A <see cref="TaskScheduler"/> that is not <see cref="TaskScheduler.Default"/> and runs each queued task
-/// on the thread pool. Used to exercise the code paths that branch on a caller-supplied scheduler.
-/// </summary>
+/// <summary>A scheduler distinct from <see cref="TaskScheduler.Default"/> that runs each queued task on the thread pool.</summary>
 internal sealed class CustomTaskScheduler : TaskScheduler
 {
     /// <summary>Singleton instance.</summary>

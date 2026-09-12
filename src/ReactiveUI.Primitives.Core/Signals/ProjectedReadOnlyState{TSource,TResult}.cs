@@ -214,7 +214,7 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
     }
 
     /// <summary>Throws if disposed.</summary>
-    /// <exception cref="ObjectDisposedException">The projection has already been disposed.</exception>
+    /// <exception cref="ObjectDisposedException">The projection is disposed.</exception>
     private void ThrowIfDisposed()
     {
         if (!_isDisposed)

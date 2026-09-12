@@ -12,7 +12,7 @@ internal sealed class StatelessReplayLatestSignalAsyncStateObserverLease<T>(
     StatelessReplayLatestSignalAsyncState<T> state,
     IObserverAsync<T> observer) : IAsyncDisposable
 {
-    /// <summary>Indicates whether the lease has already removed its observer.</summary>
+    /// <summary>Latch raised by the first disposer, so the observer is removed once.</summary>
     private int _disposed;
 
     /// <inheritdoc/>

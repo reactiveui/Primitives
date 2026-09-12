@@ -12,8 +12,8 @@ namespace ReactiveUI.Primitives.Async.Helpers;
 /// </summary>
 public static class FireAndForgetHelper
 {
-    /// <summary>Executes an async action as fire-and-forget, swallowing all exceptions.</summary>
-    /// <param name="action">The async action to execute.</param>
+    /// <summary>Starts <paramref name="action"/> with no task to await, routing any failure to <see cref="UnhandledExceptionHandler"/>.</summary>
+    /// <param name="action">The asynchronous action to start.</param>
     [SuppressMessage(
         "Concurrency",
         "SST1905:Do not use async void",
@@ -21,14 +21,14 @@ public static class FireAndForgetHelper
     [SuppressMessage(
         "ReSharper",
         "AsyncVoidMethod",
-        Justification = "This is a fire-and-forget helper.")]
+        Justification = "There is no caller to hand a Task back to, so failures go to the global handler instead.")]
     [ExcludeFromCodeCoverage]
     public static async void Run(Func<ValueTask> action) =>
         await RunAsync(action).ConfigureAwait(false);
 
     /// <summary>Runs the action and reports failures to the unhandled exception handler.</summary>
     /// <param name="action">The action to execute.</param>
-    /// <returns>The action and any exception reporting.</returns>
+    /// <returns>A task that completes once the action and any failure reporting have run.</returns>
     internal static async ValueTask RunAsync(Func<ValueTask> action)
     {
         ArgumentExceptionHelper.ThrowIfNull(action);

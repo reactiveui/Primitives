@@ -112,9 +112,7 @@ public sealed class VirtualClock : ISequencer, IServiceProvider, IStopwatchProvi
         "Design",
         "SST2318:Members should not have identical bodies",
         Justification =
-            "The relative (TimeSpan) and absolute (DateTimeOffset) Schedule overloads forward to _state.Schedule with "
-            + "the same argument names, so the source text matches, but overload resolution binds each to a different "
-            + "_state.Schedule overload by dueTime's type. Both are required by the scheduler contract.")]
+            "The dueTime type binds this body to a different state overload than the relative one it matches textually.")]
     public IDisposable Schedule<TState>(
         TState state,
         DateTimeOffset dueTime,

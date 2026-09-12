@@ -13,10 +13,7 @@ public sealed class SignalCollectTests
     /// <summary>The buffer window used by the manually driven flush tests.</summary>
     private static readonly TimeSpan CollectWindow = TimeSpan.FromMilliseconds(50);
 
-    /// <summary>
-    /// Verifies a flush that fires with an empty window emits no batch, and that a source which completes
-    /// twice completes the buffered sequence once.
-    /// </summary>
+    /// <summary>A stale flush emits no batch, and a source that completes twice completes the batched sequence once.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task CollectIgnoresAStaleFlushAndASecondCompletion()
@@ -40,7 +37,7 @@ public sealed class SignalCollectTests
         await Assert.That(batches.Count).IsEqualTo(1);
     }
 
-    /// <summary>Verifies the Collect method covers immediate, scheduled, terminal, and error paths.</summary>
+    /// <summary>Collect emits immediately with a zero window, batches on a clock, and forwards completion and errors.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task CollectCoversImmediateScheduledCompletionErrorAndDisposePaths()
@@ -111,7 +108,6 @@ public sealed class SignalCollectTests
         source.OnNext(First);
         source.OnNext(Second);
 
-        // The window has not elapsed, so nothing may have been emitted yet.
         await Assert.That(batches.Count).IsEqualTo(0);
 
         clock.AdvanceBy(TimeSpan.FromTicks(Second));
@@ -119,7 +115,6 @@ public sealed class SignalCollectTests
         await Assert.That(batches.Count).IsEqualTo(1);
         await Assert.That(batches[0].SequenceEqual([First, Second])).IsTrue();
 
-        // A value in the next window opens a fresh batch rather than re-emitting the previous one.
         source.OnNext(Third);
         clock.AdvanceBy(TimeSpan.FromTicks(Second));
 
@@ -150,7 +145,7 @@ public sealed class SignalCollectTests
         await Assert.That(observed.Count).IsEqualTo(1);
         await Assert.That(observed[0]).IsSameReferenceAs(expected);
 
-        // The buffer has stopped, so a late value must not be recorded and the scheduled flush must emit nothing.
+        // The source keeps pushing after its error, which the stopped buffer must drop.
         upstream.OnNext(Second);
         clock.AdvanceBy(TimeSpan.FromTicks(Second));
 

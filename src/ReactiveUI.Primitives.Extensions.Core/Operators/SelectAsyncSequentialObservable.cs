@@ -5,7 +5,11 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>Projects each element to an asynchronous operation, preserving order and handling sequential execution.</summary>
+/// <summary>
+/// Projects each element through an asynchronous selector one operation at a time, queueing values that arrive while an
+/// operation runs so results keep source order. The first selector failure terminates the sequence, and the source's
+/// completion waits for the queue to drain.
+/// </summary>
 /// <typeparam name = "TSource">The type of elements in the source sequence.</typeparam>
 /// <typeparam name = "TResult">The type of the result of the asynchronous operation.</typeparam>
 /// <param name = "source">The source observable.</param>
@@ -89,7 +93,7 @@ public sealed class SelectAsyncSequentialObservable<TSource, TResult>(IObservabl
             }
         }
 
-        /// <summary>Processes a value and returns its active operation.</summary>
+        /// <summary>Queues the value and starts the drain loop when no operation is running.</summary>
         /// <param name = "value">The source value.</param>
         /// <returns>The processing task, or a completed task when no work starts.</returns>
         internal Task OnNextAsync(TSource value)
@@ -113,7 +117,7 @@ public sealed class SelectAsyncSequentialObservable<TSource, TResult>(IObservabl
             return processing;
         }
 
-        /// <summary>Processes the next value in the queue.</summary>
+        /// <summary>Projects queued values one at a time, completing the sequence when the queue empties after the source finishes.</summary>
         /// <returns>A task representing the operation.</returns>
         private async Task ProcessNextAsync()
         {

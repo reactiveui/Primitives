@@ -16,7 +16,7 @@ public sealed class ImmediateReturnSignal<T> : IRequireCurrentThread<T>, IInline
     private readonly T _value;
 
     /// <summary>Initializes a new instance of the <see cref="ImmediateReturnSignal{T}"/> class.</summary>
-    /// <param name="value">The value.</param>
+    /// <param name="value">The value emitted to every subscriber.</param>
     public ImmediateReturnSignal(T value) => _value = value;
 
     /// <summary>Indicates whether subscription has to happen on the calling thread.</summary>

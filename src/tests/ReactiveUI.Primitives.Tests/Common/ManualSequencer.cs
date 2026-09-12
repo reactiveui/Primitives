@@ -34,10 +34,7 @@ internal sealed class ManualSequencer : ISequencer
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2318:Members should not have identical bodies",
-        Justification =
-            "The relative and absolute Schedule overloads of this test-double sequencer intentionally behave the same "
-            + "way; both are required by the ISequencer contract and, as distinct interface overloads, cannot forward "
-            + "to one another.")]
+        Justification = "Both ISequencer Schedule overloads of this test double queue the item without honoring a due time.")]
     public void Schedule(IWorkItem item, long dueTimestamp) => _pending.Add(item);
 
     /// <summary>Moves the sequencer's clock forward without running any work.</summary>

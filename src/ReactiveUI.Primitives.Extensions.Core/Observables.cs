@@ -6,11 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions;
 
-/// <summary>
-/// Factory methods that build <see cref="IObservable{T}"/> instances. The plural name avoids
-/// resolution collisions with other observable factory types at call sites that import multiple
-/// reactive namespaces.
-/// </summary>
+/// <summary>Factory methods that build <see cref="IObservable{T}"/> sequences.</summary>
 public static class Observables
 {
     /// <summary>Returns an observable sequence that emits a single value and completes synchronously inside <see cref="IObservable{T}.Subscribe"/>.</summary>

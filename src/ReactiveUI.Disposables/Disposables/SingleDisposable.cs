@@ -4,7 +4,7 @@
 
 namespace ReactiveUI.Primitives.Disposables;
 
-/// <summary>Single-assignment disposable slot.</summary>
+/// <summary>A disposable slot that accepts one assignment: a second assignment throws, and a value assigned after disposal is disposed immediately.</summary>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public class SingleDisposable : IsDisposed
 {
@@ -50,7 +50,7 @@ public class SingleDisposable : IsDisposed
     /// <summary>Assigns the disposable held by this slot.</summary>
     /// <param name="disposable">The disposable.</param>
     /// <exception cref="ArgumentExceptionHelper"><paramref name="disposable"/> is <see langword="null"/>.</exception>
-    /// <exception cref="InvalidOperationException">The slot already has an assignment.</exception>
+    /// <exception cref="InvalidOperationException">The slot holds an earlier assignment.</exception>
     public void Create(IDisposable disposable)
     {
         ArgumentExceptionHelper.ThrowIfNull(disposable);
@@ -70,15 +70,15 @@ public class SingleDisposable : IsDisposed
         throw new InvalidOperationException($"The {nameof(disposable)} slot has already been assigned.");
     }
 
-    /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
+    /// <summary>Disposes the assigned value and blocks further assignments; repeated calls have no further effect.</summary>
     public void Dispose()
     {
         Dispose(true);
         GC.SuppressFinalize(this);
     }
 
-    /// <summary>Releases unmanaged and - optionally - managed resources.</summary>
-    /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
+    /// <summary>Runs the constructor-supplied action and then disposes the assigned value, once.</summary>
+    /// <param name="disposing"><see langword="true"/> to dispose the assigned value; <see langword="false"/> to release nothing.</param>
     protected virtual void Dispose(bool disposing)
     {
         if (!disposing)
@@ -103,8 +103,8 @@ public class SingleDisposable : IsDisposed
         /// <inheritdoc/>
         public void Dispose()
         {
-            // Intentionally empty: a reference-identity sentinel marking an already-disposed slot. It is only
-            // ever compared with ReferenceEquals and never itself disposed, so this body is unreachable.
+            // Intentionally empty: a reference-identity sentinel marking a disposed slot. It is only ever
+            // compared with ReferenceEquals and never itself disposed, so this body is unreachable.
         }
     }
 }

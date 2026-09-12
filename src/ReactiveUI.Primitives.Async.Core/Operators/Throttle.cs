@@ -5,7 +5,6 @@
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides Throttle (debounce) extension methods for asynchronous observable sequences.</summary>
-/// <remarks>Only the latest value is emitted after the quiet period; each source value restarts that period.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Throttle (debounce) operators for an observable source sequence.</summary>
@@ -19,6 +18,7 @@ public static partial class SignalAsyncExtensions
         /// <returns>An observable sequence containing only those elements that are not followed by another
         /// element within the specified due time.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="dueTime"/> is negative.</exception>
+        /// <remarks>Each source element restarts the quiet period, so a continuous burst forwards only its final element.</remarks>
         public IObservableAsync<T> Throttle(TimeSpan dueTime)
         {
             ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(dueTime, TimeSpan.Zero);
@@ -34,6 +34,7 @@ public static partial class SignalAsyncExtensions
         /// <returns>An observable sequence containing only those elements that are not followed by another
         /// element within the specified due time.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="dueTime"/> is negative.</exception>
+        /// <remarks>Each source element restarts the quiet period, so a continuous burst forwards only its final element.</remarks>
         public IObservableAsync<T> Throttle(TimeSpan dueTime, TimeProvider? timeProvider)
         {
             ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(dueTime, TimeSpan.Zero);

@@ -9,7 +9,7 @@ namespace ReactiveUI.Disposables.Tests;
 /// <summary>Tests slot assignment, replacement disposal, and idempotent disposal.</summary>
 public class DisposableSlotHelperTests
 {
-    /// <summary>Verifies that an incoming value is disposed immediately if the slot is already disposed.</summary>
+    /// <summary>Verifies that an incoming value is disposed immediately when the slot is disposed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAssignWithoutDisposingPreviousIntoDisposedSlot_ThenIncomingDisposed()
@@ -72,7 +72,7 @@ public class DisposableSlotHelperTests
         await Assert.That(second.DisposeCount).IsEqualTo(0);
     }
 
-    /// <summary>Verifies the swap path disposes the incoming value if the slot is already disposed.</summary>
+    /// <summary>Verifies the swap path disposes the incoming value when the slot is disposed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSwapAndDisposePreviousIntoDisposedSlot_ThenIncomingDisposed()

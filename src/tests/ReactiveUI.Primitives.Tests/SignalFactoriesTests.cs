@@ -61,7 +61,7 @@ public partial class SignalFactoriesTests
     /// <summary>The expected repeated five values emitted by the bounded loop factory.</summary>
     private static readonly int[] ExpectedFiveFive = [Five, Five];
 
-    /// <summary>The expected single seven produced by the start and scheduled branches.</summary>
+    /// <summary>The expected single seven produced by the start and scheduled factories.</summary>
     private static readonly int[] ExpectedSingleSeven = [Seven];
 
     /// <summary>The expected error type names produced by the task factory continuations.</summary>
@@ -89,7 +89,7 @@ public partial class SignalFactoriesTests
     /// <summary>The expected values emitted by the direct task runner tests.</summary>
     private static readonly int[] ExpectedOneTwoThree = [One, Two, Three];
 
-    /// <summary>Covers scheduled return, throw, and empty signal implementations.</summary>
+    /// <summary>Scheduled emit, none, and fail factories deliver a value, a completion, and the original error.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ScheduledScalarFactoriesUseNonImmediateSignalImplementations()
@@ -110,7 +110,7 @@ public partial class SignalFactoriesTests
         await Assert.That(thrown[0]).IsSameReferenceAs(error);
     }
 
-    /// <summary>Covers factory scheduling, task continuations, and timer aliases with deterministic time.</summary>
+    /// <summary>Scheduled ranges, loops, task factories, and timer aliases emit their sequences on a virtual clock.</summary>
     /// <returns>A task that completes when asynchronous continuations are observed.</returns>
     [Test]
     public async Task FactoryAliasesScheduledRangesTasksAndTimersCoverRemainderBranches()
@@ -161,7 +161,7 @@ public partial class SignalFactoriesTests
         AssertSchedulingFactoriesRejectInvalidArguments();
     }
 
-    /// <summary>Covers small value/factory/inline branches with public surface behavior.</summary>
+    /// <summary>Scheduled, looped, and paired signals validate their observers and emit through the inline surface.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ValueFactoryAndInlineBranchesCoverPublicEdgeBehavior()
@@ -211,7 +211,7 @@ public partial class SignalFactoriesTests
         await Assert.That(mappedErrors.SequenceEqual(ExpectedMappedErrors)).IsTrue();
     }
 
-    /// <summary>Covers create-with-state, defer, and immediate-throw factory observer error paths.</summary>
+    /// <summary>Create-with-state, lazy, and fail factories forward their failures to the observer.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task FactoryErrorPathsForwardObserverErrors()
@@ -280,7 +280,7 @@ public partial class SignalFactoriesTests
         await Assert.That(observer.Completions).IsEqualTo(0);
     }
 
-    /// <summary>Verifies that external token cancellation remains a source error while subscribed.</summary>
+    /// <summary>Verifies that external token cancellation surfaces as an observer error while the subscription is live.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task FromAsyncCancellableFactoryExternalCancellationForwardsObserverError()
@@ -374,7 +374,7 @@ public partial class SignalFactoriesTests
         await Assert.That(nullTask.Completed).IsEqualTo(0);
     }
 
-    /// <summary>Verifies that already-canceled task factories forward cancellation as observer errors.</summary>
+    /// <summary>Verifies that a canceled task and a canceled external token forward cancellation as observer errors.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task FromAsyncCancellableFactoryCanceledTasksForwardObserverErrors()
@@ -528,10 +528,7 @@ public partial class SignalFactoriesTests
         AssertRxFactoryAliasesRejectInvalidArguments(cases);
     }
 
-    /// <summary>
-    /// Verifies an empty range completes immediately without touching the sequencer. There is nothing to emit, so the
-    /// factory hands back the shared empty signal rather than scheduling a walk over zero values.
-    /// </summary>
+    /// <summary>A sequence of no values completes immediately without scheduling anything.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task SequenceOfNoValuesCompletesWithoutSchedulingAnything()

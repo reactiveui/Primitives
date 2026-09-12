@@ -121,7 +121,7 @@ public class PriorityQueueTests
         await Assert.That(rightQueue.VerifyHeapProperty()).IsFalse();
     }
 
-    /// <summary>Covers indexed-item equality, hashing, and type mismatch handling.</summary>
+    /// <summary>Verifies indexed-item equality, hashing, and the comparison operators.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task IndexedItemEqualityCoversContracts()
@@ -162,7 +162,7 @@ public class PriorityQueueTests
         return queue;
     }
 
-    /// <summary>A mutable comparable item used to invalidate heap ordering after enqueue.</summary>
+    /// <summary>A comparable item whose priority can change after it is enqueued.</summary>
     /// <param name="priority">The initial priority.</param>
     private sealed class PriorityItem(int priority) : IComparable<PriorityItem>
     {

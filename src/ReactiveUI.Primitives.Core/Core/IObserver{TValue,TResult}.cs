@@ -5,14 +5,8 @@
 namespace ReactiveUI.Primitives.Core;
 
 /// <summary>Provides a mechanism for receiving push-based notifications and returning a response.</summary>
-/// <typeparam name="TValue">
-/// The type of the elements received by the observer.
-/// This type parameter is contravariant. That is, you can use either the type you specified or any type that is less derived.
-/// </typeparam>
-/// <typeparam name="TResult">
-/// The type of the result returned from the observer's notification handlers.
-/// This type parameter is covariant. That is, you can use either the type you specified or any type that is more derived.
-/// </typeparam>
+/// <typeparam name="TValue">The element type received by the observer.</typeparam>
+/// <typeparam name="TResult">The result type returned from the observer's notification handlers.</typeparam>
 public interface IObserver<in TValue, out TResult>
 {
     /// <summary>Notifies the observer of a new element in the sequence.</summary>

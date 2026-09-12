@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Tests;
 /// <summary>Tests for <see cref="WasmSequencer"/>.</summary>
 public sealed class WasmSequencerTests
 {
-    /// <summary>Expected values produced by an immediate burst, used to verify FIFO order.</summary>
+    /// <summary>Expected values produced by an immediate burst, in FIFO order.</summary>
     private static readonly int[] ExpectedBurst = [1, 2, 3];
 
     /// <summary>Verifies the shared instance is a singleton.</summary>
@@ -105,7 +105,7 @@ public sealed class WasmSequencerTests
         await Assert.That(executed).IsTrue();
     }
 
-    /// <summary>Verifies a cancelled work item never executes while later work still runs.</summary>
+    /// <summary>Verifies a cancelled work item never executes while later work runs.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task CancelledItemIsSkipped()

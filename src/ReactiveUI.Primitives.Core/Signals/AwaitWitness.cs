@@ -6,20 +6,20 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>Represents the AwaitWitness class.</summary>
-/// <typeparam name="T">The Type.</typeparam>
+/// <summary>Observer that discards values and runs a continuation on the first terminal notification.</summary>
+/// <typeparam name="T">The observed value type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("AwaitWitness: Callback = {_callback}, Context = {_context}")]
 public sealed class AwaitWitness<T> : IObserver<T>
 {
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The context captured at construction, or <see langword="null"/> to run the continuation inline.</summary>
     private readonly SynchronizationContext? _context;
 
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The continuation run on completion or failure.</summary>
     private readonly Action _callback;
 
     /// <summary>Initializes a new instance of the <see cref="AwaitWitness{T}"/> class.</summary>
-    /// <param name="callback">The callback value.</param>
-    /// <param name="originalContext">The originalContext value.</param>
+    /// <param name="callback">The continuation to run on the terminal notification.</param>
+    /// <param name="originalContext">Whether to capture the current synchronization context and post the continuation to it.</param>
     public AwaitWitness(Action callback, bool originalContext)
     {
         if (originalContext)
@@ -35,19 +35,16 @@ public sealed class AwaitWitness<T> : IObserver<T>
     public void OnCompleted() => InvokeOnOriginalContext();
 
     /// <summary>Resumes the awaiting continuation when the source fails.</summary>
-    /// <param name="error">The error value.</param>
+    /// <param name="error">The terminal error, which the continuation does not receive.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2318:Members should not have identical bodies",
-        Justification =
-            "OnCompleted and OnError are distinct IObserver<T> terminal notifications that intentionally both fire the "
-            + "witness by delegating to the shared InvokeOnOriginalContext helper. They are not a copy-paste of each "
-            + "other; having one call the other would misrepresent an error as a completion.")]
+        Justification = "Both terminal notifications resume the same continuation, and neither may delegate to the other.")]
     public void OnError(Exception error) => InvokeOnOriginalContext();
 
     /// <summary>Ignores values; only terminal notifications resume the continuation.</summary>
-    /// <param name="value">The value.</param>
+    /// <param name="value">The ignored value.</param>
     public void OnNext(T value)
     {
     }

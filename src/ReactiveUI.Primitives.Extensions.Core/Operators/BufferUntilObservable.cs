@@ -7,7 +7,11 @@ using System.Text;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>Operator that buffers characters until a start and end delimiter are found.</summary>
+/// <summary>
+/// Buffers characters from <paramref name="startsWith"/> through <paramref name="endsWith"/> inclusive and emits each
+/// delimited run as one string, discarding characters outside a run. Completion flushes a run whose end delimiter never
+/// arrived.
+/// </summary>
 /// <param name="source">The source observable of characters.</param>
 /// <param name="startsWith">The starting delimiter.</param>
 /// <param name="endsWith">The ending delimiter.</param>
@@ -33,10 +37,10 @@ public sealed class BufferUntilObservable(
         char startsWith,
         char endsWith) : IObserver<char>
     {
-        /// <summary>The string builder.</summary>
+        /// <summary>Accumulates the characters of the run being buffered.</summary>
         private readonly StringBuilder _sb = new();
 
-        /// <summary>Whether the start delimiter has been found.</summary>
+        /// <summary>Set while a run is open, meaning the start delimiter has arrived and the end delimiter has not.</summary>
         private bool _startFound;
 
         /// <inheritdoc/>

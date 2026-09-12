@@ -7,6 +7,9 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Reactive.Concurrency;
 
 /// <summary>Windows Forms scheduler that coalesces scheduled work through a UI control.</summary>
+/// <remarks>Work runs on the control's UI thread. Work scheduled before the control has a handle stays queued until
+/// handle creation posts a drain, and delayed work waits on a background scheduler that marshals it back through the
+/// control when due.</remarks>
 /// <seealso cref="System.Reactive.Concurrency.IScheduler" />
 [System.Diagnostics.DebuggerDisplay("ControlSequencer: Control = {Control}")]
 public sealed class ControlSequencer : CoalescingDispatchScheduler

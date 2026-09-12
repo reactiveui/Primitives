@@ -5,10 +5,9 @@
 namespace ReactiveUI.Primitives.Extensions;
 
 /// <summary>
-/// Represents either a staleness indicator or a value update from an observable stream. Value-type shape;
-/// the stale-detection operator emits these directly so per-emission allocations are zero. Note that
-/// <c>default(Stale&lt;T&gt;)</c> represents a value update with the default <typeparamref name="T"/>; use
-/// <c>new Stale&lt;T&gt;()</c> to construct a staleness signal.
+/// Carries either a staleness signal or a value update from an observable sequence. <c>default(Stale&lt;T&gt;)</c> is a
+/// value update holding the default <typeparamref name="T"/>; construct a staleness signal with
+/// <c>new Stale&lt;T&gt;()</c>, and read <see cref="Update"/> only when <see cref="IsStale"/> is <see langword="false"/>.
 /// </summary>
 /// <typeparam name="T">The type of the update value.</typeparam>
 [System.Diagnostics.DebuggerDisplay("Stale: IsStale = {IsStale}")]

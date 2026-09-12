@@ -21,10 +21,7 @@ public sealed class SkipWhileNullObservable<T>(IObservable<T> source) : IObserva
         return source.Subscribe(new SkipWhileNullWitness(observer));
     }
 
-    /// <summary>
-    /// Forwarding observer that swallows leading <see langword="null"/> values until the first
-    /// non-null value, then becomes a transparent forwarder for the remainder of the sequence.
-    /// </summary>
+    /// <summary>Forwarding observer that drops leading nulls and forwards everything from the first non-null value onward.</summary>
     /// <param name="downstream">The downstream observer.</param>
     private sealed class SkipWhileNullWitness(IObserver<T> downstream) : IObserver<T>
     {

@@ -6,11 +6,7 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Verifies <see cref="CommandExecution{TResult}"/>, the awaitable a command hands back. It exists so a command
-/// that finishes synchronously does not have to allocate a task, which means it has three shapes to honour —
-/// a task, a bare result, and a bare exception — behind one awaiter.
-/// </summary>
+/// <summary>Verifies <see cref="CommandExecution{TResult}"/>, the awaitable a command hands back.</summary>
 public class CommandExecutionTests
 {
     /// <summary>The value a successful command produces.</summary>
@@ -31,10 +27,7 @@ public class CommandExecutionTests
         await Assert.That(await execution).IsEqualTo(CommandResult);
     }
 
-    /// <summary>
-    /// A synchronous command that fails is carried as a bare exception, and awaiting it must rethrow that exact
-    /// exception rather than an <see cref="AggregateException"/> wrapper.
-    /// </summary>
+    /// <summary>Awaiting a failed synchronous command rethrows the original exception, not an <see cref="AggregateException"/>.</summary>
     /// <returns>A task that completes when the synchronous-fault assertions finish.</returns>
     [Test]
     public async Task AwaitingAFailedSynchronousCommandRethrowsTheOriginalException()
@@ -49,10 +42,7 @@ public class CommandExecutionTests
         await Assert.That(thrown!).IsSameReferenceAs(fault);
     }
 
-    /// <summary>
-    /// <c>ConfigureAwait</c> hands back a fresh awaitable that carries the same outcome. It must not lose the
-    /// result on the way through, whichever of the three shapes the execution is carrying.
-    /// </summary>
+    /// <summary><c>ConfigureAwait</c> preserves the outcome of a task, a bare result, and a bare exception alike.</summary>
     /// <returns>A task that completes when the configure-await assertions finish.</returns>
     [Test]
     public async Task ConfigureAwaitPreservesTheOutcomeOfEveryExecutionShape()
@@ -75,11 +65,7 @@ public class CommandExecutionTests
         await Assert.That(thrown!).IsSameReferenceAs(fault);
     }
 
-    /// <summary>
-    /// The awaiter implements the plain <see cref="System.Runtime.CompilerServices.INotifyCompletion"/>
-    /// continuation path as well as the critical one the C# compiler prefers. A caller that schedules through it
-    /// must still be resumed, and must still see the result.
-    /// </summary>
+    /// <summary>A continuation scheduled through <see cref="System.Runtime.CompilerServices.INotifyCompletion"/> is resumed and sees the result.</summary>
     /// <returns>A task that completes when the continuation assertions finish.</returns>
     [Test]
     public async Task TheAwaiterResumesAContinuationScheduledThroughOnCompleted()

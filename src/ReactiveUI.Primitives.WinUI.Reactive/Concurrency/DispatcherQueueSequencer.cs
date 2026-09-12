@@ -8,6 +8,8 @@ using Microsoft.UI.Dispatching;
 namespace ReactiveUI.Primitives.Reactive.Concurrency;
 
 /// <summary>WinUI dispatcher queue scheduler that coalesces scheduled work through a <see cref="DispatcherQueue"/>.</summary>
+/// <remarks>Work runs on the dispatcher queue's thread and delayed work fires on a dispatcher queue timer, so disposing
+/// the returned subscription stops that timer as well as suppressing work that has not started.</remarks>
 /// <seealso cref="System.Reactive.Concurrency.IScheduler" />
 [System.Diagnostics.DebuggerDisplay("DispatcherQueueSequencer: DispatcherQueue = {DispatcherQueue}, Priority = {Priority}")]
 public sealed class DispatcherQueueSequencer : CoalescingDispatchScheduler
@@ -16,8 +18,7 @@ public sealed class DispatcherQueueSequencer : CoalescingDispatchScheduler
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Maintainability",
         "SST1422:Move this field into the method that uses it",
-        Justification =
-            "Persistent lazy cache: the dispatcher queue handler is built once and reused across every post, so it cannot be a method local.")]
+        Justification = "The handler delegate is cached across every post, so it cannot be a method local.")]
     private DispatcherQueueHandler? _handler;
 
     /// <summary>Initializes a new instance of the <see cref="DispatcherQueueSequencer"/> class.</summary>
@@ -45,7 +46,7 @@ public sealed class DispatcherQueueSequencer : CoalescingDispatchScheduler
     public DispatcherQueuePriority Priority { get; }
 
     /// <inheritdoc/>
-    /// <exception cref="InvalidOperationException">The dispatcher queue is no longer accepting work.</exception>
+    /// <exception cref="InvalidOperationException">The dispatcher queue rejected the work.</exception>
     protected override bool Post(Action drain)
     {
         _handler ??= drain.Invoke;

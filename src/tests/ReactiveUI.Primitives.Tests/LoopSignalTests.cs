@@ -6,11 +6,7 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Tests for the infinite <c>Loop</c> signal, whose current-thread trampoline repeats a value until a bounding
-/// operator disposes the subscription. A bounded loop must stop repeating once the bound is reached instead of
-/// livelocking the subscribing thread.
-/// </summary>
+/// <summary>Verifies the infinite <c>Loop</c> signal repeats its value until a bounding operator stops it.</summary>
 public sealed class LoopSignalTests
 {
     /// <summary>The value repeated by the loop.</summary>

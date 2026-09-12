@@ -24,8 +24,8 @@ public static partial class SignalAsyncReactiveExtensions
     {
         /// <summary>Wraps the source observable so that observer callbacks are invoked on the specified async context.</summary>
         /// <param name="asyncContext">The async context on which observer callbacks should be invoked.</param>
-        /// <param name="forceYielding">When true, forces an asynchronous yield before invoking each callback, even if already on the target
-        /// context.</param>
+        /// <param name="forceYielding">When true, forces an asynchronous yield before invoking each callback, even when
+        /// the calling thread is on the target context.</param>
         /// <returns>An observable sequence whose observer callbacks execute on the specified context.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> WitnessOn(AsyncContext asyncContext, bool forceYielding) =>
@@ -74,7 +74,7 @@ public static partial class SignalAsyncReactiveExtensions
 
         /// <summary>Configures the observable sequence to notify observers on the specified scheduler.</summary>
         /// <param name="scheduler">The scheduler on which to observe and deliver notifications to observers. Cannot be null.</param>
-        /// <param name="forceYielding">true to force yielding to the scheduler even if already on the target context; otherwise, false.</param>
+        /// <param name="forceYielding">true to force yielding to the scheduler even when the calling thread is on the target context; otherwise, false.</param>
         /// <returns>An observable sequence whose notifications are delivered on the specified scheduler.</returns>
         public IObservableAsync<T> WitnessOn(ISequencer scheduler, bool forceYielding)
         {

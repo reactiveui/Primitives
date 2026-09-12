@@ -15,16 +15,13 @@ public sealed class BooleanDisposable : IsDisposed
     private int _isDisposed;
 
     /// <summary>Gets a value indicating whether this instance is disposed.</summary>
-    /// <value>
-    ///   <c>true</c> if this instance is disposed; otherwise, <c>false</c>.
-    /// </value>
     public bool IsDisposed => Volatile.Read(ref _isDisposed) != 0;
 
     /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
-    /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
+    /// <summary>Latches the disposed flag; repeated calls have no further effect.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose() => Interlocked.Exchange(ref _isDisposed, 1);
 }

@@ -7,7 +7,10 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>Shuffles arrays in place using non-cryptographic randomness.</summary>
+/// <summary>
+/// Reorders each array the source emits in place with non-cryptographic randomness and forwards that same instance, so
+/// any other holder of the array sees the new order. A null array is forwarded untouched.
+/// </summary>
 /// <typeparam name="T">The array element type.</typeparam>
 /// <param name="source">The source observable emitting arrays.</param>
 public sealed class ShuffleObservable<T>(IObservable<T[]> source) : IObservable<T[]>
@@ -20,7 +23,7 @@ public sealed class ShuffleObservable<T>(IObservable<T[]> source) : IObservable<
         return source.Subscribe(new ShuffleWitness(observer));
     }
 
-    /// <summary>Randomizes buffered values for non-security use.</summary>
+    /// <summary>Observer that reorders each array in place before forwarding it.</summary>
     /// <param name="downstream">The downstream observer receiving shuffled arrays.</param>
     [SuppressMessage(
         "Security",
@@ -67,7 +70,6 @@ public sealed class ShuffleObservable<T>(IObservable<T[]> source) : IObservable<
         /// <param name="array">The array to shuffle in place.</param>
         private static void ShuffleInPlace(T[] array)
         {
-            // This shuffle requires no cryptographic randomness.
             var random = _threadRandom;
             if (random is null)
             {

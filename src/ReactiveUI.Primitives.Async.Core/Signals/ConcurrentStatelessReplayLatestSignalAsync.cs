@@ -6,11 +6,11 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async.Signals;
 
-/// <summary>Represents an asynchronous Signal that replays the latest value to new observers and forwards notifications to all observers concurrently without maintaining internal state.</summary>
+/// <summary>An asynchronous Signal that replays its latest value to each new subscriber, notifies observers concurrently, and resets once the last observer leaves.</summary>
 /// <typeparam name="T">The type of the elements processed by the Signal.</typeparam>
-/// <param name="startValue">An optional initial value to be replayed to new observers. If not specified, no value is replayed until the first
-/// value is published.</param>
-/// <remarks>Replays the latest value to new subscribers and notifies observers concurrently. Cancellation can prevent some observers from receiving a notification.</remarks>
+/// <param name="startValue">The value replayed until something is published, and restored when the last observer
+/// leaves.</param>
+/// <remarks>Cancellation can stop some observers from receiving a notification the others do receive.</remarks>
 [System.Diagnostics.DebuggerDisplay("ConcurrentStatelessReplayLatestSignalAsync: Value = {_state.Value}, IsDisposed = {_state.IsDisposed}")]
 public sealed class ConcurrentStatelessReplayLatestSignalAsync<T>(Optional<T> startValue) : ISignalAsync<T>
 {

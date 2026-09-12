@@ -21,13 +21,8 @@ public static partial class SignalAsyncExtensions
         /// the buffering and backpressure behavior between the asynchronous observable and the asynchronous enumerable.</param>
         /// <returns>An asynchronous enumerable sequence that yields elements from the asynchronous observable. The
         /// enumeration completes when the source observable completes, or an unhandled error occurs.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown when <paramref name="source"/> or <paramref name="channelFactory"/>
-        /// is null.</exception>
-        /// <remarks>
-        /// The resulting asynchronous enumerable sequence reflects the items and completion behavior of the source
-        /// asynchronous observable. The buffering behavior is determined by the channel created by the provided
-        /// <paramref name="channelFactory"/>.
-        /// </remarks>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="channelFactory"/> is <see langword="null"/>.</exception>
+        /// <remarks>The channel returned by <paramref name="channelFactory"/> determines buffering; a source error completes the enumeration with that error.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IAsyncEnumerable<T> ToAsyncEnumerable(
             Func<Channel<T>> channelFactory) =>
@@ -41,7 +36,7 @@ public static partial class SignalAsyncExtensions
         /// sequence completes with the error.</param>
         /// <returns>An asynchronous enumerable sequence that yields the elements produced by the observable sequence. The
         /// enumeration completes when the observable completes or an unhandled error occurs.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="source"/> or <paramref name="channelFactory"/> is null.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="channelFactory"/> is <see langword="null"/>.</exception>
         /// <remarks>The channel factory controls buffering. The optional error callback handles source errors; without it, errors propagate to the enumerator.</remarks>
         public IAsyncEnumerable<T> ToAsyncEnumerable(
             Func<Channel<T>> channelFactory,

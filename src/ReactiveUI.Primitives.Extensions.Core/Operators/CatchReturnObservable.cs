@@ -20,11 +20,7 @@ public sealed class CatchReturnObservable<T>(IObservable<T> source, T fallback) 
         return source.Subscribe(new CatchReturnWitness(observer, fallback));
     }
 
-    /// <summary>
-    /// Forwarding observer that passes <see cref="OnNext"/>/<see cref="OnCompleted"/>
-    /// through and replaces <see cref="OnError"/> with an inline emit of the stored
-    /// fallback followed by terminal <see cref="IObserver{T}.OnCompleted"/>.
-    /// </summary>
+    /// <summary>Forwarding observer that replaces any error with the stored fallback value followed by completion.</summary>
     /// <param name="downstream">The downstream observer receiving the forwarded signals.</param>
     /// <param name="fallback">The fallback value to emit when the source errors.</param>
     private sealed class CatchReturnWitness(IObserver<T> downstream, T fallback) : IObserver<T>

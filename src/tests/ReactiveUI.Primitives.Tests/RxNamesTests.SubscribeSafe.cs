@@ -401,9 +401,9 @@ public partial class RxNamesTests
     }
 
     /// <summary>
-    /// Verifies the observer-taking <c>SubscribeSafe</c> is ambiguous once System.Reactive is in scope, and that
-    /// the explicit Primitives name resolves. System.Reactive declares its own observer overload in the
-    /// <c>System</c> namespace, which an implicit <c>using System;</c> always brings along.
+    /// Verifies the explicit Primitives name resolves where the observer-taking <c>SubscribeSafe</c> is ambiguous.
+    /// System.Reactive declares a competing observer overload in the <c>System</c> namespace, which an implicit
+    /// <c>using System;</c> brings along.
     /// </summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]

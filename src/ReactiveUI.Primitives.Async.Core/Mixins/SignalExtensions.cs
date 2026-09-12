@@ -8,7 +8,7 @@ using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>Provides extension methods for working with signals in a reactive programming context.</summary>
+/// <summary>Adapts a signal to an observer, and projects a signal's value sequence without changing where values are published.</summary>
 public static class SignalExtensions
 {
     /// <summary>Observer-wrapping and value-mapping operators for a signal source.</summary>
@@ -29,9 +29,8 @@ public static class SignalExtensions
             return new SignalAsyncWitness<T>(source);
         }
 
-        /// <summary>Creates a new signal that applies a transformation to the values of the source signal using the specified mapping function.</summary>
-        /// <param name="mapper">A function that takes an asynchronous observable of type T and returns a transformed asynchronous observable of
-        /// type T. This function defines how the values are mapped.</param>
+        /// <summary>Creates a signal whose observers see <paramref name="mapper"/> applied to the source's value sequence.</summary>
+        /// <param name="mapper">Projects the source's value sequence into the sequence observers receive.</param>
         /// <returns>A signal that publishes into <paramref name="source"/> but exposes the mapped sequence to its own
         /// subscribers.</returns>
         /// <remarks><paramref name="mapper"/> runs once, against the source's value sequence, rather than per
@@ -48,8 +47,7 @@ public static class SignalExtensions
     /// <summary>A signal that applies a transformation to the observable values of the source signal.</summary>
     /// <typeparam name="T">The type of elements processed by the signal.</typeparam>
     /// <param name="original">The source signal.</param>
-    /// <param name="mapper">Transforms the source's value sequence
-    /// once during construction.</param>
+    /// <param name="mapper">Transforms the source's value sequence once during construction.</param>
     internal sealed class MappedSignal<T>(
         ISignalAsync<T> original,
         Func<IObservableAsync<T>, IObservableAsync<T>> mapper) : ISignalAsync<T>

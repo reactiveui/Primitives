@@ -22,19 +22,19 @@ public class AsyncSignalTests
     /// <summary>The values expected after the first emission.</summary>
     private static readonly int[] FirstEmittedValues = [FirstEmittedValue];
 
-    /// <summary>Subscribes the argument checking.</summary>
+    /// <summary>Subscribing with a null observer is rejected.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void Subscribe_ArgumentChecking() =>
         Assert.Throws<ArgumentNullException>(static () => new AsyncSignal<int>().Subscribe(null!));
 
-    /// <summary>Called when [error argument checking].</summary>
+    /// <summary>Faulting with a null error is rejected.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void OnError_ArgumentChecking() =>
         Assert.Throws<ArgumentNullException>(static () => new AsyncSignal<int>().OnError(null!));
 
-    /// <summary>Awaits the blocking.</summary>
+    /// <summary>The signal is its own awaiter and reports completion once a value arrives.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task Await_Blocking()
@@ -45,7 +45,7 @@ public class AsyncSignalTests
         await Assert.That(s.IsCompleted).IsTrue();
     }
 
-    /// <summary>Awaits the throw.</summary>
+    /// <summary>The signal is its own awaiter and reports completion once a fault arrives.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task Await_Throw()
@@ -56,7 +56,7 @@ public class AsyncSignalTests
         await Assert.That(s.IsCompleted).IsTrue();
     }
 
-    /// <summary>Gets the result empty.</summary>
+    /// <summary>Reading the result of a signal that completed without a value throws.</summary>
     [Test]
     public void GetResult_Empty()
     {
@@ -65,7 +65,7 @@ public class AsyncSignalTests
         _ = Assert.Throws<InvalidOperationException>(() => s.GetResult());
     }
 
-    /// <summary>Gets the result blocking.</summary>
+    /// <summary>A pending wait delivers a value and leaves the signal completed.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task GetResult_Blocking()
@@ -75,7 +75,7 @@ public class AsyncSignalTests
         await Assert.That(s.IsCompleted).IsTrue();
     }
 
-    /// <summary>Gets the result blocking throw.</summary>
+    /// <summary>A pending wait delivers a fault and leaves the signal completed.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task GetResult_Blocking_Throw()
@@ -85,7 +85,7 @@ public class AsyncSignalTests
         await Assert.That(s.IsCompleted).IsTrue();
     }
 
-    /// <summary>Gets the result context.</summary>
+    /// <summary>A continuation registered under a synchronization context is posted through that context.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task GetResult_Context()
@@ -110,7 +110,7 @@ public class AsyncSignalTests
         await Assert.That(context.Ran).IsTrue();
     }
 
-    /// <summary>Determines whether this instance has observers.</summary>
+    /// <summary>Observer presence tracks subscriptions as they are added and disposed.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task HasObservers()
@@ -131,7 +131,7 @@ public class AsyncSignalTests
         await Assert.That(s.HasObservers).IsFalse();
     }
 
-    /// <summary>Determines whether [has observers dispose1].</summary>
+    /// <summary>Disposing the signal drops its observers, and disposing a live subscription afterwards is safe.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task HasObservers_Dispose1()
@@ -150,7 +150,7 @@ public class AsyncSignalTests
         await Assert.That(s.IsDisposed).IsTrue();
     }
 
-    /// <summary>Determines whether [has observers dispose2].</summary>
+    /// <summary>Disposing the last subscription clears the observers and leaves the signal undisposed.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task HasObservers_Dispose2()
@@ -169,7 +169,7 @@ public class AsyncSignalTests
         await Assert.That(s.IsDisposed).IsTrue();
     }
 
-    /// <summary>Determines whether [has observers dispose3].</summary>
+    /// <summary>Disposing a signal that was never subscribed to reports no observers.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task HasObservers_Dispose3()
@@ -182,7 +182,7 @@ public class AsyncSignalTests
         await Assert.That(s.IsDisposed).IsTrue();
     }
 
-    /// <summary>Determines whether [has observers on completed].</summary>
+    /// <summary>Completing the signal releases its observers.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task HasObservers_OnCompleted()
@@ -198,7 +198,7 @@ public class AsyncSignalTests
         d.Dispose();
     }
 
-    /// <summary>Determines whether [has observers on error].</summary>
+    /// <summary>Faulting the signal releases its observers.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task HasObservers_OnError()
@@ -216,10 +216,7 @@ public class AsyncSignalTests
         d.Dispose();
     }
 
-    /// <summary>
-    /// An async signal that completes without ever producing a value has no terminal value to replay. A late
-    /// subscriber must simply be completed — not handed a fabricated default, and not left hanging.
-    /// </summary>
+    /// <summary>A signal that completes without producing a value only completes its late subscribers.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task CompletingWithoutAValueOnlyCompletesLateSubscribers()
@@ -237,7 +234,7 @@ public class AsyncSignalTests
         await Assert.That(signal.HasObservers).IsFalse();
     }
 
-    /// <summary>Covers async-signal subscriber churn, late subscriptions, disposal, and terminal no-op branches.</summary>
+    /// <summary>Subscriber churn, late subscriptions, repeated terminals, and disposal all hold on an async signal.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task AsyncSignalSubscriberChurnLateTerminalsAndDisposalCoverBranches()

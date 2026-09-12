@@ -20,6 +20,8 @@ public static partial class SignalAsyncExtensions
     {
         /// <summary>Emits <see langword="true"/> when the latest value from every source sequence is <see langword="false"/>.</summary>
         /// <returns>A sequence of aggregate boolean states.</returns>
+        /// <remarks>An empty <paramref name="sources"/> sequence emits a single <see langword="true"/>; otherwise nothing is
+        /// emitted until every source has produced a value.</remarks>
         public IObservableAsync<bool> CombineLatestValuesAreAllFalse()
         {
             ArgumentExceptionHelper.ThrowIfNull(sources);
@@ -43,6 +45,8 @@ public static partial class SignalAsyncExtensions
 
         /// <summary>Emits <see langword="true"/> when the latest value from every source sequence is <see langword="true"/>.</summary>
         /// <returns>A sequence of aggregate boolean states.</returns>
+        /// <remarks>An empty <paramref name="sources"/> sequence emits a single <see langword="true"/>; otherwise nothing is
+        /// emitted until every source has produced a value.</remarks>
         public IObservableAsync<bool> CombineLatestValuesAreAllTrue()
         {
             ArgumentExceptionHelper.ThrowIfNull(sources);

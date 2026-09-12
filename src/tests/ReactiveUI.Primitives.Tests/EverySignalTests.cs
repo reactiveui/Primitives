@@ -26,7 +26,7 @@ public sealed class EverySignalTests
     /// <summary>The inactivity window <c>Expire</c> allows before it times the sequence out.</summary>
     private static readonly TimeSpan ExpiryPeriod = TimeSpan.FromMilliseconds(50);
 
-    /// <summary>An inline first tick retains the successor it schedules before the initial scheduling call returns.</summary>
+    /// <summary>A tick that fires inline during scheduling keeps the successor tick it arms.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task EveryRetainsTheTickArmedByAnInlineFirstTick()
@@ -56,7 +56,7 @@ public sealed class EverySignalTests
         await Assert.That(completions).IsEqualTo(1);
     }
 
-    /// <summary>Verifies the current-thread ticks stay on the subscribing thread rather than moving to a pool thread.</summary>
+    /// <summary>Verifies the current-thread ticks are delivered on the subscribing thread.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task EveryOnTheCurrentThreadSequencerTicksOnTheSubscribingThread()

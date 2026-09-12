@@ -9,10 +9,9 @@ using ReactiveUI.Primitives.Extensions.Internal;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
 /// <summary>
-/// Combines the latest boolean values from multiple sources and emits <c>true</c> iff every latest
-/// value equals <paramref name="target"/>. Backs both <c>AllTrue</c> (target=true) and <c>AllFalse</c>
-/// (target=false) without the array allocations a generic <c>CombineLatest(...).Select(xs =&gt; xs.All(...))</c>
-/// pipeline would incur.
+/// Emits whether every source's latest boolean equals <paramref name="target"/>, re-evaluating on each value once all
+/// sources have produced one. An empty source list emits <c>true</c> and completes on subscribe; any source's error
+/// terminates the sequence, and the sequence completes when every source completes or one completes without emitting.
 /// </summary>
 /// <param name="sources">The source observables.</param>
 /// <param name="target">The value every source must hold for the operator to emit <c>true</c>.</param>
@@ -44,7 +43,7 @@ public sealed class BooleanReduceObservable(IEnumerable<IObservable<bool>> sourc
         return IndexedSubscribeHelper.SubscribeIndexed(_sourceList, sink.OnNext, sink.OnError, sink.OnCompleted);
     }
 
-    /// <summary>Materializes source enumeration once without using LINQ in shipping code.</summary>
+    /// <summary>Copies the sources into an indexable list, enumerating the sequence at most once.</summary>
     /// <param name="sources">The sources to materialize.</param>
     /// <returns>The source list.</returns>
     private static IReadOnlyList<IObservable<bool>> MaterializeSources(IEnumerable<IObservable<bool>> sources)
@@ -94,7 +93,7 @@ public sealed class BooleanReduceObservable(IEnumerable<IObservable<bool>> sourc
     /// <param name="target">The value every source must hold for emit to be <c>true</c>.</param>
     private sealed class Sink(IObserver<bool> downstream, int count, bool target)
     {
-        /// <summary>Shared gate / value cache / terminal-state plumbing.</summary>
+        /// <summary>The shared gate, per-source value cache and terminal-state bookkeeping.</summary>
         private readonly ReduceSinkState<bool, bool> _state = new(downstream, count);
 
         /// <summary>Reduces the per-source latest values to whether every source holds the target value.</summary>
@@ -111,18 +110,18 @@ public sealed class BooleanReduceObservable(IEnumerable<IObservable<bool>> sourc
             return true;
         };
 
-        /// <summary>Handles OnNext from a source.</summary>
+        /// <summary>Records one source's latest value and re-evaluates the combined result.</summary>
         /// <param name="index">Source index.</param>
         /// <param name="value">Emitted value.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnNext(int index, bool value) => _state.HandleNext(index, value, _reduce);
 
-        /// <summary>Handles OnError from any source.</summary>
+        /// <summary>Forwards an error from any source downstream and terminates the sink.</summary>
         /// <param name="error">The error.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnError(Exception error) => _state.HandleError(error);
 
-        /// <summary>Handles OnCompleted from a source.</summary>
+        /// <summary>Records one source's completion and completes downstream when the sequence is finished.</summary>
         /// <param name="index">Source index.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnCompleted(int index) => _state.HandleCompleted(index);

@@ -51,7 +51,7 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The source sequence.</param>
     extension<T>(IObservableAsync<T> source)
     {
-        /// <summary>Null-checks and returns the source unchanged, so generic code can convert without knowing whether it has a signal already.</summary>
+        /// <summary>Null-checks and returns the source unchanged, so generic code can convert without testing the source's type.</summary>
         /// <returns>The same sequence.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
         [SuppressMessage(

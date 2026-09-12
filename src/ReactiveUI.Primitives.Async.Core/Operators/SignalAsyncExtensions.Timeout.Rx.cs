@@ -53,7 +53,7 @@ public static partial class SignalAsyncExtensions
         /// <returns>An observable sequence that mirrors the source, switching to the fallback sequence
         /// if any inter-element interval exceeds the specified interval.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="dueTime"/> is negative or zero.</exception>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="fallback"/> is null.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="fallback"/> is <see langword="null"/>.</exception>
         public IObservableAsync<T> Timeout(TimeSpan dueTime, IObservableAsync<T> fallback)
         {
             ArgumentExceptionHelper.ThrowIfNull(fallback);
@@ -73,7 +73,7 @@ public static partial class SignalAsyncExtensions
         /// <returns>An observable sequence that mirrors the source, switching to the fallback sequence
         /// if any inter-element interval exceeds the specified interval.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="dueTime"/> is negative or zero.</exception>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="fallback"/> is null.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="fallback"/> is <see langword="null"/>.</exception>
         public IObservableAsync<T> Timeout(
             TimeSpan dueTime,
             IObservableAsync<T> fallback,

@@ -11,10 +11,10 @@ namespace ReactiveUI.Primitives.Signals;
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
 {
-    /// <summary>Stores asynchronous command execution.</summary>
+    /// <summary>The asynchronous command body, or <see langword="null"/> for a synchronous command.</summary>
     private readonly Func<CancellationToken, Task<TResult>>? _executeAsync;
 
-    /// <summary>Stores synchronous command execution.</summary>
+    /// <summary>The synchronous command body, or <see langword="null"/> for an asynchronous command.</summary>
     private readonly Func<TResult>? _executeSync;
 
     /// <summary>Serializes running-flag writes with running-state stream notifications so the two never diverge.</summary>
@@ -29,10 +29,10 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
     /// <summary>Lazily created running state stream.</summary>
     private StateSignal<bool>? _isRunningState;
 
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The subscription to the gating signal, or <see langword="null"/> when the command is ungated.</summary>
     private IDisposable? _canRunSubscription;
 
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The latest value from the gating signal.</summary>
     private bool _canRun;
 
     /// <summary>Stores the current running flag without forcing the public state stream to allocate.</summary>
@@ -41,7 +41,7 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
     /// <summary>Non-zero while an execution is active.</summary>
     private int _running;
 
-    /// <summary>Stores disposal state.</summary>
+    /// <summary>Non-zero once the command has been disposed.</summary>
     private int _disposed;
 
     /// <summary>Initializes a new instance of the <see cref="CommandSignal{TResult}"/> class.</summary>
@@ -154,7 +154,7 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
 
     /// <summary>Attempts to append an observer to an unchanged snapshot.</summary>
     /// <param name="storage">The published observer snapshot.</param>
-    /// <param name="current">The snapshot used to prepare the update.</param>
+    /// <param name="current">The snapshot the update was prepared against.</param>
     /// <param name="observer">The observer to append.</param>
     /// <returns>Whether the update was published.</returns>
     internal static bool TryAddResult(ref object? storage, object? current, IObserver<TResult> observer)
@@ -181,7 +181,7 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
 
     /// <summary>Attempts to remove an observer from an unchanged snapshot.</summary>
     /// <param name="storage">The published observer snapshot.</param>
-    /// <param name="current">The snapshot used to prepare the update.</param>
+    /// <param name="current">The snapshot the update was prepared against.</param>
     /// <param name="observer">The observer to remove.</param>
     /// <returns>Whether no retry is required.</returns>
     internal static bool TryRemoveResult(ref object? storage, object? current, IObserver<TResult> observer)
@@ -326,7 +326,7 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
     }
 
     /// <summary>Enters the running state after validating gate state.</summary>
-    /// <exception cref="InvalidOperationException">The command is gated off or an execution is already in flight.</exception>
+    /// <exception cref="InvalidOperationException">The command is gated off or another execution is in flight.</exception>
     private void BeginExecution()
     {
         if (!CanRun || Interlocked.CompareExchange(ref _running, 1, 0) != 0)

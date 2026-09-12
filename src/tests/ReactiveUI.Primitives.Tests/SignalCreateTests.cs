@@ -31,7 +31,7 @@ public class SignalCreateTests
     /// <summary>Expected values for create-with-state tests.</summary>
     private static readonly int[] CreateWithStateExpected = [Third];
 
-    /// <summary>Creates the argument checking.</summary>
+    /// <summary>The create factory rejects a null subscribe callback and a null observer.</summary>
     [Test]
     public void Create_ArgumentChecking()
     {
@@ -40,7 +40,7 @@ public class SignalCreateTests
             Signal.Create((Func<IObserver<int>, IDisposable>)null!).Subscribe(null!));
     }
 
-    /// <summary>Creates the null coalescing action.</summary>
+    /// <summary>A create subscription disposes cleanly when its disposable carries no action.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task Create_NullCoalescingAction()
@@ -56,14 +56,14 @@ public class SignalCreateTests
         await Assert.That(lst.SequenceEqual([CreatedValue])).IsTrue();
     }
 
-    /// <summary>Creates the exception.</summary>
+    /// <summary>A subscribe callback that throws surfaces at the subscribe call.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void Create_Exception() => Assert.Throws<InvalidOperationException>(static () => Signal.Create(
             new Func<IObserver<int>, IDisposable>(static _ => throw new InvalidOperationException()))
         .Subscribe());
 
-    /// <summary>Creates the observer throws.</summary>
+    /// <summary>An observer that throws from a notification surfaces the failure at the subscribe call.</summary>
     [Test]
     public void Create_ObserverThrows()
     {
@@ -84,7 +84,7 @@ public class SignalCreateTests
         }).Subscribe(static x => { }, static ex => { }, static () => throw new InvalidOperationException()));
     }
 
-    /// <summary>Creates the with disposable argument checking.</summary>
+    /// <summary>The disposable-returning create overload rejects a null callback and a null observer.</summary>
     [Test]
     public void CreateWithDisposable_ArgumentChecking()
     {
@@ -98,7 +98,7 @@ public class SignalCreateTests
         }).Subscribe(null!));
     }
 
-    /// <summary>Creates the with disposable null coalescing action.</summary>
+    /// <summary>The disposable-returning create overload tolerates a callback that returns no disposable.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task CreateWithDisposable_NullCoalescingAction()
@@ -114,16 +114,14 @@ public class SignalCreateTests
         await Assert.That(lst.SequenceEqual([CreatedValue])).IsTrue();
     }
 
-    /// <summary>Creates the with disposable exception.</summary>
+    /// <summary>A throwing subscribe callback surfaces at the subscribe call of the disposable-returning overload.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2318:Members should not have identical bodies",
         Justification =
-            "A separate named regression test covering the disposable-returning Create overload's subscribe-time throw. "
-            + "It shares its assertion shape with Create_Exception but is kept as its own [Test] so the two entry points "
-            + "have independent, named coverage.")]
+            "The two tests subscribe through different Create overloads.")]
     public void CreateWithDisposable_Exception() => Assert.Throws<InvalidOperationException>(static () => Signal.Create(
             new Func<IObserver<int>, IDisposable>(static _ => throw new InvalidOperationException()))
         .Subscribe());
@@ -176,7 +174,7 @@ public class SignalCreateTests
         await Assert.That(disposable).IsSameReferenceAs(EmptyDisposable.Instance);
     }
 
-    /// <summary>Covers create-with-state overloads and null validation.</summary>
+    /// <summary>The create-with-state overloads invoke their stateful callback and reject null arguments.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task CreateWithStateFactoriesInvokeStatefulSubscribeCallbacks()

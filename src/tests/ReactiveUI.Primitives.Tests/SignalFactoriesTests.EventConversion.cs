@@ -98,10 +98,7 @@ public partial class SignalFactoriesTests
             null!)).Throws<ArgumentNullException>();
     }
 
-    /// <summary>
-    /// Verifies the handler-pair constructor attaches on the subscribing thread. The factories all supply a
-    /// sequencer argument now, so this is the shape only a caller constructing the signal directly reaches.
-    /// </summary>
+    /// <summary>Verifies the handler-pair constructor attaches on the subscribing thread.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task FromEventPatternSignalWithoutASequencerAttachesOnTheSubscribingThread()

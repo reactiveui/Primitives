@@ -22,7 +22,8 @@ public static partial class SignalAsyncExtensions
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains a dictionary mapping keys to
         /// elements from the sequence.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if the keySelector parameter is null.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="keySelector"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Two elements of the source sequence produce the same key.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<Dictionary<TKey, T>> ToDictionaryAsync<TKey>(
             Func<T, TKey> keySelector,
@@ -36,7 +37,8 @@ public static partial class SignalAsyncExtensions
         /// <param name="keySelector">A function to extract a key from each element in the sequence. Cannot be null.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains a dictionary mapping keys to
         /// elements from the sequence.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if the keySelector parameter is null.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="keySelector"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Two elements of the source sequence produce the same key.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<Dictionary<TKey, T>> ToDictionaryAsync<TKey>(Func<T, TKey> keySelector)
             where TKey : notnull =>
@@ -52,9 +54,8 @@ public static partial class SignalAsyncExtensions
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains a dictionary mapping keys to
         /// values as defined by the selector functions.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="keySelector"/> or <paramref name="elementSelector"/> is null.</exception>
-        /// <remarks>If multiple elements produce the same key, an exception may be thrown. The operation
-        /// is performed asynchronously and can be cancelled using the provided cancellation token.</remarks>
+        /// <exception cref="ArgumentNullException"><paramref name="keySelector"/> or <paramref name="elementSelector"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Two elements of the source sequence produce the same key.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<Dictionary<TKey, TValue>> ToDictionaryAsync<TKey, TValue>(
             Func<T, TKey> keySelector,
@@ -74,7 +75,8 @@ public static partial class SignalAsyncExtensions
         /// <param name="elementSelector">A function to map each element in the sequence to a value in the resulting dictionary.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains a dictionary mapping keys to
         /// values as defined by the selector functions.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="keySelector"/> or <paramref name="elementSelector"/> is null.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="keySelector"/> or <paramref name="elementSelector"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Two elements of the source sequence produce the same key.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<Dictionary<TKey, TValue>> ToDictionaryAsync<TKey, TValue>(
             Func<T, TKey> keySelector,

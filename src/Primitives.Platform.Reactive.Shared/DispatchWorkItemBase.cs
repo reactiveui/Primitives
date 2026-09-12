@@ -44,7 +44,7 @@ internal class DispatchWorkItemBase<TState>
     /// <summary>Gets a value indicating whether the work item has been cancelled.</summary>
     internal bool IsDisposed => Volatile.Read(ref _isDisposed) != 0;
 
-    /// <summary>Runs the scheduled action unless it has already been cancelled, disposing its result if a cancel races the start.</summary>
+    /// <summary>Runs the scheduled action unless it has been cancelled, disposing its result when a cancel races the start.</summary>
     public void Run()
     {
         if (IsDisposed)
@@ -72,7 +72,7 @@ internal class DispatchWorkItemBase<TState>
     /// <returns><see langword="true"/> for the first caller, which owns releasing the item's resources.</returns>
     protected bool TryClaimDispose() => Interlocked.Exchange(ref _isDisposed, 1) == 0;
 
-    /// <summary>Releases the disposable the action returned once it has started, so a late cancel still tears it down.</summary>
+    /// <summary>Disposes whatever the started action returned, so a cancel arriving after the start tears it down.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected void ReleaseStartedWork() => Interlocked.Exchange(ref _disposable, Disposable.Empty)?.Dispose();
 }

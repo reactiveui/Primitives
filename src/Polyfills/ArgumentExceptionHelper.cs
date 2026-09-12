@@ -7,10 +7,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Internal;
 
-/// <summary>
-/// Polyfill for <c>ArgumentNullException.ThrowIfNull</c> on net462-net481; net8.0 and later compile no copy of this
-/// type and alias the <c>ArgumentExceptionHelper</c> identifier to <see cref="ArgumentNullException"/> instead.
-/// </summary>
+/// <summary>Polyfill for <c>ArgumentNullException.ThrowIfNull</c> on target frameworks that predate it.</summary>
 [ExcludeFromCodeCoverage]
 internal static class ArgumentExceptionHelper
 {

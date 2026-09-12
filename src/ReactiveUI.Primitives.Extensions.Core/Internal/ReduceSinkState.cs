@@ -5,8 +5,7 @@
 namespace ReactiveUI.Primitives.Extensions.Internal;
 
 /// <summary>Stores synchronized reduction state and coordinates terminal notifications.</summary>
-/// <typeparam name="TIn">The source element type (must be a struct so <c>TIn?</c> doubles as the
-/// "value seen yet?" Optional).</typeparam>
+/// <typeparam name="TIn">The source element type; the struct constraint lets <c>TIn?</c> record whether a value has arrived.</typeparam>
 /// <typeparam name="TOut">The downstream element type the operator emits after reducing.</typeparam>
 internal sealed class ReduceSinkState<TIn, TOut>
     where TIn : struct

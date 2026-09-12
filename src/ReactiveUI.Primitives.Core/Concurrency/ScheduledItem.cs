@@ -8,9 +8,7 @@ using ReactiveUI.Primitives.Disposables;
 namespace ReactiveUI.Primitives.Concurrency;
 
 /// <summary>Provides the base implementation for a scheduled unit of work that is ordered by an absolute due time.</summary>
-/// <typeparam name="TAbsolute">
-/// The absolute-time representation, which must be comparable so scheduled items can be ordered.
-/// </typeparam>
+/// <typeparam name="TAbsolute">The absolute-time representation, which must be comparable so items can be ordered.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, IComparable<ScheduledItem<TAbsolute>>,
     IsDisposed, IComparable
@@ -22,16 +20,13 @@ public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICompa
     /// <summary>The work performed when the item is invoked; receives this item so callers can self-deregister.</summary>
     private readonly Func<ScheduledItem<TAbsolute>, IDisposable> _invokeCore;
 
-    /// <summary>Invocation disposable.</summary>
+    /// <summary>The disposable returned by the invoked work, latched once so cancellation can reach it.</summary>
     private IDisposable? _disposable;
 
-    /// <summary>Disposal flag.</summary>
+    /// <summary>Non-zero once the item has been canceled or disposed.</summary>
     private int _isDisposed;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ScheduledItem{TAbsolute}"/> class with the due time, comparer,
-    /// and the callback that supplies the work performed by <see cref="Invoke"/>.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="ScheduledItem{TAbsolute}"/> class.</summary>
     /// <param name="dueTime">The absolute time at which this item is due to run.</param>
     /// <param name="comparer">The comparer that orders due-time values.</param>
     /// <param name="invokeCore">
@@ -52,14 +47,10 @@ public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICompa
     /// <summary>Gets the absolute time at which this work item is scheduled to run.</summary>
     public TAbsolute DueTime { get; }
 
-    /// <summary>Gets a value indicating whether this work item has been canceled or disposed.</summary>
-    /// <remarks>
-    /// Once this is <see langword="true"/>, <see cref="Invoke"/> starts no new work, and a disposable returned by
-    /// work that has begun is disposed as soon as it is available.
-    /// </remarks>
+    /// <summary>Gets a value indicating whether this work item has been canceled or disposed, so <see cref="Invoke"/> starts no work.</summary>
     public bool IsDisposed => Volatile.Read(ref _isDisposed) != 0;
 
-    /// <summary>Gets the Debugger text.</summary>
+    /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
@@ -125,7 +116,7 @@ public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICompa
     public static bool operator >=(ScheduledItem<TAbsolute> left, ScheduledItem<TAbsolute> right) =>
         Comparer<ScheduledItem<TAbsolute>>.Default.Compare(left, right) >= 0;
 
-    /// <summary>Cancels this scheduled work item: work that has not started does not run, and a disposable returned by work that has begun is disposed as soon as it is available.</summary>
+    /// <summary>Cancels this scheduled work item; an alias for <see cref="Dispose"/>.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Cancel() => Dispose();
 

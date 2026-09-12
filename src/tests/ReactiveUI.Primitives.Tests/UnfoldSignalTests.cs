@@ -17,7 +17,7 @@ public class UnfoldSignalTests
     /// <summary>The second expected value.</summary>
     private const int Second = 2;
 
-    /// <summary>Covers unfold subscribe argument validation.</summary>
+    /// <summary>Verifies an unfold rejects a null observer.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void UnfoldValidatesObserver() => Assert.Throws<ArgumentNullException>(static () => Signal.Unfold(
@@ -27,7 +27,7 @@ public class UnfoldSignalTests
             static value => value)
         .Subscribe(null!));
 
-    /// <summary>Covers unfold emission while the condition holds.</summary>
+    /// <summary>Verifies an unfold emits values while the condition holds and then completes.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task UnfoldEmitsWhileConditionHolds()
@@ -40,10 +40,7 @@ public class UnfoldSignalTests
         await Assert.That(unfoldCompleted).IsEqualTo(1);
     }
 
-    /// <summary>
-    /// The observer surface must generate the same sequence as the callback surface: the unfold runs to
-    /// exhaustion on subscribe, and a condition that is false from the start yields nothing but a completion.
-    /// </summary>
+    /// <summary>Verifies an observer receives the generated sequence, or only a completion when the condition starts false.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task UnfoldEmitsTheGeneratedSequenceToObservers()
@@ -65,7 +62,7 @@ public class UnfoldSignalTests
         await Assert.That(exhausted.Completed).IsEqualTo(1);
     }
 
-    /// <summary>An unfold runs entirely inline on the subscriber's thread, so it never demands a particular one.</summary>
+    /// <summary>Verifies an unfold never requires subscription on the current thread.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task UnfoldNeverRequiresCurrentThreadSubscription()

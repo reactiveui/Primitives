@@ -18,7 +18,7 @@ public sealed partial class SwitchWitnessTests
     /// <summary>The integer constant two.</summary>
     private const int Two = 2;
 
-    /// <summary>Verifies direct switch witness completion is emitted once.</summary>
+    /// <summary>A duplicate completion from the current inner source is suppressed.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task SwitchWitnessSuppressesDuplicateCompletionFromCurrentInner()
@@ -96,7 +96,6 @@ public sealed partial class SwitchWitnessTests
 
         outer.OnNext(second);
 
-        // The stale first inner is now superseded; its values must be dropped.
         first.Observer.OnNext(One);
         second.Observer!.OnNext(Two);
 
@@ -121,11 +120,9 @@ public sealed partial class SwitchWitnessTests
         outer.OnNext(second);
         outer.OnCompleted();
 
-        // Stale inner completion (wrong version) must not complete the witness.
         staleFirst.OnCompleted();
         await Assert.That(observer.Completed).IsEqualTo(0);
 
-        // Current inner completion plus outer-complete completes once.
         second.Observer!.OnCompleted();
         await Assert.That(observer.Completed).IsEqualTo(One);
     }
@@ -143,7 +140,6 @@ public sealed partial class SwitchWitnessTests
         outer.OnNext(inner);
         outer.OnCompleted();
 
-        // Outer done but inner still active: no completion yet.
         await Assert.That(observer.Completed).IsEqualTo(0);
 
         inner.Observer!.OnCompleted();
@@ -181,7 +177,6 @@ public sealed partial class SwitchWitnessTests
         await Assert.That(observer.Errors).HasSingleItem();
         await Assert.That(observer.Errors[0]).IsSameReferenceAs(error);
 
-        // Everything is gated after the terminal error.
         inner.Observer!.OnNext(One);
         inner.Observer.OnCompleted();
         outer.OnNext(inner);
@@ -209,7 +204,6 @@ public sealed partial class SwitchWitnessTests
         await Assert.That(observer.Errors).HasSingleItem();
         await Assert.That(observer.Errors[0]).IsSameReferenceAs(error);
 
-        // Subsequent inner/outer notifications are gated.
         inner.Observer.OnNext(One);
         outer.OnCompleted();
 
@@ -233,7 +227,6 @@ public sealed partial class SwitchWitnessTests
         var staleFirst = first.Observer!;
         outer.OnNext(second);
 
-        // Error from the superseded inner is dropped, not forwarded.
         staleFirst.OnError(new InvalidOperationException("stale"));
 
         await Assert.That(observer.Errors).IsEmpty();
@@ -256,7 +249,6 @@ public sealed partial class SwitchWitnessTests
         outer.OnCompleted();
         await Assert.That(observer.Completed).IsEqualTo(One);
 
-        // A late source must be ignored; its observer is never captured.
         outer.OnNext(inner);
         await Assert.That(inner.Observer).IsNull();
     }
@@ -274,11 +266,9 @@ public sealed partial class SwitchWitnessTests
 
         outer.OnNext(first);
 
-        // An inner error makes the witness terminal without stopping the outer source.
         first.Observer!.OnError(new InvalidOperationException("boom"));
         await Assert.That(observer.Errors).HasSingleItem();
 
-        // Subsequent source switches and outer errors are gated: nothing more is forwarded.
         outer.OnNext(late);
         outer.OnError(new InvalidOperationException("late"));
 
@@ -303,7 +293,6 @@ public sealed partial class SwitchWitnessTests
 
         subscription.Dispose();
 
-        // The inner subscription is disposed by the witness.
         await Assert.That(inner.Disposed).IsTrue();
     }
 
@@ -340,7 +329,7 @@ public sealed partial class SwitchWitnessTests
         }
     }
 
-    /// <summary>Observer that blocks its first value so any concurrent re-entry is detected with thread-safe state.</summary>
+    /// <summary>Observer that blocks inside its first value callback so concurrent re-entry is detected.</summary>
     private sealed class GatedObserver : IObserver<int>, IDisposable
     {
         /// <summary>Tracks how many threads are currently inside <see cref="OnNext"/>.</summary>

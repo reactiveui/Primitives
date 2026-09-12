@@ -95,7 +95,7 @@ public sealed class CurrentThreadSequencer : ISequencer
         Schedule(item, Timestamp);
     }
 
-    /// <summary>Schedules a work item to be executed at the specified monotonic timestamp.</summary>
+    /// <summary>Runs the work item on the calling thread once due, blocking until then, or queues it on the trampoline when that thread is running scheduled work.</summary>
     /// <param name="item">Work item to execute.</param>
     /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
     /// <exception cref="ArgumentExceptionHelper"><paramref name="item"/> is <see langword="null"/>.</exception>

@@ -21,7 +21,7 @@ internal sealed class UnhandledExceptionCapture : IDisposable
     /// <summary>Signals the next captured exception.</summary>
     private TaskCompletionSource _arrival = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-    /// <summary>Tracks whether the capture has already restored the previous handler.</summary>
+    /// <summary>Set to one once the prior handler has been restored.</summary>
     private int _disposed;
 
     /// <summary>Initializes a new instance of the <see cref="UnhandledExceptionCapture"/> class.</summary>

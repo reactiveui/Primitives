@@ -197,7 +197,7 @@ public sealed class WasmSequencer : ISequencer, IDisposable
             _owner.ScheduleReady(_item);
         }
 
-        /// <summary>Cancels the marshalled item, handing it back to the caller that still holds it.</summary>
+        /// <summary>Cancels the marshalled item, handing it back to the caller holding it.</summary>
         private void Release()
         {
             if (_item is not IDisposable cancellable)

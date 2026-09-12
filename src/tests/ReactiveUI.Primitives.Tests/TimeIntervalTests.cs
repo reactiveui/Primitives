@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Tests;
 /// <summary>Verifies <see cref="TimeInterval{T}"/> equality and hashing contracts.</summary>
 public class TimeIntervalTests
 {
-    /// <summary>An arbitrary non-zero interval; only its stability matters to the hashing contract.</summary>
+    /// <summary>A fixed non-zero interval shared by the time-interval tests.</summary>
     private static readonly TimeSpan SampleInterval = TimeSpan.FromMilliseconds(123);
 
     /// <summary>Verifies a time interval with a null value uses a deterministic null hash code.</summary>

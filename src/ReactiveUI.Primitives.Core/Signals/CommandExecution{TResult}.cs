@@ -116,8 +116,7 @@ public readonly record struct CommandExecution<TResult>
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
             "Concurrency",
             "PSH1315:A blocking wait on an awaitable that may not be done",
-            Justification =
-                "Awaiter GetResult must be synchronous; it runs only after completion and unwraps exceptions without AggregateException wrapping.")]
+            Justification = "An awaiter's GetResult is synchronous by contract and runs only once the task is complete.")]
         public TResult GetResult()
         {
             if (_task is not null)

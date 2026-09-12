@@ -33,9 +33,8 @@ public static partial class SignalAsyncExtensions
         /// <returns>An observable sequence that contains only distinct consecutive elements from the source sequence, as
         /// determined by the specified equality comparer.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="equalityComparer"/> is <see langword="null"/>.</exception>
-        /// <remarks>Use this method to suppress consecutive duplicate elements in the sequence. Only
-        /// elements that differ from their immediate predecessor, according to the provided comparer, are emitted to
-        /// observers.</remarks>
+        /// <remarks>Only elements that differ from their immediate predecessor, as judged by <paramref
+        /// name="equalityComparer"/>, are emitted; non-consecutive duplicates are not suppressed.</remarks>
         public IObservableAsync<T> Unique(IEqualityComparer<T> equalityComparer)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -82,7 +81,7 @@ public static partial class SignalAsyncExtensions
         }
     }
 
-    /// <summary>Single-observer-layer <c>DistinctUntilChanged</c>. Replaces the previous \c Create + async-lambda + closure pattern; per-subscription state lives in observer fields.</summary>
+    /// <summary>Drops each value that the comparer judges equal to the most-recently-forwarded one.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     /// <param name="comparer">The equality comparer used to detect duplicates.</param>
@@ -114,7 +113,7 @@ public static partial class SignalAsyncExtensions
             IEqualityComparer<T> comparer,
             CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
         {
-            /// <summary>The previously-forwarded value; valid only when <see cref="_hasPrevious"/> is set.</summary>
+            /// <summary>The most-recently-forwarded value; valid only when <see cref="_hasPrevious"/> is set.</summary>
             private T? _previous;
 
             /// <summary>Latches to <see langword="true"/> after the first emission has been forwarded.</summary>
@@ -182,7 +181,7 @@ public static partial class SignalAsyncExtensions
             IEqualityComparer<TKey> comparer,
             CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
         {
-            /// <summary>The previously-forwarded key; valid only when <see cref="_hasPrevious"/> is set.</summary>
+            /// <summary>The most-recently-forwarded key; valid only when <see cref="_hasPrevious"/> is set.</summary>
             private TKey? _previousKey;
 
             /// <summary>Latches to <see langword="true"/> after the first emission has been forwarded.</summary>

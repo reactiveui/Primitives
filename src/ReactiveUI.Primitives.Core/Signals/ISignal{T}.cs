@@ -5,5 +5,5 @@
 namespace ReactiveUI.Primitives.Signals;
 
 /// <summary>A signal that is both an observer and observable of the same type.</summary>
-/// <typeparam name="T">The Type.</typeparam>
+/// <typeparam name="T">The value type observed and emitted.</typeparam>
 public interface ISignal<T> : ISignal<T, T>;

@@ -4,7 +4,7 @@
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>Executes an action when the subscription is disposed.</summary>
+/// <summary>Forwards the source and runs an action exactly once when the subscription is disposed, after the upstream subscription is released.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="disposeAction">The action to execute when the subscription is disposed.</param>

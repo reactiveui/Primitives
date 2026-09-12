@@ -13,7 +13,7 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// <summary>Shares virtual-time message formats across clock types.</summary>
 internal static class VirtualTimeMessages
 {
-    /// <summary>Format of the message thrown when the clock is advanced while the scheduler is already running.</summary>
+    /// <summary>Format of the message thrown when the clock is advanced while the scheduler is running.</summary>
     private const string SchedulerAlreadyRunningFormat =
         "{0} cannot be called when the scheduler is already running. Try using Sleep instead.";
 
@@ -23,7 +23,7 @@ internal static class VirtualTimeMessages
         CompositeFormat.Parse(SchedulerAlreadyRunningFormat);
 #endif
 
-    /// <summary>Builds the message thrown when a clock-advancing method runs against an already-running scheduler.</summary>
+    /// <summary>Builds the message thrown when a clock-advancing method runs against a running scheduler.</summary>
     /// <param name="methodName">The name of the clock-advancing method that was called.</param>
     /// <returns>The formatted message.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -13,19 +13,15 @@ namespace ReactiveUI.Primitives.Extensions;
     "Design",
     "SST2315:A type that owns a disposable should be disposable",
     Justification =
-        "The timer's lifetime is owned by the parent operator sink, which releases it under its own gate through "
-        + "HandleErrorLocked/HandleCompletedLocked/HandleDisposeLocked. This state object is deliberately not independently "
-        + "IDisposable: adding IDisposable would expose an ungated disposal path that races the sink's gate.")]
+        "The parent operator sink owns the timer's lifetime and releases it under its own gate, so an independent "
+        + "disposal path on this state object would race that gate.")]
 [System.Diagnostics.DebuggerDisplay("TimerSinkState: Done = {Done}, Timer = {Timer}")]
 public sealed class TimerSinkState<T>(IObserver<T> downstream)
 {
     /// <summary>Gets the timer slot used by the operator's OnNext logic to schedule deferred emissions.</summary>
     public SwapDisposable Timer { get; } = new();
 
-    /// <summary>
-    /// Gets a value indicating whether the sink has reached a terminal state (OnError, OnCompleted,
-    /// or Dispose). Read inside the owning sink's gate by callers that need to short-circuit a deferred operation.
-    /// </summary>
+    /// <summary>Gets a value indicating whether the sink has terminated through error, completion or disposal; read it under the owning sink's gate.</summary>
     public bool Done { get; private set; }
 
     /// <summary>Forwards a terminal error to the downstream observer and tears the sink down. The caller must hold the sink's gate.</summary>

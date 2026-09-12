@@ -258,7 +258,7 @@ public partial class SequencerTests
         }
     }
 
-    /// <summary>Task scheduler that runs queued work inline and keeps the last task so a test can read its outcome.</summary>
+    /// <summary>Task scheduler that runs queued work inline and keeps the most recently queued task.</summary>
     private sealed class InlineTaskScheduler : TaskScheduler
     {
         /// <summary>Gets the most recently queued task.</summary>
@@ -278,7 +278,7 @@ public partial class SequencerTests
         protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued) => false;
     }
 
-    /// <summary>Work item that always faults, so a sequencer's failure routing can be observed.</summary>
+    /// <summary>Work item that throws when executed.</summary>
     private sealed class ThrowingWorkItem : IWorkItem
     {
         /// <inheritdoc/>

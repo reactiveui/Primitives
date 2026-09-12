@@ -17,7 +17,7 @@ public class UseSignalTests
     /// <summary>A value pushed after the signal has terminated; it must never be delivered.</summary>
     private const int LateValue = 2;
 
-    /// <summary>Covers resource disposal when the subscription forwards a null error.</summary>
+    /// <summary>A null error from the scoped source is rejected and the resource is released.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task UseValidatesSubscriptionError()
@@ -30,7 +30,7 @@ public class UseSignalTests
         await Assert.That(resource.DisposeCount).IsEqualTo(1);
     }
 
-    /// <summary>Covers resource disposal when the inner subscription is null.</summary>
+    /// <summary>A null inner subscription is rejected and the resource is released.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task UseDisposesResourceWhenSubscriptionIsNull()
@@ -42,10 +42,7 @@ public class UseSignalTests
         await Assert.That(resource.DisposeCount).IsEqualTo(1);
     }
 
-    /// <summary>
-    /// A fault from the scoped source reaches the observer and releases the resource. The whole point of the
-    /// operator is that the resource does not outlive the sequence, whichever way the sequence ends.
-    /// </summary>
+    /// <summary>A fault from the scoped source reaches the observer and releases the resource.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task UseForwardsSourceFaultsAndReleasesTheResource()
@@ -63,11 +60,7 @@ public class UseSignalTests
         await Assert.That(resource.DisposeCount).IsEqualTo(1);
     }
 
-    /// <summary>
-    /// With a hot source, the subscription is handed to the sink while the sequence is still live: the resource
-    /// stays alive until completion, and every notification the source keeps sending afterwards is dropped
-    /// rather than re-delivered or re-releasing the resource.
-    /// </summary>
+    /// <summary>A hot source holds the resource until it completes, and notifications after the terminal are dropped.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task UseHoldsTheResourceUntilTheHotSourceCompletesThenIgnoresLateSignals()
@@ -96,11 +89,7 @@ public class UseSignalTests
         await Assert.That(source.DisposeCount).IsEqualTo(1);
     }
 
-    /// <summary>
-    /// When the observer throws from its value callback, the sink tears itself down — unsubscribing upstream
-    /// and releasing the resource — and rethrows. A second value must then be dropped, not fed back into the
-    /// observer that already failed.
-    /// </summary>
+    /// <summary>An observer that throws from its value callback releases the resource and receives no further values.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task UseReleasesTheResourceWhenTheObserverThrows()
@@ -113,7 +102,7 @@ public class UseSignalTests
 
         var thrown = Assert.Throws<InvalidOperationException>(() => sink.OnNext(FirstValue));
 
-        // The sink has stopped, so this must be a silent no-op rather than a second trip into the observer.
+        // The sink has stopped, so this is a silent no-op.
         sink.OnNext(LateValue);
 
         await Assert.That(thrown!.Message).IsEqualTo("observer-next");

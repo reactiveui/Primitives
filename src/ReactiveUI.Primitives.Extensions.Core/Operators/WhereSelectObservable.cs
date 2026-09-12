@@ -7,10 +7,8 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
 /// <summary>
-/// Fused <c>Where(predicate).Select(selector)</c> operator. Replaces the two-operator
-/// Rx chain with a single observable + observer pair, saving the intermediate
-/// <c>Select</c> operator allocation (and its <see cref="IObserver{T}"/>) per
-/// subscription on hot paths.
+/// Emits <paramref name="selector"/> applied to each source element that <paramref name="predicate"/> accepts. An
+/// exception from either delegate terminates the sequence.
 /// </summary>
 /// <typeparam name="TIn">The source element type.</typeparam>
 /// <typeparam name="TOut">The projected element type after applying the selector.</typeparam>
@@ -32,11 +30,7 @@ public sealed class WhereSelectObservable<TIn, TOut>(
         return source.Subscribe(new WhereSelectWitness(observer, predicate, selector));
     }
 
-    /// <summary>
-    /// Forwarding observer that applies the predicate and selector inline on each
-    /// <see cref="OnNext"/>. Any exception thrown by either delegate is routed to
-    /// <see cref="IObserver{T}.OnError"/> on the downstream observer.
-    /// </summary>
+    /// <summary>Forwarding observer that applies the predicate then the selector, routing an exception from either to the downstream error channel.</summary>
     /// <param name="downstream">The downstream observer receiving projected values.</param>
     /// <param name="predicate">Filter delegate.</param>
     /// <param name="selector">Projection delegate.</param>

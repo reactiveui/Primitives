@@ -5,7 +5,11 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>Projects each element to an asynchronous operation, but only the result of the latest operation is emitted.</summary>
+/// <summary>
+/// Projects each element through an asynchronous selector and emits only the latest projection's result. A superseded
+/// operation keeps running but its result and its failure are both discarded, and the source's completion is deferred
+/// until the latest projection finishes.
+/// </summary>
 /// <typeparam name = "TSource">The type of elements in the source sequence.</typeparam>
 /// <typeparam name = "TResult">The type of the result of the asynchronous operation.</typeparam>
 /// <param name = "source">The source observable.</param>
@@ -31,7 +35,7 @@ public sealed class SelectLatestAsyncObservable<TSource, TResult>(IObservable<TS
         /// <summary>The gate for state access.</summary>
         private readonly Lock _gate = new();
 
-        /// <summary>The current operation ID to track latest.</summary>
+        /// <summary>Identifier of the most recent projection; a result carrying an older identifier is dropped.</summary>
         private long _currentId;
 
         /// <summary>Whether the source has completed (no more values will arrive).</summary>
@@ -40,7 +44,7 @@ public sealed class SelectLatestAsyncObservable<TSource, TResult>(IObservable<TS
         /// <summary>Whether downstream completion has been signalled.</summary>
         private bool _completionSignalled;
 
-        /// <summary>The latest in-flight projection task, used to delay completion until it finishes.</summary>
+        /// <summary>The latest in-flight projection task, whose completion gates the downstream completion.</summary>
         private Task? _latestTask;
 
         /// <summary>Whether the sink has been disposed.</summary>
@@ -99,7 +103,7 @@ public sealed class SelectLatestAsyncObservable<TSource, TResult>(IObservable<TS
             }
         }
 
-        /// <summary>Processes a value and returns its active operation.</summary>
+        /// <summary>Starts a projection for the value and records it as the latest, superseding any in-flight one.</summary>
         /// <param name = "value">The source value.</param>
         /// <returns>The processing task, or a completed task when no work starts.</returns>
         internal Task OnNextAsync(TSource value)
@@ -139,7 +143,7 @@ public sealed class SelectLatestAsyncObservable<TSource, TResult>(IObservable<TS
             }
         }
 
-        /// <summary>Processes the async operation and checks for latest ID.</summary>
+        /// <summary>Awaits the selector and emits or faults only while this operation is the latest one.</summary>
         /// <param name = "value">The value to project.</param>
         /// <param name = "id">The ID of this operation.</param>
         /// <returns>A task representing the operation.</returns>

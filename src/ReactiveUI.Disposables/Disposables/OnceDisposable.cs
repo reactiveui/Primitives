@@ -5,10 +5,10 @@
 namespace ReactiveUI.Primitives.Disposables;
 
 /// <summary>
-/// A disposable holder whose inner disposable can be set exactly once.
-/// Replaces <c>SingleAssignmentDisposable</c>. Subsequent assignments throw
-/// <see cref="InvalidOperationException"/>; if the holder has been disposed before
-/// assignment, the supplied disposable is disposed immediately and no exception is thrown.
+/// A disposable holder whose inner disposable can be set exactly once. A second
+/// assignment throws <see cref="InvalidOperationException"/>; if the holder was disposed
+/// before the assignment, the supplied disposable is disposed immediately and no exception
+/// is thrown.
 /// </summary>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class OnceDisposable : IsDisposed

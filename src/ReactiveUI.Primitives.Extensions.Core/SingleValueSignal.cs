@@ -6,10 +6,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions;
 
-/// <summary>
-/// Synchronously emits a single cached value to each subscriber and completes. Drop-in for
-/// the Rx <c>Observable.Return</c> pattern when sharing the observable instance across calls.
-/// </summary>
+/// <summary>Emits one cached value to each subscriber and completes, both inside <c>Subscribe</c>; the Rx spelling is <c>Observable.Return</c>.</summary>
 /// <typeparam name="T">The element type.</typeparam>
 /// <param name="value">The value emitted to every subscriber.</param>
 public sealed class SingleValueSignal<T>(T value) : IObservable<T>

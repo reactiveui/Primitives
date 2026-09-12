@@ -293,8 +293,8 @@ public class FactoryAdapterExpansionBenchmarks
         return observer.NextCount + observer.CompletionCount + observer.ErrorCount;
     }
 
-    /// <summary>Gets the values.</summary>
-    /// <returns>The enumerable of values.</returns>
+    /// <summary>Yields the benchmark values asynchronously after an initial scheduler yield.</summary>
+    /// <returns>An async sequence of <see cref="Count"/> ascending values.</returns>
     private static async IAsyncEnumerable<int> ValuesAsync()
     {
         await Task.Yield();

@@ -7,27 +7,17 @@ namespace ReactiveUI.Primitives.Extensions.Internal;
 /// <summary>Claims one-time transitions and tolerates cancellation of disposed token sources.</summary>
 internal static class ConcurrencyRaceHelpers
 {
-    /// <summary>
-    /// Atomically transitions <paramref name="state"/> from <paramref name="openSentinel"/>
-    /// to <paramref name="claimedSentinel"/>. Returns <see langword="true"/> if this caller
-    /// won the race; <see langword="false"/> if another caller had already claimed the state.
-    /// </summary>
+    /// <summary>Atomically moves <paramref name="state"/> from <paramref name="openSentinel"/> to <paramref name="claimedSentinel"/>.</summary>
     /// <param name="state">The reference to the state field.</param>
-    /// <param name="openSentinel">The sentinel value the state must currently hold.</param>
+    /// <param name="openSentinel">The sentinel value the state must hold for the claim to succeed.</param>
     /// <param name="claimedSentinel">The sentinel value the state transitions to on success.</param>
-    /// <returns>
-    /// <see langword="true"/> if the claim succeeded; <see langword="false"/> if another caller
-    /// already claimed the state.
-    /// </returns>
+    /// <returns><see langword="true"/> when this caller made the transition; <see langword="false"/> when another caller holds the claim.</returns>
     internal static bool TryClaim(ref int state, int openSentinel, int claimedSentinel) =>
         Interlocked.CompareExchange(ref state, claimedSentinel, openSentinel) == openSentinel;
 
     /// <summary>Cancels the source asynchronously, tolerating concurrent disposal.</summary>
     /// <param name="cts">The cancellation token source to cancel.</param>
-    /// <returns>
-    /// <see langword="true"/> if the cancellation completed; <see langword="false"/> if the
-    /// source was already disposed.
-    /// </returns>
+    /// <returns><see langword="true"/> when the cancellation ran; <see langword="false"/> when the source was disposed first.</returns>
     internal static async ValueTask<bool> TryCancelAsync(CancellationTokenSource cts)
     {
         try

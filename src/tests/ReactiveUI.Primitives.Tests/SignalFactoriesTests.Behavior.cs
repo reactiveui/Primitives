@@ -23,7 +23,7 @@ public partial class SignalFactoriesTests
     /// <summary>Expected single async value.</summary>
     private static readonly int[] ExpectedSingleAsyncValue = [1];
 
-    /// <summary>Exercises task, async-enumerable, and terminal task branches.</summary>
+    /// <summary>Task and async-enumerable factories forward cancellation and faults, and terminal tasks fault on an empty source.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]
     public async Task FactoriesTasksAndTerminalTasksCoverCancellationFaultAndEmptyBranches()

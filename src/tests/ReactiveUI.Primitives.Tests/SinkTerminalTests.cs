@@ -55,7 +55,7 @@ public class SinkTerminalTests
         await Assert.That(sink.DisposeCount).IsEqualTo(1);
     }
 
-    /// <summary>The sink is disposed via the <c>finally</c> even when the downstream observer throws.</summary>
+    /// <summary>The sink is disposed even when the downstream observer throws.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task FaultStillDisposesTheSinkWhenTheObserverThrows()
@@ -82,7 +82,7 @@ public class SinkTerminalTests
         await Assert.That(sink.DisposeCount).IsEqualTo(1);
     }
 
-    /// <summary>The latched <c>Fault</c> overload does nothing once the latch is already set.</summary>
+    /// <summary>The latched <c>Fault</c> overload does nothing when the latch is set.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task FaultWithLatchIsNoOpWhenAlreadyDone()
@@ -111,7 +111,7 @@ public class SinkTerminalTests
         await Assert.That(sink.DisposeCount).IsEqualTo(1);
     }
 
-    /// <summary>The latched value <c>Complete</c> overload does nothing once the latch is already set.</summary>
+    /// <summary>The latched value <c>Complete</c> overload does nothing when the latch is set.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task CompleteWithValueAndLatchIsNoOpWhenAlreadyDone()
@@ -140,7 +140,7 @@ public class SinkTerminalTests
         await Assert.That(sink.DisposeCount).IsEqualTo(1);
     }
 
-    /// <summary>The latched valueless <c>Complete</c> overload does nothing once the latch is already set.</summary>
+    /// <summary>The latched valueless <c>Complete</c> overload does nothing when the latch is set.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task CompleteWithoutValueAndLatchIsNoOpWhenAlreadyDone()
@@ -180,7 +180,7 @@ public class SinkTerminalTests
         public void OnNext(T value) => Values.Add(value);
     }
 
-    /// <summary>An observer whose <see cref = "OnError"/> throws, to exercise the helper's <c>finally</c> branch.</summary>
+    /// <summary>An observer whose <see cref = "OnError"/> throws when a fault is forwarded to it.</summary>
     /// <typeparam name = "T">The type of the observed values.</typeparam>
     private sealed class ThrowingObserver<T> : IObserver<T>
     {

@@ -7,7 +7,7 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>Coverage for the public <see cref="Broadcaster{T}"/> equality and copy-on-write surface.</summary>
+/// <summary>Tests for the public <see cref="Broadcaster{T}"/> equality and copy-on-write surface.</summary>
 public class BroadcasterTests
 {
     /// <summary>The literal one.</summary>
@@ -27,21 +27,16 @@ public class BroadcasterTests
         Broadcaster<int> left = default;
         Broadcaster<int> right = default;
 
-        // Both empty -> same (null) observer set.
         await Assert.That(left == right).IsTrue();
         await Assert.That(left != right).IsFalse();
         left.Add(new DelegateWitness<int>(static _ => { }));
 
-        // Left now references an observer set; right is still empty.
+        // Left references an observer set; right is empty.
         await Assert.That(left != right).IsTrue();
         await Assert.That(left == right).IsFalse();
     }
 
-    /// <summary>
-    /// The hash follows the observer set, which has three shapes. An empty broadcaster hashes to zero, and a
-    /// broadcaster holding exactly one observer hashes to that observer's identity — so two broadcasters over
-    /// the same single observer agree, which is what equality promises.
-    /// </summary>
+    /// <summary>An empty broadcaster hashes to zero and a single-observer broadcaster hashes to that observer's identity.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task BroadcasterHashesToZeroWhenEmptyAndToTheObserverIdentityWhenSingle()
@@ -61,7 +56,7 @@ public class BroadcasterTests
         await Assert.That(single.Equals(alsoSingle)).IsTrue();
     }
 
-    /// <summary>Covers broadcaster copy-on-write, signal late-terminal, and buffer disposal/error branches.</summary>
+    /// <summary>Verifies broadcaster copy-on-write, late terminal notifications on a signal, and buffer error handling.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task BroadcasterCopyOnWriteSignalAndBufferCoverTerminalEdges()
@@ -109,7 +104,7 @@ public class BroadcasterTests
             source.OnNext(One);
             source.OnNext(Two);
 
-            // The window (size 3) is incomplete; completion flushes the partial trailing window.
+            // The size-3 window is incomplete, so completion flushes the partial window.
             source.OnCompleted();
         }
 

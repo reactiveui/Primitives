@@ -6,7 +6,11 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>Subscribes to an observable sequence and executes an asynchronous handler for each element.</summary>
+/// <summary>
+/// Subscribes to a source and runs an asynchronous handler for each element, one at a time, queueing values that arrive
+/// while a handler runs. A handler failure goes to the error callback and stops further processing; the completion
+/// callback runs once the queue drains after the source completes, and disposal drops the subscription and the queue.
+/// </summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 [System.Diagnostics.DebuggerDisplay("SubscribeAsyncObservable: Queued = {_queue.Count}, Processing = {_isProcessing}, Done = {_done}")]
 public sealed class SubscribeAsyncObservable<T> : IDisposable
@@ -94,7 +98,7 @@ public sealed class SubscribeAsyncObservable<T> : IDisposable
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     private void OnNext(T value) => _ = OnNextAsync(value);
 
-    /// <summary>Called when an error occurs in the source.</summary>
+    /// <summary>Routes a source error to the error callback and stops processing the queue.</summary>
     /// <param name="error">The error that occurred.</param>
     private void OnError(Exception error)
     {
@@ -110,7 +114,7 @@ public sealed class SubscribeAsyncObservable<T> : IDisposable
         }
     }
 
-    /// <summary>Called when the source completes.</summary>
+    /// <summary>Marks the source finished and runs the completion callback when no handler is in flight.</summary>
     private void OnCompleted()
     {
         lock (_gate)
@@ -128,7 +132,7 @@ public sealed class SubscribeAsyncObservable<T> : IDisposable
         }
     }
 
-    /// <summary>Processes the next value in the queue.</summary>
+    /// <summary>Runs the handler for queued values in turn, invoking the completion callback when the queue empties after the source finishes.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     private async Task ProcessNextAsync()
     {

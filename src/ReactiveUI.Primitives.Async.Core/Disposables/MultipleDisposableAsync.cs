@@ -6,10 +6,7 @@ using System.Buffers;
 
 namespace ReactiveUI.Primitives.Async.Disposables;
 
-/// <summary>
-/// Represents a thread-safe collection of asynchronous disposable objects that are disposed together as a group.
-/// Provides methods to add, remove, and asynchronously dispose contained resources as a single operation.
-/// </summary>
+/// <summary>A thread-safe collection of asynchronous disposables whose lifetimes are owned and released as one group.</summary>
 /// <remarks>Disposal is one-way: a disposed collection holds nothing, and adding to it disposes the incoming item
 /// instead of storing it. Safe for concurrent access from several threads.</remarks>
 [System.Diagnostics.DebuggerDisplay("MultipleDisposableAsync: Count = {_count}, IsDisposed = {_isDisposed}")]
@@ -21,7 +18,7 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
     /// <summary>Used-slot count at or below which a remove leaves the array uncompacted.</summary>
     private const int ShrinkThreshold = 16;
 
-    /// <summary>Divisor used to decide whether a remove triggers compaction (count * 4 &lt; length).</summary>
+    /// <summary>Occupancy divisor: a remove compacts when count multiplied by this falls below the array's length.</summary>
     private const int ShrinkOccupancyDivisor = 4;
 
     /// <summary>Factor the backing array's capacity is multiplied by when it overflows.</summary>
@@ -162,8 +159,8 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
 
     /// <summary>Removes the specified item from the collection and disposes it asynchronously.</summary>
     /// <param name="item">The item to remove and dispose. Cannot be null.</param>
-    /// <returns>A task that represents the asynchronous remove operation. The task result is <see langword="true"/> if the item
-    /// was found and removed; otherwise, <see langword="false"/>.</returns>
+    /// <returns><see langword="true"/> when the item was found, removed and disposed; otherwise,
+    /// <see langword="false"/>.</returns>
     /// <remarks>An item this collection does not hold is left alone, not disposed.</remarks>
     public async ValueTask<bool> Remove(IAsyncDisposable item)
     {
@@ -252,12 +249,10 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
     }
 
     /// <summary>Copies the elements of the collection to the specified array, starting at the given array index.</summary>
-    /// <param name="array">The one-dimensional array of IAsyncDisposable elements that is the destination of the elements copied from the
-    /// collection. The array must have zero-based indexing.</param>
-    /// <param name="arrayIndex">The zero-based index in the destination array at which copying begins. Must be non-negative and less than the
-    /// length of the array.</param>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when arrayIndex is less than zero, greater than or equal to the length of array, or when there is not
-    /// enough space from arrayIndex to the end of array to accommodate all elements in the collection.</exception>
+    /// <param name="array">The zero-based destination array.</param>
+    /// <param name="arrayIndex">The index in <paramref name="array"/> at which copying begins.</param>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="arrayIndex"/> falls outside
+    /// <paramref name="array"/>, or the space from it to the end of the array cannot hold every item.</exception>
     /// <remarks>A disposed collection copies nothing and raises nothing.</remarks>
     public void CopyTo(IAsyncDisposable[]? array, int arrayIndex)
     {
@@ -324,10 +319,7 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
         }
     }
 
-    /// <summary>
-    /// Returns an enumerator that iterates a snapshot of the non-null disposables in the collection.
-    /// The snapshot is taken under the gate; subsequent mutations do not affect the enumerator.
-    /// </summary>
+    /// <summary>Returns an enumerator over a snapshot taken under the gate, so later mutations do not affect it.</summary>
     /// <returns>An enumerator over a snapshot of the collection's disposables.</returns>
     public IEnumerator<IAsyncDisposable> GetEnumerator()
     {

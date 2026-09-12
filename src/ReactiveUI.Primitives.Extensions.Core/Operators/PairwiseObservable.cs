@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>Emits (previous, current) pairs from a sequence.</summary>
+/// <summary>Emits each adjacent pair of source values as <c>(Previous, Current)</c>, so the first value produces nothing on its own.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 public sealed class PairwiseObservable<T>(IObservable<T> source) : IObservable<(T Previous, T Current)>
@@ -20,7 +20,7 @@ public sealed class PairwiseObservable<T>(IObservable<T> source) : IObservable<(
         return source.Subscribe(new PairwiseWitness(observer));
     }
 
-    /// <summary>The observer for the pairwise operator.</summary>
+    /// <summary>Observer that holds the last value under a gate and pairs it with the next one.</summary>
     /// <param name="downstream">The downstream observer.</param>
     private sealed class PairwiseWitness(IObserver<(T Previous, T Current)> downstream) : IObserver<T>
     {

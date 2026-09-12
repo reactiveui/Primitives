@@ -7,10 +7,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async.Disposables;
 
-/// <summary>
-/// Represents an asynchronously disposable resource that allows a single assignment of its underlying disposable. Once
-/// disposed, further assignments will dispose the assigned resource immediately.
-/// </summary>
+/// <summary>Owns one asynchronous disposable: the first assignment takes, and an assignment made after disposal disposes its argument.</summary>
 /// <remarks>A second assignment throws <see cref="InvalidOperationException"/>, so this type suits the common shape
 /// where a subscription handle has to be stored before the work it cancels can produce it.</remarks>
 [System.Diagnostics.DebuggerDisplay("SingleAssignmentDisposableAsync: IsDisposed = {IsDisposed}, Current = {_current}")]

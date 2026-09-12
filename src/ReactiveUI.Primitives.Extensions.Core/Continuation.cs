@@ -6,11 +6,15 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions;
 
-/// <summary>Coordinates phase synchronization between a lock holder and its continuation.</summary>
+/// <summary>
+/// Pairs an emitted item with a release handle so a producer can wait on its consumer: <see cref="Lock{T}"/> hands the
+/// item and this instance to an observer and returns a task that completes once that handle is disposed. The barrier
+/// behind it takes two participants and is torn down by <see cref="Dispose()"/>, so an instance gates one handoff.
+/// </summary>
 [System.Diagnostics.DebuggerDisplay("Continuation: Locked = {_locked}, CompletedPhases = {CompletedPhases}")]
 public class Continuation : IDisposable
 {
-    /// <summary>The barrier used to synchronize phases between the lock holder and the continuation.</summary>
+    /// <summary>The two-participant barrier that synchronizes phases between the gate holder and its continuation.</summary>
     private readonly Barrier _phaseSync = new(2);
 
     /// <summary>One once this instance has been disposed; otherwise zero.</summary>
@@ -19,25 +23,26 @@ public class Continuation : IDisposable
     /// <summary>One while the continuation is locked; otherwise zero.</summary>
     private int _locked;
 
-    /// <summary>Gets the number of completed phases.</summary>
-    /// <value>
-    /// The completed phases.
-    /// </value>
+    /// <summary>Gets the number of barrier phases that have completed.</summary>
     public long CompletedPhases => _phaseSync.CurrentPhaseNumber;
 
-    /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
+    /// <summary>Releases the gate, completing the task returned by <see cref="Lock{T}"/>, and tears down the barrier.</summary>
     public void Dispose()
     {
         Dispose(true);
         GC.SuppressFinalize(this);
     }
 
-    /// <summary>Locks this instance.</summary>
+    /// <summary>
+    /// Takes the gate and hands <paramref name="item"/> to <paramref name="observer"/> paired with this instance as the
+    /// release handle. A call made while the gate is held emits nothing.
+    /// </summary>
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
-    /// <param name="item">The item.</param>
-    /// <param name="observer">The observer.</param>
+    /// <param name="item">The item handed to the observer.</param>
+    /// <param name="observer">The observer receiving the item and its release handle; ignored when <see langword="null"/>.</param>
     /// <returns>
-    /// A <see cref="Task" /> representing the asynchronous operation.
+    /// A <see cref="Task" /> that completes once the release handle is disposed, or a completed task when the gate was
+    /// held.
     /// </returns>
     public Task Lock<T>(T item, IObserver<(T Value, IDisposable Sync)>? observer)
     {
@@ -50,15 +55,11 @@ public class Continuation : IDisposable
         return ScheduleSignalPhase();
     }
 
-    /// <summary>
-    /// <see cref="ValueTask"/>-returning counterpart to <see cref="Lock{T}"/>. Use this at per-emission
-    /// call sites where the returned task is awaited exactly once — saves the boxed <see cref="Task"/>
-    /// wrapper allocation in the already-locked fast path.
-    /// </summary>
+    /// <summary><see cref="ValueTask"/>-returning counterpart to <see cref="Lock{T}"/>, for call sites that await the result exactly once.</summary>
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
-    /// <param name="item">The item.</param>
-    /// <param name="observer">The observer.</param>
-    /// <returns>A <see cref="ValueTask"/> representing the asynchronous operation.</returns>
+    /// <param name="item">The item handed to the observer.</param>
+    /// <param name="observer">The observer receiving the item and its release handle; ignored when <see langword="null"/>.</param>
+    /// <returns>A <see cref="ValueTask"/> that completes once the release handle is disposed, or a completed task when the gate was held.</returns>
     public ValueTask LockValueTask<T>(T item, IObserver<(T Value, IDisposable Sync)>? observer)
     {
         if (Interlocked.Exchange(ref _locked, 1) != 0)
@@ -70,8 +71,8 @@ public class Continuation : IDisposable
         return new(ScheduleSignalPhase());
     }
 
-    /// <summary>UnLocks this instance.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    /// <summary>Releases the gate and signals the barrier phase; a no-op when the gate is not held.</summary>
+    /// <returns>A <see cref="Task"/> that completes once the barrier phase is signalled.</returns>
     internal Task UnLock() =>
         Interlocked.Exchange(ref _locked, 0) == 0 ? Task.CompletedTask : ScheduleSignalPhase();
 
@@ -81,8 +82,7 @@ public class Continuation : IDisposable
         "Concurrency",
         "SST1905:Do not use async void",
         Justification =
-            "This is the Dispose(bool) disposal-pattern overload, whose signature is fixed to return void; it cannot return "
-            + "Task. The await is best-effort teardown of the phase barrier during disposal, with no caller positioned to observe it.")]
+            "The disposal-pattern overload must return void, and no caller is positioned to observe the awaited barrier teardown.")]
     protected virtual async void Dispose(bool disposing)
     {
         if (Interlocked.Exchange(ref _disposedValue, 1) != 0 || !disposing)
@@ -94,14 +94,14 @@ public class Continuation : IDisposable
         _phaseSync.Dispose();
     }
 
-    /// <summary>Static state-carrying signal callback; avoids the per-call closure allocation a captured lambda would produce.</summary>
+    /// <summary>Signals the phase barrier and waits there for the paired participant.</summary>
     /// <param name="state">The owning <see cref="Continuation"/> instance.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void SignalPhaseSync(object? state) =>
         ((Continuation)state!)._phaseSync.SignalAndWait(CancellationToken.None);
 
-    /// <summary>Schedules an action on the default task scheduler.</summary>
-    /// <returns>The task representing the scheduled signal work.</returns>
+    /// <summary>Runs the barrier signal on the default task scheduler.</summary>
+    /// <returns>The task for the scheduled signal work.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private Task ScheduleSignalPhase() =>
         Task.Factory.StartNew(

@@ -59,7 +59,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(observer.Values.SequenceEqual([One])).IsTrue();
     }
 
-    /// <summary>Verifies that dispose waits for in-flight delivery and blocks queued notifications.</summary>
+    /// <summary>Disposing during delivery suppresses the queued notifications that follow it.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ShiftDisposalClaimDuringDeliverySuppressesQueuedNotifications()
@@ -121,7 +121,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(sequencer.ScheduledCount).IsEqualTo(0);
     }
 
-    /// <summary>Verifies notifications after a terminal one are dropped while the source is stopped.</summary>
+    /// <summary>Shift drops the notifications a source delivers after its terminal one.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ShiftDropsNotificationsAfterTerminalNotification()
@@ -205,9 +205,7 @@ public partial class SignalOperatorMixinsTests
             "Design",
             "SST2318:Members should not have identical bodies",
             Justification =
-                "The relative and absolute Schedule overloads of this test-double sequencer intentionally behave the "
-                + "same way; both are required by the ISequencer contract and, as distinct interface overloads, cannot "
-                + "forward to one another.")]
+                "Both Schedule overloads are required by the ISequencer contract and cannot forward to one another.")]
         public void Schedule(IWorkItem item, long dueTimestamp) => _items.Enqueue(item);
 
         /// <summary>Advances the scheduler clock without running queued work.</summary>

@@ -13,7 +13,7 @@ using PrimitivesAsyncSignalFactory = ReactiveUI.Primitives.Async.Signals.Signal;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
-/// <summary>Benchmarks the new async primitives API against ReactiveUI.Extensions 4.0.0.</summary>
+/// <summary>Benchmarks the async primitives API against the ReactiveUI.Extensions async equivalents.</summary>
 [MemoryDiagnoser]
 public class AsyncExtensionsComparisonBenchmarks
 {
@@ -234,8 +234,7 @@ public class AsyncExtensionsComparisonBenchmarks
         "Design",
         "SST2318:Members should not have identical bodies",
         Justification =
-            "Type-specialized overloads over different witness array types. The summation loop is identical, but the "
-            + "overloads take different element types and cannot forward to one another.")]
+            "The Sum overloads take different witness array element types and cannot forward to one another.")]
     private static int Sum(ExtensionsCountingWitness[] observers)
     {
         var total = 0;

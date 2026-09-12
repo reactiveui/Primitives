@@ -6,12 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Projection operator that ignores every source element and emits a stored constant
-/// instead. Replaces the common <c>.Select(_ =&gt; value)</c> pattern, avoiding the
-/// per-subscription closure allocation that the lambda <c>_ =&gt; value</c> would
-/// capture.
-/// </summary>
+/// <summary>Emits <paramref name="constant"/> once per source element, ignoring the element itself; errors and completion pass through unchanged.</summary>
 /// <typeparam name="TSource">The source element type (ignored).</typeparam>
 /// <typeparam name="TResult">The result element type emitted to the downstream observer.</typeparam>
 /// <param name="source">The source observable whose values are ignored.</param>

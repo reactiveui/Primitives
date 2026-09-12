@@ -45,7 +45,7 @@ public sealed class ImmediateSequencer : ISequencer
         return EmptyDisposable.Instance;
     }
 
-    /// <summary>Schedules the specified work item.</summary>
+    /// <summary>Executes the work item on the calling thread unless it has been cancelled.</summary>
     /// <param name="item">Work item to execute.</param>
     /// <exception cref="ArgumentExceptionHelper"><paramref name="item"/> is <see langword="null"/>.</exception>
     public void Schedule(IWorkItem item)
@@ -60,7 +60,7 @@ public sealed class ImmediateSequencer : ISequencer
         item.Execute();
     }
 
-    /// <summary>Schedules the specified work item.</summary>
+    /// <summary>Blocks the calling thread until the due timestamp, then executes the work item unless it has been cancelled.</summary>
     /// <param name="item">Work item to execute.</param>
     /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
     /// <exception cref="ArgumentExceptionHelper"><paramref name="item"/> is <see langword="null"/>.</exception>

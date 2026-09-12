@@ -251,7 +251,7 @@ internal static class SymbolHelpers
         return parameter.HasNotNullConstraint ? "notnull" : string.Empty;
     }
 
-    /// <summary>Appends the constraint separator when something has already been written.</summary>
+    /// <summary>Appends the constraint separator unless the builder is empty.</summary>
     /// <param name="builder">The destination builder.</param>
     /// <returns>The builder, for chaining.</returns>
     private static PooledStringBuilder AppendSeparator(PooledStringBuilder builder) =>

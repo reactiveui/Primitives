@@ -201,7 +201,7 @@ public partial class RxNamesTests
             _latched);
     }
 
-    /// <summary>Provides the generated multi-source CombineLatest arities not covered by the dedicated edge tests.</summary>
+    /// <summary>Provides the arities of the generated multi-source CombineLatest overloads.</summary>
     /// <returns>The CombineLatest arities from 4 through 15.</returns>
     public static IEnumerable<int> MultiSourceCombineLatestArities()
     {
@@ -656,7 +656,7 @@ public partial class RxNamesTests
         _ = Assert.Throws<ArgumentOutOfRangeException>(() => source.Sample(TimeSpan.FromTicks(NegativeOne)));
     }
 
-    /// <summary>Verifies the stateful sinks forward a value and then an error (covers their error path).</summary>
+    /// <summary>Verifies the stateful sinks forward a value and then an error.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task StatefulSinksForwardValueThenError()
@@ -666,7 +666,7 @@ public partial class RxNamesTests
         await Assert.That(RunStatefulError(static s => s.DoWith(Ten, IgnoreState))).IsTrue();
     }
 
-    /// <summary>Verifies the stateful projection sinks forward an exception thrown by the projection (covers their catch path).</summary>
+    /// <summary>Verifies the stateful projection sinks forward an exception thrown by the projection.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task StatefulProjectionForwardsThrownError()
@@ -721,7 +721,7 @@ public partial class RxNamesTests
         await Assert.That(values.SequenceEqual(_tenOnly)).IsTrue();
     }
 
-    /// <summary>Verifies <c>Sample</c> mirrors <c>Probe</c> when sampled against an identical virtual clock drive.</summary>
+    /// <summary>Verifies <c>Sample</c> mirrors <c>Probe</c>.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task SampleMatchesProbe()
@@ -764,7 +764,7 @@ public partial class RxNamesTests
         await Assert.That(switched).IsEquivalentTo(switchedTo, EqualityComparer<int>.Default);
     }
 
-    /// <summary>Verifies <c>Retry</c> mirrors the source when no error occurs (covers the happy path).</summary>
+    /// <summary>Verifies <c>Retry</c> mirrors the source when no error occurs.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task RetryMirrorsSourceWhenNoError() =>
@@ -826,7 +826,7 @@ public partial class RxNamesTests
             .Resume(Signal.FromEnumerable(_oneToThree))
             .Subscribe((IObserver<int>)null!));
 
-    /// <summary>Verifies Resume takes the scheduled subscription path when a current-thread sequencer is already active.</summary>
+    /// <summary>Verifies Resume schedules its subscription when a current-thread sequencer is active.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ResumeSchedulesWhenCurrentThreadSequencerActive()
@@ -855,7 +855,7 @@ public partial class RxNamesTests
     /// <returns>The new accumulated value.</returns>
     private static int Add(int accumulated, int value) => accumulated + value;
 
-    /// <summary>Returns the value unchanged (key selector).</summary>
+    /// <summary>Returns the value unchanged.</summary>
     /// <param name = "value">The source value.</param>
     /// <returns>The value.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -873,11 +873,11 @@ public partial class RxNamesTests
     /// <returns><see langword="true"/> when the value is a multiple of the divisor.</returns>
     private static bool IsMultiple(int divisor, int value) => value % divisor == 0;
 
-    /// <summary>Consumes a value without effect (the side-effect under test is irrelevant to the output).</summary>
+    /// <summary>Consumes a value without effect.</summary>
     /// <param name = "_">The source value, which the side effect deliberately ignores.</param>
     private static void Ignore(int _)
     {
-        // Intentionally empty: Do/Tap forward values unchanged regardless of the side effect.
+        // Intentionally empty.
     }
 
     /// <summary>Consumes a state and value without effect.</summary>
@@ -886,7 +886,7 @@ public partial class RxNamesTests
     [SuppressMessage("Maintainability", "SST1461:Remove unread private parameters", Justification = "The signature is fixed by the delegate this method is passed to as a method group.")]
     private static void IgnoreState(int state, int value)
     {
-        // Intentionally empty: DoWith/TapWith forward values unchanged regardless of the side effect.
+        // Intentionally empty.
     }
 
     /// <summary>Projects a value to an inner sequence that emits it twice.</summary>

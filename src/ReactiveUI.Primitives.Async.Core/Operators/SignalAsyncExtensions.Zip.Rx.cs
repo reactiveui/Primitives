@@ -18,6 +18,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="second">The second observable sequence.</param>
         /// <param name="resultSelector">A function to apply to each pair of elements.</param>
         /// <returns>An observable sequence whose elements are the pair-wise combination of source elements.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="src1"/>, <paramref name="second"/> or <paramref name="resultSelector"/> is <see langword="null"/>.</exception>
         public IObservableAsync<TResult> Zip<T2, TResult>(
             IObservableAsync<T2> second,
             Func<T1, T2, TResult> resultSelector)
@@ -33,6 +34,7 @@ public static partial class SignalAsyncExtensions
         /// <typeparam name="T2">The type of elements in the second source sequence.</typeparam>
         /// <param name="second">The second observable sequence.</param>
         /// <returns>An observable sequence of tuples pairing elements from each source.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="src1"/> or <paramref name="second"/> is <see langword="null"/>.</exception>
         public IObservableAsync<(T1 First, T2 Second)> Zip<T2>(IObservableAsync<T2> second)
         {
             ArgumentExceptionHelper.ThrowIfNull(src1);

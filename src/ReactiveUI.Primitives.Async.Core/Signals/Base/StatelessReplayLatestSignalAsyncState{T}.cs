@@ -11,11 +11,11 @@ namespace ReactiveUI.Primitives.Async.Signals;
 /// <typeparam name="T">The observed value type.</typeparam>
 internal sealed class StatelessReplayLatestSignalAsyncState<T> : IDisposable
 {
-    /// <summary>The asynchronous gate used to synchronize mutable state.</summary>
+    /// <summary>Serializes every mutation of this state, including the replay emitted during subscribe.</summary>
     [SuppressMessage(
         "Style",
         "SST1401:Field should be private",
-        Justification = "Gate fields are intentionally direct readonly state for helper access.")]
+        Justification = "The state helpers enter this gate directly.")]
     internal readonly AsyncSerialGate Gate = new();
 
     /// <summary>Initializes a new instance of the <see cref="StatelessReplayLatestSignalAsyncState{T}"/> class.</summary>

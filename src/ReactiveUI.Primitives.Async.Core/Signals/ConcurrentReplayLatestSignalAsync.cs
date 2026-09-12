@@ -6,10 +6,11 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async.Signals;
 
-/// <summary>Represents an asynchronous Signal that replays only the latest value to new observers and supports concurrent notification of observers.</summary>
+/// <summary>An asynchronous Signal that replays its latest value to each new subscriber and notifies observers concurrently.</summary>
 /// <typeparam name="T">The type of the elements processed by the Signal.</typeparam>
-/// <param name="startValue">An optional initial value to be emitted to observers upon subscription if no other value has been published.</param>
-/// <remarks>Observer notifications overlap; their completion order is unspecified.</remarks>
+/// <param name="startValue">The value replayed to new subscribers until something is published.</param>
+/// <remarks>Completion order across observers is unspecified, and a cancelled notification does not stop the
+/// others.</remarks>
 [System.Diagnostics.DebuggerDisplay("ConcurrentReplayLatestSignalAsync: LastValue = {_state.LastValue}, IsDisposed = {_state.IsDisposed}")]
 public sealed class ConcurrentReplayLatestSignalAsync<T>(Optional<T> startValue) : ISignalAsync<T>
 {

@@ -72,7 +72,7 @@ public sealed class TapWithSignal<T, TState>(IObservable<T> source, TState state
         }
 
         /// <summary>Forwards an error downstream.</summary>
-        /// <param name="error">The error value.</param>
+        /// <param name="error">The terminal error.</param>
         public void OnError(Exception error)
         {
             if (Interlocked.Exchange(ref _stopped, 1) != 0)

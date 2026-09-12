@@ -301,7 +301,7 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
         [SuppressMessage(
             "Usage",
             "CA2213:Disposable fields should be disposed",
-            Justification = "_owner is the sequencer that queued this work item, not a resource it owns; disposing it would shut the sequencer down when one item completes.")]
+            Justification = "The sequencer that queued this work item is not a resource the work item owns.")]
         private readonly ThreadPoolSequencer _owner = owner;
 
         /// <summary>Scheduled state.</summary>

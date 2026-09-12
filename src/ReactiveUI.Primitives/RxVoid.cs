@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives;
 
-/// <summary>A Reactive Void.</summary>
+/// <summary>A unit type with exactly one value, carried by sequences that signal an occurrence rather than data.</summary>
 [Serializable]
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public readonly struct RxVoid : IEquatable<RxVoid>

@@ -39,9 +39,7 @@ public static partial class SignalAsync
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2318:Members should not have identical bodies",
-        Justification =
-            "Using is the System.Reactive name for Use. Both operators intentionally build the same signal directly "
-            + "rather than one forwarding to the other, so the Rx-named alias costs nothing at the call site.")]
+        Justification = "Using is the System.Reactive name for Use and builds the same signal.")]
     public static IObservableAsync<T> Using<T, TResource>(
         Func<CancellationToken, ValueTask<TResource>> resourceFactory,
         Func<TResource, IObservableAsync<T>> signalFactory)

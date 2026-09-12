@@ -7,11 +7,9 @@ using ReactiveUI.Primitives.Disposables;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
 /// <summary>
-/// Fused <c>Where(predicate).Take(1)</c>. Subscribes a single observer to the source,
-/// emits the first value satisfying <paramref name="predicate"/> followed by
-/// <see cref="IObserver{T}.OnCompleted"/>, then disposes the source subscription —
-/// avoiding the two intermediate observer wrappers that the equivalent Rx chain would
-/// allocate per subscription.
+/// Emits the first source value that satisfies <paramref name="predicate"/>, completes, and disposes the source
+/// subscription. An exception from the predicate terminates the sequence, and the source completing first ends the
+/// sequence without a value.
 /// </summary>
 /// <typeparam name="T">The element type of the source observable.</typeparam>
 /// <param name="source">The source observable.</param>

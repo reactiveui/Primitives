@@ -25,7 +25,7 @@ public partial class SignalFactoriesTests
         await Assert.That(completions).IsEqualTo(1);
     }
 
-    /// <summary>Verifies the cancellable enumerable factory stops when its token is already cancelled.</summary>
+    /// <summary>The enumerable factory stops for a cancelled token and emits its whole sequence for an uncancellable one.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task FromEnumerableHonorsACancellableTokenAndIgnoresAnUncancellableOne()
@@ -72,8 +72,7 @@ public partial class SignalFactoriesTests
         var actionRuns = 0;
         AwaitableWitness<RxVoid> actionWitness = new();
 
-        // A void method group is what selects Start(Action); a lambda over 'actionRuns++' is a
-        // Func<int> and would bind to the generic Start<T> overload instead.
+        // A void method group selects Start(Action); a lambda over 'actionRuns++' would bind to Start<T>.
         void RunAction() => actionRuns++;
 
         using var actionSubscription = Signal.Start(RunAction).Subscribe(actionWitness);

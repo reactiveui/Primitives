@@ -37,7 +37,7 @@ internal static class IndexedSubscribeHelper
         return composite;
     }
 
-    /// <summary>Observer that carries a source index without allocating per-source callback closures.</summary>
+    /// <summary>Observer that tags each notification with its source index before invoking the shared hooks.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="index">The source index.</param>
     /// <param name="onNext">Per-source OnNext hook.</param>

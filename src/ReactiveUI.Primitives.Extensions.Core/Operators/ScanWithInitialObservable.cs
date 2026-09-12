@@ -6,7 +6,10 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions;
 
-/// <summary>Scans the source sequence and emits the initial value immediately upon subscription.</summary>
+/// <summary>
+/// Emits <paramref name="initial"/> on subscribe, then the running accumulation after each source element. An exception
+/// thrown by <paramref name="accumulator"/> terminates the sequence and the accumulation stops there.
+/// </summary>
 /// <typeparam name="TSource">The type of elements in the source sequence.</typeparam>
 /// <typeparam name="TAccumulate">The type of the accumulated value.</typeparam>
 /// <param name="source">The source observable.</param>
@@ -29,7 +32,7 @@ public sealed class ScanWithInitialObservable<TSource, TAccumulate>(
         return source.Subscribe(sink);
     }
 
-    /// <summary>Sink that implements the scan with initial logic.</summary>
+    /// <summary>Observer that keeps the running accumulation under a gate and emits it after each element.</summary>
     /// <param name="downstream">The observer to forward elements to.</param>
     /// <param name="initial">The initial accumulated value.</param>
     /// <param name="accumulator">The accumulator function.</param>
@@ -47,7 +50,7 @@ public sealed class ScanWithInitialObservable<TSource, TAccumulate>(
         /// <summary>Whether the sink has finished.</summary>
         private bool _done;
 
-        /// <summary>Initializes the sink by emitting the initial value.</summary>
+        /// <summary>Emits the seed accumulation downstream, which the caller does before subscribing the source.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Initialize() => downstream.OnNext(_current);
 

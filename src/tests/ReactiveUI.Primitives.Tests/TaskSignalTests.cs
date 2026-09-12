@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Tests;
 /// <summary>Verifies <see cref="TaskSignal{T}"/> cancellation and disposal contracts.</summary>
 public partial class TaskSignalTests
 {
-    /// <summary>Covers task-signal cancellation registration and disposal branches.</summary>
+    /// <summary>Disposing a task signal requests cancellation once, and a null factory is rejected.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task TaskSignalCoversCancellationAndDisposeBranches()
@@ -49,7 +49,7 @@ public partial class TaskSignalTests
         await Assert.That(taskSignal.IsCancellationRequested).IsTrue();
     }
 
-    /// <summary>Disposal tolerates a token source that the completion path has already disposed.</summary>
+    /// <summary>Disposal tolerates a token source that the completion path has disposed.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task TaskSignalDisposeToleratesAnAlreadyDisposedTokenSource()

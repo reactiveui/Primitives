@@ -37,9 +37,7 @@ public sealed class CatchIgnoreEmptyObservable<T>(IObservable<T> source) : IObse
             "Design",
             "SST2318:Members should not have identical bodies",
             Justification =
-                "This witness deliberately swaps a terminal error for downstream completion, so OnError and OnCompleted "
-                + "both forward to downstream.OnCompleted by design. They are distinct IObserver<T> channels, not a copy "
-                + "that was meant to differ.")]
+                "Swapping a terminal error for completion makes both observer channels forward to the same downstream call.")]
         public void OnCompleted() => downstream.OnCompleted();
     }
 }

@@ -192,7 +192,6 @@ public static class SequencerExtensions
         /// <param name="action">Action to execute.</param>
         /// <returns>The disposable object used to cancel the scheduled action (best effort).</returns>
         /// <exception cref="ArgumentNullException"><paramref name="scheduler" /> or <paramref name="action" /> is <c>null</c>.</exception>
-        /// <remarks>Named <c>ScheduleAction</c> because a <c>Schedule</c> overload taking state plus an action would be ambiguous with the others.</remarks>
         public IDisposable ScheduleAction<TState>(TState state, Action<TState> action)
         {
             ArgumentExceptionHelper.ThrowIfNull(scheduler);

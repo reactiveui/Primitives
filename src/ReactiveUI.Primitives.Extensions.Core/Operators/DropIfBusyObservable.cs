@@ -6,7 +6,10 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>Operator that drops source elements while an asynchronous action is in progress. Replaces the closure-based implementation in ReactiveExtensions.DropIfBusy.</summary>
+/// <summary>
+/// Runs <paramref name="asyncAction"/> for each source value and forwards the value once it finishes, dropping every
+/// value that arrives while an action is in flight. An exception from the action terminates the sequence.
+/// </summary>
 /// <typeparam name = "T">The element type.</typeparam>
 /// <param name = "source">The source observable.</param>
 /// <param name = "asyncAction">The asynchronous action to execute for each forwarded element.</param>
@@ -60,7 +63,7 @@ public sealed class DropIfBusyObservable<T>(IObservable<T> source, Func<T, Value
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose() => Volatile.Write(ref _done, 1);
 
-        /// <summary>Processes a value and returns its active operation.</summary>
+        /// <summary>Starts the action for the value when the sink is idle, and drops the value otherwise.</summary>
         /// <param name = "value">The source value.</param>
         /// <returns>The processing task, or a completed task when no work starts.</returns>
         internal Task OnNextAsync(T value)
@@ -70,13 +73,12 @@ public sealed class DropIfBusyObservable<T>(IObservable<T> source, Func<T, Value
                 return Task.CompletedTask;
             }
 
-            // If we can transition from 0 to 1, we handle this value.
             return Interlocked.CompareExchange(ref _isBusy, 1, 0) != 0
                 ? Task.CompletedTask
                 : ProcessAsync(value);
         }
 
-        /// <summary>Executes the async action and manages the busy state transition.</summary>
+        /// <summary>Awaits the action, forwards the value unless the sink has terminated, and clears the busy flag.</summary>
         /// <param name = "value">The value to process.</param>
         /// <returns>A task representing the async operation.</returns>
         private async Task ProcessAsync(T value)

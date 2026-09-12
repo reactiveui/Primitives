@@ -98,13 +98,13 @@ public partial class SignalOperatorParityMixinsTests
     /// <summary>Expected result-selector FlatMap values.</summary>
     private static readonly int[] ResultFlatMapExpected = [First + FirstInner, Second + FirstInner];
 
-    /// <summary>Covers count, long-count, distinct fast count, and any helper branches.</summary>
+    /// <summary>The count, long-count, distinct-count, and any helpers report their aggregate.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [SuppressMessage(
         "Concurrency",
         "PSH1313:Call the async overload from an async method",
         Justification =
-            "This test deliberately exercises the synchronous IObservable operator overloads, not their awaitable terminal counterparts.")]
+            "The synchronous IObservable operator overloads are the subject under test.")]
     [Test]
     public async Task AggregateHelpersCoverPredicateDistinctAndAnyPaths()
     {
@@ -160,13 +160,13 @@ public partial class SignalOperatorParityMixinsTests
         await Assert.That(rangeContainsFalse.SequenceEqual(FalseExpected)).IsTrue();
     }
 
-    /// <summary>Covers optimized aggregate observer error paths.</summary>
+    /// <summary>The optimized aggregate observers forward a source error unchanged.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [SuppressMessage(
         "Concurrency",
         "PSH1313:Call the async overload from an async method",
         Justification =
-            "This test deliberately exercises the synchronous IObservable operator overloads, not their awaitable terminal counterparts.")]
+            "The synchronous IObservable operator overloads are the subject under test.")]
     [Test]
     public async Task AggregateHelpersForwardSourceErrors()
     {
@@ -186,7 +186,7 @@ public partial class SignalOperatorParityMixinsTests
         await Assert.That(observed[DistinctErrorIndex]).IsSameReferenceAs(distinctError);
     }
 
-    /// <summary>Covers predicate exceptions for aggregate boolean terminals.</summary>
+    /// <summary>The boolean aggregate terminals forward an exception thrown by the predicate.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task AggregateBooleanTerminalsForwardPredicateErrors()
@@ -197,7 +197,7 @@ public partial class SignalOperatorParityMixinsTests
         await Assert.That(observed[0]).IsSameReferenceAs(allError);
     }
 
-    /// <summary>Covers FlatMap queuing while an inner signal is active.</summary>
+    /// <summary>FlatMap queues a later inner signal until the active inner signal completes.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task FlatMapQueuesInnerSignalsUntilActiveInnerCompletes()
@@ -220,7 +220,7 @@ public partial class SignalOperatorParityMixinsTests
         await Assert.That(completed).IsEqualTo(1);
     }
 
-    /// <summary>Covers the FlatMap overload with an outer and inner result selector.</summary>
+    /// <summary>The FlatMap result-selector overload projects each outer value with its inner value.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task FlatMapResultSelectorProjectsOuterAndInnerValues()
@@ -232,7 +232,7 @@ public partial class SignalOperatorParityMixinsTests
         await Assert.That(values.SequenceEqual(ResultFlatMapExpected)).IsTrue();
     }
 
-    /// <summary>Covers FlatMap selector, inner, and outer error forwarding.</summary>
+    /// <summary>FlatMap forwards a selector, inner, and outer error to the observer.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task FlatMapForwardsSelectorInnerAndOuterErrors()
@@ -320,7 +320,7 @@ public partial class SignalOperatorParityMixinsTests
         await Assert.That(countError!).IsSameReferenceAs(expected);
     }
 
-    /// <summary>The predicate terminals cancel up front when handed an already-cancelled token.</summary>
+    /// <summary>The predicate terminals cancel up front when handed a pre-cancelled token.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task PredicateTerminalTasksCancelUpFrontOnAnAlreadyCancelledToken()

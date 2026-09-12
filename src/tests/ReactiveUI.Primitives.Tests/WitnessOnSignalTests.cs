@@ -42,7 +42,6 @@ public sealed class WitnessOnSignalTests
         source.OnNext(First);
         source.OnNext(Second);
 
-        // Nothing may be delivered until the sequencer runs the queued drain.
         await Assert.That(witness.Values.Count).IsEqualTo(0);
 
         clock.AdvanceBy(SingleTick);
@@ -76,7 +75,7 @@ public sealed class WitnessOnSignalTests
         await Assert.That(witness.Errors[0]).IsSameReferenceAs(expected);
     }
 
-    /// <summary>A drain that is torn down mid-flight abandons the notifications still queued behind it.</summary>
+    /// <summary>A drain that is torn down mid-flight abandons the notifications queued behind it.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task DispatchAbandonsQueuedNotificationsWhenDisposedMidDrain()

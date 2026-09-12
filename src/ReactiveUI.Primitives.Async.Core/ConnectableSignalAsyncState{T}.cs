@@ -20,7 +20,7 @@ internal sealed class ConnectableSignalAsyncState<T> : IDisposable
         Justification = "The helper class that drives this state enters the gate directly.")]
     internal readonly AsyncSerialGate Gate = new();
 
-    /// <summary>The monitor used to make synchronous disposal idempotent.</summary>
+    /// <summary>Guards the disposal latch so only the first caller tears the state down.</summary>
     private readonly Lock _disposalGate = new();
 
     /// <summary>Initializes a new instance of the <see cref="ConnectableSignalAsyncState{T}"/> class.</summary>
@@ -48,8 +48,7 @@ internal sealed class ConnectableSignalAsyncState<T> : IDisposable
     /// <summary>Gets or sets a value indicating whether disposal has been claimed.</summary>
     internal bool IsDisposed { get; set; }
 
-    /// <summary>Gets the token cancelled when the connectable signal is disposed, captured at construction because
-    /// <see cref="Dispose"/> makes <see cref="CancellationTokenSource.Token"/> throw.</summary>
+    /// <summary>Gets the disposal token, captured at construction because <see cref="Dispose"/> makes <see cref="CancellationTokenSource.Token"/> throw.</summary>
     internal CancellationToken DisposedCancellationToken { get; }
 
     /// <inheritdoc/>

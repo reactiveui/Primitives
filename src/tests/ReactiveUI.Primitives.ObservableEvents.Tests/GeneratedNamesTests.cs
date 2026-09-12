@@ -34,7 +34,7 @@ public sealed class GeneratedNamesTests
         await Assert.That(trimmed).IsNotEqualTo(bare);
     }
 
-    /// <summary>Verifies an identity with nothing nameable still produces a usable identifier.</summary>
+    /// <summary>Verifies an identity with nothing nameable produces a usable identifier.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task GeneratedNamesHandlesAnIdentityWithNothingNameable()

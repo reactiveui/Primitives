@@ -22,11 +22,11 @@ public readonly record struct Optional<T>
     public Optional() => (_value, HasValue) = (default, false);
 
     /// <summary>Initializes a new instance of the <see cref="Optional{T}"/> struct.</summary>
-    /// <param name="value">The value to be contained in the <see cref="Optional{T}"/>  instance.</param>
+    /// <param name="value">The value to be contained in the <see cref="Optional{T}"/> instance.</param>
     public Optional([AllowNull] T value) => (_value, HasValue) = value is null ? (default, false) : (value, true);
 
     /// <summary>Initializes a new instance of the <see cref="Optional{T}"/> struct.</summary>
-    /// <param name="value">The value.</param>
+    /// <param name="value">The value to contain, treated as absent when <see langword="null"/>.</param>
     /// <param name="hasValue">A value indicating whether a value is present.</param>
     private Optional([AllowNull] T value, bool hasValue) =>
         (_value, HasValue) = hasValue && value is not null ? (value, true) : (default, false);
@@ -53,7 +53,7 @@ public readonly record struct Optional<T>
     public static Optional<T> Some([AllowNull] T value) => new(value, true);
 
     /// <summary>Implicit cast from the value to the optional.</summary>
-    /// <param name="value">The value.</param>
+    /// <param name="value">The value to wrap, treated as absent when <see langword="null"/>.</param>
     /// <returns>The optional value.</returns>
     public static implicit operator Optional<T>([AllowNull] T value) => ToOptional(value);
 
@@ -63,13 +63,13 @@ public readonly record struct Optional<T>
     public static explicit operator T?(in Optional<T> value) => FromOptional(value);
 
     /// <summary>Creates an optional value, treating a <see langword="null"/> value as absent.</summary>
-    /// <param name="value">The value.</param>
+    /// <param name="value">The value to wrap.</param>
     /// <returns>The optional value.</returns>
     public static Optional<T> Create([AllowNull] T value) => new(value);
 
     /// <summary>Gets the value from the optional value.</summary>
-    /// <param name="value">The optional value.</param>
-    /// <returns>The value.</returns>
+    /// <param name="value">The optional value to unwrap.</param>
+    /// <returns>The contained value.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static T? FromOptional(in Optional<T> value) => value.Value;
 

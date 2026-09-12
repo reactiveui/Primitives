@@ -6,7 +6,10 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>Emits the latest value from the source sequence or a default value if no value has been emitted.</summary>
+/// <summary>
+/// Emits <paramref name="defaultValue"/> on subscribe, then each source value that differs from the one emitted before
+/// it under <see cref="EqualityComparer{T}.Default"/>.
+/// </summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="defaultValue">The value to emit initially.</param>
@@ -25,7 +28,7 @@ public sealed class LatestOrDefaultObservable<T>(
         return source.Subscribe(sink);
     }
 
-    /// <summary>Sink that implements the latest or default logic.</summary>
+    /// <summary>Observer that seeds the downstream with the default value and suppresses repeats of the last value.</summary>
     /// <param name="downstream">The observer to forward elements to.</param>
     /// <param name="defaultValue">The value to emit initially.</param>
     private sealed class LatestOrDefaultSink(IObserver<T> downstream, T defaultValue) : IObserver<T>
@@ -36,7 +39,7 @@ public sealed class LatestOrDefaultObservable<T>(
         /// <summary>Whether any value has been emitted yet.</summary>
         private bool _hasEmitted;
 
-        /// <summary>Initializes the sink by emitting the default value.</summary>
+        /// <summary>Emits the seed value downstream, which the caller does before subscribing the source.</summary>
         public void Initialize()
         {
             downstream.OnNext(_last!);

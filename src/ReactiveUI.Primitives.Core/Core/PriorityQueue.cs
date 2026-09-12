@@ -24,10 +24,10 @@ public sealed class PriorityQueue<T>
     /// <summary>Offset from a node's doubled index to its right child.</summary>
     private const int RightChildOffset = 2;
 
-    /// <summary>Capacity divisor used to shrink sparse queues.</summary>
+    /// <summary>Capacity divisor that decides when a sparse queue shrinks.</summary>
     private const int ShrinkDivisor = 4;
 
-    /// <summary>Offset from <see cref="Count"/> to the last index that can still have a child.</summary>
+    /// <summary>Offset from <see cref="Count"/> to the last index with a child.</summary>
     private const int LastParentCountOffset = 2;
 
     /// <summary>Monotonic tie-breaker for equal-priority items.</summary>
@@ -251,7 +251,6 @@ public sealed class PriorityQueue<T>
                 break;
             }
 
-            // swap index and first
             (_items[first], _items[index]) = (_items[index], _items[first]);
             index = first;
         }
@@ -276,7 +275,6 @@ public sealed class PriorityQueue<T>
         var parent = (index - 1) / HeapBranchingFactor;
         while (parent >= 0 && parent != index && IsHigherPriority(index, parent))
         {
-            // swap index and parent
             (_items[parent], _items[index]) = (_items[index], _items[parent]);
             index = parent;
             parent = (index - 1) / HeapBranchingFactor;

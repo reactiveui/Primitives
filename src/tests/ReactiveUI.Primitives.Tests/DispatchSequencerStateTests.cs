@@ -228,14 +228,13 @@ public sealed class DispatchSequencerStateTests
         sequencer.PostSucceeds = true;
         sequencer.Schedule(new RecordingWorkItem(values, NestedDrainValue));
 
-        // A latch left set by the rejected post would swallow this second post, stranding both work items.
         await Assert.That(sequencer.PostCount).IsEqualTo(ExpectedRetriedPostCount);
 
         sequencer.RunNextDrain();
         await Assert.That(values.SequenceEqual(ExpectedDrainPair)).IsTrue();
     }
 
-    /// <summary>Verifies a dispatcher post that throws surfaces the failure and still releases the drain latch.</summary>
+    /// <summary>Verifies a dispatcher post that throws surfaces the failure and releases the drain latch.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task FailedPostReleasesTheDrainLatchAndRethrows()
@@ -255,7 +254,7 @@ public sealed class DispatchSequencerStateTests
         await Assert.That(values.SequenceEqual(ExpectedDrainPair)).IsTrue();
     }
 
-    /// <summary>Verifies a drain re-entered by one of its own work items still runs every queued item exactly once.</summary>
+    /// <summary>Verifies a drain re-entered by one of its own work items runs every queued item exactly once.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ReentrantDrainRunsEachQueuedItemExactlyOnce()
@@ -294,8 +293,7 @@ public sealed class DispatchSequencerStateTests
         /// <inheritdoc/>
         public long Timestamp => DispatchSequencerState.Timestamp;
 
-        /// <summary>Creates a sequencer whose dispatch state is wired only after construction has finished,
-        /// so the engine never sees a half-built owner.</summary>
+        /// <summary>Creates a sequencer wired to a dispatch state.</summary>
         /// <param name="sharedTimer">The optional fallback delay sequencer.</param>
         /// <returns>The wired sequencer.</returns>
         public static TestDispatchSequencer Create(ISequencer? sharedTimer = null)

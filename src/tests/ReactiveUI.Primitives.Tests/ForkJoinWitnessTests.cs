@@ -53,7 +53,6 @@ public sealed class ForkJoinWitnessTests
         await Assert.That(observer.Errors).HasSingleItem();
         await Assert.That(observer.Errors[0]).IsSameReferenceAs(error);
 
-        // Everything from either side is gated after the terminal error.
         right.Observer!.OnNext(Two);
         right.Observer.OnError(new InvalidOperationException("right"));
         right.Observer.OnCompleted();
@@ -100,7 +99,6 @@ public sealed class ForkJoinWitnessTests
 
         await Assert.That(observer.Completed).IsEqualTo(One);
 
-        // A late error from either side must not deliver a second terminal.
         left.Observer.OnError(new InvalidOperationException("late"));
         right.Observer.OnError(new InvalidOperationException("late"));
 
@@ -121,7 +119,6 @@ public sealed class ForkJoinWitnessTests
         left.Observer!.OnNext(One);
         left.Observer.OnCompleted();
 
-        // Right completes empty: no result, single completion.
         right.Observer!.OnCompleted();
 
         await Assert.That(observer.Values).IsEmpty();

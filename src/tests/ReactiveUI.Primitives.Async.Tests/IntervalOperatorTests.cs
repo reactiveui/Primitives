@@ -4,11 +4,7 @@
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>
-/// Tests for the <c>Interval</c> operator's shutdown path: disposing the subscription from inside a tick
-/// cancels the tick loop between one notification and the next, so the loop exits on its own cancellation
-/// check rather than by tearing a pending delay down with an exception.
-/// </summary>
+/// <summary>Tests the <c>Interval</c> operator's tick loop and its shutdown path.</summary>
 public class IntervalOperatorTests
 {
     /// <summary>The tick the handler disposes on.</summary>
@@ -17,8 +13,7 @@ public class IntervalOperatorTests
     /// <summary>The interval between ticks.</summary>
     private static readonly TimeSpan TickPeriod = TimeSpan.FromMilliseconds(20);
 
-    /// <summary>Verifies that disposing the interval subscription from inside a tick handler ends the tick loop:
-    /// the ticks seen so far start at one and are consecutive, and nothing arrives after the dispose.</summary>
+    /// <summary>Verifies that disposing from inside a tick handler delivers no tick after the one that disposed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenDisposedFromWithinATick_ThenTheTickLoopStops()

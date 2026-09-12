@@ -17,7 +17,7 @@ public sealed class ConnectableSignalAsync<T> : IObservableAsync<T>, IDisposable
 {
     /// <summary>Initializes a new instance of the <see cref="ConnectableSignalAsync{T}"/> class.</summary>
     /// <param name="source">The source signal to multicast.</param>
-    /// <param name="signal">The signal used to broadcast notifications to multiple observers.</param>
+    /// <param name="signal">The signal that multicasts source notifications to the subscribed observers.</param>
     public ConnectableSignalAsync(IObservableAsync<T> source, ISignalAsync<T> signal) =>
         State = new(source, signal);
 
@@ -25,7 +25,7 @@ public sealed class ConnectableSignalAsync<T> : IObservableAsync<T>, IDisposable
     private ConnectableSignalAsyncState<T> State { get; }
 
     /// <summary>Subscribes the signal to the source, or returns the live connection when one exists.</summary>
-    /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous connection operation.</param>
+    /// <param name="cancellationToken">A token that cancels connection establishment.</param>
     /// <returns>A handle whose disposal drops the source subscription, allowing a later call to reconnect.</returns>
     /// <exception cref="OperationCanceledException">This instance has been disposed, or
     /// <paramref name="cancellationToken"/> was cancelled.</exception>

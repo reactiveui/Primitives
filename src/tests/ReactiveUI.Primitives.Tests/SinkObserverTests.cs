@@ -443,10 +443,7 @@ public class SinkObserverTests
         await Assert.That(r.Completed).IsTrue();
     }
 
-    /// <summary>
-    /// A filtering sink that hands a value to a throwing observer must unsubscribe upstream before it rethrows.
-    /// Without that teardown the source keeps producing into an observer that has already failed.
-    /// </summary>
+    /// <summary>A filtering sink unsubscribes upstream before it rethrows the observer's failure.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task FilteringSinksReleaseTheUpstreamWhenTheObserverThrows()
@@ -481,10 +478,7 @@ public class SinkObserverTests
         await AssertObserverFailureReleasesUpstream(uniqueBySink, uniqueBy);
     }
 
-    /// <summary>
-    /// The accumulating and counting sinks make the same promise: a throwing observer tears the sink down and
-    /// unsubscribes upstream rather than leaving a half-live pipeline behind.
-    /// </summary>
+    /// <summary>An accumulating or counting sink tears itself down and unsubscribes upstream when the observer throws.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task AccumulatingAndCountingSinksReleaseTheUpstreamWhenTheObserverThrows()
@@ -506,10 +500,7 @@ public class SinkObserverTests
         await AssertObserverFailureReleasesUpstream(takeWhileSink, takeWhile);
     }
 
-    /// <summary>
-    /// A <see cref = "BufferWitness{T}"/> hands a window to the observer only when the window fills, so its
-    /// teardown-on-throw path is reached on the value that closes the window, not on the ones that fill it.
-    /// </summary>
+    /// <summary>A <see cref = "BufferWitness{T}"/> releases the upstream when the observer throws on the window it closes.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task BufferSinkReleasesTheUpstreamWhenTheObserverThrowsOnACompletedWindow()
@@ -537,7 +528,7 @@ public class SinkObserverTests
         UnstoppableSource<int> source = new();
         using var subscription = source.Buffer(Two).Subscribe(observer);
 
-        // The window closes on the second value, so that is the first — and only — hand-off to the observer.
+        // The window closes on the second value, the only hand-off to the observer.
         source.Next(One);
         var thrown = Assert.Throws<InvalidOperationException>(() => source.Next(Two));
 
@@ -553,10 +544,7 @@ public class SinkObserverTests
         await Assert.That(observer.CompletedCount).IsEqualTo(0);
     }
 
-    /// <summary>
-    /// Every single-source sink forwards a fault to its observer exactly once and releases the upstream
-    /// subscription as it goes; none of them completes the observer as well.
-    /// </summary>
+    /// <summary>A filtering sink forwards a fault once, releases the upstream, and does not complete the observer.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task FilteringSinksForwardFaultsAndReleaseTheUpstream()
@@ -603,7 +591,7 @@ public class SinkObserverTests
             });
     }
 
-    /// <summary>The accumulating and counting sinks forward a fault and release the upstream subscription too.</summary>
+    /// <summary>An accumulating or counting sink forwards a fault and releases the upstream subscription.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task AccumulatingAndCountingSinksForwardFaultsAndReleaseTheUpstream()
@@ -641,10 +629,7 @@ public class SinkObserverTests
             });
     }
 
-    /// <summary>
-    /// The take sinks complete early, so a source that has not noticed yet can still push a fault at them. That
-    /// fault must be dropped: the observer has already been completed and must not then be told it failed.
-    /// </summary>
+    /// <summary>A fault that arrives after a take sink's terminal is dropped rather than forwarded to the observer.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task TakeSinksDropFaultsThatArriveAfterTheirTerminal()
@@ -713,7 +698,7 @@ public class SinkObserverTests
         }
     }
 
-    /// <summary>A user-defined accumulator that sums observed values, exercising the public <see cref = "IAggregator{T, TResult, TSelf}"/> contract.</summary>
+    /// <summary>A user-defined <see cref = "IAggregator{T, TResult, TSelf}"/> that sums observed values.</summary>
     private readonly record struct SumAggregator : IAggregator<int, int, SumAggregator>
     {
         /// <summary>Initializes a new instance of the <see cref = "SumAggregator"/> struct.</summary>

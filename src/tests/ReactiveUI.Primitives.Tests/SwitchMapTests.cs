@@ -61,10 +61,7 @@ public class SwitchMapTests
         await Assert.That(values.SequenceEqual(_tenThenTwenty)).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that a null source value switches onto whatever the selector returns for it, which detaches the
-    /// previous inner rather than leaving it attached.
-    /// </summary>
+    /// <summary>Verifies that a null source value switches onto the inner the selector returns for it.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task SwitchMapSwitchesOnNullSourceValue()

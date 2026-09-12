@@ -12,8 +12,7 @@ namespace ReactiveUI.Primitives.Async.Reactive;
 namespace ReactiveUI.Primitives.Async;
 #endif
 
-/// <summary>Represents an asynchronous execution context that encapsulates a specific SynchronizationContext or TaskScheduler for controlling the scheduling of asynchronous operations.</summary>
-/// <remarks>Contexts wrap a synchronization context, task scheduler, or sequencer. Default uses the default task scheduler.</remarks>
+/// <summary>An execution context that pins continuations to a <see cref="SynchronizationContext"/>, a <see cref="TaskScheduler"/>, or an <see cref="ISequencer"/>.</summary>
 [System.Diagnostics.DebuggerDisplay(
 "AsyncContext: SynchronizationContext = {SynchronizationContext}, TaskScheduler = {TaskScheduler}, Sequencer = {Sequencer}")]
 public sealed record AsyncContext
@@ -23,7 +22,7 @@ public sealed record AsyncContext
     {
     }
 
-    /// <summary>Gets the default instance of the AsyncContext class.</summary>
+    /// <summary>Gets the context that schedules continuations on the default task scheduler.</summary>
     public static AsyncContext Default { get; } = new();
 
     /// <summary>Gets the synchronization context to use for marshaling callbacks and continuations.</summary>
@@ -90,8 +89,8 @@ public sealed record AsyncContext
     }
 
     /// <summary>Creates an awaitable that switches execution to the associated asynchronous context.</summary>
-    /// <param name="forceYielding">true to always yield execution to the context, even if already in the correct context; otherwise, false to avoid
-    /// yielding if already in the context.</param>
+    /// <param name="forceYielding">true to always yield execution to the context, even when the calling thread is on it;
+    /// otherwise, false to continue inline when the context matches.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the context switch operation.</param>
     /// <returns>An awaitable that completes when execution has switched to the asynchronous context.</returns>
     public AsyncContextSwitcherAwaitable SwitchContextAsync(bool forceYielding, CancellationToken cancellationToken) =>
@@ -99,8 +98,8 @@ public sealed record AsyncContext
 
     /// <summary>Provides an awaitable that switches execution to a specified asynchronous context, optionally forcing a yield and supporting cancellation.</summary>
     /// <param name="AsyncContext">The asynchronous context to which execution should be switched when awaited.</param>
-    /// <param name="ForceYielding">true to always yield execution even if already in the target context; otherwise, false to avoid yielding if
-    /// already in the specified context.</param>
+    /// <param name="ForceYielding">true to always yield execution even when the calling thread is on the target context;
+    /// otherwise, false to continue inline when the context matches.</param>
     /// <param name="CancellationToken">A cancellation token that can be used to cancel the await operation before the continuation is scheduled.</param>
     /// <remarks>Cancellation invokes the continuation immediately; GetResult then throws OperationCanceledException.</remarks>
     [System.Diagnostics.DebuggerDisplay("AsyncContextSwitcherAwaitable: IsCompleted = {IsCompleted}, ForceYielding = {ForceYielding}")]
@@ -117,7 +116,7 @@ public sealed record AsyncContext
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GetResult() => CancellationToken.ThrowIfCancellationRequested();
 
-        /// <summary>Returns an awaiter for this AsyncContextSwitcherAwaitable instance, enabling use of the await keyword to asynchronously switch execution context.</summary>
+        /// <summary>Returns this instance, which acts as its own awaiter.</summary>
         /// <returns>An awaiter that can be used to await this instance and perform an asynchronous context switch.</returns>
         public AsyncContextSwitcherAwaitable GetAwaiter() => this;
 
@@ -181,8 +180,7 @@ public sealed record AsyncContext
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Performance",
         "CA1812:Avoid uninstantiated internal classes",
-        Justification =
-            "Kept as an internal adapter for generator and test smoke scenarios that need TaskScheduler-shaped sequencer execution.")]
+        Justification = "The adapter is constructed outside this assembly, not by the library itself.")]
     internal sealed class SequencerTaskScheduler(ISequencer scheduler) : TaskScheduler
     {
         /// <summary>Gets the sequencer used by this task-scheduler adapter.</summary>
@@ -195,7 +193,7 @@ public sealed record AsyncContext
 
         /// <summary>Attempts inline execution through the adapter.</summary>
         /// <param name="task">The task to attempt to execute inline.</param>
-        /// <param name="taskWasPreviouslyQueued">Whether the task was previously queued.</param>
+        /// <param name="taskWasPreviouslyQueued">Whether the task has been queued to this scheduler before the call.</param>
         /// <returns>The result of the protected <see cref="TryExecuteTaskInline"/> implementation.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal bool TryExecuteTaskInlineForTesting(Task task, bool taskWasPreviouslyQueued) =>

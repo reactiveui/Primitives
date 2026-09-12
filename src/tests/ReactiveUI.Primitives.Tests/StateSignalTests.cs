@@ -34,7 +34,7 @@ public class StateSignalTests
     /// <summary>Expected projected read-only state values.</summary>
     private static readonly string[] ExpectedReadOnlyValues = ["v:10", "v:11", "v:11"];
 
-    /// <summary>Covers read-only projection error argument validation.</summary>
+    /// <summary>A read-only projection rejects a null error.</summary>
     [Test]
     public void ReadOnlyStateProjectionValidatesError()
     {
@@ -43,7 +43,7 @@ public class StateSignalTests
         _ = Assert.Throws<ArgumentNullException>(() => projection.OnError(null!));
     }
 
-    /// <summary>Covers read-only projection selector errors forwarded to current and late subscribers.</summary>
+    /// <summary>A selector error reaches both the current subscribers and later ones.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ReadOnlyStateProjectionForwardsSelectorErrorToLateSubscribers()
@@ -161,10 +161,7 @@ public class StateSignalTests
         await Assert.That(late.Errors.Count).IsEqualTo(0);
     }
 
-    /// <summary>
-    /// Once the projection has completed, a source that keeps notifying must not be able to move the projected
-    /// value, complete the subscribers twice, or turn a completed projection into a faulted one.
-    /// </summary>
+    /// <summary>A completed projection ignores later values, completions, and faults from its source.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ReadOnlyStateProjectionIgnoresSourceNotificationsAfterItsTerminal()
@@ -186,10 +183,7 @@ public class StateSignalTests
         await Assert.That(observer.Errors.Count).IsEqualTo(0);
     }
 
-    /// <summary>
-    /// Disposing a projection subscription detaches that observer and only that observer; disposing the same
-    /// handle again is a no-op rather than a second detach.
-    /// </summary>
+    /// <summary>Disposing a projection subscription detaches only that observer, and disposing it twice is a no-op.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ReadOnlyStateProjectionStopsFeedingADisposedSubscription()
@@ -210,10 +204,7 @@ public class StateSignalTests
         await Assert.That(attached.Values.SequenceEqual(["v:10", "v:11", "v:12"])).IsTrue();
     }
 
-    /// <summary>
-    /// A disposed projection has thrown its state away, so reading or subscribing to it must fail loudly rather
-    /// than hand back a stale value. Disposing twice must still be safe.
-    /// </summary>
+    /// <summary>A disposed projection rejects reads and subscriptions, and disposing it twice is safe.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task DisposedReadOnlyStateProjectionRejectsReadsAndSubscriptions()

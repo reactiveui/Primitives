@@ -9,11 +9,12 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Reactive.Concurrency;
 
-/// <summary>
-/// Base <see cref="IScheduler"/> for UI-thread dispatchers that coalesces dispatcher posts: immediate work is queued
-/// and drained one batch per post. A sealed platform scheduler supplies its dispatcher <see cref="Post"/> (and
-/// optionally a native delayed path via <see cref="ScheduleOnDispatcher"/>).
-/// </summary>
+/// <summary>Base <see cref="IScheduler"/> for UI-thread dispatchers that drains queued work one batch per dispatcher post.</summary>
+/// <remarks>Work runs on the dispatcher thread; scheduling from that thread queues the item for the next posted batch
+/// rather than running it inline, so a scheduled action never re-enters the caller. The disposable a
+/// <c>Schedule</c> overload returns suppresses work that has not started and disposes what a started action
+/// returned. A platform scheduler supplies <see cref="Post"/> and may replace the delayed path by overriding
+/// <see cref="ScheduleOnDispatcher"/>.</remarks>
 [System.Diagnostics.DebuggerDisplay("CoalescingDispatchScheduler: ReadyCount = {_readyCount}, DrainPosted = {_drainPosted}")]
 public abstract class CoalescingDispatchScheduler : LocalScheduler
 {
@@ -26,7 +27,7 @@ public abstract class CoalescingDispatchScheduler : LocalScheduler
     /// <summary>Schedules delays before work returns to the dispatcher.</summary>
     private readonly IScheduler _delayScheduler;
 
-    /// <summary>Approximate number of ready items; snapshots a drain batch.</summary>
+    /// <summary>Approximate count of ready items; bounds the batch one drain dequeues.</summary>
     private int _readyCount;
 
     /// <summary>Gate that keeps at most one queued drain callback pending.</summary>
@@ -106,7 +107,7 @@ public abstract class CoalescingDispatchScheduler : LocalScheduler
                     return Disposable.Empty;
                 }));
 
-    /// <summary>Re-posts a drain if work is still queued; platform adapters call this when the dispatcher becomes ready.</summary>
+    /// <summary>Posts a drain when queued work remains; platform adapters call this when the dispatcher becomes ready.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected void RequestDrain() => PostDrain();
 

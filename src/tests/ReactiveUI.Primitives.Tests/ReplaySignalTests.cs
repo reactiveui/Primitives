@@ -31,7 +31,7 @@ public class ReplaySignalTests
     /// <summary>The integer constant ten.</summary>
     private const int Ten = 10;
 
-    /// <summary>Constructors the argument checking.</summary>
+    /// <summary>Verifies the constructors reject negative buffer sizes, negative windows, and null sequencers.</summary>
     [Test]
     public void Constructor_ArgumentChecking()
     {
@@ -51,7 +51,6 @@ public class ReplaySignalTests
         _ = Assert.Throws<ArgumentNullException>(static () => CreateAndDispose(static () => new(TimeSpan.Zero, null!)));
         _ = Assert.Throws<ArgumentNullException>(static () => CreateAndDispose(static () => new(0, TimeSpan.Zero, null!)));
 
-        // zero allowed
         CreateAndDispose(static () => new(0));
         CreateAndDispose(static () => new(TimeSpan.Zero));
         CreateAndDispose(static () => new(0, TimeSpan.Zero));
@@ -83,7 +82,7 @@ public class ReplaySignalTests
         await Assert.That(replayed.SequenceEqual([Three])).IsTrue();
     }
 
-    /// <summary>Verifies a windowed buffer still drops the values that overflow its buffer size.</summary>
+    /// <summary>Verifies a windowed buffer drops the values that overflow its buffer size.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task AWindowedBufferDropsValuesBeyondItsBufferSize()
@@ -113,7 +112,7 @@ public class ReplaySignalTests
         await Assert.That(replayed.Count).IsEqualTo(0);
     }
 
-    /// <summary>Determines whether this instance has observers.</summary>
+    /// <summary>Verifies every replay buffer shape tracks observers as subscriptions are added and removed.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task HasObservers()
@@ -124,7 +123,7 @@ public class ReplaySignalTests
         await HasObserversImpl(new(TimeSpan.FromSeconds(1), EmptySequencer.Instance));
     }
 
-    /// <summary>Determines whether [has observers dispose1].</summary>
+    /// <summary>Verifies every replay buffer shape drops its observers when the source is disposed first.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task HasObservers_Dispose1()
@@ -135,7 +134,7 @@ public class ReplaySignalTests
         await HasObservers_Dispose1Impl(new(TimeSpan.FromSeconds(1), EmptySequencer.Instance));
     }
 
-    /// <summary>Determines whether [has observers dispose2].</summary>
+    /// <summary>Verifies every replay buffer shape drops its observers when the subscription is disposed first.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task HasObservers_Dispose2()
@@ -146,7 +145,7 @@ public class ReplaySignalTests
         await HasObservers_Dispose2Impl(new(TimeSpan.FromSeconds(1), EmptySequencer.Instance));
     }
 
-    /// <summary>Determines whether [has observers dispose3].</summary>
+    /// <summary>Verifies every replay buffer shape reports disposal when it has no subscribers.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task HasObservers_Dispose3()
@@ -157,7 +156,7 @@ public class ReplaySignalTests
         await HasObservers_Dispose3Impl(new(TimeSpan.FromSeconds(1), EmptySequencer.Instance));
     }
 
-    /// <summary>Determines whether [has observers on completed].</summary>
+    /// <summary>Verifies completion drops the observers of every replay buffer shape.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task HasObservers_OnCompleted()
@@ -168,7 +167,7 @@ public class ReplaySignalTests
         await HasObservers_OnCompletedImpl(new(TimeSpan.FromSeconds(1), EmptySequencer.Instance));
     }
 
-    /// <summary>Determines whether [has observers on error].</summary>
+    /// <summary>Verifies an error drops the observers of every replay buffer shape.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task HasObservers_OnError()
@@ -179,7 +178,7 @@ public class ReplaySignalTests
         await HasObservers_OnErrorImpl(new(TimeSpan.FromSeconds(1), EmptySequencer.Instance));
     }
 
-    /// <summary>Called when [error argument checking].</summary>
+    /// <summary>Verifies a replay signal rejects a null error.</summary>
     [Test]
     public void OnError_ArgumentChecking()
     {
@@ -189,7 +188,7 @@ public class ReplaySignalTests
         _ = Assert.Throws<ArgumentNullException>(static () => new ReplaySignal<int>(EmptySequencer.Instance).OnError(null!));
     }
 
-    /// <summary>Subscribes the argument checking.</summary>
+    /// <summary>Verifies a replay signal rejects a null observer.</summary>
     [Test]
     public void Subscribe_ArgumentChecking()
     {
@@ -199,7 +198,7 @@ public class ReplaySignalTests
         _ = Assert.Throws<ArgumentNullException>(static () => new ReplaySignal<int>(EmptySequencer.Instance).Subscribe(null!));
     }
 
-    /// <summary>Verifies subjects, replay, behavior, state, and connectable aliases cover late terminal branches.</summary>
+    /// <summary>Verifies late subscribers receive the buffered values and the first terminal notification.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task SubjectsReplayBehaviorStateAndConnectableAliasesCoverLateTerminalBranches()

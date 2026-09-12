@@ -147,7 +147,7 @@ public static partial class SignalAsyncExtensions
         }
     }
 
-    /// <summary>Schedules the value without canceling superseded delays; only the current value is emitted.</summary>
+    /// <summary>Debounces the source, dropping repeated values both before the delay and before each forward, so only the newest pending value is emitted.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     /// <param name="dueTime">The debounce window.</param>
@@ -434,7 +434,7 @@ public static partial class SignalAsyncExtensions
         }
     }
 
-    /// <summary>Schedules the latest value, discarding superseded delay results.</summary>
+    /// <summary>Forwards a value immediately when the condition holds, and otherwise after the debounce window, discarding values a newer one supersedes.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     /// <param name="debounce">The debounce window applied to bypass-false values.</param>
@@ -494,7 +494,7 @@ public static partial class SignalAsyncExtensions
                 }
             }
 
-            /// <summary>Starts a delay that supersedes the previously pending value.</summary>
+            /// <summary>Starts a delay for the value, superseding any pending one.</summary>
             /// <param name="value">The pending value.</param>
             /// <param name="cancellationToken">Cancellation for the delay.</param>
             /// <returns>The delay and any downstream notification.</returns>
@@ -587,7 +587,7 @@ public static partial class SignalAsyncExtensions
         }
     }
 
-    /// <summary>Forwards every element of each enumerable the source emits, walking arrays and lists by index.</summary>
+    /// <summary>Forwards every element of each enumerable the source emits, in order.</summary>
     /// <typeparam name="T">The flattened element type.</typeparam>
     /// <param name="source">The upstream observable of <see cref="IEnumerable{T}"/> snapshots.</param>
     internal sealed class ForEachEnumerableSignal<T>(IObservableAsync<IEnumerable<T>> source) : IObservableAsync<T>

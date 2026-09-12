@@ -4,11 +4,7 @@
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>
-/// Tests for the <c>Expire</c> operator — the inter-element deadline that completes the sequence with a
-/// <see cref="TimeoutException"/>. Covers the deadline firing, and the tick of a deadline that was rearmed
-/// by a source value arriving after the sequence had already expired.
-/// </summary>
+/// <summary>Tests the <c>Expire</c> operator's inter-element deadline, which completes the sequence with a <see cref="TimeoutException"/>.</summary>
 public class ExpireOperatorTests
 {
     /// <summary>The inter-element deadline used by the tests.</summary>

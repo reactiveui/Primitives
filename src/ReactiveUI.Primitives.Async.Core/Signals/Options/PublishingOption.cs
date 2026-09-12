@@ -4,7 +4,7 @@
 
 namespace ReactiveUI.Primitives.Async.Signals;
 
-/// <summary>Specifies the available options for publishing operations, indicating whether actions are performed serially or concurrently.</summary>
+/// <summary>Specifies whether a signal awaits each observer notification before the next or starts them together.</summary>
 public enum PublishingOption
 {
     /// <summary>Awaits each observer notification before invoking the next observer.</summary>

@@ -66,7 +66,7 @@ public partial class SignalOperatorMixinsTests
     /// <summary>Expected inner-subscribe error message.</summary>
     private static readonly string[] ExpectedInnerSubscribe = ["inner-subscribe"];
 
-    /// <summary>Verifies parity alias operators cover remaining lines.</summary>
+    /// <summary>Parity aliases forward prepended, fused, and chained values, and an ignoring recovery completes.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]
     public async Task ParityAliasOperatorsCoverRemainingLines()
@@ -96,13 +96,13 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(ignoredCatchCompleted).IsEqualTo(1);
     }
 
-    /// <summary>Verifies range async fast paths and guard clauses cover remaining lines.</summary>
+    /// <summary>Sequence fast paths collect their values, and a pre-cancelled token cancels the task sink.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]
     [SuppressMessage(
         "Concurrency",
         "PSH1313:Call the async overload from an async method",
-        Justification = "Synchronous CollectArray/CollectList operators are deliberately covered.")]
+        Justification = "The synchronous CollectArray and CollectList operators are the subject under test.")]
     public async Task RangeAsyncFastPathsAndNullGuardsCoverRemainingLines()
     {
         IEnumerable<IObservable<int>> blendSources = [Signal.Emit(One), Signal.Emit(Two)];
@@ -124,7 +124,7 @@ public partial class SignalOperatorMixinsTests
         AssertOperatorGuardsRejectNullSourcesAndCallbacks();
     }
 
-    /// <summary>Verifies non-range task terminal sinks use the observer-backed async paths.</summary>
+    /// <summary>Count and any terminals await their results over a plain source, and cancel with a pre-cancelled token.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]
     public async Task NonRangeTaskTerminalsUseObserverBackedSinks()
@@ -144,7 +144,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(source.CountAsync(canceledTerminal.Token).IsCanceled).IsTrue();
     }
 
-    /// <summary>Verifies remaining operator, factory, and observer failure branches are deterministic.</summary>
+    /// <summary>Scheduled factories, task signals, observer failures, and flat-map faults behave deterministically.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]
     public async Task RemainingOperatorFactoryAndObserverFailureBranchesAreDeterministic()
@@ -157,7 +157,7 @@ public partial class SignalOperatorMixinsTests
         await VerifyFlatMapTerminalAndErrorBranches();
     }
 
-    /// <summary>Verifies optimized coordinator and async enumerable branches cover remaining gaps.</summary>
+    /// <summary>Async enumerable sources, race, switch, probe, calm, and fork-join coordinators gate their terminals.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]
     public async Task OptimizedCoordinatorAndAsyncEnumerableBranchesCoverRemainingGaps()
@@ -168,7 +168,7 @@ public partial class SignalOperatorMixinsTests
         await VerifyCalmAppendAndForkJoinBranches();
     }
 
-    /// <summary>Verifies range timing, queues, and thread pool cover remaining gaps.</summary>
+    /// <summary>Timestamp, time-interval, delay-start, and thread pool work items deliver on their sequencers.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]
     public async Task RangeTimingQueuesAndThreadPoolCoverRemainingGaps()
@@ -315,7 +315,7 @@ public partial class SignalOperatorMixinsTests
         "Concurrency",
         "PSH1313:Call the async overload from an async method",
         Justification =
-            "This test deliberately verifies eager argument validation thrown synchronously, before the awaitable method returns its task.")]
+            "The guards under test throw synchronously, before the awaitable method returns its task.")]
     private static async Task VerifyAliasGuardsAndNullArgumentChecksAsync()
     {
         List<int> startWithAlias = [];
@@ -347,7 +347,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(pendingTask.IsCanceled).IsTrue();
     }
 
-    /// <summary>Verifies immediate signal observer failure branches and the map late-notification branch.</summary>
+    /// <summary>A throwing observer propagates out of an immediate signal, and map drops notifications after its terminal.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     private static async Task VerifyObserverFailureBranchesAndMap()
     {
@@ -397,7 +397,7 @@ public partial class SignalOperatorMixinsTests
         _ = Assert.Throws<InvalidOperationException>(() => signal.OnError(new InvalidOperationException("many")));
     }
 
-    /// <summary>Verifies FlatMap terminal completion, disposal, and the null-selector and inner-error branches.</summary>
+    /// <summary>FlatMap completes after its inners, stops on disposal, and faults on a null selector or failing inner.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     private static async Task VerifyFlatMapTerminalAndErrorBranches()
     {
@@ -454,7 +454,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(subscribeErrors.SequenceEqual(ExpectedInnerSubscribe)).IsTrue();
     }
 
-    /// <summary>Verifies async enumerable subscription, shift timing, and expire timeout branches.</summary>
+    /// <summary>Async enumerable sources drain to their subscriber, and shift and expire follow the virtual clock.</summary>
     /// <returns>A task representing the asynchronous verification.</returns>
     private static async Task VerifyAsyncEnumerableShiftAndExpireAsync()
     {
@@ -507,7 +507,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(expireError.Errors[0].Message).IsEqualTo("expire-error");
     }
 
-    /// <summary>Verifies the race, synchronized-latest, and switch coordinator branches.</summary>
+    /// <summary>Race, synchronized-latest, and switch coordinators gate every losing and stale inner.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     private static async Task VerifyRaceSyncLatestAndSwitchBranches()
     {
@@ -615,7 +615,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(switched.Errors[0].Message).IsEqualTo("current-switch");
     }
 
-    /// <summary>Verifies switch outer-error, deferred-completion, and post-terminal gating branches.</summary>
+    /// <summary>Switch forwards one outer error, defers completion to its current inner, and gates what follows.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     private static async Task VerifySwitchTerminalGatingBranches()
     {
@@ -645,10 +645,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(outerErrored.Values.Count).IsEqualTo(0);
     }
 
-    /// <summary>
-    /// Verifies an outer completion waits for the current inner to finish, and that a superseded inner's
-    /// completion never completes the observer.
-    /// </summary>
+    /// <summary>Switch defers its completion to the current inner and ignores a superseded inner's completion.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     private static async Task VerifySwitchDefersCompletionUntilTheCurrentInnerFinishes()
     {
@@ -717,7 +714,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(innerErrorCompleted.Completed).IsEqualTo(0);
     }
 
-    /// <summary>Verifies the probe operator error, disposal, and completion branches.</summary>
+    /// <summary>Probe forwards a fault, stops after disposal, and completes without a sampled value.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     private static async Task VerifyProbeBranches()
     {
@@ -762,7 +759,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(currentThreadProbe.Completed).IsEqualTo(1);
     }
 
-    /// <summary>Verifies the calm debounce, append observer failure, and fork-join completion branches.</summary>
+    /// <summary>Calm emits only the quiet value, append surfaces observer faults, and fork-join waits for both sides.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     private static async Task VerifyCalmAppendAndForkJoinBranches()
     {

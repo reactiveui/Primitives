@@ -5,7 +5,11 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>Projects each element to an asynchronous operation with limited concurrency.</summary>
+/// <summary>
+/// Projects each element through an asynchronous selector with at most <paramref name="maxConcurrency"/> operations in
+/// flight and queues the rest, so results arrive in completion order rather than source order. The first selector
+/// failure terminates the sequence, and the source's completion is held back until the queue drains.
+/// </summary>
 /// <typeparam name = "TSource">The type of elements in the source sequence.</typeparam>
 /// <typeparam name = "TResult">The type of the result of the asynchronous operation.</typeparam>
 /// <param name = "source">The source observable.</param>
@@ -91,7 +95,7 @@ public sealed class SelectAsyncConcurrentObservable<TSource, TResult>(IObservabl
             }
         }
 
-        /// <summary>Processes a value and returns its active operation.</summary>
+        /// <summary>Queues the value and starts as many operations as the concurrency limit allows.</summary>
         /// <param name = "value">The source value.</param>
         /// <returns>The processing task, or a completed task when no work starts.</returns>
         internal Task OnNextAsync(TSource value)
@@ -126,7 +130,7 @@ public sealed class SelectAsyncConcurrentObservable<TSource, TResult>(IObservabl
             return processing;
         }
 
-        /// <summary>Processes the async operation.</summary>
+        /// <summary>Awaits the selector, emits its result, then starts queued work or completes the sequence.</summary>
         /// <param name = "value">The value to project.</param>
         /// <returns>A task representing the operation.</returns>
         private async Task ProcessAsync(TSource value)

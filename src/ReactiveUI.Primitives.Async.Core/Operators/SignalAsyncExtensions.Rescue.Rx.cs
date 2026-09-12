@@ -15,6 +15,7 @@ public static partial class SignalAsyncExtensions
         /// <summary>Recovers from a terminal failure with a replacement sequence.</summary>
         /// <param name="handler">The handler that produces a replacement sequence from the error.</param>
         /// <returns>An observable sequence that recovers from failures.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="handler"/> is <see langword="null"/>.</exception>
         public IObservableAsync<T> Rescue(Func<Exception, IObservableAsync<T>> handler)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);

@@ -18,10 +18,10 @@ public static class SubscribeExtensions
     private static readonly Action nop = static () => { };
 
     /// <summary>Exception helpers for a nullable exception receiver.</summary>
-    /// <param name="exception">The exception.</param>
+    /// <param name="exception">The receiver exception, which may be <see langword="null"/>.</param>
     extension(Exception? exception)
     {
-        /// <summary>Rethrows Exception.</summary>
+        /// <summary>Rethrows the exception, doing nothing when there is none.</summary>
         public void Rethrow()
         {
             if (exception is null)
@@ -38,9 +38,9 @@ public static class SubscribeExtensions
     /// <param name="source">Signals sequence to subscribe to.</param>
     extension<T>(IObservable<T> source)
     {
-        /// <summary>Subscribes to the Signals sequence without specifying any handlers. This method can be used to evaluate the Signals sequence for its side-effects only.</summary>
-        /// <returns><see cref="IDisposable"/> object used to unsubscribe from the Signals sequence.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <c>null</c>.</exception>
+        /// <summary>Subscribes without any handlers, so the source sequence runs for its side effects alone.</summary>
+        /// <returns>A handle that unsubscribes from the source sequence when disposed.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> is <c>null</c>.</exception>
         public IDisposable Subscribe()
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -48,9 +48,9 @@ public static class SubscribeExtensions
             return source.Subscribe(OnNextNoOpCache<T>.Instance, nop);
         }
 
-        /// <summary>Subscribes to the Signals providing just the <paramref name="onNext" /> delegate.</summary>
-        /// <param name="onNext">The on next.</param>
-        /// <returns>A IDisposable.</returns>
+        /// <summary>Subscribes a value callback; a terminal error is rethrown to the producer and completion is ignored.</summary>
+        /// <param name="onNext">The callback invoked for each value.</param>
+        /// <returns>A handle that unsubscribes from the source sequence when disposed.</returns>
         public IDisposable Subscribe(Action<T> onNext)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -65,10 +65,10 @@ public static class SubscribeExtensions
             };
         }
 
-        /// <summary>Subscribes to the Signals providing both the <paramref name="onNext" /> and <paramref name="onError" /> delegates.</summary>
-        /// <param name="onNext">The on next.</param>
-        /// <param name="onError">The on error.</param>
-        /// <returns>A IDisposable.</returns>
+        /// <summary>Subscribes value and error callbacks; completion is ignored.</summary>
+        /// <param name="onNext">The callback invoked for each value.</param>
+        /// <param name="onError">The callback invoked with the terminal error.</param>
+        /// <returns>A handle that unsubscribes from the source sequence when disposed.</returns>
         public IDisposable Subscribe(Action<T> onNext, Action<Exception> onError)
         {
             ArgumentExceptionHelper.ThrowIfNull(onError);
@@ -76,10 +76,10 @@ public static class SubscribeExtensions
             return source.Subscribe(onNext, onError, nop);
         }
 
-        /// <summary>Subscribes to the Signals providing both the <paramref name="onNext" /> and <paramref name="onCompleted" /> delegates.</summary>
-        /// <param name="onNext">The on next.</param>
-        /// <param name="onCompleted">The on completed.</param>
-        /// <returns>A IDisposable.</returns>
+        /// <summary>Subscribes value and completion callbacks; a terminal error is rethrown to the producer.</summary>
+        /// <param name="onNext">The callback invoked for each value.</param>
+        /// <param name="onCompleted">The callback invoked when the sequence completes.</param>
+        /// <returns>A handle that unsubscribes from the source sequence when disposed.</returns>
         public IDisposable Subscribe(Action<T> onNext, Action onCompleted)
         {
             ArgumentExceptionHelper.ThrowIfNull(onCompleted);
@@ -87,11 +87,11 @@ public static class SubscribeExtensions
             return source.Subscribe(onNext, rethrow, onCompleted);
         }
 
-        /// <summary>Subscribes to the Signals providing all three <paramref name="onNext" />, <paramref name="onError" /> and <paramref name="onCompleted" /> delegates.</summary>
-        /// <param name="onNext">The on next.</param>
-        /// <param name="onError">The on error.</param>
-        /// <param name="onCompleted">The on completed.</param>
-        /// <returns>A IDisposable.</returns>
+        /// <summary>Subscribes value, error, and completion callbacks.</summary>
+        /// <param name="onNext">The callback invoked for each value.</param>
+        /// <param name="onError">The callback invoked with the terminal error.</param>
+        /// <param name="onCompleted">The callback invoked when the sequence completes.</param>
+        /// <returns>A handle that unsubscribes from the source sequence when disposed.</returns>
         public IDisposable Subscribe(Action<T> onNext, Action<Exception> onError, Action onCompleted)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -107,39 +107,39 @@ public static class SubscribeExtensions
                 : source.Subscribe(new EmptyWitness<T>(onNext, onError, onCompleted));
         }
 
-        /// <summary>Subscribes to the Signals sequence without specifying any handlers using a Primitives-specific name.</summary>
-        /// <returns><see cref="IDisposable"/> object used to unsubscribe from the Signals sequence.</returns>
-        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <c>null</c>.</exception>
+        /// <summary>Subscribes without any handlers, under the Primitives-specific name.</summary>
+        /// <returns>A handle that unsubscribes from the source sequence when disposed.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> is <c>null</c>.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IDisposable SubscribePrimitives() => Subscribe(source);
 
-        /// <summary>Subscribes to the Signals providing just the <paramref name="onNext" /> delegate using a Primitives-specific name.</summary>
-        /// <param name="onNext">The on next.</param>
-        /// <returns>A IDisposable.</returns>
+        /// <summary>Subscribes a value callback, under the Primitives-specific name.</summary>
+        /// <param name="onNext">The callback invoked for each value.</param>
+        /// <returns>A handle that unsubscribes from the source sequence when disposed.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IDisposable SubscribePrimitives(Action<T> onNext) => Subscribe(source, onNext);
 
-        /// <summary>Subscribes to the Signals providing next and error delegates using a Primitives-specific name.</summary>
-        /// <param name="onNext">The on next.</param>
-        /// <param name="onError">The on error.</param>
-        /// <returns>A IDisposable.</returns>
+        /// <summary>Subscribes value and error callbacks, under the Primitives-specific name.</summary>
+        /// <param name="onNext">The callback invoked for each value.</param>
+        /// <param name="onError">The callback invoked with the terminal error.</param>
+        /// <returns>A handle that unsubscribes from the source sequence when disposed.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IDisposable SubscribePrimitives(Action<T> onNext, Action<Exception> onError) =>
             Subscribe(source, onNext, onError);
 
-        /// <summary>Subscribes to the Signals providing next and completed delegates using a Primitives-specific name.</summary>
-        /// <param name="onNext">The on next.</param>
-        /// <param name="onCompleted">The on completed.</param>
-        /// <returns>A IDisposable.</returns>
+        /// <summary>Subscribes value and completion callbacks, under the Primitives-specific name.</summary>
+        /// <param name="onNext">The callback invoked for each value.</param>
+        /// <param name="onCompleted">The callback invoked when the sequence completes.</param>
+        /// <returns>A handle that unsubscribes from the source sequence when disposed.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IDisposable SubscribePrimitives(Action<T> onNext, Action onCompleted) =>
             Subscribe(source, onNext, onCompleted);
 
-        /// <summary>Subscribes to the Signals providing all callback delegates using a Primitives-specific name.</summary>
-        /// <param name="onNext">The on next.</param>
-        /// <param name="onError">The on error.</param>
-        /// <param name="onCompleted">The on completed.</param>
-        /// <returns>A IDisposable.</returns>
+        /// <summary>Subscribes value, error, and completion callbacks, under the Primitives-specific name.</summary>
+        /// <param name="onNext">The callback invoked for each value.</param>
+        /// <param name="onError">The callback invoked with the terminal error.</param>
+        /// <param name="onCompleted">The callback invoked when the sequence completes.</param>
+        /// <returns>A handle that unsubscribes from the source sequence when disposed.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IDisposable SubscribePrimitives(Action<T> onNext, Action<Exception> onError, Action onCompleted) =>
             Subscribe(source, onNext, onError, onCompleted);

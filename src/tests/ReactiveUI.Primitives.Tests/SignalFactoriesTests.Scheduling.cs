@@ -157,7 +157,6 @@ public partial class SignalFactoriesTests
         await Assert.That(witness.Values.SequenceEqual(ExpectedSingleZeroTick)).IsTrue();
         await Assert.That(witness.Completed).IsEqualTo(1);
 
-        // The downstream tore the timer down on its first tick, so no further tick may be scheduled.
         clock.AdvanceBy(SingleTick);
         clock.AdvanceBy(SingleTick);
 

@@ -8,7 +8,11 @@ using System.Threading;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>Partitions a sequence into two observables based on a predicate.</summary>
+/// <summary>
+/// Splits a sequence into a <see cref="True"/> and a <see cref="False"/> side by predicate. Both sides share one
+/// subscription to the source, opened when the first side is subscribed and released when the last subscription is
+/// disposed; each value reaches one side only, while an error or completion reaches both.
+/// </summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 [System.Diagnostics.DebuggerDisplay("PartitionObservable: Source = {_source}, Subscriptions = {_subscriptionCount}")]
 public sealed class PartitionObservable<T>
@@ -25,10 +29,10 @@ public sealed class PartitionObservable<T>
     /// <summary>The source subscription.</summary>
     private IDisposable? _sourceSubscription;
 
-    /// <summary>The observer for the source.</summary>
+    /// <summary>The shared source observer, live only while at least one side is subscribed.</summary>
     private PartitionSink? _sink;
 
-    /// <summary>The number of subscriptions.</summary>
+    /// <summary>The number of live subscriptions across both sides.</summary>
     private int _subscriptionCount;
 
     /// <summary>Initializes a new instance of the <see cref="PartitionObservable{T}"/> class.</summary>
@@ -107,8 +111,7 @@ public sealed class PartitionObservable<T>
                 _parent._subscriptionCount--;
                 if (_parent._subscriptionCount == 0)
                 {
-                    // Subscribe set _sourceSubscription alongside _sink under the same lock,
-                    // so when the last branch disposes here it is non-null by construction.
+                    // Set alongside the sink under this same lock, so the last disposal finds it non-null.
                     _parent._sourceSubscription!.Dispose();
                     _parent._sourceSubscription = null;
                     _parent._sink = null;
@@ -127,7 +130,7 @@ public sealed class PartitionObservable<T>
         public IDisposable Subscribe(IObserver<T> observer) => parent.Subscribe(observer, side);
     }
 
-    /// <summary>Sink that partitions elements.</summary>
+    /// <summary>Observer that fans each value to the observers on the matching side.</summary>
     /// <param name="parent">The parent observable.</param>
     private sealed class PartitionSink(PartitionObservable<T> parent) : IObserver<T>
     {
@@ -137,7 +140,7 @@ public sealed class PartitionObservable<T>
         /// <summary>The observers for the false side.</summary>
         private IObserver<T>[] _falseObservers = [];
 
-        /// <summary>Adds an observer to the specified side.</summary>
+        /// <summary>Adds an observer to one side's array; callers hold the parent gate.</summary>
         /// <param name="observer">The observer to add.</param>
         /// <param name="side">The side.</param>
         public void Add(IObserver<T> observer, bool side)
@@ -152,7 +155,7 @@ public sealed class PartitionObservable<T>
             }
         }
 
-        /// <summary>Removes an observer from the specified side.</summary>
+        /// <summary>Removes an observer from one side's array; callers hold the parent gate.</summary>
         /// <param name="observer">The observer to remove.</param>
         /// <param name="side">The side.</param>
         public void Remove(IObserver<T> observer, bool side)

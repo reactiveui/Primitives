@@ -55,6 +55,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="other">The observable sequence whose first emission or completion terminates the result.</param>
         /// <param name="cancellationToken">A cancellation token that also terminates the result when cancelled.</param>
         /// <returns>An observable sequence that completes on the first of the two signals.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if either the source sequence or the other observable is null.</exception>
         public IObservableAsync<T> TakeUntil<TOther>(
             IObservableAsync<TOther> other,
             CancellationToken cancellationToken)
@@ -75,6 +76,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="options">Options controlling the take-until behavior, or null for defaults.</param>
         /// <param name="cancellationToken">A cancellation token that also terminates the result when cancelled.</param>
         /// <returns>An observable sequence that completes on the first of the two signals.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if either the source sequence or the other observable is null.</exception>
         public IObservableAsync<T> TakeUntil<TOther>(
             IObservableAsync<TOther> other,
             TakeUntilOptions? options,
@@ -123,6 +125,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="task">The task whose completion terminates the result.</param>
         /// <param name="cancellationToken">A cancellation token that also terminates the result when cancelled.</param>
         /// <returns>An observable sequence that completes on the first of the two signals.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if the source observable is null.</exception>
         public IObservableAsync<T> TakeUntil(Task task, CancellationToken cancellationToken)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -142,6 +145,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="options">Options controlling the take-until behavior, or null for defaults.</param>
         /// <param name="cancellationToken">A cancellation token that also terminates the result when cancelled.</param>
         /// <returns>An observable sequence that completes on the first of the two signals.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if the source observable is null.</exception>
         public IObservableAsync<T> TakeUntil(
             Task task,
             TakeUntilOptions? options,
@@ -186,6 +190,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="predicate">A predicate evaluated for each element; first true terminates the sequence.</param>
         /// <param name="cancellationToken">A cancellation token that also terminates the result when cancelled.</param>
         /// <returns>An observable sequence that completes on the first of the two signals.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="predicate"/> is null.</exception>
         public IObservableAsync<T> TakeUntil(Func<T, bool> predicate, CancellationToken cancellationToken)
         {
             ArgumentExceptionHelper.ThrowIfNull(predicate);
@@ -216,6 +221,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="asyncPredicate">An async predicate evaluated for each element; first true terminates the sequence.</param>
         /// <param name="cancellationToken">A cancellation token that also terminates the result when cancelled.</param>
         /// <returns>An observable sequence that completes on the first of the two signals.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="asyncPredicate"/> is null.</exception>
         public IObservableAsync<T> TakeUntil(
             Func<T, CancellationToken, ValueTask<bool>> asyncPredicate,
             CancellationToken cancellationToken)
@@ -261,6 +267,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="stopSignal">A delegate that provides the completion stop signal.</param>
         /// <param name="cancellationToken">A cancellation token that also terminates the result when cancelled.</param>
         /// <returns>An observable sequence that completes on the first of the two signals.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="stopSignal"/> is null.</exception>
         public IObservableAsync<T> TakeUntil(
             CompletionSignalDelegate stopSignal,
             CancellationToken cancellationToken)
@@ -279,6 +286,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="options">Options controlling the take-until behavior, or null for defaults.</param>
         /// <param name="cancellationToken">A cancellation token that also terminates the result when cancelled.</param>
         /// <returns>An observable sequence that completes on the first of the two signals.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="stopSignal"/> is null.</exception>
         public IObservableAsync<T> TakeUntil(
             CompletionSignalDelegate stopSignal,
             TakeUntilOptions? options,
@@ -479,7 +487,7 @@ public static partial class SignalAsyncExtensions
             internal void LinkExternalCancellation(CancellationToken external) =>
                 _lifecycle.LinkExternalCancellation(external);
 
-            /// <summary>Completes on the notifying thread when downstream completion is synchronous.</summary>
+            /// <summary>Hands the stop callback to the delegate and releases a registration that arrives after the callback has fired.</summary>
             internal void AwaitStopThenComplete()
             {
                 Volatile.Write(ref _stopRegistration, _parent._stopSignal(Stop));

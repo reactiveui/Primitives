@@ -63,7 +63,7 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
     /// <summary>Delivers a value to <see cref="OnNextAsyncCore"/>, dropping it silently when this observer is disposed,
     /// the token is cancelled, or another thread holds the notification gate.</summary>
     /// <param name="value">The value to be processed.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
+    /// <param name="cancellationToken">A token that cancels the delivery; it is linked with this observer's disposal token.</param>
     /// <returns>A task that completes once the core handler and its bookkeeping have run.</returns>
     public ValueTask OnNextAsync(T value, CancellationToken cancellationToken)
     {
@@ -100,7 +100,7 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
 
     /// <summary>Routes a non-terminal error to <see cref="OnErrorResumeAsyncCore"/>, never propagating a failure back to the producer.</summary>
     /// <param name="error">The exception that triggered the error handling logic. Cannot be null.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
+    /// <param name="cancellationToken">A token that cancels the handling; it is linked with this observer's disposal token.</param>
     /// <returns>A task that completes once the error has been handled.</returns>
     public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken)
     {
@@ -441,13 +441,13 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
 
     /// <summary>Handles non-terminal errors; callback failures reach the unhandled-exception handler.</summary>
     /// <param name="error">The exception that triggered the error handling logic. Cannot be null.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous error handling operation.</param>
+    /// <param name="cancellationToken">The effective token for this notification.</param>
     /// <returns>A task that completes when the error has been handled.</returns>
     protected abstract ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken);
 
     /// <summary>Delivers the value, forwarding callback failures to error-resume handling and swallowing cancellation.</summary>
     /// <param name="value">The value to be processed.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
+    /// <param name="cancellationToken">The effective token for this notification.</param>
     /// <returns>A task that completes when the value has been handled.</returns>
     protected abstract ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken);
 

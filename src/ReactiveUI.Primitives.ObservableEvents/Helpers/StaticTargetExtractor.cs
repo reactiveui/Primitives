@@ -66,7 +66,7 @@ internal static class StaticTargetExtractor
         _ => string.Empty,
     };
 
-    /// <summary>Rejects generic static hosts whose type arguments cannot be inferred.</summary>
+    /// <summary>Builds the model for a static host, reporting a diagnostic instead when the host is generic.</summary>
     /// <param name="host">The host to expose, reduced to its original definition.</param>
     /// <param name="location">The attribute application, for diagnostics.</param>
     /// <param name="supportsNullableAnnotations">Whether the consumer's language can express an annotation.</param>

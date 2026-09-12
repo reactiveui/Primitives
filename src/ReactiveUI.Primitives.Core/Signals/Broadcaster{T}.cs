@@ -37,7 +37,7 @@ public struct Broadcaster<T> : IEquatable<Broadcaster<T>>
     /// <returns><see langword="true"/> when the broadcasters reference different observer sets; otherwise, <see langword="false"/>.</returns>
     public static bool operator !=(Broadcaster<T> left, Broadcaster<T> right) => !left.Equals(right);
 
-    /// <summary>Adds an observer to the broadcaster. The update is a lock-free compare-and-swap, so the broadcaster is self-contained and does not rely on an external lock for correctness.</summary>
+    /// <summary>Adds an observer with a lock-free compare-and-swap, so no external lock is required.</summary>
     /// <param name="observer">Observer to add.</param>
     public void Add(IObserver<T> observer)
     {
@@ -174,7 +174,7 @@ public struct Broadcaster<T> : IEquatable<Broadcaster<T>>
     [SuppressMessage(
         "Maintainability",
         "SST1482:GetHashCode reads mutable state",
-        Justification = "Equality is the observer set, so the hash must follow it; a Broadcaster is compared, never used as a hash key.")]
+        Justification = "Equality compares the observer set, so the hash must follow it.")]
     public override readonly int GetHashCode()
     {
         var snapshot = _observers;

@@ -15,7 +15,7 @@ internal static class SerialBroadcastHelpers
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="observers">The current observer snapshot.</param>
     /// <param name="value">The value being broadcast.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used to cancel the notification operation.</param>
+    /// <param name="cancellationToken">A token passed to each observer's notification.</param>
     /// <returns>A task that represents the asynchronous notification operation.</returns>
     internal static ValueTask BroadcastOnNextAsync<T>(
         ImmutableArray<IObserverAsync<T>> observers,
@@ -29,7 +29,7 @@ internal static class SerialBroadcastHelpers
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="observers">The current observer snapshot.</param>
     /// <param name="value">The value being broadcast.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used to cancel the notification operation.</param>
+    /// <param name="cancellationToken">A token passed to each observer's notification.</param>
     /// <returns>A task that represents the asynchronous notification operation.</returns>
     internal static ValueTask BroadcastOnNextAsyncMulti<T>(
         ImmutableArray<IObserverAsync<T>> observers,
@@ -54,7 +54,7 @@ internal static class SerialBroadcastHelpers
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="observers">The current observer snapshot.</param>
     /// <param name="error">The error being broadcast.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used to cancel the notification operation.</param>
+    /// <param name="cancellationToken">A token passed to each observer's notification.</param>
     /// <returns>A task that represents the asynchronous notification operation.</returns>
     internal static ValueTask BroadcastOnErrorResumeAsync<T>(
         ImmutableArray<IObserverAsync<T>> observers,
@@ -105,7 +105,7 @@ internal static class SerialBroadcastHelpers
         "Concurrency",
         "PSH1315:A blocking wait on an awaitable that may not be done",
         Justification =
-            "Every caller returns early unless IsCompletedSuccessfully, so this only ever consumes a task that is already done. The guard is one frame up, which the rule does not follow.")]
+            "Every caller checks IsCompletedSuccessfully and returns early otherwise, so the awaiter only ever observes a completed task.")]
     private static void ConsumeCompleted(ValueTask pending) =>
         pending.GetAwaiter().GetResult();
 

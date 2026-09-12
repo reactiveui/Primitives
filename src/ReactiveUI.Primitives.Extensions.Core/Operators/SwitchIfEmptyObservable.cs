@@ -6,7 +6,11 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>Provides a fallback observable if the source sequence completes without emitting any elements.</summary>
+/// <summary>
+/// Forwards the source's values, and when the source completes without having emitted any, subscribes
+/// <paramref name="fallback"/> and forwards that sequence instead. A source error propagates without the fallback being
+/// tried.
+/// </summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="fallback">The fallback observable.</param>
@@ -27,7 +31,7 @@ public sealed class SwitchIfEmptyObservable<T>(
         return sink;
     }
 
-    /// <summary>The sink for the <see cref="SwitchIfEmptyObservable{T}"/>.</summary>
+    /// <summary>Observer that tracks whether the source emitted and swaps in the fallback subscription when it did not.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="fallback">The fallback observable.</param>
     private sealed class SwitchIfEmptySink(
@@ -37,7 +41,7 @@ public sealed class SwitchIfEmptyObservable<T>(
         /// <summary>The gate for state access.</summary>
         private readonly Lock _gate = new();
 
-        /// <summary>The current subscription.</summary>
+        /// <summary>The active subscription, replaced by the fallback's when the source turns out empty.</summary>
         private readonly MutableDisposable _subscription = new();
 
         /// <summary>Whether the source has emitted a value.</summary>
@@ -46,7 +50,7 @@ public sealed class SwitchIfEmptyObservable<T>(
         /// <summary>Whether the sink has completed or been disposed.</summary>
         private bool _done;
 
-        /// <summary>Sets the subscription to the source observable.</summary>
+        /// <summary>Stores the source subscription so the fallback subscription can take its place.</summary>
         /// <param name="sub">The subscription.</param>
         public void SetSubscription(IDisposable sub) => _subscription.Disposable = sub;
 
@@ -98,7 +102,6 @@ public sealed class SwitchIfEmptyObservable<T>(
                 }
                 else
                 {
-                    // Source was empty, switch to fallback
                     _subscription.Disposable = fallback.Subscribe(downstream);
                 }
             }

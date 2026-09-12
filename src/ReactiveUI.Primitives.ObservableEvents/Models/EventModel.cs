@@ -5,8 +5,8 @@
 namespace ReactiveUI.Primitives.ObservableEvents.Models;
 
 /// <summary>Stores event emission data without compiler objects; parameterless payloads remain provider-independent.</summary>
-/// <param name="PropertyName">The generated property name, already escaped.</param>
-/// <param name="EventAccess">The subscription target and event name, already escaped.</param>
+/// <param name="PropertyName">The generated property name, escaped for use as an identifier.</param>
+/// <param name="EventAccess">The subscription target and event name, escaped for use as an identifier.</param>
 /// <param name="PayloadType">The observable payload type, or empty when the delegate takes no parameters.</param>
 /// <param name="PayloadValue">The value passed to OnNext, or empty when the delegate takes no parameters.</param>
 /// <param name="HandlerParameters">The generated handler's parameter list.</param>

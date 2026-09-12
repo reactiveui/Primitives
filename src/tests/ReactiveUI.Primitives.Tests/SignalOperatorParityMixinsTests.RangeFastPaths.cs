@@ -7,11 +7,7 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Verifies the range-backed fast paths of the aggregate operators: a sequence built from
-/// <see cref="Signal.Sequence(int, int)"/> is answered from its bounds instead of by enumerating it, and a
-/// predicate that throws while the bounds are being walked is still reported as an error to the observer.
-/// </summary>
+/// <summary>Verifies the range-backed fast paths of the aggregate operators.</summary>
 public partial class SignalOperatorParityMixinsTests
 {
     /// <summary>Verifies the aggregate operators answer a range source directly from its bounds.</summary>
@@ -20,7 +16,7 @@ public partial class SignalOperatorParityMixinsTests
         "Concurrency",
         "PSH1313:Call the async overload from an async method",
         Justification =
-            "This test deliberately exercises the synchronous IObservable operator overloads, not their awaitable terminal counterparts.")]
+            "The synchronous IObservable operator overloads are the subject under test.")]
     [Test]
     public async Task RangeBackedAggregatesAreAnsweredFromTheRangeBounds()
     {
@@ -47,7 +43,7 @@ public partial class SignalOperatorParityMixinsTests
         "Concurrency",
         "PSH1313:Call the async overload from an async method",
         Justification =
-            "This test deliberately exercises the synchronous IObservable operator overloads, not their awaitable terminal counterparts.")]
+            "The synchronous IObservable operator overloads are the subject under test.")]
     [Test]
     public async Task RangeBackedAggregatesReportAPredicateFailureAsAnError()
     {

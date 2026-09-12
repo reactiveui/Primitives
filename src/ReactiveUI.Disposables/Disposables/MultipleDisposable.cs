@@ -128,7 +128,7 @@ public class MultipleDisposable : IsDisposed, ICollection<IDisposable>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IDisposable Create(params IDisposable[] disposables) => new MultipleDisposableBase(disposables);
 
-    /// <summary>Adds a disposable to the <see cref="MultipleDisposable"/> or disposes it immediately if the pocket is already disposed.</summary>
+    /// <summary>Adds a disposable to the group, or disposes it immediately when the group is disposed.</summary>
     /// <param name="item">Disposable to add.</param>
     /// <exception cref="ArgumentExceptionHelper"><paramref name="item"/> is <see langword="null"/>.</exception>
     public void Add(IDisposable item)
@@ -280,15 +280,15 @@ public class MultipleDisposable : IsDisposed, ICollection<IDisposable>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IEnumerator<IDisposable> GetEnumerator() => Snapshot().GetEnumerator();
 
-    /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
+    /// <summary>Disposes every held disposable and marks the group disposed; repeated calls have no further effect.</summary>
     public void Dispose()
     {
         Dispose(true);
         GC.SuppressFinalize(this);
     }
 
-    /// <summary>Releases unmanaged and - optionally - managed resources.</summary>
-    /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
+    /// <summary>Releases the held disposables in registration order, the two inline slots first, then the overflow entries.</summary>
+    /// <param name="disposing"><see langword="true"/> to dispose the held disposables; <see langword="false"/> to release nothing.</param>
     protected virtual void Dispose(bool disposing)
     {
         if (!disposing)

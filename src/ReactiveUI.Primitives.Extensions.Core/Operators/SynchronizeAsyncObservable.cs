@@ -6,7 +6,10 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>Wraps elements in a synchronization context that waits for a disposal signal before proceeding to the next element.</summary>
+/// <summary>
+/// Forwards each source value paired with a fresh disposable handle the consumer disposes to acknowledge it. Each value
+/// carries its own handle, and a handle left undisposed leaves only its own acknowledgement wait outstanding.
+/// </summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 public sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IObservable<(T Value, IDisposable Sync)>
@@ -22,7 +25,7 @@ public sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IObse
         return new DisposableBag(sub, sink);
     }
 
-    /// <summary>The sink for the <see cref="SynchronizeAsyncObservable{T}"/>.</summary>
+    /// <summary>Observer that pairs each value with a new acknowledgement handle and forwards the pair downstream.</summary>
     /// <param name="downstream">The downstream observer.</param>
     internal sealed class SynchronizeAsyncSink(IObserver<(T Value, IDisposable Sync)> downstream) : IObserver<T>, IDisposable
     {
@@ -89,7 +92,7 @@ public sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IObse
             }
         }
 
-        /// <summary>Delivers the value and waits for the consumer to dispose its acknowledgement signal.</summary>
+        /// <summary>Delivers the value with a fresh acknowledgement signal and returns the task that the signal's disposal completes.</summary>
         /// <param name="value">The value to process.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         private Task ProcessAsync(T value)
@@ -99,10 +102,10 @@ public sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IObse
             return signal.WaitForDisposeAsync();
         }
 
-        /// <summary>Releases one emission when the consumer disposes it, allocating completion state only for an asynchronous wait.</summary>
+        /// <summary>Acknowledgement handle for one emission whose disposal completes that emission's wait task.</summary>
         internal sealed class SyncSignal : IDisposable
         {
-            /// <summary>The lazily-created completion source; only allocated on the slow path.</summary>
+            /// <summary>The completion source, created only when the wait cannot finish synchronously.</summary>
             private TaskCompletionSource<bool>? _tcs;
 
             /// <summary>Latches to <c>1</c> on the first dispose so signalling is idempotent.</summary>
@@ -120,7 +123,7 @@ public sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IObse
             }
 
             /// <summary>Returns the disposal task; the producer must call this exactly once per emission.</summary>
-            /// <returns>A completed task if the consumer already disposed; otherwise the lazily-allocated TCS task.</returns>
+            /// <returns>A completed task when the handle has been disposed; otherwise the task that its disposal completes.</returns>
             internal Task WaitForDisposeAsync()
             {
                 if (Volatile.Read(ref _disposed) == 1)

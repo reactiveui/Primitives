@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Async.Signals;
 /// <typeparam name="T">The observed value type.</typeparam>
 internal sealed class SignalAsyncState<T>
 {
-    /// <summary>The lock used to synchronize mutable state.</summary>
+    /// <summary>Guards the observer list and the completion result against concurrent mutation.</summary>
     private readonly Lock _gate = new();
 
     /// <summary>Gets or sets the currently subscribed observers.</summary>
@@ -19,9 +19,9 @@ internal sealed class SignalAsyncState<T>
     /// <summary>Gets or sets the completion result, or null if the signal has not completed.</summary>
     internal Result? Result { get; set; }
 
-    /// <summary>Gets a stable observer snapshot when the signal is still active.</summary>
+    /// <summary>Gets a stable observer snapshot when the signal has not completed.</summary>
     /// <param name="observers">Receives the observers to notify when the signal is active.</param>
-    /// <returns>true if observers should be notified; otherwise, false.</returns>
+    /// <returns><see langword="true"/> when observers should be notified; otherwise, <see langword="false"/>.</returns>
     internal bool TryGetObservers(out ImmutableArray<IObserverAsync<T>> observers)
     {
         lock (_gate)
@@ -40,7 +40,7 @@ internal sealed class SignalAsyncState<T>
     /// <summary>Marks the signal as completed and returns the observers to notify.</summary>
     /// <param name="result">The completion result to store.</param>
     /// <param name="observers">Receives the observers subscribed at completion time.</param>
-    /// <returns>true if this call completed the signal; otherwise, false.</returns>
+    /// <returns><see langword="true"/> when this call completed the signal; otherwise, <see langword="false"/>.</returns>
     internal bool TryComplete(Result result, out ImmutableArray<IObserverAsync<T>> observers)
     {
         lock (_gate)
@@ -58,9 +58,9 @@ internal sealed class SignalAsyncState<T>
         }
     }
 
-    /// <summary>Adds an observer unless the signal has already completed.</summary>
+    /// <summary>Adds an observer unless the signal has completed.</summary>
     /// <param name="observer">The observer to subscribe.</param>
-    /// <returns>The existing completion result when the signal is already completed; otherwise, null.</returns>
+    /// <returns>The stored completion result when the signal has completed; otherwise, null.</returns>
     internal Result? Subscribe(IObserverAsync<T> observer)
     {
         lock (_gate)

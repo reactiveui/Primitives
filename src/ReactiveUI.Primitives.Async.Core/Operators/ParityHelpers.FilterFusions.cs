@@ -7,7 +7,7 @@ namespace ReactiveUI.Primitives.Async;
 /// <summary>Fused filter / projection observables that back the parity-helper extension methods in <see cref="SignalAsyncExtensions"/>.</summary>
 public static partial class SignalAsyncExtensions
 {
-    /// <summary>Emits each adjacent pair of source values, holding the prior value in a field rather than a closure.</summary>
+    /// <summary>Emits each adjacent <c>(previous, current)</c> pair of source values.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     internal sealed class PairwiseSignal<T>(IObservableAsync<T> source) : IObservableAsync<(T Previous, T Current)>

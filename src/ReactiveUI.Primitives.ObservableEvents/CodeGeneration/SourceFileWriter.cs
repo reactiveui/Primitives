@@ -51,7 +51,7 @@ internal static class SourceFileWriter
         _ = builder.AppendLine("}");
     }
 
-    /// <summary>Emits a local event handler with the delegate's return type.</summary>
+    /// <summary>Emits one event's observable property, including the local handler that forwards the payload to the observer.</summary>
     /// <param name="builder">The destination builder.</param>
     /// <param name="model">The event to wrap.</param>
     /// <param name="provider">The observable implementation to write against.</param>

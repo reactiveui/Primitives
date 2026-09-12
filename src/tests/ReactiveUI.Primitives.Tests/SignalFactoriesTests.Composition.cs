@@ -364,7 +364,7 @@ public partial class SignalFactoriesTests
         await Assert.That(every.SequenceEqual(EveryExpected)).IsTrue();
     }
 
-    /// <summary>Verifies additional factory and unary operator parity helpers.</summary>
+    /// <summary>Sequence boundary, boolean terminal, and selection operators emit their expected values.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task AdditionalFactoriesAndUnaryOperatorsCoverCommonParitySurface()
@@ -374,7 +374,7 @@ public partial class SignalFactoriesTests
         await VerifySelectionAndProjectionOperators();
     }
 
-    /// <summary>Verifies System.Reactive-style aliases intended to ease migration.</summary>
+    /// <summary>System.Reactive-named aliases prepend, tap, recover, and observe on a sequencer.</summary>
     /// <returns>A task that completes when the asynchronous assertions have run.</returns>
     [Test]
     public async Task SystemReactiveNamedAliasesCoverMigrationConvenienceSurface()
@@ -660,7 +660,7 @@ public partial class SignalFactoriesTests
         "Concurrency",
         "PSH1313:Call the async overload from an async method",
         Justification =
-            "This test deliberately exercises the synchronous IObservable operator overloads, not their awaitable terminal counterparts.")]
+            "The assertions target the synchronous IObservable operator overloads.")]
     private static async Task VerifyBooleanTerminalOperators()
     {
         List<int> count = [];

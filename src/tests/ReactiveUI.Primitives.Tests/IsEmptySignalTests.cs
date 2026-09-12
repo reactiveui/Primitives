@@ -4,10 +4,7 @@
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Tests for <c>IsEmpty</c> over an ordinary source, which does not require the current thread and therefore
-/// settles on the direct subscribe path rather than the current-thread trampoline the timer sources use.
-/// </summary>
+/// <summary>Verifies <c>IsEmpty</c> reports whether an ordinary source produced a value before completing.</summary>
 public sealed class IsEmptySignalTests
 {
     /// <summary>The value produced by the non-empty source.</summary>

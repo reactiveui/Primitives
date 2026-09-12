@@ -9,6 +9,9 @@ using ReactiveUI.Primitives.Advanced;
 namespace ReactiveUI.Primitives.Concurrency;
 
 /// <summary>WinUI dispatcher queue sequencer that coalesces scheduled work through a <see cref="DispatcherQueue"/>.</summary>
+/// <remarks>Work runs on the dispatcher queue's thread, one batch per posted drain; scheduling from that thread queues
+/// the item for the next drain rather than running it inline. Delayed work fires on a dispatcher queue timer, and an
+/// item cancelled before its drain reaches it is skipped.</remarks>
 /// <seealso cref="ISequencer" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class DispatcherQueueSequencer : ISequencer
@@ -20,8 +23,7 @@ public sealed class DispatcherQueueSequencer : ISequencer
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Maintainability",
         "SST1422:Move this field into the method that uses it",
-        Justification =
-            "Persistent lazy cache: the dispatcher queue handler is built once and reused across every post, so it cannot be a method local.")]
+        Justification = "The handler delegate is cached across every post, so it cannot be a method local.")]
     private DispatcherQueueHandler? _handler;
 
     /// <summary>Initializes a new instance of the <see cref="DispatcherQueueSequencer"/> class.</summary>
@@ -70,7 +72,7 @@ public sealed class DispatcherQueueSequencer : ISequencer
     /// <summary>Marshals the cached drain callback through the dispatcher queue.</summary>
     /// <param name="drain">The drain callback.</param>
     /// <returns><see langword="true"/> when the drain was enqueued.</returns>
-    /// <exception cref="InvalidOperationException">The dispatcher queue is no longer accepting work.</exception>
+    /// <exception cref="InvalidOperationException">The dispatcher queue rejected the work.</exception>
     private bool Post(Action drain)
     {
         _handler ??= drain.Invoke;
@@ -99,7 +101,7 @@ public sealed class DispatcherQueueSequencer : ISequencer
         timer.Start();
     }
 
-    /// <summary>Forwards the cached drain callback to the engine.</summary>
+    /// <summary>Runs one queued batch on the coalescing engine.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void RunDrain() => _state.RunDrain();
 }

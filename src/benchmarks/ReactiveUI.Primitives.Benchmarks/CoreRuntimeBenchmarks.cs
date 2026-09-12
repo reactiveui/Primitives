@@ -44,7 +44,7 @@ public class CoreRuntimeBenchmarks
     [SuppressMessage(
         "Allocations",
         "PSH1011:Use the overload with a state argument so this lambda does not capture",
-        Justification = "The baseline builds the same closure through a constructor, which has no state overload; de-closuring only this arm would invert the memory column it is compared on.")]
+        Justification = "De-closuring only this arm would skew the memory column it is compared on.")]
     public int SystemReactiveCompositeDispose()
     {
         var disposed = 0;
@@ -63,7 +63,7 @@ public class CoreRuntimeBenchmarks
     [SuppressMessage(
         "Allocations",
         "PSH1011:Use the overload with a state argument so this lambda does not capture",
-        Justification = "The baseline builds the same closure through a constructor, which has no state overload; de-closuring only this arm would invert the memory column it is compared on.")]
+        Justification = "De-closuring only this arm would skew the memory column it is compared on.")]
     public int R3CompositeDispose()
     {
         var disposed = 0;
@@ -142,7 +142,7 @@ public class CoreRuntimeBenchmarks
         return value;
     }
 
-    /// <summary>Allocating a completed spark should remain allocation efficient.</summary>
+    /// <summary>Allocating a completed spark with ReactiveUI.Primitives.</summary>
     /// <returns>An integer marker extracted from kind.</returns>
     [Benchmark]
     public int PrimitivesCompletedSpark()

@@ -17,6 +17,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="seed">The initial accumulator value.</param>
         /// <param name="accumulator">An asynchronous accumulator function to be invoked on each element.</param>
         /// <returns>An observable sequence containing the accumulated values produced after each element is processed.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="accumulator"/> is <see langword="null"/>.</exception>
         public IObservableAsync<TAcc> Scan<TAcc>(
             TAcc seed,
             Func<TAcc, T, CancellationToken, ValueTask<TAcc>> accumulator)
@@ -31,6 +32,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="seed">The initial accumulator value.</param>
         /// <param name="accumulator">An accumulator function to be invoked on each element.</param>
         /// <returns>An observable sequence containing the accumulated values produced after each element is processed.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="accumulator"/> is <see langword="null"/>.</exception>
         public IObservableAsync<TAcc> Scan<TAcc>(TAcc seed, Func<TAcc, T, TAcc> accumulator)
         {
             ArgumentExceptionHelper.ThrowIfNull(accumulator);

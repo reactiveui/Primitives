@@ -199,7 +199,7 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
         }
     }
 
-    /// <summary>Claims a drain or requests another pass if the observed state is still current.</summary>
+    /// <summary>Claims a drain, or requests another pass when the observed state has not changed.</summary>
     /// <param name="observedState">The drain state observed before attempting the transition.</param>
     /// <returns>True when no further claim attempt is needed; false when the observed state changed.</returns>
     internal bool TryPostDrain(int observedState)

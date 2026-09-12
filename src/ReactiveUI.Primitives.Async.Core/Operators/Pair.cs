@@ -22,7 +22,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="resultSelector">A function to apply to each pair of elements. Cannot be null.</param>
         /// <returns>An observable sequence whose elements are the result of pair-wise combining the source
         /// elements using the result selector.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if any argument is null.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="src1"/>, <paramref name="second"/> or <paramref name="resultSelector"/> is <see langword="null"/>.</exception>
         /// <remarks>The nth element of one source is paired with the nth element of the other, so an element waits until
         /// its partner arrives. The result completes when either source completes with no pending pair.</remarks>
         public IObservableAsync<TResult> Pair<T2, TResult>(

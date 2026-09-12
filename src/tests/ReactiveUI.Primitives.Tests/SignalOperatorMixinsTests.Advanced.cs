@@ -40,10 +40,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(keptPlain.IsRequiredSubscribeOnCurrentThread()).IsFalse();
     }
 
-    /// <summary>
-    /// A source that keeps notifying after it has completed must not get a second bite at a Keep subscriber. The
-    /// filter must drop the late value before it even consults the predicate, and drop the late fault entirely.
-    /// </summary>
+    /// <summary>Keep drops the values and faults a source delivers after its completion, without consulting the predicate.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task KeepSignalDropsSourceNotificationsThatArriveAfterItsTerminal()
@@ -72,7 +69,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(predicateCalls).IsEqualTo(0);
     }
 
-    /// <summary>Verifies advanced map-indexed and enumerable blend direct paths.</summary>
+    /// <summary>Map-indexed signals report their source's thread requirement, and an unbounded blend forwards every value.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task AdvancedSignalsReportThreadRequirementsAndBlendUnboundedSources()
@@ -116,7 +113,7 @@ public partial class SignalOperatorMixinsTests
         var bounded = sources.Blend(1);
         using var subscription = bounded.Subscribe(blended.Add, static ex => throw ex, () => completions++);
 
-        // The bound is one, so the second source must not be subscribed while the first is still running.
+        // The bound is one, so the second source stays unsubscribed while the first one runs.
         second.OnNext(UnobservedValue);
         first.OnNext(One);
         first.OnCompleted();
@@ -130,7 +127,7 @@ public partial class SignalOperatorMixinsTests
         _ = Assert.Throws<ArgumentNullException>(() => bounded.Subscribe((IObserver<int>)null!));
     }
 
-    /// <summary>Verifies bounded blend drains enumerable sources and suppresses late terminals.</summary>
+    /// <summary>A bounded blend drains its sources, forwards only the first fault, and completes on a null enumerator.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task MaxConcurrentBlendCoordinatorDrainsAndSuppressesLateTerminals()
@@ -269,7 +266,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(expired.Errors[0]).IsTypeOf<TimeoutException>();
     }
 
-    /// <summary>Verifies take-until terminal guards and distinct set creation branches.</summary>
+    /// <summary>Take-until forwards the first terminal from either source, and distinct drops repeats with any comparer.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task TakeUntilAndDistinctTerminalBranchesAreCovered()
@@ -346,9 +343,7 @@ public partial class SignalOperatorMixinsTests
             "Design",
             "SST2318:Members should not have identical bodies",
             Justification =
-                "The relative and absolute Schedule overloads of this test-double sequencer intentionally behave the "
-                + "same way; both are required by the ISequencer contract and, as distinct interface overloads, cannot "
-                + "forward to one another.")]
+                "Both Schedule overloads are required by the ISequencer contract and cannot forward to one another.")]
         public void Schedule(IWorkItem item, long dueTimestamp)
         {
             item.Execute();
@@ -356,7 +351,7 @@ public partial class SignalOperatorMixinsTests
         }
     }
 
-    /// <summary>An enumerable that returns a null enumerator for defensive coordinator branches.</summary>
+    /// <summary>An enumerable that optionally returns a null enumerator.</summary>
     /// <typeparam name="T">The value type.</typeparam>
     private sealed class NullEnumeratorEnumerable<T> : IEnumerable<IObservable<T>>
     {

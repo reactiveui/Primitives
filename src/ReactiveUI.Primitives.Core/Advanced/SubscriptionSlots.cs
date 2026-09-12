@@ -5,10 +5,8 @@
 namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>
-/// Helpers for the interlocked single-assignment subscription slots shared by the catch-style sinks
-/// (<c>RecoverSignal</c>, <c>ResumeSignal</c>): a slot holds at most one live
-/// subscription and, once the sink is disposed, swaps to a sentinel so a late assignment is disposed instead of
-/// stored.
+/// Interlocked single-assignment subscription slots for a sink that resubscribes: a slot holds at most one live
+/// subscription and, once released, swaps to a sentinel so a late assignment is disposed instead of stored.
 /// </summary>
 public static class SubscriptionSlots
 {

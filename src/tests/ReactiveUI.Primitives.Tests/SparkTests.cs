@@ -39,7 +39,7 @@ public class SparkTests
         await Assert.That(second).IsEqualTo(first);
     }
 
-    /// <summary>Exercises on-next spark value, equality, accept overloads, and observable conversion.</summary>
+    /// <summary>Verifies an on-next spark reports its value, compares by value, and dispatches every accept overload.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task SparkOnNextCoversValueEqualityAndAcceptOverloads()
@@ -81,7 +81,7 @@ public class SparkTests
         await Assert.That(observer.Events).Contains("next:42");
     }
 
-    /// <summary>Exercises on-error spark exception, equality, and accept overloads.</summary>
+    /// <summary>Verifies an on-error spark carries its exception, compares by value, and dispatches every accept overload.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task SparkOnErrorCoversExceptionEqualityAndAcceptOverloads()
@@ -126,7 +126,7 @@ public class SparkTests
         await Assert.That(observer.Events).Contains("error:spark-error");
     }
 
-    /// <summary>Exercises on-completed spark equality, accept overloads, and observable validation.</summary>
+    /// <summary>Verifies an on-completed spark compares by value and dispatches every accept overload.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task SparkOnCompletedCoversEqualityAndAcceptOverloads()
@@ -162,7 +162,7 @@ public class SparkTests
         await Assert.That(observer.Events).Contains(CompletedText);
     }
 
-    /// <summary>Verifies a completed spark hashes without a value or an exception to reach for.</summary>
+    /// <summary>Verifies two completed sparks produce the same hash code.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task CompletedSparksWithNoValueOrExceptionHashEqual()

@@ -23,7 +23,7 @@ public sealed class ExpireCoordinatorTests
     /// <summary>A gap shorter than <see cref="DueTicks"/> that must not expire the timeout.</summary>
     private const int ActiveGapTicks = 9;
 
-    /// <summary>A gap shorter than <see cref="DueTicks"/> after which a value still arrives in time.</summary>
+    /// <summary>A gap shorter than <see cref="DueTicks"/> after which a value arrives in time.</summary>
     private const int ShortGapTicks = 5;
 
     /// <summary>The values forwarded by the active-source re-arming test.</summary>
@@ -51,7 +51,7 @@ public sealed class ExpireCoordinatorTests
         await Assert.That(values.SequenceEqual(ExpectedActiveValues)).IsTrue();
     }
 
-    /// <summary>Verifies silence longer than the timeout still expires after re-arming.</summary>
+    /// <summary>Verifies silence longer than the timeout expires the sequence after re-arming.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task TimeoutExpiresWhenSilenceExceedsDueTimeAfterAValue()
@@ -198,15 +198,11 @@ public sealed class ExpireCoordinatorTests
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
             "Design",
             "SST2318:Members should not have identical bodies",
-            Justification =
-                "The relative and absolute Schedule overloads of this test-double sequencer intentionally behave the "
-                + "same way; both are required by the ISequencer contract and, as distinct interface overloads, cannot "
-                + "forward to one another.")]
+            Justification = "Distinct interface overloads cannot forward to one another.")]
         public void Schedule(IWorkItem item, long dueTimestamp) => Pending++;
     }
 
-    /// <summary>Observer that makes the armed timeout due from inside <see cref="OnNext"/>, so the timeout is
-    /// dispatched while the value is still in flight.</summary>
+    /// <summary>Observer that makes the armed timeout due from inside <see cref="OnNext"/>.</summary>
     /// <param name="clock">The clock that dispatches due work inline.</param>
     /// <param name="dueTime">The amount to advance the clock by so the armed timeout becomes due.</param>
     private sealed class ReentrantTimeoutObserver(VirtualClock clock, TimeSpan dueTime) : IObserver<int>

@@ -7,7 +7,7 @@ namespace ReactiveUI.Primitives.Async.Tests;
 /// <summary>Tests gate acquisition, reentry, contention and idempotent disposal.</summary>
 public class AsyncSerialGateTests
 {
-    /// <summary>Verifies that the uncontended fast path acquires the gate via pure CAS.</summary>
+    /// <summary>Verifies that an uncontended gate can be acquired again after release.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenUncontendedLock_ThenAcquiresAndReleases()
@@ -19,14 +19,13 @@ public class AsyncSerialGateTests
             await Assert.That(gate).IsNotNull();
         }
 
-        // After release the gate must be re-acquirable.
         using (await gate.EnterAsync())
         {
             await Assert.That(gate).IsNotNull();
         }
     }
 
-    /// <summary>Verifies that same-thread reentry bumps the recursion depth and does not block.</summary>
+    /// <summary>Verifies that nested acquisitions on the owning thread are granted without blocking.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSameThreadReentry_ThenAllowedWithoutBlocking()
@@ -47,7 +46,6 @@ public class AsyncSerialGateTests
             lease1.Dispose();
         }
 
-        // Gate must release cleanly after nested acquisitions.
         using (await gate.EnterAsync())
         {
             await Assert.That(gate).IsNotNull();
@@ -69,7 +67,7 @@ public class AsyncSerialGateTests
         await Assert.That(gate.WaitersCount).IsEqualTo(0);
     }
 
-    /// <summary>Verifies that double-dispose is idempotent.</summary>
+    /// <summary>Verifies that a second dispose of the gate has no effect.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenDisposeCalledTwice_ThenIdempotent()

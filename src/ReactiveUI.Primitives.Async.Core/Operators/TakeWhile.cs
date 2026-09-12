@@ -17,7 +17,7 @@ public static partial class SignalAsyncExtensions
         /// and a cancellation token.</param>
         /// <returns>An observable sequence that contains elements from the source sequence that satisfy the
         /// condition, completing as soon as the predicate returns false.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="predicate"/> is null.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="predicate"/> is <see langword="null"/>.</exception>
         public IObservableAsync<T> TakeWhile(Func<T, CancellationToken, ValueTask<bool>> predicate)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -30,7 +30,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="predicate">A function to test each element for a condition.</param>
         /// <returns>An observable sequence that contains elements from the source sequence that satisfy the
         /// condition, completing as soon as the predicate returns false.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="predicate"/> is null.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="predicate"/> is <see langword="null"/>.</exception>
         public IObservableAsync<T> TakeWhile(Func<T, bool> predicate)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);

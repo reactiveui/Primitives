@@ -4,11 +4,11 @@
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>A signal that can remove a previously subscribed observer when its subscription handle is disposed.</summary>
+/// <summary>A signal that a subscription handle can detach its observer from when the handle is disposed.</summary>
 /// <typeparam name="T">The observed value type.</typeparam>
 internal interface IWitnessRemovable<out T>
 {
-    /// <summary>Removes an observer previously registered via subscription.</summary>
+    /// <summary>Removes a subscribed observer from the signal.</summary>
     /// <param name="observer">The observer to remove.</param>
     void RemoveObserver(IObserver<T> observer);
 }

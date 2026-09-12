@@ -892,7 +892,7 @@ public sealed partial class EventGeneratorTests
         return references;
     }
 
-    /// <summary>Adds a metadata reference unless the same assembly path is already present.</summary>
+    /// <summary>Adds a metadata reference unless the same assembly path is present.</summary>
     /// <param name="references">The destination references.</param>
     /// <param name="path">The assembly path to add.</param>
     private static void AddReference(List<MetadataReference> references, string path)

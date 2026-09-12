@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Tests;
 /// <summary>An equality comparer that throws when comparing values.</summary>
 internal sealed class ThrowingComparer : IEqualityComparer<int>
 {
-    /// <summary>Defers to a faulting comparison so the equality comparison throws when invoked.</summary>
+    /// <summary>Throws instead of comparing the two values.</summary>
     /// <param name="x">The first value to compare.</param>
     /// <param name="y">The second value to compare.</param>
     /// <returns>This method never returns; the faulting comparison always throws.</returns>

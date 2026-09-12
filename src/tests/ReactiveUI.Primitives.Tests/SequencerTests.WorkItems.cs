@@ -7,16 +7,13 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Verifies the work-item shapes the sequencers queue: the run-once handshake, cancellation before and after a run,
-/// and the delay conversion that decides when a due item runs.
-/// </summary>
+/// <summary>Verifies the queued work-item shapes: run-once execution, cancellation, and delay conversion.</summary>
 public partial class SequencerTests
 {
-    /// <summary>A monotonic timestamp delta used to drive the delay conversions.</summary>
+    /// <summary>A monotonic timestamp delta that drives the delay conversions.</summary>
     private const long DueTimestamp = 1000;
 
-    /// <summary>Verifies a monotonic delta that has already elapsed converts to no delay at all.</summary>
+    /// <summary>Verifies a monotonic delta at or before the current instant converts to no delay at all.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task TimestampDeltaAtOrBeforeNowConvertsToZeroDelay()
@@ -105,7 +102,6 @@ public partial class SequencerTests
         item.Dispose();
         await Assert.That(disposed).IsEqualTo(1);
 
-        // Disposal is a single transition: a second cancel must not dispose the action's result twice.
         item.Dispose();
         await Assert.That(disposed).IsEqualTo(1);
         await Assert.That(item.IsDisposed).IsTrue();
@@ -187,7 +183,6 @@ public partial class SequencerTests
         await Assert.That(item.Equals(otherItem)).IsFalse();
         await Assert.That(item.Equals(otherDueTimestamp)).IsFalse();
 
-        // The boxed overload agrees with the strongly typed one, and rejects anything that is not an entry.
         await Assert.That(item.Equals((object)same)).IsTrue();
         await Assert.That(item.Equals((object)otherItem)).IsFalse();
         await Assert.That(item.Equals(new object())).IsFalse();

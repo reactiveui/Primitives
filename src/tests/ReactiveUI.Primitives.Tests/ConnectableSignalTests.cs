@@ -123,7 +123,6 @@ public sealed class ConnectableSignalTests
         List<int> observed = [];
         using var subscription = multicast.Subscribe(observed.Add);
 
-        // No connection yet, so the hub must not see the source at all.
         source.OnNext(UnobservedSharedValue);
         await Assert.That(observed.Count).IsEqualTo(0);
 
@@ -299,7 +298,6 @@ public sealed class ConnectableSignalTests
         var secondSubscription = shared.Subscribe(second.Add);
         source.OnNext(FirstSharedValue);
 
-        // The single upstream connection feeds every observer.
         await Assert.That(sourceSubscriptions).IsEqualTo(1);
 
         firstSubscription.Dispose();
@@ -307,7 +305,6 @@ public sealed class ConnectableSignalTests
 
         secondSubscription.Dispose();
 
-        // The connection is disposed only once the final subscriber leaves.
         await Assert.That(sourceDisposals).IsEqualTo(1);
         await Assert.That(first.SequenceEqual(ExpectedFirstSharedValues)).IsTrue();
         await Assert.That(second.SequenceEqual(ExpectedFirstSharedValues)).IsTrue();
@@ -339,7 +336,6 @@ public sealed class ConnectableSignalTests
         await Assert.That(sourceSubscriptions).IsEqualTo(1);
         await Assert.That(sourceDisposals).IsEqualTo(1);
 
-        // A fresh subscriber after the count returned to zero forces a new connection.
         using var second = shared.Subscribe(static _ => { });
         await Assert.That(sourceSubscriptions).IsEqualTo(ExpectedConnections);
         await Assert.That(sourceDisposals).IsEqualTo(1);
@@ -368,12 +364,10 @@ public sealed class ConnectableSignalTests
 
         var shared = cold.Share().AutoShare();
 
-        // Connect runs outside the gate; a synchronous failure surfaces to the caller.
         var thrown = Assert.Throws<InvalidOperationException>(() => shared.Subscribe(static _ => { }));
         await Assert.That(thrown).IsSameReferenceAs(expected);
         await Assert.That(subscribeAttempts).IsEqualTo(1);
 
-        // The failed attempt unwound the count, so the next subscriber reconnects rather than stalling.
         shouldThrow = false;
         List<int> values = [];
         using var recovered = shared.Subscribe(values.Add);

@@ -37,7 +37,7 @@ public class FromEnumerableSignalTests
     /// <summary>Expected five-six value sequence.</summary>
     private static readonly int[] ExpectedFiveSix = [Five, Six];
 
-    /// <summary>Covers enumerable signal fast paths for arrays, read-only lists, iterators, and delegate subscriptions.</summary>
+    /// <summary>Verifies an enumerable signal emits values from arrays, lists, and iterators, then completes.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task FromEnumerableSignalCoversAllSynchronousFastPaths()
@@ -69,7 +69,7 @@ public class FromEnumerableSignalTests
         _ = Assert.Throws<ArgumentNullException>(() => arraySignal.Subscribe(static _ => { }, static ex => { }, null!));
     }
 
-    /// <summary>Creates an iterator-backed enumerable for the non-indexable enumerable path.</summary>
+    /// <summary>Creates an iterator-backed enumerable that cannot be indexed.</summary>
     /// <returns>The yielded values.</returns>
     private static IEnumerable<int> YieldValues()
     {

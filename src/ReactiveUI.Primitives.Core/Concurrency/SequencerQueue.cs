@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Concurrency;
 
 /// <summary>Scheduler queue that keeps scheduled items ordered by absolute due time.</summary>
 /// <typeparam name="TAbsolute">Absolute time representation type.</typeparam>
-/// <remarks>This type is not thread safe; users should ensure proper synchronization.</remarks>
+/// <remarks>This type is not thread safe; concurrent callers must provide their own synchronization.</remarks>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public class SequencerQueue<TAbsolute>
     where TAbsolute : IComparable<TAbsolute>

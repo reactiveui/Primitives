@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Tests;
 /// <summary>Tests Rx-style alias factories and empty-source shortcuts.</summary>
 public partial class SignalTests
 {
-    /// <summary>Verifies Rx factory aliases cover scheduled, empty, timeout, and switch range branches.</summary>
+    /// <summary>Rx-named aliases produce scheduled, empty, and timeout signals, and switch flattens range and non-range sources.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task RxFactoryAliasesCoverScheduledAndSwitchRangeBranches()
@@ -43,7 +43,7 @@ public partial class SignalTests
         await Assert.That(nonRangeSwitch.SequenceEqual([Five])).IsTrue();
     }
 
-    /// <summary>Verifies parity aliases cover task terminal shortcut branches.</summary>
+    /// <summary>Task conversion forwards a completed result, a cancellation, a fault, and a pending result.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ParityAliasesCoverTaskObservableBranches()
@@ -69,7 +69,7 @@ public partial class SignalTests
         await Assert.That(pendingWitness.Values.SequenceEqual([Two])).IsTrue();
     }
 
-    /// <summary>Verifies parity operators cover remaining public range and alias branches.</summary>
+    /// <summary>Range-backed aliases emit their values through default, unique, timestamp, concat, merge, and pair operators.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ParityOperatorsCoverRangeAndAliasBranches()
@@ -115,7 +115,7 @@ public partial class SignalTests
         await Assert.That(latestWithNonRangeRight.SequenceEqual([Two + Three, Two + Four])).IsTrue();
     }
 
-    /// <summary>Verifies direct from-async subscriptions cover constructor and synchronous completion paths.</summary>
+    /// <summary>A from-async subscription emits and completes synchronously, even when its factory disposes it.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task FromAsyncSubscriptionsCoverConstructorAndSynchronousCompletionPaths()

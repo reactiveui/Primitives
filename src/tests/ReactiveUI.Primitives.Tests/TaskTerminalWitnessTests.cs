@@ -110,7 +110,7 @@ public sealed class TaskTerminalWitnessTests
         await Assert.That(upstream.DisposeCount).IsEqualTo(1);
     }
 
-    /// <summary>A count witness built on an already-cancelled token cancels inline and drops a late subscription.</summary>
+    /// <summary>A count witness built on a cancelled token cancels inline and drops a late subscription.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task CountWitnessOnAnAlreadyCancelledTokenCancelsInlineAndDropsTheSubscription()
@@ -145,7 +145,7 @@ public sealed class TaskTerminalWitnessTests
         await Assert.That(upstream.DisposeCount).IsEqualTo(1);
     }
 
-    /// <summary>The any-witness keeps its result when a cancellation is signalled after it has already stopped.</summary>
+    /// <summary>The any-witness keeps its result when a cancellation is signalled after it stopped.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task AnyWitnessIgnoresCancellationSignalledAfterItsResult()
@@ -163,7 +163,7 @@ public sealed class TaskTerminalWitnessTests
         await Assert.That(upstream.DisposeCount).IsEqualTo(1);
     }
 
-    /// <summary>The count witness keeps its result when a cancellation is signalled after it has already stopped.</summary>
+    /// <summary>The count witness keeps its result when a cancellation is signalled after it stopped.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task CountWitnessIgnoresCancellationSignalledAfterItStopped()

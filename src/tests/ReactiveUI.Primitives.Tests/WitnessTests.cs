@@ -95,7 +95,7 @@ public partial class WitnessTests
         await Assert.That(disposed).IsEqualTo(1);
     }
 
-    /// <summary>Covers internal witness implementations and safe observer terminal behavior.</summary>
+    /// <summary>Disposed, throwing, and empty witnesses follow their contracts, and a safe witness stops at its terminal.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task WitnessesCoverDisposedThrowEmptyAndSafeBranches()
@@ -175,7 +175,7 @@ public partial class WitnessTests
         await Assert.That(completed).IsEqualTo(1);
     }
 
-    /// <summary>Verifies the witness routes a source failure through the same deferred sequencer drain.</summary>
+    /// <summary>A source failure is deferred until the sequencer drains it.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task WitnessOnDefersAnErrorUntilTheSequencerDrainsIt()
@@ -195,7 +195,7 @@ public partial class WitnessTests
         await Assert.That(observed).IsSameReferenceAs(error);
     }
 
-    /// <summary>Covers callback, forwarding, and stateful witness contracts.</summary>
+    /// <summary>Callback, forwarding, stateful, and safe witnesses each forward notifications as their contract requires.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task WitnessImplementationsForwardNotificationsAndFallbackErrors()
@@ -207,7 +207,7 @@ public partial class WitnessTests
         await AssertSafeWitnessIgnoresNotificationsAfterTheTerminal();
     }
 
-    /// <summary>Covers witness factory and safe-wrapper null-callback validation.</summary>
+    /// <summary>The witness factories and safe wrappers reject null callbacks and a null error.</summary>
     [Test]
     public void WitnessFactoriesValidateNullCallbacks()
     {
@@ -223,7 +223,7 @@ public partial class WitnessTests
             Witness.Create<int>(static _ => { }, static _ => { }, static () => { }).OnError(null!));
     }
 
-    /// <summary>Covers safe-witness error forwarding and post-terminal suppression branches.</summary>
+    /// <summary>A safe witness forwards a throwing observer's error, disposes its cancel resource, and drops later faults.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task SafeWitnessForwardsErrorAndIgnoresLateSignals()
@@ -932,10 +932,7 @@ public partial class WitnessTests
         _ = Assert.Throws<ArgumentNullException>(() => signal.Subscribe(null!));
     }
 
-    /// <summary>
-    /// Verifies removing an observer the list never held leaves the witness unchanged, so a stray unsubscribe
-    /// cannot drop a live observer or allocate a new snapshot.
-    /// </summary>
+    /// <summary>Removing an observer the list never held returns the same witness.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ListWitnessRemoveReturnsTheSameWitnessWhenTheObserverIsNotPresent()

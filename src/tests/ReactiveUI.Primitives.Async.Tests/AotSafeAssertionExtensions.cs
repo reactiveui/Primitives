@@ -18,12 +18,7 @@ internal static class AotSafeAssertionExtensions
     extension<TCollection, TItem>(IAssertionSource<TCollection> source)
         where TCollection : IEnumerable<TItem>
     {
-        /// <summary>
-        /// Asserts the collection is equivalent to <paramref name="expected"/>
-        /// using the element type's default <see cref="EqualityComparer{T}"/>
-        /// (mirroring <c>IsEquivalentTo</c>) without the reflection-based structural
-        /// comparison that triggers trim/AOT warnings.
-        /// </summary>
+        /// <summary>Asserts element-wise equality with <paramref name="expected"/> using <see cref="EqualityComparer{T}"/>, which keeps the assertion trim-safe.</summary>
         /// <param name="expected">The expected element sequence.</param>
         /// <returns>The chained collection-equivalency assertion.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

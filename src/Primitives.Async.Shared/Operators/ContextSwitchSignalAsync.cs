@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Async;
 /// <typeparam name = "T">The type of elements in the observable sequence.</typeparam>
 /// <param name = "source">The source observable whose notifications will be context-switched.</param>
 /// <param name = "asyncContext">The async context to switch notifications onto.</param>
-/// <param name = "forceYielding">Whether to force yielding even if already on the target context.</param>
+/// <param name = "forceYielding">Whether to yield even when the calling thread is on the target context.</param>
 public sealed class ContextSwitchSignalAsync<T>(
     IObservableAsync<T> source,
     AsyncContext asyncContext,
@@ -28,7 +28,7 @@ public sealed class ContextSwitchSignalAsync<T>(
     /// <summary>An observer that switches each notification onto the specified async context before forwarding.</summary>
     /// <param name = "observer">The downstream observer to forward notifications to.</param>
     /// <param name = "asyncContext">The async context to switch onto.</param>
-    /// <param name = "forceYielding">Whether to force yielding even if already on the target context.</param>
+    /// <param name = "forceYielding">Whether to yield even when the calling thread is on the target context.</param>
     internal sealed class ContextSwitchWitness(
         IObserverAsync<T> observer,
         AsyncContext asyncContext,

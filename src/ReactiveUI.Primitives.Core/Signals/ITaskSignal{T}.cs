@@ -7,29 +7,19 @@ using ReactiveUI.Primitives.Disposables;
 namespace ReactiveUI.Primitives.Signals;
 
 /// <summary>A signal backed by a task.</summary>
-/// <typeparam name="T">The object that provides notification information.</typeparam>
-/// <seealso cref="IObservable&lt;T&gt;" />
+/// <typeparam name="T">The value type.</typeparam>
 public interface ITaskSignal<out T> : IObservable<T>, IsDisposed
 {
-    /// <summary>Gets the cancellation token source.</summary>
-    /// <value>
-    /// The cancellation token source.
-    /// </value>
+    /// <summary>Gets the source that cancels the backing task, or <see langword="null"/> when the signal is not cancellable.</summary>
     CancellationTokenSource? CancellationTokenSource { get; }
 
-    /// <summary>Gets a value indicating whether this instance is cancellation requested.</summary>
-    /// <value>
-    ///   <c>true</c> if this instance is cancellation requested; otherwise, <c>false</c>.
-    /// </value>
+    /// <summary>Gets a value indicating whether cancellation of the backing task has been requested.</summary>
     bool IsCancellationRequested { get; }
 
-    /// <summary>Gets the source.</summary>
-    /// <value>
-    /// The source.
-    /// </value>
+    /// <summary>Gets the sequence the backing task produces, or <see langword="null"/> before the task starts.</summary>
     IObservable<T>? Source { get; }
 
-    /// <summary>Gets the operation canceled.</summary>
-    /// <param name="observer">The observer.</param>
+    /// <summary>Notifies an observer with the exception produced by cancelling the backing task.</summary>
+    /// <param name="observer">The observer that receives the cancellation exception.</param>
     void GetOperationCanceled(IObserver<Exception> observer);
 }

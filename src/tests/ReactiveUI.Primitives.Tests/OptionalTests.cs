@@ -13,7 +13,7 @@ public class OptionalTests
     /// <summary>The second expected value.</summary>
     private const int Second = 2;
 
-    /// <summary>Covers optional value creation and empty value access.</summary>
+    /// <summary>Verifies an empty optional rejects value access and a created optional exposes its value.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task OptionalCoversEmptyAndValueContracts()
@@ -33,7 +33,7 @@ public class OptionalTests
         await Assert.That(some.Value).IsEqualTo(Second);
     }
 
-    /// <summary>Covers optional conversion helpers and operators.</summary>
+    /// <summary>Verifies the optional conversion helpers and operators round-trip a value.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task OptionalSupportsConversionHelpers()
@@ -55,7 +55,7 @@ public class OptionalTests
         await Assert.That(some.Value).IsEqualTo(Second);
     }
 
-    /// <summary>Covers optional string formatting for values and empty values.</summary>
+    /// <summary>Verifies an optional formats its value, and an empty optional formats as none.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task OptionalToStringFormatsValueAndNone()

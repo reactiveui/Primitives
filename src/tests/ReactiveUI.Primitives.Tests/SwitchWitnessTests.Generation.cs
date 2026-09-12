@@ -32,7 +32,6 @@ public sealed partial class SwitchWitnessTests
         // Pushing `first` subscribes it, which emits synchronously, which re-enters the outer with `second`.
         outer.OnNext(first);
 
-        // The replacement remains subscribed after the first subscription returns.
         second.Observer?.OnNext(SecondValue);
 
         using (Assert.Multiple())
@@ -102,7 +101,7 @@ public sealed partial class SwitchWitnessTests
     /// <param name="replacement">The inner pushed on the first observed value.</param>
     private sealed class ReenteringObserver<T>(Signal<IObservable<T>> outer, IObservable<T> replacement) : RecordingObserver<T>
     {
-        /// <summary>Whether the re-entrant push has already happened.</summary>
+        /// <summary>Whether the re-entrant push has happened.</summary>
         private int _pushed;
 
         /// <inheritdoc/>

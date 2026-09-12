@@ -17,7 +17,7 @@ public interface IObserverAsync<in T> : IAsyncDisposable
 
     /// <summary>Reports a non-terminal error, leaving the sequence free to carry on.</summary>
     /// <param name="error">The exception to report.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used to cancel the error handling operation.</param>
+    /// <param name="cancellationToken">A token that cancels the observer's handling of the error.</param>
     /// <returns>A task that completes when the observer has handled the error.</returns>
     /// <remarks>Unlike a faulted <see cref="OnCompletedAsync"/>, this does not end the sequence; an implementation
     /// chooses whether to swallow the error or tear itself down.</remarks>
@@ -25,7 +25,7 @@ public interface IObserverAsync<in T> : IAsyncDisposable
 
     /// <summary>Delivers the next value in the sequence.</summary>
     /// <param name="value">The value to be processed.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
+    /// <param name="cancellationToken">A token that cancels the observer's handling of the value.</param>
     /// <returns>A task that completes when the observer has consumed the value.</returns>
     ValueTask OnNextAsync(T value, CancellationToken cancellationToken);
 }

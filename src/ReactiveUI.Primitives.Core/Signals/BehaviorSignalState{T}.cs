@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Signals;
 [System.Diagnostics.CodeAnalysis.SuppressMessage(
     "Performance",
     "SST1803:Make record struct readonly",
-    Justification = "This is mutable signal state; its members mutate the fields in place, so it cannot be readonly.")]
+    Justification = "The members mutate these fields in place.")]
 internal record struct BehaviorSignalState<T>
 {
     /// <summary>Protects observer and terminal-state mutations.</summary>
@@ -21,8 +21,7 @@ internal record struct BehaviorSignalState<T>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Performance",
         "SST1424:Make field readonly",
-        Justification =
-            "Broadcaster<T> is a mutable struct; readonly fields would mutate defensive copies and lose observer updates.")]
+        Justification = "A readonly field would mutate a defensive copy of this mutable struct and lose observer updates.")]
     private Broadcaster<T> _broadcaster;
 
     /// <summary>The last error, when terminated exceptionally.</summary>
@@ -137,7 +136,7 @@ internal record struct BehaviorSignalState<T>
     }
 
     /// <summary>Subscribes an observer, replaying the current value or terminal notification.</summary>
-    /// <param name="owner">The owning signal used to remove the observer on disposal.</param>
+    /// <param name="owner">The owning signal that the returned handle removes the observer from.</param>
     /// <param name="observer">The observer to subscribe.</param>
     /// <returns>A handle that unsubscribes the observer when disposed.</returns>
     internal IDisposable Subscribe(IWitnessRemovable<T> owner, IObserver<T> observer)
@@ -173,7 +172,7 @@ internal record struct BehaviorSignalState<T>
         return EmptyDisposable.Instance;
     }
 
-    /// <summary>Removes a previously subscribed observer.</summary>
+    /// <summary>Removes a subscribed observer from the broadcaster.</summary>
     /// <param name="observer">The observer to remove.</param>
     internal void RemoveObserver(IObserver<T> observer)
     {
@@ -200,7 +199,7 @@ internal record struct BehaviorSignalState<T>
     }
 
     /// <summary>Throws when the signal has been disposed.</summary>
-    /// <exception cref="ObjectDisposedException">The signal has already been released.</exception>
+    /// <exception cref="ObjectDisposedException">The signal is released.</exception>
     private readonly void ThrowIfDisposed()
     {
         if (_isDisposed == 0)

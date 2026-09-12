@@ -7,7 +7,11 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>Samples the latest value from the source observable whenever a trigger observable emits.</summary>
+/// <summary>
+/// Emits the source's latest value each time <paramref name="trigger"/> fires, repeating it when no newer value has
+/// arrived and emitting nothing until the source produces its first. An error from either sequence terminates the
+/// result; the source's completion completes it, while the trigger's completion is ignored.
+/// </summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="trigger">The trigger observable.</param>
@@ -28,7 +32,7 @@ public sealed class SampleLatestObservable<T>(
         return new DisposableBag(sourceSub, triggerSub, sink);
     }
 
-    /// <summary>Sinks the source observable and samples it based on the trigger.</summary>
+    /// <summary>Holds the latest source value and the terminal state shared by the source and trigger observers.</summary>
     /// <param name="downstream">The downstream observer.</param>
     private sealed class SampleLatestSink(IObserver<T> downstream) : IDisposable
     {
@@ -44,10 +48,10 @@ public sealed class SampleLatestObservable<T>(
         /// <summary>Whether the sequence is done.</summary>
         private bool _done;
 
-        /// <summary>Gets the source observer.</summary>
+        /// <summary>Gets a new observer that records source values into this sink.</summary>
         public IObserver<T> SourceWitness => new SourceSampleWitness(this);
 
-        /// <summary>Gets the trigger observer.</summary>
+        /// <summary>Gets a new observer that samples this sink on each trigger notification.</summary>
         public IObserver<object> TriggerObserver => new TriggerSampleWitness(this);
 
         /// <inheritdoc/>
@@ -86,7 +90,7 @@ public sealed class SampleLatestObservable<T>(
             }
         }
 
-        /// <summary>Forwards source completion.</summary>
+        /// <summary>Completes the downstream observer once, ignoring later notifications.</summary>
         private void OnSourceCompleted()
         {
             lock (_gate)
@@ -120,7 +124,7 @@ public sealed class SampleLatestObservable<T>(
             downstream.OnNext(value!);
         }
 
-        /// <summary>Observer for source values.</summary>
+        /// <summary>Observer that stores each source value in the sink.</summary>
         /// <param name="sink">The owning sink.</param>
         private sealed class SourceSampleWitness(SampleLatestSink sink) : IObserver<T>
         {
@@ -137,7 +141,7 @@ public sealed class SampleLatestObservable<T>(
             public void OnCompleted() => sink.OnSourceCompleted();
         }
 
-        /// <summary>Observer for trigger values.</summary>
+        /// <summary>Observer that asks the sink to emit its latest value on each trigger notification.</summary>
         /// <param name="sink">The owning sink.</param>
         private sealed class TriggerSampleWitness(SampleLatestSink sink) : IObserver<object>
         {
@@ -152,7 +156,7 @@ public sealed class SampleLatestObservable<T>(
             /// <inheritdoc/>
             public void OnCompleted()
             {
-                /* Trigger completion does not affect sample */
+                // A completed trigger leaves the sampled sequence running.
             }
         }
     }

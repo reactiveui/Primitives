@@ -16,7 +16,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="count">The number of elements to skip. Must be greater than or equal to 0.</param>
         /// <returns>An observable sequence that contains the elements of the source sequence after the specified number of
         /// elements have been skipped. If the count is 0, the original sequence is returned.</returns>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown if count is less than 0.</exception>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="count"/> is less than zero.</exception>
         public IObservableAsync<T> Skip(int count)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);

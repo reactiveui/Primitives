@@ -54,25 +54,25 @@ public partial class SignalOperatorMixinsTests
     /// <summary>The expected one-through-four sequence emitted by the four-element source.</summary>
     private static readonly int[] ExpectedOneToFour = [One, Two, Three, Four];
 
-    /// <summary>The expected single null produced by the default-if-empty branch.</summary>
+    /// <summary>The expected single null from default-if-empty.</summary>
     private static readonly int?[] ExpectedSingleNull = [null];
 
-    /// <summary>The expected one-and-two prefix retained by take-while and distinct branches.</summary>
+    /// <summary>The expected one-and-two prefix retained by take-while and distinct.</summary>
     private static readonly int[] ExpectedOneTwo = [One, Two];
 
-    /// <summary>The expected three-and-four suffix retained by skip-while and delay branches.</summary>
+    /// <summary>The expected three-and-four suffix retained by skip-while and delay.</summary>
     private static readonly int[] ExpectedThreeFour = [Three, Four];
 
-    /// <summary>The expected single nine produced by the fork-join sum branch.</summary>
+    /// <summary>The expected single nine produced by the fork-join sum.</summary>
     private static readonly int[] ExpectedSingleNine = [Nine];
 
-    /// <summary>The expected two-through-four prefix produced by the single prepend branch.</summary>
+    /// <summary>The expected two-through-four sequence produced by a single prepend.</summary>
     private static readonly int[] ExpectedTwoToFour = [Two, Three, Four];
 
-    /// <summary>The expected message from the single delayed-error branch.</summary>
+    /// <summary>The expected message from a delayed error.</summary>
     private static readonly string[] ExpectedDelayErrors = ["delay-error"];
 
-    /// <summary>The expected error type name from the expire-timeout branch.</summary>
+    /// <summary>The expected error type name from an expire timeout.</summary>
     private static readonly string[] ExpectedTimeoutErrors = [nameof(TimeoutException)];
 
     /// <summary>The expected single true value emitted by the true signal.</summary>
@@ -81,34 +81,34 @@ public partial class SignalOperatorMixinsTests
     /// <summary>The expected single false value emitted by the false signal.</summary>
     private static readonly bool[] ExpectedFalseValues = [false];
 
-    /// <summary>The expected single seven produced by the scheduled branch.</summary>
+    /// <summary>The expected single seven produced by scheduled work.</summary>
     private static readonly int[] ExpectedSingleSeven = [Seven];
 
-    /// <summary>The expected two-and-three sequence produced by the observer prepend branch.</summary>
+    /// <summary>The expected two-and-three sequence produced by an observer prepend.</summary>
     private static readonly int[] ExpectedTwoThree = [Two, Three];
 
-    /// <summary>The expected one-through-three sequence produced by the prepend/append branches.</summary>
+    /// <summary>The expected one-through-three sequence produced by prepend and append.</summary>
     private static readonly int[] ExpectedOneToThree = [One, Two, Three];
 
-    /// <summary>The expected three-and-five sequence produced by the combine-latest branch.</summary>
+    /// <summary>The expected three-and-five sequence produced by combine-latest.</summary>
     private static readonly int[] ExpectedThreeFive = [Three, Five];
 
-    /// <summary>The expected single two produced by the switch branch.</summary>
+    /// <summary>The expected single two produced by switching inners.</summary>
     private static readonly int[] ExpectedSingleTwo = [Two];
 
-    /// <summary>The expected single five produced by the typed catch branch.</summary>
+    /// <summary>The expected single five produced by a typed recovery.</summary>
     private static readonly int[] ExpectedSingleFive = [Five];
 
-    /// <summary>The expected message from the keep-predicate fault branch.</summary>
+    /// <summary>The expected message from a faulting keep predicate.</summary>
     private static readonly string[] ExpectedKeepErrors = ["keep-predicate"];
 
-    /// <summary>The expected message from the all-predicate fault branch.</summary>
+    /// <summary>The expected message from a faulting all predicate.</summary>
     private static readonly string[] ExpectedAllErrors = ["all-predicate"];
 
-    /// <summary>The expected messages from the recover handler-fault and unmatched branches.</summary>
+    /// <summary>The expected messages from a faulting recover handler and an unmatched error.</summary>
     private static readonly string[] ExpectedCatchErrors = ["handler-threw", "not-matched"];
 
-    /// <summary>Covers parity operator overloads, aliases, and argument guards that are not hit by scenario tests.</summary>
+    /// <summary>Parity operator aliases forward their values, report side effects, and reject null arguments.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ParityOperatorAliasesAndGuardsCoverRemainingBranches()
@@ -160,7 +160,7 @@ public partial class SignalOperatorMixinsTests
         AssertAggregateAndTimingGuards(source);
     }
 
-    /// <summary>Covers prepend, observe-on, default-if-empty, and time-shift alias edge branches.</summary>
+    /// <summary>Prepend, observe-on, default-if-empty, and time-shift aliases return their shortcut results.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task AliasAndTimeShiftBranchesCoverRemainingEdges()
@@ -192,7 +192,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(timeoutErrors.SequenceEqual(ExpectedTimeoutErrors)).IsTrue();
     }
 
-    /// <summary>Covers deterministic shortcut branches in primitive-vocabulary operator wrappers.</summary>
+    /// <summary>Primitive operator wrappers shortcut cancelable sources, empty takes, and pending tasks.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task PrimitiveShortcutBranchesCoverCancelableFallbackAndPendingTaskPaths()
@@ -242,7 +242,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(stringSwitch.SequenceEqual(ExpectedSingleValue)).IsTrue();
     }
 
-    /// <summary>Covers immutable boolean and rx-void return-signal inline subscription branches.</summary>
+    /// <summary>Immutable boolean and rx-void return signals deliver their value inline and complete.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ImmutableReturnSignalsCoverInlineBranches()
@@ -270,7 +270,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(inlineCompleted).IsEqualTo(Three);
     }
 
-    /// <summary>Covers minimal virtual-clock scheduling guards and dispatch branches.</summary>
+    /// <summary>The minimal virtual clock rejects invalid advances and null actions, and dispatches due work.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task MinimalVirtualClockSchedulingCoversGuardsAndDispatch()
@@ -296,7 +296,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(scheduled.SequenceEqual(ExpectedSingleSeven)).IsTrue();
     }
 
-    /// <summary>Covers observer-based inline operator paths and private observer error cleanup paths.</summary>
+    /// <summary>Inline prepend and append operators reject null observers and propagate observer failures.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task InlineOperatorObserverAndErrorCleanupPathsCoverRemainingBranches()
@@ -339,7 +339,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(delegateErrors).IsEqualTo(1);
     }
 
-    /// <summary>Covers coordinator paths where later sources complete or error after another source has won.</summary>
+    /// <summary>Race, combine, and switch coordinators ignore sources that terminate after another has won.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task HigherOrderCoordinatorRaceCombineSwitchPathsCoverLateBranches()
@@ -395,7 +395,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(switched.Completed).IsEqualTo(1);
     }
 
-    /// <summary>Covers observer exception paths and typed catch/finally branches with deterministic synchronous sources.</summary>
+    /// <summary>Predicate faults, typed recovery, and cleanup handlers surface their errors once.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ObserverExceptionCatchFinallyAndTerminalPredicateBranchesCoverRemainders()
@@ -451,7 +451,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(finallyCalls).IsEqualTo(1);
     }
 
-    /// <summary>Covers fused prepend/default-if-empty/append and empty Prepend helpers.</summary>
+    /// <summary>Fused prepend, default-if-empty, and append preserve value ordering and the single terminal.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task PrependAppendDefaultIfEmptyFusionPreservesOrderingAndTerminals()
@@ -508,7 +508,7 @@ public partial class SignalOperatorMixinsTests
         _ = Assert.Throws<ArgumentNullException>(static () => ((IObservable<Task<int>>)null!).Chain());
     }
 
-    /// <summary>Verifies direct task-chain sequencing without the map adapter.</summary>
+    /// <summary>Task chaining emits pending task results in source order.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task TaskChainDirectSignalKeepsPendingTasksInSourceOrder()
@@ -533,7 +533,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(chained.Completions).IsEqualTo(One);
     }
 
-    /// <summary>Verifies direct task-chain terminal and disposal paths.</summary>
+    /// <summary>Task chaining forwards a source fault, a null task, and a task fault, and drops notifications after disposal.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task TaskChainDirectSignalHandlesErrorsAndDisposal()
@@ -585,7 +585,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(disposed.Completed).IsEqualTo(0);
     }
 
-    /// <summary>Covers default-if-empty behavior over hot sources for empty, non-empty, error, and observer-guard branches.</summary>
+    /// <summary>Default-if-empty substitutes its fallback only for an empty source and rejects a null observer.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task DefaultIfEmptyCoversHotSourceEmptyNonEmptyErrorAndObserverGuard()
@@ -621,7 +621,7 @@ public partial class SignalOperatorMixinsTests
         "Concurrency",
         "PSH1313:Call the async overload from an async method",
         Justification =
-            "This test deliberately exercises the synchronous IObservable operator overloads, not their awaitable terminal counterparts.")]
+            "The synchronous IObservable operator overloads are the subject under test.")]
     [Test]
     public async Task TelemetryBurstBuffersTerminalCountsAndSubscriberChurnAreDeterministic()
     {
@@ -743,7 +743,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(faultedTaskSignal.Errors[0]).IsSameReferenceAs(taskError);
     }
 
-    /// <summary>Covers the synchronous collect-list and collect-array operator branches.</summary>
+    /// <summary>Asserts collect-list and collect-array emit the entire source as a single value.</summary>
     /// <param name="source">A four-element integer source.</param>
     /// <exception cref="InvalidOperationException">A collect operator produced an unexpected sequence.</exception>
     private static void VerifyCollectOperators(IObservable<int> source)

@@ -8,12 +8,15 @@ using System.Windows.Threading;
 namespace ReactiveUI.Primitives.Reactive.Concurrency;
 
 /// <summary>WPF dispatcher scheduler that coalesces scheduled work onto a dispatcher drain.</summary>
+/// <remarks>Work runs on the dispatcher's thread at <see cref="Priority"/> and delayed work fires on a
+/// <see cref="DispatcherTimer"/>, so disposing the returned subscription stops that timer as well as suppressing work
+/// that has not started.</remarks>
 /// <seealso cref="System.Reactive.Concurrency.IScheduler" />
 [System.Diagnostics.DebuggerDisplay("DispatcherSequencer: Dispatcher = {Dispatcher}, Priority = {Priority}")]
 public sealed class DispatcherSequencer : CoalescingDispatchScheduler
 {
     /// <summary>Initializes a new instance of the <see cref="DispatcherSequencer"/> class.</summary>
-    /// <param name="dispatcher">The dispatcher.</param>
+    /// <param name="dispatcher">The dispatcher whose thread runs the scheduled work.</param>
     /// <exception cref="ArgumentNullException"><paramref name="dispatcher"/> is <see langword="null"/>.</exception>
     public DispatcherSequencer(Dispatcher dispatcher)
         : this(dispatcher, DispatcherPriority.Normal)
@@ -21,7 +24,7 @@ public sealed class DispatcherSequencer : CoalescingDispatchScheduler
     }
 
     /// <summary>Initializes a new instance of the <see cref="DispatcherSequencer"/> class.</summary>
-    /// <param name="dispatcher">The dispatcher.</param>
+    /// <param name="dispatcher">The dispatcher whose thread runs the scheduled work.</param>
     /// <param name="priority">Dispatcher priority used for posted drains.</param>
     /// <exception cref="ArgumentNullException"><paramref name="dispatcher"/> is <see langword="null"/>.</exception>
     public DispatcherSequencer(Dispatcher dispatcher, DispatcherPriority priority)
@@ -30,7 +33,7 @@ public sealed class DispatcherSequencer : CoalescingDispatchScheduler
         Priority = priority;
     }
 
-    /// <summary>Gets the dispatcher.</summary>
+    /// <summary>Gets the dispatcher whose thread runs the scheduled work.</summary>
     public Dispatcher Dispatcher { get; }
 
     /// <summary>Gets the dispatcher priority used for posted drains.</summary>

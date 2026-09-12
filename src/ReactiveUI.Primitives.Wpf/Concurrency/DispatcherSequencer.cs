@@ -9,6 +9,9 @@ using ReactiveUI.Primitives.Advanced;
 namespace ReactiveUI.Primitives.Concurrency;
 
 /// <summary>WPF dispatcher sequencer that coalesces scheduled work onto a dispatcher drain.</summary>
+/// <remarks>Work runs on the dispatcher's thread at <see cref="Priority"/>, one batch per posted drain; scheduling from
+/// that thread queues the item for the next drain rather than running it inline. Delayed work fires on a
+/// <see cref="DispatcherTimer"/>, and an item cancelled before its drain reaches it is skipped.</remarks>
 /// <seealso cref="ISequencer" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class DispatcherSequencer : ISequencer
@@ -17,7 +20,7 @@ public sealed class DispatcherSequencer : ISequencer
     private DispatchSequencerState _state;
 
     /// <summary>Initializes a new instance of the <see cref="DispatcherSequencer"/> class.</summary>
-    /// <param name="dispatcher">The dispatcher.</param>
+    /// <param name="dispatcher">The dispatcher whose thread runs the scheduled work.</param>
     /// <exception cref="ArgumentNullException"><paramref name="dispatcher"/> is <see langword="null"/>.</exception>
     public DispatcherSequencer(Dispatcher dispatcher)
         : this(dispatcher, DispatcherPriority.Normal)
@@ -25,7 +28,7 @@ public sealed class DispatcherSequencer : ISequencer
     }
 
     /// <summary>Initializes a new instance of the <see cref="DispatcherSequencer"/> class.</summary>
-    /// <param name="dispatcher">The dispatcher.</param>
+    /// <param name="dispatcher">The dispatcher whose thread runs the scheduled work.</param>
     /// <param name="priority">Dispatcher priority used for posted drains.</param>
     /// <exception cref="ArgumentNullException"><paramref name="dispatcher"/> is <see langword="null"/>.</exception>
     public DispatcherSequencer(Dispatcher dispatcher, DispatcherPriority priority)
@@ -35,7 +38,7 @@ public sealed class DispatcherSequencer : ISequencer
         _state = new(this, Post, RunDrain, ScheduleDelayed);
     }
 
-    /// <summary>Gets the dispatcher.</summary>
+    /// <summary>Gets the dispatcher whose thread runs the scheduled work.</summary>
     public Dispatcher Dispatcher { get; }
 
     /// <summary>Gets the dispatcher priority used for posted drains.</summary>
@@ -84,7 +87,7 @@ public sealed class DispatcherSequencer : ISequencer
         timer.Start();
     }
 
-    /// <summary>Forwards the cached drain callback to the engine.</summary>
+    /// <summary>Runs one queued batch on the coalescing engine.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void RunDrain() => _state.RunDrain();
 }

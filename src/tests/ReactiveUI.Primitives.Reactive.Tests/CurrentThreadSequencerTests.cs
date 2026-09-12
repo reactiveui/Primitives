@@ -8,10 +8,7 @@ using ReactiveUI.Primitives.Reactive.Concurrency;
 
 namespace ReactiveUI.Primitives.Reactive.Tests;
 
-/// <summary>
-/// Verifies <see cref="CurrentThreadSequencer"/> forwards to System.Reactive's current-thread scheduler,
-/// including the trampoline flag callers use to decide whether they must schedule.
-/// </summary>
+/// <summary>Verifies <see cref="CurrentThreadSequencer"/> forwards to System.Reactive's current-thread scheduler, trampoline flag included.</summary>
 public class CurrentThreadSequencerTests
 {
     /// <summary>Verifies the exposed instance is System.Reactive's current-thread scheduler singleton.</summary>
@@ -21,11 +18,7 @@ public class CurrentThreadSequencerTests
         await Assert.That(CurrentThreadSequencer.Instance)
             .IsSameReferenceAs(System.Reactive.Concurrency.CurrentThreadScheduler.Instance);
 
-    /// <summary>
-    /// Verifies the schedule-required flag mirrors System.Reactive. Outside a trampoline both are
-    /// <see langword="true"/>; the assertion compares the two rather than a literal so the test states the
-    /// forwarding contract rather than a snapshot of the runtime's state.
-    /// </summary>
+    /// <summary>Verifies the schedule-required flag mirrors System.Reactive's.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenScheduleRequiredRead_ThenItMirrorsTheCurrentThreadScheduler() =>

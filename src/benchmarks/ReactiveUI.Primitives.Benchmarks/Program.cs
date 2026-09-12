@@ -104,9 +104,8 @@ internal static class Program
             "Design",
             "SST2318:Members should not have identical bodies",
             Justification =
-                "Write(char) and Write(string?) are distinct TextWriter overrides that this tee-writer implements the "
-                + "same way: forward to both underlying writers. They are separate base-class overrides over different "
-                + "parameter types and cannot be collapsed.")]
+                "Write(char) and Write(string?) are distinct TextWriter overrides over different parameter types and "
+                + "cannot be collapsed into one.")]
         public override void Write(string? value)
         {
             primary.Write(value);

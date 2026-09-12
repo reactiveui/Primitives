@@ -4,19 +4,10 @@
 
 namespace ReactiveUI.Primitives.Extensions;
 
-/// <summary>
-/// Pure-plumbing helpers for swap-on-write <see cref="IObserver{T}"/> arrays. Centralizes the
-/// empty-array short-circuit on broadcast and the not-present short-circuit on remove so the
-/// operator hot paths stay branchless on the steady state. Every branch is a pure function
-/// over its inputs and is directly RxVoid-testable through this class.
-/// </summary>
+/// <summary>Helpers for broadcasting to, and removing from, swap-on-write <see cref="IObserver{T}"/> arrays.</summary>
 public static class ObserverArrayHelpers
 {
-    /// <summary>
-    /// Snapshots the supplied observer array and fans the value out to every observer in order.
-    /// Returns silently if the array is empty (which happens during the race between the last
-    /// unsubscribe and an already-scheduled broadcast).
-    /// </summary>
+    /// <summary>Fans <paramref name="value"/> out to every observer in <paramref name="observers"/> in order; an empty array emits nothing.</summary>
     /// <typeparam name="T">The value type.</typeparam>
     /// <param name="observers">The observer array snapshot.</param>
     /// <param name="value">The value to broadcast.</param>
@@ -33,18 +24,14 @@ public static class ObserverArrayHelpers
         }
     }
 
-    /// <summary>
-    /// Returns a new observer array with <paramref name="observer"/> removed, or
-    /// <see langword="null"/> if the observer was not in the array (which happens during
-    /// the race between an idempotent subscription dispose and a previous successful remove).
-    /// </summary>
+    /// <summary>Copies <paramref name="current"/> without <paramref name="observer"/>, reporting absence so a caller can skip the swap entirely.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="current">The current observer array snapshot.</param>
     /// <param name="observer">The observer to remove.</param>
     /// <param name="empty">The sentinel empty array.</param>
     /// <returns>
-    /// The new array (possibly the empty sentinel), or <see langword="null"/> if the observer
-    /// was not present.
+    /// The shortened array, <paramref name="empty"/> when the removed observer was the last one, or
+    /// <see langword="null"/> when the observer is absent from <paramref name="current"/>.
     /// </returns>
     public static IObserver<T>[]? RemoveOrNull<T>(
         IObserver<T>[] current,

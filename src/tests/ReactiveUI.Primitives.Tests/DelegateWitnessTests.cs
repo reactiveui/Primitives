@@ -6,7 +6,7 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>Coverage for the public <see cref="DelegateWitness{T}"/> surface.</summary>
+/// <summary>Tests for <see cref="DelegateWitness{T}"/>.</summary>
 public class DelegateWitnessTests
 {
     /// <summary>The literal one.</summary>

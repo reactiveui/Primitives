@@ -8,6 +8,10 @@ using ReactiveUI.Primitives.Advanced;
 namespace ReactiveUI.Primitives.Concurrency;
 
 /// <summary>Windows Forms sequencer that coalesces scheduled work through a UI control.</summary>
+/// <remarks>Work runs on the control's UI thread, one batch per posted drain; scheduling from that thread queues the
+/// item for the next drain rather than running it inline. Work scheduled before the control has a handle stays queued
+/// until handle creation posts a drain, and delayed work waits on a shared timer that marshals it back through the
+/// control when due.</remarks>
 /// <seealso cref="ISequencer" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class ControlSequencer : ISequencer
@@ -70,7 +74,7 @@ public sealed class ControlSequencer : ISequencer
         }
     }
 
-    /// <summary>Forwards the cached drain callback to the engine.</summary>
+    /// <summary>Runs one queued batch on the coalescing engine.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void RunDrain() => _state.RunDrain();
 

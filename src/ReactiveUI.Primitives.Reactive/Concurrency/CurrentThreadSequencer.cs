@@ -12,6 +12,6 @@ internal static class CurrentThreadSequencer
     /// <summary>Gets the singleton current-thread scheduler.</summary>
     internal static IScheduler Instance => CurrentThreadScheduler.Instance;
 
-    /// <summary>Gets a value indicating whether the caller must call a Schedule method.</summary>
+    /// <summary>Gets a value indicating whether the caller must schedule work instead of running it inline.</summary>
     internal static bool IsScheduleRequired => CurrentThreadScheduler.IsScheduleRequired;
 }

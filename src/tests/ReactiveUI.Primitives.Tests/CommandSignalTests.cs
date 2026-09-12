@@ -68,7 +68,7 @@ public sealed partial class CommandSignalTests
         await Assert.That(rejected!.Message).IsEqualTo("Command cannot run.");
     }
 
-    /// <summary>Verifies command aliases, sync execution failures, and disposal branches.</summary>
+    /// <summary>A synchronous command that throws publishes the fault, and a disposed command rejects execution.</summary>
     /// <returns>A task that completes when command assertions finish.</returns>
     [Test]
     public async Task CommandSignalCoversSyncFaultAndDisposalBranches()
@@ -130,11 +130,7 @@ public sealed partial class CommandSignalTests
         await Assert.That(installed.Value).IsFalse();
     }
 
-    /// <summary>
-    /// Verifies the running-state stream is allocated lazily, cached on the second access, and
-    /// reports <see langword="false"/> when first observed on an idle command (the install CAS wins
-    /// and the post-install reconcile publishes the authoritative flag).
-    /// </summary>
+    /// <summary>The running-state stream is allocated lazily, cached, and reports <see langword="false"/> on an idle command.</summary>
     /// <returns>A task that completes when the lazy-allocation assertions finish.</returns>
     [Test]
     public async Task IsRunningAllocatesLazilyAndCachesTheStream()
@@ -148,11 +144,7 @@ public sealed partial class CommandSignalTests
         await Assert.That(first.Value).IsFalse();
     }
 
-    /// <summary>
-    /// Verifies a normal true-then-false transition flows through an already-installed stream: the
-    /// stream is observed before execution, so <c>SetRunning</c> takes the "stream present" path on
-    /// both edges and the running flag returns to <see langword="false"/> at the end.
-    /// </summary>
+    /// <summary>A stream observed before execution sees the true-then-false transition and ends at <see langword="false"/>.</summary>
     /// <returns>A task that completes when the transition assertions finish.</returns>
     [Test]
     public async Task IsRunningTransitionsTrueThenFalseThroughInstalledStream()
@@ -167,11 +159,7 @@ public sealed partial class CommandSignalTests
         await Assert.That(running.SequenceEqual(ExpectedRunningValues)).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that when an execution completes without the running-state stream ever having been
-    /// observed, <c>SetRunning</c> exercises the "stream still null" reconciliation branch and a
-    /// later first observation still reports <see langword="false"/>.
-    /// </summary>
+    /// <summary>A first observation made after the execution completes reports <see langword="false"/>.</summary>
     /// <returns>A task that completes when the deferred-observation assertions finish.</returns>
     [Test]
     public async Task IsRunningReportsFalseWhenObservedOnlyAfterExecution()
@@ -183,12 +171,7 @@ public sealed partial class CommandSignalTests
         await Assert.That(command.IsRunning.Value).IsFalse();
     }
 
-    /// <summary>
-    /// Drives the lazy install deterministically: the stream is first observed while an async
-    /// execution is in flight (running flag true), then the execution completes and lowers it. This
-    /// exercises the install-side re-sync seeding a <see langword="true"/> value followed by the
-    /// installed-stream completion edge.
-    /// </summary>
+    /// <summary>A stream first observed mid-flight reports <see langword="true"/>, then <see langword="false"/> once the execution completes.</summary>
     /// <returns>A task that completes when the mid-flight assertions finish.</returns>
     [Test]
     public async Task IsRunningObservedMidFlightSettlesFalseAfterCompletion()
@@ -219,15 +202,13 @@ public sealed partial class CommandSignalTests
 
         _ = command.ExecuteAsync();
 
-        // Remove from the middle of a three-observer array: the survivors must both keep receiving.
+        // Removing the middle of a three-observer array leaves both survivors receiving.
         secondSubscription.Dispose();
         _ = command.ExecuteAsync();
 
-        // Remove from a two-observer array, collapsing it back to a single observer.
         thirdSubscription.Dispose();
         _ = command.ExecuteAsync();
 
-        // Removing the last observer, then disposing the same handle again, must both be safe.
         firstSubscription.Dispose();
         firstSubscription.Dispose();
         _ = command.ExecuteAsync();
@@ -238,10 +219,7 @@ public sealed partial class CommandSignalTests
         await Assert.That(first.TrueForAll(static value => value == CommandResult)).IsTrue();
     }
 
-    /// <summary>
-    /// Disposing the command drops its observer set, so a subscription handle disposed afterwards has nothing
-    /// to detach from. That must be a quiet no-op rather than a failure.
-    /// </summary>
+    /// <summary>Disposing a result subscription after the command is disposed is a quiet no-op.</summary>
     /// <returns>A task that completes when the post-disposal assertions finish.</returns>
     [Test]
     public async Task ResultSubscriptionDisposedAfterTheCommandIsSafe()
@@ -257,18 +235,14 @@ public sealed partial class CommandSignalTests
         _ = Assert.Throws<ObjectDisposedException>(() => command.Results.Subscribe(results.Add));
     }
 
-    /// <summary>
-    /// An async command that faults publishes the fault to the fault stream before the awaited task rethrows it,
-    /// and still lowers the running flag on the way out.
-    /// </summary>
+    /// <summary>An async command that faults publishes the fault before the await rethrows it, and lowers the running flag.</summary>
     /// <returns>A task that completes when the async-fault assertions finish.</returns>
     [Test]
     public async Task AsyncExecutionPublishesTheFaultAndStillLowersTheRunningFlag()
     {
         InvalidOperationException fault = new("async failed");
 
-        // The delegate type is spelled out because a body that only throws gives the compiler no return
-        // expression to infer Task<int> from.
+        // The delegate type is spelled out: a throw-only body gives the compiler nothing to infer Task<int> from.
         Func<CancellationToken, Task<int>> execute = async token =>
         {
             await Task.Yield();
@@ -299,10 +273,7 @@ public sealed partial class CommandSignalTests
         await Assert.That(command.IsRunning.Value).IsFalse();
     }
 
-    /// <summary>
-    /// The fault stream is allocated on first use and cached thereafter, and disposing the command tears down
-    /// the gate subscription along with the streams it created.
-    /// </summary>
+    /// <summary>The fault stream is cached after first use, and disposing the command releases the gate subscription.</summary>
     /// <returns>A task that completes when the lazy-fault-stream assertions finish.</returns>
     [Test]
     public async Task FaultsAllocateLazilyAndDisposalReleasesTheGateSubscription()
@@ -319,7 +290,7 @@ public sealed partial class CommandSignalTests
 
         command.Dispose();
 
-        // The command released the gate, so the gate signal no longer feeds anything.
+        // The command released the gate, so the gate signal feeds nothing.
         await Assert.That(canRun.HasObservers).IsFalse();
         await Assert.That(running.IsDisposed).IsTrue();
     }

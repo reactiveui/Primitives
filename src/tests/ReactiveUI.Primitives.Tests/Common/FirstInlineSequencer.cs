@@ -12,10 +12,10 @@ namespace ReactiveUI.Primitives.Tests;
 [System.Diagnostics.DebuggerDisplay("FirstInlineSequencer: Now = {Now}, Started = {_started}, Pending = {_pending.Count}")]
 public sealed class FirstInlineSequencer(TimeSpan advanceBeforeFirst) : ISequencer
 {
-    /// <summary>The work items queued after the first, still waiting to run.</summary>
+    /// <summary>The work items queued after the first, waiting to run.</summary>
     private readonly List<IWorkItem> _pending = [];
 
-    /// <summary>Whether the inline first item has already run.</summary>
+    /// <summary>Whether the inline first item has run.</summary>
     private bool _started;
 
     /// <summary>Gets the sequencer's notion of current time.</summary>

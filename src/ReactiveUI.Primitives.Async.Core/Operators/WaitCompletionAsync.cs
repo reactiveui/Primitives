@@ -16,8 +16,8 @@ public static partial class SignalAsyncExtensions
     {
         /// <summary>Asynchronously waits for the observable sequence to complete without retrieving any values.</summary>
         /// <returns>A ValueTask that represents the asynchronous wait operation.</returns>
-        /// <remarks>This method subscribes to the observable sequence and completes when the sequence signals
-        /// completion or when the operation is canceled. Any values produced by the sequence are ignored.</remarks>
+        /// <remarks>The source is subscribed once and its values are ignored; the returned task completes when the
+        /// sequence completes and faults with the error when it fails.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask WaitCompletionAsync() =>
             source.WaitCompletionAsync(CancellationToken.None);
@@ -25,8 +25,8 @@ public static partial class SignalAsyncExtensions
         /// <summary>Asynchronously waits for the observable sequence to complete without retrieving any values.</summary>
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the wait operation.</param>
         /// <returns>A ValueTask that represents the asynchronous wait operation.</returns>
-        /// <remarks>This method subscribes to the observable sequence and completes when the sequence signals
-        /// completion or when the operation is canceled. Any values produced by the sequence are ignored.</remarks>
+        /// <remarks>The source is subscribed once and its values are ignored; the returned task completes when the
+        /// sequence completes and faults with the error when it fails.</remarks>
         public async ValueTask WaitCompletionAsync(
             CancellationToken cancellationToken)
         {

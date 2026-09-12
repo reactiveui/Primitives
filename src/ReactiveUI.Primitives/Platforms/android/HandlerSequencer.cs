@@ -24,8 +24,7 @@ public sealed class HandlerSequencer : ISequencer
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Maintainability",
         "SST1422:Move this field into the method that uses it",
-        Justification =
-            "Persistent lazy cache: the JNI runnable bridge is built once and reused across every Post call, so it cannot be a method local.")]
+        Justification = "The JNI runnable bridge is built once and reused across every posted batch.")]
     private Java.Lang.IRunnable? _drainRunnable;
 
     /// <summary>Initializes a new instance of the <see cref="HandlerSequencer"/> class.</summary>

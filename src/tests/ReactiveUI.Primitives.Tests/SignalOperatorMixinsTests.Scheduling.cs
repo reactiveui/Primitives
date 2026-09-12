@@ -13,7 +13,7 @@ namespace ReactiveUI.Primitives.Tests;
 /// <summary>Tests scheduled delivery and virtual-time operator behavior.</summary>
 public partial class SignalOperatorMixinsTests
 {
-    /// <summary>Verifies the timestamp operator immediate and clock-backed branches.</summary>
+    /// <summary>Timestamp stamps every value from its immediate or clock-backed sequencer and rejects null observers.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     private static async Task VerifyTimestampBranches()
     {
@@ -56,7 +56,7 @@ public partial class SignalOperatorMixinsTests
             immediateTimestampSignal.Subscribe((Action<Moment<int>>)null!, static _ => { }, static () => { }));
     }
 
-    /// <summary>Verifies the time-interval operator immediate and clock-backed branches.</summary>
+    /// <summary>Time-interval reports a zero gap for values its sequencer delivers without advancing the clock.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     private static async Task VerifyTimeIntervalBranches()
     {
@@ -116,7 +116,7 @@ public partial class SignalOperatorMixinsTests
             immediateIntervalSignal.Subscribe((Action<TimeInterval<int>>)null!, static _ => { }, static () => { }));
     }
 
-    /// <summary>Verifies delay-start signal branches, the sequencer work item, and queue guard clauses.</summary>
+    /// <summary>Verifies delay-start delivery, the sequencer work item, and the queue guard clauses.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     private static async Task VerifyDelayStartAndWorkItemBranches()
     {
@@ -173,8 +173,6 @@ public partial class SignalOperatorMixinsTests
     /// <returns>A task representing the asynchronous verification.</returns>
     private static async Task VerifySequencerWorkItemDisposalBranches()
     {
-        // Invoke then dispose: the published disposable is released by Dispose exactly once,
-        // and a redundant second Dispose is a no-op.
         var invokeThenDisposeReleased = 0;
         SequencerWorkItem<ISequencer, int> invokeThenDispose = new(Sequencer.Immediate, One, (_, _) =>
             new ActionDisposable(() => Interlocked.Increment(ref invokeThenDisposeReleased)));
@@ -198,11 +196,10 @@ public partial class SignalOperatorMixinsTests
         await VerifySequencerWorkItemDisposeRaceInvariant();
     }
 
-    /// <summary>Verifies both compare-exchange outcomes of <c>SequencerWorkItem.Publish</c>.</summary>
+    /// <summary>Publish stores its disposable into an empty slot and releases it when the slot is claimed.</summary>
     /// <returns>A task representing the asynchronous verification.</returns>
     private static async Task VerifySequencerWorkItemPublishBranches()
     {
-        // Publish wins the empty slot: the disposable is stored and left alive for Dispose.
         var stored = 0;
         ActionDisposable storedDisposable = new(() => Interlocked.Increment(ref stored));
         IDisposable? winSlot = null;
@@ -210,7 +207,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(ReferenceEquals(winSlot, storedDisposable)).IsTrue();
         await Assert.That(stored).IsEqualTo(0);
 
-        // Publish loses to disposal (slot already claimed): the disposable is released immediately.
+        // A non-null slot means disposal claimed it first, so Publish releases the disposable.
         var loserDisposed = 0;
         ActionDisposable loser = new(() => Interlocked.Increment(ref loserDisposed));
         IDisposable? loseSlot = EmptyDisposable.Instance;
@@ -235,7 +232,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(disposed).IsEqualTo(1);
     }
 
-    /// <summary>Verifies the thread pool absolute scheduling and scheduled work item disposal branches.</summary>
+    /// <summary>Verifies absolute thread pool scheduling and the disposal of a scheduled work item.</summary>
     /// <returns>A task representing the asynchronous verification.</returns>
     private static async Task VerifyThreadPoolWorkItemBranchesAsync()
 {

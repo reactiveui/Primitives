@@ -12,7 +12,7 @@ public interface IObservableAsync<T>
 {
     /// <summary>Subscribes the specified asynchronous observer to receive notifications from the observable sequence.</summary>
     /// <param name="observer">The observer that will receive asynchronous notifications. Cannot be null.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used to cancel the subscription operation.</param>
+    /// <param name="cancellationToken">A token that cancels establishing the subscription.</param>
     /// <returns>A handle whose disposal unsubscribes the observer.</returns>
     /// <remarks>Implementations must tolerate several observers subscribed at once, and must release the
     /// subscription's resources when the returned handle is disposed.</remarks>

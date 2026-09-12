@@ -4,19 +4,19 @@
 
 namespace ReactiveUI.Primitives.Disposables;
 
-/// <summary>A disposable that cancels an owned <see cref="CancellationTokenSource"/> when disposed.</summary>
+/// <summary>A disposable that cancels a <see cref="CancellationTokenSource"/> when disposed; the source itself is left undisposed.</summary>
 /// <seealso cref="IDisposable" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class CancellationDisposable : IsDisposed
 {
-    /// <summary>Cancellation source owned by this disposable.</summary>
+    /// <summary>The source cancelled on disposal.</summary>
     private readonly CancellationTokenSource _cts;
 
     /// <summary>Disposed latch; 0 when alive, 1 once disposed.</summary>
     private int _isDisposed;
 
     /// <summary>Initializes a new instance of the <see cref="CancellationDisposable"/> class.</summary>
-    /// <param name="cts">The CTS.</param>
+    /// <param name="cts">The source to cancel when this instance is disposed.</param>
     /// <exception cref="ArgumentNullException"><paramref name="cts"/> is <see langword="null"/>.</exception>
     public CancellationDisposable(CancellationTokenSource cts) =>
         _cts = cts ?? throw new ArgumentNullException(nameof(cts));
@@ -27,16 +27,10 @@ public sealed class CancellationDisposable : IsDisposed
     {
     }
 
-    /// <summary>Gets the token.</summary>
-    /// <value>
-    /// The token.
-    /// </value>
+    /// <summary>Gets the token that enters the cancelled state when this instance is disposed.</summary>
     public CancellationToken Token => _cts.Token;
 
     /// <summary>Gets a value indicating whether this instance is disposed.</summary>
-    /// <value>
-    /// <c>true</c> if this instance is disposed; otherwise, <c>false</c>.
-    /// </value>
     public bool IsDisposed => Volatile.Read(ref _isDisposed) != 0;
 
     /// <summary>Gets the debugger display text.</summary>
@@ -44,7 +38,7 @@ public sealed class CancellationDisposable : IsDisposed
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
-    /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
+    /// <summary>Cancels the source on the first call; repeated calls have no further effect.</summary>
     public void Dispose()
     {
         // Atomic run-once latch so concurrent disposal cannot cancel the source twice.

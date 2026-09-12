@@ -8,38 +8,31 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>A signal that exposes its next value as an awaitable operation.</summary>
-/// <typeparam name="T">The Type.</typeparam>
-/// <seealso cref="ISignal&lt;T&gt;" />
+/// <summary>A signal that records the latest value and replays it to observers when it completes, so the completion can be awaited.</summary>
+/// <typeparam name="T">The observed value type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class AsyncSignal<T> : IAwaitSignal<T>
 {
     /// <summary>Serializes observer changes and terminal-state transitions.</summary>
     private readonly Lock _observerLock = new();
 
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The most recent value, replayed when the signal completes.</summary>
     private T? _lastValue;
 
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>Whether a value has been recorded.</summary>
     private bool _hasValue;
 
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The terminal error, when the signal faulted.</summary>
     private Exception? _lastError;
 
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The dispatch target: the empty witness, a single observer, or a <see cref="ListWitness{T}"/> fan-out.</summary>
     private IObserver<T> _outObserver = EmptyWitness<T>.Instance;
 
     /// <summary>Gets a value indicating whether this instance is disposed.</summary>
-    /// <value>
-    ///   <c>true</c> if this instance is disposed; otherwise, <c>false</c>.
-    /// </value>
     public bool IsDisposed { get; private set; }
 
-    /// <summary>Gets the value.</summary>
-    /// <value>
-    /// The value.
-    /// </value>
-    /// <exception cref="InvalidOperationException">The final signal is not completed yet.</exception>
+    /// <summary>Gets the value the signal completed with.</summary>
+    /// <exception cref="InvalidOperationException">The signal has not completed.</exception>
     public T Value
     {
         get
@@ -56,16 +49,10 @@ public sealed class AsyncSignal<T> : IAwaitSignal<T>
         }
     }
 
-    /// <summary>Gets a value indicating whether this instance has observers.</summary>
-    /// <value>
-    ///   <c>true</c> if this instance has observers; otherwise, <c>false</c>.
-    /// </value>
+    /// <summary>Gets a value indicating whether an observer is subscribed and the signal has neither completed nor been disposed.</summary>
     public bool HasObservers => _outObserver is not EmptyWitness<T> && !IsCompleted && !IsDisposed;
 
     /// <summary>Gets a value indicating whether this instance is completed.</summary>
-    /// <value>
-    ///   <c>true</c> if this instance is completed; otherwise, <c>false</c>.
-    /// </value>
     public bool IsCompleted { get; private set; }
 
     /// <summary>Gets the debugger display text.</summary>
@@ -73,7 +60,7 @@ public sealed class AsyncSignal<T> : IAwaitSignal<T>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
-    /// <summary>Called when [completed].</summary>
+    /// <summary>Completes the signal, emitting the recorded value to the current observers first when one was recorded.</summary>
     public void OnCompleted()
     {
         IObserver<T> observers;
@@ -105,9 +92,9 @@ public sealed class AsyncSignal<T> : IAwaitSignal<T>
         }
     }
 
-    /// <summary>Specifies a callback action that will be invoked when the subject completes.</summary>
-    /// <param name="continuation">Callback action that will be invoked when the subject completes.</param>
-    /// <exception cref="ArgumentExceptionHelper"><paramref name="continuation"/> is null.</exception>
+    /// <summary>Registers a callback to run when the signal terminates, on the captured synchronization context.</summary>
+    /// <param name="continuation">The callback to run on completion or failure.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="continuation"/> is <see langword="null"/>.</exception>
     public void OnCompleted(Action continuation)
     {
         ArgumentExceptionHelper.ThrowIfNull(continuation);
@@ -115,9 +102,9 @@ public sealed class AsyncSignal<T> : IAwaitSignal<T>
         SubscribeCompletion(continuation, true);
     }
 
-    /// <summary>Called when [error].</summary>
-    /// <param name="error">The error.</param>
-    /// <exception cref="ArgumentExceptionHelper">error.</exception>
+    /// <summary>Faults the signal and forwards <paramref name="error"/> to the current observers, discarding any recorded value.</summary>
+    /// <param name="error">The terminal error.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="error"/> is <see langword="null"/>.</exception>
     public void OnError(Exception error)
     {
         ArgumentExceptionHelper.ThrowIfNull(error);
@@ -140,8 +127,8 @@ public sealed class AsyncSignal<T> : IAwaitSignal<T>
         observers.OnError(error);
     }
 
-    /// <summary>Called when [next].</summary>
-    /// <param name="value">The value.</param>
+    /// <summary>Records <paramref name="value"/> as the value replayed on completion; observers are not notified here.</summary>
+    /// <param name="value">The value to record.</param>
     public void OnNext(T value)
     {
         lock (_observerLock)
@@ -157,10 +144,10 @@ public sealed class AsyncSignal<T> : IAwaitSignal<T>
         }
     }
 
-    /// <summary>Subscribes the specified observer.</summary>
-    /// <param name="observer">The observer.</param>
-    /// <returns>A Disposable.</returns>
-    /// <exception cref="ArgumentExceptionHelper">observer.</exception>
+    /// <summary>Subscribes an observer, delivering the terminal value or error immediately when the signal has completed.</summary>
+    /// <param name="observer">The observer to subscribe.</param>
+    /// <returns>A handle that removes the observer when disposed.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="observer"/> is <see langword="null"/>.</exception>
     public IDisposable Subscribe(IObserver<T> observer)
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
@@ -211,7 +198,7 @@ public sealed class AsyncSignal<T> : IAwaitSignal<T>
         return EmptyDisposable.Instance;
     }
 
-    /// <summary>Releases unmanaged and - optionally - managed resources.</summary>
+    /// <summary>Drops the observers and the recorded value, making every later notification throw.</summary>
     public void Dispose()
     {
         if (IsDisposed)
@@ -229,13 +216,13 @@ public sealed class AsyncSignal<T> : IAwaitSignal<T>
         IsDisposed = true;
     }
 
-    /// <summary>Gets an awaitable object for the current final signal.</summary>
-    /// <returns>Object that can be awaited.</returns>
+    /// <summary>Gets the awaiter for this signal.</summary>
+    /// <returns>The signal itself, which acts as its own awaiter.</returns>
     public IAwaitSignal<T> GetAwaiter() => this;
 
-    /// <summary>Gets the last element of the subject, potentially blocking until the subject completes successfully or exceptionally.</summary>
-    /// <returns>The last element of the subject. Throws an InvalidOperationException if no element was received.</returns>
-    /// <exception cref="InvalidOperationException">The source sequence is empty.</exception>
+    /// <summary>Gets the completed value, blocking the calling thread until the signal completes or faults.</summary>
+    /// <returns>The recorded value, after rethrowing the terminal error when the signal faulted.</returns>
+    /// <exception cref="InvalidOperationException">The signal completed without recording a value.</exception>
     public T GetResult()
     {
         WaitIfPending(WaitForCompletion);
@@ -249,7 +236,7 @@ public sealed class AsyncSignal<T> : IAwaitSignal<T>
         return _lastValue!;
     }
 
-    /// <summary>Removes an observer previously registered via <see cref="Subscribe"/>. Called by the observer's subscription handle when it is disposed.</summary>
+    /// <summary>Removes an observer registered via <see cref="Subscribe"/>; the observer's subscription handle calls this on disposal.</summary>
     /// <param name="observer">The observer to remove.</param>
     public void RemoveObserver(IObserver<T> observer)
     {
@@ -285,7 +272,7 @@ public sealed class AsyncSignal<T> : IAwaitSignal<T>
     }
 
     /// <summary>Rejects operations after the signal has been disposed.</summary>
-    /// <exception cref="ObjectDisposedException">This instance has already been disposed.</exception>
+    /// <exception cref="ObjectDisposedException">The signal is disposed.</exception>
     private void ThrowIfDisposed()
     {
         if (!IsDisposed)
@@ -297,8 +284,8 @@ public sealed class AsyncSignal<T> : IAwaitSignal<T>
     }
 
     /// <summary>Registers a callback for either terminal notification.</summary>
-    /// <param name="continuation">The continuation value.</param>
-    /// <param name="originalContext">The originalContext value.</param>
+    /// <param name="continuation">The callback invoked on the terminal notification.</param>
+    /// <param name="originalContext">Whether to resume the callback on the captured synchronization context.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void SubscribeCompletion(Action continuation, bool originalContext) =>
         Subscribe(new AwaitWitness<T>(continuation, originalContext));

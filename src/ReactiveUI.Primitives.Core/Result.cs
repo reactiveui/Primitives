@@ -24,16 +24,14 @@ public readonly record struct Result
     /// <summary>Gets a predefined result instance that indicates a successful operation.</summary>
     public static Result Success => default;
 
-    /// <summary>Gets the exception that caused the current operation to fail, if any.</summary>
+    /// <summary>Gets the exception that caused the operation to fail, or <see langword="null"/> when it succeeded.</summary>
     public Exception? Exception { get; }
 
-    /// <summary>Gets a value indicating whether the operation completed successfully without an exception.</summary>
-    /// <remarks>When <see langword="false"/>, <see cref="Exception"/> is non-null.</remarks>
+    /// <summary>Gets a value indicating whether the operation completed without an exception.</summary>
     [MemberNotNullWhen(false, nameof(Exception))]
     public bool IsSuccess => Exception is null;
 
     /// <summary>Gets a value indicating whether the operation has failed.</summary>
-    /// <remarks>When <see langword="true"/>, <see cref="Exception"/> is non-null.</remarks>
     [MemberNotNullWhen(true, nameof(Exception))]
     public bool IsFailure => Exception is not null;
 
@@ -57,7 +55,6 @@ public readonly record struct Result
     }
 
     /// <summary>Returns a string that represents the result status of the operation.</summary>
-    /// <returns>A string indicating "Success" if the operation was successful; otherwise, a string in the format
-    /// "Failure{exception message}" containing the associated exception message.</returns>
+    /// <returns><c>Success</c>, or <c>Failure{message}</c> carrying the failure exception's message.</returns>
     public override string ToString() => IsSuccess ? "Success" : $"Failure{{{Exception.Message}}}";
 }

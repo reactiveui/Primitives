@@ -4,7 +4,7 @@
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>Executes an action at subscription time.</summary>
+/// <summary>Runs an action before subscribing the observer to the source, so an exception from the action propagates out of <c>Subscribe</c>.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="action">The action to execute when subscribed.</param>

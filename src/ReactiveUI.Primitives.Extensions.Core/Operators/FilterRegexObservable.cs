@@ -7,7 +7,10 @@ using System.Text.RegularExpressions;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>Filters strings using a regular expression and forwards matching errors to the observer.</summary>
+/// <summary>
+/// Forwards the source strings that <paramref name="regex"/> matches, dropping non-matches and nulls. An exception
+/// raised while matching, such as a regex timeout, terminates the sequence.
+/// </summary>
 /// <param name="source">The source observable emitting strings.</param>
 /// <param name="regex">The regex to use for filtering.</param>
 public sealed class FilterRegexObservable(
@@ -23,7 +26,7 @@ public sealed class FilterRegexObservable(
         return source.Subscribe(new FilterRegexWitness(observer, regex));
     }
 
-    /// <summary>Observer that filters strings using regex.</summary>
+    /// <summary>Observer that forwards matching strings and turns a failure raised by the match into an error.</summary>
     /// <param name="downstream">The downstream observer receiving strings that match the regex.</param>
     /// <param name="regex">The regex used for filtering.</param>
     private sealed class FilterRegexWitness(

@@ -99,7 +99,7 @@ public class DisposableTests
         await Assert.That(actionCount).IsEqualTo(1);
     }
 
-    /// <summary>Covers disposable slot constructor, disposal, removal, and disposed-assignment branches.</summary>
+    /// <summary>Verifies slot assignment after disposal, replacement, and removal from a disposable group.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task DisposableSlotsCoverAssignmentReplacementAndRemovalBranches()
@@ -125,7 +125,7 @@ public class DisposableTests
         DisposeEveryConstructedSlotShape();
     }
 
-    /// <summary>Verifies low-level disposables, collections, and schedulers cover deterministic edges.</summary>
+    /// <summary>Verifies the disposable, copy-on-write list, priority queue, and scheduling contracts.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task LowLevelDisposablesCollectionsAndSchedulersCoverDeterministicEdges()
@@ -188,7 +188,7 @@ public class DisposableTests
         await Assert.That(scheduled.Count).IsEqualTo(Two);
     }
 
-    /// <summary>Exercises value types, disposables, and handle delegates.</summary>
+    /// <summary>Verifies core value-type equality, disposable lifecycles, and the handle delegates.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task CoreValueTypesDisposablesAndHandlesCoverEqualityAndLifecycleBranches()
@@ -268,7 +268,7 @@ public class DisposableTests
         await Assert.That(multiple.IsDisposed).IsTrue();
     }
 
-    /// <summary>Asserts the protected <c>Dispose(false)</c> path still disposes the underlying disposable exactly once.</summary>
+    /// <summary>Asserts the protected <c>Dispose(false)</c> path disposes the underlying disposable exactly once.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     private static async Task AssertProtectedDisposePathRunsTheUnderlyingDisposableOnce()
     {
@@ -290,7 +290,7 @@ public class DisposableTests
         await Assert.That(multipleFalse).IsEqualTo(1);
     }
 
-    /// <summary>Asserts removal detaches an item from the group and disposal reaches only the items still in it.</summary>
+    /// <summary>Asserts removal detaches an item from the group and disposal reaches only the remaining items.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     private static async Task AssertMultipleDisposableRemovesItemsAndDisposesTheRest()
     {

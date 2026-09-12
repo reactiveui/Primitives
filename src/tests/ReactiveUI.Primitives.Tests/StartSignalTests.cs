@@ -7,10 +7,7 @@ using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Tests for <see cref="StartSignal{T}"/>'s current-thread requirement, which downstream current-thread
-/// operators query to decide whether they must enter the trampoline before subscribing to it.
-/// </summary>
+/// <summary>Verifies <see cref="StartSignal{T}"/> reports whether it must be subscribed on the current thread.</summary>
 public sealed class StartSignalTests
 {
     /// <summary>The value produced by the start function.</summary>

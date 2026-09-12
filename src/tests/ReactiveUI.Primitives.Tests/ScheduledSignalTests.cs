@@ -33,7 +33,7 @@ public sealed class ScheduledSignalTests
     /// <summary>The expected terminal exception message.</summary>
     private const string TerminalThrowMessage = "terminal";
 
-    /// <summary>The default observer receives the original terminal event and the restored replay.</summary>
+    /// <summary>The terminal notification count the default observer receives across completion and replay.</summary>
     private const int DefaultObserverTerminalReplayCount = 2;
 
     /// <summary>Constructor validates the scheduler argument.</summary>
@@ -160,7 +160,7 @@ public sealed class ScheduledSignalTests
             .ThrowsExactly<ObjectDisposedException>();
     }
 
-    /// <summary>The protected dispose path marks the signal disposed when managed cleanup is not requested.</summary>
+    /// <summary>The protected dispose overload marks the signal disposed when managed cleanup is not requested.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task DisposeWithoutManagedCleanupMarksSignalDisposed()

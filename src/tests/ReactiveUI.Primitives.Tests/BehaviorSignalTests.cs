@@ -22,19 +22,19 @@ public class BehaviorSignalTests
     /// <summary>Value that should be ignored after completion.</summary>
     private const int IgnoredAfterCompletionValue = 1234;
 
-    /// <summary>Subscribes the argument checking.</summary>
+    /// <summary>Verifies a behavior signal rejects a null observer.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void Subscribe_ArgumentChecking() =>
         Assert.Throws<ArgumentNullException>(static () => new BehaviorSignal<int>(1).Subscribe(null!));
 
-    /// <summary>Called when [error argument checking].</summary>
+    /// <summary>Verifies a behavior signal rejects a null error.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void OnError_ArgumentChecking() =>
         Assert.Throws<ArgumentNullException>(static () => new BehaviorSignal<int>(1).OnError(null!));
 
-    /// <summary>Determines whether this instance has observers.</summary>
+    /// <summary>Verifies a behavior signal tracks observers as subscriptions are added and removed.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task HasObservers()
@@ -55,7 +55,7 @@ public class BehaviorSignalTests
         await Assert.That(s.HasObservers).IsFalse();
     }
 
-    /// <summary>Determines whether [has observers dispose1].</summary>
+    /// <summary>Verifies a behavior signal drops its observers when the signal is disposed first.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task HasObservers_Dispose1()
@@ -74,7 +74,7 @@ public class BehaviorSignalTests
         await Assert.That(s.IsDisposed).IsTrue();
     }
 
-    /// <summary>Determines whether [has observers dispose2].</summary>
+    /// <summary>Verifies a behavior signal drops its observers when the subscription is disposed first.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task HasObservers_Dispose2()
@@ -93,7 +93,7 @@ public class BehaviorSignalTests
         await Assert.That(s.IsDisposed).IsTrue();
     }
 
-    /// <summary>Determines whether [has observers dispose3].</summary>
+    /// <summary>Verifies a behavior signal with no subscribers reports itself as disposed.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task HasObservers_Dispose3()
@@ -106,7 +106,7 @@ public class BehaviorSignalTests
         await Assert.That(s.IsDisposed).IsTrue();
     }
 
-    /// <summary>Determines whether [has observers on completed].</summary>
+    /// <summary>Verifies completion drops a behavior signal's observers.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task HasObservers_OnCompleted()
@@ -121,7 +121,7 @@ public class BehaviorSignalTests
         await Assert.That(s.HasObservers).IsFalse();
     }
 
-    /// <summary>Determines whether [has observers on error].</summary>
+    /// <summary>Verifies an error drops a behavior signal's observers.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task HasObservers_OnError()
@@ -138,7 +138,7 @@ public class BehaviorSignalTests
         await Assert.That(s.HasObservers).IsFalse();
     }
 
-    /// <summary>Values the initial.</summary>
+    /// <summary>Verifies a new behavior signal exposes the initial value it was constructed with.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task Value_Initial()
@@ -149,7 +149,7 @@ public class BehaviorSignalTests
         await Assert.That(x).IsEqualTo(InitialValue);
     }
 
-    /// <summary>Values the first.</summary>
+    /// <summary>Verifies a behavior signal's value follows the first emitted value.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task Value_First()
@@ -164,7 +164,7 @@ public class BehaviorSignalTests
         await Assert.That(x).IsEqualTo(FirstUpdatedValue);
     }
 
-    /// <summary>Values the second.</summary>
+    /// <summary>Verifies a behavior signal's value follows each subsequent emitted value.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task Value_Second()
@@ -183,7 +183,7 @@ public class BehaviorSignalTests
         await Assert.That(x).IsEqualTo(SecondUpdatedValue);
     }
 
-    /// <summary>Values the frozen after on completed.</summary>
+    /// <summary>Verifies a completed behavior signal keeps its last value and ignores later values.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task Value_FrozenAfterOnCompleted()
@@ -210,7 +210,7 @@ public class BehaviorSignalTests
         await Assert.That(x).IsEqualTo(SecondUpdatedValue);
     }
 
-    /// <summary>Values the throws after on error.</summary>
+    /// <summary>Verifies reading the value of a faulted behavior signal rethrows its error.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task Value_ThrowsAfterOnError()
@@ -222,7 +222,7 @@ public class BehaviorSignalTests
         _ = Assert.Throws<InvalidOperationException>(() => s.TryGetValue(out _));
     }
 
-    /// <summary>Values the throws on dispose.</summary>
+    /// <summary>Verifies reading the value of a disposed behavior signal throws.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task Value_ThrowsOnDispose()

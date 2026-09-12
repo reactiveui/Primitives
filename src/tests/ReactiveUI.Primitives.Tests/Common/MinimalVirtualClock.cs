@@ -7,7 +7,7 @@ using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>Creates a minimal tick-based <see cref="VirtualTimeSequencer{TAbsolute, TRelative}"/> used to exercise scheduling edge branches.</summary>
+/// <summary>Creates a minimal tick-based <see cref="VirtualTimeSequencer{TAbsolute, TRelative}"/>.</summary>
 internal static class MinimalVirtualClock
 {
     /// <summary>Adds a tick offset to an absolute tick value.</summary>

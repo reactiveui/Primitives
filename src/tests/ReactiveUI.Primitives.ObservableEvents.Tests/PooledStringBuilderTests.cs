@@ -142,8 +142,7 @@ public sealed class PooledStringBuilderTests
             builder.Return();
         }
 
-        // The pool is now full; a fresh builder still has to work, whether it was handed a pooled buffer or a
-        // newly allocated one.
+        // With the free list saturated, this builder gets either a pooled buffer or a fresh allocation.
         await Assert.That(new PooledStringBuilder().Append("after").ToStringAndReturn()).IsEqualTo("after");
     }
 
@@ -159,7 +158,7 @@ public sealed class PooledStringBuilderTests
         await Assert.That(builder.ToStringAndReturn()).IsEqualTo("  first\n\n  third\n");
     }
 
-    /// <summary>Verifies a block whose last line has no terminator still gets one.</summary>
+    /// <summary>Verifies a block whose last line has no terminator gets one appended.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task PooledStringBuilderTerminatesAnUnterminatedFinalLine()
