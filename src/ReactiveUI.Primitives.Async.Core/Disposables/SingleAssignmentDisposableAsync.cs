@@ -31,8 +31,7 @@ public sealed class SingleAssignmentDisposableAsync : IAsyncDisposable
         return DisposableAsyncSlot.IsDisposed(field) ? DisposableAsync.Empty : field;
     }
 
-    /// <summary>Assigns the resource this instance owns, disposing <paramref name="value"/> on the spot when this
-    /// instance has been disposed.</summary>
+    /// <summary>Assigns the resource this instance owns, disposing <paramref name="value"/> on the spot when this instance has been disposed.</summary>
     /// <param name="value">The <see cref="IAsyncDisposable"/> to take ownership of, or <see langword="null"/>.</param>
     /// <returns>A <see cref="ValueTask"/> that completes once any disposal this call triggered has finished.</returns>
     /// <exception cref="InvalidOperationException">A resource has been assigned by an earlier call.</exception>

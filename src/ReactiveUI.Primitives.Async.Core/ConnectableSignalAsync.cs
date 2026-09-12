@@ -8,10 +8,7 @@ using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// An asynchronous observable that multicasts a cold source through a signal, leaving the caller to decide when the
-/// source subscription is established.
-/// </summary>
+/// <summary>An asynchronous observable that multicasts a cold source through a signal, leaving the caller to decide when the source subscription is established.</summary>
 /// <typeparam name="T">The type of elements produced by the observable sequence.</typeparam>
 /// <remarks>Subscribing attaches the observer to the signal without touching the source, so observers that subscribe
 /// before <see cref="ConnectAsync"/> all share the one source subscription it creates.</remarks>
@@ -27,9 +24,7 @@ public sealed class ConnectableSignalAsync<T> : IObservableAsync<T>, IDisposable
     /// <summary>Gets the mutable connection state owned by this wrapper.</summary>
     private ConnectableSignalAsyncState<T> State { get; }
 
-    /// <summary>
-    /// Subscribes the signal to the source, or returns the live connection when one exists.
-    /// </summary>
+    /// <summary>Subscribes the signal to the source, or returns the live connection when one exists.</summary>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous connection operation.</param>
     /// <returns>A handle whose disposal drops the source subscription, allowing a later call to reconnect.</returns>
     /// <exception cref="OperationCanceledException">This instance has been disposed, or

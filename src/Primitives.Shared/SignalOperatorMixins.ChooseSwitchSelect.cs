@@ -18,10 +18,7 @@ public static partial class LinqExtensions
     /// <param name="source">The source observable.</param>
     extension<TIn>(IObservable<TIn> source)
     {
-        /// <summary>
-        /// Projects each source value to an inner observable and mirrors only the latest one — a single fused
-        /// sink in place of <c>Select(selector).Switch()</c>.
-        /// </summary>
+        /// <summary>Projects each source value to an inner observable and mirrors only the latest one — a single fused sink in place of <c>Select(selector).Switch()</c>.</summary>
         /// <typeparam name="TOut">The element type of the projected inner observables.</typeparam>
         /// <param name="selector">Projects each source value to an inner observable.</param>
         /// <returns>An observable that mirrors the latest projected inner observable.</returns>

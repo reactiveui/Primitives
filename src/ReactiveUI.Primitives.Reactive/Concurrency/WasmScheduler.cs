@@ -3,19 +3,13 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
-using System.Diagnostics.CodeAnalysis;
 using System.Reactive.Concurrency;
-using Timer = System.Threading.Timer;
 
 namespace ReactiveUI.Primitives.Reactive.Concurrency;
 
 /// <summary>
-/// Task-pool replacement for single-threaded event-loop runtimes such as browser WebAssembly: it never starts
-/// threads, never blocks, and does not support long-running scheduling. Immediate work is batched one drain per
-/// event-loop turn through a zero-due timer (a <c>setTimeout(0)</c> macrotask on WebAssembly, so the browser can
-/// render between batches); delayed and periodic work use one-shot/periodic timers, which the WebAssembly runtime
-/// backs with the JS event loop. Successor to the retired <c>Reactive.Wasm</c> package's scheduler, whose runtime
-/// reflection no longer exists on modern .NET.
+/// Schedules work on a single-threaded event loop without blocking or starting threads. Immediate work runs in
+/// batches between event-loop turns; delayed and periodic work use timers. Long-running scheduling is unsupported.
 /// </summary>
 [System.Diagnostics.DebuggerDisplay("WasmScheduler: ReadyCount = {_readyCount}, DrainState = {_drainState}, Disposed = {_isDisposed}")]
 public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposable
@@ -36,38 +30,36 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
     private readonly ConcurrentQueue<IReadyWorkItem> _ready = new();
 
     /// <summary>One-shot timer used to yield a drain to the event loop.</summary>
-    private readonly Timer _drainTimer;
+    private readonly ITimer _drainTimer;
+
+    /// <summary>Creates the timers that dispatch scheduled work.</summary>
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>Approximate number of ready items; snapshots a drain batch.</summary>
     private int _readyCount;
 
-    /// <summary>
-    /// Single-flight drain state: <c>0</c> idle, <c>1</c> a drain is running, <c>2</c> a drain is running and more
-    /// work arrived while it ran. Keeping at most one drain in flight preserves the single-threaded, FIFO,
-    /// one-drain-per-event-loop-turn semantics the type promises even though the backing timer may fire callbacks
-    /// on more than one thread-pool thread.
-    /// </summary>
+    /// <summary>Drain state: zero idle, one active, two active with another pass requested.</summary>
     private int _drainState;
 
     /// <summary>Non-zero once <see cref="Dispose"/> has released the drain timer and the ready queue.</summary>
     private int _isDisposed;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="WasmScheduler"/> class. Callers use <see cref="Default"/>; this is
-    /// internal so a test can own an isolated scheduler it may dispose without shutting the shared singleton down for
-    /// every other test.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="WasmScheduler"/> class.</summary>
+    /// <param name="timeProvider">Timer provider; null selects the system provider.</param>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Correctness",
         "SST2403:Do not let 'this' escape from a constructor",
         Justification =
             "The drain timer is created disarmed, so nothing can call back into it until Schedule arms it after construction.")]
-    internal WasmScheduler() =>
-        _drainTimer = new(
+    internal WasmScheduler(TimeProvider? timeProvider = null)
+    {
+        _timeProvider = timeProvider ?? TimeProvider.System;
+        _drainTimer = _timeProvider.CreateTimer(
             static state => ((WasmScheduler)state!).RunDrain(),
             this,
             Timeout.InfiniteTimeSpan,
             Timeout.InfiniteTimeSpan);
+    }
 
     /// <summary>A queued work item awaiting an event-loop drain or a one-shot timer. Disposing it cancels it.</summary>
     internal interface IReadyWorkItem : IDisposable
@@ -125,7 +117,7 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
 
         // The timer roots itself while armed through the callback's target (the work item), which stores the
         // timer; the item's Dispose cancels and releases it.
-        item.AttachTimer(new Timer(static s => ((IReadyWorkItem)s!).Run(), item, dt, Timeout.InfiniteTimeSpan));
+        item.AttachTimer(_timeProvider.CreateTimer(static s => ((IReadyWorkItem)s!).Run(), item, dt, Timeout.InfiniteTimeSpan));
         return item;
     }
 
@@ -153,14 +145,12 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
             period = OneMillisecond;
         }
 
-        return PeriodicWorkItem<TState>.Start(state, period, action);
+        return PeriodicWorkItem<TState>.Start(state, period, action, _timeProvider);
     }
 
     /// <summary>
-    /// Releases the drain timer this scheduler owns and cancels the ready work still queued behind it. Scheduling
-    /// through a disposed scheduler throws <see cref="ObjectDisposedException"/> rather than queueing work no drain
-    /// will ever reach. Work an in-flight drain has already dequeued runs to completion, and a delayed item that
-    /// already owns its one-shot timer keeps it — the caller cancels those through the disposable it was handed.
+    /// Releases the drain timer and cancels queued work. Subsequent scheduling throws ObjectDisposedException.
+    /// Running work completes; callers retain responsibility for cancelling delayed work through its returned handle.
     /// </summary>
     public void Dispose()
     {
@@ -173,20 +163,14 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
         ReleaseReady();
     }
 
-    /// <summary>
-    /// Enqueues immediate work and coalesces a single drain post. Internal rather than private so a test can drive the
-    /// enqueue that was already past <see cref="Schedule{TState}(TState, Func{IScheduler, TState, IDisposable})"/>'s
-    /// disposed check when disposal drained the ready queue, and prove the item is released rather than stranded.
-    /// </summary>
+    /// <summary>Enqueues work and requests a drain, releasing the item if disposal overlaps.</summary>
     /// <param name="item">Work item to execute on the next event-loop turn.</param>
     internal void Enqueue(IReadyWorkItem item)
     {
         QueueReady(item);
         PostDrain();
 
-        // A disposal that raced the enqueue above may have drained the queue before this item joined it. Re-check
-        // the flag the disposal published first, so the loser of that race releases the item instead of leaving it
-        // queued behind a timer that can no longer fire.
+        // Release work enqueued after disposal drained the queue.
         if (!IsDisposed)
         {
             return;
@@ -195,10 +179,7 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
         ReleaseReady();
     }
 
-    /// <summary>
-    /// Adds a work item to the ready queue without arming a drain. Internal rather than private so a test can order an
-    /// enqueue, a disposal and a drain as explicit steps instead of racing them across threads.
-    /// </summary>
+    /// <summary>Adds ready work without requesting a drain.</summary>
     /// <param name="item">Work item to add to the ready queue.</param>
     internal void QueueReady(IReadyWorkItem item)
     {
@@ -206,10 +187,7 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
         _ = Interlocked.Increment(ref _readyCount);
     }
 
-    /// <summary>
-    /// Runs one batch: every item the ready count promised, stopping early if a concurrent drain took one first.
-    /// Internal rather than private so a test can run a drain pass at the point in a sequence it chooses.
-    /// </summary>
+    /// <summary>Runs the ready items in one batch.</summary>
     internal void RunReadyBatch()
     {
         for (var remaining = Volatile.Read(ref _readyCount);
@@ -221,10 +199,31 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
         }
     }
 
-    /// <summary>
-    /// Cancels and drops every ready item. The items are the handles their callers hold, so disposing them releases
-    /// the caller's work instead of stranding it in a queue nothing will ever drain again.
-    /// </summary>
+    /// <summary>Claims a drain or requests another pass if the observed state is still current.</summary>
+    /// <param name="observedState">The drain state observed before attempting the transition.</param>
+    /// <returns>True when no further claim attempt is needed; false when the observed state changed.</returns>
+    internal bool TryPostDrain(int observedState)
+    {
+        if (Volatile.Read(ref _readyCount) == 0)
+        {
+            return true;
+        }
+
+        if (observedState != DrainIdle)
+        {
+            return Interlocked.CompareExchange(ref _drainState, DrainRunningPending, observedState) == observedState;
+        }
+
+        if (Interlocked.CompareExchange(ref _drainState, DrainRunning, DrainIdle) != DrainIdle)
+        {
+            return false;
+        }
+
+        ArmDrain();
+        return true;
+    }
+
+    /// <summary>Cancels and removes every queued work item.</summary>
     private void ReleaseReady()
     {
         while (_ready.TryDequeue(out var item))
@@ -234,49 +233,22 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
         }
     }
 
-    /// <summary>
-    /// Arms a single drain if none is in flight, otherwise flags the running drain to loop again.
-    /// <para>
-    /// The whole body is the claim protocol: it spins only while a compare-exchange
-    /// loses to a concurrent claim, and exits early only when a concurrent drain empties the queue between the
-    /// caller's enqueue and this read. Neither path is reachable without a second thread interleaving, so the
-    /// shell carries the coverage exclusion; the work it schedules lives in ArmDrain, which is covered.
-    /// </para>
-    /// </summary>
-    [ExcludeFromCodeCoverage]
+    /// <summary>Retries drain claims after competing state updates.</summary>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     private void PostDrain()
     {
-        while (Volatile.Read(ref _readyCount) != 0)
+        int state;
+        do
         {
-            var state = Volatile.Read(ref _drainState);
-            if (state != DrainIdle)
-            {
-                // A drain is already running; flag that more work arrived so it drains again.
-                if (Interlocked.CompareExchange(ref _drainState, DrainRunningPending, state) == state)
-                {
-                    return;
-                }
-
-                continue;
-            }
-
-            // Become the sole drainer, then yield a batch to the event loop.
-            if (Interlocked.CompareExchange(ref _drainState, DrainRunning, DrainIdle) != DrainIdle)
-            {
-                continue;
-            }
-
-            ArmDrain();
-            return;
+            state = Volatile.Read(ref _drainState);
         }
+        while (!TryPostDrain(state));
     }
 
     /// <summary>Yields the claimed drain batch to the event loop, or hands the latch back when disposal beat it.</summary>
     private void ArmDrain()
     {
-        // Arming a released timer is a silent no-op, so a claim made while the scheduler was being disposed would
-        // leave the latch set on a drain that can never run. Hand the latch back instead: with scheduling closed and
-        // the ready queue released, there is nothing left for that drain to do anyway.
+        // Release the drain claim when disposal prevents arming the timer.
         if (IsDisposed)
         {
             Volatile.Write(ref _drainState, DrainIdle);
@@ -286,15 +258,7 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
         _ = _drainTimer.Change(TimeSpan.Zero, Timeout.InfiniteTimeSpan);
     }
 
-    /// <summary>
-    /// Runs event-loop batches for the single in-flight drain until no more work is queued.
-    /// <para>
-    /// This is a thin batching shell around <see cref="RunReadyBatch"/>. It repeats a pass only when a concurrent
-    /// <see cref="PostDrain"/> flagged more work mid-pass, which needs a second thread to interleave, so the shell
-    /// carries the coverage exclusion and the per-item work lives in the method it calls.
-    /// </para>
-    /// </summary>
-    [ExcludeFromCodeCoverage]
+    /// <summary>Drains queued batches until no further pass is requested.</summary>
     private void RunDrain()
     {
         do
@@ -316,20 +280,11 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
         PostDrain();
     }
 
-    /// <summary>
-    /// A cancellable scheduled work item carrying closure-free state and the scheduler passed back to the action;
-    /// also the target that roots a delayed one-shot timer. The run/cancel handshake lives in the shared
-    /// <see cref="DispatchWorkItemBase{TState}"/>; this item only adds the optional one-shot timer a delayed schedule
-    /// attaches.
-    /// </summary>
+    /// <summary>Owns scheduled work and its optional one-shot timer.</summary>
     /// <typeparam name="TState">The scheduled state type.</typeparam>
     internal sealed class StatefulWorkItem<TState> : DispatchWorkItemBase<TState>, IReadyWorkItem
     {
-        /// <summary>
-        /// Release handle for the one-shot timer driving a delayed item; <see langword="null"/> for immediate work.
-        /// Typed as the cancellation the item actually performs rather than the timer itself, so a test can hand it a
-        /// recording handle and observe the release directly.
-        /// </summary>
+        /// <summary>The delayed item's timer release handle, or null for immediate work.</summary>
         private IDisposable? _timer;
 
         /// <summary>Initializes a new instance of the <see cref="StatefulWorkItem{TState}"/> class.</summary>
@@ -344,8 +299,7 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
         /// <inheritdoc/>
         public void Dispose()
         {
-            // Claim cancellation first so a racing AttachTimer observes the disposed state and releases the timer it
-            // just stored, then reclaim any timer this item already owns and the disposable the action returned.
+            // Publish cancellation before reclaiming timers so a concurrent attachment releases its handle.
             if (!TryClaimDispose())
             {
                 return;
@@ -379,11 +333,8 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
         /// <summary>Scheduled action.</summary>
         private readonly Func<TState, TState> _action;
 
-        /// <summary>
-        /// Periodic timer; rooted through the tick callback's target while armed. Attached by <see cref="Start"/>
-        /// once the item is fully constructed, so it is never <see langword="null"/> for an item a caller can see.
-        /// </summary>
-        private Timer? _timer;
+        /// <summary>Periodic timer, attached after construction and rooted by its callback while armed.</summary>
+        private ITimer? _timer;
 
         /// <summary>State threaded through the periodic action.</summary>
         private TState _state;
@@ -412,27 +363,27 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
 
                 _isDisposed = true;
 
-                // Start is the only construction path and always assigns the timer before returning, and a second
-                // Dispose exits at the flag above, so the timer is always present on the one pass that reaches here.
+                // Start assigns the timer before returning; only the first Dispose reaches this point.
                 _timer!.Dispose();
                 _timer = null;
                 _state = default!;
             }
         }
 
-        /// <summary>
-        /// Creates a periodic item and arms its timer. Arming it here rather than in the constructor is what keeps
-        /// the tick callback from ever seeing a half-built item: the timer is created disarmed, attached, and only
-        /// then started, so the first tick runs against an item whose fields are all published.
-        /// </summary>
+        /// <summary>Publishes the periodic item and its timer before enabling ticks.</summary>
         /// <param name="state">Initial state.</param>
         /// <param name="period">Tick period.</param>
         /// <param name="action">Scheduled action.</param>
+        /// <param name="timeProvider">Timer provider.</param>
         /// <returns>The armed periodic work item, which cancels the ticks when disposed.</returns>
-        internal static PeriodicWorkItem<TState> Start(TState state, TimeSpan period, Func<TState, TState> action)
+        internal static PeriodicWorkItem<TState> Start(
+            TState state,
+            TimeSpan period,
+            Func<TState, TState> action,
+            TimeProvider timeProvider)
         {
             PeriodicWorkItem<TState> item = new(state, action);
-            Timer timer = new(
+            var timer = timeProvider.CreateTimer(
                 static s => ((PeriodicWorkItem<TState>)s!).Tick(),
                 item,
                 Timeout.InfiniteTimeSpan,
@@ -443,10 +394,7 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
             return item;
         }
 
-        /// <summary>
-        /// Runs one periodic tick. Internal rather than private so a test can drive the tick a timer callback already
-        /// in flight would deliver after <see cref="Dispose"/> won the race, and prove the action does not run.
-        /// </summary>
+        /// <summary>Runs one periodic tick unless the work item is disposed.</summary>
         internal void Tick()
         {
             lock (_gate)

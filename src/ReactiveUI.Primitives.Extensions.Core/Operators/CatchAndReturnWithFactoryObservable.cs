@@ -6,10 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Catches the configured exception type, emits a fallback built from the exception, and completes.
-/// Other exception types propagate downstream.
-/// </summary>
+/// <summary>Catches the configured exception type, emits a fallback built from the exception, and completes. Other exception types propagate downstream.</summary>
 /// <typeparam name="T">Element type.</typeparam>
 /// <typeparam name="TException">Exception type to catch.</typeparam>
 /// <param name="source">Upstream source.</param>

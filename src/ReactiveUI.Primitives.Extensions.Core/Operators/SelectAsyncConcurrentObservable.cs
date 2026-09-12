@@ -1,21 +1,17 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
-
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
 /// <summary>Projects each element to an asynchronous operation with limited concurrency.</summary>
-/// <typeparam name="TSource">The type of elements in the source sequence.</typeparam>
-/// <typeparam name="TResult">The type of the result of the asynchronous operation.</typeparam>
-/// <param name="source">The source observable.</param>
-/// <param name="selector">The asynchronous projection function.</param>
-/// <param name="maxConcurrency">The maximum number of concurrent operations.</param>
-public sealed class SelectAsyncConcurrentObservable<TSource, TResult>(
-    IObservable<TSource> source,
-    Func<TSource, Task<TResult>> selector,
-    int maxConcurrency) : IObservable<TResult>
+/// <typeparam name = "TSource">The type of elements in the source sequence.</typeparam>
+/// <typeparam name = "TResult">The type of the result of the asynchronous operation.</typeparam>
+/// <param name = "source">The source observable.</param>
+/// <param name = "selector">The asynchronous projection function.</param>
+/// <param name = "maxConcurrency">The maximum number of concurrent operations.</param>
+public sealed class SelectAsyncConcurrentObservable<TSource, TResult>(IObservable<TSource> source, Func<TSource, Task<TResult>> selector, int maxConcurrency) : IObservable<TResult>
 {
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<TResult> observer)
@@ -23,20 +19,16 @@ public sealed class SelectAsyncConcurrentObservable<TSource, TResult>(
         InvalidOperationExceptionHelper.ThrowIfNull(source);
         InvalidOperationExceptionHelper.ThrowIfNull(selector);
         ArgumentExceptionHelper.ThrowIfNull(observer);
-
         SelectAsyncConcurrentSink sink = new(observer, selector, maxConcurrency);
         var sub = source.Subscribe(sink);
         return new DisposableBag(sub, sink);
     }
 
-    /// <summary>Sink that manages concurrent async projection.</summary>
-    /// <param name="downstream">The downstream observer.</param>
-    /// <param name="selector">The async selector.</param>
-    /// <param name="maxConcurrency">The maximum concurrency.</param>
-    private sealed class SelectAsyncConcurrentSink(
-        IObserver<TResult> downstream,
-        Func<TSource, Task<TResult>> selector,
-        int maxConcurrency) : IObserver<TSource>, IDisposable
+    /// <summary>Processes source values and owns the subscription state.</summary>
+    /// <param name = "downstream">The downstream observer.</param>
+    /// <param name = "selector">The asynchronous operation.</param>
+    /// <param name = "maxConcurrency">The maximum concurrency.</param>
+    internal sealed class SelectAsyncConcurrentSink(IObserver<TResult> downstream, Func<TSource, Task<TResult>> selector, int maxConcurrency) : IObserver<TSource>, IDisposable
     {
         /// <summary>The gate for state access.</summary>
         private readonly Lock _gate = new();
@@ -54,19 +46,8 @@ public sealed class SelectAsyncConcurrentObservable<TSource, TResult>(
         private bool _disposed;
 
         /// <inheritdoc/>
-        public void OnNext(TSource value)
-        {
-            lock (_gate)
-            {
-                if (_done || _disposed)
-                {
-                    return;
-                }
-
-                _queue.Enqueue(value);
-                TryProcessNext();
-            }
-        }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnNext(TSource value) => _ = OnNextAsync(value);
 
         /// <inheritdoc/>
         public void OnError(Exception error)
@@ -110,19 +91,43 @@ public sealed class SelectAsyncConcurrentObservable<TSource, TResult>(
             }
         }
 
-        /// <summary>Attempts to process the next value in the queue.</summary>
-        private void TryProcessNext()
+        /// <summary>Processes a value and returns its active operation.</summary>
+        /// <param name = "value">The source value.</param>
+        /// <returns>The processing task, or a completed task when no work starts.</returns>
+        internal Task OnNextAsync(TSource value)
         {
+            Task processing;
+            lock (_gate)
+            {
+                if (_done || _disposed)
+                {
+                    return Task.CompletedTask;
+                }
+
+                _queue.Enqueue(value);
+                processing = TryProcessNext();
+            }
+
+            return processing;
+        }
+
+        /// <summary>Attempts to process the next value in the queue.</summary>
+        /// <returns>The last operation started, or a completed task when the queue cannot advance.</returns>
+        private Task TryProcessNext()
+        {
+            var processing = Task.CompletedTask;
             while (_running < maxConcurrency && _queue.Count > 0)
             {
                 var value = _queue.Dequeue();
                 _running++;
-                _ = ProcessAsync(value);
+                processing = ProcessAsync(value);
             }
+
+            return processing;
         }
 
         /// <summary>Processes the async operation.</summary>
-        /// <param name="value">The value to project.</param>
+        /// <param name = "value">The value to project.</param>
         /// <returns>A task representing the operation.</returns>
         private async Task ProcessAsync(TSource value)
         {
@@ -161,7 +166,7 @@ public sealed class SelectAsyncConcurrentObservable<TSource, TResult>(
                         }
                         else
                         {
-                            TryProcessNext();
+                            _ = TryProcessNext();
                         }
                     }
                 }

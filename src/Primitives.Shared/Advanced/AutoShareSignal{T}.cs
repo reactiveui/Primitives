@@ -92,13 +92,8 @@ public sealed class AutoShareSignal<T> : IObservable<T>
         connection?.Dispose();
     }
 
-    /// <summary>Connects the source outside <see cref="_gate"/> and publishes or drops the connection.</summary>
+    /// <summary>Connects outside the subscription gate and releases the connection if every subscriber has disposed.</summary>
     /// <param name="subscription">The inner source subscription owned by the connecting observer.</param>
-    /// <remarks>
-    /// Connecting runs outside the lock so a synchronous source cannot drive user callbacks while the gate is
-    /// held, which lets a re-entrant or concurrent <see cref="Release"/> drain the subscriber count before the
-    /// connection is published.
-    /// </remarks>
     private void ConnectOutsideGate(IDisposable subscription)
     {
         var connection = ConnectOrUnwind(subscription);

@@ -6,10 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Provides a mechanism for registering a global handler to process unhandled exceptions that occur during
-/// application execution.
-/// </summary>
+/// <summary>Provides a mechanism for registering a global handler to process unhandled exceptions that occur during application execution.</summary>
 /// <remarks>The process-wide default writes the exception to <see cref="System.Diagnostics.Trace"/>. Register a
 /// handler to log, clean up or notify instead. Cancellation is treated as normal flow and never reaches the
 /// handler.</remarks>

@@ -4,10 +4,7 @@
 
 namespace ReactiveUI.Primitives.Async.Advanced;
 
-/// <summary>
-/// <see cref="WitnessAsync{T}"/> that forwards every source notification straight into a
-/// <see cref="TakeUntilLifecycle{T}"/>, which gates it on its way downstream.
-/// </summary>
+/// <summary><see cref="WitnessAsync{T}"/> that forwards every source notification straight into a <see cref="TakeUntilLifecycle{T}"/>, which gates it on its way downstream.</summary>
 /// <typeparam name="T">The downstream element type.</typeparam>
 /// <param name="lifecycle">The shared lifecycle owning the gate and forwarding logic.</param>
 public sealed class TakeUntilSourceWitness<T>(TakeUntilLifecycle<T> lifecycle) : WitnessAsync<T>

@@ -45,9 +45,16 @@ public static partial class Sequencer
     /// <summary>Calculates the remaining wall time until a monotonic timestamp.</summary>
     /// <param name="dueTimestamp">Absolute monotonic timestamp.</param>
     /// <returns>The remaining time until <paramref name="dueTimestamp"/>.</returns>
-    internal static TimeSpan TimeUntil(long dueTimestamp)
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    internal static TimeSpan TimeUntil(long dueTimestamp) => TimeUntil(dueTimestamp, Timestamp);
+
+    /// <summary>Calculates a delay from an explicit monotonic clock reading.</summary>
+    /// <param name="dueTimestamp">The absolute due timestamp.</param>
+    /// <param name="timestamp">The current clock reading.</param>
+    /// <returns>The nonnegative remaining delay.</returns>
+    internal static TimeSpan TimeUntil(long dueTimestamp, long timestamp)
     {
-        var delta = dueTimestamp - Timestamp;
+        var delta = dueTimestamp - timestamp;
         return delta <= 0
             ? TimeSpan.Zero
             : TimeSpan.FromSeconds(delta / (double)System.Diagnostics.Stopwatch.Frequency);

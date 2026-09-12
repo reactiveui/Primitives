@@ -12,10 +12,7 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The source observable sequence.</param>
     extension<T>(IObservableAsync<T> source)
     {
-        /// <summary>
-        /// Returns a sequence that contains only distinct elements from the source sequence, using the default equality
-        /// comparer for the element type.
-        /// </summary>
+        /// <summary>Returns a sequence that contains only distinct elements from the source sequence, using the default equality comparer for the element type.</summary>
         /// <returns>An observable sequence that contains distinct elements from the source sequence.</returns>
         /// <remarks>Only the first occurrence of each element reaches observers, in source order; the set of seen
         /// elements lives for the whole subscription.</remarks>
@@ -26,10 +23,7 @@ public static partial class SignalAsyncExtensions
             return new DistinctSignal<T>(source, EqualityComparer<T>.Default);
         }
 
-        /// <summary>
-        /// Returns an observable sequence that contains only distinct elements from the source sequence, using the
-        /// specified equality comparer to determine uniqueness.
-        /// </summary>
+        /// <summary>Returns an observable sequence that contains only distinct elements from the source sequence, using the specified equality comparer to determine uniqueness.</summary>
         /// <param name="equalityComparer">An equality comparer to compare values for equality. If null, the default equality comparer for the type is
         /// used.</param>
         /// <returns>An observable sequence that emits each distinct element from the source sequence, in the order in which they
@@ -44,10 +38,7 @@ public static partial class SignalAsyncExtensions
             return new DistinctSignal<T>(source, equalityComparer);
         }
 
-        /// <summary>
-        /// Returns a sequence that contains distinct elements from the source sequence according to a specified key
-        /// selector function.
-        /// </summary>
+        /// <summary>Returns a sequence that contains distinct elements from the source sequence according to a specified key selector function.</summary>
         /// <typeparam name="TKey">The type of the key returned by the key selector function.</typeparam>
         /// <param name="keySelector">A function to extract the key for each element. Cannot be null.</param>
         /// <returns>An observable sequence that contains only the first occurrence of each distinct key as determined by the key
@@ -61,10 +52,7 @@ public static partial class SignalAsyncExtensions
             return new DistinctBySignal<T, TKey>(source, keySelector, EqualityComparer<TKey>.Default);
         }
 
-        /// <summary>
-        /// Returns an observable sequence that contains only distinct elements from the source sequence, comparing
-        /// values based on a specified key and equality comparer.
-        /// </summary>
+        /// <summary>Returns an observable sequence that contains only distinct elements from the source sequence, comparing values based on a specified key and equality comparer.</summary>
         /// <typeparam name="TKey">The type of the key used to determine the distinctness of elements.</typeparam>
         /// <param name="keySelector">A function to extract the key for each element. Cannot be null.</param>
         /// <param name="equalityComparer">An equality comparer to compare keys for equality. Cannot be null.</param>

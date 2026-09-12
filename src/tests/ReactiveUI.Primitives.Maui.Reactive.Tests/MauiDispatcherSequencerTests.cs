@@ -104,7 +104,7 @@ public sealed class MauiDispatcherSequencerTests
             _ = scheduler.Schedule(() => values.Add(captured));
         }
 
-        await Assert.That(values).IsEquivalentTo(ExpectedBurst, EqualityComparer<int>.Default);
+        await Assert.That(values).IsEquivalentTo(ExpectedBurst, EqualityComparer<int>.Default, TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 
     /// <summary>Fake MAUI dispatcher that runs marshalled work synchronously and records how it was dispatched.</summary>

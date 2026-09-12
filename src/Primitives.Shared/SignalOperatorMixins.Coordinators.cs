@@ -13,9 +13,7 @@ namespace ReactiveUI.Primitives;
 /// <summary>Coordinator helpers for multi-source signal operators.</summary>
 public static partial class LinqExtensions
 {
-    /// <summary>
-    /// Range-specialized WithLatest (Latch): emits each left range value paired with the right range's final value.
-    /// </summary>
+    /// <summary>Range-specialized WithLatest (Latch): emits each left range value paired with the right range's final value.</summary>
     /// <typeparam name="TResult">The result value type.</typeparam>
     /// <param name="left">The left source range.</param>
     /// <param name="right">The right source range.</param>
@@ -481,10 +479,7 @@ public static partial class LinqExtensions
             Drain();
         }
 
-        /// <summary>
-        /// Emits every pair the queues can form. The gate is held across the projection and the downstream
-        /// callbacks, so the left and right threads cannot interleave emissions.
-        /// </summary>
+        /// <summary>Projects and emits queued pairs under the gate, preserving emission order.</summary>
         private void Drain()
         {
             lock (_gate)

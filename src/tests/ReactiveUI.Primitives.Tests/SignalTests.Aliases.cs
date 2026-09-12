@@ -9,24 +9,9 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>Focused coverage for Rx-style alias factories and parity shortcut branches.</summary>
-public class SignalAliasCoverageTests
+/// <summary>Tests Rx-style alias factories and empty-source shortcuts.</summary>
+public partial class SignalTests
 {
-    /// <summary>Reusable value one.</summary>
-    private const int One = 1;
-
-    /// <summary>Reusable value two.</summary>
-    private const int Two = 2;
-
-    /// <summary>Reusable value three.</summary>
-    private const int Three = 3;
-
-    /// <summary>Reusable value four.</summary>
-    private const int Four = 4;
-
-    /// <summary>Reusable value five.</summary>
-    private const int Five = 5;
-
     /// <summary>Verifies Rx factory aliases cover scheduled, empty, timeout, and switch range branches.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]

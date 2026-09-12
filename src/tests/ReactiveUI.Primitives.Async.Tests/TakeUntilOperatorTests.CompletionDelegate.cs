@@ -8,7 +8,7 @@ using ReactiveUI.Primitives.Async.Signals;
 namespace ReactiveUI.Primitives.Async.Tests;
 
 /// <summary>TakeUntil operator tests — CompletionSignalDelegate overload and option behavior.</summary>
-[System.Diagnostics.DebuggerDisplay("TakeUntilOperatorTests: WaitTimeout = {WaitTimeout}")]
+[System.Diagnostics.DebuggerDisplay("TakeUntilOperatorTests")]
 public partial class TakeUntilOperatorTests
 {
     /// <summary>String literal "subscribe failed" used by multiple tests.</summary>
@@ -737,7 +737,7 @@ public partial class TakeUntilOperatorTests
     /// <summary>An <see cref = "IAsyncDisposable"/> that records how many times it has been disposed.</summary>
     private sealed class DisposeCountingAsyncDisposable : IAsyncDisposable
     {
-        /// <summary>Signals the first disposal so a test can await it instead of polling the count.</summary>
+        /// <summary>Signals the first disposal.</summary>
         private readonly TaskCompletionSource _disposed = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         /// <summary>The number of times <see cref = "DisposeAsync"/> has been called.</summary>

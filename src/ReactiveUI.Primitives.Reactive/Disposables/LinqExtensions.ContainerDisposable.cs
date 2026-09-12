@@ -19,13 +19,7 @@ public static partial class LinqExtensions
         /// <param name="disposables">The container.</param>
         /// <returns>The original disposable.</returns>
         /// <exception cref="ArgumentExceptionHelper"><paramref name="disposables"/> is <see langword="null"/>.</exception>
-        /// <remarks>
-        /// A <see cref="ContainerDisposable"/> converts to a System.Reactive <c>CompositeDisposable</c>, so
-        /// without this overload a call site that imports both this namespace and System.Reactive's fluent
-        /// disposal helpers has two equally-good candidates - the inherited
-        /// <c>DisposeWith(MultipleDisposable)</c> and System.Reactive's <c>DisposeWith(CompositeDisposable)</c>
-        /// - and is ambiguous. Taking the container exactly makes this an identity match, which wins outright.
-        /// </remarks>
+        /// <remarks>This exact container overload resolves DisposeWith calls when System.Reactive's composite overload is also in scope.</remarks>
         public T DisposeWith(ContainerDisposable disposables)
         {
             ArgumentExceptionHelper.ThrowIfNull(disposables);

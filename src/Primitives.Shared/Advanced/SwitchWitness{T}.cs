@@ -80,10 +80,7 @@ public sealed class SwitchWitness<T> : IDisposable
             error => OnError(current, error),
             () => OnCompleted(current));
 
-        // Subscribing can push a value downstream synchronously, and that handler is free to feed the outer
-        // source again, re-entering OnSource and installing a newer generation before this call returns. Only
-        // the current generation may occupy the slot: installing a superseded subscription would dispose the
-        // newer one and leave a sequence whose notifications are all filtered out by version.
+        // Reentrant subscription can install a newer generation; only the current generation may occupy the slot.
         var superseded = false;
         lock (_gate)
         {

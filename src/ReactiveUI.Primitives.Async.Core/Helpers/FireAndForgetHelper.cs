@@ -10,7 +10,6 @@ namespace ReactiveUI.Primitives.Async.Helpers;
 /// Runs asynchronous work from a synchronous callback — a cancellation-token registration, a signal handler — where
 /// there is no caller to observe a task, reporting failures to <see cref="UnhandledExceptionHandler"/>.
 /// </summary>
-[ExcludeFromCodeCoverage]
 public static class FireAndForgetHelper
 {
     /// <summary>Executes an async action as fire-and-forget, swallowing all exceptions.</summary>
@@ -23,7 +22,14 @@ public static class FireAndForgetHelper
         "ReSharper",
         "AsyncVoidMethod",
         Justification = "This is a fire-and-forget helper.")]
-    public static async void Run(Func<ValueTask> action)
+    [ExcludeFromCodeCoverage]
+    public static async void Run(Func<ValueTask> action) =>
+        await RunAsync(action).ConfigureAwait(false);
+
+    /// <summary>Runs the action and reports failures to the unhandled exception handler.</summary>
+    /// <param name="action">The action to execute.</param>
+    /// <returns>The action and any exception reporting.</returns>
+    internal static async ValueTask RunAsync(Func<ValueTask> action)
     {
         ArgumentExceptionHelper.ThrowIfNull(action);
 

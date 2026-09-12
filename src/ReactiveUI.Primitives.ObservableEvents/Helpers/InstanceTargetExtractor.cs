@@ -12,14 +12,10 @@ namespace ReactiveUI.Primitives.ObservableEvents.Helpers;
 /// <summary>Turns an <c>Events()</c> call site into the model of the wrapper it asks for.</summary>
 internal static class InstanceTargetExtractor
 {
-    /// <summary>Cheaply rejects syntax that cannot be an activation call.</summary>
+    /// <summary>Identifies candidate activation calls by syntax alone.</summary>
     /// <param name="node">The node under consideration.</param>
     /// <param name="cancellationToken">A token that cancels the check.</param>
     /// <returns><see langword="true"/> when the node is a parameterless <c>Events()</c> member invocation.</returns>
-    /// <remarks>
-    /// This runs on every node of every edited file, so it only looks at shape and spelling. Deciding whether the
-    /// call is really ours needs the semantic model, and is left to the transform that runs on the survivors.
-    /// </remarks>
     internal static bool IsActivationInvocation(SyntaxNode node, CancellationToken cancellationToken)
     {
         _ = cancellationToken;
@@ -31,16 +27,10 @@ internal static class InstanceTargetExtractor
         && memberAccess.Name.Identifier.ValueText == Constants.EventMethodName;
     }
 
-    /// <summary>Resolves an activation call into the host it wraps.</summary>
+    /// <summary>Extracts the receiver type from an unresolved activation call.</summary>
     /// <param name="context">The semantic context for the candidate call.</param>
     /// <param name="cancellationToken">A token that cancels the resolution.</param>
     /// <returns>The requested host, or <see langword="null"/> for an unrelated call.</returns>
-    /// <remarks>
-    /// The activation placeholder this call will eventually bind to is this generator's own output, and output is
-    /// not visible to the pipeline that produced it - so during a run the call resolves to nothing. That absence is
-    /// the signal: a call that <em>does</em> resolve belongs to somebody else and is left alone, and a call that
-    /// does not is ours to answer. What the request needs is the receiver's type, which binds on its own.
-    /// </remarks>
     internal static InstanceTargetModel? Extract(GeneratorSyntaxContext context, CancellationToken cancellationToken)
     {
         var invocation = (InvocationExpressionSyntax)context.Node;
@@ -62,17 +52,13 @@ internal static class InstanceTargetExtractor
             : null;
     }
 
-    /// <summary>Builds the model for one requested host.</summary>
+    /// <summary>Extracts a host's original generic definition for a shared wrapper.</summary>
     /// <param name="host">The host to wrap, reduced to its original definition.</param>
     /// <param name="location">The call site, for diagnostics.</param>
     /// <param name="supportsNullableAnnotations">Whether the consumer's language can express an annotation.</param>
     /// <param name="wellKnownTypes">The task types resolved from the consumer compilation.</param>
     /// <param name="cancellationToken">A token that cancels the walk.</param>
     /// <returns>The host model.</returns>
-    /// <remarks>
-    /// A generic host is reduced to its original definition so that <c>Foo&lt;int&gt;</c> and
-    /// <c>Foo&lt;string&gt;</c> share one wrapper, generic in the same parameters the host is.
-    /// </remarks>
     private static InstanceTargetModel Create(
         INamedTypeSymbol host,
         LocationInfo? location,

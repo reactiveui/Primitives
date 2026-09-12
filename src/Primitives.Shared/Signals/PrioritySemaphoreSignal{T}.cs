@@ -192,11 +192,7 @@ public sealed class PrioritySemaphoreSignal<T> : ISignal<T>
         }
     }
 
-    /// <summary>Forwards queued values downstream while capacity is available.</summary>
-    /// <remarks>
-    /// Only one thread delivers downstream at a time: a caller that finds a drain in progress leaves its work to the
-    /// owner, and the owner re-checks for queued work under the gate before relinquishing ownership, so no wakeup is lost.
-    /// </remarks>
+    /// <summary>Drains queued notifications with one delivery owner, checking for pending work before releasing ownership.</summary>
     private void YieldUntilEmptyOrBlocked()
     {
         if (!TryBeginDrain())
@@ -252,8 +248,7 @@ public sealed class PrioritySemaphoreSignal<T> : ISignal<T>
                 return true;
             }
 
-            // No work remains; release ownership atomically with the empty check so a
-            // producer that queues work after this point will be able to begin a fresh drain.
+            // Release ownership under the queue gate so subsequent producers can start a drain.
             _isDraining = false;
             return false;
         }

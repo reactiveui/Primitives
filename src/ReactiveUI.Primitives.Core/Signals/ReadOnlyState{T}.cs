@@ -45,7 +45,7 @@ public sealed class ReadOnlyState<T> : IObservable<T>, IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IDisposable Subscribe(IObserver<T> observer) => _inner.Subscribe(observer);
 
-    /// <summary>Executes the Dispose operation.</summary>
+    /// <summary>Stops mirroring the source and disposes the cached state.</summary>
     public void Dispose()
     {
         _subscription.Dispose();

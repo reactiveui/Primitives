@@ -30,10 +30,7 @@ public static partial class SignalAsyncExtensions
         }
     }
 
-    /// <summary>
-    /// Async observable that mirrors the source but completes with a <see cref="TimeoutException"/>
-    /// once an inter-element gap exceeds the configured interval.
-    /// </summary>
+    /// <summary>Async observable that mirrors the source but completes with a <see cref="TimeoutException"/> once an inter-element gap exceeds the configured interval.</summary>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
     /// <param name="source">The source observable sequence.</param>
     /// <param name="dueTime">The maximum allowed inter-element interval.</param>
@@ -54,10 +51,7 @@ public static partial class SignalAsyncExtensions
             return subscription;
         }
 
-        /// <summary>
-        /// Observer that resets a timer on each received element and signals a <see cref="TimeoutException"/>
-        /// if no element arrives within the configured interval.
-        /// </summary>
+        /// <summary>Observer that resets a timer on each received element and signals a <see cref="TimeoutException"/> if no element arrives within the configured interval.</summary>
         /// <param name="observer">The downstream observer to forward elements to.</param>
         /// <param name="dueTime">The maximum allowed inter-element interval.</param>
         /// <param name="timeProvider">The time provider used to schedule the deadline.</param>
@@ -90,12 +84,20 @@ public static partial class SignalAsyncExtensions
                 }
                 catch (Exception e)
                 {
-                    // A CreateTimer failure routes to the unhandled exception handler rather than tearing
-                    // down the subscription: with no timer the operator degrades to a pass-through that
-                    // forwards every emission and never signals a timeout.
+                    // Timer creation failure is reported; values continue without timeout enforcement.
                     UnhandledExceptionHandler.ReportUnhandledException(e);
                 }
             }
+
+            /// <summary>Rearms the deadline unless disposal has removed the timer.</summary>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            internal void RearmTimer() =>
+                _timer?.Change(dueTime, System.Threading.Timeout.InfiniteTimeSpan);
+
+            /// <summary>Stops the deadline unless disposal has removed the timer.</summary>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            internal void StopTimer() =>
+                _timer?.Change(System.Threading.Timeout.InfiniteTimeSpan, System.Threading.Timeout.InfiniteTimeSpan);
 
             /// <summary>Rearms the deadline timer and forwards the element to the downstream observer.</summary>
             /// <param name="value">The element to forward.</param>
@@ -184,27 +186,10 @@ public static partial class SignalAsyncExtensions
 
                 _ = FireTimeoutAsync(observer);
             }
-
-            /// <summary>Rearms the timeout deadline for the next emission; <c>_timer</c> is null only when the source
-            /// emits after <c>DisposeAsyncCore</c> has torn the timer down, a race no deterministic test can hit.</summary>
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-            private void RearmTimer() =>
-                _timer?.Change(dueTime, System.Threading.Timeout.InfiniteTimeSpan);
-
-            /// <summary>Stops the timeout deadline on terminal forwarding; <c>_timer</c> is null only under the same
-            /// post-teardown race as <see cref="RearmTimer"/>.</summary>
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-            private void StopTimer() =>
-                _timer?.Change(System.Threading.Timeout.InfiniteTimeSpan, System.Threading.Timeout.InfiniteTimeSpan);
         }
     }
 
-    /// <summary>
-    /// Async observable that mirrors the source but switches to a fallback observable
-    /// once an inter-element gap exceeds the configured interval.
-    /// </summary>
+    /// <summary>Async observable that mirrors the source but switches to a fallback observable once an inter-element gap exceeds the configured interval.</summary>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
     /// <param name="source">The source observable sequence.</param>
     /// <param name="dueTime">The maximum allowed inter-element interval.</param>

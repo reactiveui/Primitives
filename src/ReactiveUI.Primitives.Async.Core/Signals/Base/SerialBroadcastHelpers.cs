@@ -8,21 +8,10 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async.Signals;
 
-/// <summary>
-/// Shared serial-broadcast loops for the Serial* Signal family. The body of each Signal's
-/// <c>OnNextAsyncCore</c> / <c>OnErrorResumeAsyncCore</c> / <c>OnCompletedAsyncCore</c> is identical:
-/// iterate the observer snapshot and await each call in turn. Centralising the loops here keeps the
-/// hot-path single-observer fast-path inlined at the call site while removing the duplicated
-/// multi-observer body across four Signal classes. Methods are static so there is no virtual
-/// dispatch and no extra heap allocation per emission.
-/// </summary>
+/// <summary>Delivers notifications to each observer in a snapshot, awaiting them in order.</summary>
 internal static class SerialBroadcastHelpers
 {
-    /// <summary>
-    /// Single-observer fast path delegates directly to the observer's <c>OnNextAsync</c>; the
-    /// multi-observer case forwards to <see cref="BroadcastOnNextAsyncMulti{T}"/>, where the async
-    /// state machine is only used when an observer actually suspends.
-    /// </summary>
+    /// <summary>Forwards directly to a single observer or awaits multiple observers in order.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="observers">The current observer snapshot.</param>
     /// <param name="value">The value being broadcast.</param>

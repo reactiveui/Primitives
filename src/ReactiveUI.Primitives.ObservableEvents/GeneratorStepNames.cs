@@ -4,11 +4,7 @@
 
 namespace ReactiveUI.Primitives.ObservableEvents;
 
-/// <summary>The names the pipeline's steps are tracked under.</summary>
-/// <remarks>
-/// A driver told to track steps reports, per run, whether each named step recomputed and whether its value changed,
-/// which is how a test asserts that the models compare by value and the caching holds.
-/// </remarks>
+/// <summary>Names the pipeline steps reported by incremental tracking.</summary>
 internal static class GeneratorStepNames
 {
     /// <summary>The step that resolves which observable implementation is referenced.</summary>

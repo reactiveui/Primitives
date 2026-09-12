@@ -528,12 +528,7 @@ public class SinkObserverTests
         await Assert.That(subscription.DisposeCount).IsEqualTo(1);
     }
 
-    /// <summary>
-    /// A <see cref = "BufferWitness{T}"/> releases its window buffer before handing the window to the observer,
-    /// so an observer that throws leaves the sink with no buffer to fill. The sink must therefore latch itself
-    /// terminal on that throw: a source that ignores the sink's disposal and keeps pushing has to be dropped
-    /// quietly, not indexed into the released buffer.
-    /// </summary>
+    /// <summary>A buffer witness stops accepting values when delivery of a completed window throws.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task BufferSinkDropsValuesFromASourceThatKeepsPushingAfterTheObserverThrows()
@@ -732,11 +727,7 @@ public class SinkObserverTests
         public SumAggregator Add(int value) => new(Result + value);
     }
 
-    /// <summary>
-    /// An observable whose subscription retains its observer and ignores disposal, letting a test keep pushing
-    /// notifications into a sink that has already torn itself down. A well-behaved source would stop; this one is
-    /// what a sink's terminal latch exists to defend against.
-    /// </summary>
+    /// <summary>Retains its observer after disposal and permits further notifications.</summary>
     /// <typeparam name = "T">The value type.</typeparam>
     private sealed class UnstoppableSource<T> : IObservable<T>
     {

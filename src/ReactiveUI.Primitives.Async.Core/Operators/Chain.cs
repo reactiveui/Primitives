@@ -14,10 +14,7 @@ public static partial class SignalAsyncExtensions
     /// <param name="sources">A collection of asynchronous observable sequences to concatenate. Cannot be null.</param>
     extension<T>(IEnumerable<IObservableAsync<T>> sources)
     {
-        /// <summary>
-        /// Concatenates multiple asynchronous observable sequences into a single sequence that emits items from each source
-        /// in order.
-        /// </summary>
+        /// <summary>Concatenates multiple asynchronous observable sequences into a single sequence that emits items from each source in order.</summary>
         /// <returns>An asynchronous observable sequence that emits all items from each source sequence in the order they appear in
         /// the collection.</returns>
         /// <remarks>A source is subscribed only after the previous one completes, so at most one source is active at a
@@ -26,10 +23,7 @@ public static partial class SignalAsyncExtensions
         public IObservableAsync<T> Chain() =>
             new ChainEnumerableSignal<T>(sources);
 
-        /// <summary>
-        /// Concatenates multiple asynchronous observable sequences into a single sequence that emits items from each source
-        /// in order.
-        /// </summary>
+        /// <summary>Concatenates multiple asynchronous observable sequences into a single sequence that emits items from each source in order.</summary>
         /// <returns>An asynchronous observable sequence that emits all items from each source sequence in order.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> Concat() =>

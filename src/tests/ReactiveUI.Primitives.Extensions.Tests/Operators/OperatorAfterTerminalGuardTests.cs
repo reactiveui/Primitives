@@ -11,12 +11,7 @@ using ReactiveUI.Primitives.Extensions.Operators;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Covers the consistent <c>if (_done) return;</c> after-terminal guards on the
-/// remaining sync operators that share the pattern but lacked dedicated coverage —
-/// <c>RetryWithDelay</c>, <c>OnErrorRetry</c>, <c>TakeUntilInclusive</c>, <c>SwitchIfEmpty</c>,
-/// <c>ThrottleOnScheduler</c>, <c>BufferUntilIdle</c>, <c>ObserveOnIf</c>. Each test drives a
-/// <see cref = "SyncDirectSource{T}"/> through one terminal event, then pushes additional
-/// notifications past the terminal to verify the guard silently drops them.</summary>
+/// <summary>Tests suppression of notifications after source termination.</summary>
 public class OperatorAfterTerminalGuardTests
 {
     /// <summary>Retry delay handed to the retry operators under test.</summary>
@@ -230,10 +225,7 @@ public class OperatorAfterTerminalGuardTests
     [Test]
     public async Task WhenWhileDownstreamDisposesInsideOnNext_ThenIterateGuardSkipsNextPredicate()
     {
-        // The scheduler indirection lets us defer the first iteration to after Subscribe has
-        // returned (so the SingleAssignmentDisposable can capture the subscription), then run
-        // the inner iterations synchronously enough that the OnNext-side dispose hits before
-        // the second Iterate evaluates the predicate.
+        // Capture the subscription before running the iteration that disposes it.
         VirtualClock scheduler = new();
         var actionCalls = 0;
         SingleAssignmentDisposable sub = new();
@@ -463,7 +455,7 @@ public class OperatorAfterTerminalGuardTests
     public async Task WhenSubscribeSynchronousOmitsErrorAndCompletedCallbacks_ThenNullPathsTaken()
     {
         Subject<int> subject = new();
-        TaskCompletionSource processed = new();
+        TaskCompletionSource processed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var sub = subject.SubscribeSynchronous(value =>
         {
             _ = processed.TrySetResult();

@@ -48,11 +48,7 @@ public sealed class ExpireCoordinator<T> : IObserver<T>, IDisposable
     /// <summary>Monotonic version that suppresses timeouts superseded by a newer value.</summary>
     private long _epoch;
 
-    /// <summary>
-    /// The instant on the sequencer's clock at which the current inactivity window closes, read and written under
-    /// <see cref="_gate"/>. It starts at <see cref="DateTimeOffset.MaxValue"/> so an unpublished window never
-    /// expires a value.
-    /// </summary>
+    /// <summary>Deadline guarded by the gate; MaxValue prevents expiration until the first window is armed.</summary>
     private DateTimeOffset _deadline = DateTimeOffset.MaxValue;
 
     /// <summary>Initializes a new instance of the <see cref="ExpireCoordinator{T}"/> class.</summary>
@@ -137,11 +133,7 @@ public sealed class ExpireCoordinator<T> : IObserver<T>, IDisposable
     }
 
     /// <inheritdoc/>
-    /// <remarks>
-    /// A value is on time only when it arrives before the inactivity window closes on the sequencer's clock, not
-    /// merely before the armed timer has run. A value that arrives past its deadline — which a saturated thread-pool
-    /// sequencer can allow — terminates the sequence with <see cref="TimeoutException"/> instead of being forwarded.
-    /// </remarks>
+    /// <remarks>Values arriving at or after the clock deadline fail with TimeoutException, even if the timer callback has not run.</remarks>
     public void OnNext(T value)
     {
         long epoch;
@@ -199,11 +191,8 @@ public sealed class ExpireCoordinator<T> : IObserver<T>, IDisposable
         return this;
     }
 
-    /// <summary>Schedules a fresh inactivity timer for the given epoch and discards the in-flight one.</summary>
+    /// <summary>Schedules outside the gate and publishes the timer only if its window remains current.</summary>
     /// <param name="epoch">The version this timer must match to fire.</param>
-    /// <remarks>Scheduling happens outside the gate so a synchronous sequencer cannot re-enter <see cref="Lock"/>.
-    /// The publish is re-checked under the gate, so neither a terminal notification nor a newer value's window can be
-    /// overwritten by a superseded arm.</remarks>
     private void ArmTimer(long epoch)
     {
         var deadline = Deadline();
@@ -228,12 +217,8 @@ public sealed class ExpireCoordinator<T> : IObserver<T>, IDisposable
         previous?.Dispose();
     }
 
-    /// <summary>Computes the closing instant of an inactivity window opened at the current time.</summary>
+    /// <summary>Captures a deadline for positive delays; zero delays remain queued immediate work.</summary>
     /// <returns>The deadline on the sequencer's clock, saturated instead of overflowing.</returns>
-    /// <remarks>
-    /// A due time that normalizes to zero is queued as immediate work, so it opens no clock window and a synchronous
-    /// value arriving before the queue drains wins; only a positive due time yields a real deadline.
-    /// </remarks>
     private DateTimeOffset Deadline()
     {
         var dueTime = Sequencer.Normalize(_dueTime);

@@ -33,11 +33,7 @@ internal sealed class ConflateObservable<T>(
         return sink;
     }
 
-    /// <summary>
-    /// Single observer that both marshals upstream notifications onto the scheduler thread, through the
-    /// <see cref="ScheduledDrainState{T}"/> queue and scheduled drain, and applies the conflate time-window
-    /// throttle to each <see cref="DrainNotificationKind.Next"/> notification.
-    /// </summary>
+    /// <summary>Delivers notifications on the scheduler and limits value emissions to the conflate interval.</summary>
     internal sealed class ConflateSink : IObserver<T>, IDisposable, IDrainTarget
     {
         /// <summary>The downstream observer.</summary>
@@ -61,8 +57,7 @@ internal sealed class ConflateObservable<T>(
         /// <summary>Wall-clock timestamp of the last emission forwarded downstream.</summary>
         private DateTimeOffset _lastUpdateTime = DateTimeOffset.MinValue;
 
-        /// <summary>Set to <see langword="true"/> when an upstream OnCompleted is queued but a deferred
-        /// emission is still pending; the completion fires after that emission lands.</summary>
+        /// <summary>Set to <see langword="true"/> when an upstream OnCompleted is queued but a deferred emission is still pending; the completion fires after that emission lands.</summary>
         private bool _completionRequested;
 
         /// <summary>Initializes a new instance of the <see cref="ConflateSink"/> class.</summary>
@@ -147,18 +142,15 @@ internal sealed class ConflateObservable<T>(
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void AttachSourceSubscription(IDisposable subscription) => _state.Attach(subscription);
 
-        /// <summary>Applies the throttle-window decision to a dequeued value, emitting it inline or scheduling a
-        /// deferred emission at the end of the window.</summary>
+        /// <summary>Emits a dequeued value immediately or defers it until the conflate interval ends.</summary>
         /// <param name="value">The value to forward.</param>
-        [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-        private void ProcessNext(T value)
+        internal void ProcessNext(T value)
         {
             var currentUpdateTime = _scheduler.Now;
             bool scheduleRequired;
 
             lock (_gate)
             {
-                // Race-only: a concurrent dispose can flip the done flag between the drain dequeue and this gate.
                 if (_state.Done)
                 {
                     return;
@@ -182,8 +174,48 @@ internal sealed class ConflateObservable<T>(
             }
         }
 
-        /// <summary>Schedules a deferred emission of <paramref name="value"/> at the end of the throttle window, forwarding a pending completion once it lands.</summary>
-        /// <param name="value">The value to emit when the window elapses.</param>
+        /// <summary>Forwards an error to downstream and terminates the sink.</summary>
+        /// <param name="error">The error to forward.</param>
+        internal void ForwardError(Exception error)
+        {
+            lock (_gate)
+            {
+                if (_state.Done)
+                {
+                    return;
+                }
+
+                _state.MarkDoneLocked();
+                _updateScheduled.Dispose();
+            }
+
+            _downstream.OnError(error);
+        }
+
+        /// <summary>Forwards completion, deferring it when a throttled emission is scheduled.</summary>
+        internal void ForwardCompleted()
+        {
+            lock (_gate)
+            {
+                if (_state.Done)
+                {
+                    return;
+                }
+
+                if (_updateScheduled.Disposable is not null)
+                {
+                    _completionRequested = true;
+                    return;
+                }
+
+                _state.MarkDoneLocked();
+            }
+
+            _downstream.OnCompleted();
+        }
+
+        /// <summary>Schedules a value for the end of the conflate interval.</summary>
+        /// <param name="value">The value to emit when the interval elapses.</param>
         private void ScheduleDeferredEmission(T value) =>
             _updateScheduled.Disposable = _scheduler.Schedule(
                 (Sink: this, Value: value),
@@ -194,7 +226,7 @@ internal sealed class ConflateObservable<T>(
                     return EmptyDisposable.Instance;
                 });
 
-        /// <summary>Emits a deferred value and forwards a pending completion once the value lands.</summary>
+        /// <summary>Emits a deferred value before forwarding any pending completion.</summary>
         /// <param name="value">The deferred value.</param>
         private void EmitDeferred(T value)
         {
@@ -212,7 +244,7 @@ internal sealed class ConflateObservable<T>(
             }
         }
 
-        /// <summary>Emits <paramref name="value"/> immediately and records the emission time.</summary>
+        /// <summary>Emits a value immediately and records the emission time.</summary>
         /// <param name="value">The value to emit.</param>
         private void EmitInline(T value)
         {
@@ -221,50 +253,6 @@ internal sealed class ConflateObservable<T>(
             {
                 _lastUpdateTime = _scheduler.Now;
             }
-        }
-
-        /// <summary>Forwards an error to downstream and terminates the sink.</summary>
-        /// <param name="error">The error to forward.</param>
-        [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-        private void ForwardError(Exception error)
-        {
-            lock (_gate)
-            {
-                // Race-only: a concurrent dispose can flip the done flag between the drain dequeue and this gate.
-                if (_state.Done)
-                {
-                    return;
-                }
-
-                _state.MarkDoneLocked();
-                _updateScheduled.Dispose();
-            }
-
-            _downstream.OnError(error);
-        }
-
-        /// <summary>Forwards completion, deferring it when a throttled emission is scheduled.</summary>
-        [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-        private void ForwardCompleted()
-        {
-            lock (_gate)
-            {
-                // Race-only: a concurrent dispose can flip the done flag between the drain dequeue and this gate.
-                if (_state.Done)
-                {
-                    return;
-                }
-
-                if (_updateScheduled.Disposable is not null)
-                {
-                    _completionRequested = true;
-                    return;
-                }
-
-                _state.MarkDoneLocked();
-            }
-
-            _downstream.OnCompleted();
         }
     }
 }

@@ -115,13 +115,7 @@ public sealed class ExpireCoordinatorTests
         await Assert.That(errors.SequenceEqual([nameof(InvalidOperationException)])).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies a value that arrives after the inactivity window closed expires the sequence even though the armed
-    /// timeout has not been dispatched yet. The timeout runs on the sequencer, and a thread-pool sequencer whose pool
-    /// is saturated can dispatch it arbitrarily late while a source ticking on its own thread keeps producing. The
-    /// window is a property of the clock, not of whether the timer callback has been given a thread, so a value that
-    /// missed it must not reach the observer.
-    /// </summary>
+    /// <summary>A value after the inactivity deadline expires the sequence even when the timeout callback remains queued.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ValueArrivingAfterTheWindowClosedExpiresWhileTheTimeoutIsStillUndispatched()
@@ -141,10 +135,7 @@ public sealed class ExpireCoordinatorTests
         await Assert.That(errors.SequenceEqual([nameof(TimeoutException)])).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies the deadline check does not expire a value that is still inside its window. This is the guard against
-    /// the previous test's fix over-firing: an undispatched timeout must not turn an on-time value into a timeout.
-    /// </summary>
+    /// <summary>A value inside the inactivity window is forwarded while its timeout callback remains queued.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ValueArrivingInsideTheWindowIsForwardedWhileTheTimeoutIsStillUndispatched()
@@ -180,11 +171,7 @@ public sealed class ExpireCoordinatorTests
         await Assert.That(observer.Values).IsEqualTo(One);
     }
 
-    /// <summary>
-    /// A sequencer that accepts scheduled work and never dispatches it, modelling a thread-pool sequencer whose pool
-    /// is saturated: the timer becomes due on the clock, but no thread is free to run the callback. Its clock is
-    /// driven by the test.
-    /// </summary>
+    /// <summary>Tracks virtual time and accepts work without dispatching it.</summary>
     /// <param name="start">The instant the clock starts at.</param>
     private sealed class UndispatchedSequencer(DateTimeOffset start) : ISequencer
     {

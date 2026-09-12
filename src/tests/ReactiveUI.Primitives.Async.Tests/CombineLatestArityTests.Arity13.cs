@@ -131,7 +131,7 @@ public partial class CombineLatestArityTests
             });
         InvalidOperationException expected = new("source error");
         await s1.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorReceived.Task.WaitAsync(TimeSpan.FromSeconds(EmissionTimeoutSeconds));
+        await errorReceived.Task;
         await Assert.That(receivedError).IsEqualTo(expected);
     }
 
@@ -171,7 +171,7 @@ public partial class CombineLatestArityTests
             static (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13) =>
                 v1 + v2 + v3 + v4 + v5 + v6 + v7 + v8 + v9 + v10 + v11 + v12 + v13).SubscribeAsync(RecordAndSignalValues(results, emitted), null);
         await EmitSeedAndPlaceValuesAsync(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13);
-        await emitted.Task.WaitAsync(TimeSpan.FromSeconds(EmissionTimeoutSeconds));
+        await emitted.Task;
         await Assert.That(results[0]).IsEqualTo(1 + PlaceValue1 + PlaceValue2 + PlaceValue3 + PlaceValue4
                                                 + PlaceValue5 + PlaceValue6 + PlaceValue7 + PlaceValue8 + PlaceValue9
                                                 + PlaceValue10 + PlaceValue11 + PlaceValue12);
@@ -221,7 +221,7 @@ public partial class CombineLatestArityTests
             });
         await EmitSeedAndPlaceValuesAsync(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13);
         await CompleteAllAsync(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13);
-        var result = await completed.Task.WaitAsync(TimeSpan.FromSeconds(EmissionTimeoutSeconds));
+        var result = await completed.Task;
         await Assert.That(result.IsSuccess).IsTrue();
     }
 }

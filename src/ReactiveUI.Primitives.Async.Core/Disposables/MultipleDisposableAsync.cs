@@ -27,8 +27,7 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
     /// <summary>Factor the backing array's capacity is multiplied by when it overflows.</summary>
     private const int GrowthFactor = 2;
 
-    /// <summary>Divisor applied to the backing array's capacity when a sparse collection is compacted; safe because
-    /// compaction only runs below quarter occupancy.</summary>
+    /// <summary>Divisor applied to the backing array's capacity when a sparse collection is compacted; safe because compaction only runs below quarter occupancy.</summary>
     private const int CompactionShrinkDivisor = 2;
 
     /// <summary>The synchronization gate protecting all mutable state in this collection.</summary>
@@ -49,10 +48,7 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
     /// <summary>Indicates whether the collection has been disposed.</summary>
     private bool _isDisposed;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="MultipleDisposableAsync"/> class, allocating its backing array on
-    /// the first <see cref="AddAsync"/> call.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="MultipleDisposableAsync"/> class, allocating its backing array on the first <see cref="AddAsync"/> call.</summary>
     public MultipleDisposableAsync()
     {
     }
@@ -67,10 +63,7 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
         _items = capacity == 0 ? null : new IAsyncDisposable?[capacity];
     }
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="MultipleDisposableAsync"/> class that contains the specified
-    /// disposables, sizing the backing array exactly.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="MultipleDisposableAsync"/> class that contains the specified disposables, sizing the backing array exactly.</summary>
     /// <param name="disposables">An array of objects implementing <see cref="IAsyncDisposable"/>.</param>
     public MultipleDisposableAsync(params IAsyncDisposable[] disposables)
     {
@@ -145,9 +138,7 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
         }
     }
 
-    /// <summary>
-    /// Takes ownership of a disposable, disposing it on the spot when this collection has been disposed.
-    /// </summary>
+    /// <summary>Takes ownership of a disposable, disposing it on the spot when this collection has been disposed.</summary>
     /// <param name="item">The item whose lifetime this collection takes over. Cannot be null.</param>
     /// <returns>A completed task when the item was stored; otherwise the task disposing it.</returns>
     public ValueTask AddAsync(IAsyncDisposable item)
@@ -296,10 +287,7 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
         }
     }
 
-    /// <summary>
-    /// Asynchronously releases all resources used by the collection and disposes of each contained asynchronous
-    /// disposable object.
-    /// </summary>
+    /// <summary>Asynchronously releases all resources used by the collection and disposes of each contained asynchronous disposable object.</summary>
     /// <returns>A task that represents the asynchronous dispose operation.</returns>
     /// <remarks>Idempotent. Items are disposed one after another in insertion order.</remarks>
     public async ValueTask DisposeAsync()
@@ -396,8 +384,7 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
         }
     }
 
-    /// <summary>Ensures <see cref="_items"/> has at least one free slot at index <see cref="_length"/>.
-    /// Allocates the default-capacity array on first use; doubles on subsequent overflow.</summary>
+    /// <summary>Ensures <see cref="_items"/> has at least one free slot at index <see cref="_length"/>. Allocates the default-capacity array on first use; doubles on subsequent overflow.</summary>
     private void EnsureCapacityForOneMore()
     {
         if (_items is null)

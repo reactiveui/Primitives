@@ -21,10 +21,7 @@ public sealed class NSRunloopSequencer : CoalescingDispatchScheduler
     /// <summary>Nanoseconds per millisecond, used to convert a managed delay into a <see cref="DispatchTime"/> offset.</summary>
     private const long NanosecondsPerMillisecond = 1_000_000;
 
-    /// <summary>
-    /// Cached dispatch block wrapping the drain. The drain callback is invariant for the lifetime of the
-    /// sequencer, so the block is created once and re-enqueued for every posted batch rather than per post.
-    /// </summary>
+    /// <summary>Native drain callback reused across posted batches.</summary>
     private DispatchBlock? _drainBlock;
 
     /// <summary>Initializes a new instance of the <see cref="NSRunloopSequencer"/> class.</summary>

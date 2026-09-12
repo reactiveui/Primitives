@@ -37,8 +37,8 @@ public sealed class ImmutableEmptySignal<T> : IRequireCurrentThread<T>, IInlineS
     }
 
     /// <summary>Invokes <paramref name="onCompleted"/> before returning.</summary>
-    /// <param name="onNext">Never invoked.</param>
-    /// <param name="onError">Never invoked.</param>
+    /// <param name="onNext">The unused value callback.</param>
+    /// <param name="onError">The unused error callback.</param>
     /// <param name="onCompleted">Invoked before this method returns.</param>
     /// <returns>An empty disposable; the signal has finished by the time this returns.</returns>
     public IDisposable Subscribe(Action<T> onNext, Action<Exception> onError, Action onCompleted)

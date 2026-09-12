@@ -4,10 +4,7 @@
 
 namespace ReactiveUI.Primitives.Async.Advanced;
 
-/// <summary>
-/// Per-source observer used by arity-specific <c>SyncLatest</c> coordinators to record typed source values
-/// and forward source terminal notifications to the shared lifecycle.
-/// </summary>
+/// <summary>Per-source observer used by arity-specific <c>SyncLatest</c> coordinators to record typed source values and forward source terminal notifications to the shared lifecycle.</summary>
 /// <typeparam name="TSource">The source element type.</typeparam>
 /// <typeparam name="TResult">The downstream element type.</typeparam>
 /// <param name="parent">The parent coordinator.</param>

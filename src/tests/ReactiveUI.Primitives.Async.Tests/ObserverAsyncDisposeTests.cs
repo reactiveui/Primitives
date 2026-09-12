@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async.Tests;
@@ -9,46 +10,45 @@ namespace ReactiveUI.Primitives.Async.Tests;
 /// <summary>Tests for <see cref="WitnessAsync{T}"/> disposal behavior.</summary>
 public sealed class ObserverAsyncDisposeTests
 {
-    /// <summary>The value emitted by the hopping source.</summary>
+    /// <summary>The value emitted by the asynchronous source.</summary>
     private const int EmittedValue = 7;
 
     /// <summary>The value pushed after the external link has been cancelled; it must never be delivered.</summary>
     private const int PostCancellationValue = 8;
 
-    /// <summary>
-    /// How many times the dispose-versus-exiting-notification race is replayed. The interesting interleaving —
-    /// the in-flight call count reaching zero between the disposer reading it and re-reading it after publishing
-    /// its wait handle — is a nanosecond-wide window, so it is provoked repeatedly rather than once.
-    /// </summary>
-    private const int DisposeRaceAttempts = 256;
-
-    /// <summary>Verifies the reentrant dispose path lets an observer dispose itself from within its own in-flight
-    /// notification without deadlocking, even after the notification continuation has hopped to a different thread.</summary>
-    /// <returns>A task that completes when disposal finishes; a self-join deadlock leaves it pending.</returns>
+    /// <summary>Verifies that a resumed notification can dispose its own observer.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
     [Test]
-    public async Task WhenDisposedReentrantlyFromOwnNotificationAfterThreadHop_ThenDoesNotDeadlock()
+    public async Task WhenDisposedReentrantlyAfterNotificationResumes_ThenCompletes()
     {
-        SelfDisposingObserver observer = new();
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        SelfDisposingObserver observer = new(release.Task);
 
-        await observer.OnNextAsync(1, CancellationToken.None);
+        var notification = observer.OnNextAsync(1, CancellationToken.None);
+        await Assert.That(notification.IsCompleted).IsFalse();
+        release.SetResult();
+        await notification;
 
         await Assert.That(observer.HasDisposed).IsTrue();
     }
 
-    /// <summary>Verifies the terminal-sink reentrant dispose path completes when the result resolves during a
-    /// notification whose continuation has hopped threads.</summary>
+    /// <summary>Verifies that FirstAsync resolves and disposes its source after a suspended subscription resumes.</summary>
     /// <returns>A task to monitor completion.</returns>
     [Test]
-    public async Task WhenFirstAsyncResolvesDuringHoppedNotification_ThenCompletes()
+    public async Task WhenFirstAsyncResolvesAfterSubscriptionResumes_ThenCompletes()
     {
-        var source = SignalAsync.Create<int>(static async (observer, _) =>
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var source = SignalAsync.Create<int>(async (observer, _) =>
         {
-            await Task.Yield();
+            await release.Task;
             await observer.OnNextAsync(EmittedValue, CancellationToken.None).ConfigureAwait(false);
             return DisposableAsync.Empty;
         });
 
-        var value = await source.FirstAsync();
+        var first = source.FirstAsync();
+        await Assert.That(first.IsCompleted).IsFalse();
+        release.SetResult();
+        var value = await first;
 
         await Assert.That(value).IsEqualTo(EmittedValue);
     }
@@ -75,25 +75,126 @@ public sealed class ObserverAsyncDisposeTests
         await Assert.That(observer.Received).IsCollectionEqualTo([EmittedValue]);
     }
 
-    /// <summary>Verifies that disposing an observer from one thread while a notification is still in flight on
-    /// another never hangs, including when that notification's call count drops to zero inside the disposer's
-    /// publish-then-recheck window — the case the disposer must self-signal to avoid waiting forever.</summary>
-    /// <returns>A task that completes when every attempt has disposed; a deadlocked wait leaves it pending.</returns>
+    /// <summary>Verifies that the last active notification signals an already published disposal waiter.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
     [Test]
-    public async Task WhenDisposedFromAnotherThreadAsNotificationExits_ThenDoesNotDeadlock()
+    public async Task WhenCompletionWaiterPublishedBeforeNotificationExits_ThenExitSignalsWaiter()
     {
-        for (var attempt = 0; attempt < DisposeRaceAttempts; attempt++)
+        RecordingObserver observer = new(CancellationToken.None);
+        var entered = observer.TryEnterOnSomethingCall(CancellationToken.None, out var scope);
+        await Assert.That(entered).IsTrue();
+        var waiter = observer.PublishCallCompletionWaiter();
+        await Assert.That(waiter.IsCompleted).IsFalse();
+        scope.Dispose();
+        await Assert.That(observer.ExitOnSomethingCall()).IsFalse();
+        await waiter;
+        await observer.DisposeAsync();
+        await Assert.That(observer.HasDisposed).IsTrue();
+    }
+
+    /// <summary>A notification that exits before waiter publication requires no further signal.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task WhenNotificationExitsBeforeCompletionWaiterPublished_ThenWaiterIsCompleted()
+    {
+        RecordingObserver observer = new(CancellationToken.None);
+        var entered = observer.TryEnterOnSomethingCall(CancellationToken.None, out var scope);
+        await Assert.That(entered).IsTrue();
+        scope.Dispose();
+        await Assert.That(observer.ExitOnSomethingCall()).IsTrue();
+        var waiter = observer.PublishCallCompletionWaiter();
+        await Assert.That(waiter.IsCompletedSuccessfully).IsTrue();
+        await waiter;
+        await observer.DisposeAsync();
+    }
+
+    /// <summary>Disposal waits for a notification owned by another thread before releasing its source subscription.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task WhenDisposedWithForeignNotificationOwner_ThenSourceWaitsForNotificationExit()
+    {
+        const int ForeignOwnerThread = -1;
+        RecordingObserver observer = new(CancellationToken.None);
+        StrongBox<bool> sourceDisposed = new();
+        await observer.AssignSourceSubscriptionAsync(DisposableAsync.Create(sourceDisposed, static state =>
         {
-            ParkedNotificationObserver observer = new();
-            var notification = Task.Run(async () =>
-                await observer.OnNextAsync(EmittedValue, CancellationToken.None));
+            state.Value = true;
+            return default;
+        }));
+        var entered = observer.TryEnterOnSomethingCall(ForeignOwnerThread, CancellationToken.None, out var scope);
+        await Assert.That(entered).IsTrue();
 
-            await observer.Entered;
+        var disposal = observer.DisposeAsync();
+        await Assert.That(disposal.IsCompleted).IsFalse();
+        await Assert.That(sourceDisposed.Value).IsFalse();
+        scope.Dispose();
+        await Assert.That(observer.ExitOnSomethingCall()).IsFalse();
+        await disposal;
+
+        await Assert.That(sourceDisposed.Value).IsTrue();
+        await Assert.That(observer.HasDisposed).IsTrue();
+    }
+
+    /// <summary>Verifies entry and exit retry against the current notification count after stale observations.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task WhenCallStateChangesAfterObservation_ThenEntryAndExitRetry()
+    {
+        const int CallerThread = 1;
+        await using RecordingObserver observer = new(CancellationToken.None);
+        var empty = observer.ReadCallState();
+        var enteredFirst = observer.TryEnterOnSomethingCall(CallerThread, CancellationToken.None, out var firstScope);
+        var beforeSecondEntry = observer.ReadCallState();
+        var enteredSecond = observer.TryEnterObservedCallState(CallerThread, empty, CancellationToken.None, out var secondScope);
+        var waiter = observer.PublishCallCompletionWaiter();
+        firstScope.Dispose();
+        secondScope.Dispose();
+        await Assert.That(enteredFirst).IsTrue();
+        await Assert.That(enteredSecond).IsTrue();
+        await Assert.That(observer.ExitObservedCallState(beforeSecondEntry)).IsTrue();
+        await Assert.That(waiter.IsCompleted).IsFalse();
+        await Assert.That(observer.ExitOnSomethingCall()).IsFalse();
+        await waiter;
+    }
+
+    /// <summary>Verifies that competing source publications retain one source and preserve prior disposal.</summary>
+    /// <param name="disposeFirst">Whether disposal precedes source publication.</param>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task WhenDisposeSourcePublishedTwice_ThenFirstSourceIsRetained(bool disposeFirst)
+    {
+        RecordingObserver observer = new(CancellationToken.None);
+        if (disposeFirst)
+        {
             await observer.DisposeAsync();
-            await notification;
-
-            await Assert.That(observer.HasDisposed).IsTrue();
         }
+
+        var first = observer.MaterializeDisposeCts();
+        var second = observer.MaterializeDisposeCts();
+        await Assert.That(second).IsSameReferenceAs(first);
+        await Assert.That(first.IsCancellationRequested).IsEqualTo(disposeFirst);
+        await observer.DisposeAsync();
+    }
+
+    /// <summary>Verifies that the last call either signals the disposal waiter or performs disposal itself.</summary>
+    /// <param name="publishWaiter">Whether another caller is waiting for disposal.</param>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task WhenLastCallCompletes_ThenDisposalFollowsWaiterOwnership(bool publishWaiter)
+    {
+        RecordingObserver observer = new(CancellationToken.None);
+        var entered = observer.TryEnterOnSomethingCall(CancellationToken.None, out var scope);
+        await Assert.That(entered).IsTrue();
+        var waiter = publishWaiter ? observer.PublishCallCompletionWaiter() : Task.CompletedTask;
+        scope.Dispose();
+        await observer.CompleteOrChainDispose();
+        await waiter;
+        await Assert.That(observer.HasDisposed).IsEqualTo(!publishWaiter);
+        await observer.DisposeAsync();
     }
 
     /// <summary>Observer that records every value it is handed, constructed with an external dispose link.</summary>
@@ -118,49 +219,14 @@ public sealed class ObserverAsyncDisposeTests
         protected override ValueTask OnCompletedAsyncCore(Result result) => default;
     }
 
-    /// <summary>Observer whose notification stays in flight until disposal releases it, so the call exits while the
-    /// disposer is inside its publish-then-recheck window rather than long before or long after it.</summary>
-    private sealed class ParkedNotificationObserver : WitnessAsync<int>
-    {
-        /// <summary>Completes once the notification has been entered and the in-flight call count is non-zero.</summary>
-        private readonly TaskCompletionSource _entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        /// <summary>Completes when disposal releases the parked notification.</summary>
-        private readonly TaskCompletionSource _released = new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        /// <summary>Gets a task that completes once the notification is in flight.</summary>
-        internal Task Entered => _entered.Task;
-
-        /// <inheritdoc/>
-        protected override async ValueTask OnNextAsyncCore(int value, CancellationToken cancellationToken)
-        {
-            IgnoredResult.Of(_entered.TrySetResult());
-            await _released.Task.ConfigureAwait(false);
-        }
-
-        /// <inheritdoc/>
-        protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-            default;
-
-        /// <inheritdoc/>
-        protected override ValueTask OnCompletedAsyncCore(Result result) => default;
-
-        /// <inheritdoc/>
-        protected override ValueTask DisposeAsyncCore()
-        {
-            // Release before the base waits on in-flight calls: the notification exits as the gate is published.
-            IgnoredResult.Of(_released.TrySetResult());
-            return base.DisposeAsyncCore();
-        }
-    }
-
-    /// <summary>Observer whose OnNext hops threads then disposes itself via the reentrant path.</summary>
-    private sealed class SelfDisposingObserver : WitnessAsync<int>
+    /// <summary>Observer that disposes itself when a suspended notification resumes.</summary>
+    /// <param name="release">The notification gate.</param>
+    private sealed class SelfDisposingObserver(Task release) : WitnessAsync<int>
     {
         /// <inheritdoc/>
         protected override async ValueTask OnNextAsyncCore(int value, CancellationToken cancellationToken)
         {
-            await Task.Yield();
+            await release;
             await ((IReentrantAsyncDisposable)this).DisposeFromNotificationAsync().ConfigureAwait(false);
         }
 

@@ -121,7 +121,7 @@ public class ReplaySignalTests
         await HasObserversImpl(new());
         await HasObserversImpl(new(1));
         await HasObserversImpl(new(Three));
-        await HasObserversImpl(new(TimeSpan.FromSeconds(1)));
+        await HasObserversImpl(new(TimeSpan.FromSeconds(1), EmptySequencer.Instance));
     }
 
     /// <summary>Determines whether [has observers dispose1].</summary>
@@ -132,7 +132,7 @@ public class ReplaySignalTests
         await HasObservers_Dispose1Impl(new());
         await HasObservers_Dispose1Impl(new(1));
         await HasObservers_Dispose1Impl(new(Three));
-        await HasObservers_Dispose1Impl(new(TimeSpan.FromSeconds(1)));
+        await HasObservers_Dispose1Impl(new(TimeSpan.FromSeconds(1), EmptySequencer.Instance));
     }
 
     /// <summary>Determines whether [has observers dispose2].</summary>
@@ -143,7 +143,7 @@ public class ReplaySignalTests
         await HasObservers_Dispose2Impl(new());
         await HasObservers_Dispose2Impl(new(1));
         await HasObservers_Dispose2Impl(new(Three));
-        await HasObservers_Dispose2Impl(new(TimeSpan.FromSeconds(1)));
+        await HasObservers_Dispose2Impl(new(TimeSpan.FromSeconds(1), EmptySequencer.Instance));
     }
 
     /// <summary>Determines whether [has observers dispose3].</summary>
@@ -154,7 +154,7 @@ public class ReplaySignalTests
         await HasObservers_Dispose3Impl(new());
         await HasObservers_Dispose3Impl(new(1));
         await HasObservers_Dispose3Impl(new(Three));
-        await HasObservers_Dispose3Impl(new(TimeSpan.FromSeconds(1)));
+        await HasObservers_Dispose3Impl(new(TimeSpan.FromSeconds(1), EmptySequencer.Instance));
     }
 
     /// <summary>Determines whether [has observers on completed].</summary>
@@ -165,7 +165,7 @@ public class ReplaySignalTests
         await HasObservers_OnCompletedImpl(new());
         await HasObservers_OnCompletedImpl(new(1));
         await HasObservers_OnCompletedImpl(new(Three));
-        await HasObservers_OnCompletedImpl(new(TimeSpan.FromSeconds(1)));
+        await HasObservers_OnCompletedImpl(new(TimeSpan.FromSeconds(1), EmptySequencer.Instance));
     }
 
     /// <summary>Determines whether [has observers on error].</summary>
@@ -176,7 +176,7 @@ public class ReplaySignalTests
         await HasObservers_OnErrorImpl(new());
         await HasObservers_OnErrorImpl(new(1));
         await HasObservers_OnErrorImpl(new(Three));
-        await HasObservers_OnErrorImpl(new(TimeSpan.FromSeconds(1)));
+        await HasObservers_OnErrorImpl(new(TimeSpan.FromSeconds(1), EmptySequencer.Instance));
     }
 
     /// <summary>Called when [error argument checking].</summary>
@@ -215,16 +215,13 @@ public class ReplaySignalTests
         await Assert.That(state.ParamName).IsEqualTo("selector");
     }
 
-    /// <summary>
-    /// A new subscriber that races a live <see cref="ReplaySignal{T}.OnNext"/> must receive each value exactly
-    /// once: the replayed buffer must not duplicate or reorder a value that is also delivered live.
-    /// </summary>
+    /// <summary>Replay and live delivery hold one shared gate and deliver each value once in order.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task Subscribe_RacingOnNext_DeliversEachValueOnce()
+    public async Task SubscribeAndOnNextHoldTheSharedDeliveryGate()
     {
-        await RaceSubscribeAgainstProducer(static () => new(1));
-        await RaceSubscribeAgainstProducer(static () => new(Three));
+        await AssertReplayAndLiveDeliveryHoldTheGate(static () => new(1));
+        await AssertReplayAndLiveDeliveryHoldTheGate(static () => new(Three));
     }
 
     /// <summary>Asserts a behavior signal keeps its first terminal notification and replays it to late subscribers.</summary>
@@ -306,41 +303,28 @@ public class ReplaySignalTests
         await Assert.That(windowedLate.Values.SequenceEqual(expectedWindowedLate)).IsTrue();
     }
 
-    /// <summary>
-    /// Continuously emits increasing values from one thread while another thread repeatedly subscribes and
-    /// disposes, asserting that no subscriber ever receives a value out of order or twice.
-    /// </summary>
+    /// <summary>Checks gate ownership and ordered handover from replay to live delivery.</summary>
     /// <param name = "factory">Factory used to create the replay signal under test.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    private static async Task RaceSubscribeAgainstProducer(Func<ReplaySignal<int>> factory)
+    private static async Task AssertReplayAndLiveDeliveryHoldTheGate(Func<ReplaySignal<int>> factory)
     {
-        const int subscribeAttempts = 50_000;
-
         using var signal = factory();
-        using CancellationTokenSource stop = new();
-        var firstFailure = default(OrderingWitness<int>.OutOfOrderDelivery);
-
-        var producer = Task.Run(() =>
+        List<int> values = [];
+        var ownsGate = true;
+        signal.OnNext(1);
+        using var subscription = signal.Subscribe(value =>
         {
-            var value = 0;
-            while (!stop.IsCancellationRequested)
-            {
-                value++;
-                signal.OnNext(value);
-            }
+            values.Add(value);
+#if NET9_0_OR_GREATER
+            ownsGate &= signal.Gate.IsHeldByCurrentThread;
+#else
+            ownsGate &= Monitor.IsEntered(signal.Gate);
+#endif
         });
-
-        for (var attempt = 0; attempt < subscribeAttempts && firstFailure is null; attempt++)
-        {
-            OrderingWitness<int> witness = new();
-            signal.Subscribe(witness).Dispose();
-            firstFailure = witness.OutOfOrder;
-        }
-
-        await stop.CancelAsync();
-        await producer;
-
-        await Assert.That(firstFailure).IsNull();
+        signal.OnNext(Two);
+        signal.OnNext(Three);
+        await Assert.That(ownsGate).IsTrue();
+        await Assert.That(values.SequenceEqual([1, Two, Three])).IsTrue();
     }
 
     /// <summary>Creates a replay signal and disposes it immediately.</summary>

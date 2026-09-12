@@ -7,9 +7,6 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for working with asynchronous observable sequences.</summary>
-/// <remarks>The SignalAsync class contains static methods that extend the functionality of asynchronous
-/// observables, enabling operations such as materializing the sequence into a list asynchronously. These methods are
-/// intended to simplify common tasks when consuming asynchronous observable streams.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Asynchronous list-materialization operators for an observable source sequence.</summary>

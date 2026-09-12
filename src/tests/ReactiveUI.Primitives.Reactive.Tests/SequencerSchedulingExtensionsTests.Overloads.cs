@@ -7,12 +7,7 @@ using ReactiveUI.Primitives.Reactive.Concurrency;
 
 namespace ReactiveUI.Primitives.Reactive.Tests;
 
-/// <summary>
-/// Exercises every member of the scheduling seam directly, rather than through an operator that happens to use one
-/// of them. This part deliberately does not import <c>System.Reactive.Concurrency</c>: the <c>Scheduler</c> class in
-/// that namespace carries extension methods with the same signatures, and importing it would make every call below
-/// ambiguous. The scheduler types are therefore spelled out in full.
-/// </summary>
+/// <summary>Tests scheduling overloads. Fully qualified scheduler names avoid ambiguous System.Reactive extension methods.</summary>
 public partial class SequencerSchedulingExtensionsTests
 {
     /// <summary>State threaded through the closure-free stateful overloads.</summary>
@@ -111,10 +106,7 @@ public partial class SequencerSchedulingExtensionsTests
         public void Execute() => ExecuteCount++;
     }
 
-    /// <summary>
-    /// Counts how often the scheduler ran a plain action. Holding the count here lets the action overloads be
-    /// handed <see cref="Record"/> as a method group, so the callback closes over nothing.
-    /// </summary>
+    /// <summary>Counts action invocations through a method-group callback.</summary>
     private sealed class RunCounter
     {
         /// <summary>Gets the number of times the scheduler ran the action.</summary>

@@ -8,12 +8,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Reactive.Concurrency;
 
-/// <summary>
-/// Shared run/cancel core for scheduled, cancellable work items carrying closure-free state and the scheduler passed
-/// back to the action. It owns the atomic start-versus-cancel handshake so every dispatcher and event-loop scheduler
-/// implements it exactly once; derived types add only the cancellation resources specific to how the work was queued
-/// (for example a one-shot timer).
-/// </summary>
+/// <summary>Coordinates work execution and cancellation; derived items own scheduling resources.</summary>
 /// <typeparam name="TState">The scheduled state type.</typeparam>
 internal class DispatchWorkItemBase<TState>
 {
@@ -36,11 +31,6 @@ internal class DispatchWorkItemBase<TState>
     /// <param name="scheduler">The scheduler passed back to the scheduled action.</param>
     /// <param name="state">Scheduled state.</param>
     /// <param name="action">Scheduled action.</param>
-    /// <remarks>
-    /// Written out rather than made a primary constructor so it can stay <c>protected</c>: a primary
-    /// constructor on a concrete class is public, which would let anything construct the base directly
-    /// instead of going through a derived work item.
-    /// </remarks>
     protected DispatchWorkItemBase(
         IScheduler scheduler,
         TState state,

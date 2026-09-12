@@ -32,9 +32,7 @@ public static partial class SignalExtensions
     /// <param name="source">Source sequence to recover or clean up.</param>
     extension<TSource>(IObservable<TSource> source)
     {
-        /// <summary>
-        /// Continues an observable sequence that is terminated by an exception of the specified type with the observable sequence produced by the handler.
-        /// </summary>
+        /// <summary>Continues an observable sequence that is terminated by an exception of the specified type with the observable sequence produced by the handler.</summary>
         /// <typeparam name="TException">The type of the exception to catch and handle. Needs to derive from <see cref="Exception"/>.</typeparam>
         /// <param name="handler">Exception handler function, producing another observable sequence.</param>
         /// <returns>

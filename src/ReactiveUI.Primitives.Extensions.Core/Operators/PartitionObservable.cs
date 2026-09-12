@@ -102,9 +102,7 @@ public sealed class PartitionObservable<T>
 
             lock (_parent._gate)
             {
-                // Invariant: a Subscription whose Interlocked.Exchange just transitioned _disposed
-                // from 0 to 1 was created by Subscribe under the same lock, which sets _sink
-                // before returning — so _sink is non-null here by construction.
+                // Subscribe assigns the sink under this lock before returning the handle.
                 _parent._sink!.Remove(_observer, _side);
                 _parent._subscriptionCount--;
                 if (_parent._subscriptionCount == 0)

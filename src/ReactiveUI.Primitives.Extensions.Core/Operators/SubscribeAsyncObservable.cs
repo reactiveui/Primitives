@@ -65,25 +65,34 @@ public sealed class SubscribeAsyncObservable<T> : IDisposable
         }
     }
 
-    /// <summary>Called when a new value is emitted by the source.</summary>
-    /// <param name="value">The value emitted by the source.</param>
-    private void OnNext(T value)
+    /// <summary>Queues a source value and returns the operation started by it.</summary>
+    /// <param name="value">The source value.</param>
+    /// <returns>The processing task, or a completed task if no work starts.</returns>
+    internal Task OnNextAsync(T value)
     {
+        var processing = Task.CompletedTask;
         lock (_gate)
         {
             if (_done || _disposed)
             {
-                return;
+                return Task.CompletedTask;
             }
 
             _queue.Enqueue(value);
             if (!_isProcessing)
             {
                 _isProcessing = true;
-                _ = ProcessNextAsync();
+                processing = ProcessNextAsync();
             }
         }
+
+        return processing;
     }
+
+    /// <summary>Queues a source value.</summary>
+    /// <param name="value">The source value.</param>
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    private void OnNext(T value) => _ = OnNextAsync(value);
 
     /// <summary>Called when an error occurs in the source.</summary>
     /// <param name="error">The error that occurred.</param>

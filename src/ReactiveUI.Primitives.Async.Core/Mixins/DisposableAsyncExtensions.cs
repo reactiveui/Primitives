@@ -29,10 +29,7 @@ public static class DisposableAsyncExtensions
         }
     }
 
-    /// <summary>
-    /// Presents a synchronous <see cref="IDisposable"/> as an <see cref="IAsyncDisposable"/>, calling
-    /// <see cref="IDisposable.Dispose"/> inline and completing synchronously.
-    /// </summary>
+    /// <summary>Presents a synchronous <see cref="IDisposable"/> as an <see cref="IAsyncDisposable"/>, calling <see cref="IDisposable.Dispose"/> inline and completing synchronously.</summary>
     /// <param name="disposable">The <see cref="IDisposable"/> instance to be wrapped for asynchronous disposal. Cannot be null.</param>
     internal sealed class DisposableToDisposableAsync(IDisposable disposable) : IAsyncDisposable
     {

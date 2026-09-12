@@ -7,12 +7,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Verifies the three wrappers <see cref="Witness.Safe{T}(IObserver{T})"/> can hand back: the delegate
-/// witness made safe in place, the cancel-owning safe wrapper, and the cancel-free safe wrapper. All three
-/// promise the same thing — one terminal signal reaches the wrapped observer, nothing reaches it afterwards,
-/// and a throwing value callback stops the witness for good.
-/// </summary>
+/// <summary>Tests that safe witnesses stop after one terminal signal or a throwing value callback.</summary>
 public class SafeWitnessTests
 {
     /// <summary>The first value pushed at a witness.</summary>

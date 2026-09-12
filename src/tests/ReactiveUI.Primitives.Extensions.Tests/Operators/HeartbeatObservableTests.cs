@@ -7,9 +7,7 @@ using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Edge-case coverage for <c>Heartbeat</c> backed by
-/// <c>HeartbeatObservable&lt;T&gt;</c> — heartbeat-on-quiet, error/completion
-/// forwarding, and post-terminal timer suppression.</summary>
+/// <summary>Tests heartbeats during source inactivity and cancellation after termination.</summary>
 public class HeartbeatObservableTests
 {
     /// <summary>Heartbeat period for the scheduler-driven tests.</summary>

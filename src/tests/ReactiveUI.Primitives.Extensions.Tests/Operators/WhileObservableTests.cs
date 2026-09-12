@@ -6,9 +6,7 @@ using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Edge-case coverage for the <c>While</c> operator backed by
-/// <c>WhileObservable</c> — inline iteration, scheduler dispatch, predicate-throws,
-/// action-throws, and dispose-during-iteration paths.</summary>
+/// <summary>Tests iteration, scheduling, predicate and action failures, and disposal.</summary>
 public class WhileObservableTests
 {
     /// <summary>Synthetic error message attached to predicate failures.</summary>
@@ -118,18 +116,22 @@ public class WhileObservableTests
         public long Timestamp => 0;
 
         /// <inheritdoc/>
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void Schedule(IWorkItem item) => _pending.Enqueue(item);
 
         /// <inheritdoc/>
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void Schedule(IWorkItem item, long dueTimestamp) => Schedule(item);
 
         /// <summary>Runs the oldest queued work item, if any.</summary>
         internal void RunNext()
         {
-            if (_pending.Count > 0)
+            if (_pending.Count == 0)
             {
-                _pending.Dequeue().Execute();
+                return;
             }
+
+            _pending.Dequeue().Execute();
         }
 
         /// <summary>Drains the queue, including work items queued by the items it runs.</summary>

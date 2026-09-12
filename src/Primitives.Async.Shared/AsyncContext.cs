@@ -12,15 +12,8 @@ namespace ReactiveUI.Primitives.Async.Reactive;
 namespace ReactiveUI.Primitives.Async;
 #endif
 
-/// <summary>
-/// Represents an asynchronous execution context that encapsulates a specific SynchronizationContext or TaskScheduler
-/// for controlling the scheduling of asynchronous operations.
-/// </summary>
-/// <remarks>Use AsyncContext to capture and restore a particular synchronization or task scheduling environment
-/// when running asynchronous code. This is useful for ensuring that continuations or asynchronous callbacks execute on
-/// a desired context, such as a UI thread or a custom scheduler. An AsyncContext can be created from a
-/// SynchronizationContext, TaskScheduler, or ISequencer. The Default context represents the absence of a specific
-/// synchronization or scheduling context, and typically corresponds to the default task scheduler.</remarks>
+/// <summary>Represents an asynchronous execution context that encapsulates a specific SynchronizationContext or TaskScheduler for controlling the scheduling of asynchronous operations.</summary>
+/// <remarks>Contexts wrap a synchronization context, task scheduler, or sequencer. Default uses the default task scheduler.</remarks>
 [System.Diagnostics.DebuggerDisplay(
 "AsyncContext: SynchronizationContext = {SynchronizationContext}, TaskScheduler = {TaskScheduler}, Sequencer = {Sequencer}")]
 public sealed record AsyncContext
@@ -31,15 +24,10 @@ public sealed record AsyncContext
     }
 
     /// <summary>Gets the default instance of the AsyncContext class.</summary>
-    /// <remarks>Use this property to access a shared, default AsyncContext instance when a custom context is
-    /// not required.</remarks>
     public static AsyncContext Default { get; } = new();
 
     /// <summary>Gets the synchronization context to use for marshaling callbacks and continuations.</summary>
-    /// <remarks>If this property is set, callbacks and continuations will be posted to the specified
-    /// synchronization context. If null, the default context is used, which may result in execution on a thread pool
-    /// thread. This property is typically used to ensure that asynchronous operations resume on a specific thread or
-    /// context, such as a UI thread.</remarks>
+    /// <remarks>A specified synchronization context receives posted continuations; otherwise the task scheduler determines execution.</remarks>
     public SynchronizationContext? SynchronizationContext { get; init; }
 
     /// <summary>Gets the task scheduler to use for scheduling tasks, or null to use the default scheduler.</summary>
@@ -57,9 +45,6 @@ public sealed record AsyncContext
     /// <param name="synchronizationContext">The SynchronizationContext to associate with the AsyncContext. Cannot be null.</param>
     /// <returns>An AsyncContext instance configured to use the provided SynchronizationContext.</returns>
     /// <exception cref="ArgumentNullException">Thrown if synchronizationContext is null.</exception>
-    /// <remarks>The returned AsyncContext will have its TaskScheduler property set to null. Use this method
-    /// when you want to control asynchronous execution using a specific SynchronizationContext, such as for UI thread
-    /// synchronization.</remarks>
     public static AsyncContext From(SynchronizationContext synchronizationContext)
     {
         ArgumentExceptionHelper.ThrowIfNull(synchronizationContext);
@@ -98,12 +83,6 @@ public sealed record AsyncContext
     /// <returns>An <see cref="AsyncContext"/> representing the current asynchronous context. If a <see
     /// cref="SynchronizationContext"/> is present, it is used; otherwise, the current <see cref="TaskScheduler"/> is
     /// used.</returns>
-    /// <remarks>
-    /// Use this method to capture the context for scheduling asynchronous operations that should continue on the same
-    /// logical thread or synchronization context. Coverage excludes this method because both inputs are ambient thread
-    /// state and cannot be changed safely by parallel tests.
-    /// </remarks>
-    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public static AsyncContext GetCurrent()
     {
         var currentSc = SynchronizationContext.Current;
@@ -118,19 +97,12 @@ public sealed record AsyncContext
     public AsyncContextSwitcherAwaitable SwitchContextAsync(bool forceYielding, CancellationToken cancellationToken) =>
         new(this, forceYielding, cancellationToken);
 
-    /// <summary>
-    /// Provides an awaitable that switches execution to a specified asynchronous context, optionally forcing a yield
-    /// and supporting cancellation.
-    /// </summary>
+    /// <summary>Provides an awaitable that switches execution to a specified asynchronous context, optionally forcing a yield and supporting cancellation.</summary>
     /// <param name="AsyncContext">The asynchronous context to which execution should be switched when awaited.</param>
     /// <param name="ForceYielding">true to always yield execution even if already in the target context; otherwise, false to avoid yielding if
     /// already in the specified context.</param>
     /// <param name="CancellationToken">A cancellation token that can be used to cancel the await operation before the continuation is scheduled.</param>
-    /// <remarks>Use this struct to ensure that code after an await resumes on a specific asynchronous
-    /// context, such as a particular SynchronizationContext or TaskScheduler. If cancellation is requested before the
-    /// continuation is scheduled, the continuation is invoked immediately and an OperationCanceledException will be
-    /// thrown when GetResult is called. This type is intended for advanced scenarios where precise control over
-    /// asynchronous context switching is required.</remarks>
+    /// <remarks>Cancellation invokes the continuation immediately; GetResult then throws OperationCanceledException.</remarks>
     [System.Diagnostics.DebuggerDisplay("AsyncContextSwitcherAwaitable: IsCompleted = {IsCompleted}, ForceYielding = {ForceYielding}")]
     public readonly record struct AsyncContextSwitcherAwaitable(
         AsyncContext AsyncContext,
@@ -140,26 +112,18 @@ public sealed record AsyncContext
         /// <summary>Gets a value indicating whether the asynchronous operation has completed in the current context.</summary>
         public bool IsCompleted => !ForceYielding && AsyncContext.IsSameAsCurrentAsyncContext();
 
-        /// <summary>Checks whether the associated cancellation token has had cancellation requested and throws an exception if so.</summary>
-        /// <remarks>This method is typically used to observe cancellation requests and respond by
-        /// throwing an OperationCanceledException if cancellation has been signaled. If cancellation has not been
-        /// requested, the method returns normally.</remarks>
+        /// <summary>Throws if cancellation was requested.</summary>
+        /// <exception cref="OperationCanceledException">Cancellation was requested.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void GetResult() => CancellationToken.ThrowIfCancellationRequested();
 
-        /// <summary>
-        /// Returns an awaiter for this AsyncContextSwitcherAwaitable instance, enabling use of the await keyword to
-        /// asynchronously switch execution context.
-        /// </summary>
+        /// <summary>Returns an awaiter for this AsyncContextSwitcherAwaitable instance, enabling use of the await keyword to asynchronously switch execution context.</summary>
         /// <returns>An awaiter that can be used to await this instance and perform an asynchronous context switch.</returns>
         public AsyncContextSwitcherAwaitable GetAwaiter() => this;
 
         /// <summary>Schedules the specified continuation action to be invoked when the operation has completed.</summary>
         /// <param name="continuation">The action to execute when the operation is complete. Cannot be null.</param>
-        /// <remarks>If a synchronization context is available, the continuation is posted to it;
-        /// otherwise, the continuation is scheduled on the associated task scheduler or the default task scheduler. If
-        /// the operation has already been canceled, the continuation is invoked immediately on the current
-        /// thread.</remarks>
+        /// <remarks>Continuations use the synchronization context or task scheduler; cancellation invokes them immediately on the current thread.</remarks>
         public void OnCompleted(Action continuation)
         {
             ArgumentExceptionHelper.ThrowIfNull(continuation);
@@ -195,9 +159,7 @@ public sealed record AsyncContext
                 return;
             }
 
-            // Fast path for the default scheduler: bypass Task.Factory.StartNew (which allocates a
-            // Task per call) and queue the continuation directly to the threadpool. This is the
-            // path Yield takes by default, so the saving lands on the operator's hot path.
+            // Queue directly to avoid allocating a Task for each continuation.
             if (ts is null || ts == TaskScheduler.Default)
             {
                 _ = ThreadPool.UnsafeQueueUserWorkItem(static c => ((Action)c!).Invoke(), continuation);
@@ -214,12 +176,8 @@ public sealed record AsyncContext
         }
     }
 
-    /// <summary>Provides a custom TaskScheduler that schedules tasks using the specified IScheduler.</summary>
+    /// <summary>Routes task execution through the supplied sequencer.</summary>
     /// <param name="scheduler">The ISequencer used to schedule and execute tasks. Cannot be null.</param>
-    /// <remarks>This TaskScheduler enables integration of Task-based asynchronous code with reactive or
-    /// custom scheduling strategies by delegating task execution to the provided ISequencer. Tasks scheduled through
-    /// this TaskScheduler will be executed according to the policies of the specified ISequencer. This class is
-    /// intended for advanced scenarios where control over task scheduling is required.</remarks>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Performance",
         "CA1812:Avoid uninstantiated internal classes",
@@ -230,12 +188,12 @@ public sealed record AsyncContext
         /// <summary>Gets the sequencer used by this task-scheduler adapter.</summary>
         internal ISequencer Sequencer => scheduler;
 
-        /// <summary>Internal accessor for the protected <see cref="GetScheduledTasks"/> override; used only by the test assembly.</summary>
+        /// <summary>Returns the adapter's scheduled-task enumeration.</summary>
         /// <returns>The result of the protected <see cref="GetScheduledTasks"/> implementation.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal IEnumerable<Task>? GetScheduledTasksForTesting() => GetScheduledTasks();
 
-        /// <summary>Internal accessor for the protected <see cref="TryExecuteTaskInline"/> override; used only by the test assembly.</summary>
+        /// <summary>Attempts inline execution through the adapter.</summary>
         /// <param name="task">The task to attempt to execute inline.</param>
         /// <param name="taskWasPreviouslyQueued">Whether the task was previously queued.</param>
         /// <returns>The result of the protected <see cref="TryExecuteTaskInline"/> implementation.</returns>

@@ -37,9 +37,9 @@ public sealed class ImmediateThrowSignal<T> : IRequireCurrentThread<T>, IInlineS
     }
 
     /// <summary>Invokes <paramref name="onError"/> with the stored error before returning.</summary>
-    /// <param name="onNext">Never invoked.</param>
+    /// <param name="onNext">The unused value callback.</param>
     /// <param name="onError">Invoked with the stored error.</param>
-    /// <param name="onCompleted">Never invoked.</param>
+    /// <param name="onCompleted">The unused completion callback.</param>
     /// <returns>An empty disposable; the signal has finished by the time this returns.</returns>
     public IDisposable Subscribe(Action<T> onNext, Action<Exception> onError, Action onCompleted)
     {

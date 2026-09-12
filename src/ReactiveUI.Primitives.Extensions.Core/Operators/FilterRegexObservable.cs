@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>Operator that filters string elements using a <see cref="Regex"/>. Replaces the closure-based implementation in ReactiveExtensions.Filter.</summary>
+/// <summary>Filters strings using a regular expression and forwards matching errors to the observer.</summary>
 /// <param name="source">The source observable emitting strings.</param>
 /// <param name="regex">The regex to use for filtering.</param>
 public sealed class FilterRegexObservable(

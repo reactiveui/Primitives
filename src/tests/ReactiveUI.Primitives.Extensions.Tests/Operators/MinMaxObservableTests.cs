@@ -7,9 +7,7 @@ using ReactiveUI.Primitives.Extensions.Operators;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Edge-case coverage for the <c>GetMin</c> / <c>GetMax</c> operators
-/// backed by <c>MinMaxObservable&lt;T&gt;</c> — partial-source suppression,
-/// max/min selection over multiple updates, and source-error propagation.</summary>
+/// <summary>Tests extrema across source updates, missing initial values, and source errors.</summary>
 public class MinMaxObservableTests
 {
     /// <summary>Synthetic error message attached to source errors.</summary>

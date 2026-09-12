@@ -7,16 +7,9 @@ using ReactiveUI.Primitives.Reactive.Concurrency;
 
 namespace ReactiveUI.Primitives.WinForms.Reactive.Tests;
 
-/// <summary>
-/// Tests for <see cref="ControlSequencer"/> as an <see cref="IScheduler"/>, exercised against a real Windows Forms
-/// <see cref="Control"/> whose handle is created on a dedicated STA thread running a message loop, so posted work
-/// runs end to end. Compiled only on Windows builds (see the csproj).
-/// </summary>
+/// <summary>Tests scheduler dispatch on a dedicated Windows Forms STA thread.</summary>
 public sealed class ControlSequencerTests
 {
-    /// <summary>Maximum time to wait for work to be marshalled onto the control thread before failing.</summary>
-    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(5);
-
     /// <summary>Verifies the constructor rejects a null control.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
@@ -34,17 +27,17 @@ public sealed class ControlSequencerTests
 
         _ = scheduler.Schedule(() => completion.TrySetResult(Environment.CurrentManagedThreadId));
 
-        var ranOnThreadId = await completion.Task.WaitAsync(WaitTimeout);
+        var ranOnThreadId = await completion.Task;
         await Assert.That(ranOnThreadId).IsEqualTo(harness.ThreadId);
     }
 
-    /// <summary>Hosts a Windows Forms <see cref="Control"/> on a dedicated STA thread running a message loop, exiting it and joining the thread on disposal.</summary>
+    /// <summary>Owns the control and its STA message loop.</summary>
     private sealed class ControlHarness : IDisposable
     {
         /// <summary>The thread running the Windows Forms message loop.</summary>
         private readonly Thread _thread;
 
-        /// <summary>Initializes a new instance of the <see cref="ControlHarness"/> class and waits until the control handle and message loop are running.</summary>
+        /// <summary>Initializes a new instance of the <see cref="ControlHarness"/> class with a created control handle.</summary>
         public ControlHarness()
         {
             using var ready = new ManualResetEventSlim(false);
@@ -72,7 +65,7 @@ public sealed class ControlSequencerTests
         public void Dispose()
         {
             _ = Control.BeginInvoke(Application.ExitThread);
-            _ = _thread.Join(WaitTimeout);
+            _thread.Join();
             Control.Dispose();
         }
     }

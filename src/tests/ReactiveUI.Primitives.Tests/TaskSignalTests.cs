@@ -9,7 +9,7 @@ using ReactiveUI.Primitives.Signals;
 namespace ReactiveUI.Primitives.Tests;
 
 /// <summary>Verifies <see cref="TaskSignal{T}"/> cancellation and disposal contracts.</summary>
-public class TaskSignalTests
+public partial class TaskSignalTests
 {
     /// <summary>Covers task-signal cancellation registration and disposal branches.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
@@ -57,8 +57,7 @@ public class TaskSignalTests
         CancellationTokenSource cts = new();
         var taskSignal = TaskSignal<int>.Create(static _ => Signal.Silent<int>(), Sequencer.CurrentThread, cts);
 
-        // The task-completion path can release the token source before the outer subscription is disposed, so
-        // cancelling it during disposal throws ObjectDisposedException, which disposal has to swallow.
+        // Completion may release the token source before subscription disposal.
         cts.Dispose();
 
         taskSignal.Dispose();

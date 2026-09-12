@@ -7,16 +7,11 @@ using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Edge-case coverage for the reactive-condition <c>ObserveOnIf</c> overload
-/// backed by <c>ObserveOnIfObservable&lt;T&gt;</c> — condition switching, error forwarding,
-/// and completion forwarding.</summary>
+/// <summary>Tests scheduler selection from condition changes and terminal notification forwarding.</summary>
 public class ObserveOnIfObservableTests
 {
     /// <summary>Synthetic error message attached to source errors.</summary>
     private const string SourceErrorMessage = "source error";
-
-    /// <summary>Guard timeout so a hung rendezvous fails this test rather than stalling the run.</summary>
-    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
 
     /// <summary>Verifies that values dispatch on the false-scheduler before any condition arrives.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -32,7 +27,7 @@ public class ObserveOnIfObservableTests
         using var sub = source.ObserveOnIf(condition, trueScheduler, falseScheduler)
             .Subscribe(v => emitted.TrySetResult(v));
         source.OnNext(Value);
-        var v2 = await emitted.Task.WaitAsync(GuardTimeout);
+        var v2 = await emitted.Task;
         await Assert.That(v2).IsEqualTo(Value);
         await Assert.That(falseScheduler.ScheduleCount).IsGreaterThanOrEqualTo(1);
         await Assert.That(trueScheduler.ScheduleCount).IsEqualTo(0);
@@ -53,7 +48,7 @@ public class ObserveOnIfObservableTests
             .Subscribe(v => emitted.TrySetResult(v));
         condition.OnNext(true);
         source.OnNext(Value);
-        var v2 = await emitted.Task.WaitAsync(GuardTimeout);
+        var v2 = await emitted.Task;
         await Assert.That(v2).IsEqualTo(Value);
         await Assert.That(trueScheduler.ScheduleCount).IsGreaterThanOrEqualTo(1);
     }
@@ -67,7 +62,7 @@ public class ObserveOnIfObservableTests
         Subject<bool> condition = new();
         Exception? caught = null;
         InvalidOperationException expected = new(SourceErrorMessage);
-        using var sub = source.ObserveOnIf(condition, TaskPoolSequencer.Default, Sequencer.Immediate).Subscribe(
+        using var sub = source.ObserveOnIf(condition, new RecordingScheduler(), Sequencer.Immediate).Subscribe(
             static _ => { },
             ex => caught = ex);
         source.OnError(expected);
@@ -82,7 +77,7 @@ public class ObserveOnIfObservableTests
         Subject<int> source = new();
         Subject<bool> condition = new();
         var completed = false;
-        using var sub = source.ObserveOnIf(condition, TaskPoolSequencer.Default, Sequencer.Immediate).Subscribe(
+        using var sub = source.ObserveOnIf(condition, new RecordingScheduler(), Sequencer.Immediate).Subscribe(
             static _ => { },
             () => completed = true);
         source.OnCompleted();
@@ -180,14 +175,14 @@ public class ObserveOnIfObservableTests
 
         // Sanity: subsequent value still routes through the true-scheduler (the duplicate did
         // not corrupt the captured state).
-        await Assert.That(values.Count).IsLessThanOrEqualTo(1);
+        await Assert.That(values).IsCollectionEqualTo([1]);
     }
 
     /// <summary>Sequencer that delegates to the default thread-pool sequencer but records each scheduled work item.</summary>
     private sealed class RecordingScheduler : ISequencer
     {
         /// <summary>Backing scheduler used to actually dispatch work.</summary>
-        private readonly TaskPoolSequencer _inner = TaskPoolSequencer.Default;
+        private readonly ImmediateSequencer _inner = Sequencer.Immediate;
 
         /// <summary>Gets the number of recorded schedule calls.</summary>
         public int ScheduleCount { get; private set; }

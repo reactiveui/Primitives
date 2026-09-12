@@ -2,13 +2,13 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reactive;
 using ReactiveUI.Primitives.Concurrency;
+using ReactiveUI.Primitives.Extensions.Operators;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Tests for <c>ThrottleObservable</c> — the after-terminal guards on
-/// <c>OnNext</c> / <c>OnError</c> / <c>OnCompleted</c> that are only reachable when
-/// an upstream pushes events past its own completion.</summary>
+/// <summary>Tests throttle delivery after replacement, termination, and disposal.</summary>
 public class ThrottleObservableTests
 {
     /// <summary>Tick window for advancing past the throttle in settle assertions.</summary>
@@ -16,6 +16,32 @@ public class ThrottleObservableTests
 
     /// <summary>Tick window for the throttle itself.</summary>
     private const int ThrottleTicks = 10;
+
+    /// <summary>Verifies stale, duplicate, and disposed throttle callbacks cannot emit.</summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task ThrottleCallbacksEmitOnlyTheCurrentValueOnce()
+    {
+        const int First = 1;
+        const int Latest = 2;
+        const int Disposed = 3;
+        List<int> values = [];
+        VirtualClock scheduler = new();
+        ThrottleObservable<int>.ThrottleSink sink = new(
+            Observer.Create<int>(values.Add),
+            TimeSpan.FromTicks(1),
+            scheduler);
+        sink.OnNext(First);
+        sink.OnNext(Latest);
+        sink.Emit(First);
+        await Assert.That(values).IsEmpty();
+        sink.Emit(Latest);
+        sink.Emit(Latest);
+        sink.OnNext(Disposed);
+        sink.Dispose();
+        sink.Emit(Disposed);
+        await Assert.That(values).IsCollectionEqualTo([Latest]);
+    }
 
     /// <summary>Verifies that an <c>OnNext</c> arriving after the source has already completed is silently dropped by the throttle sink.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>

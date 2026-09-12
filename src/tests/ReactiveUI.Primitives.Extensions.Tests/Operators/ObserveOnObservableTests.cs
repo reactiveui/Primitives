@@ -9,9 +9,7 @@ using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Coverage for <c>ObserveOnObservable</c> (reached via <c>ObserveOnSafe</c>) — the
-/// immediate-scheduler passthrough, the queue-and-drain marshaller's value / error / completion
-/// forwarding, dispose teardown, and the attach-after-terminated branch of the shared drain state.</summary>
+/// <summary>Tests immediate delivery, scheduled notifications, and subscription disposal.</summary>
 public class ObserveOnObservableTests
 {
     /// <summary>Synthetic error message attached to source errors.</summary>
@@ -146,9 +144,7 @@ public class ObserveOnObservableTests
         }
     }
 
-    /// <summary>Scheduler that runs scheduled work synchronously on the calling thread, so a drain pass
-    /// executes inline during the schedule call. Distinct instance from <see cref = "Sequencer.Immediate"/>
-    /// so the operator's immediate-scheduler passthrough does not apply.</summary>
+    /// <summary>Runs work inline while retaining the operator's queued delivery path.</summary>
     private sealed class InlineScheduler : ISequencer
     {
         /// <inheritdoc/>

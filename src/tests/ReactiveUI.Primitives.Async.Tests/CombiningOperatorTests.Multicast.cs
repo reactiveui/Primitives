@@ -354,7 +354,6 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenRefCountDisposedWithActiveConnection_ThenConnectionIsDisposed()
     {
-        const int ItemWaitTimeoutSeconds = 5;
         var source = Signal.Create<int>();
         var connectable = source.Values.Publish();
         var refCounted = connectable.RefCount();
@@ -371,9 +370,7 @@ public partial class CombiningOperatorTests
 
         await source.OnNextAsync(Sentinel42, CancellationToken.None);
 
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => items.Count == 1,
-            TimeSpan.FromSeconds(ItemWaitTimeoutSeconds));
+        await Assert.That(items.Count == 1).IsTrue();
 
         // Dispose the RefCountSignal via its IDisposable implementation.
         ((IDisposable)(object)refCounted).Dispose();

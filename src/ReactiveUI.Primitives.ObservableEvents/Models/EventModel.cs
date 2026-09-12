@@ -4,7 +4,7 @@
 
 namespace ReactiveUI.Primitives.ObservableEvents.Models;
 
-/// <summary>One event, reduced to the exact fragments its generated observable property is assembled from.</summary>
+/// <summary>Stores event emission data without compiler objects; parameterless payloads remain provider-independent.</summary>
 /// <param name="PropertyName">The generated property name, already escaped.</param>
 /// <param name="EventAccess">The subscription target and event name, already escaped.</param>
 /// <param name="PayloadType">The observable payload type, or empty when the delegate takes no parameters.</param>
@@ -14,12 +14,6 @@ namespace ReactiveUI.Primitives.ObservableEvents.Models;
 /// <param name="HandlerReturnValue">The handler's return expression, or empty when it returns void.</param>
 /// <param name="IsStatic">Whether the generated property is static.</param>
 /// <param name="DocumentationName">The event name, escaped for the generated documentation comment.</param>
-/// <remarks>
-/// Everything the emitter needs is a string by this point: no symbol, syntax node, or compilation survives into the
-/// pipeline. A parameterless delegate leaves the payload fields empty rather than naming a void type, because which
-/// void type applies is the one thing that depends on the provider - keeping it out here is what lets a model stay
-/// cached when only the consumer's references change.
-/// </remarks>
 internal sealed record EventModel(
     string PropertyName,
     string EventAccess,

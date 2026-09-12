@@ -36,9 +36,7 @@ public partial class CombineLatestOperatorTests
         await s3.OnNextAsync(LargeStep1, CancellationToken.None);
         await s4.OnNextAsync(LargeStep3, CancellationToken.None);
 
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => results.Count >= 1,
-            TimeSpan.FromSeconds(WaitTimeoutSeconds));
+        await Assert.That(results.Count >= 1).IsTrue();
 
         await Assert.That(results).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(results[0]).IsEqualTo(ExpectedSum);
@@ -74,9 +72,7 @@ public partial class CombineLatestOperatorTests
             await signals[i].OnNextAsync((i + 1) * ValueMultiplier, CancellationToken.None);
         }
 
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => results.Count >= 1,
-            TimeSpan.FromSeconds(WaitTimeoutSeconds));
+        await Assert.That(results.Count >= 1).IsTrue();
 
         await Assert.That(results).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(results[0]).IsEqualTo(ExpectedSum);
@@ -112,9 +108,7 @@ public partial class CombineLatestOperatorTests
             await signals[i].OnNextAsync(i + 1, CancellationToken.None);
         }
 
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => results.Count >= 1,
-            TimeSpan.FromSeconds(WaitTimeoutSeconds));
+        await Assert.That(results.Count >= 1).IsTrue();
 
         await Assert.That(results).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(results[0]).IsEqualTo(ExpectedSum);
@@ -151,9 +145,7 @@ public partial class CombineLatestOperatorTests
             await signals[i].OnNextAsync(1, CancellationToken.None);
         }
 
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => results.Count >= 1,
-            TimeSpan.FromSeconds(WaitTimeoutSeconds));
+        await Assert.That(results.Count >= 1).IsTrue();
 
         await Assert.That(results).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(results[0]).IsEqualTo(ExpectedSum);
@@ -191,9 +183,7 @@ public partial class CombineLatestOperatorTests
             await signals[i].OnNextAsync(1, CancellationToken.None);
         }
 
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => results.Count >= 1,
-            TimeSpan.FromSeconds(WaitTimeoutSeconds));
+        await Assert.That(results.Count >= 1).IsTrue();
 
         await Assert.That(results).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(results[0]).IsEqualTo(ExpectedSum);

@@ -150,9 +150,7 @@ public partial class CombineLatestOperatorTests
                 return default;
             });
 
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => completion is not null,
-            TimeSpan.FromSeconds(WaitTimeoutSeconds));
+        await Assert.That(completion is not null).IsTrue();
 
         await Assert.That(completion).IsNotNull();
         await Assert.That(completion!.Value.IsSuccess).IsTrue();
@@ -192,7 +190,7 @@ public partial class CombineLatestOperatorTests
         await src2.EmitNext(Source1Value);
 
         // Trigger failure on src1 → FinishAsync → _disposed=1 → blocks on OnCompletedAsync
-        var failTask = Task.Run(() => src1.Complete(Result.Failure(new InvalidOperationException("test"))));
+        var failTask = src1.Complete(Result.Failure(new InvalidOperationException("test")));
         await completionBlocked.Task;
 
         // _disposed is 1, gate still alive → OnNextAsync should hit the guard
@@ -233,7 +231,7 @@ public partial class CombineLatestOperatorTests
         await src1.EmitNext(1);
         await src2.EmitNext(Source1Value);
 
-        var failTask = Task.Run(() => src1.Complete(Result.Failure(new InvalidOperationException("test"))));
+        var failTask = src1.Complete(Result.Failure(new InvalidOperationException("test")));
         await completionBlocked.Task;
 
         // _disposed is 1, gate still alive → OnErrorResumeAsync should hit the guard
@@ -312,35 +310,29 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestEnumerableDisposedDuringSubscribeLoop_ThenReturnsEarly()
     {
-        // First source triggers disposal when subscribed
-        TaskCompletionSource<IAsyncDisposable> disposeTrigger = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var slowSource = AsyncObs.Create<int>(async (_, ct) =>
         {
-            var disp = await disposeTrigger.Task.WaitAsync(ct);
-            await disp.DisposeAsync();
+            IgnoredResult.Of(entered.TrySetResult());
+            await release.Task.WaitAsync(ct);
             return DisposableAsync.Empty;
         });
 
-        DirectSource<int> normalSource = new();
+        var normalSubscribed = false;
+        var normalSource = AsyncObs.Create<int>((_, _) =>
+        {
+            normalSubscribed = true;
+            return new(DisposableAsync.Empty);
+        });
         IObservableAsync<int>[] sources = [slowSource, normalSource];
-
-        // Cancel after 1s, not WaitTimeoutSeconds (5s): this test pure-waits for cancellation
-        // by design (nothing ever sets disposeTrigger) — the cancellation is the only exit,
-        // so we want the shortest window that reliably lets the subscribe loop start. 1s is
-        // safe even on slow CI runners.
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(1));
-
-        try
-        {
-            var sub = await sources.CombineLatest()
-                .SubscribeAsync(static (_, _) => default, null, null, cts.Token);
-            disposeTrigger.SetResult(sub);
-            await sub.DisposeAsync();
-        }
-        catch (OperationCanceledException)
-        {
-            // Expected
-        }
+        using CancellationTokenSource cts = new();
+        var pending = sources.CombineLatest()
+            .SubscribeAsync(static (_, _) => default, null, null, cts.Token);
+        await entered.Task;
+        await cts.CancelAsync();
+        await Assert.That(async () => await pending).Throws<OperationCanceledException>();
+        await Assert.That(normalSubscribed).IsFalse();
     }
 
     /// <summary>

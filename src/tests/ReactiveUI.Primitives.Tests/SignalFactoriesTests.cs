@@ -40,9 +40,6 @@ public partial class SignalFactoriesTests
     /// <summary>The integer constant ninety-nine.</summary>
     private const int NinetyNine = 99;
 
-    /// <summary>The timeout in seconds used when waiting for asynchronous branches.</summary>
-    private const int TimeoutSeconds = 2;
-
     /// <summary>The long constant zero.</summary>
     private const long ZeroLong = 0L;
 
@@ -271,19 +268,13 @@ public partial class SignalFactoriesTests
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task FromAsyncCancellableFactoryDisposalSuppressesIgnoredCancellationResult()
-    {
-        TaskCompletionSource subscribed = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        TaskCompletionSource<int> complete = new(TaskCreationOptions.RunContinuationsAsynchronously);
+{
+        AsyncSubscriptionLifetime lifetime = new();
         AwaitableWitness<int> observer = new();
-        var subscription = Signal.FromAsync(token =>
-        {
-            subscribed.SetResult();
-            return complete.Task;
-        }).Subscribe(observer);
-        await subscribed.Task;
-        subscription.Dispose();
-        complete.SetResult(NinetyNine);
-        await Task.Yield();
+        using FromAsyncExternalCancellation<int> cancellation = new(observer, lifetime, CancellationToken.None);
+        FromAsyncTaskObservation<int> observation = new(observer, lifetime, cancellation, null);
+        lifetime.Dispose();
+        observation.Observe(Task.FromResult(NinetyNine));
         await Assert.That(observer.Values.Count).IsEqualTo(0);
         await Assert.That(observer.Errors.Count).IsEqualTo(0);
         await Assert.That(observer.Completions).IsEqualTo(0);
@@ -318,24 +309,16 @@ public partial class SignalFactoriesTests
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task FromAsyncCancellableFactoryExternalCancellationForwardsObserverErrorWhenTaskIgnoresToken()
-    {
+{
         using CancellationTokenSource external = new();
-        TaskCompletionSource subscribed = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        TaskCompletionSource<int> complete = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using AsyncSubscriptionLifetime lifetime = new();
         AwaitableWitness<int> observer = new();
-        using var subscription = Signal.FromAsync(
-            token =>
-            {
-                subscribed.SetResult();
-                return complete.Task;
-            },
-            external.Token).Subscribe(observer);
-        await subscribed.Task;
+        using FromAsyncExternalCancellation<int> cancellation = new(observer, lifetime, external.Token);
+        FromAsyncTaskObservation<int> observation = new(observer, lifetime, cancellation, null);
+        await Assert.That(cancellation.Start()).IsTrue();
         await external.CancelAsync();
-        var error = await observer.FirstError;
-        complete.SetResult(NinetyNine);
-        await Task.Yield();
-        await Assert.That(error).IsTypeOf<TaskCanceledException>();
+        observation.Observe(Task.FromResult(NinetyNine));
+        await Assert.That(observer.Errors[0]).IsTypeOf<TaskCanceledException>();
         await Assert.That(observer.Errors.Count).IsEqualTo(One);
         await Assert.That(observer.Values.Count).IsEqualTo(0);
         await Assert.That(observer.Completions).IsEqualTo(0);

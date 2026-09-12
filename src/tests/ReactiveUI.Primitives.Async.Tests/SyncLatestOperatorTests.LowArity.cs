@@ -6,12 +6,7 @@ using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>
-/// Tests for the arity-3 through arity-7 <c>SyncLatest</c> spelling of the combine-latest operator. The
-/// <c>CombineLatest</c> spelling of these overloads is exercised elsewhere; these cover the <c>SyncLatest</c>
-/// alias methods, which forward to the same signal. Each source contributes a value of one, so the projected
-/// result equals the arity once every source has produced a value.
-/// </summary>
+/// <summary>Tests SyncLatest with three through seven sources, each contributing one to the projected sum.</summary>
 public partial class SyncLatestOperatorTests
 {
     /// <summary>Number of sources combined by the arity-3 overload.</summary>
@@ -55,7 +50,7 @@ public partial class SyncLatestOperatorTests
             await signals[index].OnNextAsync(1, CancellationToken.None);
         }
 
-        await AsyncTestHelpers.WaitForConditionAsync(() => results.Count >= 1, WaitTimeout);
+        await Assert.That(results.Count >= 1).IsTrue();
 
         await Assert.That(results).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(results[0]).IsEqualTo(ArityThree);
@@ -88,7 +83,7 @@ public partial class SyncLatestOperatorTests
             await signals[index].OnNextAsync(1, CancellationToken.None);
         }
 
-        await AsyncTestHelpers.WaitForConditionAsync(() => results.Count >= 1, WaitTimeout);
+        await Assert.That(results.Count >= 1).IsTrue();
 
         await Assert.That(results).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(results[0]).IsEqualTo(ArityFour);
@@ -122,7 +117,7 @@ public partial class SyncLatestOperatorTests
             await signals[index].OnNextAsync(1, CancellationToken.None);
         }
 
-        await AsyncTestHelpers.WaitForConditionAsync(() => results.Count >= 1, WaitTimeout);
+        await Assert.That(results.Count >= 1).IsTrue();
 
         await Assert.That(results).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(results[0]).IsEqualTo(ArityFive);
@@ -157,7 +152,7 @@ public partial class SyncLatestOperatorTests
             await signals[index].OnNextAsync(1, CancellationToken.None);
         }
 
-        await AsyncTestHelpers.WaitForConditionAsync(() => results.Count >= 1, WaitTimeout);
+        await Assert.That(results.Count >= 1).IsTrue();
 
         await Assert.That(results).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(results[0]).IsEqualTo(AritySix);
@@ -193,7 +188,7 @@ public partial class SyncLatestOperatorTests
             await signals[index].OnNextAsync(1, CancellationToken.None);
         }
 
-        await AsyncTestHelpers.WaitForConditionAsync(() => results.Count >= 1, WaitTimeout);
+        await Assert.That(results.Count >= 1).IsTrue();
 
         await Assert.That(results).Count().IsGreaterThanOrEqualTo(1);
         await Assert.That(results[0]).IsEqualTo(AritySeven);

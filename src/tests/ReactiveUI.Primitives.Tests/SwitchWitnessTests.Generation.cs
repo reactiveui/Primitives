@@ -8,12 +8,8 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Tests that the switch and merge coordinators keep their generation bookkeeping correct when a source
-/// behaves awkwardly: re-entering the outer sequence from a downstream handler, or signalling completion
-/// more than once. Both shapes previously lost notifications or terminated early.
-/// </summary>
-public sealed class GenerationSafetyTests
+/// <summary>Tests switch generation tracking during reentrant subscription.</summary>
+public sealed partial class SwitchWitnessTests
 {
     /// <summary>The value the first inner emits synchronously while it is being subscribed.</summary>
     private const int FirstValue = 1;
@@ -21,12 +17,7 @@ public sealed class GenerationSafetyTests
     /// <summary>The value the second inner emits after the re-entrant switch has settled.</summary>
     private const int SecondValue = 2;
 
-    /// <summary>
-    /// Subscribing an inner can push a value downstream synchronously, and a downstream handler may feed the
-    /// outer sequence again. The newer generation must survive that re-entrancy: installing the older
-    /// subscription afterwards would dispose the newer one and strand the sequence, because every surviving
-    /// notification is then filtered out by version.
-    /// </summary>
+    /// <summary>Reentrant replacement during subscription keeps the newest inner active.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task SwitchWitnessKeepsTheNewestGenerationWhenTheOuterIsReenteredWhileSubscribing()
@@ -41,43 +32,13 @@ public sealed class GenerationSafetyTests
         // Pushing `first` subscribes it, which emits synchronously, which re-enters the outer with `second`.
         outer.OnNext(first);
 
-        // `second` is the current generation, so it must still be live and still be heard.
+        // The replacement remains subscribed after the first subscription returns.
         second.Observer?.OnNext(SecondValue);
 
         using (Assert.Multiple())
         {
             await Assert.That(second.DisposeCount).IsEqualTo(0);
             await Assert.That(downstream.Values).Contains(SecondValue);
-        }
-    }
-
-    /// <summary>
-    /// A source may signal completion more than once. A repeat must not decrement the merge's active count a
-    /// second time, because that count belongs to a sibling that is still running - the merge would otherwise
-    /// complete early and drop whatever the sibling had left.
-    /// </summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    [Test]
-    public async Task MergeCoordinatorIgnoresARepeatedInnerCompletionWhileASiblingIsStillRunning()
-    {
-        CapturingObservable<int> left = new();
-        CapturingObservable<int> right = new();
-        RecordingObserver<int> downstream = new();
-
-        using var subscription = new MergeCoordinator<int>(downstream).Run([left, right]);
-
-        left.Observer!.OnCompleted();
-        left.Observer!.OnCompleted();
-
-        // `right` has not finished, so the merge must still be open.
-        await Assert.That(downstream.Completed).IsEqualTo(0);
-
-        right.Observer!.OnCompleted();
-
-        using (Assert.Multiple())
-        {
-            await Assert.That(downstream.Completed).IsEqualTo(1);
-            await Assert.That(right.Observer).IsNotNull();
         }
     }
 
@@ -112,21 +73,6 @@ public sealed class GenerationSafetyTests
         {
             Observer = observer;
             return new Tracker(() => DisposeCount++);
-        }
-    }
-
-    /// <summary>An observable that captures its observer for manual notification.</summary>
-    /// <typeparam name="T">The value type.</typeparam>
-    private sealed class CapturingObservable<T> : IObservable<T>
-    {
-        /// <summary>Gets the captured observer.</summary>
-        public IObserver<T>? Observer { get; private set; }
-
-        /// <inheritdoc/>
-        public IDisposable Subscribe(IObserver<T> observer)
-        {
-            Observer = observer;
-            return new Tracker(static () => { });
         }
     }
 

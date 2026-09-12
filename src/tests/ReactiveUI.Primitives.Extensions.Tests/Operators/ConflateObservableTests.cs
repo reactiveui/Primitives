@@ -9,10 +9,7 @@ using ReactiveUI.Primitives.Extensions.Operators;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Edge-case coverage for the <c>Conflate</c> operator backed by
-/// <c>ConflateObservable&lt;T&gt;</c> — source-error path through the scheduler
-/// marshaller, completion-while-throttled, fast-path interruption by a newer value,
-/// and dispose mid-drain.</summary>
+/// <summary>Tests conflated value replacement, scheduled termination, and disposal during delivery.</summary>
 public class ConflateObservableTests
 {
     /// <summary>Synthetic error message attached to source errors.</summary>
@@ -70,10 +67,7 @@ public class ConflateObservableTests
         subject.OnNext(Third);
         scheduler.AdvanceBy(UpdatePeriodTicks * SettleMultiplier);
 
-        // Inside the throttle window: the first pending value is replaced by the newer one.
-        await Assert.That(results.Count).IsGreaterThanOrEqualTo(1);
-        await Assert.That(results).DoesNotContain(First);
-        await Assert.That(results).Contains(Second);
+        await Assert.That(results).IsCollectionEqualTo([Second, Third]);
     }
 
     /// <summary>Verifies that completion before any throttled emission flushes through.</summary>
@@ -107,10 +101,7 @@ public class ConflateObservableTests
         sub.Dispose();
         scheduler.AdvanceBy(UpdatePeriodTicks);
 
-        // Initial value may or may not have fired before disposal but no late emission must arrive.
-        var snapshot = results.Count;
-        scheduler.AdvanceBy(UpdatePeriodTicks);
-        await Assert.That(results.Count).IsEqualTo(snapshot);
+        await Assert.That(results).IsEmpty();
     }
 
     /// <summary>Verifies that an <c>OnNext</c> arriving after the source has completed is silently dropped.</summary>
@@ -175,10 +166,7 @@ public class ConflateObservableTests
         await Assert.That(completed).IsFalse();
     }
 
-    /// <summary>Verifies <see cref = "ConflateObservable{T}.ConflateSink"/>'s
-    /// post-dispose <c>Enqueue</c> guard by constructing the sink directly, disposing it, and then
-    /// pushing notifications — exercising the defensive branch that is otherwise unreachable
-    /// through the front-door <c>Conflate</c> pipeline.</summary>
+    /// <summary>Verifies disposal suppresses queued notifications and callbacks already removed from the queue.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSinkEnqueuedAfterDispose_ThenSilentlyDropped()
@@ -193,15 +181,16 @@ public class ConflateObservableTests
         sink.OnNext(1);
         sink.OnError(new InvalidOperationException("late"));
         sink.OnCompleted();
+        sink.ProcessNext(First);
+        sink.ForwardError(new InvalidOperationException("dequeued"));
+        sink.ForwardCompleted();
         scheduler.AdvanceBy(UpdatePeriodTicks);
         await Assert.That(downstream.Values).IsEmpty();
         await Assert.That(downstream.Error).IsNull();
         await Assert.That(downstream.Completed).IsFalse();
     }
 
-    /// <summary>Verifies <see cref = "ConflateObservable{T}.ConflateSink"/>'s
-    /// after-terminal guards on <c>OnNext</c>, <c>OnError</c>, and <c>OnCompleted</c> by constructing
-    /// the sink directly, terminating via <c>OnError</c>, and then pushing follow-up notifications.</summary>
+    /// <summary>Verifies notifications received after termination are ignored.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSinkEventsAfterTerminated_ThenDropped()
@@ -224,9 +213,7 @@ public class ConflateObservableTests
         await Assert.That(downstream.Completed).IsFalse();
     }
 
-    /// <summary>Recording observer used to verify direct-invocation tests of the conflate sink
-    /// and marshaller — does not race with a scheduler, so the assertion sees exactly the
-    /// notifications that were forwarded.</summary>
+    /// <summary>Records notifications delivered by explicitly invoked sink operations.</summary>
     /// <typeparam name = "T">The element type.</typeparam>
     private sealed class RecordingWitness<T> : IObserver<T>
     {

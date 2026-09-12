@@ -53,8 +53,7 @@ public sealed class FlatMapCoordinator<TResult> : IAsyncDisposable
     /// <summary>Gets or sets a value indicating whether this coordinator has been disposed.</summary>
     private bool Disposed { get; set; }
 
-    /// <summary>Takes ownership of the outer subscription, disposing it immediately when this coordinator
-    /// has finished. Callable once per coordinator.</summary>
+    /// <summary>Takes ownership of the outer subscription, disposing it immediately when this coordinator has finished. Callable once per coordinator.</summary>
     /// <param name="observer">The outer subscription to own.</param>
     /// <returns>A task that completes once the subscription has been stored or disposed.</returns>
     /// <exception cref="InvalidOperationException">Thrown when an outer subscription is set twice.</exception>
@@ -117,8 +116,7 @@ public sealed class FlatMapCoordinator<TResult> : IAsyncDisposable
         }
     }
 
-    /// <summary>Forwards an inner value downstream, serialized against the other inner sequences so the observer
-    /// is never entered concurrently.</summary>
+    /// <summary>Forwards an inner value downstream, serialized against the other inner sequences so the observer is never entered concurrently.</summary>
     /// <param name="value">The value.</param>
     /// <returns>A task that completes once the observer has accepted the value.</returns>
     public async ValueTask RelayNextAsync(TResult value)
@@ -129,8 +127,7 @@ public sealed class FlatMapCoordinator<TResult> : IAsyncDisposable
         }
     }
 
-    /// <summary>Forwards a non-terminal error downstream under the same serialization as values, leaving the
-    /// sequence running.</summary>
+    /// <summary>Forwards a non-terminal error downstream under the same serialization as values, leaving the sequence running.</summary>
     /// <param name="error">The error.</param>
     /// <returns>A task that completes once the observer has accepted the error.</returns>
     public async ValueTask RelayErrorAsync(Exception error)
@@ -141,8 +138,7 @@ public sealed class FlatMapCoordinator<TResult> : IAsyncDisposable
         }
     }
 
-    /// <summary>Records outer completion, finishing the sequence when the result is a failure or no inner
-    /// sequence is active, and otherwise waiting for the active inner sequences.</summary>
+    /// <summary>Records outer completion, finishing the sequence when the result is a failure or no inner sequence is active, and otherwise waiting for the active inner sequences.</summary>
     /// <param name="result">The completion result.</param>
     /// <returns>A task that completes once the sequence has finished, or immediately when it continues.</returns>
     public ValueTask CompleteOuterAsync(Result result)
@@ -157,8 +153,7 @@ public sealed class FlatMapCoordinator<TResult> : IAsyncDisposable
         return shouldComplete ? FinishAsync(result) : default;
     }
 
-    /// <summary>Records one inner sequence finishing, completing the sequence when the result is a failure or
-    /// when the outer source has completed and no inner sequence remains.</summary>
+    /// <summary>Records one inner sequence finishing, completing the sequence when the result is a failure or when the outer source has completed and no inner sequence remains.</summary>
     /// <param name="result">The completion result.</param>
     /// <returns>A task that completes once the sequence has finished, or immediately when it continues.</returns>
     public ValueTask CompleteInnerAsync(Result result)
@@ -177,8 +172,7 @@ public sealed class FlatMapCoordinator<TResult> : IAsyncDisposable
         return shouldComplete ? FinishAsync(result) : default;
     }
 
-    /// <summary>Completes the downstream observer and disposes every tracked subscription. Idempotent; a failure
-    /// handed in after teardown goes to the unhandled exception handler.</summary>
+    /// <summary>Completes the downstream observer and disposes every tracked subscription. Idempotent; a failure handed in after teardown goes to the unhandled exception handler.</summary>
     /// <param name="result">The result to forward, or <see langword="null"/> to tear down without completing
     /// the observer.</param>
     /// <returns>A task that completes once teardown has finished.</returns>

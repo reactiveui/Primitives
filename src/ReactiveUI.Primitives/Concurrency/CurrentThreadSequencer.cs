@@ -110,11 +110,7 @@ public sealed class CurrentThreadSequencer : ISequencer
         {
             SetRunning(true);
 
-            var dueTime = Sequencer.TimeUntil(dueTimestamp);
-            if (dueTime > TimeSpan.Zero)
-            {
-                Thread.Sleep(dueTime);
-            }
+            WaitIfNeeded(Sequencer.TimeUntil(dueTimestamp), Wait);
 
             try
             {
@@ -173,6 +169,19 @@ public sealed class CurrentThreadSequencer : ISequencer
         queue.Enqueue(si);
     }
 
+    /// <summary>Waits only when work remains in the future.</summary>
+    /// <param name="dueTime">The remaining delay.</param>
+    /// <param name="wait">The wait operation.</param>
+    internal static void WaitIfNeeded(TimeSpan dueTime, Action<TimeSpan> wait)
+    {
+        if (dueTime <= TimeSpan.Zero)
+        {
+            return;
+        }
+
+        wait(dueTime);
+    }
+
     /// <summary>Gets the queued recursive work for the current thread.</summary>
     /// <returns>The current thread queue, if one exists.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -186,12 +195,25 @@ public sealed class CurrentThreadSequencer : ISequencer
     /// <param name="running">Value indicating whether work is running.</param>
     private static void SetRunning(bool running) => _running = running;
 
+    /// <summary>Blocks the scheduling thread until delayed work becomes due.</summary>
+    /// <param name="dueTime">The remaining delay.</param>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void Wait(TimeSpan dueTime) => Thread.Sleep(dueTime);
+
     /// <summary>Runs queued current-thread work.</summary>
-    private static class Trampoline
+    internal static class Trampoline
     {
         /// <summary>Runs all work currently in the queue.</summary>
         /// <param name="queue">Queue to drain.</param>
-        public static void Run(SequencerQueue<long> queue)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static void Run(SequencerQueue<long> queue) => Run(queue, static () => Sequencer.Timestamp, Wait);
+
+        /// <summary>Drains work using the supplied clock and wait operation.</summary>
+        /// <param name="queue">The pending work.</param>
+        /// <param name="timestamp">The monotonic clock.</param>
+        /// <param name="wait">The wait operation.</param>
+        internal static void Run(SequencerQueue<long> queue, Func<long> timestamp, Action<TimeSpan> wait)
         {
             while (queue.Count > 0)
             {
@@ -201,11 +223,7 @@ public sealed class CurrentThreadSequencer : ISequencer
                     continue;
                 }
 
-                var wait = Sequencer.TimeUntil(item.DueTime);
-                if (wait > TimeSpan.Zero)
-                {
-                    Thread.Sleep(wait);
-                }
+                WaitIfNeeded(Sequencer.TimeUntil(item.DueTime, timestamp()), wait);
 
                 if (!item.IsDisposed)
                 {
@@ -216,7 +234,7 @@ public sealed class CurrentThreadSequencer : ISequencer
     }
 
     /// <summary>Cancellable action work item.</summary>
-    private sealed class ActionWorkItem : IWorkItem, IsDisposed
+    internal sealed class ActionWorkItem : IWorkItem, IsDisposed
     {
         /// <summary>Action to execute.</summary>
         private readonly Action _action;

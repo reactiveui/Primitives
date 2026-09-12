@@ -14,10 +14,7 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The source observable sequence.</param>
     extension<T>(IObservableAsync<T> source)
     {
-        /// <summary>
-        /// Subscribes to the asynchronous data source and invokes the specified callbacks for each item, error, or
-        /// completion notification.
-        /// </summary>
+        /// <summary>Subscribes to the asynchronous data source and invokes the specified callbacks for each item, error, or completion notification.</summary>
         /// <param name="onNextAsync">A delegate that is invoked asynchronously for each item received from the data source. The delegate receives
         /// the item and a cancellation token.</param>
         /// <param name="onErrorResumeAsync">An optional delegate that is invoked asynchronously if an error occurs during data processing. The delegate
@@ -54,10 +51,7 @@ public static partial class SignalAsyncExtensions
             Func<Exception, CancellationToken, ValueTask>? onErrorResumeAsync) =>
             source.SubscribeAsync(onNextAsync, onErrorResumeAsync, null, CancellationToken.None);
 
-        /// <summary>
-        /// Subscribes to the asynchronous data source and invokes the specified callbacks for each item, error, or
-        /// completion notification.
-        /// </summary>
+        /// <summary>Subscribes to the asynchronous data source and invokes the specified callbacks for each item, error, or completion notification.</summary>
         /// <param name="onNextAsync">A delegate that is invoked asynchronously for each item received from the data source.</param>
         /// <param name="onErrorResumeAsync">An optional delegate that is invoked asynchronously if an error occurs during data processing.</param>
         /// <param name="onCompletedAsync">An optional delegate that is invoked asynchronously when the data source completes successfully.</param>
@@ -101,10 +95,7 @@ public static partial class SignalAsyncExtensions
         public ValueTask<IAsyncDisposable> SubscribeAsync(Action<T> onNext) =>
             source.SubscribeAsync(onNext, CancellationToken.None);
 
-        /// <summary>
-        /// Subscribes to the observable sequence asynchronously, invoking the specified callbacks for each element,
-        /// error, or completion notification.
-        /// </summary>
+        /// <summary>Subscribes to the observable sequence asynchronously, invoking the specified callbacks for each element, error, or completion notification.</summary>
         /// <param name="onNext">An action to invoke for each element in the sequence. Cannot be null.</param>
         /// <param name="onErrorResume">An optional action to invoke if an error occurs during the sequence. If null, errors are not handled by the
         /// subscriber.</param>
@@ -163,10 +154,7 @@ public static partial class SignalAsyncExtensions
         public ValueTask<IAsyncDisposable> SubscribeAsync(Func<T, CancellationToken, ValueTask> onNextAsync) =>
             source.SubscribeAsync(onNextAsync, CancellationToken.None);
 
-        /// <summary>
-        /// Subscribes asynchronously to receive notifications for each item in the sequence using the specified
-        /// asynchronous callback.
-        /// </summary>
+        /// <summary>Subscribes asynchronously to receive notifications for each item in the sequence using the specified asynchronous callback.</summary>
         /// <param name="onNextAsync">A function to invoke asynchronously for each item in the sequence. The function receives the item and a
         /// cancellation token, and returns a ValueTask that completes when processing is finished.</param>
         /// <param name="cancellationToken">The token that cancels the subscription.</param>

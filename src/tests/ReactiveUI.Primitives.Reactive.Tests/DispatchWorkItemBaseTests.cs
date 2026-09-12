@@ -26,11 +26,9 @@ public sealed class DispatchWorkItemBaseTests
     {
         BooleanDisposable started = new();
         ProbeWorkItem? item = null;
-        item = new(Scheduler.Default, ProbeState, (_, _) =>
+        item = new(Scheduler.Immediate, ProbeState, (_, _) =>
         {
-            // Reproduce the interleaving the guard exists for: a concurrent cancel has claimed the single
-            // dispose transition, but the run's compare-exchange has already published the started work, so
-            // the run itself is what tears the work down.
+            // Cancellation claims disposal before Run publishes its started work.
             _ = item!.ClaimCancellation();
             return started;
         });

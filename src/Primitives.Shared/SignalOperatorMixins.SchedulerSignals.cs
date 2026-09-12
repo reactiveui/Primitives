@@ -16,113 +16,13 @@ namespace ReactiveUI.Primitives;
 /// </summary>
 public static partial class LinqExtensions
 {
-    /// <summary>Dedicated signal for <c>Calm</c> (quiet-period debounce).</summary>
-    /// <typeparam name="T">The value type.</typeparam>
-    /// <param name="source">The source observable.</param>
-    /// <param name="dueTime">The quiet period.</param>
-    /// <param name="scheduler">The sequencer used to schedule quiet-period timers.</param>
-    private sealed class CalmSignal<T>(IObservable<T> source, TimeSpan dueTime, ISequencer scheduler) : IRequireCurrentThread<T>
-    {
-        /// <summary>The source observable.</summary>
-        private readonly IObservable<T> _source = source;
-
-        /// <summary>The quiet period.</summary>
-        private readonly TimeSpan _dueTime = dueTime;
-
-        /// <summary>The sequencer used to schedule quiet-period timers.</summary>
-        private readonly ISequencer _scheduler = scheduler;
-
-        /// <inheritdoc/>
-        public bool IsRequiredSubscribeOnCurrentThread() => _scheduler == Sequencer.CurrentThread;
-
-        /// <inheritdoc/>
-        public IDisposable Subscribe(IObserver<T> observer)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(observer);
-
-            CalmCoordinator<T> coordinator = new(_source, _dueTime, _scheduler);
-            if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
-            {
-                return coordinator.Run(observer);
-            }
-
-            SingleDisposable subscription = new();
-            _ = Sequencer.CurrentThread.Schedule(
-                (subscription, coordinator, observer),
-                static (_, s) =>
-                {
-                    s.subscription.Create(s.coordinator.Run(s.observer));
-                    return EmptyDisposable.Instance;
-                });
-            return subscription;
-        }
-    }
-
-    /// <summary>Dedicated signal for <c>Shift</c> (delay each notification on a sequencer).</summary>
-    /// <typeparam name="T">The value type.</typeparam>
-    private sealed class ShiftSignal<T> : IRequireCurrentThread<T>
-    {
-        /// <summary>The source observable.</summary>
-        private readonly IObservable<T> _source;
-
-        /// <summary>The delay applied to each notification.</summary>
-        private readonly TimeSpan _dueTime;
-
-        /// <summary>The sequencer used to schedule delayed notifications.</summary>
-        private readonly ISequencer _scheduler;
-
-        /// <summary>Initializes a new instance of the <see cref="ShiftSignal{T}"/> class.</summary>
-        /// <param name="source">The source observable.</param>
-        /// <param name="dueTime">The delay applied to each notification.</param>
-        /// <param name="scheduler">The sequencer used to schedule delayed notifications.</param>
-        internal ShiftSignal(IObservable<T> source, TimeSpan dueTime, ISequencer scheduler)
-        {
-            _source = source;
-            _dueTime = Sequencer.Normalize(dueTime);
-            _scheduler = scheduler;
-        }
-
-        /// <inheritdoc/>
-        public bool IsRequiredSubscribeOnCurrentThread() => _scheduler == Sequencer.CurrentThread;
-
-        /// <inheritdoc/>
-        public IDisposable Subscribe(IObserver<T> observer)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(observer);
-
-            if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
-            {
-                return RunCore(observer);
-            }
-
-            SingleDisposable subscription = new();
-            _ = Sequencer.CurrentThread.Schedule(
-                (Self: this, subscription, observer),
-                static (_, s) =>
-                {
-                    s.subscription.Create(s.Self.RunCore(s.observer));
-                    return EmptyDisposable.Instance;
-                });
-            return subscription;
-        }
-
-        /// <summary>Subscribes to the source and schedules each notification by the delay.</summary>
-        /// <param name="observer">The downstream observer.</param>
-        /// <returns>The disposable that cancels the source subscription and pending timers.</returns>
-        private ShiftCoordinator<T> RunCore(IObserver<T> observer)
-        {
-            ShiftCoordinator<T> coordinator = new(_source, _dueTime, _scheduler, observer);
-            return coordinator.Run();
-        }
-    }
-
     /// <summary>Coordinates delayed notification delivery with a single serialized timer.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     /// <param name="source">The source observable.</param>
     /// <param name="dueTime">The normalized delay applied to each notification.</param>
     /// <param name="sequencer">The sequencer used to schedule delayed notifications.</param>
     /// <param name="observer">The downstream observer.</param>
-    private sealed class ShiftCoordinator<T>(IObservable<T> source, TimeSpan dueTime, ISequencer sequencer, IObserver<T> observer) : IDisposable
+    internal sealed class ShiftCoordinator<T>(IObservable<T> source, TimeSpan dueTime, ISequencer sequencer, IObserver<T> observer) : IDisposable
     {
         /// <summary>The source observable.</summary>
         private readonly IObservable<T> _source = source;
@@ -179,11 +79,22 @@ public static partial class LinqExtensions
         /// <inheritdoc/>
         public void Dispose()
         {
-            if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            if (!TryBeginDispose())
             {
                 return;
             }
 
+            ReleaseSubscriptions();
+        }
+
+        /// <summary>Claims disposal before waiting for an in-flight notification.</summary>
+        /// <returns>Whether this call owns resource cleanup.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal bool TryBeginDispose() => Interlocked.Exchange(ref _disposed, 1) == 0;
+
+        /// <summary>Releases resources after the active notification leaves the gate.</summary>
+        internal void ReleaseSubscriptions()
+        {
             lock (_gate)
             {
                 _timer.Dispose();
@@ -390,6 +301,106 @@ public static partial class LinqExtensions
             /// <returns>The delayed notification.</returns>
             public static DelayedNotification Completed(DateTimeOffset dueAt) =>
                 new(NotificationKind.Completed, default, null, dueAt);
+        }
+    }
+
+    /// <summary>Dedicated signal for <c>Calm</c> (quiet-period debounce).</summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="source">The source observable.</param>
+    /// <param name="dueTime">The quiet period.</param>
+    /// <param name="scheduler">The sequencer used to schedule quiet-period timers.</param>
+    private sealed class CalmSignal<T>(IObservable<T> source, TimeSpan dueTime, ISequencer scheduler) : IRequireCurrentThread<T>
+    {
+        /// <summary>The source observable.</summary>
+        private readonly IObservable<T> _source = source;
+
+        /// <summary>The quiet period.</summary>
+        private readonly TimeSpan _dueTime = dueTime;
+
+        /// <summary>The sequencer used to schedule quiet-period timers.</summary>
+        private readonly ISequencer _scheduler = scheduler;
+
+        /// <inheritdoc/>
+        public bool IsRequiredSubscribeOnCurrentThread() => _scheduler == Sequencer.CurrentThread;
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<T> observer)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(observer);
+
+            CalmCoordinator<T> coordinator = new(_source, _dueTime, _scheduler);
+            if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
+            {
+                return coordinator.Run(observer);
+            }
+
+            SingleDisposable subscription = new();
+            _ = Sequencer.CurrentThread.Schedule(
+                (subscription, coordinator, observer),
+                static (_, s) =>
+                {
+                    s.subscription.Create(s.coordinator.Run(s.observer));
+                    return EmptyDisposable.Instance;
+                });
+            return subscription;
+        }
+    }
+
+    /// <summary>Dedicated signal for <c>Shift</c> (delay each notification on a sequencer).</summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    private sealed class ShiftSignal<T> : IRequireCurrentThread<T>
+    {
+        /// <summary>The source observable.</summary>
+        private readonly IObservable<T> _source;
+
+        /// <summary>The delay applied to each notification.</summary>
+        private readonly TimeSpan _dueTime;
+
+        /// <summary>The sequencer used to schedule delayed notifications.</summary>
+        private readonly ISequencer _scheduler;
+
+        /// <summary>Initializes a new instance of the <see cref="ShiftSignal{T}"/> class.</summary>
+        /// <param name="source">The source observable.</param>
+        /// <param name="dueTime">The delay applied to each notification.</param>
+        /// <param name="scheduler">The sequencer used to schedule delayed notifications.</param>
+        internal ShiftSignal(IObservable<T> source, TimeSpan dueTime, ISequencer scheduler)
+        {
+            _source = source;
+            _dueTime = Sequencer.Normalize(dueTime);
+            _scheduler = scheduler;
+        }
+
+        /// <inheritdoc/>
+        public bool IsRequiredSubscribeOnCurrentThread() => _scheduler == Sequencer.CurrentThread;
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<T> observer)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(observer);
+
+            if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
+            {
+                return RunCore(observer);
+            }
+
+            SingleDisposable subscription = new();
+            _ = Sequencer.CurrentThread.Schedule(
+                (Self: this, subscription, observer),
+                static (_, s) =>
+                {
+                    s.subscription.Create(s.Self.RunCore(s.observer));
+                    return EmptyDisposable.Instance;
+                });
+            return subscription;
+        }
+
+        /// <summary>Subscribes to the source and schedules each notification by the delay.</summary>
+        /// <param name="observer">The downstream observer.</param>
+        /// <returns>The disposable that cancels the source subscription and pending timers.</returns>
+        private ShiftCoordinator<T> RunCore(IObserver<T> observer)
+        {
+            ShiftCoordinator<T> coordinator = new(_source, _dueTime, _scheduler, observer);
+            return coordinator.Run();
         }
     }
 

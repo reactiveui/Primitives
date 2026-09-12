@@ -7,15 +7,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions;
 
-/// <summary>
-/// Thread-safe subject that holds the most-recently-emitted value, replays it to new subscribers,
-/// and broadcasts subsequent emissions. Per-emission hot path:
-/// <list type="bullet">
-///   <item>Lock taken only to read the current observer state and update the cached value.</item>
-///   <item>Single-observer state lives in a dedicated field — no array allocated for the common case.</item>
-///   <item>Multi-observer state uses a copy-on-write <c>IObserver{T}[]</c> snapshot iterated outside the lock.</item>
-/// </list>
-/// </summary>
+/// <summary>Stores the latest value, replays it to new subscribers, and broadcasts updates outside the state lock.</summary>
 /// <typeparam name="T">The element type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("CurrentValueSubject: Value = {_value}, Completed = {_completed}, Disposed = {_disposed}")]
 public sealed class CurrentValueSubject<T> : IObservable<T>, IObserver<T>, IDisposable
@@ -256,11 +248,7 @@ public sealed class CurrentValueSubject<T> : IObservable<T>, IObserver<T>, IDisp
                 return;
             }
 
-            // Subscription.Dispose's Interlocked guard means a given observer reaches Unsubscribe
-            // at most once, and Subscribe ensures that observer is present in _observers before
-            // returning. OnError / OnCompleted / Dispose nullify _observers atomically, which the
-            // is-null check above already short-circuits — so when we get here, IndexOf finds the
-            // observer by construction.
+            // A subscription removes its registered observer at most once.
             var index = Array.IndexOf(existing, observer);
 
             if (existing.Length == 2)
@@ -286,10 +274,7 @@ public sealed class CurrentValueSubject<T> : IObservable<T>, IObserver<T>, IDisp
         }
     }
 
-    /// <summary>Per-subscription handle that detaches the observer on dispose. Idempotency is
-    /// enforced via <see cref="Interlocked.Exchange{T}(ref T, T)"/> on <see cref="_observer"/> —
-    /// the second dispose sees <see langword="null"/> and returns. Eliminates the previous
-    /// dedicated <c>_disposed</c> int and shaves a field off every subscription.</summary>
+    /// <summary>Atomically clears its observer reference to detach exactly once.</summary>
     /// <param name="parent">The owning subject.</param>
     /// <param name="observer">The observer to detach.</param>
     private sealed class Subscription(CurrentValueSubject<T> parent, IObserver<T> observer) : IDisposable

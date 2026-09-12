@@ -50,20 +50,14 @@ public static partial class SignalAsyncExtensions
             CancellationToken cancellationToken) =>
             SingleOrDefaultCoreAsync(source, predicate, defaultValue, cancellationToken);
 
-        /// <summary>
-        /// Asynchronously returns the only element of a sequence, or a default value if the sequence is empty; this
-        /// operation throws an exception if more than one element is found.
-        /// </summary>
+        /// <summary>Asynchronously returns the only element of a sequence, or a default value if the sequence is empty; this operation throws an exception if more than one element is found.</summary>
         /// <returns>A value task that represents the asynchronous operation. The task result contains the single element of the
         /// sequence, or the default value of <typeparamref name="T"/> if the sequence is empty.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T?> SingleOrDefaultAsync() =>
             source.SingleOrDefaultAsync(default, CancellationToken.None);
 
-        /// <summary>
-        /// Asynchronously returns the only element of a sequence, or a default value if the sequence is empty; this
-        /// operation throws an exception if more than one element is found.
-        /// </summary>
+        /// <summary>Asynchronously returns the only element of a sequence, or a default value if the sequence is empty; this operation throws an exception if more than one element is found.</summary>
         /// <param name="cancellationToken">The token that cancels the operation.</param>
         /// <returns>A value task that represents the asynchronous operation. The task result contains the single element of the
         /// sequence, or the default value of <typeparamref name="T"/> if the sequence is empty.</returns>

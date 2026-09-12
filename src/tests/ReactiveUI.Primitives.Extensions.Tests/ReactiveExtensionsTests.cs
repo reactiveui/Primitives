@@ -58,9 +58,6 @@ public partial class ReactiveExtensionsTests
     /// <summary>Sample integer value (99) used by multiple tests.</summary>
     private const int SampleValue99 = 99;
 
-    /// <summary>Minimum-elapsed-time guard in milliseconds for timing assertions.</summary>
-    private const int MinimumExpectedMilliseconds = 90;
-
     /// <summary>Throttle/debounce wait window in milliseconds.</summary>
     private const int ThrottleWaitMilliseconds = 150;
 
@@ -76,20 +73,12 @@ public partial class ReactiveExtensionsTests
     /// <summary>One tick past the scheduler window, used to advance virtual time.</summary>
     private const int SchedulerAdvancePastWindowTicks = 101;
 
-    /// <summary>Short real-time delay in milliseconds.</summary>
+    /// <summary>Short delay supplied to virtual schedulers, in milliseconds.</summary>
     private const int ShortDelayMilliseconds = 500;
 
-    /// <summary>Long real-time delay in milliseconds.</summary>
+    /// <summary>Long delay supplied to virtual schedulers, in milliseconds.</summary>
     private const int LongDelayMilliseconds = 1_000;
 
     /// <summary>Expected sequence [1, 2, 3] for collection equality assertions.</summary>
     private static readonly int[] ExpectedSequence123 = [1, 2, 3];
-
-#if NET9_0_OR_GREATER
-    /// <summary>Lock used to synchronize observer callbacks during concurrency tests.</summary>
-    private readonly Lock _gate = new();
-#else
-    /// <summary>Lock used to synchronize observer callbacks during concurrency tests.</summary>
-    private readonly object _gate = new();
-#endif
 }

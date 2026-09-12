@@ -3,12 +3,11 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
+using ReactiveUI.Primitives.Extensions.Operators;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Edge-case coverage for the <c>SubscribeSynchronous</c> / <c>SubscribeAsync</c>
-/// overloads backed by <c>SubscribeAsyncObservable&lt;T&gt;</c> — sequential handler invocation,
-/// handler-throws forwards via onError, completion-while-processing defers, disposal stops queue.</summary>
+/// <summary>Tests sequential handlers, deferred completion, error forwarding, and disposal.</summary>
 public class SubscribeAsyncObservableTests
 {
     /// <summary>Synthetic error message attached to handler failures.</summary>
@@ -26,7 +25,7 @@ public class SubscribeAsyncObservableTests
         const int Second = 2;
         Subject<int> subject = new();
         List<int> results = [];
-        TaskCompletionSource<bool> completed = new();
+        TaskCompletionSource<bool> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var sub = subject.SubscribeSynchronous(
             x =>
             {
@@ -50,7 +49,7 @@ public class SubscribeAsyncObservableTests
     {
         const int TriggerValue = 1;
         Subject<int> subject = new();
-        TaskCompletionSource<Exception> faulted = new();
+        TaskCompletionSource<Exception> faulted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         InvalidOperationException expected = new(HandlerFailedMessage);
         using var sub =
             subject.SubscribeSynchronous(_ => ValueTask.FromException(expected), ex => faulted.TrySetResult(ex));
@@ -98,8 +97,8 @@ public class SubscribeAsyncObservableTests
         Subject<int> subject = new();
 
         // The gate completes its continuations inline, so releasing it drains the pump before control returns.
-        TaskCompletionSource<bool> gate = new();
-        TaskCompletionSource<bool> completed = new();
+        TaskCompletionSource<bool> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<bool> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var sub = subject.SubscribeSynchronous(
             async _ => await gate.Task.ConfigureAwait(false),
             () => completed.TrySetResult(true));
@@ -120,20 +119,13 @@ public class SubscribeAsyncObservableTests
     {
         const int Value = 7;
         Subject<int> subject = new();
-        TaskCompletionSource<bool> gate = new();
-        TaskCompletionSource<bool> handled = new();
-        using var sub = subject.SubscribeSynchronous(async value =>
-        {
-            await gate.Task.ConfigureAwait(false);
-            _ = handled.TrySetResult(true);
-        });
-        subject.OnNext(Value);
+        TaskCompletionSource gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using SubscribeAsyncObservable<int> subscription = new(subject, _ => new ValueTask(gate.Task), null, null);
+        var processing = subscription.OnNextAsync(Value);
         subject.OnCompleted();
-
-        // Releasing the gate resumes the handler inline, so the null-completion path runs here.
-        gate.SetResult(true);
-        var done = await handled.Task;
-        await Assert.That(done).IsTrue();
+        gate.SetResult();
+        await processing;
+        await Assert.That(processing.IsCompletedSuccessfully).IsTrue();
     }
 
     /// <summary>Verifies disposal during an in-flight handler suppresses deferred terminal callbacks.</summary>
@@ -143,26 +135,23 @@ public class SubscribeAsyncObservableTests
     {
         const int Value = 7;
         Subject<int> subject = new();
-        TaskCompletionSource<bool> gate = new();
-        TaskCompletionSource<bool> handlerStarted = new();
+        TaskCompletionSource gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
         Exception? caught = null;
         var completedCount = 0;
-        var sub = subject.SubscribeSynchronous(
-            async value =>
+        SubscribeAsyncObservable<int> subscription = new(
+            subject,
+            async _ =>
             {
-                _ = handlerStarted.TrySetResult(true);
                 await gate.Task.ConfigureAwait(false);
                 throw new InvalidOperationException(HandlerFailedMessage);
             },
             ex => caught = ex,
             () => completedCount++);
-        subject.OnNext(Value);
-        await handlerStarted.Task;
+        var processing = subscription.OnNextAsync(Value);
         subject.OnCompleted();
-        sub.Dispose();
-
-        // Releasing the gate lets the handler throw inline, so the suppressed terminal paths run here.
-        gate.SetResult(true);
+        subscription.Dispose();
+        gate.SetResult();
+        await processing;
         await Assert.That(caught).IsNull();
         await Assert.That(completedCount).IsEqualTo(0);
     }

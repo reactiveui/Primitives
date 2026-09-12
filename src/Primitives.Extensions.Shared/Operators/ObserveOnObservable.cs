@@ -10,11 +10,7 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
-/// <summary>
-/// Marshals every source notification onto the supplied <see cref="ISequencer"/>, preserving order: notifications
-/// are enqueued in <see cref="ScheduledDrainState{T}"/> and one drain pass is scheduled per burst rather than one
-/// scheduled action per item.
-/// </summary>
+/// <summary>Delivers source notifications in order on the supplied sequencer, scheduling one drain per burst.</summary>
 /// <typeparam name="T">The element type of the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="scheduler">The scheduler every notification is delivered on.</param>
@@ -39,11 +35,7 @@ internal sealed class ObserveOnObservable<T>(IObservable<T> source, ISequencer s
         return sink;
     }
 
-    /// <summary>
-    /// Single observer that queues upstream notifications and drains them on the scheduler thread in
-    /// FIFO order. Terminal notifications travel through the same queue so they never overtake
-    /// still-queued values.
-    /// </summary>
+    /// <summary>Queues values and terminal notifications together for ordered delivery on the scheduler.</summary>
     private sealed class ObserveOnSink : IObserver<T>, IDisposable, IDrainTarget
     {
         /// <summary>The downstream observer.</summary>

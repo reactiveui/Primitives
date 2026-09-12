@@ -17,10 +17,7 @@ namespace ReactiveUI.Primitives.Reactive.Concurrency;
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class HandlerSequencer : CoalescingDispatchScheduler
 {
-    /// <summary>
-    /// Cached runnable wrapping the drain. The drain callback is invariant for the lifetime of the sequencer,
-    /// so the JNI runnable bridge is built once and reused for every posted batch rather than per post.
-    /// </summary>
+    /// <summary>JNI drain callback reused across posted batches.</summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Maintainability",
         "SST1422:Move this field into the method that uses it",

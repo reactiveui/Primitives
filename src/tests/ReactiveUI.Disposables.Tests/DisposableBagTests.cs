@@ -6,8 +6,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Disposables.Tests;
 
-/// <summary>Coverage for <see cref="DisposableBag"/> — inline-slot fill, overflow growth,
-/// add-after-dispose immediate disposal, three-arg constructor, and dispose-order guarantees.</summary>
+/// <summary>Tests bag growth, disposal order, and additions after disposal.</summary>
 public class DisposableBagTests
 {
     /// <summary>Verifies that the parameterless constructor accepts inline slot fills and disposes both.</summary>

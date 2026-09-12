@@ -8,11 +8,7 @@ using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>
-/// Deep coverage tests for all TakeUntil operator overloads:
-/// TakeUntil(observable), TakeUntil(Task), TakeUntil(CancellationToken),
-/// TakeUntil(predicate), TakeUntil(asyncPredicate), TakeUntil(CompletionSignalDelegate).
-/// </summary>
+/// <summary>Tests TakeUntil termination through signals, tasks, cancellation, predicates and callbacks.</summary>
 public partial class TakeUntilOperatorTests
 {
     /// <summary>String literal "warning" used by multiple tests.</summary>
@@ -32,9 +28,6 @@ public partial class TakeUntilOperatorTests
 
     /// <summary>A predicate threshold no element of the test sources ever reaches.</summary>
     private const int UnreachableThreshold = 10;
-
-    /// <summary>Maximum time a test waits for a completion signal to arrive.</summary>
-    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(5);
 #if NET9_0_OR_GREATER
 
     /// <summary>Synchronization gate used by tests.</summary>
@@ -228,7 +221,7 @@ public partial class TakeUntilOperatorTests
                 });
         await source.OnNextAsync(1, CancellationToken.None);
         tcs.SetException(new InvalidOperationException("task failed"));
-        var completionResult = await completed.Task.WaitAsync(WaitTimeout);
+        var completionResult = await completed.Task;
         await Assert.That(completionResult.IsFailure).IsTrue();
     }
 
@@ -238,20 +231,17 @@ public partial class TakeUntilOperatorTests
     public async Task WhenTaskStopSignalFailsAndOptionFalse_ThenSendsErrorResume()
     {
         TaskCompletionSource tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<Exception> errorReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var source = Signal.Create<int>();
-        List<Exception> errors = [];
         await using var sub = await source.Values.TakeUntil(tcs.Task).SubscribeAsync(static (_, _) => default, (ex, _) =>
         {
-            errors.Add(ex);
+            IgnoredResult.Of(errorReceived.TrySetResult(ex));
             return default;
         });
         await source.OnNextAsync(1, CancellationToken.None);
-        tcs.SetException(new InvalidOperationException("task failed"));
-
-        // Wait for the error to be relayed rather than assuming the task's continuation ran inline.
-        var resumed = await AsyncTestHelpers.WaitForConditionAsync(() => errors.Count == 1, WaitTimeout);
-        await Assert.That(resumed).IsTrue();
-        await Assert.That(errors).Count().IsEqualTo(1);
+        InvalidOperationException expected = new("task failed");
+        tcs.SetException(expected);
+        await Assert.That(await errorReceived.Task).IsSameReferenceAs(expected);
     }
 
     /// <summary>Tests that an already-completed task completes the sequence immediately.</summary>
@@ -326,7 +316,7 @@ public partial class TakeUntilOperatorTests
             _ = completed.TrySetResult(result);
             return default;
         });
-        var completionResult = await completed.Task.WaitAsync(WaitTimeout);
+        var completionResult = await completed.Task;
         await Assert.That(completionResult.IsSuccess).IsTrue();
     }
 
@@ -600,7 +590,7 @@ public partial class TakeUntilOperatorTests
                 return default;
             });
         await cts.CancelAsync();
-        await completed.Task.WaitAsync(WaitTimeout);
+        await completed.Task;
     }
 
     /// <summary>Verifies the two-argument <c>TakeUntil(task, cancellationToken)</c> overload.</summary>
@@ -621,7 +611,7 @@ public partial class TakeUntilOperatorTests
                 return default;
             });
         await cts.CancelAsync();
-        await completed.Task.WaitAsync(WaitTimeout);
+        await completed.Task;
     }
 
     /// <summary>Verifies the predicate overload with a cancellable token reaches the CT-linked branch.</summary>
@@ -641,7 +631,7 @@ public partial class TakeUntilOperatorTests
                 return default;
             });
         await cts.CancelAsync();
-        await completed.Task.WaitAsync(WaitTimeout);
+        await completed.Task;
     }
 
     /// <summary>Verifies the async-predicate overload with a cancellable token reaches the CT-linked branch.</summary>
@@ -661,6 +651,6 @@ public partial class TakeUntilOperatorTests
                 return default;
             });
         await cts.CancelAsync();
-        await completed.Task.WaitAsync(WaitTimeout);
+        await completed.Task;
     }
 }

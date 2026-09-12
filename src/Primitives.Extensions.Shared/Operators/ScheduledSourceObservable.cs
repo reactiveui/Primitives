@@ -10,16 +10,8 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
-/// <summary>
-/// Source-driven scheduled observable: for every upstream value, schedules a callback on the supplied
-/// <see cref="ISequencer"/> that applies an optional <see cref="Action{T}"/> side-effect and/or
-/// <see cref="Func{T,T}"/> transform before forwarding the value downstream.
-/// </summary>
+/// <summary>Schedules source values without forwarding errors or completion.</summary>
 /// <typeparam name="T">The element type of the source observable.</typeparam>
-/// <remarks>
-/// Only <see cref="IObserver{T}.OnNext"/> is forwarded: source errors and completion never reach the downstream
-/// observer, so a subscriber sees no terminal notification.
-/// </remarks>
 internal sealed class ScheduledSourceObservable<T> : IObservable<T>
 {
     /// <summary>The upstream observable.</summary>
@@ -48,10 +40,7 @@ internal sealed class ScheduledSourceObservable<T> : IObservable<T>
         return _source.Subscribe(sink);
     }
 
-    /// <summary>
-    /// Carries the per-emission state by value into the scheduled callback so the scheduler lambda captures
-    /// nothing.
-    /// </summary>
+    /// <summary>Carries the per-emission state by value into the scheduled callback so the scheduler lambda captures nothing.</summary>
     /// <param name="Observer">The downstream observer.</param>
     /// <param name="Value">The value to emit.</param>
     /// <param name="Transform">The optional transform.</param>

@@ -543,9 +543,7 @@ public static partial class LinqExtensions
 
                 _done = true;
 
-                // Completion cuts the quiet window short rather than cancelling it, so a value the window was
-                // holding is delivered first. A value the timer delivered cleared _hasLatest under this same
-                // gate, so it cannot be emitted twice.
+                // Completion flushes the pending value; the timer clears the same flag under this gate.
                 if (_hasLatest)
                 {
                     _hasLatest = false;

@@ -82,9 +82,6 @@ public partial class CombineLatestOperatorTests
     /// <summary>Sentinel value (99) used for late or post-disposal emissions.</summary>
     private const int SentinelValue = 99;
 
-    /// <summary>Timeout in seconds for awaiting test completion signals.</summary>
-    private const int WaitTimeoutSeconds = 5;
-
     /// <summary>Index of source 2 within the sources array.</summary>
     private const int Source2Index = 2;
 

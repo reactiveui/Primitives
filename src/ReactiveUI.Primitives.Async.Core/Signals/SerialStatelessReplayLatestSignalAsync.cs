@@ -6,17 +6,11 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async.Signals;
 
-/// <summary>
-/// Represents a serial, stateless asynchronous Signal that replays only the last value to new observers and supports
-/// asynchronous notification delivery.
-/// </summary>
+/// <summary>Represents a serial, stateless asynchronous Signal that replays only the last value to new observers and supports asynchronous notification delivery.</summary>
 /// <typeparam name="T">The type of the elements processed by the Signal.</typeparam>
 /// <param name="startValue">An optional initial value to be replayed to new observers before any values are published. If not specified, no
 /// value is replayed until the first value is received.</param>
-/// <remarks>This Signal delivers notifications to observers one at a time in the order they are received. It
-/// does not maintain any state beyond the most recent value, and only the last value (if any) is replayed to new
-/// subscribers. All observer notifications are dispatched asynchronously and serially, ensuring that each observer
-/// receives notifications in the correct order.</remarks>
+/// <remarks>Replays the latest value, if present, and awaits each observer notification in order.</remarks>
 [System.Diagnostics.DebuggerDisplay("SerialStatelessReplayLatestSignalAsync: State = {_state}")]
 public sealed class SerialStatelessReplayLatestSignalAsync<T>(Optional<T> startValue) : ISignalAsync<T>
 {

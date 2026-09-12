@@ -8,10 +8,7 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
-/// <summary>
-/// Bundled retry configuration for <see cref="RetryWithBackoffObservable{T}"/>: retry count, delay schedule,
-/// scheduler, and an optional error sink.
-/// </summary>
+/// <summary>Bundled retry configuration for <see cref="RetryWithBackoffObservable{T}"/>: retry count, delay schedule, scheduler, and an optional error sink.</summary>
 /// <param name="MaxRetries">Maximum number of retries.</param>
 /// <param name="InitialDelay">Delay before the first retry.</param>
 /// <param name="BackoffFactor">Multiplier applied to the delay per retry attempt.</param>

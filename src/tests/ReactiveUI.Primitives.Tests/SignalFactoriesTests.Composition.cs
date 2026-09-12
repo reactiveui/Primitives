@@ -285,11 +285,9 @@ public partial class SignalFactoriesTests
     }
 
     /// <summary>Verifies async enumerable subscriptions cancel and dispose the enumerator.</summary>
-    /// <param name="testToken">The test cancellation token.</param>
     /// <returns>A task that completes when the asynchronous assertions have run.</returns>
     [Test]
-    [Timeout(30_000)]
-    public async Task AsyncEnumerableFactoryCancelsEnumeratorOnDispose(CancellationToken testToken)
+    public async Task AsyncEnumerableFactoryCancelsEnumeratorOnDispose()
     {
         var disposed = false;
         List<int> values = [];
@@ -311,7 +309,7 @@ public partial class SignalFactoriesTests
             }
         }
 
-        var subscription = Signal.FromAsyncEnumerable(Values(testToken), testToken).Subscribe(
+        var subscription = Signal.FromAsyncEnumerable(Values()).Subscribe(
             value =>
             {
                 values.Add(value);

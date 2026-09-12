@@ -14,10 +14,7 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The source observable sequence.</param>
     extension<T>(IObservableAsync<T> source)
     {
-        /// <summary>
-        /// Applies an asynchronous accumulator function over the observable sequence, returning the
-        /// final accumulated value when the sequence completes.
-        /// </summary>
+        /// <summary>Applies an asynchronous accumulator function over the observable sequence, returning the final accumulated value when the sequence completes.</summary>
         /// <typeparam name="TAcc">The type of the accumulated value.</typeparam>
         /// <param name="seed">The initial accumulator value.</param>
         /// <param name="accumulator">An asynchronous accumulator function to invoke on each element. Receives the
@@ -30,10 +27,7 @@ public static partial class SignalAsyncExtensions
             Func<TAcc, T, CancellationToken, ValueTask<TAcc>> accumulator) =>
             source.ReduceAsync(seed, accumulator);
 
-        /// <summary>
-        /// Applies an asynchronous accumulator function over the observable sequence, returning the
-        /// final accumulated value when the sequence completes.
-        /// </summary>
+        /// <summary>Applies an asynchronous accumulator function over the observable sequence, returning the final accumulated value when the sequence completes.</summary>
         /// <typeparam name="TAcc">The type of the accumulated value.</typeparam>
         /// <param name="seed">The initial accumulator value.</param>
         /// <param name="accumulator">An asynchronous accumulator function to invoke on each element. Receives the
@@ -48,10 +42,7 @@ public static partial class SignalAsyncExtensions
             CancellationToken cancellationToken) =>
             source.ReduceAsync(seed, accumulator, cancellationToken);
 
-        /// <summary>
-        /// Applies an accumulator function over the observable sequence, returning the final accumulated
-        /// value when the sequence completes.
-        /// </summary>
+        /// <summary>Applies an accumulator function over the observable sequence, returning the final accumulated value when the sequence completes.</summary>
         /// <typeparam name="TAcc">The type of the accumulated value.</typeparam>
         /// <param name="seed">The initial accumulator value.</param>
         /// <param name="accumulator">An accumulator function to invoke on each element. Receives the current
@@ -64,10 +55,7 @@ public static partial class SignalAsyncExtensions
             Func<TAcc, T, TAcc> accumulator) =>
             source.ReduceAsync(seed, accumulator);
 
-        /// <summary>
-        /// Applies an accumulator function over the observable sequence, returning the final accumulated
-        /// value when the sequence completes.
-        /// </summary>
+        /// <summary>Applies an accumulator function over the observable sequence, returning the final accumulated value when the sequence completes.</summary>
         /// <typeparam name="TAcc">The type of the accumulated value.</typeparam>
         /// <param name="seed">The initial accumulator value.</param>
         /// <param name="accumulator">An accumulator function to invoke on each element. Receives the current
@@ -82,10 +70,7 @@ public static partial class SignalAsyncExtensions
             CancellationToken cancellationToken) =>
             source.ReduceAsync(seed, accumulator, cancellationToken);
 
-        /// <summary>
-        /// Applies an accumulator function over the observable sequence with a seed value, then applies
-        /// a result selector to the final accumulated value.
-        /// </summary>
+        /// <summary>Applies an accumulator function over the observable sequence with a seed value, then applies a result selector to the final accumulated value.</summary>
         /// <typeparam name="TAcc">The type of the intermediate accumulated value.</typeparam>
         /// <typeparam name="TResult">The type of the result value.</typeparam>
         /// <param name="seed">The initial accumulator value.</param>
@@ -101,10 +86,7 @@ public static partial class SignalAsyncExtensions
             Func<TAcc, TResult> resultSelector) =>
             source.ReduceAsync(seed, accumulator, resultSelector);
 
-        /// <summary>
-        /// Applies an accumulator function over the observable sequence with a seed value, then applies
-        /// a result selector to the final accumulated value.
-        /// </summary>
+        /// <summary>Applies an accumulator function over the observable sequence with a seed value, then applies a result selector to the final accumulated value.</summary>
         /// <typeparam name="TAcc">The type of the intermediate accumulated value.</typeparam>
         /// <typeparam name="TResult">The type of the result value.</typeparam>
         /// <param name="seed">The initial accumulator value.</param>
@@ -122,10 +104,7 @@ public static partial class SignalAsyncExtensions
             CancellationToken cancellationToken) =>
             source.ReduceAsync(seed, accumulator, resultSelector, cancellationToken);
 
-        /// <summary>
-        /// Applies an asynchronous accumulator function over the observable sequence, returning the
-        /// final accumulated value when the sequence completes.
-        /// </summary>
+        /// <summary>Applies an asynchronous accumulator function over the observable sequence, returning the final accumulated value when the sequence completes.</summary>
         /// <typeparam name="TAcc">The type of the accumulated value.</typeparam>
         /// <param name="seed">The initial accumulator value.</param>
         /// <param name="accumulator">An asynchronous accumulator function to invoke on each element. Receives the
@@ -138,10 +117,7 @@ public static partial class SignalAsyncExtensions
             Func<TAcc, T, CancellationToken, ValueTask<TAcc>> accumulator) =>
             source.ReduceAsync(seed, accumulator, CancellationToken.None);
 
-        /// <summary>
-        /// Applies an asynchronous accumulator function over the observable sequence, returning the
-        /// final accumulated value when the sequence completes.
-        /// </summary>
+        /// <summary>Applies an asynchronous accumulator function over the observable sequence, returning the final accumulated value when the sequence completes.</summary>
         /// <typeparam name="TAcc">The type of the accumulated value.</typeparam>
         /// <param name="seed">The initial accumulator value.</param>
         /// <param name="accumulator">An asynchronous accumulator function to invoke on each element. Receives the
@@ -163,10 +139,7 @@ public static partial class SignalAsyncExtensions
             return await observer.AwaitResultAsync().ConfigureAwait(false);
         }
 
-        /// <summary>
-        /// Applies an accumulator function over the observable sequence, returning the final accumulated
-        /// value when the sequence completes.
-        /// </summary>
+        /// <summary>Applies an accumulator function over the observable sequence, returning the final accumulated value when the sequence completes.</summary>
         /// <typeparam name="TAccumulate">The type of the accumulated value.</typeparam>
         /// <param name="seed">The initial accumulator value.</param>
         /// <param name="accumulator">An accumulator function to invoke on each element. Receives the current
@@ -179,10 +152,7 @@ public static partial class SignalAsyncExtensions
             Func<TAccumulate, T, TAccumulate> accumulator) =>
             source.ReduceAsync(seed, accumulator, CancellationToken.None);
 
-        /// <summary>
-        /// Applies an accumulator function over the observable sequence, returning the final accumulated
-        /// value when the sequence completes.
-        /// </summary>
+        /// <summary>Applies an accumulator function over the observable sequence, returning the final accumulated value when the sequence completes.</summary>
         /// <typeparam name="TAcc">The type of the accumulated value.</typeparam>
         /// <param name="seed">The initial accumulator value.</param>
         /// <param name="accumulator">An accumulator function to invoke on each element. Receives the current
@@ -204,10 +174,7 @@ public static partial class SignalAsyncExtensions
             return await observer.AwaitResultAsync().ConfigureAwait(false);
         }
 
-        /// <summary>
-        /// Applies an accumulator function over the observable sequence with a seed value, then applies
-        /// a result selector to the final accumulated value.
-        /// </summary>
+        /// <summary>Applies an accumulator function over the observable sequence with a seed value, then applies a result selector to the final accumulated value.</summary>
         /// <typeparam name="TAcc">The type of the intermediate accumulated value.</typeparam>
         /// <typeparam name="TResult">The type of the result value.</typeparam>
         /// <param name="seed">The initial accumulator value.</param>
@@ -223,10 +190,7 @@ public static partial class SignalAsyncExtensions
             Func<TAcc, TResult> resultSelector) =>
             source.ReduceAsync(seed, accumulator, resultSelector, CancellationToken.None);
 
-        /// <summary>
-        /// Applies an accumulator function over the observable sequence with a seed value, then applies
-        /// a result selector to the final accumulated value.
-        /// </summary>
+        /// <summary>Applies an accumulator function over the observable sequence with a seed value, then applies a result selector to the final accumulated value.</summary>
         /// <typeparam name="TAcc">The type of the intermediate accumulated value.</typeparam>
         /// <typeparam name="TResult">The type of the result value.</typeparam>
         /// <param name="seed">The initial accumulator value.</param>

@@ -6,10 +6,7 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Verifies the factory overloads that name no sequencer and therefore run on the default one, together with
-/// the degenerate inputs those factories have to fold away: an empty range and an uncancellable token.
-/// </summary>
+/// <summary>Verifies factory defaults, cancellation, and scheduled notifications.</summary>
 public partial class SignalFactoriesTests
 {
     /// <summary>The timeout used by the expiry factory test.</summary>
@@ -49,15 +46,17 @@ public partial class SignalFactoriesTests
         await Assert.That(plainValues.SequenceEqual([One, Two, Three])).IsTrue();
     }
 
-    /// <summary>Verifies the sequencer-free expiry factory fails a sequence that never terminates.</summary>
+    /// <summary>Running the scheduled expiry fails a silent source.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task ExpireWithoutASequencerFailsASilentSequence()
-    {
-        AwaitableWitness<int> witness = new();
-        using var subscription = Signal.Expire(Signal.Silent<int>(), ShortExpiry).Subscribe(witness);
-        var error = await witness.FirstError;
-        await Assert.That(error).IsTypeOf<TimeoutException>();
+    public async Task ExpireFailsASilentSequenceWhenTheDelayRuns()
+{
+        ManualSequencer sequencer = new();
+        RecordingWitness<int> witness = new();
+        using var subscription = Signal.Expire(Signal.Silent<int>(), ShortExpiry, sequencer).Subscribe(witness);
+        await Assert.That(witness.Errors.Count).IsEqualTo(0);
+        sequencer.RunPending();
+        await Assert.That(witness.Errors[0]).IsTypeOf<TimeoutException>();
         await Assert.That(witness.Errors.Count).IsEqualTo(1);
     }
 
@@ -83,18 +82,16 @@ public partial class SignalFactoriesTests
         await Assert.That(actionWitness.Values[0]).IsEqualTo(RxVoid.Default);
     }
 
-    /// <summary>Verifies the sequencer-free <c>Every</c> factory ticks on the default sequencer.</summary>
+    /// <summary>Each scheduled callback emits the next tick.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task EveryWithoutASequencerTicksOnTheDefaultSequencer()
-    {
-        AwaitableWitness<long> witness = new();
-        using (Signal.Every(ShortExpiry).Subscribe(witness))
-        {
-            await witness.ValueCountReaching(Two);
-        }
-
-        var ticks = witness.Values;
-        await Assert.That(ticks[1]).IsGreaterThan(ticks[0]);
+    public async Task EveryTicksWhenTheSequencerRuns()
+{
+        ManualSequencer sequencer = new();
+        RecordingWitness<long> witness = new();
+        using var subscription = Signal.Every(ShortExpiry, sequencer).Subscribe(witness);
+        sequencer.RunPending();
+        sequencer.RunPending();
+        await Assert.That(witness.Values.SequenceEqual([0L, 1L])).IsTrue();
     }
 }

@@ -7,9 +7,7 @@ using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Edge-case coverage for <c>ThrottleOnScheduler</c>, <c>WaitUntil</c>,
-/// <c>TakeUntilInclusive</c>, and <c>SynchronizeAsync</c> — paths the happy-path
-/// tests do not reach (error propagation, predicate throws, dispose, completion-flush).</summary>
+/// <summary>Tests throttle and wait termination, predicate failures, and disposal.</summary>
 public class ThrottleAndWaitOperatorCoverageTests
 {
     /// <summary>Throttle interval used across the scheduler-driven tests.</summary>

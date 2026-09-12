@@ -34,9 +34,7 @@ public sealed class ContextSwitchSignalAsync<T>(
         AsyncContext asyncContext,
         bool forceYielding) : WitnessAsync<T>
     {
-        /// <summary>Slow path: switch to the target context then forward the value.
-        /// Exposed as <see langword="internal"/> so tests can invoke the slow-path body
-        /// directly without needing to race the current-context check.</summary>
+        /// <summary>Switches to the target context before forwarding the value.</summary>
         /// <param name = "value">The value to forward.</param>
         /// <param name = "cancellationToken">The cancellation token.</param>
         /// <returns>A task that completes after the context switch and downstream forward.</returns>
@@ -46,7 +44,7 @@ public sealed class ContextSwitchSignalAsync<T>(
             await observer.OnNextAsync(value, cancellationToken).ConfigureAwait(false);
         }
 
-        /// <summary>Slow path: switch to the target context then forward the error. Exposed as <see langword="internal"/> for direct unit testing.</summary>
+        /// <summary>Switches to the target context before forwarding the error.</summary>
         /// <param name = "error">The error to forward.</param>
         /// <param name = "cancellationToken">The cancellation token.</param>
         /// <returns>A task that completes after the context switch and downstream forward.</returns>
@@ -58,7 +56,7 @@ public sealed class ContextSwitchSignalAsync<T>(
             await observer.OnErrorResumeAsync(error, cancellationToken).ConfigureAwait(false);
         }
 
-        /// <summary>Slow path: switch to the target context then forward completion. Exposed as <see langword="internal"/> for direct unit testing.</summary>
+        /// <summary>Switches to the target context before forwarding completion.</summary>
         /// <param name = "result">The completion result.</param>
         /// <returns>A task that completes after the context switch and downstream forward.</returns>
         internal async ValueTask ForwardCompletionAfterContextSwitchAsync(Result result)
@@ -69,8 +67,7 @@ public sealed class ContextSwitchSignalAsync<T>(
 
         /// <inheritdoc/>
         protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
-            // Fast path: already on the target context and no forced yield — skip the awaitable
-            // dance entirely and forward synchronously.
+            // A matching context needs no switch unless yielding is forced.
             !forceYielding && asyncContext.IsSameAsCurrentAsyncContext()
                 ? observer.OnNextAsync(value, cancellationToken)
                 : ForwardAfterContextSwitchAsync(value, cancellationToken);

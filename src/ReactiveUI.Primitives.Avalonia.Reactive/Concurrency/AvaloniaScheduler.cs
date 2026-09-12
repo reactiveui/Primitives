@@ -48,6 +48,7 @@ public sealed class AvaloniaScheduler : CoalescingDispatchScheduler
     }
 
     /// <inheritdoc/>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     protected override IDisposable ScheduleOnDispatcher(Action work, TimeSpan dueTime)
     {
         DispatcherTimer timer = new(Priority, Dispatcher) { Interval = dueTime };

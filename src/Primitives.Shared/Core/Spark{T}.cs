@@ -12,10 +12,7 @@ namespace ReactiveUI.Primitives.Reactive.Core;
 namespace ReactiveUI.Primitives.Core;
 #endif
 
-/// <summary>
-/// Represents a spark to an observer. Being a value type, materializing a sequence allocates no
-/// per-notification heap object.
-/// </summary>
+/// <summary>Represents a spark to an observer. Being a value type, materializing a sequence allocates no per-notification heap object.</summary>
 /// <typeparam name="T">The type of the elements received by the observer.</typeparam>
 [Serializable]
 [DebuggerDisplay("{DebuggerDisplay,nq}")]
@@ -56,10 +53,7 @@ public readonly record struct Spark<T>
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
-    /// <summary>
-    /// Determines whether both sparks carry the same observer message payload: the same <see cref="Kind"/> and,
-    /// for OnNext and OnError, the same value or exception.
-    /// </summary>
+    /// <summary>Determines whether both sparks carry the same observer message payload: the same <see cref="Kind"/> and, for OnNext and OnError, the same value or exception.</summary>
     /// <param name="other">The spark to compare with this one.</param>
     /// <returns>true if both sparks carry the same payload; otherwise, false.</returns>
     public bool Equals(Spark<T> other) => Kind == other.Kind && Kind switch

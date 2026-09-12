@@ -7,9 +7,7 @@ using System.Reactive.Subjects;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Edge-case coverage for <c>SelectManyThen</c> backed by
-/// <c>SelectManyThenObservable&lt;TSource, TMid, TResult&gt;</c> — two-stage projection,
-/// first/second projection throws, source error/completion, and inner-observable errors.</summary>
+/// <summary>Tests two-stage projection and propagation of source, projection, and inner errors.</summary>
 public class SelectManyThenObservableTests
 {
     /// <summary>Synthetic error messages.</summary>

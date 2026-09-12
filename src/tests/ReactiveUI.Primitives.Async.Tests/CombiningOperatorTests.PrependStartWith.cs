@@ -7,9 +7,6 @@ namespace ReactiveUI.Primitives.Async.Tests;
 /// <summary>Tests for the Prepend and StartWith operators.</summary>
 public partial class CombiningOperatorTests
 {
-    /// <summary>Maximum time the combining-operator tests wait for emissions to arrive.</summary>
-    private static readonly TimeSpan CombiningWaitTimeout = TimeSpan.FromSeconds(5);
-
     /// <summary>Tests Prepend value comes first.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -131,9 +128,7 @@ public partial class CombiningOperatorTests
             null,
             cts.Token);
 
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => items.Count >= 5,
-            CombiningWaitTimeout);
+        await Assert.That(items.Count >= 5).IsTrue();
 
         await Assert.That(items).Contains(SampleValue5);
     }
@@ -163,9 +158,7 @@ public partial class CombiningOperatorTests
                     return default;
                 });
 
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => completionResult is not null,
-            CombiningWaitTimeout);
+        await Assert.That(completionResult is not null).IsTrue();
 
         await Assert.That(items).Contains(Sentinel42);
         await Assert.That(completionResult).IsNotNull();
@@ -229,9 +222,7 @@ public partial class CombiningOperatorTests
             null,
             cts.Token);
 
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => items.Contains(SampleValue2),
-            CombiningWaitTimeout);
+        await Assert.That(items.Contains(SampleValue2)).IsTrue();
 
         // Should have emitted at least 1 and 2
         await Assert.That(items).Contains(SampleValue1);
@@ -274,9 +265,7 @@ public partial class CombiningOperatorTests
                 null);
 
         // Wait for prepended values to be emitted
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => items.Count >= 5,
-            CombiningWaitTimeout);
+        await Assert.That(items.Count >= 5).IsTrue();
 
         await sub.DisposeAsync();
 
@@ -305,9 +294,7 @@ public partial class CombiningOperatorTests
                     return default;
                 });
 
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => completionResult.HasValue,
-            CombiningWaitTimeout);
+        await Assert.That(completionResult.HasValue).IsTrue();
 
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
@@ -339,9 +326,7 @@ public partial class CombiningOperatorTests
                 null,
                 static result => default);
 
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => items.Count >= 2,
-            CombiningWaitTimeout);
+        await Assert.That(items.Count >= 2).IsTrue();
 
         await sub.DisposeAsync();
 

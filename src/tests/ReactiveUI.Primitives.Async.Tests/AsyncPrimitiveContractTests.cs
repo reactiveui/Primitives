@@ -5,6 +5,7 @@
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async;
+using ReactiveUI.Primitives.Async.Tests;
 using ReactiveUI.Primitives.Concurrency;
 using AsyncObs = ReactiveUI.Primitives.Async.SignalAsync;
 
@@ -115,9 +116,6 @@ public sealed class AsyncPrimitiveContractTests
     /// <summary>Expected sequence four, five.</summary>
     private static readonly int[] FourFive = [4, 5];
 
-    /// <summary>Expected sequence zero, one.</summary>
-    private static readonly long[] ZeroOne = [0, 1];
-
     /// <summary>Expected single-element sequence containing zero.</summary>
     private static readonly long[] ZeroOnly = [0];
 
@@ -168,9 +166,9 @@ public sealed class AsyncPrimitiveContractTests
         var enumerable = await AsyncObs.FromEnumerable(FourFive).ToListAsync();
         var asyncEnumerable = await AsyncObs.FromAsyncEnumerable(ReadValuesAsync()).ToListAsync();
         var after = await AsyncObs.After(TimeSpan.Zero).ToListAsync();
-        var periodicAfter = await AsyncObs.After(TimeSpan.Zero, period).Take(Two).ToListAsync();
-        var every = await AsyncObs.Every(period).Take(1).ToListAsync();
-        var pulse = await AsyncObs.Pulse(period).Take(1).ToListAsync();
+        var periodicAfter = AsyncObs.After(TimeSpan.Zero, period);
+        var every = AsyncObs.Every(period);
+        var pulse = AsyncObs.Pulse(period);
         var chained = await AsyncObs.Chain(AsyncObs.Emit(FirstValue), AsyncObs.Emit(SecondValue)).ToListAsync();
         var blended = await AsyncObs.Blend(AsyncObs.Emit(ThirdValue), AsyncObs.Emit(FourthValue)).ToListAsync();
         List<int> subscribed = [];
@@ -179,9 +177,15 @@ public sealed class AsyncPrimitiveContractTests
         await Assert.That(enumerable.SequenceEqual(FourFive)).IsTrue();
         await Assert.That(asyncEnumerable.SequenceEqual(FourFive)).IsTrue();
         await Assert.That(after.SequenceEqual(ZeroOnly)).IsTrue();
-        await Assert.That(periodicAfter.SequenceEqual(ZeroOne)).IsTrue();
-        await Assert.That(every.SequenceEqual(ZeroOnly)).IsTrue();
-        await Assert.That(pulse.SequenceEqual(ZeroOnly)).IsTrue();
+        await Assert.That(periodicAfter).IsTypeOf<TimerSignal>();
+        await Assert.That(every).IsTypeOf<TimerSignal>();
+        await Assert.That(pulse).IsTypeOf<TimerSignal>();
+        await Assert.That(((TimerSignal)periodicAfter).DueTime).IsEqualTo(TimeSpan.Zero);
+        await Assert.That(((TimerSignal)periodicAfter).Period).IsEqualTo(period);
+        await Assert.That(((TimerSignal)every).DueTime).IsEqualTo(period);
+        await Assert.That(((TimerSignal)every).Period).IsEqualTo(period);
+        await Assert.That(((TimerSignal)pulse).DueTime).IsEqualTo(period);
+        await Assert.That(((TimerSignal)pulse).Period).IsEqualTo(period);
         await Assert.That(chained.SequenceEqual(OneTwo)).IsTrue();
         await Assert.That(blended.Count).IsEqualTo(BlendedCount);
         await Assert.That(blended).Contains(ThirdValue);
@@ -364,22 +368,11 @@ public sealed class AsyncPrimitiveContractTests
     [Test]
     public async Task ShiftAndExpireAliasesUseTimeBasedOperators()
     {
-        const int EmittedValue = 3;
-        const int DelayMilliseconds = 1;
-        var shifted = await AsyncObs.Emit(EmittedValue).Shift(TimeSpan.FromMilliseconds(DelayMilliseconds))
-            .ToListAsync();
-        await Assert.That(shifted.SequenceEqual(ThreeOnly)).IsTrue();
-        TimeoutException? timeout = null;
-        try
-        {
-            await AsyncObs.Never<int>().Expire(TimeSpan.FromMilliseconds(DelayMilliseconds)).ToListAsync();
-        }
-        catch (TimeoutException exception)
-        {
-            timeout = exception;
-        }
-
-        await Assert.That(timeout).IsNotNull();
+        const int ThirdValue = 3;
+        var shifted = AsyncObs.Emit(ThirdValue).Shift(TimeSpan.FromSeconds(1));
+        var expired = AsyncObs.Never<int>().Expire(TimeSpan.FromSeconds(1));
+        await Assert.That(shifted).IsTypeOf<SignalAsyncExtensions.DelaySignal<int>>();
+        await Assert.That(expired).IsTypeOf<SignalAsyncExtensions.TimeoutSignal<int>>();
     }
 
     /// <summary>Drains queued sequencer work until the supplied task completes.</summary>
@@ -404,7 +397,7 @@ public sealed class AsyncPrimitiveContractTests
         }
     }
 
-    /// <summary>Reads a short async enumerable sequence for factory alias coverage.</summary>
+    /// <summary>Yields two values after an asynchronous suspension.</summary>
     /// <returns>The async enumerable values.</returns>
     private static async IAsyncEnumerable<int> ReadValuesAsync()
     {
@@ -413,7 +406,6 @@ public sealed class AsyncPrimitiveContractTests
         yield return FourFive[1];
     }
 
-    /// <summary>Test sequencer that queues scheduled work until drained explicitly.</summary>
     /// <summary>Verifies the asynchronous and stateful map/keep aliases forward to their canonical operators.</summary>
     /// <param name = "source">The 1..3 sequence under test.</param>
     /// <returns>A task to monitor completion.</returns>

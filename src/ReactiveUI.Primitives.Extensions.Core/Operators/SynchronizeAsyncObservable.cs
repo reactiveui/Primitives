@@ -24,7 +24,7 @@ public sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IObse
 
     /// <summary>The sink for the <see cref="SynchronizeAsyncObservable{T}"/>.</summary>
     /// <param name="downstream">The downstream observer.</param>
-    private sealed class SynchronizeAsyncSink(IObserver<(T Value, IDisposable Sync)> downstream) : IObserver<T>, IDisposable
+    internal sealed class SynchronizeAsyncSink(IObserver<(T Value, IDisposable Sync)> downstream) : IObserver<T>, IDisposable
     {
         /// <summary>The gate for state access.</summary>
         private readonly Lock _gate = new();
@@ -47,8 +47,6 @@ public sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IObse
                 }
             }
 
-            // Implementation note: The original used 'new Continuation().Lock(item, observer)'.
-            // This is complex and stateful, so we maintain that logic in a way that respects sequentiality.
             _ = ProcessAsync(value);
         }
 
@@ -91,12 +89,7 @@ public sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IObse
             }
         }
 
-        /// <summary>
-        /// Processes the value. Pushes <c>(value, signal)</c> downstream and waits for the consumer
-        /// to dispose the signal. The fast path (consumer disposes synchronously inside <c>OnNext</c>)
-        /// returns a completed task without allocating a state machine or <see cref="TaskCompletionSource"/>;
-        /// the slow path (consumer defers disposal) lazily promotes the signal to a TCS-backed gate.
-        /// </summary>
+        /// <summary>Delivers the value and waits for the consumer to dispose its acknowledgement signal.</summary>
         /// <param name="value">The value to process.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         private Task ProcessAsync(T value)
@@ -106,36 +99,14 @@ public sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IObse
             return signal.WaitForDisposeAsync();
         }
 
-        /// <summary>
-        /// Per-emission gate: the downstream receives this handle as <c>Sync</c>. The producer
-        /// calls <see cref="WaitForDisposeAsync"/> after pushing the value; synchronous disposal
-        /// short-circuits to <see cref="Task.CompletedTask"/> with no TCS allocation. Late
-        /// (asynchronous) disposal lazily allocates a single <see cref="TaskCompletionSource"/>.
-        /// </summary>
-        private sealed class SyncSignal : IDisposable
+        /// <summary>Releases one emission when the consumer disposes it, allocating completion state only for an asynchronous wait.</summary>
+        internal sealed class SyncSignal : IDisposable
         {
             /// <summary>The lazily-created completion source; only allocated on the slow path.</summary>
             private TaskCompletionSource<bool>? _tcs;
 
             /// <summary>Latches to <c>1</c> on the first dispose so signalling is idempotent.</summary>
             private int _disposed;
-
-            /// <summary>Returns the task the producer should await before completing the emission.
-            /// The producer calls this exactly once per signal, so the TCS is published with a plain
-            /// volatile write rather than a compare-exchange.</summary>
-            /// <returns>A completed task if the consumer already disposed; otherwise the lazily-allocated TCS task.</returns>
-            public Task WaitForDisposeAsync()
-            {
-                if (Volatile.Read(ref _disposed) == 1)
-                {
-                    return Task.CompletedTask;
-                }
-
-                TaskCompletionSource<bool> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
-                Volatile.Write(ref _tcs, tcs);
-                CompleteIfDisposedRaced(tcs);
-                return tcs.Task;
-            }
 
             /// <inheritdoc/>
             public void Dispose()
@@ -148,13 +119,24 @@ public sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IObse
                 Volatile.Read(ref _tcs)?.TrySetResult(true);
             }
 
-            /// <summary>Self-completes the just-published TCS if a dispose raced ahead of the publish and could
-            /// not see it, so the producer's await never hangs.</summary>
+            /// <summary>Returns the disposal task; the producer must call this exactly once per emission.</summary>
+            /// <returns>A completed task if the consumer already disposed; otherwise the lazily-allocated TCS task.</returns>
+            internal Task WaitForDisposeAsync()
+            {
+                if (Volatile.Read(ref _disposed) == 1)
+                {
+                    return Task.CompletedTask;
+                }
+
+                TaskCompletionSource<bool> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+                Volatile.Write(ref _tcs, tcs);
+                CompleteIfDisposedRaced(tcs);
+                return tcs.Task;
+            }
+
+            /// <summary>Completes the acknowledgement task when disposal overlaps its publication.</summary>
             /// <param name="tcs">The completion source published for this signal.</param>
-            /// <remarks>The set-result is only taken when a concurrent dispose latches between the publish and
-            /// this re-check; isolated here and excluded from coverage as race-only.</remarks>
-            [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-            private void CompleteIfDisposedRaced(TaskCompletionSource<bool> tcs)
+            internal void CompleteIfDisposedRaced(TaskCompletionSource<bool> tcs)
             {
                 if (Volatile.Read(ref _disposed) != 1)
                 {

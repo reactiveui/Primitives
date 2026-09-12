@@ -10,10 +10,7 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
-/// <summary>
-/// Factory operator that emits each element of an <see cref="IEnumerable{T}"/> to a single subscriber and then
-/// completes, optionally marshalling the emission through a scheduler.
-/// </summary>
+/// <summary>Factory operator that emits each element of an <see cref="IEnumerable{T}"/> to a single subscriber and then completes, optionally marshalling the emission through a scheduler.</summary>
 /// <typeparam name="T">The element type emitted to the downstream observer.</typeparam>
 /// <param name="source">The source enumerable whose elements are pumped on subscription.</param>
 /// <param name="scheduler">An optional scheduler used to dispatch the pump.</param>

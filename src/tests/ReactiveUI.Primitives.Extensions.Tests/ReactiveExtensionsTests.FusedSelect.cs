@@ -86,9 +86,7 @@ public partial class ReactiveExtensionsTests
         const int ExpectedChained = 11;
         List<int> results = [];
 
-        // Single source emission keeps the test deterministic — the operator's downstream
-        // completes once the inner-inner observable completes, so a multi-emission source
-        // would race against the early-completion semantic.
+        // The inner sequence completes the result after this emission.
         using var subscription = Observable.Return(1)
             .SelectManyThen(
                 static x => Observable.Return(x * SampleValue10),
@@ -117,7 +115,7 @@ public partial class ReactiveExtensionsTests
             results.Add,
             () => completed.TrySetResult());
 
-        await completed.Task.WaitAsync(WaitTimeout);
+        await completed.Task;
         await Assert.That(results).Count().IsEqualTo(1);
     }
 

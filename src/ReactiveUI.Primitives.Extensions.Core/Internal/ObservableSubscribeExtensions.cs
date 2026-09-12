@@ -14,12 +14,7 @@ internal static class ObservableSubscribeExtensions
     /// <param name="source">The source observable.</param>
     extension<T>(IObservable<T> source)
     {
-        /// <summary>
-        /// Subscribes using delegate callbacks for OnNext / OnError / OnCompleted. Unique name to
-        /// avoid the System.Reactive <c>Subscribe(onNext, onError, onCompleted)</c> ambiguity; the
-        /// delegates are wrapped by the core <see cref="SubscribeExtensions"/> sink rather than a
-        /// duplicated observer.
-        /// </summary>
+        /// <summary>Subscribes delegate callbacks through the core sink; the distinct name avoids ambiguity with System.Reactive extensions.</summary>
         /// <param name="onNext">Per-value callback.</param>
         /// <param name="onError">Error callback.</param>
         /// <param name="onCompleted">Completion callback.</param>

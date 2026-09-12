@@ -6,16 +6,7 @@ using ReactiveUI.Primitives.Reactive.Concurrency;
 
 namespace ReactiveUI.Primitives.Async.Reactive.Tests;
 
-/// <summary>
-/// Exercises the scheduling seam the Reactive async leaf uses to give <c>IScheduler</c> the sequencer shape the
-/// shared source expects. Every overload must run the work it is handed on the supplied scheduler; the immediate
-/// scheduler used here runs it before <c>Schedule</c> returns.
-/// <para>
-/// This file deliberately does not import <c>System.Reactive.Concurrency</c>: the <c>Scheduler</c> class in that
-/// namespace carries extension methods with the same signatures, and importing it would make every call below
-/// ambiguous. The scheduler types are therefore spelled out in full.
-/// </para>
-/// </summary>
+/// <summary>Tests scheduling overloads. Fully qualified scheduler names avoid ambiguous System.Reactive extension methods.</summary>
 public class SequencerSchedulingTests
 {
     /// <summary>State threaded through the closure-free stateful overloads.</summary>
@@ -112,10 +103,7 @@ public class SequencerSchedulingTests
         await Assert.That(received).IsEqualTo(ScheduledState);
     }
 
-    /// <summary>
-    /// Records that the scheduler ran a plain action. Holding the flag here lets the action overloads be handed
-    /// <see cref="Record"/> as a method group, so the callback closes over nothing.
-    /// </summary>
+    /// <summary>Records action invocation through a method-group callback.</summary>
     private sealed class RunRecorder
     {
         /// <summary>Gets a value indicating whether the scheduler ran the action.</summary>

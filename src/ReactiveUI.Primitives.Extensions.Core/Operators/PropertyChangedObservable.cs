@@ -6,14 +6,7 @@ using System.ComponentModel;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Fused replacement for
-/// <c>Observable.FromEventPattern(...).Where(name match).Select(getter).StartWith(getter)</c>.
-/// Subscribes directly to <see cref="INotifyPropertyChanged.PropertyChanged"/>, holds the
-/// compiled getter once at construction (the original chain compiled it twice per
-/// subscription), and emits the current value on subscribe followed by the getter
-/// result for each matching property change — all through a single sink.
-/// </summary>
+/// <summary>Emits the current property value on subscription, then invokes the shared getter for matching property changes.</summary>
 /// <typeparam name="T">The owning type that raises <see cref="INotifyPropertyChanged.PropertyChanged"/>.</typeparam>
 /// <typeparam name="TProperty">The property element type.</typeparam>
 /// <param name="source">The owning instance.</param>

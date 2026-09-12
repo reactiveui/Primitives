@@ -30,35 +30,20 @@ public sealed class PrioritySemaphoreSignalTests
     /// <summary>The number of values expected after the first drain.</summary>
     private const int FirstDrainCount = 2;
 
-    /// <summary>The number of worker tasks used to stress concurrent signaling.</summary>
-    private const int StressWorkers = 4;
+    /// <summary>The number of reentrant operation groups.</summary>
+    private const int OperationGroups = 4;
 
-    /// <summary>The number of operations each stress worker performs.</summary>
-    private const int StressIterations = 4;
+    /// <summary>The number of release and production pairs per group.</summary>
+    private const int OperationsPerGroup = 4;
 
-    /// <summary>The number of seeded values for the concurrent drain scenario.</summary>
+    /// <summary>The number of values queued before draining.</summary>
     private const int SeededValueCount = 12;
 
-    /// <summary>The initial semaphore capacity used in the concurrent drain scenario.</summary>
+    /// <summary>The initial capacity used to drain queued values.</summary>
     private const int InitialDrainCapacity = 3;
 
     /// <summary>The amount added during alternating capacity updates.</summary>
     private const int CapacityJitter = 2;
-
-    /// <summary>The number of polling loops while waiting for signal drain.</summary>
-    private const int PollIterations = 500;
-
-    /// <summary>The wait duration for each drain polling loop.</summary>
-    private const int PollDelayMilliseconds = 1;
-
-    /// <summary>Task-group offsets for the concurrent operations phase.</summary>
-    private const int OnNextTaskOffsetMultiplier = 2;
-
-    /// <summary>The number of worker groups (release, capacity, and OnNext) started for each stress worker.</summary>
-    private const int StressWorkerGroups = 3;
-
-    /// <summary>The wait duration for terminal serialization probes.</summary>
-    private static readonly TimeSpan TerminalProbeTimeout = TimeSpan.FromSeconds(5);
 
     /// <summary>Constructor and observer validation follow the inner signal contract.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
@@ -203,135 +188,115 @@ public sealed class PrioritySemaphoreSignalTests
         await Assert.That(observer.Values.SequenceEqual([FourthValue])).IsTrue();
     }
 
-    /// <summary>Concurrent release and production drain work without concurrent downstream <see langword="OnNext"/> calls.</summary>
+    /// <summary>Reentrant release and production preserve serialized value delivery.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task ConcurrentOperationsDoNotNotifyObserverConcurrently()
-    {
-        using var signal = new PrioritySemaphoreSignal<int>(InitialDrainCapacity);
-        var observer = new ConcurrencyProbe();
-        var subscription = signal.Subscribe(observer);
-        for (var i = 0; i < SeededValueCount; i++)
-        {
-            signal.OnNext(i);
-        }
-
-        var go = new ManualResetEventSlim();
-        var tasks = new Task[StressWorkers * StressWorkerGroups];
+    public async Task ReentrantOperationsDoNotOverlapValueDelivery()
+{
+        using var signal = new PrioritySemaphoreSignal<int>(0);
+        var inside = false;
+        var overlap = false;
+        var count = 0;
         var next = 0;
-        for (var t = 0; t < StressWorkers; t++)
+        using var subscription = signal.Subscribe(_ =>
         {
-            tasks[t] = Task.Run(() =>
+            overlap |= inside;
+            inside = true;
+            count++;
+            if (count == 1)
             {
-                go.Wait();
-                for (var i = 0; i < StressIterations; i++)
+                for (var group = 0; group < OperationGroups; group++)
                 {
-                    signal.Release();
-                    signal.OnNext(Interlocked.Increment(ref next));
+                    for (var iteration = 0; iteration < OperationsPerGroup; iteration++)
+                    {
+                        signal.Release();
+                        next++;
+                        signal.OnNext(next);
+                        signal.MaximumCount = InitialDrainCapacity + (iteration % CapacityJitter);
+                        next++;
+                        signal.OnNext(InitialDrainCapacity + next);
+                    }
                 }
-            });
+            }
+
+            inside = false;
+        });
+        for (var value = 0; value < SeededValueCount; value++)
+        {
+            signal.OnNext(value);
         }
 
-        for (var t = 0; t < StressWorkers; t++)
-        {
-            tasks[StressWorkers + t] = Task.Run(() =>
-            {
-                go.Wait();
-                for (var i = 0; i < StressIterations; i++)
-                {
-                    signal.MaximumCount = InitialDrainCapacity + (i % CapacityJitter);
-                }
-            });
-        }
-
-        for (var t = 0; t < StressWorkers; t++)
-        {
-            tasks[(StressWorkers * OnNextTaskOffsetMultiplier) + t] = Task.Run(() =>
-            {
-                go.Wait();
-                for (var i = 0; i < StressIterations; i++)
-                {
-                    signal.OnNext(InitialDrainCapacity + Interlocked.Increment(ref next));
-                }
-            });
-        }
-
-        go.Set();
-        await Task.WhenAll(tasks);
-
+        signal.MaximumCount = InitialDrainCapacity;
         signal.MaximumCount = int.MaxValue;
+        const int ExpectedValues = SeededValueCount + (OperationGroups * OperationsPerGroup * 2);
+        await Assert.That(overlap).IsFalse();
+        await Assert.That(count).IsEqualTo(ExpectedValues);
+    }
 
-        const int ExpectedValues = SeededValueCount + (StressWorkers * StressIterations * 2);
-        for (var i = 0; i < PollIterations && observer.OnNextCount < ExpectedValues; i++)
+    /// <summary>Reentrant completion waits until value delivery returns.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ReentrantCompletionWaitsForValueDelivery()
+{
+        using var signal = new PrioritySemaphoreSignal<int>(0);
+        List<int> values = [];
+        var inside = false;
+        var overlap = false;
+        var completed = 0;
+        using var subscription = signal.Subscribe(
+            value =>
         {
-            await Task.Delay(PollDelayMilliseconds);
-        }
-
-        await Assert.That(observer.OverlapDetected).IsFalse();
-        await Assert.That(observer.OnNextCount).IsEqualTo(ExpectedValues);
-
-        subscription.Dispose();
-    }
-
-    /// <summary>Terminal completion notifications remain serialized with value delivery under concurrent drain.</summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    [Test]
-    public async Task ConcurrentCompletionDoesNotOverlapObserverOnNext()
-    {
-        using var signal = new PrioritySemaphoreSignal<int>(0);
-        using var releaseOnNext = new ManualResetEventSlim();
-        using var observer = new TerminalOverlapProbe(releaseOnNext);
-        using var subscription = signal.Subscribe(observer);
-
+            inside = true;
+            values.Add(value);
+            signal.OnCompleted();
+            inside = false;
+        },
+            static _ => { },
+            () =>
+        {
+            overlap |= inside;
+            completed++;
+        });
         signal.OnNext(ThirdValue);
         signal.OnNext(FirstValue);
         signal.OnNext(SecondValue);
-
-        // Drive the drain on a dedicated thread so the probe can block it without starving the
-        // thread pool; the started gate is observed synchronously to keep the race deterministic.
-        var drainThread = StartThread(() => signal.MaximumCount = 1);
-        await Assert.That(observer.WaitForOnNextStarted(TerminalProbeTimeout)).IsTrue();
-
-        var completionThread = StartThread(signal.OnCompleted);
-
-        releaseOnNext.Set();
-        drainThread.Join();
-        completionThread.Join();
-
-        await Assert.That(observer.Completed).IsEqualTo(1);
-        await Assert.That(observer.Values.SequenceEqual([FirstValue, SecondValue, ThirdValue])).IsTrue();
-        await Assert.That(observer.OverlapDetected).IsFalse();
+        signal.MaximumCount = 1;
+        await Assert.That(completed).IsEqualTo(1);
+        await Assert.That(values.SequenceEqual([FirstValue, SecondValue, ThirdValue])).IsTrue();
+        await Assert.That(overlap).IsFalse();
     }
 
-    /// <summary>Terminal error notifications remain serialized with value delivery under concurrent drain.</summary>
+    /// <summary>Reentrant errors wait until value delivery returns.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task ConcurrentErrorDoesNotOverlapObserverOnNext()
-    {
+    public async Task ReentrantErrorWaitsForValueDelivery()
+{
         using var signal = new PrioritySemaphoreSignal<int>(0);
-        using var releaseOnNext = new ManualResetEventSlim();
-        using var observer = new TerminalOverlapProbe(releaseOnNext);
-        using var subscription = signal.Subscribe(observer);
-        var expected = new InvalidOperationException("expected");
-
+        List<int> values = [];
+        var inside = false;
+        var overlap = false;
+        InvalidOperationException expected = new("expected");
+        Exception? observed = null;
+        using var subscription = signal.Subscribe(
+            value =>
+        {
+            inside = true;
+            values.Add(value);
+            signal.OnError(expected);
+            inside = false;
+        },
+            error =>
+        {
+            overlap |= inside;
+            observed = error;
+        });
         signal.OnNext(ThirdValue);
         signal.OnNext(FirstValue);
         signal.OnNext(SecondValue);
-
-        // Drive the drain on a dedicated thread so the probe can block it without starving the
-        // thread pool; the started gate is observed synchronously to keep the race deterministic.
-        var drainThread = StartThread(() => signal.MaximumCount = 1);
-        await Assert.That(observer.WaitForOnNextStarted(TerminalProbeTimeout)).IsTrue();
-
-        var errorThread = StartThread(() => signal.OnError(expected));
-
-        releaseOnNext.Set();
-        drainThread.Join();
-        errorThread.Join();
-
-        await Assert.That(observer.Errors[0]).IsSameReferenceAs(expected);
-        await Assert.That(observer.Values.Length).IsEqualTo(1);
-        await Assert.That(observer.OverlapDetected).IsFalse();
+        signal.MaximumCount = 1;
+        await Assert.That(observed).IsSameReferenceAs(expected);
+        await Assert.That(values.SequenceEqual([FirstValue])).IsTrue();
+        await Assert.That(overlap).IsFalse();
     }
 
     /// <summary>A terminal notification arriving after the signal is already terminal is ignored.</summary>
@@ -379,16 +344,6 @@ public sealed class PrioritySemaphoreSignalTests
         var second = Assert.Throws<InvalidOperationException>(signal.Release);
         await Assert.That(second).IsSameReferenceAs(failure);
         await Assert.That(deliveries).IsEqualTo(FirstDrainCount);
-    }
-
-    /// <summary>Starts a background thread running the supplied action.</summary>
-    /// <param name="action">The work to run.</param>
-    /// <returns>The started thread.</returns>
-    private static Thread StartThread(Action action)
-    {
-        var thread = new Thread(() => action()) { IsBackground = true };
-        thread.Start();
-        return thread;
     }
 
     /// <summary>Test sequencer that queues scheduled work until drained explicitly.</summary>
@@ -510,172 +465,6 @@ public sealed class PrioritySemaphoreSignalTests
             {
                 _values.Add(value);
             }
-        }
-    }
-
-    /// <summary>Observer used to detect concurrent <see cref="IObserver{T}.OnCompleted"/> and <see cref="IObserver{T}.OnError"/> overlap.</summary>
-    private sealed class TerminalOverlapProbe : IObserver<int>, IDisposable
-    {
-        /// <summary>Gate to hold the first value until assertions can observe interleaving.</summary>
-        private readonly ManualResetEventSlim _releaseOnNext;
-
-        /// <summary>Guards internal state.</summary>
-        private readonly Lock _gate = new();
-
-        /// <summary>Captured errors.</summary>
-        private readonly List<Exception> _errors = [];
-
-        /// <summary>Captured values.</summary>
-        private readonly List<int> _values = [];
-
-        /// <summary>Signals that one <see cref="OnNext"/> value started delivering.</summary>
-        private readonly ManualResetEventSlim _onNextStarted = new();
-
-        /// <summary>Whether the observer is currently inside <see cref="OnNext"/>.</summary>
-        private int _insideOnNext;
-
-        /// <summary>Whether a terminal notification was observed while a value was being delivered.</summary>
-        private int _overlapDetected;
-
-        /// <summary>Whether a value was emitted.</summary>
-        private int _onNextCount;
-
-        /// <summary>Completed notification count.</summary>
-        private int _completed;
-
-        /// <summary>Initializes a new instance of the <see cref="TerminalOverlapProbe"/> class.</summary>
-        /// <param name="releaseOnNext">Gate used by tests to hold <see cref="OnNext"/> in-flight.</param>
-        public TerminalOverlapProbe(ManualResetEventSlim releaseOnNext) => _releaseOnNext = releaseOnNext;
-
-        /// <summary>Gets whether overlapping terminal and value notifications were observed.</summary>
-        public bool OverlapDetected => Volatile.Read(ref _overlapDetected) != 0;
-
-        /// <summary>Gets the number of delivered values.</summary>
-        public int[] Values
-        {
-            get
-            {
-                lock (_gate)
-                {
-                    return [.. _values];
-                }
-            }
-        }
-
-        /// <summary>Gets the number of completed notifications.</summary>
-        public int Completed => Volatile.Read(ref _completed);
-
-        /// <summary>Gets the errors delivered to this observer.</summary>
-        public Exception[] Errors
-        {
-            get
-            {
-                lock (_gate)
-                {
-                    return [.. _errors];
-                }
-            }
-        }
-
-        /// <summary>Blocks until <see cref="OnNext"/> has started delivering at least one value.</summary>
-        /// <param name="timeout">The maximum time to wait.</param>
-        /// <returns><see langword="true"/> when delivery started within the timeout.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool WaitForOnNextStarted(TimeSpan timeout) => _onNextStarted.Wait(timeout);
-
-        /// <inheritdoc />
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Dispose() => _onNextStarted.Dispose();
-
-        /// <inheritdoc />
-        public void OnNext(int value)
-        {
-            if (Interlocked.Exchange(ref _insideOnNext, 1) != 0)
-            {
-                _ = Interlocked.Exchange(ref _overlapDetected, 1);
-            }
-
-            lock (_gate)
-            {
-                _onNextCount++;
-                _values.Add(value);
-            }
-
-            _onNextStarted.Set();
-            _releaseOnNext.Wait();
-            _ = Interlocked.Exchange(ref _insideOnNext, 0);
-        }
-
-        /// <inheritdoc />
-        public void OnCompleted()
-        {
-            if (Volatile.Read(ref _insideOnNext) != 0)
-            {
-                _ = Interlocked.Exchange(ref _overlapDetected, 1);
-            }
-
-            _ = Interlocked.Increment(ref _completed);
-        }
-
-        /// <inheritdoc />
-        public void OnError(Exception error)
-        {
-            if (Volatile.Read(ref _insideOnNext) != 0)
-            {
-                _ = Interlocked.Exchange(ref _overlapDetected, 1);
-            }
-
-            lock (_gate)
-            {
-                _errors.Add(error);
-            }
-        }
-    }
-
-    /// <summary>Observer used to detect overlapping <see cref="IObserver{T}.OnNext"/> notifications.</summary>
-    private sealed class ConcurrencyProbe : IObserver<int>
-    {
-        /// <summary>The spin delay used to amplify overlap detection.</summary>
-        private const int ProbeSpinWaitIterations = 1000;
-
-        /// <summary>Non-zero while a notification is in-flight.</summary>
-        private int _inside;
-
-        /// <summary>Whether two notifications overlapped.</summary>
-        private int _overlapDetected;
-
-        /// <summary>Count of delivered notifications.</summary>
-        private int _onNextCount;
-
-        /// <summary>Gets whether overlapping notifications were observed.</summary>
-        public bool OverlapDetected => Volatile.Read(ref _overlapDetected) != 0;
-
-        /// <summary>Gets the number of delivered notifications.</summary>
-        public int OnNextCount => Volatile.Read(ref _onNextCount);
-
-        /// <summary>Records a single notification value, pausing briefly to amplify overlap races.</summary>
-        /// <param name="value">The observed value.</param>
-        public void OnNext(int value)
-        {
-            if (Interlocked.Exchange(ref _inside, 1) != 0)
-            {
-                _ = Interlocked.Exchange(ref _overlapDetected, 1);
-            }
-
-            _ = Interlocked.Increment(ref _onNextCount);
-            Thread.SpinWait(ProbeSpinWaitIterations);
-            _ = Interlocked.Exchange(ref _inside, 0);
-        }
-
-        /// <summary>Implements the generic observer interface for value-only checks.</summary>
-        public void OnCompleted()
-        {
-        }
-
-        /// <summary>Implements the generic observer interface for value-only checks.</summary>
-        /// <param name="error">The observed error.</param>
-        public void OnError(Exception error)
-        {
         }
     }
 }

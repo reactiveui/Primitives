@@ -11,15 +11,6 @@ namespace ReactiveUI.Primitives.Avalonia.Reactive.Tests;
 /// <summary>Tests for <see cref="AvaloniaScheduler"/> against a pumped Avalonia headless dispatcher.</summary>
 public sealed class AvaloniaSchedulerTests
 {
-    /// <summary>Delay used to exercise the native dispatcher-timer path.</summary>
-    private static readonly TimeSpan DelayedDueTime = TimeSpan.FromMilliseconds(50);
-
-    /// <summary>Delay used for work that is cancelled before its timer fires.</summary>
-    private static readonly TimeSpan CancellationDueTime = TimeSpan.FromMilliseconds(100);
-
-    /// <summary>Delay for work that falls due after the cancelled work, on the same dispatcher and priority.</summary>
-    private static readonly TimeSpan FollowingDueTime = TimeSpan.FromMilliseconds(200);
-
     /// <summary>Verifies constructor validation.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
@@ -29,23 +20,22 @@ public sealed class AvaloniaSchedulerTests
     /// <summary>Verifies the singleton uses Avalonia's UI dispatcher and legacy background priority.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task InstanceUsesUiDispatcherAndBackgroundPriority() =>
-        await AvaloniaTestSession.Instance.Dispatch(
-            static async () =>
-            {
-                await Assert.That(AvaloniaScheduler.Instance.Dispatcher).IsSameReferenceAs(Dispatcher.UIThread);
-                await Assert.That(AvaloniaScheduler.Instance.Priority).IsEqualTo(DispatcherPriority.Background);
-                await Assert.That(AvaloniaScheduler.Instance).IsSameReferenceAs(AvaloniaScheduler.Instance);
-            },
+    public async Task InstanceUsesUiDispatcherAndBackgroundPriority()
+    {
+        var (scheduler, dispatcher) = await AvaloniaTestSession.Instance.Dispatch(
+            static () => (AvaloniaScheduler.Instance, Dispatcher.UIThread),
             CancellationToken.None);
+
+        await Assert.That(scheduler.Dispatcher).IsSameReferenceAs(dispatcher);
+        await Assert.That(scheduler.Priority).IsEqualTo(DispatcherPriority.Background);
+        await Assert.That(scheduler).IsSameReferenceAs(AvaloniaScheduler.Instance);
+    }
 
     /// <summary>Verifies immediate scheduler work is posted to and executed on the selected dispatcher thread.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ImmediateScheduleExecutesOnDispatcherThread()
     {
-        // The session only awaits a dispatched delegate that returns a result, so the facts to assert come back
-        // out of the dispatch; an assertion left inside it past the first await is never observed.
         var (dispatcherThreadId, executionThreadId) = await AvaloniaTestSession.Instance.Dispatch(
             static async () =>
             {
@@ -64,10 +54,10 @@ public sealed class AvaloniaSchedulerTests
         await Assert.That(executionThreadId).IsEqualTo(dispatcherThreadId);
     }
 
-    /// <summary>Verifies delayed scheduler work runs on a timer bound to the selected dispatcher.</summary>
+    /// <summary>Verifies due work runs on the selected dispatcher at the configured priority.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task DelayedScheduleExecutesOnDispatcherThread()
+    public async Task DueScheduleExecutesOnDispatcherThread()
     {
         var (dispatcherThreadId, executionThreadId, priority) = await AvaloniaTestSession.Instance.Dispatch(
             static async () =>
@@ -78,7 +68,7 @@ public sealed class AvaloniaSchedulerTests
                     new(TaskCreationOptions.RunContinuationsAsynchronously);
 
                 _ = scheduler.Schedule(
-                    DelayedDueTime,
+                    TimeSpan.Zero,
                     () => completion.TrySetResult(Environment.CurrentManagedThreadId));
 
                 return (
@@ -92,10 +82,10 @@ public sealed class AvaloniaSchedulerTests
         await Assert.That(priority).IsEqualTo(DispatcherPriority.Normal);
     }
 
-    /// <summary>Verifies disposing delayed work stops its dispatcher timer before execution.</summary>
+    /// <summary>Verifies disposing queued work prevents execution.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task DelayedScheduleCanBeCancelled()
+    public async Task DueScheduleCanBeCancelled()
     {
         var executed = await AvaloniaTestSession.Instance.Dispatch(
             static async () =>
@@ -105,14 +95,11 @@ public sealed class AvaloniaSchedulerTests
                 var executed = false;
 
                 var disposable = scheduler.Schedule(
-                    CancellationDueTime,
+                    TimeSpan.Zero,
                     () => executed = true);
                 disposable.Dispose();
 
-                // The following work is due after the cancelled work and shares its dispatcher and priority, so the
-                // dispatcher passes the cancelled due time first: the follower running means the cancelled action was
-                // skipped rather than merely still pending.
-                _ = scheduler.Schedule(FollowingDueTime, following.SetResult);
+                _ = scheduler.Schedule(TimeSpan.Zero, following.SetResult);
 
                 await following.Task;
                 return executed;

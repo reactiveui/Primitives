@@ -16,11 +16,7 @@ public static partial class SignalAsyncExtensions
         /// <returns>An observable sequence that emits a snapshot of the latest values whenever any source produces a new value,
         /// after all sources have produced at least one value.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="sources"/> is <see langword="null"/>.</exception>
-        /// <remarks>Each emitted <see cref="IReadOnlyList{T}"/> is a reference to one buffer owned by the subscription,
-        /// not a fresh allocation. An observer must consume the snapshot inside its <c>OnNextAsync</c> handler: the buffer
-        /// is overwritten under the operator's gate before each emit, so a retained reference surfaces the next emission's
-        /// values. For a stable copy, use the projecting <c>CombineLatest</c> overload or
-        /// <c>.Select(static s =&gt; s.ToArray())</c>.</remarks>
+        /// <remarks>Snapshots share a subscription-owned buffer. Consume them inside OnNextAsync or copy them before retaining them; subsequent emissions overwrite the buffer.</remarks>
         public IObservableAsync<IReadOnlyList<TSource>> SyncLatest()
         {
             ArgumentExceptionHelper.ThrowIfNull(sources);
@@ -29,10 +25,7 @@ public static partial class SignalAsyncExtensions
             return new SyncLatestEnumerableSignal<TSource, IReadOnlyList<TSource>>(sources, static s => s);
         }
 
-        /// <summary>
-        /// Combines the latest value from each asynchronous observable sequence in the supplied collection and projects the
-        /// resulting snapshot into a result value.
-        /// </summary>
+        /// <summary>Combines the latest value from each asynchronous observable sequence in the supplied collection and projects the resulting snapshot into a result value.</summary>
         /// <typeparam name="TResult">The projected result type.</typeparam>
         /// <param name="resultSelector">A selector that projects the current snapshot of latest values into a result value.</param>
         /// <returns>An observable sequence that emits projected results whenever any source produces a new value, after all

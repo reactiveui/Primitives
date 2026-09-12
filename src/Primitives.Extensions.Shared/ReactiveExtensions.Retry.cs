@@ -134,10 +134,7 @@ public static partial class ReactiveExtensions
                         onError(tex);
                     }));
 
-        /// <summary>
-        /// When caught exception, do onError action and repeat observable sequence after delay
-        /// time(work on delayScheduler) during within retryCount.
-        /// </summary>
+        /// <summary>When caught exception, do onError action and repeat observable sequence after delay time(work on delayScheduler) during within retryCount.</summary>
         /// <typeparam name="TException">The type of the exception.</typeparam>
         /// <param name="onError">The on error.</param>
         /// <param name="retryCount">The retry count.</param>

@@ -36,10 +36,7 @@ internal sealed class WhileObservable(
         return sink;
     }
 
-    /// <summary>
-    /// Sink that orchestrates the iteration loop, scheduling the next iteration
-    /// after each emission and terminating when the predicate becomes false.
-    /// </summary>
+    /// <summary>Sink that orchestrates the iteration loop, scheduling the next iteration after each emission and terminating when the predicate becomes false.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="condition">The loop predicate.</param>
     /// <param name="action">The action invoked per iteration.</param>

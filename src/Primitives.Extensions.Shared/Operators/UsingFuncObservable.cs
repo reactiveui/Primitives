@@ -46,10 +46,7 @@ internal sealed class UsingFuncObservable<T, TResult>(
             });
     }
 
-    /// <summary>
-    /// Invokes the function against the resource, signals the produced value
-    /// followed by completion, then disposes the resource.
-    /// </summary>
+    /// <summary>Invokes the function against the resource, signals the produced value followed by completion, then disposes the resource.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="resource">The resource to use and dispose.</param>
     /// <param name="function">The function invoked against the resource.</param>

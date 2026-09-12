@@ -6,10 +6,7 @@ using System.Collections.Concurrent;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// An observer that records every callback and hands out tasks that complete when a callback arrives, so a test
-/// awaits the notification it is asserting on instead of giving a clock a budget to produce it.
-/// </summary>
+/// <summary>Records callbacks and completes a task for each notification.</summary>
 /// <typeparam name="T">The type of the observed values.</typeparam>
 internal sealed class AwaitableWitness<T> : IObserver<T>
 {
@@ -45,24 +42,6 @@ internal sealed class AwaitableWitness<T> : IObserver<T>
     /// <summary>Gets the number of completion callbacks observed.</summary>
     internal int Completions { get; private set; }
 
-    /// <summary>Gets a task that completes once the observed value count reaches a threshold.</summary>
-    /// <param name="count">The value count to wait for.</param>
-    /// <returns>A task that completes when at least <paramref name="count"/> values have been observed.</returns>
-    internal Task ValueCountReaching(int count)
-    {
-        var waiter = _valueWaiters.GetOrAdd(
-            count,
-            static _ => new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously));
-
-        // Re-check after registering: a value that arrived in between would otherwise never signal this waiter.
-        if (_values.Count >= count)
-        {
-            _ = waiter.TrySetResult();
-        }
-
-        return waiter.Task;
-    }
-
     /// <inheritdoc/>
     public void OnCompleted()
     {
@@ -89,5 +68,23 @@ internal sealed class AwaitableWitness<T> : IObserver<T>
                 _ = waiter.Value.TrySetResult();
             }
         }
+    }
+
+    /// <summary>Gets a task that completes once the observed value count reaches a threshold.</summary>
+    /// <param name="count">The value count to wait for.</param>
+    /// <returns>A task that completes when at least <paramref name="count"/> values have been observed.</returns>
+    internal Task ValueCountReaching(int count)
+    {
+        var waiter = _valueWaiters.GetOrAdd(
+            count,
+            static _ => new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously));
+
+        // Re-check after registering: a value that arrived in between would otherwise never signal this waiter.
+        if (_values.Count >= count)
+        {
+            _ = waiter.TrySetResult();
+        }
+
+        return waiter.Task;
     }
 }

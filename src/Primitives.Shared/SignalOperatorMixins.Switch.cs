@@ -11,29 +11,9 @@ namespace ReactiveUI.Primitives;
 /// <summary>The Switch operator: subscribes to the most recent inner sequence and drops the previous one.</summary>
 public static partial class LinqExtensions
 {
-    /// <summary>Dedicated signal for <c>SwitchTo</c> that hands each subscription to a coordinator.</summary>
-    /// <typeparam name="T">The value type.</typeparam>
-    private sealed class SwitchSignal<T> : IObservable<T>
-    {
-        /// <summary>The outer sequence of inner sources.</summary>
-        private readonly IObservable<IObservable<T>> _sources;
-
-        /// <summary>Initializes a new instance of the <see cref="SwitchSignal{T}"/> class.</summary>
-        /// <param name="sources">The outer sequence of inner sources.</param>
-        internal SwitchSignal(IObservable<IObservable<T>> sources) => _sources = sources;
-
-        /// <inheritdoc/>
-        public IDisposable Subscribe(IObserver<T> observer)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(observer);
-
-            return new SwitchCoordinator<T>(observer).Run(_sources);
-        }
-    }
-
     /// <summary>Coordinates a switch operation.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
-    private sealed class SwitchCoordinator<T> : IDisposable
+    internal sealed class SwitchCoordinator<T> : IDisposable
     {
         /// <summary>The synchronization gate.</summary>
         private readonly Lock _gate = new();
@@ -62,6 +42,9 @@ public static partial class LinqExtensions
         /// <summary>Initializes a new instance of the <see cref="SwitchCoordinator{T}"/> class.</summary>
         /// <param name="observer">The downstream observer.</param>
         internal SwitchCoordinator(IObserver<T> observer) => _observer = observer;
+
+        /// <summary>Gets the gate serializing switches and downstream notifications.</summary>
+        internal Lock Gate => _gate;
 
         /// <summary>Releases the active subscriptions.</summary>
         public void Dispose()
@@ -195,6 +178,26 @@ public static partial class LinqExtensions
 
             _done = true;
             _observer.OnCompleted();
+        }
+    }
+
+    /// <summary>Dedicated signal for <c>SwitchTo</c> that hands each subscription to a coordinator.</summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    private sealed class SwitchSignal<T> : IObservable<T>
+    {
+        /// <summary>The outer sequence of inner sources.</summary>
+        private readonly IObservable<IObservable<T>> _sources;
+
+        /// <summary>Initializes a new instance of the <see cref="SwitchSignal{T}"/> class.</summary>
+        /// <param name="sources">The outer sequence of inner sources.</param>
+        internal SwitchSignal(IObservable<IObservable<T>> sources) => _sources = sources;
+
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<T> observer)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(observer);
+
+            return new SwitchCoordinator<T>(observer).Run(_sources);
         }
     }
 }

@@ -7,10 +7,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Provides extension methods for converting tasks, asynchronous enumerables, and enumerable sequences into
-/// asynchronous observable sequences.
-/// </summary>
+/// <summary>Provides extension methods for converting tasks, asynchronous enumerables, and enumerable sequences into asynchronous observable sequences.</summary>
 /// <remarks>Every overload is spelled <c>ToAsyncSignal</c>, so the conversion reads the same whatever the source, and a
 /// sequence that is an <see cref="IObservableAsync{T}"/> passes straight through.</remarks>
 public static partial class SignalAsyncExtensions
@@ -36,10 +33,7 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The enumerable sequence to convert to an asynchronous observable. Cannot be null.</param>
     extension<T>(IEnumerable<T> source)
     {
-        /// <summary>
-        /// Converts the specified enumerable sequence to an asynchronous observable sequence, emitting each element in the
-        /// background.
-        /// </summary>
+        /// <summary>Converts the specified enumerable sequence to an asynchronous observable sequence, emitting each element in the background.</summary>
         /// <returns>An asynchronous observable sequence that emits each element from the source enumerable and completes when all
         /// elements have been emitted.</returns>
         /// <remarks>Enumeration runs on a background thread, once per subscriber, so a blocking or side-effecting
@@ -57,8 +51,7 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The source sequence.</param>
     extension<T>(IObservableAsync<T> source)
     {
-        /// <summary>Null-checks and returns the source unchanged, so generic code can convert without knowing whether
-        /// it has a signal already.</summary>
+        /// <summary>Null-checks and returns the source unchanged, so generic code can convert without knowing whether it has a signal already.</summary>
         /// <returns>The same sequence.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
         [SuppressMessage(
@@ -74,10 +67,7 @@ public static partial class SignalAsyncExtensions
     /// <param name="task">The task to convert to an asynchronous observable sequence. Cannot be null.</param>
     extension<T>(Task<T> task)
     {
-        /// <summary>
-        /// Converts a task representing a single asynchronous value into an observable sequence that emits the result when
-        /// the task completes.
-        /// </summary>
+        /// <summary>Converts a task representing a single asynchronous value into an observable sequence that emits the result when the task completes.</summary>
         /// <returns>An asynchronous observable sequence that emits the result of the task when it completes, followed by a
         /// completion notification.</returns>
         /// <remarks>A faulted or cancelled task terminates the sequence with that error. Since the task is a single

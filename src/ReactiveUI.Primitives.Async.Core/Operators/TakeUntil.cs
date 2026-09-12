@@ -18,10 +18,7 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The source observable sequence.</param>
     extension<T>(IObservableAsync<T> source)
     {
-        /// <summary>
-        /// Returns an observable sequence that emits items from the source sequence until the specified other
-        /// observable emits an item or completes.
-        /// </summary>
+        /// <summary>Returns an observable sequence that emits items from the source sequence until the specified other observable emits an item or completes.</summary>
         /// <typeparam name="TOther">The type of the elements in the other observable sequence that triggers termination of the source sequence.</typeparam>
         /// <param name="other">The observable sequence whose first emission or completion will cause the returned sequence to stop emitting
         /// items from the source.</param>
@@ -36,10 +33,7 @@ public static partial class SignalAsyncExtensions
             return new TakeUntilAsyncSignal<T, TOther>(source, other, TakeUntilOptions.Default);
         }
 
-        /// <summary>
-        /// Returns an observable sequence that emits items from the source sequence until the specified other
-        /// observable emits an item or completes.
-        /// </summary>
+        /// <summary>Returns an observable sequence that emits items from the source sequence until the specified other observable emits an item or completes.</summary>
         /// <typeparam name="TOther">The type of the elements in the other observable sequence that triggers termination of the source sequence.</typeparam>
         /// <param name="other">The observable sequence whose first emission or completion will cause the returned sequence to stop emitting
         /// items from the source.</param>
@@ -162,10 +156,7 @@ public static partial class SignalAsyncExtensions
                 : new TaskStopSignal<T>(source, task, options ?? TakeUntilOptions.Default);
         }
 
-        /// <summary>
-        /// Returns an observable sequence that emits items from the source sequence until the specified cancellation
-        /// token is canceled.
-        /// </summary>
+        /// <summary>Returns an observable sequence that emits items from the source sequence until the specified cancellation token is canceled.</summary>
         /// <param name="cancellationToken">A cancellation token that, when canceled, will terminate the resulting observable sequence.</param>
         /// <returns>An observable sequence that completes when the provided cancellation token is canceled or when the source
         /// sequence completes.</returns>
@@ -204,10 +195,7 @@ public static partial class SignalAsyncExtensions
                 : new PredicateStopSignal<T>(source, predicate);
         }
 
-        /// <summary>
-        /// Returns an observable sequence that emits elements from the source sequence until the specified asynchronous
-        /// predicate returns true for an element.
-        /// </summary>
+        /// <summary>Returns an observable sequence that emits elements from the source sequence until the specified asynchronous predicate returns true for an element.</summary>
         /// <param name="asyncPredicate">A function that evaluates each element and its associated cancellation token asynchronously. The sequence
         /// stops emitting elements when this function returns true.</param>
         /// <returns>An observable sequence that contains the elements from the source sequence up to, but not including, the
@@ -491,15 +479,12 @@ public static partial class SignalAsyncExtensions
             internal void LinkExternalCancellation(CancellationToken external) =>
                 _lifecycle.LinkExternalCancellation(external);
 
-            /// <summary>Hands the stop delegate the callback that ends the sequence.</summary>
-            /// <remarks>Completion runs on the thread that invokes the callback, so a synchronous <c>notify</c> ends the
-            /// sequence before it returns whenever the downstream observer completes synchronously.</remarks>
+            /// <summary>Completes on the notifying thread when downstream completion is synchronous.</summary>
             internal void AwaitStopThenComplete()
             {
                 Volatile.Write(ref _stopRegistration, _parent._stopSignal(Stop));
 
-                // A delegate is free to notify before it returns, in which case Stop ran without a
-                // registration to release. Release it here so the stop source is never left attached.
+                // Release registrations returned after a synchronous stop notification.
                 if (Volatile.Read(ref _stopSignalled) != 1)
                 {
                     return;

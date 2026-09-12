@@ -7,12 +7,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async.Advanced;
 
-/// <summary>
-/// Asynchronous mutual-exclusion primitive that serializes critical sections in the async pipeline.
-/// Each acquire hands back a <see cref="Lease"/> that releases the gate when disposed. Ownership is keyed
-/// on the managed thread id, so a nested acquire on the holding thread is granted immediately and reentry
-/// is recognised only while the caller stays on the thread that took the gate.
-/// </summary>
+/// <summary>Serializes asynchronous critical sections with disposable leases. Reentrant acquisition is allowed only on the managed thread that currently owns the gate.</summary>
 [System.Diagnostics.DebuggerDisplay("AsyncSerialGate: OwnerThreadId = {_ownerThreadId}, Waiters = {_waiters}, RecursionDepth = {_recursionDepth}")]
 public sealed class AsyncSerialGate : IDisposable
 {
@@ -47,23 +42,10 @@ public sealed class AsyncSerialGate : IDisposable
     /// <returns>A <see cref="ValueTask{Lease}"/> that completes when the gate has been acquired.</returns>
     /// <exception cref="OperationCanceledException">Thrown when the token is cancelled before the gate is
     /// acquired.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [DebuggerStepThrough]
-    public ValueTask<Lease> EnterAsync(CancellationToken cancellationToken)
-    {
-        var currentThreadId = Environment.CurrentManagedThreadId;
-
-        // Same-thread reentry: the calling thread owns the gate, so bumping depth needs no synchronization.
-        if (Volatile.Read(ref _ownerThreadId) == currentThreadId)
-        {
-            _recursionDepth++;
-            return new(new Lease(this));
-        }
-
-        // Fast uncontended acquire: pure CAS, no semaphore touch.
-        return Interlocked.CompareExchange(ref _ownerThreadId, currentThreadId, 0) == 0
-            ? new(new Lease(this))
-            : WaitForEntryAsync(cancellationToken);
-    }
+    public ValueTask<Lease> EnterAsync(CancellationToken cancellationToken) =>
+        EnterForThreadAsync(Environment.CurrentManagedThreadId, cancellationToken);
 
     /// <inheritdoc/>
     public void Dispose()
@@ -76,10 +58,24 @@ public sealed class AsyncSerialGate : IDisposable
         _semaphore.Dispose();
     }
 
-    /// <summary>
-    /// Exits the gate. Decrements the recursion depth on a nested exit, or clears the owner
-    /// and signals one waiter (if any) on the outermost release.
-    /// </summary>
+    /// <summary>Acquires ownership for the supplied caller thread, allowing same-thread reentry.</summary>
+    /// <param name="currentThreadId">The calling thread identifier.</param>
+    /// <param name="cancellationToken">Cancellation observed while waiting.</param>
+    /// <returns>The acquired gate lease.</returns>
+    internal ValueTask<Lease> EnterForThreadAsync(int currentThreadId, CancellationToken cancellationToken)
+    {
+        if (Volatile.Read(ref _ownerThreadId) == currentThreadId)
+        {
+            _recursionDepth++;
+            return new(new Lease(this));
+        }
+
+        return Interlocked.CompareExchange(ref _ownerThreadId, currentThreadId, 0) == 0
+            ? new(new Lease(this))
+            : WaitForEntryAsync(cancellationToken);
+    }
+
+    /// <summary>Exits the gate. Decrements the recursion depth on a nested exit, or clears the owner and signals one waiter (if any) on the outermost release.</summary>
     internal void Exit()
     {
         if (_recursionDepth > 0)
@@ -92,24 +88,10 @@ public sealed class AsyncSerialGate : IDisposable
         WakeNextWaiter();
     }
 
-    /// <summary>
-    /// Signals one parked waiter if any are present. A signal released after the last waiter has left
-    /// lands in the semaphore count and is consumed by the next waiter to arrive.
-    /// </summary>
-    private void WakeNextWaiter()
-    {
-        if (Volatile.Read(ref _waiters) == 0)
-        {
-            return;
-        }
-
-        _ = _semaphore.Release();
-    }
-
     /// <summary>Slow path: park as a waiter and retry the acquire CAS after each semaphore signal.</summary>
     /// <param name="cancellationToken">Cancellation token observed while waiting.</param>
     /// <returns>A <see cref="Lease"/> for the acquired gate.</returns>
-    private async ValueTask<Lease> WaitForEntryAsync(CancellationToken cancellationToken)
+    internal async ValueTask<Lease> WaitForEntryAsync(CancellationToken cancellationToken)
     {
         _ = Interlocked.Increment(ref _waiters);
         try
@@ -130,6 +112,17 @@ public sealed class AsyncSerialGate : IDisposable
         {
             _ = Interlocked.Decrement(ref _waiters);
         }
+    }
+
+    /// <summary>Signals one parked waiter if any are present; a late signal is consumed by the next waiter.</summary>
+    private void WakeNextWaiter()
+    {
+        if (Volatile.Read(ref _waiters) == 0)
+        {
+            return;
+        }
+
+        _ = _semaphore.Release();
     }
 
     /// <summary>Holds one acquisition of an <see cref="AsyncSerialGate"/> and releases it on disposal.</summary>

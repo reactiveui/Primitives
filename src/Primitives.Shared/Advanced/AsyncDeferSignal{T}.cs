@@ -48,7 +48,7 @@ public sealed class AsyncDeferSignal<T> : IObservable<T>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="subscription">The subscription slot.</param>
     /// <returns>A task that completes when the source subscription has been assigned.</returns>
-    private static async Task RunAsyncFactory(
+    internal static async Task RunAsyncFactory(
         Func<CancellationToken, Task<IObservable<T>>> observableFactory,
         CreateWitness<T> observer,
         AsyncSubscriptionLifetime subscription)

@@ -36,10 +36,7 @@ public static partial class SignalAsyncExtensions
                 static _ => AsyncSignalFactory.Create<TValue>());
         }
 
-        /// <summary>
-        /// Groups the elements of an asynchronous observable sequence according to a specified key selector function and
-        /// returns an observable sequence of grouped observables.
-        /// </summary>
+        /// <summary>Groups the elements of an asynchronous observable sequence according to a specified key selector function and returns an observable sequence of grouped observables.</summary>
         /// <typeparam name="TKey">The type of the key returned by the key selector function. Must be non-null.</typeparam>
         /// <param name="keySelector">A function to extract the key for each element in the source sequence.</param>
         /// <param name="groupSignalSelector">A function that provides a signal for each group, given its key. Used to control how elements are published

@@ -40,7 +40,7 @@ public sealed class TaskInstanceSignal<T> : IObservable<T>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="subscription">The subscription lifetime.</param>
     /// <returns>A task representing the asynchronous observation.</returns>
-    private static async Task ObserveTaskAsync(
+    internal static async Task ObserveTaskAsync(
         Task<T> task,
         IObserver<T> observer,
         TaskInstanceSubscription subscription)

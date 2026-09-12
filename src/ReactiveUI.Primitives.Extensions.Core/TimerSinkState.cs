@@ -6,13 +6,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions;
 
-/// <summary>
-/// Shared lock + timer + done-flag triple used by the synchronous timer-driven operator sinks
-/// (Debounce-Until, Detect-Stale, Throttle-Distinct, Buffer-Until-Idle, etc.). Each of those sinks
-/// previously hand-rolled three identical OnError / OnCompleted / Dispose method bodies on top of
-/// the same fields; this helper centralises the bodies so the per-sink class only carries the
-/// operator-specific OnNext logic. Sinks compose one instance and forward to it — no base class.
-/// </summary>
+/// <summary>Stores timer ownership, disposal state, and terminal notification state.</summary>
 /// <typeparam name="T">The element type the downstream observer receives.</typeparam>
 /// <param name="downstream">The downstream observer terminal callbacks fan out to.</param>
 [System.Diagnostics.CodeAnalysis.SuppressMessage(

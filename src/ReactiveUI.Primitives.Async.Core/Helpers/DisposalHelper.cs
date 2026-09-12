@@ -2,13 +2,11 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async.Helpers;
 
 /// <summary>Provides helper methods for idempotent disposal patterns using an integer flag.</summary>
-[ExcludeFromCodeCoverage]
 public static class DisposalHelper
 {
     /// <summary>Checks whether the disposed flag indicates disposal has occurred.</summary>

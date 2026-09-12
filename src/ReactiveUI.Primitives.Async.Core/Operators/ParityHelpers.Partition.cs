@@ -2,7 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Disposables;
 
@@ -11,11 +10,7 @@ namespace ReactiveUI.Primitives.Async;
 /// <summary>Provides the shared upstream coordinator backing the <c>Partition</c> parity helper.</summary>
 public static partial class SignalAsyncExtensions
 {
-    /// <summary>
-    /// Shares one upstream subscription between the two <c>Partition</c> branches, starting it when the first branch
-    /// subscribes and tearing it down when the last one disposes. Each emission dispatches to whichever branch observer
-    /// the predicate selects, or to nothing when that branch has no subscriber.
-    /// </summary>
+    /// <summary>Shares an upstream subscription between predicate-selected branches until the last subscriber disposes.</summary>
     /// <typeparam name="T">The element type partitioned across the two branches.</typeparam>
     internal sealed class PartitionCoordinator<T>
     {
@@ -126,8 +121,7 @@ public static partial class SignalAsyncExtensions
         /// <summary>Attaches the new upstream subscription, disposing it when both branches disposed during the subscribe.</summary>
         /// <param name="subscription">The freshly-created upstream subscription.</param>
         /// <returns>A task that completes once the subscription has been attached or disposed.</returns>
-        [ExcludeFromCodeCoverage]
-        private async ValueTask AttachOrDisposeStaleSubscriptionAsync(IAsyncDisposable subscription)
+        internal async ValueTask AttachOrDisposeStaleSubscriptionAsync(IAsyncDisposable subscription)
         {
             if (!TryAttachSourceSubscription(subscription))
             {

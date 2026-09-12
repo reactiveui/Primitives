@@ -4,12 +4,7 @@
 
 namespace ReactiveUI.Primitives.Extensions.Internal;
 
-/// <summary>
-/// Shared synchronous reduce-sink state used by <c>BooleanReduceObservable</c> (AllTrue / AllFalse)
-/// and <c>MinMaxObservable</c> (Max / Min). Each per-operator sink composes one instance (has-a, not
-/// is-a) and adds only its operator-specific OnNext reduce step; the boilerplate gate, value cache,
-/// completion bookkeeping, OnError, and OnCompleted bodies all live here in one place.
-/// </summary>
+/// <summary>Stores synchronized reduction state and coordinates terminal notifications.</summary>
 /// <typeparam name="TIn">The source element type (must be a struct so <c>TIn?</c> doubles as the
 /// "value seen yet?" Optional).</typeparam>
 /// <typeparam name="TOut">The downstream element type the operator emits after reducing.</typeparam>
@@ -95,10 +90,7 @@ internal sealed class ReduceSinkState<TIn, TOut>
         }
     }
 
-    /// <summary>
-    /// Records completion of the source at <paramref name="index"/>. The combined sequence terminates
-    /// once every source has completed OR a source completes without ever having emitted a value.
-    /// </summary>
+    /// <summary>Records source completion, terminating when all sources complete or one completes without a value.</summary>
     /// <param name="index">The 0-based source index that just completed.</param>
     internal void HandleCompleted(int index)
     {

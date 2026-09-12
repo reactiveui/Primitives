@@ -7,15 +7,9 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides factory methods for creating and composing asynchronous observable sequences.</summary>
-/// <remarks>The SignalAsync class contains static methods for working with asynchronous observables, enabling
-/// resource management and composition patterns similar to those found in reactive programming. All members are
-/// thread-safe and intended for use in asynchronous and reactive scenarios.</remarks>
 public static partial class SignalAsync
 {
-    /// <summary>
-    /// Creates an observable sequence that manages the lifetime of an asynchronous resource, ensuring the resource is
-    /// disposed when the sequence terminates.
-    /// </summary>
+    /// <summary>Creates an observable sequence that manages the lifetime of an asynchronous resource, ensuring the resource is disposed when the sequence terminates.</summary>
     /// <typeparam name="TResource">The type of the asynchronous resource that implements <see cref="IAsyncDisposable"/>.</typeparam>
     /// <typeparam name="T">The type of the elements produced by the observable sequence.</typeparam>
     /// <param name="resourceFactory">A function that asynchronously creates the resource to be used by the observable sequence. The function receives
@@ -32,10 +26,7 @@ public static partial class SignalAsync
         where TResource : IAsyncDisposable =>
         new UsingSignal<TResource, T>(resourceFactory, signalFactory);
 
-    /// <summary>
-    /// Creates an observable sequence that manages the lifetime of an asynchronous resource, ensuring the resource is
-    /// disposed when the sequence terminates.
-    /// </summary>
+    /// <summary>Creates an observable sequence that manages the lifetime of an asynchronous resource, ensuring the resource is disposed when the sequence terminates.</summary>
     /// <typeparam name="T">The type of the elements produced by the observable sequence.</typeparam>
     /// <typeparam name="TResource">The type of the asynchronous resource that implements <see cref="IAsyncDisposable"/>.</typeparam>
     /// <param name="resourceFactory">A function that asynchronously creates the resource to be used by the observable sequence.</param>
@@ -43,11 +34,7 @@ public static partial class SignalAsync
     /// signal sequence that uses the resource.</param>
     /// <returns>An observable that uses the specified resource and ensures the resource is disposed
     /// asynchronously when the sequence completes or an error occurs.</returns>
-    /// <remarks>The resource is created for each subscription and is disposed asynchronously when the
-    /// observable sequence terminates, either by completion or error. If the observable factory throws an exception,
-    /// the resource is disposed before the exception is propagated. This method is useful for managing resources that
-    /// must be disposed when no longer needed, such as streams or database connections, in conjunction with
-    /// asynchronous observable sequences.</remarks>
+    /// <remarks>Each subscription owns its resource. Completion, error, or a throwing observable factory disposes that resource asynchronously.</remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",

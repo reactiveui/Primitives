@@ -879,6 +879,7 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public void Dispose() { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.Async.Advanced.AsyncSerialGate.Lease> EnterAsync() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.Async.Advanced.AsyncSerialGate.Lease> EnterAsync(System.Threading.CancellationToken cancellationToken) { }
         [System.Diagnostics.DebuggerDisplay("Lease: Parent = {_parent}")]
         public readonly record struct Lease : System.IDisposable, System.IEquatable<ReactiveUI.Primitives.Async.Advanced.AsyncSerialGate.Lease>
@@ -1659,7 +1660,7 @@ namespace ReactiveUI.Primitives.Async.Disposables
         public static System.Threading.Tasks.ValueTask DisposeAsync(ref System.IAsyncDisposable? slot) { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public static bool IsDisposed(System.IAsyncDisposable? slot) { }
-        [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public static System.Threading.Tasks.ValueTask SwapAsync(ref System.IAsyncDisposable? slot, System.IAsyncDisposable? value) { }
     }
     [System.Diagnostics.DebuggerDisplay("MultipleDisposableAsync: Count = {_count}, IsDisposed = {_isDisposed}")]
@@ -1701,13 +1702,12 @@ namespace ReactiveUI.Primitives.Async.Disposables
 }
 namespace ReactiveUI.Primitives.Async.Helpers
 {
-    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public static class DisposalHelper
     {
     }
-    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public static class FireAndForgetHelper
     {
+        [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
         public static void Run(System.Func<System.Threading.Tasks.ValueTask> action) { }
     }
     public static class SubscriptionHelper

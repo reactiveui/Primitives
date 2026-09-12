@@ -4,12 +4,7 @@
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Verifies the sampling and flat-map coordinators hold the Rx grammar when a source breaks it: a stale timer
-/// tick, a notification after a terminal, and a notification after disposal are all dropped instead of
-/// forwarded. Sources here are scripted so that disposing the subscription does not unhook them, which is what
-/// lets the test deliver the illegal notifications the guards exist for.
-/// </summary>
+/// <summary>Tests that sampling and flat-map coordinators reject stale callbacks and post-terminal notifications.</summary>
 public partial class SignalOperatorParityMixinsTests
 {
     /// <summary>The sample period used by the probe guard tests.</summary>

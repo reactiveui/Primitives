@@ -21,26 +21,16 @@ internal static class SymbolHelpers
     /// <summary>Renders a type without nullable annotations, for a consumer whose language predates them.</summary>
     private static readonly SymbolDisplayFormat ObliviousFormat = SymbolDisplayFormat.FullyQualifiedFormat;
 
-    /// <summary>Renders a type with its nullable annotations.</summary>
-    /// <remarks>
-    /// The generated handler has to match the delegate it is assigned to exactly. A delegate declared with an
-    /// annotated parameter - <c>EventHandler</c> and its sender being the one nearly every event goes through -
-    /// does not match a handler that declares the same parameter unannotated, and the consumer's build says so.
-    /// </remarks>
+    /// <summary>Formats a type with the nullability required by its delegate signature.</summary>
     private static readonly SymbolDisplayFormat AnnotatedFormat =
         SymbolDisplayFormat.FullyQualifiedFormat.AddMiscellaneousOptions(
             SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier);
 
-    /// <summary>Renders a type as a fully qualified reference, substituting renamed type parameters.</summary>
+    /// <summary>Substitutes type parameter names by symbol, preserving other display parts.</summary>
     /// <param name="symbol">The type to render.</param>
     /// <param name="typeParameterNames">The generated type-parameter names, or null when none were renamed.</param>
     /// <param name="supportsNullableAnnotations">Whether the consumer's language can express an annotation.</param>
     /// <returns>The fully qualified type reference.</returns>
-    /// <remarks>
-    /// Walking display parts rather than the finished string is what makes the substitution safe: a part carrying a
-    /// type parameter is identified by its symbol, so a parameter named <c>T</c> is replaced while a type whose name
-    /// merely contains <c>T</c> is left alone.
-    /// </remarks>
     internal static string Display(
         ITypeSymbol symbol,
         IReadOnlyDictionary<ITypeParameterSymbol, string>? typeParameterNames,
@@ -68,13 +58,9 @@ internal static class SymbolHelpers
         return builder.ToStringAndReturn();
     }
 
-    /// <summary>Collects the type parameters a wrapper has to redeclare, outermost container first.</summary>
+    /// <summary>Collects the host's type parameters, including those inherited from containing types.</summary>
     /// <param name="type">The host type.</param>
     /// <returns>The complete ordered type-parameter list.</returns>
-    /// <remarks>
-    /// A wrapper for a nested generic sits at namespace level, so it has to redeclare every parameter its host
-    /// inherits from its containing types as well as its own.
-    /// </remarks>
     internal static List<ITypeParameterSymbol> CollectTypeParameters(INamedTypeSymbol type)
     {
         var containers = new Stack<INamedTypeSymbol>();
@@ -92,14 +78,9 @@ internal static class SymbolHelpers
         return result;
     }
 
-    /// <summary>Assigns each type parameter a name that is unique across the flattened list.</summary>
+    /// <summary>Assigns distinct names to type parameters from nested generic scopes.</summary>
     /// <param name="typeParameters">The ordered type parameters.</param>
     /// <returns>The symbol-to-generated-name mapping.</returns>
-    /// <remarks>
-    /// Flattening a nested generic can collide two parameters that were distinct in their own scopes -
-    /// <c>Outer&lt;T&gt;.Inner&lt;T&gt;</c> being the usual shape - so the second one is suffixed rather than
-    /// silently shadowing the first.
-    /// </remarks>
     internal static Dictionary<ITypeParameterSymbol, string> CreateTypeParameterNames(
         List<ITypeParameterSymbol> typeParameters)
     {
@@ -149,15 +130,11 @@ internal static class SymbolHelpers
         return builder.Append('>').ToStringAndReturn();
     }
 
-    /// <summary>Renders the generic constraint clauses, one per line and without indentation.</summary>
+    /// <summary>Formats constraint clauses without indentation.</summary>
     /// <param name="typeParameters">The ordered type parameters.</param>
     /// <param name="typeParameterNames">The generated type-parameter names.</param>
     /// <param name="supportsNullableAnnotations">Whether the consumer's language can express an annotation.</param>
     /// <returns>The constraint clauses, or an empty string when nothing is constrained.</returns>
-    /// <remarks>
-    /// Left unindented because the same clauses are emitted at two different depths - once on the wrapper class and
-    /// once on the activation overload - and the emitter is what knows which.
-    /// </remarks>
     internal static string BuildConstraints(
         List<ITypeParameterSymbol> typeParameters,
         IReadOnlyDictionary<ITypeParameterSymbol, string> typeParameterNames,
@@ -215,15 +192,11 @@ internal static class SymbolHelpers
         return builder.ToStringAndReturn();
     }
 
-    /// <summary>Appends one type parameter's comma-separated constraints.</summary>
+    /// <summary>Appends the single applicable primary constraint before other constraints.</summary>
     /// <param name="builder">The destination builder.</param>
     /// <param name="parameter">The constrained type parameter.</param>
     /// <param name="typeParameterNames">The generated type-parameter names.</param>
     /// <param name="supportsNullableAnnotations">Whether the consumer's language can express an annotation.</param>
-    /// <remarks>
-    /// The primary constraint has to come first and only one of the four forms may appear, which is why they are
-    /// tested in order rather than accumulated.
-    /// </remarks>
     private static void AppendConstraintClause(
         PooledStringBuilder builder,
         ITypeParameterSymbol parameter,
@@ -268,8 +241,7 @@ internal static class SymbolHelpers
 
         if (parameter.HasReferenceTypeConstraint)
         {
-            // A referenced assembly can declare `class?` whatever the consumer's language version is, so the
-            // annotation has to be dropped rather than repeated when the consumer could not have written it.
+            // Omit referenced nullable constraints when the consumer's language cannot express them.
             return supportsNullableAnnotations
                 && parameter.ReferenceTypeConstraintNullableAnnotation == NullableAnnotation.Annotated
                 ? "class?"

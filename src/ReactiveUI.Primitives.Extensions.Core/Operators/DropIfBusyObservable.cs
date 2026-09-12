@@ -1,22 +1,16 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
-
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Operator that drops source elements while an asynchronous action is in progress.
-/// Replaces the closure-based implementation in ReactiveExtensions.DropIfBusy.
-/// </summary>
-/// <typeparam name="T">The element type.</typeparam>
-/// <param name="source">The source observable.</param>
-/// <param name="asyncAction">The asynchronous action to execute for each forwarded element.</param>
-public sealed class DropIfBusyObservable<T>(
-    IObservable<T> source,
-    Func<T, ValueTask> asyncAction) : IObservable<T>
+/// <summary>Operator that drops source elements while an asynchronous action is in progress. Replaces the closure-based implementation in ReactiveExtensions.DropIfBusy.</summary>
+/// <typeparam name = "T">The element type.</typeparam>
+/// <param name = "source">The source observable.</param>
+/// <param name = "asyncAction">The asynchronous action to execute for each forwarded element.</param>
+public sealed class DropIfBusyObservable<T>(IObservable<T> source, Func<T, ValueTask> asyncAction) : IObservable<T>
 {
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
@@ -29,12 +23,10 @@ public sealed class DropIfBusyObservable<T>(
         return new DisposableBag(sub, sink);
     }
 
-    /// <summary>Sink that manages the busy state and executes the async action.</summary>
-    /// <param name="downstream">The downstream observer.</param>
-    /// <param name="asyncAction">The async action to run.</param>
-    private sealed class DropIfBusySink(
-        IObserver<T> downstream,
-        Func<T, ValueTask> asyncAction) : IObserver<T>, IDisposable
+    /// <summary>Processes source values and owns the subscription state.</summary>
+    /// <param name = "downstream">The downstream observer.</param>
+    /// <param name = "asyncAction">The asynchronous operation.</param>
+    internal sealed class DropIfBusySink(IObserver<T> downstream, Func<T, ValueTask> asyncAction) : IObserver<T>, IDisposable
     {
         /// <summary>0 = idle, 1 = busy.</summary>
         private int _isBusy;
@@ -43,21 +35,8 @@ public sealed class DropIfBusyObservable<T>(
         private int _done;
 
         /// <inheritdoc/>
-        public void OnNext(T value)
-        {
-            if (Volatile.Read(ref _done) != 0)
-            {
-                return;
-            }
-
-            // If we can transition from 0 to 1, we handle this value.
-            if (Interlocked.CompareExchange(ref _isBusy, 1, 0) != 0)
-            {
-                return;
-            }
-
-            _ = ProcessAsync(value);
-        }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnNext(T value) => _ = OnNextAsync(value);
 
         /// <inheritdoc/>
         public void OnError(Exception error)
@@ -81,8 +60,24 @@ public sealed class DropIfBusyObservable<T>(
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose() => Volatile.Write(ref _done, 1);
 
+        /// <summary>Processes a value and returns its active operation.</summary>
+        /// <param name = "value">The source value.</param>
+        /// <returns>The processing task, or a completed task when no work starts.</returns>
+        internal Task OnNextAsync(T value)
+        {
+            if (Volatile.Read(ref _done) != 0)
+            {
+                return Task.CompletedTask;
+            }
+
+            // If we can transition from 0 to 1, we handle this value.
+            return Interlocked.CompareExchange(ref _isBusy, 1, 0) != 0
+                ? Task.CompletedTask
+                : ProcessAsync(value);
+        }
+
         /// <summary>Executes the async action and manages the busy state transition.</summary>
-        /// <param name="value">The value to process.</param>
+        /// <param name = "value">The value to process.</param>
         /// <returns>A task representing the async operation.</returns>
         private async Task ProcessAsync(T value)
         {

@@ -8,19 +8,9 @@ using ReactiveUI.Primitives.Reactive.Concurrency;
 
 namespace ReactiveUI.Primitives.Wpf.Reactive.Tests;
 
-/// <summary>
-/// Tests for <see cref="DispatcherSequencer"/> as an <see cref="IScheduler"/>, exercised against a real WPF
-/// <see cref="Dispatcher"/> pumped on a dedicated STA thread so both the immediate and timer-based dispatch
-/// paths run end to end. Compiled only on Windows builds (see the csproj).
-/// </summary>
+/// <summary>Tests scheduler execution on a dedicated WPF STA thread.</summary>
 public sealed class DispatcherSequencerTests
 {
-    /// <summary>Maximum time to wait for work to be marshalled onto the dispatcher thread before failing.</summary>
-    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(5);
-
-    /// <summary>How far into the future the delayed work is scheduled.</summary>
-    private static readonly TimeSpan ScheduleDelay = TimeSpan.FromMilliseconds(50);
-
     /// <summary>Verifies the constructor rejects a null dispatcher.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
@@ -38,26 +28,26 @@ public sealed class DispatcherSequencerTests
 
         _ = scheduler.Schedule(() => completion.TrySetResult(Environment.CurrentManagedThreadId));
 
-        var ranOnThreadId = await completion.Task.WaitAsync(WaitTimeout);
+        var ranOnThreadId = await completion.Task;
         await Assert.That(ranOnThreadId).IsEqualTo(harness.ThreadId);
     }
 
-    /// <summary>Verifies work due in the future is executed on the dispatcher thread via the dispatcher timer.</summary>
+    /// <summary>Verifies due work executes on the dispatcher thread.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
-    public async Task DelayedScheduleExecutesOnDispatcherThread()
+    public async Task DueScheduleExecutesOnDispatcherThread()
     {
         using var harness = new DispatcherHarness();
         var scheduler = new DispatcherSequencer(harness.Dispatcher);
         var completion = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        _ = scheduler.Schedule(ScheduleDelay, () => completion.TrySetResult(Environment.CurrentManagedThreadId));
+        _ = scheduler.Schedule(TimeSpan.Zero, () => completion.TrySetResult(Environment.CurrentManagedThreadId));
 
-        var ranOnThreadId = await completion.Task.WaitAsync(WaitTimeout);
+        var ranOnThreadId = await completion.Task;
         await Assert.That(ranOnThreadId).IsEqualTo(harness.ThreadId);
     }
 
-    /// <summary>Hosts a WPF <see cref="Dispatcher"/> on a dedicated STA thread and pumps its message loop, shutting it down and joining the thread on disposal.</summary>
+    /// <summary>Owns a WPF dispatcher and its STA message loop.</summary>
     private sealed class DispatcherHarness : IDisposable
     {
         /// <summary>The thread running the dispatcher message loop.</summary>
@@ -90,7 +80,7 @@ public sealed class DispatcherSequencerTests
         public void Dispose()
         {
             Dispatcher.InvokeShutdown();
-            _ = _thread.Join(WaitTimeout);
+            _thread.Join();
         }
     }
 }

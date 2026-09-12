@@ -4,10 +4,7 @@
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Takes elements from the source sequence until a predicate returns true for an element.
-/// The element that satisfies the predicate is included in the sequence.
-/// </summary>
+/// <summary>Takes elements from the source sequence until a predicate returns true for an element. The element that satisfies the predicate is included in the sequence.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="predicate">The predicate to determine when to stop taking elements.</param>

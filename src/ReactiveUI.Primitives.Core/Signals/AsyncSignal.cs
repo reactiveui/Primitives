@@ -14,8 +14,7 @@ namespace ReactiveUI.Primitives.Signals;
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class AsyncSignal<T> : IAwaitSignal<T>
 {
-    /// <summary>Executes the new operation.</summary>
-    /// <returns>The result.</returns>
+    /// <summary>Serializes observer changes and terminal-state transitions.</summary>
     private readonly Lock _observerLock = new();
 
     /// <summary>Stores state for the signal implementation.</summary>
@@ -239,13 +238,7 @@ public sealed class AsyncSignal<T> : IAwaitSignal<T>
     /// <exception cref="InvalidOperationException">The source sequence is empty.</exception>
     public T GetResult()
     {
-        if (!IsCompleted)
-        {
-            ManualResetEvent completionEvent = new(false);
-            SubscribeCompletion(() => completionEvent.Set(), false);
-            _ = completionEvent.WaitOne();
-        }
-
+        WaitIfPending(WaitForCompletion);
         _lastError.Rethrow();
 
         if (!_hasValue)
@@ -268,7 +261,30 @@ public sealed class AsyncSignal<T> : IAwaitSignal<T>
         }
     }
 
-    /// <summary>Executes the ThrowIfDisposed operation.</summary>
+    /// <summary>Invokes the wait operation only while completion is pending.</summary>
+    /// <param name="wait">The operation that waits for this signal to complete.</param>
+    internal void WaitIfPending(Action<AsyncSignal<T>> wait)
+    {
+        if (IsCompleted)
+        {
+            return;
+        }
+
+        wait(this);
+    }
+
+    /// <summary>Blocks the calling thread until the signal completes.</summary>
+    /// <param name="signal">The signal supplying the completion notification.</param>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    private static void WaitForCompletion(AsyncSignal<T> signal)
+    {
+        // Registration precedes waiting so completion cannot be missed.
+        using ManualResetEvent completionEvent = new(false);
+        signal.SubscribeCompletion(() => completionEvent.Set(), false);
+        _ = completionEvent.WaitOne();
+    }
+
+    /// <summary>Rejects operations after the signal has been disposed.</summary>
     /// <exception cref="ObjectDisposedException">This instance has already been disposed.</exception>
     private void ThrowIfDisposed()
     {
@@ -280,7 +296,7 @@ public sealed class AsyncSignal<T> : IAwaitSignal<T>
         throw new ObjectDisposedException(string.Empty);
     }
 
-    /// <summary>Executes the SubscribeCompletion operation.</summary>
+    /// <summary>Registers a callback for either terminal notification.</summary>
     /// <param name="continuation">The continuation value.</param>
     /// <param name="originalContext">The originalContext value.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

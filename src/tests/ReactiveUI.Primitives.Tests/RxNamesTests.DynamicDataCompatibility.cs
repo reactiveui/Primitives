@@ -311,7 +311,6 @@ public partial class RxNamesTests
         _ = Signal.FromEnumerable([Task.FromResult(One), Task.FromResult(Two)]).Concat().Subscribe(aliasValues.Add);
         _ = ((IEnumerable<IObservable<int>>)[Signal.Return(One), Signal.Return(Two)]).Merge()
             .Subscribe(aliasValues.Add);
-        await Task.Yield();
 
         await Assert.That(aliasValues.SequenceEqual([One, Two, Three, One, Two, Three, One, Three, One, Two, One, Two]))
             .IsTrue();

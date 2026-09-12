@@ -1,19 +1,16 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
-
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
 /// <summary>Projects each element to an asynchronous operation, preserving order and handling sequential execution.</summary>
-/// <typeparam name="TSource">The type of elements in the source sequence.</typeparam>
-/// <typeparam name="TResult">The type of the result of the asynchronous operation.</typeparam>
-/// <param name="source">The source observable.</param>
-/// <param name="selector">The asynchronous projection function.</param>
-public sealed class SelectAsyncSequentialObservable<TSource, TResult>(
-    IObservable<TSource> source,
-    Func<TSource, Task<TResult>> selector) : IObservable<TResult>
+/// <typeparam name = "TSource">The type of elements in the source sequence.</typeparam>
+/// <typeparam name = "TResult">The type of the result of the asynchronous operation.</typeparam>
+/// <param name = "source">The source observable.</param>
+/// <param name = "selector">The asynchronous projection function.</param>
+public sealed class SelectAsyncSequentialObservable<TSource, TResult>(IObservable<TSource> source, Func<TSource, Task<TResult>> selector) : IObservable<TResult>
 {
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<TResult> observer)
@@ -21,18 +18,15 @@ public sealed class SelectAsyncSequentialObservable<TSource, TResult>(
         InvalidOperationExceptionHelper.ThrowIfNull(source);
         InvalidOperationExceptionHelper.ThrowIfNull(selector);
         ArgumentExceptionHelper.ThrowIfNull(observer);
-
         SelectAsyncSequentialSink sink = new(observer, selector);
         var sub = source.Subscribe(sink);
         return new DisposableBag(sub, sink);
     }
 
-    /// <summary>Sink that manages sequential async projection.</summary>
-    /// <param name="downstream">The downstream observer.</param>
-    /// <param name="selector">The async selector.</param>
-    private sealed class SelectAsyncSequentialSink(
-        IObserver<TResult> downstream,
-        Func<TSource, Task<TResult>> selector) : IObserver<TSource>, IDisposable
+    /// <summary>Processes source values and owns the subscription state.</summary>
+    /// <param name = "downstream">The downstream observer.</param>
+    /// <param name = "selector">The asynchronous operation.</param>
+    internal sealed class SelectAsyncSequentialSink(IObserver<TResult> downstream, Func<TSource, Task<TResult>> selector) : IObserver<TSource>, IDisposable
     {
         /// <summary>The gate for state access.</summary>
         private readonly Lock _gate = new();
@@ -50,23 +44,8 @@ public sealed class SelectAsyncSequentialObservable<TSource, TResult>(
         private bool _disposed;
 
         /// <inheritdoc/>
-        public void OnNext(TSource value)
-        {
-            lock (_gate)
-            {
-                if (_done || _disposed)
-                {
-                    return;
-                }
-
-                _queue.Enqueue(value);
-                if (!_isProcessing)
-                {
-                    _isProcessing = true;
-                    _ = ProcessNextAsync();
-                }
-            }
-        }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnNext(TSource value) => _ = OnNextAsync(value);
 
         /// <inheritdoc/>
         public void OnError(Exception error)
@@ -108,6 +87,30 @@ public sealed class SelectAsyncSequentialObservable<TSource, TResult>(
             {
                 _disposed = true;
             }
+        }
+
+        /// <summary>Processes a value and returns its active operation.</summary>
+        /// <param name = "value">The source value.</param>
+        /// <returns>The processing task, or a completed task when no work starts.</returns>
+        internal Task OnNextAsync(TSource value)
+        {
+            var processing = Task.CompletedTask;
+            lock (_gate)
+            {
+                if (_done || _disposed)
+                {
+                    return Task.CompletedTask;
+                }
+
+                _queue.Enqueue(value);
+                if (!_isProcessing)
+                {
+                    _isProcessing = true;
+                    processing = ProcessNextAsync();
+                }
+            }
+
+            return processing;
         }
 
         /// <summary>Processes the next value in the queue.</summary>

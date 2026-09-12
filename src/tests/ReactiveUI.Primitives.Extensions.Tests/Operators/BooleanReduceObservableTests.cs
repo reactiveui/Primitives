@@ -7,9 +7,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Edge-case coverage for the boolean-reduce operators backed by
-/// <c>BooleanReduceObservable</c> — empty-source short-circuit, partial-value
-/// suppression, target match/mismatch, error broadcast.</summary>
+/// <summary>Tests boolean aggregation of empty and partially populated sources and error forwarding.</summary>
 public class BooleanReduceObservableTests
 {
     /// <summary>Synthetic error message attached to source errors.</summary>

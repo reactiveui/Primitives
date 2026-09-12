@@ -125,10 +125,7 @@ public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICompa
     public static bool operator >=(ScheduledItem<TAbsolute> left, ScheduledItem<TAbsolute> right) =>
         Comparer<ScheduledItem<TAbsolute>>.Default.Compare(left, right) >= 0;
 
-    /// <summary>
-    /// Cancels this scheduled work item: work that has not started does not run, and a disposable returned by work
-    /// that has begun is disposed as soon as it is available.
-    /// </summary>
+    /// <summary>Cancels this scheduled work item: work that has not started does not run, and a disposable returned by work that has begun is disposed as soon as it is available.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Cancel() => Dispose();
 

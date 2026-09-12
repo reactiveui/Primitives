@@ -9,13 +9,7 @@ using ReactiveUI.Primitives.ObservableEvents.Models;
 
 namespace ReactiveUI.Primitives.ObservableEvents.Helpers;
 
-/// <summary>Turns each <c>GenerateStaticEventObservables</c> application into the model of the host it names.</summary>
-/// <remarks>
-/// Matched on how the attribute is written rather than on the symbol it binds to. The attribute is declared by this
-/// generator's own output, and output is not visible to the pipeline that produced it, so there is no symbol to
-/// match against while the pipeline runs. What the request actually needs - the host type - comes from the
-/// <c>typeof</c> argument, which binds on its own.
-/// </remarks>
+/// <summary>Matches activation attributes by syntax because their declarations are generated output.</summary>
 internal static class StaticTargetExtractor
 {
     /// <summary>Cheaply rejects syntax that cannot be a static generation request.</summary>
@@ -31,15 +25,10 @@ internal static class StaticTargetExtractor
             && IsRequestAttributeName(attribute.Name);
     }
 
-    /// <summary>Resolves one static request into the host it names.</summary>
+    /// <summary>Extracts static-host requests, ignoring missing or invalid type arguments.</summary>
     /// <param name="context">The semantic context for the candidate attribute.</param>
     /// <param name="cancellationToken">A token that cancels the resolution.</param>
     /// <returns>The requested host, or <see langword="null"/> when the attribute names nothing usable.</returns>
-    /// <remarks>
-    /// An attribute that names nothing usable - written without an argument, or with one that is not a type - is
-    /// skipped rather than diagnosed: the consumer is already being told about it by the compiler, and a half-typed
-    /// attribute should not add a second complaint on every keystroke.
-    /// </remarks>
     internal static StaticTargetModel? Extract(GeneratorSyntaxContext context, CancellationToken cancellationToken)
     {
         var attribute = (AttributeSyntax)context.Node;
@@ -77,17 +66,13 @@ internal static class StaticTargetExtractor
         _ => string.Empty,
     };
 
-    /// <summary>Builds the model for one requested static host.</summary>
+    /// <summary>Rejects generic static hosts whose type arguments cannot be inferred.</summary>
     /// <param name="host">The host to expose, reduced to its original definition.</param>
     /// <param name="location">The attribute application, for diagnostics.</param>
     /// <param name="supportsNullableAnnotations">Whether the consumer's language can express an annotation.</param>
     /// <param name="wellKnownTypes">The task types resolved from the consumer compilation.</param>
     /// <param name="cancellationToken">A token that cancels the walk.</param>
     /// <returns>The host model.</returns>
-    /// <remarks>
-    /// A generic host is refused outright: its static events belong to each closed construction rather than to the
-    /// open type, and the generated class has no receiver to infer type arguments from.
-    /// </remarks>
     private static StaticTargetModel Create(
         INamedTypeSymbol host,
         LocationInfo? location,

@@ -147,12 +147,11 @@ public static partial class SignalAsyncExtensions
         }
     }
 
-    /// <summary>Drops upstream duplicates, debounces each value, and suppresses duplicates again before forwarding.</summary>
+    /// <summary>Schedules the value without canceling superseded delays; only the current value is emitted.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     /// <param name="dueTime">The debounce window.</param>
     /// <param name="timeProvider">The time provider for the debounce timer.</param>
-    /// <remarks>A superseded delay is not cancelled: it runs to completion and its result is dropped by the id check.</remarks>
     internal sealed class ThrottleDistinctSignal<T>(
         IObservableAsync<T> source,
         TimeSpan dueTime,
@@ -232,15 +231,18 @@ public static partial class SignalAsyncExtensions
                 }
             }
 
-            /// <inheritdoc/>
-            protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
+            /// <summary>Starts a delay for a distinct upstream value and supersedes the previous pending value.</summary>
+            /// <param name="value">The upstream value.</param>
+            /// <param name="cancellationToken">Cancellation for the delay.</param>
+            /// <returns>The pending emission, or a completed task for a duplicate value.</returns>
+            internal Task StartDelayAsync(T value, CancellationToken cancellationToken)
             {
                 long currentId;
                 lock (_gate)
                 {
                     if (_hasUpstream && Comparer.Equals(value, _lastUpstream))
                     {
-                        return default;
+                        return Task.CompletedTask;
                     }
 
                     _lastUpstream = value;
@@ -248,7 +250,13 @@ public static partial class SignalAsyncExtensions
                     currentId = ++_id;
                 }
 
-                _ = FireAfterDelayAsync(value, currentId, cancellationToken);
+                return FireAfterDelayAsync(value, currentId, cancellationToken);
+            }
+
+            /// <inheritdoc/>
+            protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
+            {
+                _ = StartDelayAsync(value, cancellationToken);
                 return default;
             }
 
@@ -426,14 +434,12 @@ public static partial class SignalAsyncExtensions
         }
     }
 
-    /// <summary>Forwards a value at once when the condition holds, otherwise after the debounce window elapses.</summary>
+    /// <summary>Schedules the latest value, discarding superseded delay results.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     /// <param name="debounce">The debounce window applied to bypass-false values.</param>
     /// <param name="condition">When <see langword="true"/> the value bypasses the delay and is forwarded immediately.</param>
     /// <param name="timeProvider">The time provider for the debounce timer.</param>
-    /// <remarks>Each new upstream value supersedes a pending delay, which is not cancelled: it runs to completion and its
-    /// result is dropped by the id check.</remarks>
     internal sealed class DebounceUntilSignal<T>(
         IObservableAsync<T> source,
         TimeSpan debounce,
@@ -488,6 +494,21 @@ public static partial class SignalAsyncExtensions
                 }
             }
 
+            /// <summary>Starts a delay that supersedes the previously pending value.</summary>
+            /// <param name="value">The pending value.</param>
+            /// <param name="cancellationToken">Cancellation for the delay.</param>
+            /// <returns>The delay and any downstream notification.</returns>
+            internal Task StartDelayAsync(T value, CancellationToken cancellationToken)
+            {
+                long currentId;
+                lock (_gate)
+                {
+                    currentId = ++_id;
+                }
+
+                return DelayAndEmitAsync(value, currentId, cancellationToken);
+            }
+
             /// <inheritdoc/>
             protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
             {
@@ -502,13 +523,7 @@ public static partial class SignalAsyncExtensions
                     return downstream.OnNextAsync(value, cancellationToken);
                 }
 
-                long currentId;
-                lock (_gate)
-                {
-                    currentId = ++_id;
-                }
-
-                _ = DelayAndEmitAsync(value, currentId, cancellationToken);
+                _ = StartDelayAsync(value, cancellationToken);
                 return default;
             }
 

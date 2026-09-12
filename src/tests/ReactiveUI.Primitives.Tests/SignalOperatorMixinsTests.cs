@@ -574,16 +574,12 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(taskFailure.Completed).IsEqualTo(0);
 
         TaskCompletionSource<int> pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        Signal<Task<int>> disposableSource = new();
         RecordingWitness<int> disposed = new();
-        {
-            var disposable = disposableSource.Chain().Subscribe(disposed);
-            disposableSource.OnNext(pending.Task);
-            disposable.Dispose();
-            pending.SetResult(Five);
-        }
+        TaskInstanceSubscription disposable = new();
+        disposable.Dispose();
+        pending.SetResult(Five);
+        await TaskInstanceSignal<int>.ObserveTaskAsync(pending.Task, disposed, disposable);
 
-        await Task.Yield();
         await Assert.That(disposed.Values.Count).IsEqualTo(0);
         await Assert.That(disposed.Errors.Count).IsEqualTo(0);
         await Assert.That(disposed.Completed).IsEqualTo(0);
@@ -731,7 +727,6 @@ public partial class SignalOperatorMixinsTests
     {
         List<int> chained = [];
         _ = Signal.FromEnumerable([Task.FromResult(One), Task.FromResult(Two)]).Chain().Subscribe(chained.Add);
-        await Task.Yield();
 
         await Assert.That(chained.SequenceEqual(ExpectedOneTwo)).IsTrue();
 

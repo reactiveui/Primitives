@@ -284,8 +284,7 @@ public partial class CombiningOperatorTests
         SignalAsyncExtensions.BlendCoordinator<int> subscription = new(observer);
 
         // Trigger FinishAsync with failure - blocks on observer.OnCompletedAsync
-        var failTask = Task.Run(() =>
-            subscription.FinishAsync(Result.Failure(new InvalidOperationException("fail"))));
+        var failTask = subscription.FinishAsync(Result.Failure(new InvalidOperationException("fail")));
         await completionBlocked.Task;
 
         // _disposed is 1, gate is still alive → OnNextAsync acquires gate and hits post-gate check
@@ -321,8 +320,7 @@ public partial class CombiningOperatorTests
 
         SignalAsyncExtensions.BlendCoordinator<int> subscription = new(observer);
 
-        var failTask = Task.Run(() =>
-            subscription.FinishAsync(Result.Failure(new InvalidOperationException("fail"))));
+        var failTask = subscription.FinishAsync(Result.Failure(new InvalidOperationException("fail")));
         await completionBlocked.Task;
 
         await subscription.RelayErrorAsync(new InvalidOperationException("post-dispose"), CancellationToken.None);

@@ -61,10 +61,7 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
     /// <summary>Gets the stream of current and subsequent values.</summary>
     public IObservable<TResult> Changed => this;
 
-    /// <summary>
-    /// Creates a projected read-only state and subscribes it to the source after construction, so the
-    /// instance is never exposed to the source while partially constructed.
-    /// </summary>
+    /// <summary>Creates a projected read-only state and subscribes it to the source after construction, so the instance is never exposed to the source while partially constructed.</summary>
     /// <param name="source">The source state signal.</param>
     /// <param name="selector">The projection applied to each source value.</param>
     /// <returns>The fully-initialized projected read-only state.</returns>

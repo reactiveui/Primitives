@@ -10,11 +10,7 @@ namespace ReactiveUI.Primitives.Reactive.Signals;
 namespace ReactiveUI.Primitives.Signals;
 #endif
 
-/// <summary>
-/// Owns the task source, the source subscription and the cancellation registration for task-returning terminals.
-/// Callers wire their observer callbacks to <see cref="Resolve"/>/<see cref="Fail"/> and hand the subscription to
-/// <see cref="Attach"/>, which registers for cancellation only while the task is pending.
-/// </summary>
+/// <summary>Owns terminal task completion, the source subscription, and cancellation registration while pending.</summary>
 /// <typeparam name="T">The task result type.</typeparam>
 internal sealed class TaskTerminalCompletion<T>
 {

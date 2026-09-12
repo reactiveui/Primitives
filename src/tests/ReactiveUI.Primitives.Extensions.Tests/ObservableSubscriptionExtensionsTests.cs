@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Linq;
-using System.Reactive.Subjects;
 
 namespace ReactiveUI.Primitives.Extensions.Tests;
 
@@ -17,7 +16,7 @@ public partial class ObservableSubscriptionExtensionsTests
     private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(5);
 
     /// <summary>Deadline handed to the blocking helpers when the source never terminates, so the wait must expire.</summary>
-    private static readonly TimeSpan ExpiredTimeout = TimeSpan.FromMilliseconds(50);
+    private static readonly TimeSpan ExpiredTimeout = TimeSpan.Zero;
 
     /// <summary>Verifies that <c>SubscribeGetValue</c> returns the last synchronously-emitted value.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -102,9 +101,6 @@ public partial class ObservableSubscriptionExtensionsTests
     [Test]
     public async Task WhenWaitForCompletion_ThenReturnsAfterTerminal()
     {
-        // Helper returns void on success; the absence of TimeoutException after a synchronous
-        // completion is the contract under test. Use the value-returning sibling for the actual
-        // assertion so TUnit has a real check.
         Observable.Return(RxVoid.Default).WaitForCompletion(WaitTimeout);
         var subsequent = Observable.Return(RxVoid.Default).SubscribeGetValue();
         await Assert.That(subsequent).IsEqualTo(RxVoid.Default);
@@ -183,17 +179,8 @@ public partial class ObservableSubscriptionExtensionsTests
     /// pass-through to the scheduler-aware core with default timeout.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenWaitForCompletionUnitDefault_ThenReturnsOnCompletion()
-    {
-        Subject<RxVoid> subject = new();
-        var pump = Task.Run(() =>
-        {
-            subject.OnNext(RxVoid.Default);
-            subject.OnCompleted();
-        });
-        subject.WaitForCompletion();
-        await pump;
-    }
+    public async Task WhenWaitForCompletionUnitDefault_ThenReturnsOnCompletion() =>
+        await Assert.That(static () => Observable.Return(RxVoid.Default).WaitForCompletion()).ThrowsNothing();
 
     /// <summary>Exercises the no-op <c>OnError</c> body of <c>ValueCaptureWitness</c> —
     /// <c>SubscribeGetValue</c> on an erroring source still returns the last captured value
@@ -227,10 +214,7 @@ public partial class ObservableSubscriptionExtensionsTests
     [Test]
     public async Task WhenWaitForValueSourceErrors_ThenGateSignalledAndDefaultReturned()
     {
-        Subject<int> subject = new();
-        var pump = Task.Run(() => subject.OnError(new InvalidOperationException("source-error")));
-        var value = subject.WaitForValue();
-        await pump;
+        var value = Observable.Throw<int>(new InvalidOperationException("source-error")).WaitForValue();
         await Assert.That(value).IsEqualTo(0);
     }
 }

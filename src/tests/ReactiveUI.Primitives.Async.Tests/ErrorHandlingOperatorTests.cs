@@ -14,12 +14,6 @@ public class ErrorHandlingOperatorTests
     /// <summary>Message of the resumable error raised by the source.</summary>
     private const string ResumeErrorMessage = "resume error";
 
-    /// <summary>Maximum time a test waits for a completion or error to arrive.</summary>
-    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(5);
-
-    /// <summary>Window the retry test watches to confirm no completion is published.</summary>
-    private static readonly TimeSpan NoCompletionWindow = TimeSpan.FromMilliseconds(500);
-
     /// <summary>Tests Catch with fallback switches to fallback.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -81,7 +75,7 @@ public class ErrorHandlingOperatorTests
             _ = completed.TrySetResult();
             return default;
         });
-        await completed.Task.WaitAsync(WaitTimeout);
+        await completed.Task;
         await Assert.That(errorSent).IsTrue();
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
@@ -194,7 +188,7 @@ public class ErrorHandlingOperatorTests
                 });
         InvalidOperationException expected = new("catch-passthrough");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -238,7 +232,7 @@ public class ErrorHandlingOperatorTests
             _ = completed.TrySetResult(result);
             return default;
         });
-        var completionResult = await completed.Task.WaitAsync(WaitTimeout);
+        var completionResult = await completed.Task;
         await Assert.That(completionResult.IsFailure).IsTrue();
         await Assert.That(attempt).IsEqualTo(1);
     }
@@ -265,7 +259,7 @@ public class ErrorHandlingOperatorTests
             _ = completed.TrySetResult(result);
             return default;
         });
-        var completionResult = await completed.Task.WaitAsync(WaitTimeout);
+        var completionResult = await completed.Task;
         await Assert.That(completionResult.IsFailure).IsTrue();
         await Assert.That(attempt).IsEqualTo(ExpectedAttempts);
     }
@@ -290,7 +284,7 @@ public class ErrorHandlingOperatorTests
             _ = completed.TrySetResult(result);
             return default;
         });
-        var completionResult = await completed.Task.WaitAsync(WaitTimeout);
+        var completionResult = await completed.Task;
         await Assert.That(completionResult.IsFailure).IsTrue();
         await Assert.That(attempt).IsEqualTo(ExpectedAttempts);
     }
@@ -311,7 +305,7 @@ public class ErrorHandlingOperatorTests
                     _ = completed.TrySetResult(result);
                     return default;
                 });
-        var completionResult = await completed.Task.WaitAsync(WaitTimeout);
+        var completionResult = await completed.Task;
         await Assert.That(completionResult.IsFailure).IsTrue();
         await Assert.That(completionResult.Exception).IsTypeOf<ArithmeticException>();
     }
@@ -331,7 +325,7 @@ public class ErrorHandlingOperatorTests
         });
         var sub = await source.Catch(_ => handlerObservable)
             .SubscribeAsync(static (_, _) => default, null, static _ => default);
-        await handlerItemReceived.Task.WaitAsync(WaitTimeout);
+        await handlerItemReceived.Task;
 
         // Disposing should dispose both source and handler disposables
         await sub.DisposeAsync();
@@ -364,9 +358,9 @@ public class ErrorHandlingOperatorTests
             });
             var sub = await source.Catch(_ => handlerObservable)
                 .SubscribeAsync(static (_, _) => default, null, static _ => default);
-            await handlerSubscribed.Task.WaitAsync(WaitTimeout);
+            await handlerSubscribed.Task;
             await sub.DisposeAsync();
-            await unhandledTcs.Task.WaitAsync(WaitTimeout);
+            await unhandledTcs.Task;
             await Assert.That(unhandled).IsSameReferenceAs(disposeFailure);
         }
         finally
@@ -425,11 +419,8 @@ public class ErrorHandlingOperatorTests
             return default;
         });
 
-        // The OperationCanceledException is swallowed, so completion should not fire.
-        // Give a short window to verify no completion occurs.
-        var completedInTime = completed.Task.WaitAsync(NoCompletionWindow);
         const int ExpectedAttempts = 2;
-        await Assert.That(() => completedInTime).ThrowsExactly<TimeoutException>();
+        await Assert.That(completed.Task.IsCompleted).IsFalse();
         await Assert.That(attempt).IsEqualTo(ExpectedAttempts);
     }
 
@@ -460,7 +451,7 @@ public class ErrorHandlingOperatorTests
             _ = completed.TrySetResult(result);
             return default;
         });
-        var completionResult = await completed.Task.WaitAsync(WaitTimeout);
+        var completionResult = await completed.Task;
         await Assert.That(completionResult.IsFailure).IsTrue();
         const int ExpectedAttempts = 2;
         await Assert.That(completionResult.Exception).IsTypeOf<ArithmeticException>();

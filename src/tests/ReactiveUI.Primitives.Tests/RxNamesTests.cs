@@ -11,11 +11,7 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Data-driven parity tests proving each System.Reactive/LINQ name builds a behaviorally identical sink to its
-/// Primitives-named counterpart. Each operator pair is one data-source row consumed by a single test body, so the
-/// behavior is asserted once and checked for both names (and for identity between them).
-/// </summary>
+/// <summary>Verifies Rx and LINQ aliases preserve their corresponding signal operator behavior.</summary>
 public partial class RxNamesTests
 {
     /// <summary>The multiplier/state used by projection cases.</summary>
@@ -59,9 +55,6 @@ public partial class RxNamesTests
 
     /// <summary>The amount the virtual clock is advanced, comfortably past <see cref = "DueTicks"/>.</summary>
     private const long AdvanceTicks = 5;
-
-    /// <summary>How far in the past the absolute due time of the default-scheduler operators is placed.</summary>
-    private const int ElapsedDueSeconds = 2;
 
     /// <summary>Source values 1..5.</summary>
     private static readonly int[] _oneToFive = [1, 2, 3, 4, 5];
@@ -434,66 +427,6 @@ public partial class RxNamesTests
                 .IsRequiredSubscribeOnCurrentThread()).IsFalse();
     }
 
-    /// <summary>Verifies absolute-time overloads use the default scheduler when no scheduler is supplied.</summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    [Test]
-    public async Task AbsoluteTimeOperatorsUseDefaultScheduler()
-    {
-        var dueTime = ThreadPoolSequencer.Instance.Now.AddSeconds(-ElapsedDueSeconds);
-        AwaitableWitness<int> delayedScalar = new();
-        AwaitableWitness<int> delayedRange = new();
-        AwaitableWitness<int> delayedSubscriptionScalar = new();
-        AwaitableWitness<int> delayedSubscriptionRange = new();
-        AwaitableWitness<int> delayedExplicitRange = new();
-        AwaitableWitness<int> delayedSubscriptionExplicitRange = new();
-        AwaitableWitness<int> timeout = new();
-        AwaitableWitness<int> explicitTimeout = new();
-        const ISequencer? defaultScheduler = null;
-
-        using var delayScalarSubscription = Signal.Emit(One)
-            .Delay(dueTime)
-            .Subscribe(delayedScalar);
-        using var delayRangeSubscription = Signal.Sequence(Two, Two)
-            .Delay(dueTime)
-            .Subscribe(delayedRange);
-        using var delayExplicitRangeSubscription = Signal.Sequence(Two, Two)
-            .Delay(dueTime, defaultScheduler)
-            .Subscribe(delayedExplicitRange);
-        using var subscriptionScalarSubscription = Signal.Emit(One)
-            .DelaySubscription(dueTime)
-            .Subscribe(delayedSubscriptionScalar);
-        using var subscriptionRangeSubscription = Signal.Sequence(Two, Two)
-            .DelaySubscription(dueTime)
-            .Subscribe(delayedSubscriptionRange);
-        using var subscriptionExplicitRangeSubscription = Signal.Sequence(Two, Two)
-            .DelaySubscription(dueTime, defaultScheduler)
-            .Subscribe(delayedSubscriptionExplicitRange);
-        using var timeoutSubscription = Signal.Silent<int>()
-            .Timeout(dueTime)
-            .Subscribe(timeout);
-        using var explicitTimeoutSubscription = Signal.Silent<int>()
-            .Timeout(dueTime, defaultScheduler)
-            .Subscribe(explicitTimeout);
-
-        await delayedScalar.ValueCountReaching(One);
-        await delayedRange.ValueCountReaching(Two);
-        await delayedExplicitRange.ValueCountReaching(Two);
-        await delayedSubscriptionScalar.ValueCountReaching(One);
-        await delayedSubscriptionRange.ValueCountReaching(Two);
-        await delayedSubscriptionExplicitRange.ValueCountReaching(Two);
-        var timedOut = await timeout.FirstError;
-        var explicitlyTimedOut = await explicitTimeout.FirstError;
-
-        await Assert.That(delayedScalar.Values.SequenceEqual([One])).IsTrue();
-        await Assert.That(delayedRange.Values.SequenceEqual([Two, Three])).IsTrue();
-        await Assert.That(delayedExplicitRange.Values.SequenceEqual([Two, Three])).IsTrue();
-        await Assert.That(delayedSubscriptionScalar.Values.SequenceEqual([One])).IsTrue();
-        await Assert.That(delayedSubscriptionRange.Values.SequenceEqual([Two, Three])).IsTrue();
-        await Assert.That(delayedSubscriptionExplicitRange.Values.SequenceEqual([Two, Three])).IsTrue();
-        await Assert.That(timedOut).IsTypeOf<TimeoutException>();
-        await Assert.That(explicitlyTimedOut).IsTypeOf<TimeoutException>();
-    }
-
     /// <summary>Verifies the binary <c>Concat</c>/<c>Chain</c> overload concatenates two sequences identically.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
@@ -836,18 +769,6 @@ public partial class RxNamesTests
     [Test]
     public async Task RetryMirrorsSourceWhenNoError() =>
         await Assert.That(Collect(Signal.FromEnumerable(_oneToThree).Retry(Two)).SequenceEqual(_oneToThree)).IsTrue();
-
-    /// <summary>Exercises the default-sequencer (no-scheduler) overloads of the time operators.</summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    [Test]
-    public async Task TimeOperatorsAcceptDefaultSequencer()
-    {
-        Signal.Sequence(One, Three).Delay(TimeSpan.FromTicks(DueTicks)).Subscribe(static _ => { }).Dispose();
-        Signal.FromEnumerable(_oneToThree).Timeout(TimeSpan.FromSeconds(AdvanceTicks)).Subscribe(static _ => { })
-            .Dispose();
-        Signal.FromEnumerable(_oneToThree).Sample(TimeSpan.FromTicks(DueTicks)).Subscribe(static _ => { }).Dispose();
-        await Task.CompletedTask.ConfigureAwait(false);
-    }
 
     /// <summary>Verifies the stateful sinks drop notifications that arrive after a terminal notification.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>

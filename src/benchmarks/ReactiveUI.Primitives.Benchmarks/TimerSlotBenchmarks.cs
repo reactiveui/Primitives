@@ -11,12 +11,7 @@ using RxSubject = System.Reactive.Subjects.Subject<int>;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
-/// <summary>
-/// Benchmarks the timer slot every repeating operator arms once per window. The burst cases elsewhere schedule
-/// a single timer for the whole run and so never show what re-arming costs; these advance the clock between
-/// values, which closes each window and forces a fresh arm, which is the rate that matters for a debounce over
-/// a slow-moving source or for a periodic tick.
-/// </summary>
+/// <summary>Measures timer rearming by advancing virtual time through one window per value.</summary>
 [MemoryDiagnoser]
 public class TimerSlotBenchmarks
 {

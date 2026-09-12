@@ -12,10 +12,7 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The source observable sequence.</param>
     extension<T>(IObservableAsync<T> source)
     {
-        /// <summary>
-        /// Bypasses elements in the observable sequence as long as the specified asynchronous condition is true,
-        /// then emits all remaining elements.
-        /// </summary>
+        /// <summary>Bypasses elements in the observable sequence as long as the specified asynchronous condition is true, then emits all remaining elements.</summary>
         /// <param name="predicate">An asynchronous function to test each element for a condition. Receives the element
         /// and a cancellation token.</param>
         /// <returns>An observable sequence that skips elements while the predicate returns true and emits
@@ -29,10 +26,7 @@ public static partial class SignalAsyncExtensions
             return new SkipWhileAsyncSignal<T>(source, predicate);
         }
 
-        /// <summary>
-        /// Bypasses elements in the observable sequence as long as the specified condition is true,
-        /// then emits all remaining elements.
-        /// </summary>
+        /// <summary>Bypasses elements in the observable sequence as long as the specified condition is true, then emits all remaining elements.</summary>
         /// <param name="predicate">A function to test each element for a condition.</param>
         /// <returns>An observable sequence that skips elements while the predicate returns true and emits
         /// all subsequent elements.</returns>

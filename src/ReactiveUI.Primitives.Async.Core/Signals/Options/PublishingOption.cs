@@ -4,25 +4,12 @@
 
 namespace ReactiveUI.Primitives.Async.Signals;
 
-/// <summary>
-/// Specifies the available options for publishing operations, indicating whether actions are performed serially or
-/// concurrently.
-/// </summary>
-/// <remarks>Use this enumeration to control the execution mode of publishing processes. Selecting 'Serial'
-/// ensures that operations are performed one after another, while 'Concurrent' allows multiple operations to be
-/// executed in parallel. The appropriate option depends on the requirements for performance and resource management in
-/// your application.</remarks>
+/// <summary>Specifies the available options for publishing operations, indicating whether actions are performed serially or concurrently.</summary>
 public enum PublishingOption
 {
-    /// <summary>Represents a serial communication interface for transmitting and receiving data over serial ports.</summary>
-    /// <remarks>Use this type to interact with devices that communicate via serial protocols, such as RS-232
-    /// or UART. Serial communication is commonly used for connecting to hardware peripherals, embedded systems, or
-    /// legacy equipment. Thread safety and supported features may vary depending on the implementation.</remarks>
+    /// <summary>Awaits each observer notification before invoking the next observer.</summary>
     Serial = 0,
 
-    /// <summary>Provides thread-safe operations for managing shared resources in concurrent programming scenarios.</summary>
-    /// <remarks>Use this type to coordinate access to data or resources that may be accessed by multiple
-    /// threads simultaneously. Thread safety is ensured for all public members, allowing safe usage in multi-threaded
-    /// environments without additional synchronization.</remarks>
+    /// <summary>Invokes observer notifications concurrently.</summary>
     Concurrent = 1,
 }

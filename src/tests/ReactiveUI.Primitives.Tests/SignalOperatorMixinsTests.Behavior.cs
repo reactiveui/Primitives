@@ -10,7 +10,7 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>Completes branch and contract coverage for primitive signal operators and aliases.</summary>
+/// <summary>Tests signal operators and their aliases.</summary>
 public partial class SignalOperatorMixinsTests
 {
     /// <summary>The integer constant eight.</summary>
@@ -25,7 +25,7 @@ public partial class SignalOperatorMixinsTests
     /// <summary>The integer constant twenty-one.</summary>
     private const int TwentyOne = 21;
 
-    /// <summary>The integer constant forty-two used by behavior coverage.</summary>
+    /// <summary>The integer constant forty-two.</summary>
     private const int BehaviorFortyTwo = 42;
 
     /// <summary>Expected operator values.</summary>
@@ -100,7 +100,7 @@ public partial class SignalOperatorMixinsTests
     /// <summary>Expected timestamp values.</summary>
     private static readonly int[] ExpectedTimestampValues = [Eight, Nine];
 
-    /// <summary>Validates null guard coverage across public factories, operators, and observers.</summary>
+    /// <summary>Factories, operators, and observers reject null arguments.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task NullGuardsCoverPublicFactoryOperatorAndObserverContracts()

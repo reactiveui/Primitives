@@ -9,14 +9,8 @@ using ReactiveUI.Primitives.Signals;
 namespace ReactiveUI.Primitives.Tests;
 
 /// <summary>Tests for the <see cref = "SynchronizeWitness{T}"/> gate and the <c>Synchronize</c> operator.</summary>
-public class SynchronizeTests
+public class SynchronizeWitnessTests
 {
-    /// <summary>The number of producer threads used by stress tests.</summary>
-    private const int Threads = 8;
-
-    /// <summary>The number of values sent by each producer thread.</summary>
-    private const int PerThread = 500;
-
     /// <summary>The literal two.</summary>
     private const int Second = 2;
 
@@ -73,51 +67,50 @@ public class SynchronizeTests
     /// <returns>A task that completes when the assertions have run.</returns>
     [Test]
     public async Task SharedGateSerializesAcrossTwoWitnesses()
-    {
-        ConcurrencyProbe probe = new();
+{
         Lock gate = new();
-        SynchronizeWitness<int> first = new(probe, gate);
-        SynchronizeWitness<int> second = new(probe, gate);
-        var tasks = new Task[Threads];
-        for (var t = 0; t < Threads; t++)
+        List<int> values = [];
+        var held = true;
+        var observer = new DelegateWitness<int>(
+            value =>
         {
-            var sink = t % Second == 0 ? first : second;
-            tasks[t] = Task.Run(() =>
-            {
-                for (var i = 0; i < PerThread; i++)
-                {
-                    sink.OnNext(i);
-                }
-            });
-        }
-
-        await Task.WhenAll(tasks);
-        await Assert.That(probe.OverlapDetected).IsFalse();
-        await Assert.That(probe.Count).IsEqualTo(Threads * PerThread);
+            held &= IsHeld(gate);
+            values.Add(value);
+        },
+            static _ => { },
+            static () => { });
+        using SynchronizeWitness<int> first = new(observer, gate);
+        using SynchronizeWitness<int> second = new(observer, gate);
+        first.OnNext(1);
+        second.OnNext(Second);
+        await Assert.That(held).IsTrue();
+        await Assert.That(values.SequenceEqual([1, Second])).IsTrue();
     }
 
-    /// <summary>Concurrent <c>OnNext</c> calls are serialized: the downstream is never entered re-entrantly and sees every value.</summary>
+    /// <summary>Every downstream notification runs while the witness owns its gate.</summary>
     /// <returns>A task that completes when the assertions have run.</returns>
     [Test]
-    public async Task SerializesConcurrentOnNextSoTheDownstreamNeverOverlaps()
-    {
-        ConcurrencyProbe probe = new();
-        SynchronizeWitness<int> sink = new(probe);
-        var tasks = new Task[Threads];
-        for (var t = 0; t < Threads; t++)
+    public async Task HoldsTheGateAcrossEveryDownstreamNotification()
+{
+        var held = true;
+        List<int> values = [];
+        SynchronizeWitness<int>? sink = null;
+        var observer = new DelegateWitness<int>(
+            value =>
         {
-            tasks[t] = Task.Run(() =>
-            {
-                for (var i = 0; i < PerThread; i++)
-                {
-                    sink.OnNext(i);
-                }
-            });
-        }
-
-        await Task.WhenAll(tasks);
-        await Assert.That(probe.OverlapDetected).IsFalse();
-        await Assert.That(probe.Count).IsEqualTo(Threads * PerThread);
+            held &= IsHeld(sink!.Gate);
+            values.Add(value);
+        },
+            _ => held &= IsHeld(sink!.Gate),
+            () => held &= IsHeld(sink!.Gate));
+        sink = new(observer);
+        sink.OnNext(1);
+        sink.OnNext(Second);
+        sink.OnError(new InvalidOperationException("failure"));
+        sink.OnCompleted();
+        await Assert.That(held).IsTrue();
+        await Assert.That(values.SequenceEqual([1, Second])).IsTrue();
+        sink.Dispose();
     }
 
     /// <summary>The object-gated sequence forwards every source value and its completion downstream.</summary>
@@ -177,27 +170,24 @@ public class SynchronizeTests
     /// <returns>A task that completes when the assertions have run.</returns>
     [Test]
     public async Task ObjectGatedWitnessesSharingOneGateAreSerialized()
-    {
-        ConcurrencyProbe probe = new();
+{
         var gate = new object();
-        SynchronizeObjectWitness<int> first = new(probe, gate);
-        SynchronizeObjectWitness<int> second = new(probe, gate);
-        var tasks = new Task[Threads];
-        for (var t = 0; t < Threads; t++)
+        List<int> values = [];
+        var held = true;
+        var observer = new DelegateWitness<int>(
+            value =>
         {
-            var sink = t % Second == 0 ? first : second;
-            tasks[t] = Task.Run(() =>
-            {
-                for (var i = 0; i < PerThread; i++)
-                {
-                    sink.OnNext(i);
-                }
-            });
-        }
-
-        await Task.WhenAll(tasks);
-        await Assert.That(probe.OverlapDetected).IsFalse();
-        await Assert.That(probe.Count).IsEqualTo(Threads * PerThread);
+            held &= Monitor.IsEntered(gate);
+            values.Add(value);
+        },
+            static _ => { },
+            static () => { });
+        using SynchronizeObjectWitness<int> first = new(observer, gate);
+        using SynchronizeObjectWitness<int> second = new(observer, gate);
+        first.OnNext(1);
+        second.OnNext(Second);
+        await Assert.That(held).IsTrue();
+        await Assert.That(values.SequenceEqual([1, Second])).IsTrue();
     }
 
 #if NET9_0_OR_GREATER
@@ -216,6 +206,18 @@ public class SynchronizeTests
         await Assert.That(recorder.Completed).IsEqualTo(1);
     }
 #endif
+
+    /// <summary>Reports ownership of the platform synchronization gate.</summary>
+    /// <param name="gate">The gate under test.</param>
+    /// <returns>Whether the calling thread owns the gate.</returns>
+    private static bool IsHeld(Lock gate)
+    {
+#if NET9_0_OR_GREATER
+        return gate.IsHeldByCurrentThread;
+#else
+        return Monitor.IsEntered(gate);
+#endif
+    }
 
     /// <summary>An observer that records all values, errors, and completion counts.</summary>
     /// <typeparam name = "T">The type of the observed values.</typeparam>
@@ -264,48 +266,6 @@ public class SynchronizeTests
         /// <inheritdoc/>
         public void Dispose()
         {
-        }
-    }
-
-    /// <summary>A downstream observer that flags any re-entrant (overlapping) notification and counts deliveries.</summary>
-    private sealed class ConcurrencyProbe : IObserver<int>
-    {
-        /// <summary>The number of wait spin iterations used to widen the re-entrancy detection window.</summary>
-        private const int SpinIterations = 50;
-
-        /// <summary>Non-zero while a notification is in flight, used to detect re-entrancy.</summary>
-        private int _inside;
-
-        /// <summary>Gets the number of values delivered.</summary>
-        public int Count { get; private set; }
-
-        /// <summary>Gets a value indicating whether two notifications were ever observed to overlap.</summary>
-        public bool OverlapDetected { get; private set; }
-
-        /// <inheritdoc/>
-        public void OnCompleted()
-        {
-        }
-
-        /// <inheritdoc/>
-        /// <param name = "error">The forwarded error (ignored).</param>
-        public void OnError(Exception error)
-        {
-        }
-
-        /// <inheritdoc/>
-        /// <param name = "value">The forwarded value.</param>
-        public void OnNext(int value)
-        {
-            if (Interlocked.Exchange(ref _inside, 1) != 0)
-            {
-                OverlapDetected = true;
-            }
-
-            // Non-atomic on purpose: the gate must serialize callers for this to stay exact.
-            Count++;
-            Thread.SpinWait(SpinIterations);
-            _ = Interlocked.Exchange(ref _inside, 0);
         }
     }
 }

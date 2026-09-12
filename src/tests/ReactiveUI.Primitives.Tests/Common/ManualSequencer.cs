@@ -7,11 +7,7 @@ using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// A sequencer that queues scheduled work instead of running it, so a test can decide exactly when a timer
-/// fires. <see cref="RunStaleTick"/> re-runs the most recently fired work item, modelling a timer that fires a
-/// second time after the operator has already consumed the value it was scheduled for.
-/// </summary>
+/// <summary>Queues work for explicit execution and permits replaying the last callback.</summary>
 internal sealed class ManualSequencer : ISequencer
 {
     /// <summary>The work items scheduled and not yet run.</summary>

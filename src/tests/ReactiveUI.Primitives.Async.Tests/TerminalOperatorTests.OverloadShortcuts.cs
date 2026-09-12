@@ -4,10 +4,7 @@
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>Direct coverage for the cancellation-token / comparer "shortcut" overloads on the
-/// terminal async operators (<c>CountAsync</c>, <c>LongCountAsync</c>, <c>FirstOrDefaultAsync</c>,
-/// <c>LastOrDefaultAsync</c>, <c>SingleOrDefaultAsync</c>, <c>ContainsAsync</c>). Each shortcut
-/// forwards to the full overload with a defaulted optional argument and was previously uncovered.</summary>
+/// <summary>Tests cancellation-token and comparer overloads of terminal async operators.</summary>
 public partial class TerminalOperatorTests
 {
     /// <summary>Exercises the <c>CountAsync(cancellationToken)</c> overload — the no-predicate

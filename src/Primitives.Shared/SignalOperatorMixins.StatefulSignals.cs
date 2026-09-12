@@ -36,9 +36,7 @@ public static partial class LinqExtensions
                 return EmptyDisposable.Instance;
             }
 
-            // A current-thread source drains the trampoline inside whichever call enters it first. When that call
-            // is the source's own Subscribe, the sink does not hold the upstream subscription yet, so an endless
-            // source never learns the count was reached. Entering the trampoline here leaves Subscribe queueing only.
+            // Acquire the subscription before the trampoline delivers values that can terminate it.
             if (!CurrentThreadRequirement.IsRequired(_source) || !CurrentThreadSequencer.IsScheduleRequired)
             {
                 return SubscribeCore(observer);
@@ -84,9 +82,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            // Either arm can be a current-thread source, and whichever is subscribed first drains the trampoline
-            // inside that call, before the coordinator holds the subscription it needs in order to stop. Entering
-            // the trampoline here leaves both arms queueing only, so the coordinator owns both subscriptions first.
+            // Acquire both subscriptions before either trampoline starts delivering values.
             if ((!CurrentThreadRequirement.IsRequired(_source) && !CurrentThreadRequirement.IsRequired(_other))
                 || !CurrentThreadSequencer.IsScheduleRequired)
             {
@@ -458,9 +454,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            // A current-thread source drains its trampoline inside its own Subscribe, so on an endless source the sink
-            // never receives the upstream subscription it would have to dispose. Entering the trampoline here leaves
-            // the source queueing only, so a failing predicate can stop it.
+            // Acquire the subscription before a predicate can stop the source.
             if (!CurrentThreadRequirement.IsRequired(_source) || !CurrentThreadSequencer.IsScheduleRequired)
             {
                 return SubscribeCore(observer);

@@ -4,10 +4,7 @@
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Defines an asynchronous observer that receives notifications about a sequence of values, completion, or errors, and
-/// supports asynchronous resource cleanup.
-/// </summary>
+/// <summary>Defines an asynchronous observer that receives notifications about a sequence of values, completion, or errors, and supports asynchronous resource cleanup.</summary>
 /// <typeparam name="T">The type of the elements received by the observer.</typeparam>
 /// <remarks>Every notification is awaitable and cancellable, so a producer that awaits them gets backpressure for
 /// free: the observer's handler has to finish before the next value is pushed.</remarks>

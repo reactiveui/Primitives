@@ -4,10 +4,7 @@
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Represents a method that subscribes to completion notifications and returns an asynchronous disposable used to
-/// unsubscribe.
-/// </summary>
+/// <summary>Represents a method that subscribes to completion notifications and returns an asynchronous disposable used to unsubscribe.</summary>
 /// <param name="notifyStop">An action to be invoked with a <see cref="Result"/> when the completion event occurs. This callback is called to
 /// notify the subscriber of the completion result.</param>
 /// <returns>An <see cref="IAsyncDisposable"/> that unsubscribes the notification when disposed asynchronously.</returns>

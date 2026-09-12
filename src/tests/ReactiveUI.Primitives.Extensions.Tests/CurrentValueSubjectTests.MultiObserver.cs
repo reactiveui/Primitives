@@ -4,9 +4,7 @@
 
 namespace ReactiveUI.Primitives.Extensions.Tests;
 
-/// <summary>Multi-observer and post-terminal coverage for <see cref = "CurrentValueSubject{T}"/>
-/// — copy-on-write growth, mid-array unsubscribe, collapse back to single-observer, late
-/// subscribers after error or completion, and dispose with active observers.</summary>
+/// <summary>Tests multiple subscribers, unsubscribe, late subscribers, and disposal with active observers.</summary>
 public partial class CurrentValueSubjectTests
 {
     /// <summary>Initial value for multi-observer tests.</summary>
@@ -229,12 +227,7 @@ public partial class CurrentValueSubjectTests
         await Assert.That(values).IsCollectionEqualTo([MultiInitialValue]);
     }
 
-    /// <summary>Verifies the multi-observer Unsubscribe path tolerates a stale dispose —
-    /// after a middle observer is detached from a 4-observer array, disposing its returned
-    /// subscription a second time hits the <c>Array.IndexOf</c> not-found early-return.
-    /// The 4-observer setup keeps <c>_observers</c> non-null after the first dispose (the
-    /// 2-observer setup collapses back to the single-observer fast path, which hits a
-    /// different short-circuit instead of the IndexOf path).</summary>
+    /// <summary>Verifies repeated unsubscribe leaves every remaining observer attached.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenMultiObserverDisposedTwice_ThenSecondDisposeIsNoOp()

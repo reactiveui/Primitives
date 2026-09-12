@@ -228,9 +228,7 @@ public static partial class LinqExtensions
         /// <param name="value">The inner value.</param>
         private void OnInnerNext(TResult value)
         {
-            // Hot path: only one inner is active at a time (sequential concat semantics), so this forward is
-            // serialized without the gate. A volatile read of the disposed flag avoids a monitor acquire on
-            // every value; the lock releases elsewhere publish the write.
+            // One inner source runs at a time; the volatile disposal check needs no delivery gate.
             if (Volatile.Read(ref _disposed))
             {
                 return;

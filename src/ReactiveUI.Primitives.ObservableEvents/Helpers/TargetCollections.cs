@@ -8,12 +8,7 @@ using ReactiveUI.Primitives.ObservableEvents.Models;
 
 namespace ReactiveUI.Primitives.ObservableEvents.Helpers;
 
-/// <summary>Reconciles the requests found across a compilation into the set of files to generate.</summary>
-/// <remarks>
-/// Requests arrive one per call site or attribute, but generated files are keyed on the host or the namespace, so
-/// this is where the two are brought back into line. Both passes keep the order the requests were found in, so the
-/// generated output does not shuffle when an unrelated file is edited.
-/// </remarks>
+/// <summary>Deduplicates requests by output identity, preserving discovery order.</summary>
 internal static class TargetCollections
 {
     /// <summary>The largest request count that cannot contain a duplicate.</summary>

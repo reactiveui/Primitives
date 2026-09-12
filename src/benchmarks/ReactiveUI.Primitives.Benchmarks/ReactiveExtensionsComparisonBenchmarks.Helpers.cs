@@ -235,9 +235,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static IObservable<RxVoid> ThrowPrimitiveUnit() => Signal.Fail<RxVoid>(Boom);
 
-    /// <summary>
-    /// Creates the generated even-digit regex.
-    /// </summary>
+    /// <summary>Creates the generated even-digit regex.</summary>
     /// <returns>The generated regex instance.</returns>
     [GeneratedRegex("^[02468]$")]
     private static partial Regex EvenRegex();

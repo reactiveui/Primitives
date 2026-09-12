@@ -11,13 +11,13 @@ namespace ReactiveUI.Primitives.Extensions.Tests;
 /// <summary>Tests for ReactiveExtensionsTests.</summary>
 public partial class ReactiveExtensionsTests
 {
-    /// <summary>Throttle window in virtual ticks used by the real-time-free throttle tests.</summary>
+    /// <summary>The throttle window in virtual ticks.</summary>
     private const int ThrottleWindowTicks = 100;
 
-    /// <summary>Window used by the throttle tests that run on the default sequencer and await their emission.</summary>
-    private static readonly TimeSpan DefaultSequencerWindow = TimeSpan.FromMilliseconds(200);
+    /// <summary>The interval used to verify distinct-value throttling.</summary>
+    private static readonly TimeSpan DistinctThrottleWindow = TimeSpan.FromMilliseconds(200);
 
-    /// <summary>Debounce window used by the default-sequencer <c>DebounceUntil</c> test.</summary>
+    /// <summary>The debounce interval.</summary>
     private static readonly TimeSpan DebounceWindow = TimeSpan.FromMilliseconds(500);
 
     /// <summary>Tests DebounceImmediate emits first immediately.</summary>
@@ -62,8 +62,8 @@ public partial class ReactiveExtensionsTests
     {
         Subject<int> subject = new();
         List<int> results = [];
-        TaskCompletionSource<object> release = new();
-        TaskCompletionSource processed = new();
+        TaskCompletionSource<object> release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource processed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         _ = subject.DropIfBusy(async x =>
         {
             await release.Task.ConfigureAwait(false);
@@ -226,24 +226,20 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).Contains(1);
     }
 
-    /// <summary>Tests ThrottleDistinct without scheduler parameter.</summary>
+    /// <summary>Verifies the throttle window emits the latest distinct value.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenThrottleDistinctWithoutScheduler_ThenThrottlesAndDeduplicates()
+    public async Task WhenThrottleDistinctWindowEnds_ThenEmitsLatestDistinctValue()
     {
+        VirtualClock scheduler = new();
         Subject<int> subject = new();
         List<int> results = [];
-        TaskCompletionSource emitted = new();
-        using var sub = subject.ThrottleDistinct(DefaultSequencerWindow).Subscribe(value =>
-        {
-            results.Add(value);
-            _ = value == SampleValue2 && emitted.TrySetResult();
-        });
+        using var sub = subject.ThrottleDistinct(DistinctThrottleWindow, scheduler).Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
-        await emitted.Task;
-        await Assert.That(results).Contains(SampleValue2);
+        scheduler.AdvanceBy(DistinctThrottleWindow.Ticks);
+        await Assert.That(results).IsCollectionEqualTo([SampleValue2]);
     }
 
     /// <summary>Tests DebounceUntil with scheduler delays non-matching values and passes matching immediately.</summary>
@@ -263,19 +259,20 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).Contains(SampleValue3);
     }
 
-    /// <summary>Tests DebounceImmediate with null scheduler uses Default scheduler.</summary>
+    /// <summary>Verifies the first value is immediate and the trailing value waits for the debounce window.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenDebounceImmediateNullScheduler_ThenUsesDefault()
+    public async Task WhenDebounceImmediateWithScheduler_ThenEmitsTrailingValue()
     {
+        VirtualClock scheduler = new();
         Subject<int> subject = new();
         List<int> results = [];
-        using var sub = subject.DebounceImmediate(PolledThrottleWindow).Subscribe(results.Add);
+        using var sub = subject.DebounceImmediate(DebounceWindow, scheduler).Subscribe(results.Add);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
-        await AsyncTestHelpers.WaitForConditionAsync(() => results.Count >= 2, LongWaitTimeout);
-        await Assert.That(results).Contains(1);
-        await Assert.That(results).Contains(SampleValue2);
+        await Assert.That(results).IsCollectionEqualTo([1]);
+        scheduler.AdvanceBy(DebounceWindow.Ticks);
+        await Assert.That(results).IsCollectionEqualTo([1, SampleValue2]);
     }
 
     /// <summary>Tests DebounceUntil without scheduler emits immediately when condition true.</summary>
@@ -294,7 +291,7 @@ public partial class ReactiveExtensionsTests
 
         // Even values should emit immediately (condition true)
         subject.OnNext(SampleValue2);
-        await received.Task.WaitAsync(WaitTimeout);
+        await received.Task;
         await Assert.That(results).Contains(SampleValue2);
     }
 

@@ -22,28 +22,16 @@ public sealed class LoopSignalTests
     /// <summary>The values a three-repetition loop must observe.</summary>
     private static readonly int[] ExpectedValues = [RepeatedValue, RepeatedValue, RepeatedValue];
 
-    /// <summary>How long the bounded loop is given to finish before it is declared livelocked.</summary>
-    private static readonly TimeSpan CompletionTimeout = TimeSpan.FromSeconds(30);
-
     /// <summary>Verifies a loop bounded by <c>Take</c> repeats the value exactly the requested number of times and stops.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task LoopBoundedByTakeRepeatsTheValueAndStops()
-    {
+{
         List<int> values = [];
         var completions = 0;
-
-        // The loop runs its ticks on the subscribing thread's trampoline, so subscribe on a dedicated thread:
-        // a bounded loop returns in milliseconds, but a regression that livelocked it would otherwise hang the run.
-        var worker = Task.Run(() =>
-        {
-            using var subscription = Signal.Loop(RepeatedValue)
-                .Take(RequestedRepetitions)
-                .Subscribe(values.Add, static _ => { }, () => completions++);
-        });
-
-        await Assert.That(await Task.WhenAny(worker, Task.Delay(CompletionTimeout)) == worker).IsTrue();
-        await worker;
+        using var subscription = Signal.Loop(RepeatedValue)
+            .Take(RequestedRepetitions)
+            .Subscribe(values.Add, static _ => { }, () => completions++);
         await Assert.That(values.SequenceEqual(ExpectedValues)).IsTrue();
         await Assert.That(completions).IsEqualTo(1);
     }

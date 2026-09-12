@@ -4,10 +4,7 @@
 
 namespace ReactiveUI.Primitives.Async.Advanced;
 
-/// <summary>
-/// A subscription that runs a cancellable asynchronous job feeding a single observer, and joins that
-/// job on disposal.
-/// </summary>
+/// <summary>A subscription that runs a cancellable asynchronous job feeding a single observer, and joins that job on disposal.</summary>
 /// <typeparam name="T">The type of the elements observed by the subscription.</typeparam>
 /// <param name="observer">The observer that receives notifications for the subscription. Cannot be null.</param>
 /// <remarks>Disposal cancels the running job and waits for it to finish before releasing resources;

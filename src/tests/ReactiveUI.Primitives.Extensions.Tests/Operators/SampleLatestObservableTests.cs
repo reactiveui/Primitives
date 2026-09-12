@@ -6,10 +6,7 @@ using System.Reactive.Subjects;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Edge-case coverage for <c>SampleLatest</c> backed by
-/// <c>SampleLatestObservable&lt;T&gt;</c> — trigger before any source value,
-/// source completion, source error, trigger error, and trigger completion not
-/// terminating downstream.</summary>
+/// <summary>Tests sampling without a source value and source or trigger termination.</summary>
 public class SampleLatestObservableTests
 {
     /// <summary>Synthetic error message attached to source errors.</summary>

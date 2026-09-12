@@ -338,9 +338,7 @@ public static partial class LinqExtensions
                 return EmptyDisposable.Instance;
             }
 
-            // The first value settles this operator, so it must be able to dispose the source the moment one arrives.
-            // A current-thread source drains its trampoline inside its own Subscribe, which would not return until the
-            // source ended — never, for an endless one — leaving the sink without the subscription it needs to stop it.
+            // Acquire the subscription before the first value can terminate the source.
             if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
             {
                 return SubscribeCore(observer);
@@ -395,8 +393,7 @@ public static partial class LinqExtensions
                 return EmptyDisposable.Instance;
             }
 
-            // The first matching value settles this operator, so it must own the source subscription before the source
-            // starts producing. See AnySignal for why a current-thread source livelocks without this bootstrap.
+            // Acquire the subscription before a match can terminate the source.
             if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
             {
                 return SubscribeCore(observer);

@@ -20,12 +20,12 @@ public sealed class MapSignal<TSource, TResult>(IObservable<TSource> source, Fun
     /// <summary>Stores state for the signal implementation.</summary>
     private readonly Func<TSource, TResult> _selector = selector;
 
-    /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
+    /// <summary>Preserves the source's current-thread subscription requirement.</summary>
     /// <returns>The result.</returns>
     public bool IsRequiredSubscribeOnCurrentThread() =>
         _source is IRequireCurrentThread<TSource> currentThread && currentThread.IsRequiredSubscribeOnCurrentThread();
 
-    /// <summary>Executes the Subscribe operation.</summary>
+    /// <summary>Subscribes an observer to the selected source values.</summary>
     /// <param name="observer">The observer value.</param>
     /// <returns>The result.</returns>
     public IDisposable Subscribe(IObserver<TResult> observer)
@@ -49,7 +49,7 @@ public sealed class MapSignal<TSource, TResult>(IObservable<TSource> source, Fun
         /// <summary>Stores state for the signal implementation; non-zero once the sink has terminated.</summary>
         private int _stopped;
 
-        /// <summary>Executes the OnCompleted operation.</summary>
+        /// <summary>Forwards completion only while the sink is active.</summary>
         public void OnCompleted()
         {
             if (Interlocked.Exchange(ref _stopped, 1) != 0)
@@ -60,7 +60,7 @@ public sealed class MapSignal<TSource, TResult>(IObservable<TSource> source, Fun
             _observer.OnCompleted();
         }
 
-        /// <summary>Executes the OnError operation.</summary>
+        /// <summary>Stops the sink and forwards its first error.</summary>
         /// <param name="error">The error value.</param>
         public void OnError(Exception error)
         {
@@ -72,7 +72,7 @@ public sealed class MapSignal<TSource, TResult>(IObservable<TSource> source, Fun
             _observer.OnError(error);
         }
 
-        /// <summary>Executes the OnNext operation.</summary>
+        /// <summary>Projects active values and turns selector failures into terminal errors.</summary>
         /// <param name="value">The value.</param>
         public void OnNext(TSource value)
         {

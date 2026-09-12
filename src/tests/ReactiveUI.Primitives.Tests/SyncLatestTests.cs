@@ -261,11 +261,7 @@ public partial class SyncLatestTests
         return sources;
     }
 
-    /// <summary>
-    /// Drives every source and asserts the combined sequence: nothing is emitted until the final source
-    /// produces its first value, the first result carries each source's value in its own selector position,
-    /// and a later value on the first source replaces only that source's contribution.
-    /// </summary>
+    /// <summary>Checks first-value synchronization, selector positions, and replacement of one source's latest value.</summary>
     /// <param name="sources">The subjects feeding the combinator, in selector-parameter order.</param>
     /// <param name="results">The results recorded from the combined sequence.</param>
     /// <returns>A task representing the asynchronous operation.</returns>

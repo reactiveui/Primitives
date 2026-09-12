@@ -2,12 +2,13 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reactive;
 using ReactiveUI.Primitives.Concurrency;
+using ReactiveUI.Primitives.Extensions.Operators;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Tests for <c>ThrottleDistinctObservable</c> — the after-terminal guards on the
-/// distinct-throttle sink, exercised via a source that pushes events past its own completion.</summary>
+/// <summary>Tests distinct throttle delivery after termination and disposal.</summary>
 public class ThrottleDistinctObservableTests
 {
     /// <summary>Tick window for advancing past the throttle in settle assertions.</summary>
@@ -15,6 +16,30 @@ public class ThrottleDistinctObservableTests
 
     /// <summary>Tick window for the throttle itself.</summary>
     private const int ThrottleTicks = 10;
+
+    /// <summary>Verifies a distinct-throttle callback has no effect without a pending value or after disposal.</summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task DistinctThrottleCallbacksRequireAPendingLiveValue()
+    {
+        const int First = 1;
+        const int Disposed = 2;
+        List<int> values = [];
+        VirtualClock scheduler = new();
+        ThrottleDistinctObservable<int>.ThrottleDistinctSink sink = new(
+            Observer.Create<int>(values.Add),
+            TimeSpan.FromTicks(1),
+            scheduler);
+        sink.Emit();
+        await Assert.That(values).IsEmpty();
+        sink.OnNext(First);
+        sink.Emit();
+        sink.Emit();
+        sink.OnNext(Disposed);
+        sink.Dispose();
+        sink.Emit();
+        await Assert.That(values).IsCollectionEqualTo([First]);
+    }
 
     /// <summary>Verifies that an <c>OnNext</c> arriving after completion is silently dropped.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>

@@ -514,10 +514,7 @@ public partial class RxNamesTests
     private static IObservable<IObservable<int>> RangeInners() =>
         Signal.FromEnumerable([Signal.Sequence(One, Two), Signal.Sequence(Three, Two)]);
 
-    /// <summary>
-    /// Drives a stateful sink through a value, a terminal completion, and then further notifications, reporting
-    /// whether the post-terminal notifications were dropped (exactly one completion, no leaked error).
-    /// </summary>
+    /// <summary>Checks that a stateful sink drops every notification after its first completion.</summary>
     /// <param name = "op">The stateful operator under test.</param>
     /// <returns><see langword="true"/> when notifications after the terminal were dropped.</returns>
     private static bool RunStopGuards(Func<IObservable<int>, IObservable<int>> op)
@@ -623,10 +620,7 @@ public partial class RxNamesTests
         public Signal<int> Sixteenth { get; } = new();
     }
 
-    /// <summary>
-    /// An observable whose subscription retains its observer and ignores disposal, letting a test push raw
-    /// notifications (including ones after a terminal notification) to exercise a sink's terminal guards.
-    /// </summary>
+    /// <summary>Retains its observer after disposal so tests can deliver post-terminal notifications.</summary>
     /// <typeparam name = "T">The element type.</typeparam>
     private sealed class ManualSource<T> : IObservable<T>
     {

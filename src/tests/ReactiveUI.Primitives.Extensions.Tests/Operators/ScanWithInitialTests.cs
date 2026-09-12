@@ -106,11 +106,12 @@ public partial class ScanWithInitialTests
                    x =>
                    {
                        results.Add(x);
-                       if (results.Count == EmissionsBeforeCompletion)
+                       if (results.Count != EmissionsBeforeCompletion)
                        {
-                           // Re-enter the sink with the terminal notification from inside its own emission.
-                           source.OnCompleted();
+                           return;
                        }
+
+                       source.OnCompleted();
                    },
                    static _ => { },
                    () => completedCount++))

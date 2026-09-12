@@ -38,9 +38,7 @@ public static partial class LinqExtensions
                 return EmptyDisposable.Instance;
             }
 
-            // The first value the predicate rejects settles this operator, so it must own the source subscription
-            // before the source starts producing. A current-thread source drains its trampoline inside its own
-            // Subscribe, so on an endless source the sink would never be handed the subscription it needs to stop it.
+            // Acquire the subscription before a rejected value can terminate the source.
             if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
             {
                 return SubscribeCore(observer);
@@ -129,8 +127,7 @@ public static partial class LinqExtensions
                 return EmptyDisposable.Instance;
             }
 
-            // The value being sought settles this operator the moment it arrives, so it must own the source
-            // subscription before the source starts producing. See AllPredicateSignal for the livelock without this.
+            // Acquire the subscription before a match can terminate the source.
             if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
             {
                 return SubscribeCore(observer);

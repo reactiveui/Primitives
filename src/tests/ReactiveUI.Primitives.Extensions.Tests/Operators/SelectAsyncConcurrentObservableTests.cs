@@ -2,13 +2,13 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reactive;
 using System.Reactive.Subjects;
+using ReactiveUI.Primitives.Extensions.Operators;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Edge-case coverage for <c>SelectAsyncConcurrent</c> backed by
-/// <c>SelectAsyncConcurrentObservable&lt;TSource, TResult&gt;</c> — error forwarding,
-/// disposal mid-flight, and deferred completion while in-flight selectors finish.</summary>
+/// <summary>Tests concurrent projection completion, errors, and disposal during projection.</summary>
 public class SelectAsyncConcurrentObservableTests
 {
     /// <summary>Synthetic error message attached to a failing selector.</summary>
@@ -30,12 +30,11 @@ public class SelectAsyncConcurrentObservableTests
     {
         const int TriggerValue = 1;
         Subject<int> subject = new();
-        TaskCompletionSource<Exception> faulted = new();
+        TaskCompletionSource<Exception> faulted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         InvalidOperationException expected = new(SelectorErrorMessage);
-        using var sub = subject.SelectAsyncConcurrent(_ => Task.FromException<int>(expected), MaxConcurrencyTwo)
-            .Subscribe(
-                static _ => { },
-                ex => faulted.TrySetResult(ex));
+        using var sub = subject.SelectAsyncConcurrent(_ => Task.FromException<int>(expected), MaxConcurrencyTwo).Subscribe(
+            static _ => { },
+            ex => faulted.TrySetResult(ex));
         subject.OnNext(TriggerValue);
         var caught = await faulted.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
@@ -62,31 +61,20 @@ public class SelectAsyncConcurrentObservableTests
     public async Task WhenSelectAsyncConcurrentDisposedMidFlight_ThenSuppressesEmissionAndCompletion()
     {
         const int TriggerValue = 1;
-        Subject<int> subject = new();
-
-        // The gate completes its continuations inline, so releasing it runs the selector's tail here.
-        TaskCompletionSource<bool> gate = new();
-        TaskCompletionSource<bool> selectorResumed = new();
+        TaskCompletionSource<int> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
         List<int> results = [];
         var completed = false;
-        var sub = subject.SelectAsyncConcurrent(
-            async x =>
-            {
-                await gate.Task.ConfigureAwait(false);
-                _ = selectorResumed.TrySetResult(true);
-                return x;
-            },
-            MaxConcurrencyTwo).Subscribe(results.Add, () => completed = true);
-        subject.OnNext(TriggerValue);
-        subject.OnCompleted();
-        sub.Dispose();
-        gate.SetResult(true);
-        await selectorResumed.Task;
+        SelectAsyncConcurrentObservable<int, int>.SelectAsyncConcurrentSink sink = new(Observer.Create<int>(results.Add, () => completed = true), _ => gate.Task, MaxConcurrencyTwo);
+        var processing = sink.OnNextAsync(TriggerValue);
+        sink.Dispose();
+        gate.SetResult(TriggerValue);
+        await processing;
+        sink.OnCompleted();
         await Assert.That(results).IsEmpty();
         await Assert.That(completed).IsFalse();
     }
 
-    /// <summary>Verifies that completion arriving while selectors are still in flight is forwarded after all selectors finish.</summary>
+    /// <summary>Verifies completion waits for every active projection.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSelectAsyncConcurrentCompletesWithInFlight_ThenDeferredCompletion()
@@ -94,9 +82,9 @@ public class SelectAsyncConcurrentObservableTests
         const int First = 1;
         const int Second = 2;
         Subject<int> subject = new();
-        TaskCompletionSource<bool> gate = new();
+        TaskCompletionSource<bool> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
         List<int> results = [];
-        TaskCompletionSource<bool> completed = new();
+        TaskCompletionSource<bool> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var sub = subject.SelectAsyncConcurrent(
             async x =>
             {
@@ -107,16 +95,13 @@ public class SelectAsyncConcurrentObservableTests
         subject.OnNext(First);
         subject.OnNext(Second);
         subject.OnCompleted();
-
-        // Both selectors are parked on the gate, so nothing can have emitted or completed.
         await Assert.That(completed.Task.IsCompleted).IsFalse();
         await Assert.That(results).IsEmpty();
         gate.SetResult(true);
         var done = await completed.Task;
         await Assert.That(done).IsTrue();
 
-        // Downstream OnNext from this operator is serialized inside the sink's lock, so the
-        // list is safely populated by the time completion fires. Order is concurrent so sort.
+        // Delivery is serialized, but concurrent projections may finish in either order.
         int[] sorted = [.. results];
         Array.Sort(sorted);
         await Assert.That(sorted).IsCollectionEqualTo([First, Second]);
@@ -132,8 +117,7 @@ public class SelectAsyncConcurrentObservableTests
         List<int> values = [];
         Exception? caught = null;
         var completedCount = 0;
-        using var sub = source.SelectAsyncConcurrent(Task.FromResult, 1)
-            .Subscribe(values.Add, ex => caught = ex, () => completedCount++);
+        using var sub = source.SelectAsyncConcurrent(Task.FromResult, 1).Subscribe(values.Add, ex => caught = ex, () => completedCount++);
         source.Observer.OnCompleted();
         source.Observer.OnNext(1);
         source.Observer.OnError(new InvalidOperationException("late"));

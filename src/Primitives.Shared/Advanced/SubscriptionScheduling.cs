@@ -8,15 +8,10 @@ namespace ReactiveUI.Primitives.Reactive.Advanced;
 namespace ReactiveUI.Primitives.Advanced;
 #endif
 
-/// <summary>
-/// Subscription-time scheduling shared by advanced signals: a signal that observes the current-thread
-/// sequencer has to queue behind it while it is draining work, so emissions arrive in trampoline order.
-/// </summary>
+/// <summary>Preserves trampoline order when subscribing during a current-thread drain.</summary>
 internal static class SubscriptionScheduling
 {
-    /// <summary>
-    /// Subscribes inline when the current-thread sequencer is idle, otherwise queues the subscription on it.
-    /// </summary>
+    /// <summary>Subscribes inline when the current-thread sequencer is idle, otherwise queues the subscription on it.</summary>
     /// <typeparam name="TState">The type of the state passed to the subscribe callback.</typeparam>
     /// <param name="state">The state carried to <paramref name="subscribe"/>.</param>
     /// <param name="subscribe">Performs the subscription and returns it.</param>

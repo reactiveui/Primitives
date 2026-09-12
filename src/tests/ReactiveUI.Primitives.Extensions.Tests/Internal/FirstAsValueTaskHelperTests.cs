@@ -22,9 +22,6 @@ public class FirstAsValueTaskHelperTests
     /// <summary>Value used to verify subsequent values are ignored.</summary>
     private const int SecondValue = 11;
 
-    /// <summary>Guard timeout so a hung rendezvous fails this test rather than stalling the run.</summary>
-    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
-
     /// <summary>Verifies the helper completes with the first value the source emits.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -97,7 +94,7 @@ public class FirstAsValueTaskHelperTests
         Subject<int> subject = new();
         var pending = FirstAsValueTaskHelper<int>.FirstAsValueTask(subject).AsTask();
         subject.OnNext(FirstValue);
-        var result = await pending.WaitAsync(GuardTimeout);
+        var result = await pending;
         await Assert.That(result).IsEqualTo(FirstValue);
     }
 

@@ -9,8 +9,6 @@ namespace ReactiveUI.Primitives.Async.Signals;
 public sealed record BehaviorSignalCreationOptions
 {
     /// <summary>Gets the default configuration options for creating a new BehaviorSignal instance.</summary>
-    /// <remarks>Use this property to obtain a standard set of options when creating a BehaviorSignal, unless
-    /// custom behavior is required.</remarks>
     public static BehaviorSignalCreationOptions Default { get; } = new() { PublishingOption = PublishingOption.Serial, IsStateless = false };
 
     /// <summary>Gets the publishing option to use when processing the item.</summary>

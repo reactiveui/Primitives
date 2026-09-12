@@ -19,12 +19,7 @@ public partial class SignalOperatorMixinsTests
     /// <summary>The late terminal error message.</summary>
     private const string LateErrorMessage = "late";
 
-    /// <summary>
-    /// Map and Keep are pass-through wrappers: neither adds a thread affinity of its own, so each must report
-    /// exactly the current-thread requirement of the source it wraps. Reporting <see langword="true"/> for a
-    /// free-threaded source would needlessly pin subscription; reporting <see langword="false"/> for a pinned
-    /// one would subscribe on the wrong thread.
-    /// </summary>
+    /// <summary>Map and Keep preserve their source's current-thread subscription requirement.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task MapAndKeepSignalsInheritTheCurrentThreadRequirementOfTheirSource()

@@ -6,10 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Provides factory methods for creating asynchronous observables and background jobs that emit values to observers
-/// asynchronously.
-/// </summary>
+/// <summary>Provides factory methods for creating asynchronous observables and background jobs that emit values to observers asynchronously.</summary>
 /// <remarks>These are the entry points for turning an arbitrary asynchronous producer into a sequence: supply the
 /// subscribe logic yourself, or hand over a job to run per subscriber.</remarks>
 public static partial class SignalAsync
@@ -52,10 +49,7 @@ public static partial class SignalAsync
         bool startSynchronously) =>
         new BackgroundJobSignal<T>(job, startSynchronously, null);
 
-    /// <summary>
-    /// Creates a new observable sequence that runs the specified asynchronous job as a background task using the
-    /// provided task scheduler.
-    /// </summary>
+    /// <summary>Creates a new observable sequence that runs the specified asynchronous job as a background task using the provided task scheduler.</summary>
     /// <typeparam name="T">The type of the elements produced by the observable sequence.</typeparam>
     /// <param name="job">A delegate that defines the asynchronous job to execute. The delegate receives an observer to report results and
     /// a cancellation token to observe cancellation requests.</param>

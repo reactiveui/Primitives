@@ -55,11 +55,7 @@ public abstract class SyncLatestCoordinatorBase<TResult> : IAsyncDisposable
         return Lifecycle.OnErrorResumeAsync(error);
     }
 
-    /// <summary>
-    /// Projects the latest-value slots through the selector and forwards the result downstream, doing
-    /// nothing until every source has produced a value. Called after a per-source OnNext has landed
-    /// under <see cref="ValuesLock"/>.
-    /// </summary>
+    /// <summary>Projects the latest values once every source has emitted. Called after updating a slot under ValuesLock.</summary>
     /// <returns>A ValueTask representing the asynchronous emit.</returns>
     internal abstract ValueTask EmitLatestAsync();
 

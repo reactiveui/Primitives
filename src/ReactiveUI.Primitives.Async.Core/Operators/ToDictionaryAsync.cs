@@ -7,10 +7,6 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for asynchronously converting an observable sequence to a dictionary.</summary>
-/// <remarks>The methods in this class enable the transformation of an asynchronous observable sequence into a
-/// dictionary, using user-supplied key and element selector functions. These operations are performed asynchronously
-/// and support cancellation via a CancellationToken. All methods throw an exception if duplicate keys are encountered
-/// in the source sequence, consistent with the behavior of Dictionary{TKey, TValue}.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Asynchronous dictionary-materialization operators for an observable source sequence.</summary>
@@ -35,10 +31,7 @@ public static partial class SignalAsyncExtensions
             where TKey : notnull =>
             ToDictionaryCore(source, keySelector, DictionaryIdentity<T>.Instance, comparer, cancellationToken);
 
-        /// <summary>
-        /// Asynchronously creates a dictionary from the elements of the sequence, using the specified key selector
-        /// function and the default equality comparer for the key type.
-        /// </summary>
+        /// <summary>Asynchronously creates a dictionary from the elements of the sequence, using the specified key selector function and the default equality comparer for the key type.</summary>
         /// <typeparam name="TKey">The type of the keys in the resulting dictionary. Must be non-nullable.</typeparam>
         /// <param name="keySelector">A function to extract a key from each element in the sequence. Cannot be null.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains a dictionary mapping keys to
@@ -49,10 +42,7 @@ public static partial class SignalAsyncExtensions
             where TKey : notnull =>
             source.ToDictionaryAsync(keySelector, null, CancellationToken.None);
 
-        /// <summary>
-        /// Asynchronously creates a dictionary from the elements of the sequence using the specified key and element
-        /// selector functions.
-        /// </summary>
+        /// <summary>Asynchronously creates a dictionary from the elements of the sequence using the specified key and element selector functions.</summary>
         /// <typeparam name="TKey">The type of the keys in the resulting dictionary. Must be non-nullable.</typeparam>
         /// <typeparam name="TValue">The type of the values in the resulting dictionary.</typeparam>
         /// <param name="keySelector">A function to extract a key from each element in the sequence.</param>

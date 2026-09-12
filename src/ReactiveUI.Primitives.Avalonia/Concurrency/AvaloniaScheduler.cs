@@ -76,6 +76,7 @@ public sealed class AvaloniaScheduler : ISequencer
     /// <summary>Runs delayed work on a dispatcher timer bound to the selected dispatcher.</summary>
     /// <param name="item">Work item to execute at the due time.</param>
     /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     private void ScheduleDelayed(IWorkItem item, long dueTimestamp)
     {
         DispatcherTimer timer =

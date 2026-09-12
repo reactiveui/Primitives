@@ -405,10 +405,7 @@ public static partial class LinqExtensions
         /// <summary>The active source subscriptions.</summary>
         private readonly MultipleDisposable _subscriptions = [];
 
-        /// <summary>
-        /// One flag per source twice over: the first half records whether a source has produced a value, the
-        /// second whether it has completed.
-        /// </summary>
+        /// <summary>One flag per source twice over: the first half records whether a source has produced a value, the second whether it has completed.</summary>
         private bool[] _flags = [];
 
         /// <summary>The projection over this subscription's slots.</summary>

@@ -6,8 +6,7 @@ using System.Reactive.Subjects;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Coverage for <c>DoOnDisposeObservable</c> — the dispose action fires exactly once even when
-/// the subscription is disposed multiple times, and the upstream is torn down before the action runs.</summary>
+/// <summary>Tests that the disposal action runs once after upstream disposal.</summary>
 public class DoOnDisposeObservableTests
 {
     /// <summary>Verifies the dispose action fires once and the upstream is detached on first dispose, and a

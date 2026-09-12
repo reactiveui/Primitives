@@ -14,19 +14,13 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The source observable sequence of observable sequences.</param>
     extension<T>(IObservableAsync<IObservableAsync<T>> source)
     {
-        /// <summary>
-        /// Transforms an observable sequence of observable sequences into a single observable sequence that emits
-        /// values from the most recent inner observable sequence.
-        /// </summary>
+        /// <summary>Transforms an observable sequence of observable sequences into a single observable sequence that emits values from the most recent inner observable sequence.</summary>
         /// <returns>An observable sequence that emits items from the most recently emitted inner observable sequence. When a new
         /// inner sequence is emitted, the previous one is unsubscribed.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> SwitchTo() => new SwitchToSignal<T>(source);
 
-        /// <summary>
-        /// Transforms an observable sequence of observable sequences into a single observable sequence that emits
-        /// values from the most recent inner observable sequence.
-        /// </summary>
+        /// <summary>Transforms an observable sequence of observable sequences into a single observable sequence that emits values from the most recent inner observable sequence.</summary>
         /// <returns>An observable sequence that emits items from the most recently emitted inner observable sequence.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> Switch() => new SwitchToSignal<T>(source);

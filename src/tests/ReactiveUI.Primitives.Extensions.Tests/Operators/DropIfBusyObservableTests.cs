@@ -2,11 +2,13 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reactive;
 using System.Reactive.Subjects;
+using ReactiveUI.Primitives.Extensions.Operators;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Edge-case coverage for <c>DropIfBusyObservable&lt;T&gt;</c>.</summary>
+/// <summary>Tests handler completion and error delivery around source termination.</summary>
 public class DropIfBusyObservableTests
 {
     /// <summary>Verifies a handler completion after source completion does not emit the value.</summary>
@@ -14,22 +16,14 @@ public class DropIfBusyObservableTests
     [Test]
     public async Task WhenHandlerCompletesAfterSourceDone_ThenValueDropped()
     {
-        Subject<int> subject = new();
-
-        // The release gate completes its continuations inline, so the handler's tail runs here.
-        TaskCompletionSource release = new();
-        TaskCompletionSource handlerResumed = new();
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
         List<int> values = [];
         var completed = false;
-        using var sub = subject.DropIfBusy(async _ =>
-        {
-            await release.Task.ConfigureAwait(false);
-            handlerResumed.SetResult();
-        }).Subscribe(values.Add, () => completed = true);
-        subject.OnNext(1);
-        subject.OnCompleted();
+        using DropIfBusyObservable<int>.DropIfBusySink sink = new(Observer.Create<int>(values.Add, () => completed = true), _ => new ValueTask(release.Task));
+        var processing = sink.OnNextAsync(1);
+        sink.OnCompleted();
         release.SetResult();
-        await handlerResumed.Task;
+        await processing;
         await Assert.That(values).IsEmpty();
         await Assert.That(completed).IsTrue();
     }
@@ -39,24 +33,24 @@ public class DropIfBusyObservableTests
     [Test]
     public async Task WhenHandlerThrowsAfterSourceDone_ThenErrorDropped()
     {
-        Subject<int> subject = new();
-
-        // The release gate completes its continuations inline, so the handler throws here.
-        TaskCompletionSource release = new();
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
         InvalidOperationException expected = new("late-handler");
         Exception? caught = null;
         var completed = false;
-        using var sub = subject.DropIfBusy(async _ =>
-        {
-            await release.Task.ConfigureAwait(false);
-            throw expected;
-        }).Subscribe(
-            static _ => { },
-            ex => caught = ex,
-            () => completed = true);
-        subject.OnNext(1);
-        subject.OnCompleted();
+        using DropIfBusyObservable<int>.DropIfBusySink sink = new(
+            Observer.Create<int>(
+                static _ => { },
+                ex => caught = ex,
+                () => completed = true),
+            async _ =>
+            {
+                await release.Task.ConfigureAwait(false);
+                throw expected;
+            });
+        var processing = sink.OnNextAsync(1);
+        sink.OnCompleted();
         release.SetResult();
+        await processing;
         await Assert.That(caught).IsNull();
         await Assert.That(completed).IsTrue();
     }
@@ -82,8 +76,8 @@ public class DropIfBusyObservableTests
     public async Task WhenHandlerThrowsBeforeDone_ThenForwardsError()
     {
         Subject<int> subject = new();
-        TaskCompletionSource release = new();
-        TaskCompletionSource<Exception> error = new();
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<Exception> error = new(TaskCreationOptions.RunContinuationsAsynchronously);
         InvalidOperationException expected = new("handler");
         using var sub = subject.DropIfBusy(async _ =>
         {

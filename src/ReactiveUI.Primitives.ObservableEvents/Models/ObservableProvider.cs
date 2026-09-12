@@ -4,11 +4,7 @@
 
 namespace ReactiveUI.Primitives.ObservableEvents.Models;
 
-/// <summary>The observable implementation the generated code is written against.</summary>
-/// <remarks>
-/// Resolved once from the consumer's references and flowed into emission as a value, so that the far more expensive
-/// event extraction does not have to re-run when only the reference set moves.
-/// </remarks>
+/// <summary>Stores the selected observable provider independently of event extraction.</summary>
 internal enum ObservableProvider
 {
     /// <summary>No supported observable factory is visible; nothing can be generated.</summary>

@@ -7,11 +7,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
-/// <summary>
-/// Mutable state and mechanics backing the virtual-time sequencers. A single sequencer owns one of these inline
-/// and forwards its public surface here, so the virtual-time logic lives in one place without inheritance or
-/// composition between the sequencer types. Per-clock arithmetic is supplied as delegates rather than overrides.
-/// </summary>
+/// <summary>Stores virtual-time state with delegate-supplied clock arithmetic.</summary>
 /// <typeparam name="TAbsolute">Absolute time representation type.</typeparam>
 /// <typeparam name="TRelative">Relative time representation type.</typeparam>
 [System.Diagnostics.CodeAnalysis.SuppressMessage(
@@ -306,8 +302,7 @@ internal record struct VirtualTimeState<TAbsolute, TRelative>
     {
         ArgumentExceptionHelper.ThrowIfNull(action);
 
-        // Copy the reference-typed queue into a local so the self-removal closure synchronizes through that
-        // reference rather than capturing the enclosing struct's "this" (not permitted for struct members).
+        // Capture the queue reference; a struct member cannot capture this in a closure.
         var queue = _queue;
 
         ScheduledItem<TAbsolute> si = new(dueTime, _comparer, self =>

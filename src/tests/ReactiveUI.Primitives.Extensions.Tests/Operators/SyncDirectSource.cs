@@ -2,18 +2,11 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Reactive.Subjects;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>
-/// Synchronous test source that hands its observer back to the test so the test can
-/// invoke <c>OnNext</c> / <c>OnError</c> / <c>OnCompleted</c> directly — including
-/// sequences that <see cref="Subject{T}"/> would otherwise block (emit-after-complete,
-/// double-terminal). Subscriptions return a no-op disposable so external dispose does
-/// not detach the observer.
-/// </summary>
+/// <summary>Retains its observer for direct notification after disposal or termination.</summary>
 /// <typeparam name="T">The element type.</typeparam>
 internal sealed class SyncDirectSource<T> : IObservable<T>
 {

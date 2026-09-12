@@ -36,7 +36,7 @@ public partial class SignalTests
 
         await signal.OnNextAsync(OptionsStartValue, CancellationToken.None);
 
-        var value = await received.Task.WaitAsync(WaitTimeout);
+        var value = await received.Task;
         await Assert.That(value).IsEqualTo(OptionsStartValue);
     }
 
@@ -55,7 +55,7 @@ public partial class SignalTests
             return default;
         });
 
-        var value = await received.Task.WaitAsync(WaitTimeout);
+        var value = await received.Task;
         await Assert.That(value).IsEqualTo(OptionsStartValue);
     }
 
@@ -76,7 +76,7 @@ public partial class SignalTests
             return default;
         });
 
-        var value = await received.Task.WaitAsync(WaitTimeout);
+        var value = await received.Task;
         await Assert.That(value).IsEqualTo(OptionsLatestValue);
     }
 

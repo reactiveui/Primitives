@@ -28,10 +28,7 @@ public sealed class SelectConstantObservable<TSource, TResult>(
         return source.Subscribe(new SelectConstantWitness(observer, constant));
     }
 
-    /// <summary>
-    /// Forwarding observer that replaces every <see cref="OnNext"/> value with
-    /// the stored constant. Error and completion signals pass through unchanged.
-    /// </summary>
+    /// <summary>Forwarding observer that replaces every <see cref="OnNext"/> value with the stored constant. Error and completion signals pass through unchanged.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="constant">The constant value to emit.</param>
     private sealed class SelectConstantWitness(IObserver<TResult> downstream, TResult constant) : IObserver<TSource>

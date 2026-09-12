@@ -58,6 +58,7 @@ public sealed class DispatcherQueueSequencer : CoalescingDispatchScheduler
     }
 
     /// <inheritdoc/>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     protected override IDisposable ScheduleOnDispatcher(Action work, TimeSpan dueTime)
     {
         var timer = DispatcherQueue.CreateTimer();

@@ -10,13 +10,7 @@ using System.Text;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
-/// <summary>Builds the exception messages the virtual-time sequencers throw.</summary>
-/// <remarks>
-/// The parsed format sits on a non-generic type on purpose. A static field inside
-/// <see cref="VirtualTimeState{TAbsolute, TRelative}"/> is a field of each closed generic, so the format would be
-/// parsed once per type-argument pair; one shared instance serves every one of them. Frameworks without
-/// <c>CompositeFormat</c> fall back to formatting the literal.
-/// </remarks>
+/// <summary>Shares virtual-time message formats across clock types.</summary>
 internal static class VirtualTimeMessages
 {
     /// <summary>Format of the message thrown when the clock is advanced while the scheduler is already running.</summary>

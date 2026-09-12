@@ -36,9 +36,7 @@ public partial class CombineLatestOperatorTests
             return default;
         });
         await s1.OnErrorResumeAsync(new InvalidOperationException("resume"), CancellationToken.None);
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => received is not null,
-            TimeSpan.FromSeconds(WaitTimeoutSeconds));
+        await Assert.That(received is not null).IsTrue();
         await Assert.That(received).IsNotNull();
         await Assert.That(received!.Message).IsEqualTo("resume");
     }
@@ -81,9 +79,7 @@ public partial class CombineLatestOperatorTests
 
         // s1 completes without emitting - should trigger completion since !_values[0].HasValue
         await s1.OnCompletedAsync(Result.Success);
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => completionResult is not null,
-            TimeSpan.FromSeconds(WaitTimeoutSeconds));
+        await Assert.That(completionResult is not null).IsTrue();
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsSuccess).IsTrue();
     }

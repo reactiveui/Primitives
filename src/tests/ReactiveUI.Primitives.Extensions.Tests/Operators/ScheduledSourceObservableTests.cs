@@ -7,9 +7,7 @@ using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Direct coverage for <c>ScheduledSourceObservable&lt;T&gt;</c>'s
-/// no-op terminal handlers and the <c>EmitState</c> action/transform catch block —
-/// branches the happy-path scheduler tests don't reach.</summary>
+/// <summary>Tests ignored terminal handlers and scheduled action or transform failures.</summary>
 public class ScheduledSourceObservableTests
 {
     /// <summary>Sentinel value used by the emission tests.</summary>

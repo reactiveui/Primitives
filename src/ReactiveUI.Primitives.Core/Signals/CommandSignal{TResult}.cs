@@ -91,55 +91,11 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
     public bool CanRun => Volatile.Read(ref _canRun);
 
     /// <summary>Gets the lazily allocated fault stream.</summary>
-    private Signal<Exception> FaultsSignal
-    {
-        get
-        {
-            var signal = Volatile.Read(ref _faults);
-            if (signal is not null)
-            {
-                return signal;
-            }
-
-            signal = new();
-            var current = Interlocked.CompareExchange(ref _faults, signal, null);
-            if (current is null)
-            {
-                return signal;
-            }
-
-            signal.Dispose();
-            return current;
-        }
-    }
+    private Signal<Exception> FaultsSignal => Volatile.Read(ref _faults) ?? InstallFaultsSignal(new());
 
     /// <summary>Gets the lazily allocated running state stream.</summary>
-    private StateSignal<bool> IsRunningSignal
-    {
-        get
-        {
-            var signal = Volatile.Read(ref _isRunningState);
-            if (signal is not null)
-            {
-                return signal;
-            }
-
-            signal = new(Volatile.Read(ref _isRunning));
-            var current = Interlocked.CompareExchange(ref _isRunningState, signal, null);
-            if (current is null)
-            {
-                // The snapshot above may already be stale: a SetRunning call can run between it and
-                // the install. Reconcile under the running gate so the just-installed stream cannot
-                // latch a stale value, and so a concurrent SetRunning cannot lose its update to a
-                // late seed write here.
-                ReconcileRunningState();
-                return signal;
-            }
-
-            signal.Dispose();
-            return current;
-        }
-    }
+    private StateSignal<bool> IsRunningSignal =>
+        Volatile.Read(ref _isRunningState) ?? InstallRunningState(new(Volatile.Read(ref _isRunning)));
 
     /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
@@ -170,7 +126,7 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
         }
     }
 
-    /// <summary>Executes the Dispose operation.</summary>
+    /// <summary>Detaches the execution gate and releases result, fault, and running-state subscriptions.</summary>
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
@@ -194,6 +150,79 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
         ThrowIfDisposed();
         AddResult(observer);
         return new ResultSubscription(this, observer);
+    }
+
+    /// <summary>Attempts to append an observer to an unchanged snapshot.</summary>
+    /// <param name="storage">The published observer snapshot.</param>
+    /// <param name="current">The snapshot used to prepare the update.</param>
+    /// <param name="observer">The observer to append.</param>
+    /// <returns>Whether the update was published.</returns>
+    internal static bool TryAddResult(ref object? storage, object? current, IObserver<TResult> observer)
+    {
+        object next;
+        if (current is IObserver<TResult>[] many)
+        {
+            var copy = new IObserver<TResult>[many.Length + 1];
+            Array.Copy(many, copy, many.Length);
+            copy[many.Length] = observer;
+            next = copy;
+        }
+        else if (current is IObserver<TResult> single)
+        {
+            next = new[] { single, observer };
+        }
+        else
+        {
+            return Interlocked.CompareExchange(ref storage, observer, null) is null;
+        }
+
+        return ReferenceEquals(Interlocked.CompareExchange(ref storage, next, current), current);
+    }
+
+    /// <summary>Attempts to remove an observer from an unchanged snapshot.</summary>
+    /// <param name="storage">The published observer snapshot.</param>
+    /// <param name="current">The snapshot used to prepare the update.</param>
+    /// <param name="observer">The observer to remove.</param>
+    /// <returns>Whether no retry is required.</returns>
+    internal static bool TryRemoveResult(ref object? storage, object? current, IObserver<TResult> observer)
+    {
+        if (!TryGetRemoveResultNext(current, observer, out var next))
+        {
+            return true;
+        }
+
+        return ReferenceEquals(Interlocked.CompareExchange(ref storage, next, current), current);
+    }
+
+    /// <summary>Installs a fault stream or releases a candidate that lost installation.</summary>
+    /// <param name="signal">The newly allocated candidate.</param>
+    /// <returns>The installed stream.</returns>
+    internal Signal<Exception> InstallFaultsSignal(Signal<Exception> signal)
+    {
+        var current = Interlocked.CompareExchange(ref _faults, signal, null);
+        if (current is null)
+        {
+            return signal;
+        }
+
+        signal.Dispose();
+        return current;
+    }
+
+    /// <summary>Installs a running stream and reconciles its snapshot with the current execution state.</summary>
+    /// <param name="signal">The newly allocated candidate.</param>
+    /// <returns>The installed stream.</returns>
+    internal StateSignal<bool> InstallRunningState(StateSignal<bool> signal)
+    {
+        var current = Interlocked.CompareExchange(ref _isRunningState, signal, null);
+        if (current is null)
+        {
+            ReconcileRunningState();
+            return signal;
+        }
+
+        signal.Dispose();
+        return current;
     }
 
     /// <summary>Gets the observer snapshot that should replace the current snapshot.</summary>
@@ -312,10 +341,7 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
     /// <param name="value">The running state.</param>
     private void SetRunning(bool value)
     {
-        // Set the flag and notify the stream through the same gated path the getter uses. Holding
-        // the gate across the flag write and the notification keeps the flag and the stream value
-        // observed together, so the lazy install and a concurrent transition cannot lose each
-        // other's update.
+        // Publish the flag and stream value under the installation gate.
         lock (_runningGate)
         {
             _isRunning = value;
@@ -370,7 +396,7 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void PublishFault(Exception error) => Volatile.Read(ref _faults)?.OnNext(error);
 
-    /// <summary>Executes the ThrowIfDisposed operation.</summary>
+    /// <summary>Rejects command operations after disposal.</summary>
     /// <exception cref="ObjectDisposedException">The command has been disposed.</exception>
     private void ThrowIfDisposed()
     {
@@ -384,33 +410,13 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
 
     /// <summary>Adds a result subscriber.</summary>
     /// <param name="observer">Observer to add.</param>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     private void AddResult(IObserver<TResult> observer)
     {
+        // Retry only when another thread replaced the observed snapshot.
         while (true)
         {
-            var current = Volatile.Read(ref _resultObservers);
-            object next;
-            if (current is IObserver<TResult>[] many)
-            {
-                var copy = new IObserver<TResult>[many.Length + 1];
-                Array.Copy(many, copy, many.Length);
-                copy[many.Length] = observer;
-                next = copy;
-            }
-            else if (current is IObserver<TResult> single)
-            {
-                next = new[] { single, observer };
-            }
-            else if (Interlocked.CompareExchange(ref _resultObservers, observer, null) is null)
-            {
-                return;
-            }
-            else
-            {
-                continue;
-            }
-
-            if (ReferenceEquals(Interlocked.CompareExchange(ref _resultObservers, next, current), current))
+            if (TryAddResult(ref _resultObservers, Volatile.Read(ref _resultObservers), observer))
             {
                 return;
             }
@@ -423,17 +429,13 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
 
     /// <summary>Removes a result subscriber.</summary>
     /// <param name="observer">Observer to remove.</param>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     private void RemoveResult(IObserver<TResult> observer)
     {
+        // Retry only when another thread replaced the observed snapshot.
         while (true)
         {
-            var current = Volatile.Read(ref _resultObservers);
-            if (!TryGetRemoveResultNext(current, observer, out var next))
-            {
-                return;
-            }
-
-            if (ReferenceEquals(Interlocked.CompareExchange(ref _resultObservers, next, current), current))
+            if (TryRemoveResult(ref _resultObservers, Volatile.Read(ref _resultObservers), observer))
             {
                 return;
             }

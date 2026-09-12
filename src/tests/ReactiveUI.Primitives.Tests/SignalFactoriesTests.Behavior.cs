@@ -7,7 +7,7 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>Completes branch and contract coverage for factory, task, and terminal-task behavior.</summary>
+/// <summary>Tests factories, task observation, and terminal task results.</summary>
 public partial class SignalFactoriesTests
 {
     /// <summary>Expected use-factory errors.</summary>
@@ -24,7 +24,7 @@ public partial class SignalFactoriesTests
     private static readonly int[] ExpectedSingleAsyncValue = [1];
 
     /// <summary>Exercises task, async-enumerable, and terminal task branches.</summary>
-    /// <returns>A task that completes when asynchronous coverage has run.</returns>
+    /// <returns>A task representing the asynchronous test.</returns>
     [Test]
     public async Task FactoriesTasksAndTerminalTasksCoverCancellationFaultAndEmptyBranches()
     {

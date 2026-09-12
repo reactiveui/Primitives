@@ -29,10 +29,7 @@ public static partial class SignalAsync
         Justification = "Return is the Rx-compatible alias for Emit and builds the same signal with no forwarding hop.")]
     public static IObservableAsync<T> Return<T>(T value) => new ReturnSignalAsync<T>(value);
 
-    /// <summary>
-    /// Holds the single value in a field and emits it from a <see cref="TaskSignalSubscription{T}"/> started per
-    /// subscriber, so the emit is deferred without a delegate to close over.
-    /// </summary>
+    /// <summary>Defers one value per subscriber without allocating a closure.</summary>
     /// <typeparam name="T">The element type emitted.</typeparam>
     /// <param name="value">The captured value emitted on each subscribe.</param>
     internal sealed class ReturnSignalAsync<T>(T value) : IObservableAsync<T>

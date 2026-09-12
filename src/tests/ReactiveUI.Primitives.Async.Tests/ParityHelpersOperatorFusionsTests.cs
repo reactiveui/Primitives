@@ -8,16 +8,9 @@ using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>Edge-case coverage for the fused async operators in
-/// <c>ParityHelpers.OperatorFusions</c> — async <c>ScanWithInitial</c>,
-/// <c>ThrottleDistinct</c> upstream/downstream filtering, <c>DebounceUntil</c>
-/// immediate-bypass branch, and the typed fast paths in <c>ForEach</c>
-/// (array / IReadOnlyList / general IEnumerable).</summary>
+/// <summary>Tests filtering, accumulation and flattening in fused async operators.</summary>
 public class ParityHelpersOperatorFusionsTests
 {
-    /// <summary>Seconds a test waits for a notification before giving up.</summary>
-    private const int WaitTimeoutSeconds = 5;
-
     /// <summary>Message thrown by a downstream observer in the scan fusion tests.</summary>
     private const string DownstreamThrowsMessage = "downstream-throws";
 
@@ -48,14 +41,11 @@ public class ParityHelpersOperatorFusionsTests
     /// <summary>Sentinel four.</summary>
     private const int Four = 4;
 
-    /// <summary>Debounce window long enough that only the condition can release a value.</summary>
+    /// <summary>Debounce window used by manually fired bypass tests.</summary>
     private static readonly TimeSpan DebounceWindow = TimeSpan.FromHours(1);
 
-    /// <summary>Debounce window short enough that the test can wait for it to elapse.</summary>
+    /// <summary>Debounce window used by manually fired delay tests.</summary>
     private static readonly TimeSpan ShortDebounceWindow = TimeSpan.FromMilliseconds(80);
-
-    /// <summary>Maximum time a test waits for a notification to arrive.</summary>
-    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(WaitTimeoutSeconds);
 
     /// <summary>Array sentinels for the array fast-path test.</summary>
     private static readonly int[] ArraySlice1 = [One, Two];
@@ -110,63 +100,37 @@ public class ParityHelpersOperatorFusionsTests
     [Test]
     public async Task WhenThrottleDistinctConsecutiveDuplicates_ThenSuppressesUpstream()
     {
+        ManualTimeProvider time = new();
         var result = await ThrottleDuplicateInputs.ToAsyncSignal()
-            .ThrottleDistinct(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds))
+            .ThrottleDistinct(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds), time)
             .ToListAsync();
 
-        // All inputs are equal — only one emission is ever scheduled, and the source completes
-        // before the throttle window elapses, so the pending emission must still flush exactly once.
-        await Assert.That(result.Count).IsLessThanOrEqualTo(1);
+        await Assert.That(result).IsEmpty();
+        await Assert.That(time.PendingTimerCount).IsEqualTo(1);
     }
 
-    /// <summary>Verifies that <c>ThrottleDistinct</c> with distinct rapid values respects the
-    /// no-consecutive-duplicates contract and never emits more than the input count.
-    /// (Pending throttled emissions are superseded by source completion — this is the
-    /// documented behavior, so a count-bound assertion is the appropriate check rather than
-    /// "at least one emission".)</summary>
+    /// <summary>Verifies that completion suppresses pending distinct values.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenThrottleDistinctRapidDistinctValues_ThenNoConsecutiveDuplicates()
     {
         var result = await ThrottleRapidInputs.ToAsyncSignal()
-            .ThrottleDistinct(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds))
+            .ThrottleDistinct(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds), new ManualTimeProvider())
             .ToListAsync();
 
-        await Assert.That(result.Count).IsLessThanOrEqualTo(ThrottleRapidInputs.Length);
-        for (var i = 1; i < result.Count; i++)
-        {
-            await Assert.That(result[i]).IsNotEqualTo(result[i - 1]);
-        }
+        await Assert.That(result).IsEmpty();
     }
 
-    /// <summary>Verifies that the time-provider overload of <c>ThrottleDistinct</c> keeps the
-    /// upstream duplicate suppression when an explicit provider is supplied.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
-    [Test]
-    public async Task WhenThrottleDistinctWithTimeProviderAndConsecutiveDuplicates_ThenSuppressesUpstream()
-    {
-        var result = await ThrottleDuplicateInputs.ToAsyncSignal()
-            .ThrottleDistinct(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds), TimeProvider.System)
-            .ToListAsync();
-
-        await Assert.That(result.Count).IsLessThanOrEqualTo(1);
-    }
-
-    /// <summary>Verifies that the time-provider overload of <c>ThrottleDistinct</c> falls back to the
-    /// system provider when the caller passes <see langword="null"/>, and still throttles.</summary>
+    /// <summary>Verifies that a null provider supports a zero throttle window.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenThrottleDistinctWithNullTimeProvider_ThenStillThrottles()
     {
         var result = await ThrottleRapidInputs.ToAsyncSignal()
-            .ThrottleDistinct(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds), null)
+            .ThrottleDistinct(TimeSpan.Zero, null)
             .ToListAsync();
 
-        await Assert.That(result.Count).IsLessThanOrEqualTo(ThrottleRapidInputs.Length);
-        for (var i = 1; i < result.Count; i++)
-        {
-            await Assert.That(result[i]).IsNotEqualTo(result[i - 1]);
-        }
+        await Assert.That(result).IsCollectionEqualTo(ThrottleRapidInputs);
     }
 
     /// <summary>Verifies that <c>DebounceUntil</c> with an always-true condition bypasses the debounce window and emits inline.</summary>
@@ -188,7 +152,7 @@ public class ParityHelpersOperatorFusionsTests
     public async Task WhenDebounceUntilWithTimeProviderAndConditionAlwaysTrue_ThenEmitsImmediately()
     {
         var result = await DebounceInputs.ToAsyncSignal()
-            .DebounceUntil(DebounceWindow, static _ => true, TimeProvider.System)
+            .DebounceUntil(DebounceWindow, static _ => true, new ManualTimeProvider())
             .ToListAsync();
 
         await Assert.That(result).IsCollectionEqualTo(DebounceInputs);
@@ -390,7 +354,7 @@ public class ParityHelpersOperatorFusionsTests
         TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values
-            .ThrottleDistinct(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds))
+            .ThrottleDistinct(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds), new ManualTimeProvider())
             .SubscribeAsync(
                 static (_, _) => default,
                 (ex, _) =>
@@ -417,7 +381,7 @@ public class ParityHelpersOperatorFusionsTests
         TaskCompletionSource errorTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var sub = await signal.Values
-            .DebounceUntil(DebounceWindow, static _ => false)
+            .DebounceUntil(DebounceWindow, static _ => false, new ManualTimeProvider())
             .SubscribeAsync(
                 static (_, _) => default,
                 (ex, _) =>
@@ -488,43 +452,32 @@ public class ParityHelpersOperatorFusionsTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Verifies that <c>DropIfBusy</c> with a sync action but an asynchronously-completing
-    /// downstream takes the <c>AwaitForwardAsync</c> slow path and resets the busy flag in
-    /// its <c>finally</c>.</summary>
+    /// <summary>Verifies that a pending downstream notification drops overlapping values and releases the busy flag on completion.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenDropIfBusySyncActionAsyncDownstream_ThenAwaitForwardSlowPathResets()
     {
-        var signal = Signal.Create<int>();
         List<int> values = [];
-        TaskCompletionSource<int> emittedTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        CallbackWitnessAsync<int> downstream = new(async (value, _) =>
+        {
+            await release.Task;
+            values.Add(value);
+        });
+        await using SignalAsyncExtensions.DropIfBusySignal<int>.DropIfBusyWitness witness = new(
+            downstream,
+            static (_, _) => default,
+            CancellationToken.None);
 
-        await using var sub = await signal.Values
-            .DropIfBusy(static (_, _) => default)
-            .SubscribeAsync(async (v, _) =>
-            {
-                await Task.Yield();
-                values.Add(v);
-                IgnoredResult.Of(emittedTcs.TrySetResult(v));
-            });
+        var forwarding = witness.OnNextAsync(One, CancellationToken.None);
+        await Assert.That(forwarding.IsCompleted).IsFalse();
+        await witness.OnNextAsync(Two, CancellationToken.None);
+        await Assert.That(values).IsEmpty();
+        release.SetResult();
+        await forwarding;
+        await witness.OnNextAsync(Three, CancellationToken.None);
 
-        await signal.OnNextAsync(One, CancellationToken.None);
-        await emittedTcs.Task;
-
-        // After the slow path resets _isBusy, a second emission must also flow through.
-        TaskCompletionSource secondTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using var sub2 = await signal.Values
-            .DropIfBusy(static (_, _) => default)
-            .SubscribeAsync(async (_, _) =>
-            {
-                await Task.Yield();
-                _ = secondTcs.TrySetResult();
-            });
-
-        await signal.OnNextAsync(Two, CancellationToken.None);
-        await secondTcs.Task;
-
-        await Assert.That(values).Contains(One);
+        await Assert.That(values).IsCollectionEqualTo([One, Three]);
     }
 
     /// <summary>Verifies that the async-accumulator <c>ScanWithInitial</c> overload forwards upstream non-terminal errors downstream.</summary>
@@ -595,6 +548,33 @@ public class ParityHelpersOperatorFusionsTests
         }
     }
 
+    /// <summary>Verifies that stale distinct delays finish without forwarding their superseded values.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task WhenThrottleDistinctDelayIsSuperseded_ThenOnlyCurrentDelayEmits()
+    {
+        ManualTimeProvider time = new();
+        List<int> values = [];
+        CallbackWitnessAsync<int> downstream = new((value, _) =>
+        {
+            values.Add(value);
+            return default;
+        });
+        await using SignalAsyncExtensions.ThrottleDistinctSignal<int>.ThrottleDistinctWitness observer = new(
+            downstream,
+            ShortDebounceWindow,
+            time,
+            CancellationToken.None);
+        var first = observer.StartDelayAsync(One, CancellationToken.None);
+        var second = observer.StartDelayAsync(Two, CancellationToken.None);
+        await time.FireNextAsync();
+        await first;
+        await Assert.That(values).IsEmpty();
+        await time.FireNextAsync();
+        await second;
+        await Assert.That(values).IsCollectionEqualTo([Two]);
+    }
+
     /// <summary>Verifies that an unhandled exception thrown by the downstream observer inside
     /// <c>ThrottleDistinct</c>'s delayed-emit task is routed to
     /// <see cref="UnhandledExceptionHandler"/>.</summary>
@@ -603,16 +583,18 @@ public class ParityHelpersOperatorFusionsTests
     public async Task WhenThrottleDistinctDownstreamThrowsInDelay_ThenRoutedToUnhandled()
     {
         using UnhandledExceptionCapture unhandled = new();
+        ManualTimeProvider time = new();
 
         var signal = Signal.Create<int>();
         ThrowingAsyncWitness<int> throwingObserver = new(new InvalidOperationException(DownstreamThrowsMessage));
 
         await using var sub = await signal.Values
-            .ThrottleDistinct(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds))
+            .ThrottleDistinct(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds), time)
             .SubscribeAsync(throwingObserver, CancellationToken.None);
 
         await signal.OnNextAsync(One, CancellationToken.None);
-        var exception = await unhandled.WaitForAsync(DownstreamThrowsMessage, WaitTimeout);
+        await time.FireNextAsync();
+        var exception = await unhandled.WaitForAsync(DownstreamThrowsMessage);
 
         await Assert.That(exception).IsNotNull();
         await Assert.That(exception!.Message).IsEqualTo(DownstreamThrowsMessage);
@@ -626,46 +608,48 @@ public class ParityHelpersOperatorFusionsTests
     public async Task WhenThrottleDownstreamThrowsInDelay_ThenRoutedToUnhandled()
     {
         using UnhandledExceptionCapture unhandled = new();
+        ManualTimeProvider time = new();
 
         var signal = Signal.Create<int>();
         ThrowingAsyncWitness<int> throwingObserver = new(new InvalidOperationException(ThrottleDownstreamThrowsMessage));
 
         await using var sub = await signal.Values
-            .Throttle(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds))
+            .Throttle(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds), time)
             .SubscribeAsync(throwingObserver, CancellationToken.None);
 
         await signal.OnNextAsync(One, CancellationToken.None);
-        var exception = await unhandled.WaitForAsync(ThrottleDownstreamThrowsMessage, WaitTimeout);
+        await time.FireNextAsync();
+        var exception = await unhandled.WaitForAsync(ThrottleDownstreamThrowsMessage);
 
         await Assert.That(exception).IsNotNull();
         await Assert.That(exception!.Message).IsEqualTo(ThrottleDownstreamThrowsMessage);
     }
 
-    /// <summary>Exercises the <c>!IsCurrentEmission(id)</c> guard inside <c>DebounceUntil</c>'s
-    /// <c>DelayAndEmitAsync</c> — when a later emission supersedes the current pending one
-    /// before its debounce window elapses, the older delayed-emit task wakes, sees its id is
-    /// stale, and returns early without forwarding.</summary>
+    /// <summary>Verifies that a newer pending value suppresses an older delay.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenDebounceUntilSecondEmissionSupersedesFirst_ThenStaleDelayDropsValue()
     {
-        var signal = Signal.Create<int>();
+        ManualTimeProvider time = new();
         List<int> values = [];
-        TaskCompletionSource emitted = new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        await using var sub = await signal.Values
-            .DebounceUntil(ShortDebounceWindow, static _ => false)
-            .SubscribeAsync((v, _) =>
+        SignalAsyncExtensions.DebounceUntilSignal<int>.DebounceUntilWitness observer = new(
+            new CallbackWitnessAsync<int>((v, _) =>
             {
                 values.Add(v);
-                IgnoredResult.Of(emitted.TrySetResult());
                 return default;
-            });
-
-        await signal.OnNextAsync(One, CancellationToken.None);
-        await signal.OnNextAsync(Two, CancellationToken.None);
-
-        await emitted.Task;
+            }),
+            ShortDebounceWindow,
+            static _ => false,
+            time,
+            CancellationToken.None);
+        await using var subscription = observer;
+        var first = observer.StartDelayAsync(One, CancellationToken.None);
+        var second = observer.StartDelayAsync(Two, CancellationToken.None);
+        await time.FireNextAsync();
+        await first;
+        await Assert.That(values).IsEmpty();
+        await time.FireNextAsync();
+        await second;
 
         await Assert.That(values).IsCollectionEqualTo([Two]);
     }
@@ -677,16 +661,18 @@ public class ParityHelpersOperatorFusionsTests
     public async Task WhenDebounceUntilDownstreamThrowsInDelay_ThenRoutedToUnhandled()
     {
         using UnhandledExceptionCapture unhandled = new();
+        ManualTimeProvider time = new();
 
         var signal = Signal.Create<int>();
         ThrowingAsyncWitness<int> throwingObserver = new(new InvalidOperationException(DebounceDownstreamThrowsMessage));
 
         await using var sub = await signal.Values
-            .DebounceUntil(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds), static _ => false)
+            .DebounceUntil(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds), static _ => false, time)
             .SubscribeAsync(throwingObserver, CancellationToken.None);
 
         await signal.OnNextAsync(One, CancellationToken.None);
-        var exception = await unhandled.WaitForAsync(DebounceDownstreamThrowsMessage, WaitTimeout);
+        await time.FireNextAsync();
+        var exception = await unhandled.WaitForAsync(DebounceDownstreamThrowsMessage);
 
         await Assert.That(exception).IsNotNull();
         await Assert.That(exception!.Message).IsEqualTo(DebounceDownstreamThrowsMessage);
@@ -726,7 +712,7 @@ public class ParityHelpersOperatorFusionsTests
         SignalAsyncExtensions.ThrottleDistinctSignal<int>.ThrottleDistinctWitness observer = new(
             new NoOpAsyncWitness<int>(),
             TimeSpan.FromHours(1),
-            TimeProvider.System,
+            new ManualTimeProvider(),
             CancellationToken.None);
 
         // Drive _id forward by two emissions; the first pending delay's id (1) is then stale.
@@ -746,7 +732,7 @@ public class ParityHelpersOperatorFusionsTests
         SignalAsyncExtensions.ThrottleDistinctSignal<int>.ThrottleDistinctWitness observer = new(
             new NoOpAsyncWitness<int>(),
             TimeSpan.FromHours(1),
-            TimeProvider.System,
+            new ManualTimeProvider(),
             CancellationToken.None);
 
         await observer.OnNextAsync(One, CancellationToken.None);
@@ -757,8 +743,7 @@ public class ParityHelpersOperatorFusionsTests
         // Drive another upstream so id matches the second claim.
         await observer.OnNextAsync(Two, CancellationToken.None);
 
-        // Re-claim with the previously-emitted value at the new id — rejected by the
-        // downstream-distinct check.
+        // Equal values remain suppressed across generation changes.
         var secondClaim = observer.TryClaimEmission(One, SecondEmissionId);
 
         await Assert.That(firstClaim).IsTrue();
@@ -774,7 +759,7 @@ public class ParityHelpersOperatorFusionsTests
             new NoOpAsyncWitness<int>(),
             TimeSpan.FromHours(1),
             static _ => false,
-            TimeProvider.System,
+            new ManualTimeProvider(),
             CancellationToken.None);
 
         await observer.OnNextAsync(One, CancellationToken.None);
@@ -819,6 +804,29 @@ public class ParityHelpersOperatorFusionsTests
         await Assert.That(attached).IsTrue();
     }
 
+    /// <summary>Verifies that an upstream subscription arriving after both branches leave is disposed.</summary>
+    /// <param name="branchAlive">Whether one branch remains subscribed.</param>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task WhenPartitionSubscriptionArrives_ThenOwnershipFollowsBranchState(bool branchAlive)
+    {
+        await using var signal = Signal.Create<int>();
+        SignalAsyncExtensions.PartitionCoordinator<int> coordinator = new(signal.Values, static _ => true);
+        await using var branch = branchAlive
+            ? await coordinator.TrueBranch.SubscribeAsync(static (_, _) => default)
+            : DisposableAsync.Empty;
+        StrongBox<bool> disposed = new();
+        var incoming = DisposableAsync.Create(disposed, static state =>
+        {
+            state.Value = true;
+            return default;
+        });
+        await coordinator.AttachOrDisposeStaleSubscriptionAsync(incoming);
+        await Assert.That(disposed.Value).IsEqualTo(!branchAlive);
+    }
+
     /// <summary>Yields values as a generic <see cref="IEnumerable{T}"/> (neither array nor list) to drive the slow-path branch of <c>ForEach</c>.</summary>
     /// <param name="values">Values to yield.</param>
     /// <returns>A lazily-evaluated enumerable.</returns>
@@ -830,11 +838,7 @@ public class ParityHelpersOperatorFusionsTests
         }
     }
 
-    /// <summary>Bare-bones downstream async observer that throws a given exception inside
-    /// <c>OnNextAsync</c>. Bypassing the <see cref="WitnessAsync{T}"/> base class is intentional
-    /// — the base class would otherwise swallow synchronous throws and route them through
-    /// <see cref="UnhandledExceptionHandler"/>, never letting the exception propagate up to the
-    /// upstream operator's <c>catch (Exception e)</c> block under test.</summary>
+    /// <summary>Throws directly from OnNextAsync without handling the exception.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="error">The exception to throw on every emission.</param>
     private sealed class ThrowingAsyncWitness<T>(Exception error) : IObserverAsync<T>

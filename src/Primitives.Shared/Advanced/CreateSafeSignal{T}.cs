@@ -10,8 +10,7 @@ namespace ReactiveUI.Primitives.Reactive.Advanced;
 namespace ReactiveUI.Primitives.Advanced;
 #endif
 
-/// <summary>Creates a signal from a subscribe delegate whose sink releases the subscription when a downstream
-/// <c>OnNext</c> throws.</summary>
+/// <summary>Creates a signal from a subscribe delegate whose sink releases the subscription when a downstream <c>OnNext</c> throws.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 internal sealed class CreateSafeSignal<T> : IRequireCurrentThread<T>
 {

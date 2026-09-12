@@ -8,9 +8,6 @@ namespace ReactiveUI.Primitives.Async.Reactive;
 namespace ReactiveUI.Primitives.Async;
 #endif
 /// <summary>Provides extension methods for working with asynchronous observable sequences.</summary>
-/// <remarks>The SignalAsync class contains static methods that extend the functionality of asynchronous
-/// observables, enabling advanced composition and control over asynchronous data streams. These methods are intended
-/// for use with types that implement asynchronous observer patterns.</remarks>
 public static partial class SignalAsyncReactiveExtensions
 {
     /// <summary>Scheduler-yielding operators for an observable source sequence.</summary>
@@ -18,14 +15,9 @@ public static partial class SignalAsyncReactiveExtensions
     /// <param name = "source">The source observable sequence to yield from.</param>
     extension<T>(IObservableAsync<T> source)
     {
-        /// <summary>
-        /// Returns an observable sequence that yields control to the current thread's scheduler before emitting items from
-        /// the source sequence.
-        /// </summary>
+        /// <summary>Returns an observable sequence that yields control to the current thread's scheduler before emitting items from the source sequence.</summary>
         /// <returns>An observable sequence that emits the same elements as the source, but yields control to the scheduler before
         /// each emission.</returns>
-        /// <remarks>This method can be used to ensure that the source sequence's emissions are scheduled
-        /// asynchronously, which may help avoid stack overflows or improve responsiveness in certain scenarios.</remarks>
         public IObservableAsync<T> Yield()
         {
             ArgumentExceptionHelper.ThrowIfNull(source);

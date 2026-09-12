@@ -2,13 +2,13 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reactive;
 using System.Reactive.Subjects;
+using ReactiveUI.Primitives.Extensions.Operators;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Edge-case coverage for <c>SelectAsyncSequential</c> backed by
-/// <c>SelectAsyncSequentialObservable&lt;TSource, TResult&gt;</c> — error forwarding,
-/// disposal mid-flight, and completion while an in-flight selector is running.</summary>
+/// <summary>Tests sequential projection completion, errors, and disposal during projection.</summary>
 public class SelectAsyncSequentialObservableTests
 {
     /// <summary>Synthetic error message attached to a failing selector.</summary>
@@ -25,12 +25,10 @@ public class SelectAsyncSequentialObservableTests
         const int First = 1;
         const int Second = 2;
         Subject<int> subject = new();
-        TaskCompletionSource<Exception> faulted = new();
+        TaskCompletionSource<Exception> faulted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         List<int> results = [];
         InvalidOperationException expected = new(SelectorErrorMessage);
-        using var sub = subject
-            .SelectAsyncSequential(x => x == First ? Task.FromException<int>(expected) : Task.FromResult(x))
-            .Subscribe(results.Add, ex => faulted.TrySetResult(ex));
+        using var sub = subject.SelectAsyncSequential(x => x == First ? Task.FromException<int>(expected) : Task.FromResult(x)).Subscribe(results.Add, ex => faulted.TrySetResult(ex));
         subject.OnNext(First);
         subject.OnNext(Second);
         var caught = await faulted.Task;
@@ -59,24 +57,15 @@ public class SelectAsyncSequentialObservableTests
     public async Task WhenSelectAsyncSequentialDisposedMidFlight_ThenSuppressesEmissionAndCompletion()
     {
         const int TriggerValue = 1;
-        Subject<int> subject = new();
-
-        // The gate completes its continuations inline, so releasing it runs the selector's tail here.
-        TaskCompletionSource<bool> gate = new();
-        TaskCompletionSource<bool> selectorResumed = new();
+        TaskCompletionSource<int> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
         List<int> results = [];
         var completed = false;
-        var sub = subject.SelectAsyncSequential(async x =>
-        {
-            await gate.Task.ConfigureAwait(false);
-            _ = selectorResumed.TrySetResult(true);
-            return x;
-        }).Subscribe(results.Add, () => completed = true);
-        subject.OnNext(TriggerValue);
-        subject.OnCompleted();
-        sub.Dispose();
-        gate.SetResult(true);
-        await selectorResumed.Task;
+        SelectAsyncSequentialObservable<int, int>.SelectAsyncSequentialSink sink = new(Observer.Create<int>(results.Add, () => completed = true), _ => gate.Task);
+        var processing = sink.OnNextAsync(TriggerValue);
+        sink.Dispose();
+        gate.SetResult(TriggerValue);
+        await processing;
+        sink.OnCompleted();
         await Assert.That(results).IsEmpty();
         await Assert.That(completed).IsFalse();
     }
@@ -88,9 +77,9 @@ public class SelectAsyncSequentialObservableTests
     {
         const int Value = 42;
         Subject<int> subject = new();
-        TaskCompletionSource<bool> gate = new();
+        TaskCompletionSource<bool> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
         List<int> results = [];
-        TaskCompletionSource<bool> completed = new();
+        TaskCompletionSource<bool> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var sub = subject.SelectAsyncSequential(async x =>
         {
             await gate.Task.ConfigureAwait(false);
@@ -98,8 +87,6 @@ public class SelectAsyncSequentialObservableTests
         }).Subscribe(results.Add, () => completed.TrySetResult(true));
         subject.OnNext(Value);
         subject.OnCompleted();
-
-        // The selector is parked on the gate, so nothing can have emitted or completed.
         await Assert.That(completed.Task.IsCompleted).IsFalse();
         await Assert.That(results).IsEmpty();
         gate.SetResult(true);
@@ -119,8 +106,7 @@ public class SelectAsyncSequentialObservableTests
         List<int> values = [];
         Exception? caught = null;
         var completedCount = 0;
-        using var sub = source.SelectAsyncSequential(Task.FromResult)
-            .Subscribe(values.Add, ex => caught = ex, () => completedCount++);
+        using var sub = source.SelectAsyncSequential(Task.FromResult).Subscribe(values.Add, ex => caught = ex, () => completedCount++);
         source.Observer.OnCompleted();
         source.Observer.OnError(new InvalidOperationException("late"));
         source.Observer.OnCompleted();

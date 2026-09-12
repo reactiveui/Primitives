@@ -39,7 +39,7 @@ public sealed partial class EventGeneratorTests
     /// <summary>The number of deliberately unsupported events in the combined signature test.</summary>
     private const int UnsupportedEventCount = 4;
 
-    /// <summary>The number of distinct wrappers expected from the sanitization-collision regression.</summary>
+    /// <summary>The distinct wrappers required when sanitized identifiers collide.</summary>
     private const int SanitizationCollisionWrapperCount = 2;
 
     /// <summary>Source that exercises a conventional instance event.</summary>

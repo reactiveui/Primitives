@@ -29,7 +29,7 @@ public partial class CombineLatestOperatorTests
                 });
 
         await s1.OnCompletedAsync(Result.Failure(new InvalidOperationException("err")));
-        var result = await completed.Task.WaitAsync(TimeSpan.FromSeconds(WaitTimeoutSeconds));
+        var result = await completed.Task;
 
         await Assert.That(result.IsFailure).IsTrue();
     }
@@ -54,7 +54,7 @@ public partial class CombineLatestOperatorTests
                 });
 
         await s2.OnCompletedAsync(Result.Failure(new InvalidOperationException("err")));
-        var result = await completed.Task.WaitAsync(TimeSpan.FromSeconds(WaitTimeoutSeconds));
+        var result = await completed.Task;
 
         await Assert.That(result.IsFailure).IsTrue();
     }
@@ -83,7 +83,7 @@ public partial class CombineLatestOperatorTests
         await s2.OnCompletedAsync(Result.Success);
         await s1.OnCompletedAsync(Result.Success);
 
-        var result = await completed.Task.WaitAsync(TimeSpan.FromSeconds(WaitTimeoutSeconds));
+        var result = await completed.Task;
         await Assert.That(result.IsSuccess).IsTrue();
     }
 
@@ -111,7 +111,7 @@ public partial class CombineLatestOperatorTests
         await s1.OnCompletedAsync(Result.Success);
         await s2.OnCompletedAsync(Result.Success);
 
-        var result = await completed.Task.WaitAsync(TimeSpan.FromSeconds(WaitTimeoutSeconds));
+        var result = await completed.Task;
         await Assert.That(result.IsSuccess).IsTrue();
     }
 
@@ -187,7 +187,7 @@ public partial class CombineLatestOperatorTests
                 });
 
         await s1.OnCompletedAsync(Result.Failure(new InvalidOperationException("err")));
-        var result = await completed.Task.WaitAsync(TimeSpan.FromSeconds(WaitTimeoutSeconds));
+        var result = await completed.Task;
 
         await Assert.That(result.IsFailure).IsTrue();
     }
@@ -213,7 +213,7 @@ public partial class CombineLatestOperatorTests
                 });
 
         await s2.OnCompletedAsync(Result.Failure(new InvalidOperationException("err")));
-        var result = await completed.Task.WaitAsync(TimeSpan.FromSeconds(WaitTimeoutSeconds));
+        var result = await completed.Task;
 
         await Assert.That(result.IsFailure).IsTrue();
     }
@@ -239,7 +239,7 @@ public partial class CombineLatestOperatorTests
                 });
 
         await s3.OnCompletedAsync(Result.Failure(new InvalidOperationException("err")));
-        var result = await completed.Task.WaitAsync(TimeSpan.FromSeconds(WaitTimeoutSeconds));
+        var result = await completed.Task;
 
         await Assert.That(result.IsFailure).IsTrue();
     }
@@ -271,7 +271,7 @@ public partial class CombineLatestOperatorTests
         await s3.OnCompletedAsync(Result.Success);
         await s1.OnCompletedAsync(Result.Success);
 
-        var result = await completed.Task.WaitAsync(TimeSpan.FromSeconds(WaitTimeoutSeconds));
+        var result = await completed.Task;
         await Assert.That(result.IsSuccess).IsTrue();
     }
 
@@ -302,7 +302,7 @@ public partial class CombineLatestOperatorTests
         await s3.OnCompletedAsync(Result.Success);
         await s2.OnCompletedAsync(Result.Success);
 
-        var result = await completed.Task.WaitAsync(TimeSpan.FromSeconds(WaitTimeoutSeconds));
+        var result = await completed.Task;
         await Assert.That(result.IsSuccess).IsTrue();
     }
 
@@ -333,7 +333,7 @@ public partial class CombineLatestOperatorTests
         await s2.OnCompletedAsync(Result.Success);
         await s3.OnCompletedAsync(Result.Success);
 
-        var result = await completed.Task.WaitAsync(TimeSpan.FromSeconds(WaitTimeoutSeconds));
+        var result = await completed.Task;
         await Assert.That(result.IsSuccess).IsTrue();
     }
 

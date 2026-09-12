@@ -4,11 +4,7 @@
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
-/// <summary>
-/// Runs every benchmark scenario once and writes each result as a <c>key=value</c> row, so the
-/// libraries can be compared for parity by <see cref="SmokeParityValidator"/>. Row order is
-/// significant: the validator groups consecutive rows that share a scenario name.
-/// </summary>
+/// <summary>Runs each scenario once and writes consecutive key=value rows for parity comparison.</summary>
 internal static class SmokeBenchmarkRunner
 {
     /// <summary>Runs the deterministic smoke benchmark scenarios and writes their results to the console.</summary>
@@ -19,7 +15,7 @@ internal static class SmokeBenchmarkRunner
         await RunOperatorSmokeAsync();
         RunSubjectSmoke();
         RunAsyncBridgeSmoke();
-        await RunExpansionSmokeBenchmarksAsync();
+        await RunOperatorAndFactorySmokeBenchmarksAsync();
         RunCoreRuntimeSmokeBenchmarks();
     }
 
@@ -130,9 +126,9 @@ internal static class SmokeBenchmarkRunner
         Console.WriteLine($"R3CompletedTaskBridge={taskBridge.R3CompletedTaskBridge()}");
     }
 
-    /// <summary>Runs the expansion-coverage smoke benchmark scenarios and writes their results to the console.</summary>
-    /// <returns>A task that completes when all expansion smoke benchmarks have run.</returns>
-    private static async Task RunExpansionSmokeBenchmarksAsync()
+    /// <summary>Runs operator and factory smoke benchmarks and prints their results.</summary>
+    /// <returns>The asynchronous benchmark run.</returns>
+    private static async Task RunOperatorAndFactorySmokeBenchmarksAsync()
     {
         await RunFactoryAdapterExpansionSmokeAsync();
         RunTimeSchedulerSmoke();
@@ -269,10 +265,7 @@ internal static class SmokeBenchmarkRunner
         Console.WriteLine($"R3AllContains={await terminalCollections.R3AllContains()}");
     }
 
-    /// <summary>
-    /// Writes the synchronous array-collection smoke results from a non-async method so the
-    /// synchronous CollectArray benchmarks are measured without awaiting their async overloads.
-    /// </summary>
+    /// <summary>Writes the synchronous array-collection smoke results from a non-async method so the synchronous CollectArray benchmarks are measured without awaiting their async overloads.</summary>
     /// <param name="terminalCollections">The terminal-collection benchmarks instance.</param>
     private static void WriteSynchronousCollectArrayResults(TerminalCollectionBenchmarks terminalCollections)
     {

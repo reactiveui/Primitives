@@ -11,8 +11,7 @@ namespace ReactiveUI.Primitives.Signals;
 [System.Diagnostics.DebuggerDisplay("ObserverHandler: Subject = {_subject}, Observer = {_observer}")]
 public sealed class ObserverHandler<T>(AsyncSignal<T> subject, IObserver<T> observer) : IDisposable
 {
-    /// <summary>Executes the new operation.</summary>
-    /// <returns>The result.</returns>
+    /// <summary>Serializes detachment from the signal.</summary>
     private readonly Lock _gate = new();
 
     /// <summary>Stores state for the signal implementation.</summary>
@@ -22,7 +21,7 @@ public sealed class ObserverHandler<T>(AsyncSignal<T> subject, IObserver<T> obse
     /// <summary>Stores state for the signal implementation.</summary>
     private IObserver<T>? _observer = observer;
 
-    /// <summary>Executes the Dispose operation.</summary>
+    /// <summary>Detaches the observer once and releases references to both endpoints.</summary>
     public void Dispose()
     {
         lock (_gate)

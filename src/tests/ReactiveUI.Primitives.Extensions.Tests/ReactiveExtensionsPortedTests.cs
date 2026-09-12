@@ -8,7 +8,7 @@ using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Extensions.Tests;
 
-/// <summary>Ported coverage for the migrated synchronous extension operators using primitives runtime types.</summary>
+/// <summary>Tests synchronous extension operators with primitives runtime types.</summary>
 public sealed class ReactiveExtensionsPortedTests
 {
     /// <summary>Candidate keys probed by the first-match test.</summary>
@@ -244,7 +244,6 @@ public sealed class ReactiveExtensionsPortedTests
         using var conSub = source
             .SelectAsyncConcurrent(static x => Task.FromResult(x * ConcurrentMultiplier), MaxConcurrency)
             .Subscribe(concurrent.Add);
-        // Both selectors return an already-completed task, so their projections land inside OnNext.
         source.OnNext(InputValue);
         List<RxVoid> runAll = [];
         using var runAllSub = new[] { Observable.Return(RxVoid.Default), Observable.Return(RxVoid.Default) }.RunAll()

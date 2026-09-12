@@ -6,7 +6,7 @@ using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>Coverage tests for ReduceAsync compatibility overloads and async witness failure paths.</summary>
+/// <summary>Tests ReduceAsync compatibility overloads and async witness failures.</summary>
 public partial class TerminalOperatorTests
 {
     /// <summary>Expected sum for the sequence 1, 2, 3.</summary>

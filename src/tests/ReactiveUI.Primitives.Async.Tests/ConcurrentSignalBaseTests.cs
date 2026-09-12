@@ -9,10 +9,7 @@ using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>Coverage for the static fan-out helpers in
-/// <see cref="Concurrent"/> — exercises empty / single / multi-observer paths and the
-/// slow-path that uses <see cref="Task.WhenAll(Task[])"/> when at
-/// least one observer's <see cref="ValueTask"/> hasn't completed synchronously.</summary>
+/// <summary>Tests concurrent notification of empty, single and multiple observer collections.</summary>
 public class ConcurrentSignalBaseTests
 {
     /// <summary>Value forwarded by the <c>OnNext</c> fan-out tests.</summary>
@@ -75,15 +72,20 @@ public class ConcurrentSignalBaseTests
         IntCapture a = new();
         IntCapture b = new();
         IntCapture c = new();
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         ImmutableArray<IObserverAsync<int>> observers =
         [
-            MakeSlow(a),
+            MakeSlow(a, release.Task),
             MakeSync(b),
-            MakeSlow(c)
+            MakeSlow(c, release.Task)
         ];
 
-        await Concurrent.ForwardOnNextConcurrently(observers, ForwardedValue, default);
+        var forwarding = Concurrent.ForwardOnNextConcurrently(observers, ForwardedValue, default);
+        await Assert.That(forwarding.IsCompleted).IsFalse();
+        await Assert.That(b.Value).IsEqualTo(ForwardedValue);
+        release.SetResult();
+        await forwarding;
 
         await Assert.That(a.Value).IsEqualTo(ForwardedValue);
         await Assert.That(b.Value).IsEqualTo(ForwardedValue);
@@ -112,13 +114,18 @@ public class ConcurrentSignalBaseTests
 
         ErrorCapture a = new();
         ErrorCapture b = new();
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
         ImmutableArray<IObserverAsync<int>> multi =
         [
-            new CallbackWitnessAsync<int>(static (_, _) => default, MakeErrorSlow(a)),
+            new CallbackWitnessAsync<int>(static (_, _) => default, MakeErrorSlow(a, release.Task)),
             new CallbackWitnessAsync<int>(static (_, _) => default, MakeErrorSync(b))
         ];
         InvalidOperationException multiError = new("multi");
-        await Concurrent.ForwardOnErrorResumeConcurrently(multi, multiError, default);
+        var forwarding = Concurrent.ForwardOnErrorResumeConcurrently(multi, multiError, default);
+        await Assert.That(forwarding.IsCompleted).IsFalse();
+        await Assert.That(b.Error).IsSameReferenceAs(multiError);
+        release.SetResult();
+        await forwarding;
         await Assert.That(a.Error).IsSameReferenceAs(multiError);
         await Assert.That(b.Error).IsSameReferenceAs(multiError);
     }
@@ -141,12 +148,17 @@ public class ConcurrentSignalBaseTests
 
         ResultCapture a = new();
         ResultCapture b = new();
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
         ImmutableArray<IObserverAsync<int>> multi =
         [
-            new CallbackWitnessAsync<int>(static (_, _) => default, null, MakeCompletedSlow(a)),
+            new CallbackWitnessAsync<int>(static (_, _) => default, null, MakeCompletedSlow(a, release.Task)),
             new CallbackWitnessAsync<int>(static (_, _) => default, null, MakeCompletedSync(b))
         ];
-        await Concurrent.ForwardOnCompletedConcurrently(multi, Result.Success);
+        var forwarding = Concurrent.ForwardOnCompletedConcurrently(multi, Result.Success);
+        await Assert.That(forwarding.IsCompleted).IsFalse();
+        await Assert.That(b.Result).IsEqualTo(Result.Success);
+        release.SetResult();
+        await forwarding;
         await Assert.That(a.Result).IsEqualTo(Result.Success);
         await Assert.That(b.Result).IsEqualTo(Result.Success);
     }
@@ -158,14 +170,19 @@ public class ConcurrentSignalBaseTests
     {
         ErrorCapture a = new();
         ErrorCapture b = new();
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
         ImmutableArray<IObserverAsync<int>> observers =
         [
-            new CallbackWitnessAsync<int>(static (_, _) => default, MakeErrorSlow(a)),
+            new CallbackWitnessAsync<int>(static (_, _) => default, MakeErrorSlow(a, release.Task)),
             new CallbackWitnessAsync<int>(static (_, _) => default, MakeErrorSync(b))
         ];
         InvalidOperationException error = new("serial-error");
 
-        await SerialBroadcastHelpers.BroadcastOnErrorResumeAsync(observers, error, default);
+        var forwarding = SerialBroadcastHelpers.BroadcastOnErrorResumeAsync(observers, error, default);
+        await Assert.That(forwarding.IsCompleted).IsFalse();
+        await Assert.That(b.Error).IsNull();
+        release.SetResult();
+        await forwarding;
 
         await Assert.That(a.Error).IsSameReferenceAs(error);
         await Assert.That(b.Error).IsSameReferenceAs(error);
@@ -178,13 +195,18 @@ public class ConcurrentSignalBaseTests
     {
         ResultCapture a = new();
         ResultCapture b = new();
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
         ImmutableArray<IObserverAsync<int>> observers =
         [
-            new CallbackWitnessAsync<int>(static (_, _) => default, null, MakeCompletedSlow(a)),
+            new CallbackWitnessAsync<int>(static (_, _) => default, null, MakeCompletedSlow(a, release.Task)),
             new CallbackWitnessAsync<int>(static (_, _) => default, null, MakeCompletedSync(b))
         ];
 
-        await SerialBroadcastHelpers.BroadcastOnCompletedAsync(observers, Result.Success);
+        var forwarding = SerialBroadcastHelpers.BroadcastOnCompletedAsync(observers, Result.Success);
+        await Assert.That(forwarding.IsCompleted).IsFalse();
+        await Assert.That(b.Result).IsNull();
+        release.SetResult();
+        await forwarding;
 
         await Assert.That(a.Result).IsEqualTo(Result.Success);
         await Assert.That(b.Result).IsEqualTo(Result.Success);
@@ -248,14 +270,14 @@ public class ConcurrentSignalBaseTests
             return default;
         });
 
-    /// <summary>Creates an OnNext observer that suspends before capturing — forces the slow path.</summary>
+    /// <summary>Creates an OnNext observer that waits for release before capturing.</summary>
     /// <param name="capture">The capture sink.</param>
+    /// <param name="release">The notification gate.</param>
     /// <returns>An observer whose <c>OnNextAsync</c> completes asynchronously.</returns>
-    private static CallbackWitnessAsync<int> MakeSlow(IntCapture capture) =>
+    private static CallbackWitnessAsync<int> MakeSlow(IntCapture capture, Task release) =>
         new(async (x, _) =>
         {
-            // Yielding guarantees the returned ValueTask is incomplete when the fan-out inspects it.
-            await Task.Yield();
+            await release;
             capture.Value = x;
         });
 
@@ -269,13 +291,14 @@ public class ConcurrentSignalBaseTests
             return default;
         };
 
-    /// <summary>OnErrorResume handler that suspends before recording — forces the slow path.</summary>
+    /// <summary>Creates an error handler that waits for release before recording.</summary>
     /// <param name="capture">The capture sink.</param>
+    /// <param name="release">The notification gate.</param>
     /// <returns>An OnErrorResume delegate.</returns>
-    private static Func<Exception, CancellationToken, ValueTask> MakeErrorSlow(ErrorCapture capture) =>
+    private static Func<Exception, CancellationToken, ValueTask> MakeErrorSlow(ErrorCapture capture, Task release) =>
         async (ex, _) =>
         {
-            await Task.Yield();
+            await release;
             capture.Error = ex;
         };
 
@@ -289,13 +312,14 @@ public class ConcurrentSignalBaseTests
             return default;
         };
 
-    /// <summary>OnCompleted handler that suspends before recording — forces the slow path.</summary>
+    /// <summary>Creates a completion handler that waits for release before recording.</summary>
     /// <param name="capture">The capture sink.</param>
+    /// <param name="release">The notification gate.</param>
     /// <returns>An OnCompleted delegate.</returns>
-    private static Func<Result, ValueTask> MakeCompletedSlow(ResultCapture capture) =>
+    private static Func<Result, ValueTask> MakeCompletedSlow(ResultCapture capture, Task release) =>
         async r =>
         {
-            await Task.Yield();
+            await release;
             capture.Result = r;
         };
 

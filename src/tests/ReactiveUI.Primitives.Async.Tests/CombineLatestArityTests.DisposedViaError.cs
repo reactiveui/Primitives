@@ -42,7 +42,7 @@ public partial class CombineLatestArityTests
         await src1.EmitNext(1);
         await src2.EmitNext(SeedValue2);
 
-        var failTask = Task.Run(() => src1.Complete(Result.Failure(new InvalidOperationException("test"))));
+        var failTask = src1.Complete(Result.Failure(new InvalidOperationException("test")));
         await completionBlocked.Task;
 
         await src2.EmitNext(PostDisposeValue);
@@ -85,7 +85,7 @@ public partial class CombineLatestArityTests
         await src1.EmitNext(1);
         await src2.EmitNext(SeedValue2);
 
-        var failTask = Task.Run(() => src1.Complete(Result.Failure(new InvalidOperationException("test"))));
+        var failTask = src1.Complete(Result.Failure(new InvalidOperationException("test")));
         await completionBlocked.Task;
 
         await src2.EmitError(new InvalidOperationException(IgnoredMessage));
@@ -130,7 +130,7 @@ public partial class CombineLatestArityTests
         await src2.EmitNext(SeedValue2);
         await src3.EmitNext(SeedValue3);
 
-        var failTask = Task.Run(() => src1.Complete(Result.Failure(new InvalidOperationException("test"))));
+        var failTask = src1.Complete(Result.Failure(new InvalidOperationException("test")));
         await completionBlocked.Task;
 
         await src3.EmitNext(PostDisposeValue);
@@ -175,7 +175,7 @@ public partial class CombineLatestArityTests
         await src2.EmitNext(SeedValue2);
         await src3.EmitNext(SeedValue3);
 
-        var failTask = Task.Run(() => src1.Complete(Result.Failure(new InvalidOperationException("test"))));
+        var failTask = src1.Complete(Result.Failure(new InvalidOperationException("test")));
         await completionBlocked.Task;
 
         await src3.EmitError(new InvalidOperationException(IgnoredMessage));
@@ -222,7 +222,7 @@ public partial class CombineLatestArityTests
         await src3.EmitNext(SeedValue3);
         await src4.EmitNext(SeedValue4);
 
-        var failTask = Task.Run(() => src1.Complete(Result.Failure(new InvalidOperationException("test"))));
+        var failTask = src1.Complete(Result.Failure(new InvalidOperationException("test")));
         await completionBlocked.Task;
 
         await src4.EmitNext(PostDisposeValue);
@@ -269,7 +269,7 @@ public partial class CombineLatestArityTests
         await src3.EmitNext(SeedValue3);
         await src4.EmitNext(SeedValue4);
 
-        var failTask = Task.Run(() => src1.Complete(Result.Failure(new InvalidOperationException("test"))));
+        var failTask = src1.Complete(Result.Failure(new InvalidOperationException("test")));
         await completionBlocked.Task;
 
         await src4.EmitError(new InvalidOperationException(IgnoredMessage));
@@ -318,7 +318,7 @@ public partial class CombineLatestArityTests
         await src4.EmitNext(SeedValue4);
         await src5.EmitNext(SeedValue5);
 
-        var failTask = Task.Run(() => src1.Complete(Result.Failure(new InvalidOperationException("test"))));
+        var failTask = src1.Complete(Result.Failure(new InvalidOperationException("test")));
         await completionBlocked.Task;
 
         await src5.EmitNext(PostDisposeValue);
@@ -367,7 +367,7 @@ public partial class CombineLatestArityTests
         await src4.EmitNext(SeedValue4);
         await src5.EmitNext(SeedValue5);
 
-        var failTask = Task.Run(() => src1.Complete(Result.Failure(new InvalidOperationException("test"))));
+        var failTask = src1.Complete(Result.Failure(new InvalidOperationException("test")));
         await completionBlocked.Task;
 
         await src5.EmitError(new InvalidOperationException(IgnoredMessage));
@@ -418,7 +418,7 @@ public partial class CombineLatestArityTests
         await src5.EmitNext(SeedValue5);
         await src6.EmitNext(SeedValue6);
 
-        var failTask = Task.Run(() => src1.Complete(Result.Failure(new InvalidOperationException("test"))));
+        var failTask = src1.Complete(Result.Failure(new InvalidOperationException("test")));
         await completionBlocked.Task;
 
         await src6.EmitNext(PostDisposeValue);
@@ -469,7 +469,7 @@ public partial class CombineLatestArityTests
         await src5.EmitNext(SeedValue5);
         await src6.EmitNext(SeedValue6);
 
-        var failTask = Task.Run(() => src1.Complete(Result.Failure(new InvalidOperationException("test"))));
+        var failTask = src1.Complete(Result.Failure(new InvalidOperationException("test")));
         await completionBlocked.Task;
 
         await src6.EmitError(new InvalidOperationException(IgnoredMessage));
@@ -522,7 +522,7 @@ public partial class CombineLatestArityTests
         await src6.EmitNext(SeedValue6);
         await src7.EmitNext(SeedValue7);
 
-        var failTask = Task.Run(() => src1.Complete(Result.Failure(new InvalidOperationException("test"))));
+        var failTask = src1.Complete(Result.Failure(new InvalidOperationException("test")));
         await completionBlocked.Task;
 
         await src7.EmitNext(PostDisposeValue);
@@ -575,7 +575,7 @@ public partial class CombineLatestArityTests
         await src6.EmitNext(SeedValue6);
         await src7.EmitNext(SeedValue7);
 
-        var failTask = Task.Run(() => src1.Complete(Result.Failure(new InvalidOperationException("test"))));
+        var failTask = src1.Complete(Result.Failure(new InvalidOperationException("test")));
         await completionBlocked.Task;
 
         await src7.EmitError(new InvalidOperationException(IgnoredMessage));
@@ -637,7 +637,7 @@ public partial class CombineLatestArityTests
         await src7.EmitNext(SeedValue7);
         await src8.EmitNext(SeedValue8);
 
-        var failTask = Task.Run(() => src1.Complete(Result.Failure(new InvalidOperationException("test"))));
+        var failTask = src1.Complete(Result.Failure(new InvalidOperationException("test")));
         await completionBlocked.Task;
 
         await src8.EmitNext(PostDisposeValue);
@@ -699,7 +699,7 @@ public partial class CombineLatestArityTests
         await src7.EmitNext(SeedValue7);
         await src8.EmitNext(SeedValue8);
 
-        var failTask = Task.Run(() => src1.Complete(Result.Failure(new InvalidOperationException("test"))));
+        var failTask = src1.Complete(Result.Failure(new InvalidOperationException("test")));
         await completionBlocked.Task;
 
         await src8.EmitError(new InvalidOperationException(IgnoredMessage));

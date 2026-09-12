@@ -143,11 +143,7 @@ public class StateSignalTests
         await Assert.That(state.IsDisposed).IsTrue();
     }
 
-    /// <summary>
-    /// A state signal that has already completed never replays its value on subscription, so the projection has
-    /// no value to seed from its source. It must fall back to projecting the source's current value directly,
-    /// and then replay that value plus the completion to anyone who subscribes later.
-    /// </summary>
+    /// <summary>A projection created after source completion seeds from its current value and replays completion.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ReadOnlyStateProjectionSeedsItselfFromASourceThatHasAlreadyCompleted()
@@ -178,8 +174,7 @@ public class StateSignalTests
         Recorder<string> observer = new();
         _ = projection.Subscribe(observer);
 
-        // The projection is its own observer of the source, so driving it directly is what a source that
-        // keeps notifying after the terminal looks like from the projection's side.
+        // Deliver notifications from a source that ignores termination.
         projection.OnCompleted();
         projection.OnCompleted();
         projection.OnNext(UpdatedStateValue);

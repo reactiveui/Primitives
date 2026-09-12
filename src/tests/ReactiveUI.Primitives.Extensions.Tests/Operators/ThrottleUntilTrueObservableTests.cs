@@ -8,9 +8,7 @@ using ReactiveUI.Primitives.Extensions.Operators;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Edge-case coverage for <c>ThrottleUntilTrue</c> backed by
-/// <c>ThrottleUntilTrueObservable&lt;T&gt;</c> — predicate-true bypass, predicate-false
-/// throttling, error forwarding, completion forwarding, and dispose-before-fire.</summary>
+/// <summary>Tests predicate bypass, delayed values, termination, and cancellation of pending values.</summary>
 public class ThrottleUntilTrueObservableTests
 {
     /// <summary>Synthetic error message attached to source errors.</summary>
@@ -55,7 +53,7 @@ public class ThrottleUntilTrueObservableTests
         await Assert.That(emitted).IsCollectionEqualTo([NonMatchingValue]);
     }
 
-    /// <summary>Verifies that a later throttled value replaces an earlier still-pending one.</summary>
+    /// <summary>Verifies a later throttled value replaces the pending value.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenThrottleUntilTrueFastReplacements_ThenLatestWins()
@@ -145,14 +143,15 @@ public class ThrottleUntilTrueObservableTests
         await Assert.That(caught).IsNull();
     }
 
-    /// <summary>Builds the operator over a clock the test advances, so no emission depends on wall time.</summary>
+    /// <summary>Creates a throttle using the supplied clock and bypass predicate.</summary>
     /// <param name="source">The source sequence.</param>
     /// <param name="scheduler">The virtual clock timing throttled emissions.</param>
     /// <param name="predicate">The bypass predicate.</param>
     /// <returns>The throttled sequence.</returns>
-    private static IObservable<int> Throttled(
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    private static ThrottleUntilTrueObservable<int> Throttled(
         IObservable<int> source,
         VirtualClock scheduler,
         Func<int, bool> predicate) =>
-        new ThrottleUntilTrueObservable<int>(source, ThrottleWindow, predicate, scheduler);
+        new(source, ThrottleWindow, predicate, scheduler);
 }

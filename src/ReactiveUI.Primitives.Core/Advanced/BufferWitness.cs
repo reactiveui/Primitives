@@ -64,8 +64,7 @@ public sealed class BufferWitness<T>(IObserver<IList<T>> observer, int count, in
             return;
         }
 
-        // Reset to the skip *before* the hand-off: the observer may throw, and the sink must never be left
-        // holding an index into a buffer it has released, because the next value would index into null.
+        // Reset the index before a throwing observer can release the buffer.
         _buffer = null;
         _index = 0 - _skip;
 
@@ -120,8 +119,7 @@ public sealed class BufferWitness<T>(IObserver<IList<T>> observer, int count, in
     /// <inheritdoc/>
     public void Dispose()
     {
-        // Latching here makes the sink terminal on every teardown path, including disposal from Emit when
-        // the downstream observer throws, so a source that ignores disposal cannot push another value in.
+        // Reject further values on every teardown path, including observer failure.
         Volatile.Write(ref _done, 1);
         SinkSubscription.Dispose(ref _subscription);
     }

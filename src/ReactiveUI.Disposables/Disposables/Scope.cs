@@ -15,7 +15,7 @@ public static class Scope
     /// <summary>Creates a disposable object that invokes the specified action when disposed.</summary>
     /// <param name="dispose">Action to run during the first call to <see cref="IDisposable.Dispose"/>. The action is guaranteed to be run at most once.</param>
     /// <returns>The disposable object that runs the given action upon disposal.</returns>
-    /// <remarks>A <see langword="null"/> action returns <see cref="Empty"/> for backward compatibility with existing ReactiveUI.Primitives create pipelines.</remarks>
+    /// <remarks>A <see langword="null"/> action returns <see cref="Empty"/>.</remarks>
     public static IDisposable Create(Action dispose) =>
         dispose is null ? Empty : new ActionDisposable(dispose);
 

@@ -2,17 +2,13 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks.Sources;
 using ReactiveUI.Primitives.Internal;
 
 namespace ReactiveUI.Primitives.Async.Advanced;
 
-/// <summary>
-/// Poolable <see cref="IValueTaskSource"/> backing <c>DelayAsync</c> for non-System
-/// <see cref="TimeProvider"/> instances, so a delay costs no per-call allocation.
-/// </summary>
+/// <summary>Poolable <see cref="IValueTaskSource"/> backing <c>DelayAsync</c> for non-System <see cref="TimeProvider"/> instances, so a delay costs no per-call allocation.</summary>
 /// <remarks>
 /// Whichever of the timer callback and the cancellation registration fires first claims completion
 /// through an <see cref="Interlocked.CompareExchange(ref int, int, int)"/> on a state flag; the
@@ -27,11 +23,7 @@ public sealed class PooledDelaySource : IValueTaskSource
     /// <summary>State value for <see cref="_completed"/> meaning "either timer or cancellation claimed completion".</summary>
     private const int StateClaimed = 1;
 
-    /// <summary>
-    /// Per-thread cached instance; one slot per thread suffices because the operators that consume
-    /// <c>DelayAsync</c> serialise their work behind a gate, so a thread holds at most one
-    /// in-flight delay per operator.
-    /// </summary>
+    /// <summary>One reusable delay source per thread; concurrent rentals allocate when this slot is empty.</summary>
     [ThreadStatic]
     private static PooledDelaySource? _threadCached;
 
@@ -135,7 +127,6 @@ public sealed class PooledDelaySource : IValueTaskSource
     }
 
     /// <summary>Completes the delay successfully when the timer's dueTime elapses, unless cancellation claimed it first.</summary>
-    [ExcludeFromCodeCoverage]
     private void OnTimerFired()
     {
         if (!ConcurrencyRaceHelpers.TryClaim(ref _completed, StateOpen, StateClaimed))
@@ -148,7 +139,6 @@ public sealed class PooledDelaySource : IValueTaskSource
 
     /// <summary>Faults the delay with <see cref="OperationCanceledException"/> when the caller's token fires, unless the timer claimed it first.</summary>
     /// <param name="cancellationToken">The cancellation token that fired.</param>
-    [ExcludeFromCodeCoverage]
     private void OnCancelled(CancellationToken cancellationToken)
     {
         if (!ConcurrencyRaceHelpers.TryClaim(ref _completed, StateOpen, StateClaimed))

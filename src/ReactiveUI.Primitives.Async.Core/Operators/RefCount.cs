@@ -27,10 +27,7 @@ public static partial class SignalAsyncExtensions
             new RefCountSignal<T>(source);
     }
 
-    /// <summary>
-    /// Async observable that automatically connects to the underlying connectable source when the first
-    /// observer subscribes and disconnects when the last observer unsubscribes.
-    /// </summary>
+    /// <summary>Async observable that automatically connects to the underlying connectable source when the first observer subscribes and disconnects when the last observer unsubscribes.</summary>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
     /// <param name="source">The connectable observable to manage with reference counting.</param>
     internal sealed class RefCountSignal<T>(ConnectableSignalAsync<T> source) : IObservableAsync<T>, IDisposable
@@ -73,10 +70,7 @@ public static partial class SignalAsyncExtensions
             _connection?.DisposeAsync().AsTask().GetAwaiter().GetResult();
         }
 
-        /// <summary>
-        /// Subscribes the specified observer, incrementing the reference count and connecting to the source
-        /// if this is the first subscriber.
-        /// </summary>
+        /// <summary>Subscribes the specified observer, incrementing the reference count and connecting to the source if this is the first subscriber.</summary>
         /// <param name="observer">The observer to receive elements from the connectable source.</param>
         /// <param name="cancellationToken">A token to cancel the subscription.</param>
         /// <returns>An async disposable that decrements the reference count on disposal.</returns>
@@ -107,10 +101,7 @@ public static partial class SignalAsyncExtensions
             }
         }
 
-        /// <summary>
-        /// Witness wrapper that forwards all notifications and decrements the parent's reference count on disposal,
-        /// disconnecting from the source when the count reaches zero.
-        /// </summary>
+        /// <summary>Witness wrapper that forwards all notifications and decrements the parent's reference count on disposal, disconnecting from the source when the count reaches zero.</summary>
         /// <param name="parent">The parent ref-count observable.</param>
         /// <param name="observer">The downstream witness to forward notifications to.</param>
         internal sealed class RefCountWitness(RefCountSignal<T> parent, IObserverAsync<T> observer) : WitnessAsync<T>

@@ -14,19 +14,13 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The source observable sequence.</param>
     extension<T>(IObservableAsync<T> source)
     {
-        /// <summary>
-        /// Returns a new observable sequence that begins with the specified value, followed by the elements of the
-        /// current sequence.
-        /// </summary>
+        /// <summary>Returns a new observable sequence that begins with the specified value, followed by the elements of the current sequence.</summary>
         /// <param name="value">The value to prepend to the beginning of the sequence.</param>
         /// <returns>An observable sequence with the specified value prepended to the original sequence.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> Lead(T value) => new LeadSignal<T>(source, [value]);
 
-        /// <summary>
-        /// Returns a new observable sequence that begins with the specified value, followed by the elements of the
-        /// current sequence.
-        /// </summary>
+        /// <summary>Returns a new observable sequence that begins with the specified value, followed by the elements of the current sequence.</summary>
         /// <param name="value">The value to prepend to the beginning of the sequence.</param>
         /// <returns>An observable sequence with the specified value prepended to the original sequence.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -10,16 +10,8 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
-/// <summary>
-/// Single-value scheduled observable: on subscription, schedules a callback on the supplied
-/// <see cref="ISequencer"/> that applies an optional <see cref="Action{T}"/> side-effect and/or an optional
-/// <see cref="Func{T,T}"/> transform to the captured value and calls <see cref="IObserver{T}.OnNext"/> once.
-/// </summary>
+/// <summary>Schedules a value without a terminal notification; disposal ends the subscription.</summary>
 /// <typeparam name="T">The value type emitted to the downstream observer.</typeparam>
-/// <remarks>
-/// The sequence never completes on its own: no terminal notification is sent, so the subscriber ends it by
-/// disposing the subscription.
-/// </remarks>
 internal sealed class ScheduledValueObservable<T> : IObservable<T>
 {
     /// <summary>The value to emit.</summary>

@@ -7,9 +7,7 @@ using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Coverage for <c>DetectStaleObservable</c>'s subscription-teardown branch — when the source
-/// terminates synchronously during subscribe, the sink is already done by the time the upstream handle
-/// is attached, so the attach disposes it instead of recording it.</summary>
+/// <summary>Tests disposal of an upstream subscription returned after synchronous source termination.</summary>
 public class DetectStaleObservableTests
 {
     /// <summary>Staleness window used by the tests.</summary>

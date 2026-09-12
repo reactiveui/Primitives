@@ -52,10 +52,7 @@ public static class DisposableAsync
         public ValueTask DisposeAsync() => Interlocked.Exchange(ref _disposed, 1) == 1 ? default : disposeAsync();
     }
 
-    /// <summary>
-    /// An asynchronous disposable that invokes a delegate with a stored state when disposed, so the caller's data
-    /// travels in <typeparamref name="TState"/> instead of a closure.
-    /// </summary>
+    /// <summary>An asynchronous disposable that invokes a delegate with a stored state when disposed, so the caller's data travels in <typeparamref name="TState"/> instead of a closure.</summary>
     /// <typeparam name="TState">The type of the state passed to the dispose delegate.</typeparam>
     /// <param name="state">The state forwarded to the dispose delegate at dispose time.</param>
     /// <param name="disposeAsync">The delegate invoked to perform asynchronous disposal.</param>

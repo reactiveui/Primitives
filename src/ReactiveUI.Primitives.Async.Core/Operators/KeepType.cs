@@ -14,10 +14,7 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The source observable sequence.</param>
     extension<T>(IObservableAsync<T> source)
     {
-        /// <summary>
-        /// Projects each element of the observable sequence to the specified reference type and filters out elements
-        /// that are not of that type.
-        /// </summary>
+        /// <summary>Projects each element of the observable sequence to the specified reference type and filters out elements that are not of that type.</summary>
         /// <typeparam name="TResult">The reference type to filter and project elements to. Must be a class.</typeparam>
         /// <returns>An observable sequence containing only the elements of type TResult from the original sequence.</returns>
         [SuppressMessage(

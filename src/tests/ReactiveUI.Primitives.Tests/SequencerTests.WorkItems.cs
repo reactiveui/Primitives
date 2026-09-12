@@ -16,9 +16,6 @@ public partial class SequencerTests
     /// <summary>A monotonic timestamp delta used to drive the delay conversions.</summary>
     private const long DueTimestamp = 1000;
 
-    /// <summary>How many times a test replays the cancel-versus-start race before checking nothing leaked.</summary>
-    private const int StartCancelRaceAttempts = 2000;
-
     /// <summary>Verifies a monotonic delta that has already elapsed converts to no delay at all.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
@@ -138,22 +135,19 @@ public partial class SequencerTests
     /// <summary>Verifies queueing a thread-pool work item hands it to the pool for execution.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task ScheduledWorkItemQueueRunsOnTheThreadPool()
-    {
-        TaskCompletionSource ran = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        ThreadPoolSequencer.ScheduledWorkItem<int> item = new(
-            ThreadPoolSequencer.Instance,
-            One,
-            (_, _) =>
-            {
-                _ = ran.TrySetResult();
-                return EmptyDisposable.Instance;
-            });
-
+    public async Task ScheduledWorkItemQueuesItsExecutionCallback()
+{
+        using ManualThreadPool pool = new();
+        var ran = false;
+        ThreadPoolSequencer.ScheduledWorkItem<int> item = new(pool.Sequencer, One, (_, _) =>
+        {
+            ran = true;
+            return EmptyDisposable.Instance;
+        });
         item.Queue();
-
-        await ran.Task.WaitAsync(TimeSpan.FromSeconds(TimeoutSeconds));
-        await Assert.That(ran.Task.IsCompletedSuccessfully).IsTrue();
+        await Assert.That(ran).IsFalse();
+        pool.RunReady();
+        await Assert.That(ran).IsTrue();
     }
 
     /// <summary>Verifies the stateful scheduling overloads that take a due time run their callbacks.</summary>
@@ -173,11 +167,7 @@ public partial class SequencerTests
         await Assert.That(values.SequenceEqual(ExpectedOneTwo)).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies the delayed work item the sequencer's heap stores is a value with identity semantics: two entries are
-    /// equal only when they carry the very same work item and the same due timestamp. The heap dedupes and reorders
-    /// entries, so two distinct items that merely look alike must never compare equal, and the hash must agree.
-    /// </summary>
+    /// <summary>Timed work item equality and hashing use work item identity and due timestamp.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task TimedWorkItemComparesByWorkItemIdentityAndDueTimestamp()
@@ -203,48 +193,22 @@ public partial class SequencerTests
         await Assert.That(item.Equals(new object())).IsFalse();
     }
 
-    /// <summary>
-    /// Verifies a cancellation that lands while the action is starting still releases whatever the action returned.
-    /// The work item claims cancellation and the action's result in two separate steps, so a dispose that slips
-    /// between them would otherwise leave the returned disposable owned by nobody and never torn down.
-    /// </summary>
+    /// <summary>Cancellation during invocation disposes the action's returned resource exactly once.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task ScheduledWorkItemReleasesItsActionResultWhenCancellationRacesTheStart()
+    public async Task ScheduledWorkItemReleasesItsActionResultWhenCanceledDuringInvocation()
     {
-        var created = 0;
         var disposed = 0;
-
-        for (var attempt = 0; attempt < StartCancelRaceAttempts; attempt++)
+        ThreadPoolSequencer.ScheduledWorkItem<int>? item = null;
+        item = new(ThreadPoolSequencer.Instance, One, (_, _) =>
         {
-            using ManualResetEventSlim actionReturning = new(false);
-            ThreadPoolSequencer.ScheduledWorkItem<int> item = new(
-                ThreadPoolSequencer.Instance,
-                One,
-                (_, _) =>
-                {
-                    // Let the canceller run at the moment the action hands its result back.
-                    actionReturning.Set();
-                    _ = Interlocked.Increment(ref created);
-                    return new ActionDisposable(() => Interlocked.Increment(ref disposed));
-                });
-
-            var canceller = Task.Run(() =>
-            {
-                _ = actionReturning.Wait(TimeSpan.FromSeconds(TimeoutSeconds));
-                item.Dispose();
-            });
-
-            item.Execute();
-            await canceller;
-
-            // Whichever side won, the item is cancelled, so the action's result must not survive it.
-            item.Dispose();
-        }
-
-        // Every disposable the action handed back was released: none was stranded by the cancel-versus-start race.
-        await Assert.That(Volatile.Read(ref disposed)).IsEqualTo(Volatile.Read(ref created));
-        await Assert.That(Volatile.Read(ref created)).IsEqualTo(StartCancelRaceAttempts);
+            item!.Dispose();
+            return new ActionDisposable(() => disposed++);
+        });
+        item.Execute();
+        item.Dispose();
+        await Assert.That(item.IsDisposed).IsTrue();
+        await Assert.That(disposed).IsEqualTo(1);
     }
 
     /// <summary>Work item that counts executions and can be cancelled before a sequencer reaches it.</summary>

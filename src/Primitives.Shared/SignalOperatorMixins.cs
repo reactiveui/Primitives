@@ -136,10 +136,7 @@ public static partial class LinqExtensions
             return new MapIndexedSignal<T, TResult>(source, selector);
         }
 
-        /// <summary>
-        /// Projects each element of an observable sequence into a new form by incorporating state that is passed to the
-        /// selector function.
-        /// </summary>
+        /// <summary>Projects each element of an observable sequence into a new form by incorporating state that is passed to the selector function.</summary>
         /// <typeparam name="TState">The type of the state used in the selector function.</typeparam>
         /// <typeparam name="TResult">The type of the elements in the result sequence.</typeparam>
         /// <param name="state">The state to pass to the selector function.</param>

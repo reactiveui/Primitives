@@ -5,9 +5,7 @@
 namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>An async-disposable that can be disposed from within its own in-flight notification.</summary>
-/// <remarks>A terminal sink disposes itself from inside the <c>OnNext</c>/<c>OnCompleted</c> call that produced
-/// its result, which <see cref="IAsyncDisposable.DisposeAsync"/> cannot serve: that path waits for in-flight calls
-/// to drain, and the notification awaiting the dispose is one of them. This entry point skips the self-join.</remarks>
+/// <remarks>Disposal from inside an observer callback must not wait for that same callback to finish.</remarks>
 public interface IReentrantAsyncDisposable
 {
     /// <summary>Disposes from within the object's own in-flight notification, skipping the in-flight-call wait.</summary>

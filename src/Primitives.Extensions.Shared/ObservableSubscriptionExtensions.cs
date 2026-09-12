@@ -11,10 +11,7 @@ namespace ReactiveUI.Primitives.Extensions.Reactive;
 namespace ReactiveUI.Primitives.Extensions;
 #endif
 
-/// <summary>
-/// Provides extension methods that subscribe to a sequence and block the calling thread until it produces a
-/// value or terminates, returning the emitted value or the captured error.
-/// </summary>
+/// <summary>Provides extension methods that subscribe to a sequence and block the calling thread until it produces a value or terminates, returning the emitted value or the captured error.</summary>
 public static class ObservableSubscriptionExtensions
 {
     /// <summary>The default timeout used by the <c>WaitFor*</c> helpers when no override is supplied.</summary>
@@ -238,10 +235,7 @@ public static class ObservableSubscriptionExtensions
         return sink.Error;
     }
 
-    /// <summary>
-    /// Subscribes <paramref name="observer"/> to <paramref name="source"/> on <paramref name="scheduler"/>, or
-    /// inline when no scheduler is supplied.
-    /// </summary>
+    /// <summary>Subscribes <paramref name="observer"/> to <paramref name="source"/> on <paramref name="scheduler"/>, or inline when no scheduler is supplied.</summary>
     /// <typeparam name="T">The type of the elements in <paramref name="source"/>.</typeparam>
     /// <param name="source">The observable to subscribe to.</param>
     /// <param name="observer">The observer to receive notifications from the observable.</param>

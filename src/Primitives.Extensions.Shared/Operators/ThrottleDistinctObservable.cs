@@ -37,7 +37,7 @@ internal sealed class ThrottleDistinctObservable<T>(
     /// <param name="downstream">The observer to forward elements to.</param>
     /// <param name="throttle">The throttle duration.</param>
     /// <param name="scheduler">The scheduler to use for timing.</param>
-    private sealed class ThrottleDistinctSink(
+    internal sealed class ThrottleDistinctSink(
         IObserver<T> downstream,
         TimeSpan throttle,
         ISequencer scheduler) : IObserver<T>, IDisposable
@@ -111,13 +111,11 @@ internal sealed class ThrottleDistinctObservable<T>(
         }
 
         /// <summary>Emits the last received value when it differs from the last emitted value.</summary>
-        [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-        private void Emit()
+        internal void Emit()
         {
             T? toEmit;
             lock (_gate)
             {
-                // Race-only: reachable when this scheduled callback overlaps Dispose or a terminal notification.
                 if (_state.Done || !_hasLastReceived)
                 {
                     return;

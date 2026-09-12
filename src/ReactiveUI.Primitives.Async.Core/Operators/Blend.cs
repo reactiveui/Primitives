@@ -16,10 +16,7 @@ public static partial class SignalAsyncExtensions
     /// <param name="sources">A collection of asynchronous observable sequences to be merged.</param>
     extension<T>(IEnumerable<IObservableAsync<T>> sources)
     {
-        /// <summary>
-        /// Combines multiple asynchronous observable sequences into a single observable sequence that emits items from all
-        /// source sequences as they arrive.
-        /// </summary>
+        /// <summary>Combines multiple asynchronous observable sequences into a single observable sequence that emits items from all source sequences as they arrive.</summary>
         /// <returns>An observable sequence that emits items from all input sequences as they are produced.</returns>
         /// <remarks>Emissions interleave as the sources produce them; the result completes once every source has
         /// completed, and an error from any source propagates and terminates it.</remarks>
@@ -27,10 +24,7 @@ public static partial class SignalAsyncExtensions
         public IObservableAsync<T> Blend() =>
             new BlendEnumerableSignal<T>(sources);
 
-        /// <summary>
-        /// Combines multiple asynchronous observable sequences into a single observable sequence that emits items from all
-        /// source sequences as they arrive.
-        /// </summary>
+        /// <summary>Combines multiple asynchronous observable sequences into a single observable sequence that emits items from all source sequences as they arrive.</summary>
         /// <returns>An observable sequence that emits items from all input sequences as they are produced.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> Merge() =>
@@ -43,10 +37,7 @@ public static partial class SignalAsyncExtensions
     /// Cannot be null.</param>
     extension<T>(IObservableAsync<IObservableAsync<T>> source)
     {
-        /// <summary>
-        /// Merges multiple asynchronous observable sequences into a single observable sequence that emits items from all
-        /// inner sequences as they arrive.
-        /// </summary>
+        /// <summary>Merges multiple asynchronous observable sequences into a single observable sequence that emits items from all inner sequences as they arrive.</summary>
         /// <returns>An asynchronous observable sequence that emits items from all inner observable sequences as they are produced.</returns>
         /// <remarks>Every inner sequence stays subscribed at once; the result completes only after the outer sequence
         /// and all inner sequences have completed, and an error from any of them propagates and terminates it.</remarks>
@@ -54,19 +45,13 @@ public static partial class SignalAsyncExtensions
         public IObservableAsync<T> Blend() =>
             new BlendSignalSourcesSignal<T>(source);
 
-        /// <summary>
-        /// Merges multiple asynchronous observable sequences into a single observable sequence that emits items from all
-        /// inner sequences as they arrive.
-        /// </summary>
+        /// <summary>Merges multiple asynchronous observable sequences into a single observable sequence that emits items from all inner sequences as they arrive.</summary>
         /// <returns>An asynchronous observable sequence that emits items from all inner observable sequences as they are produced.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> Merge() =>
             new BlendSignalSourcesSignal<T>(source);
 
-        /// <summary>
-        /// Merges the emissions of multiple asynchronous observable sequences into a single observable sequence, limiting
-        /// the number of concurrent subscriptions.
-        /// </summary>
+        /// <summary>Merges the emissions of multiple asynchronous observable sequences into a single observable sequence, limiting the number of concurrent subscriptions.</summary>
         /// <param name="maxConcurrent">The maximum number of inner observable sequences to subscribe to concurrently.</param>
         /// <returns>An observable sequence that emits the items from the merged inner observable sequences.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -230,16 +215,14 @@ public static partial class SignalAsyncExtensions
                 _disposeCts);
         }
 
-        /// <summary>Re-checks the disposed flag inside the serialization gate and forwards the value downstream if the
-        /// subscription is alive.</summary>
+        /// <summary>Re-checks the disposed flag inside the serialization gate and forwards the value downstream if the subscription is alive.</summary>
         /// <param name="value">The value to forward.</param>
         /// <returns>A task representing the asynchronous forward operation.</returns>
         internal ValueTask RelayNextIfActiveAsync(T value) => DisposalHelper.HasDisposed(_disposed)
             ? default
             : _observer.OnNextAsync(value, DisposedCancellationToken);
 
-        /// <summary>Re-checks the disposed flag inside the serialization gate and forwards the error downstream if the
-        /// subscription is alive.</summary>
+        /// <summary>Re-checks the disposed flag inside the serialization gate and forwards the error downstream if the subscription is alive.</summary>
         /// <param name="exception">The error to forward.</param>
         /// <returns>A task representing the asynchronous forward operation.</returns>
         internal ValueTask RelayErrorIfActiveAsync(Exception exception) => DisposalHelper.HasDisposed(_disposed)
@@ -411,10 +394,7 @@ public static partial class SignalAsyncExtensions
             }
             finally
             {
-                // On success the observer owns its semaphore slot and releases it on its own disposal
-                // (auto-dispose after OnCompletedAsync, or via parent FinishAsync). On failure we dispose
-                // the observer here so its idempotent CleanupBranchAsync returns the slot exactly once,
-                // regardless of whether the observer also gets disposed again through _innerDisposables.
+                // The observer releases its semaphore slot once; failed subscriptions also dispose it here.
                 if (!subscribed)
                 {
                     await innerObserver.DisposeAsync().ConfigureAwait(false);
@@ -430,10 +410,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="parent">The parent bounded merge coordinator whose semaphore slot is released on disposal.</param>
         internal sealed class BlendBranchWitnessWithPermit(BoundedBlendCoordinator<T> parent) : BlendBranchWitness(parent)
         {
-            /// <summary>Guards the one-time release of this witness's semaphore slot.</summary>
-            /// <remarks><see cref="WitnessAsync{T}.DisposeAsync"/> can run several times for one witness, and a repeat
-            /// <see cref="SemaphoreSlim.Release()"/> would exceed the semaphore's count and throw
-            /// <see cref="SemaphoreFullException"/>, breaking the parent's completion chain.</remarks>
+            /// <summary>Releases the semaphore once for this witness.</summary>
             private int _released;
 
             /// <inheritdoc/>
@@ -519,8 +496,7 @@ public static partial class SignalAsyncExtensions
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public ValueTask DisposeAsync() => FinishAsync(null);
 
-            /// <summary>Routes the exception of a completion result that arrives after disposal to the unhandled
-            /// exception handler.</summary>
+            /// <summary>Routes the exception of a completion result that arrives after disposal to the unhandled exception handler.</summary>
             /// <param name="result">The completion result, or null if disposing without signaling.</param>
             internal static void RoutePostDisposalException(Result? result)
             {
@@ -543,9 +519,7 @@ public static partial class SignalAsyncExtensions
                 _reentrant.Value = true;
                 try
                 {
-                    // Sentinel: prevents premature completion while the loop is subscribing to sources.
-                    // Without this, a synchronously-completing source (e.g. Return) can decrement _active
-                    // to zero before the next source is subscribed, terminating the merge early.
+                    // Hold a sentinel while subscribing so synchronous sources cannot complete the merge early.
                     _ = Interlocked.Increment(ref _active);
 
                     foreach (var src in _sources)
@@ -627,8 +601,7 @@ public static partial class SignalAsyncExtensions
                 }
             }
 
-            /// <summary>Re-checks the disposed flag inside the serialization gate and forwards the value downstream if
-            /// the subscription is alive.</summary>
+            /// <summary>Re-checks the disposed flag inside the serialization gate and forwards the value downstream if the subscription is alive.</summary>
             /// <param name="value">The value to forward.</param>
             /// <returns>A task representing the asynchronous forward operation.</returns>
             internal ValueTask RelayNextIfActiveAsync(T value) => DisposalHelper.HasDisposed(_disposed)
@@ -653,8 +626,7 @@ public static partial class SignalAsyncExtensions
                 }
             }
 
-            /// <summary>Re-checks the disposed flag inside the serialization gate and forwards the error downstream if
-            /// the subscription is alive.</summary>
+            /// <summary>Re-checks the disposed flag inside the serialization gate and forwards the error downstream if the subscription is alive.</summary>
             /// <param name="ex">The error to forward.</param>
             /// <returns>A task representing the asynchronous forward operation.</returns>
             internal ValueTask RelayErrorIfActiveAsync(Exception ex) => DisposalHelper.HasDisposed(_disposed)

@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async.Disposables;
@@ -27,26 +26,9 @@ public static class DisposableAsyncSlot
     /// <param name="value">The new value to store, or <see langword="null"/> to clear the slot.</param>
     /// <returns>A <see cref="ValueTask"/> that completes once the previous occupant (if any) has been disposed.</returns>
     [DebuggerStepThrough]
-    [ExcludeFromCodeCoverage]
-    public static ValueTask SwapAsync(ref IAsyncDisposable? slot, IAsyncDisposable? value)
-    {
-        var current = Volatile.Read(ref slot);
-        while (true)
-        {
-            if (ReferenceEquals(current, DisposedSentinel))
-            {
-                return value?.DisposeAsync() ?? default;
-            }
-
-            var exchanged = Interlocked.CompareExchange(ref slot, value, current);
-            if (ReferenceEquals(exchanged, current))
-            {
-                return current?.DisposeAsync() ?? default;
-            }
-
-            current = exchanged;
-        }
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ValueTask SwapAsync(ref IAsyncDisposable? slot, IAsyncDisposable? value) =>
+        SwapObservedAsync(ref slot, value, Volatile.Read(ref slot));
 
     /// <summary>Atomically fills an empty slot with <paramref name="value"/>. A closed slot disposes
     /// <paramref name="value"/> instead. Equivalent to
@@ -89,6 +71,30 @@ public static class DisposableAsyncSlot
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsDisposed(IAsyncDisposable? slot) =>
         ReferenceEquals(slot, DisposedSentinel);
+
+    /// <summary>Retries a swap when the slot changed after the caller's observation.</summary>
+    /// <param name="slot">The slot to replace.</param>
+    /// <param name="value">The incoming disposable.</param>
+    /// <param name="current">The previously observed slot value.</param>
+    /// <returns>Disposal of the replaced value, or the incoming value when the slot is closed.</returns>
+    internal static ValueTask SwapObservedAsync(ref IAsyncDisposable? slot, IAsyncDisposable? value, IAsyncDisposable? current)
+    {
+        while (true)
+        {
+            if (ReferenceEquals(current, DisposedSentinel))
+            {
+                return value?.DisposeAsync() ?? default;
+            }
+
+            var exchanged = Interlocked.CompareExchange(ref slot, value, current);
+            if (ReferenceEquals(exchanged, current))
+            {
+                return current?.DisposeAsync() ?? default;
+            }
+
+            current = exchanged;
+        }
+    }
 
     /// <summary>Creates the exception for a second assignment into a single-assignment slot.</summary>
     /// <returns>The invalid-operation exception to throw from the assignment path.</returns>

@@ -7,9 +7,7 @@ using System.Text.RegularExpressions;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Direct coverage for the trivial <c>OnError</c> forwarders on a cluster of small
-/// synchronous operators. Each method is a one-liner that hands a source error straight to
-/// the downstream observer; the existing happy-path tests never exercised the error branch.</summary>
+/// <summary>Tests error propagation through synchronous operators.</summary>
 public class SyncOperatorErrorForwardingTests
 {
     /// <summary>Synthetic error message used by every forwarder test.</summary>

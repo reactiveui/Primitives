@@ -8,9 +8,7 @@ namespace ReactiveUI.Primitives.Async.Signals;
 
 /// <summary>Provides an asynchronous Signal that forwards notifications to observers concurrently.</summary>
 /// <typeparam name="T">The type of value observed and forwarded to observers.</typeparam>
-/// <remarks>Observers are notified in parallel for each event. This class is suitable for scenarios where high
-/// throughput and concurrent notification of multiple observers are required. Thread safety is ensured for observer
-/// notification operations. Cancellation tokens can be used to cancel ongoing notification tasks.</remarks>
+/// <remarks>Observer notifications overlap; their completion order is unspecified.</remarks>
 [System.Diagnostics.DebuggerDisplay("ConcurrentSignalAsync: Observers = {_state.Observers.Length}, Result = {_state.Result}")]
 public sealed class ConcurrentSignalAsync<T> : ISignalAsync<T>
 {

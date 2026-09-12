@@ -796,8 +796,7 @@ public static partial class LinqExtensions
         /// <exception cref="ArgumentNullException">The receiver task is <see langword="null"/>.</exception>
         public Task<T> ToTask() => task ?? throw new ArgumentNullException(nameof(task));
 
-        /// <summary>Returns a task that mirrors the supplied task but transitions to the canceled state when
-        /// <paramref name="cancellationToken"/> is canceled first.</summary>
+        /// <summary>Returns a task that mirrors the supplied task but transitions to the canceled state when <paramref name="cancellationToken"/> is canceled first.</summary>
         /// <param name="cancellationToken">The token used to cancel the returned task.</param>
         /// <returns>The supplied task, or a task that completes with the supplied task's outcome or cancels when <paramref name="cancellationToken"/> is canceled.</returns>
         /// <exception cref="ArgumentNullException">The receiver task is <see langword="null"/>.</exception>
@@ -837,8 +836,7 @@ public static partial class LinqExtensions
         }
         catch (OperationCanceledException)
         {
-            // The wait is abandoned while the underlying task can keep running, so observe any later fault
-            // to keep it from surfacing as an UnobservedTaskException on the finalizer thread.
+            // Observe faults from work that outlives cancellation of the wait.
             _ = task.ContinueWith(
                 static abandoned => _ = abandoned.Exception,
                 CancellationToken.None,

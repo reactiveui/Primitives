@@ -582,7 +582,6 @@ public partial class CombiningOperatorTests
     public async Task WhenConcatObservablesDoubleCompleteWithError_ThenRoutedToHandler()
     {
         UnhandledExceptionHandler.Register(static ex => _ = ex);
-        const int CompletionTimeoutSeconds = 5;
         var outer = Signal.Create<IObservableAsync<int>>();
         Result? completionResult = null;
         var sub = await outer.Values.Concat().SubscribeAsync(static (_, _) => default, null, result =>
@@ -593,13 +592,9 @@ public partial class CombiningOperatorTests
 
         // Complete with failure first
         await outer.OnCompletedAsync(Result.Failure(new InvalidOperationException(FirstFailMessage)));
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => completionResult.HasValue,
-            TimeSpan.FromSeconds(CompletionTimeoutSeconds));
+        await Assert.That(completionResult.HasValue).IsTrue();
 
-        // Now dispose, which calls FinishAsync(null) but TrySetDisposed returns true
-        // (already disposed), and since result?.Exception is null for null result, no handler call.
-        // We need another approach: dispose first, then force another completion with an error.
+        // Disposal preserves the terminal failure.
         await sub.DisposeAsync();
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();

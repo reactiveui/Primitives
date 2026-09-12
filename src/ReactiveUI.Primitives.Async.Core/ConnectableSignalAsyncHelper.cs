@@ -22,8 +22,7 @@ internal static class ConnectableSignalAsyncHelper
         ConnectableSignalAsyncState<T> state,
         CancellationToken cancellationToken)
     {
-        // A disposed signal cancels this token, and the gate's uncontended fast path does not observe
-        // cancellation, so without this check a post-disposal connect would resubscribe the cold source.
+        // The gate's fast path does not check cancellation; reject disposed signals before entering.
         state.DisposedCancellationToken.ThrowIfCancellationRequested();
 
         CancellationTokenSource? linkedCts = null;

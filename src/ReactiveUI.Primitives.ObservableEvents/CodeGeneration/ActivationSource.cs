@@ -4,14 +4,7 @@
 
 namespace ReactiveUI.Primitives.ObservableEvents.CodeGeneration;
 
-/// <summary>The API a consumer writes against, emitted into every compilation.</summary>
-/// <remarks>
-/// This is what makes the generator opt-in without a package-level runtime dependency: the placeholder
-/// <c>Events&lt;T&gt;</c> gives a call site something to bind to while it is being typed, and the generated overload
-/// for the receiver's own type displaces it once the type resolves. The attribute has to exist here too because a
-/// static host has no receiver to hang a call off, and nothing here is annotated, so this is the one generated file
-/// that carries no <c>#nullable</c> directive.
-/// </remarks>
+/// <summary>Declares the generic activation placeholder and static-host attribute.</summary>
 internal static class ActivationSource
 {
     /// <summary>The source text added to every compilation.</summary>

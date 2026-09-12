@@ -6,9 +6,7 @@ using System.Reactive.Subjects;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Edge-case coverage for <c>ThrottleFirst</c> backed by
-/// <c>ThrottleFirstObservable&lt;T&gt;</c> — error/completion forwarding and
-/// post-terminal behaviour not exercised by the happy-path window test.</summary>
+/// <summary>Tests throttle termination and suppression of subsequent values.</summary>
 public class ThrottleFirstObservableTests
 {
     /// <summary>Message attached to synthetic source errors.</summary>

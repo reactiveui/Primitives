@@ -38,17 +38,13 @@ public static class EventHandlerScope
         return AttachScheduled(handler, addHandler, removeHandler, sequencer);
     }
 
-    /// <summary>Attaches and later detaches the handler on the sequencer instead of the calling thread.</summary>
+    /// <summary>Cancels any pending attachment before scheduling detachment.</summary>
     /// <typeparam name="TEventHandler">The delegate type used by the event.</typeparam>
     /// <param name="handler">The handler this subscription owns.</param>
     /// <param name="addHandler">The action that attaches the handler.</param>
     /// <param name="removeHandler">The action that detaches the handler.</param>
     /// <param name="sequencer">The sequencer that attaches and detaches the handler.</param>
     /// <returns>The disposable that detaches the handler.</returns>
-    /// <remarks>
-    /// Disposing cancels a still-pending attach before requesting the detach, so a subscription torn down
-    /// before the sequencer ran the attach cannot leave the handler on the event.
-    /// </remarks>
     private static IDisposable AttachScheduled<TEventHandler>(
         TEventHandler handler,
         Action<TEventHandler> addHandler,

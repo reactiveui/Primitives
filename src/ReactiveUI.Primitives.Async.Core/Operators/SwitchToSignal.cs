@@ -7,10 +7,7 @@ using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Async observable that switches to the most recently emitted inner observable sequence,
-/// unsubscribing from the previous inner sequence each time a new one arrives.
-/// </summary>
+/// <summary>Async observable that switches to the most recently emitted inner observable sequence, unsubscribing from the previous inner sequence each time a new one arrives.</summary>
 /// <typeparam name="T">The type of elements produced by the inner observable sequences.</typeparam>
 /// <param name="source">The outer observable sequence that emits inner observable sequences.</param>
 public sealed class SwitchToSignal<T>(IObservableAsync<IObservableAsync<T>> source) : IObservableAsync<T>
@@ -30,10 +27,7 @@ public sealed class SwitchToSignal<T>(IObservableAsync<IObservableAsync<T>> sour
             () => subscription.SubscribeAsync(source, cancellationToken));
     }
 
-    /// <summary>
-    /// Manages the lifetime of the outer subscription and the currently active inner subscription,
-    /// switching to new inner sequences as they arrive.
-    /// </summary>
+    /// <summary>Manages the lifetime of the outer subscription and the currently active inner subscription, switching to new inner sequences as they arrive.</summary>
     internal sealed class SwitchToCoordinator : IAsyncDisposable
     {
         /// <summary>The downstream observer to forward elements to.</summary>
@@ -91,10 +85,7 @@ public sealed class SwitchToSignal<T>(IObservableAsync<IObservableAsync<T>> sour
             await _outerDisposable.SetDisposableAsync(outerSubscription).ConfigureAwait(false);
         }
 
-        /// <summary>
-        /// Handles a new inner observable from the outer sequence by disposing the previous inner subscription
-        /// and subscribing to the new one.
-        /// </summary>
+        /// <summary>Handles a new inner observable from the outer sequence by disposing the previous inner subscription and subscribing to the new one.</summary>
         /// <param name="inner">The new inner observable to switch to.</param>
         /// <returns>A task representing the asynchronous switch operation.</returns>
         internal ValueTask AcceptOuterValueAsync(IObservableAsync<T> inner)
@@ -109,10 +100,7 @@ public sealed class SwitchToSignal<T>(IObservableAsync<IObservableAsync<T>> sour
             return SubscribeReplacementInnerAsync(inner, previousSubscription);
         }
 
-        /// <summary>
-        /// Handles the outer sequence completing, propagating completion downstream when no inner
-        /// sequence is active or when the outer fails.
-        /// </summary>
+        /// <summary>Handles the outer sequence completing, propagating completion downstream when no inner sequence is active or when the outer fails.</summary>
         /// <param name="result">The completion result from the outer sequence.</param>
         /// <returns>A task representing the asynchronous completion operation.</returns>
         internal ValueTask AcceptOuterCompletionAsync(Result result)
@@ -132,10 +120,7 @@ public sealed class SwitchToSignal<T>(IObservableAsync<IObservableAsync<T>> sour
             return shouldComplete ? FinishAsync(Result.Success) : default;
         }
 
-        /// <summary>
-        /// Handles the current inner sequence completing, propagating completion downstream
-        /// if the outer has also completed, or waiting for the next inner sequence otherwise.
-        /// </summary>
+        /// <summary>Handles the current inner sequence completing, propagating completion downstream if the outer has also completed, or waiting for the next inner sequence otherwise.</summary>
         /// <param name="result">The completion result from the inner sequence.</param>
         /// <returns>A task representing the asynchronous completion operation.</returns>
         internal ValueTask AcceptInnerCompletionAsync(Result result)
@@ -253,10 +238,7 @@ public sealed class SwitchToSignal<T>(IObservableAsync<IObservableAsync<T>> sour
             }
         }
 
-        /// <summary>
-        /// Disposes the current inner subscription, the outer subscription, and optionally forwards a
-        /// completion result to the downstream observer. This method is idempotent.
-        /// </summary>
+        /// <summary>Disposes the current inner subscription, the outer subscription, and optionally forwards a completion result to the downstream observer. This method is idempotent.</summary>
         /// <param name="result">The completion result to forward, or <see langword="null"/> if disposing without signaling completion.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
         internal async ValueTask FinishAsync(Result? result)

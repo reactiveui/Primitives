@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Disposables;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Reactive.Concurrency;
 
 namespace ReactiveUI.Primitives.Reactive.Tests;
@@ -31,10 +32,10 @@ public sealed class WasmSchedulerTests
     /// <summary>A positive due time or period, so a null action is the only invalid argument under test.</summary>
     private static readonly TimeSpan ValidInterval = TimeSpan.FromMilliseconds(100);
 
-    /// <summary>A due time no test waits out, so the only run a delayed item sees is the one the test drives.</summary>
+    /// <summary>Due time for manually dispatched callbacks.</summary>
     private static readonly TimeSpan UnreachableDueTime = TimeSpan.FromHours(1);
 
-    /// <summary>A period no test waits out, so the only tick a periodic item sees is the one the test drives.</summary>
+    /// <summary>Period for manually dispatched callbacks.</summary>
     private static readonly TimeSpan UnreachablePeriod = TimeSpan.FromHours(1);
 
     /// <summary>Verifies the shared instance is a singleton.</summary>
@@ -48,7 +49,8 @@ public sealed class WasmSchedulerTests
     [Test]
     public async Task ScheduleRejectsNullAction()
     {
-        var scheduler = WasmScheduler.Default;
+        ManualTimeProvider timeProvider = new();
+        using WasmScheduler scheduler = new(timeProvider);
 
         await Assert.That(() => scheduler.Schedule(0, null!)).ThrowsExactly<ArgumentNullException>();
         await Assert.That(() => scheduler.Schedule(0, ValidInterval, null!))
@@ -71,14 +73,17 @@ public sealed class WasmSchedulerTests
     [Test]
     public async Task ImmediateScheduleExecutes()
     {
+        ManualTimeProvider timeProvider = new();
+        using WasmScheduler scheduler = new(timeProvider);
         TaskCompletionSource<int> executed = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        _ = WasmScheduler.Default.Schedule(StatePayload, (scheduler, state) =>
+        _ = scheduler.Schedule(StatePayload, (scheduler, state) =>
         {
             _ = scheduler;
             _ = executed.TrySetResult(state);
             return Disposable.Empty;
         });
+        timeProvider.FireAll();
 
         await Assert.That(await executed.Task).IsEqualTo(StatePayload);
     }
@@ -88,12 +93,14 @@ public sealed class WasmSchedulerTests
     [Test]
     public async Task ImmediateBurstExecutesInOrder()
     {
+        ManualTimeProvider timeProvider = new();
+        using WasmScheduler scheduler = new(timeProvider);
         TaskCompletionSource<bool> done = new(TaskCreationOptions.RunContinuationsAsynchronously);
         List<int> values = [];
 
         foreach (var value in ExpectedBurst)
         {
-            _ = WasmScheduler.Default.Schedule(value, (scheduler, state) =>
+            _ = scheduler.Schedule(value, (scheduler, state) =>
             {
                 _ = scheduler;
                 values.Add(state);
@@ -106,8 +113,10 @@ public sealed class WasmSchedulerTests
             });
         }
 
+        timeProvider.FireAll();
+
         _ = await done.Task;
-        await Assert.That(values).IsEquivalentTo(ExpectedBurst, EqualityComparer<int>.Default);
+        await Assert.That(values).IsEquivalentTo(ExpectedBurst, EqualityComparer<int>.Default, TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 
     /// <summary>Verifies an item disposed while it waits in the ready queue is skipped while later work still runs.</summary>
@@ -145,19 +154,22 @@ public sealed class WasmSchedulerTests
     [Test]
     public async Task DelayedScheduleExecutes()
     {
+        ManualTimeProvider timeProvider = new();
+        using WasmScheduler scheduler = new(timeProvider);
         TaskCompletionSource<bool> delayed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource<bool> immediate = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        _ = WasmScheduler.Default.Schedule(0, DelayedDueTime, (_, _) =>
+        _ = scheduler.Schedule(0, DelayedDueTime, (_, _) =>
         {
             _ = delayed.TrySetResult(true);
             return Disposable.Empty;
         });
-        _ = WasmScheduler.Default.Schedule(0, TimeSpan.Zero, (_, _) =>
+        _ = scheduler.Schedule(0, TimeSpan.Zero, (_, _) =>
         {
             _ = immediate.TrySetResult(true);
             return Disposable.Empty;
         });
+        timeProvider.FireAll();
 
         await Assert.That(await delayed.Task).IsTrue();
         await Assert.That(await immediate.Task).IsTrue();
@@ -168,8 +180,10 @@ public sealed class WasmSchedulerTests
     [Test]
     public async Task DisposedDelayedItemDoesNotRun()
     {
+        ManualTimeProvider timeProvider = new();
+        using WasmScheduler scheduler = new(timeProvider);
         var ran = false;
-        var subscription = (WasmScheduler.StatefulWorkItem<int>)WasmScheduler.Default.Schedule(
+        var subscription = (WasmScheduler.StatefulWorkItem<int>)scheduler.Schedule(
             0,
             UnreachableDueTime,
             (_, _) =>
@@ -192,8 +206,10 @@ public sealed class WasmSchedulerTests
     [Test]
     public async Task SchedulePeriodicTicksAndStopsOnDispose()
     {
+        ManualTimeProvider timeProvider = new();
+        using WasmScheduler scheduler = new(timeProvider);
         var count = 0;
-        var subscription = (WasmScheduler.PeriodicWorkItem<int>)WasmScheduler.Default.SchedulePeriodic(
+        var subscription = (WasmScheduler.PeriodicWorkItem<int>)scheduler.SchedulePeriodic(
             0,
             UnreachablePeriod,
             state =>
@@ -216,18 +232,22 @@ public sealed class WasmSchedulerTests
         await Assert.That(count).IsEqualTo(PeriodicTickCount);
     }
 
-    /// <summary>Verifies a zero period is clamped instead of rejected and still ticks.</summary>
+    /// <summary>Verifies a zero period is clamped and dispatches ticks.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task SchedulePeriodicClampsZeroPeriod()
     {
+        ManualTimeProvider timeProvider = new();
+        using WasmScheduler scheduler = new(timeProvider);
         TaskCompletionSource<bool> ticked = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var subscription = WasmScheduler.Default.SchedulePeriodic(0, TimeSpan.Zero, state =>
+        var subscription = scheduler.SchedulePeriodic(0, TimeSpan.Zero, state =>
         {
             _ = ticked.TrySetResult(true);
             return state;
         });
+        await Assert.That(timeProvider.LastPeriod).IsEqualTo(TimeSpan.FromMilliseconds(1));
+        timeProvider.FireAll();
 
         await Assert.That(await ticked.Task).IsTrue();
         subscription.Dispose();
@@ -250,8 +270,10 @@ public sealed class WasmSchedulerTests
     [Test]
     public async Task DisposedDelayedItemDisposeIsIdempotent()
     {
+        ManualTimeProvider timeProvider = new();
+        using WasmScheduler scheduler = new(timeProvider);
         var subscription =
-            WasmScheduler.Default.Schedule(0, UnreachableDueTime, static (_, _) => Disposable.Empty);
+            scheduler.Schedule(0, UnreachableDueTime, static (_, _) => Disposable.Empty);
 
         subscription.Dispose();
 
@@ -263,7 +285,9 @@ public sealed class WasmSchedulerTests
     [Test]
     public async Task DisposedPeriodicItemDisposeIsIdempotent()
     {
-        var subscription = WasmScheduler.Default.SchedulePeriodic(0, UnreachablePeriod, static state => state);
+        ManualTimeProvider timeProvider = new();
+        using WasmScheduler scheduler = new(timeProvider);
+        var subscription = scheduler.SchedulePeriodic(0, UnreachablePeriod, static state => state);
 
         subscription.Dispose();
 
@@ -278,9 +302,7 @@ public sealed class WasmSchedulerTests
         using var scheduler = CreateIsolatedScheduler();
         BooleanDisposable returned = new();
 
-        // Build the item and publish the handle it cancels through before anything can run it. Scheduling normally
-        // arms the drain inside Schedule and only then returns the handle, so the action is free to run first and
-        // find nothing to cancel; enqueueing by hand is the same path with that window closed.
+        // Publish the cancellation handle before running the queued action.
         WasmScheduler.StatefulWorkItem<int>? subscription = null;
         WasmScheduler.StatefulWorkItem<int> item = new(
             scheduler,
@@ -326,11 +348,7 @@ public sealed class WasmSchedulerTests
         .That(static () => WasmScheduler.Default.SchedulePeriodic(0, ValidInterval, null!))
         .Throws<ArgumentNullException>();
 
-    /// <summary>
-    /// Verifies a disposed scheduler rejects new work rather than queueing work it can never drain. The drain timer
-    /// is released on disposal, so an accepted item would sit in the ready queue forever behind a latch the failed
-    /// timer post left set. Every scheduling overload fails fast instead, and none of the actions run.
-    /// </summary>
+    /// <summary>Verifies every scheduling overload rejects work after disposal.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task ScheduleAfterDisposeThrowsObjectDisposedException()
@@ -390,11 +408,7 @@ public sealed class WasmSchedulerTests
         await Assert.That(queued.Dispose).ThrowsNothing();
     }
 
-    /// <summary>
-    /// Verifies a one-shot timer handed to a work item that was already cancelled is released instead of left armed.
-    /// A delayed schedule builds the item first and attaches its timer afterwards, so a dispose landing in that window
-    /// must not strand a timer that would still fire against an item nobody can cancel any more.
-    /// </summary>
+    /// <summary>Verifies a timer attached after cancellation is disposed immediately.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task AttachTimerReleasesATimerGivenToAnAlreadyCancelledItem()
@@ -410,10 +424,8 @@ public sealed class WasmSchedulerTests
                 return Disposable.Empty;
             });
 
-        // Cancel before the delayed schedule reaches its AttachTimer call.
         item.Dispose();
 
-        // Stands in for the one-shot timer, recording the release the item owes it.
         BooleanDisposable timer = new();
         item.AttachTimer(timer);
 
@@ -421,11 +433,7 @@ public sealed class WasmSchedulerTests
         await Assert.That(ran).IsEqualTo(0);
     }
 
-    /// <summary>
-    /// Verifies a periodic tick that loses the race to disposal drops the tick instead of running the action. A timer
-    /// callback the runtime had already dispatched when <see cref="IDisposable.Dispose"/> won still lands, and must
-    /// find the item cancelled rather than mutate state the disposal has already torn down.
-    /// </summary>
+    /// <summary>Verifies a dispatched periodic callback observes disposal before invoking the action.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task PeriodicTickThatLosesTheRaceToDisposeDoesNotRunTheAction()
@@ -438,21 +446,17 @@ public sealed class WasmSchedulerTests
             {
                 ticks++;
                 return state;
-            });
+            },
+            new ManualTimeProvider());
 
         item.Dispose();
 
-        // The period never elapses on its own, so this is the tick a callback already in flight would have delivered.
         item.Tick();
 
         await Assert.That(ticks).IsEqualTo(0);
     }
 
-    /// <summary>
-    /// Verifies an enqueue that loses the race to disposal releases the item it just queued. The scheduler's disposed
-    /// check happens before the item joins the ready queue, so a disposal that drains the queue in between would
-    /// otherwise strand the item behind a drain timer that can never fire again.
-    /// </summary>
+    /// <summary>Verifies disposal between the initial check and enqueue cancels the queued item.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task EnqueueThatLosesTheRaceToDisposeReleasesTheItemItQueued()
@@ -507,10 +511,136 @@ public sealed class WasmSchedulerTests
         await Assert.That(Array.FindIndex(dispatches, static count => count != 1)).IsEqualTo(NoMatch);
     }
 
-    /// <summary>
-    /// Creates a scheduler that owns its own drain timer and ready queue, so a test can dispose it without
-    /// disturbing the shared singleton every other test schedules through.
-    /// </summary>
+    /// <summary>Verifies a drain claim rejects stale snapshots and preserves the current claimant.</summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task DrainClaimsRejectStaleStateSnapshots()
+    {
+        const int Idle = 0;
+        const int Running = 1;
+        const int Pending = 2;
+        ManualTimeProvider timeProvider = new();
+        using WasmScheduler scheduler = new(timeProvider);
+        var runs = 0;
+        scheduler.QueueReady(new WasmScheduler.StatefulWorkItem<int>(scheduler, 0, (_, _) =>
+        {
+            runs++;
+            return Disposable.Empty;
+        }));
+
+        await Assert.That(scheduler.TryPostDrain(Running)).IsFalse();
+        await Assert.That(scheduler.TryPostDrain(Idle)).IsTrue();
+        await Assert.That(scheduler.TryPostDrain(Idle)).IsFalse();
+        await Assert.That(scheduler.TryPostDrain(Running)).IsTrue();
+        await Assert.That(scheduler.TryPostDrain(Running)).IsFalse();
+        await Assert.That(scheduler.TryPostDrain(Pending)).IsTrue();
+        timeProvider.FireAll();
+        await Assert.That(runs).IsEqualTo(1);
+        await Assert.That(scheduler.TryPostDrain(Idle)).IsTrue();
+    }
+
+    /// <summary>Verifies work published without a drain request is picked up by the finishing drain.</summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task FinishingDrainSchedulesWorkPublishedDuringItsBatch()
+    {
+        const int First = 1;
+        const int Second = 2;
+        ManualTimeProvider timeProvider = new();
+        using WasmScheduler scheduler = new(timeProvider);
+        List<int> values = [];
+        _ = scheduler.Schedule(First, (_, value) =>
+        {
+            values.Add(value);
+            scheduler.QueueReady(new WasmScheduler.StatefulWorkItem<int>(scheduler, Second, (_, next) =>
+            {
+                values.Add(next);
+                return Disposable.Empty;
+            }));
+            return Disposable.Empty;
+        });
+
+        timeProvider.FireAll();
+        await Assert.That(values).IsEquivalentTo([First], EqualityComparer<int>.Default, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+        timeProvider.FireAll();
+        await Assert.That(values).IsEquivalentTo([First, Second], EqualityComparer<int>.Default, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+    }
+
+    /// <summary>Creates a scheduler with manually dispatched timers.</summary>
     /// <returns>The isolated scheduler.</returns>
-    private static WasmScheduler CreateIsolatedScheduler() => new();
+    private static WasmScheduler CreateIsolatedScheduler() => new(new ManualTimeProvider());
+
+    /// <summary>Stores timer callbacks until the test dispatches them.</summary>
+    private sealed class ManualTimeProvider : TimeProvider
+    {
+        /// <summary>The timers owned by this provider.</summary>
+        private readonly List<ManualTimer> _timers = [];
+
+        /// <summary>Gets the most recently requested timer period.</summary>
+        public TimeSpan LastPeriod => _timers[^1].Period;
+
+        /// <inheritdoc/>
+        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+        {
+            ManualTimer timer = new(callback, state);
+            _ = timer.Change(dueTime, period);
+            _timers.Add(timer);
+            return timer;
+        }
+
+        /// <summary>Invokes each armed timer once.</summary>
+        public void FireAll()
+        {
+            foreach (var timer in _timers.ToArray())
+            {
+                timer.Fire();
+            }
+        }
+
+        /// <summary>A timer whose callback is dispatched explicitly.</summary>
+        /// <param name="callback">The timer callback.</param>
+        /// <param name="state">The callback state.</param>
+        private sealed class ManualTimer(TimerCallback callback, object? state) : ITimer
+        {
+            /// <summary>The next due time.</summary>
+            private TimeSpan _dueTime;
+
+            /// <summary>Whether the timer has been disposed.</summary>
+            private bool _disposed;
+
+            /// <summary>Gets the repeating period.</summary>
+            public TimeSpan Period { get; private set; }
+
+            /// <inheritdoc/>
+            public bool Change(TimeSpan dueTime, TimeSpan period)
+            {
+                _dueTime = dueTime;
+                Period = period;
+                return !_disposed;
+            }
+
+            /// <summary>Invokes the callback if the timer is armed.</summary>
+            public void Fire()
+            {
+                if (_disposed || _dueTime == Timeout.InfiniteTimeSpan)
+                {
+                    return;
+                }
+
+                _dueTime = Period;
+                callback(state);
+            }
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Dispose() => _disposed = true;
+
+            /// <inheritdoc/>
+            public ValueTask DisposeAsync()
+            {
+                Dispose();
+                return default;
+            }
+        }
+    }
 }

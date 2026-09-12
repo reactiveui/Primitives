@@ -8,10 +8,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Coverage for the asynchronous-projection path of
-/// <c>FirstMatchFromCandidates</c> backed by <c>FirstMatchFromCandidatesObservable</c>
-/// — empty candidate list, async-projection match, async-projection no-match falls back,
-/// async-projection error skips, and dispose during the async walk.</summary>
+/// <summary>Tests asynchronous candidate matching, fallback, errors, and cancellation.</summary>
 public class FirstMatchFromCandidatesAsyncPathTests
 {
     /// <summary>Fallback value emitted when no candidate matches.</summary>
@@ -28,9 +25,6 @@ public class FirstMatchFromCandidatesAsyncPathTests
 
     /// <summary>Candidate key whose projection emits the match value.</summary>
     private const string HitKey = "hit";
-
-    /// <summary>Guard timeout so a hung rendezvous fails this test rather than stalling the run.</summary>
-    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
 
     /// <summary>Verifies that an empty candidate list emits the fallback and completes.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -67,7 +61,7 @@ public class FirstMatchFromCandidatesAsyncPathTests
                 Fallback).Subscribe(results.Add, () => completed.TrySetResult(true));
         emissionGate.OnNext(HitKey);
         emissionGate.OnCompleted();
-        var done = await completed.Task.WaitAsync(GuardTimeout);
+        var done = await completed.Task;
         await Assert.That(done).IsTrue();
         await Assert.That(results).IsCollectionEqualTo([HitKey]);
     }
@@ -90,7 +84,7 @@ public class FirstMatchFromCandidatesAsyncPathTests
                 Fallback).Subscribe(results.Add, () => completed.TrySetResult(true));
         subject.OnNext("nope");
         subject.OnCompleted();
-        await completed.Task.WaitAsync(GuardTimeout);
+        await completed.Task;
         await Assert.That(results).IsCollectionEqualTo([Fallback]);
     }
 
@@ -114,7 +108,7 @@ public class FirstMatchFromCandidatesAsyncPathTests
         badSubject.OnError(new InvalidOperationException("bad failed"));
         goodSubject.OnNext("good");
         goodSubject.OnCompleted();
-        await completed.Task.WaitAsync(GuardTimeout);
+        await completed.Task;
         await Assert.That(results).IsCollectionEqualTo(["good"]);
     }
 
@@ -132,9 +126,6 @@ public class FirstMatchFromCandidatesAsyncPathTests
             .Subscribe(results.Add, () => completed = true);
         sub.Dispose();
 
-        // Second dispose hits the Interlocked.Exchange null-loser branch in AsyncSink.Dispose
-        // — the first call swapped in null and disposed the previous subscription, so the
-        // second call sees null and the `?.Dispose()` no-op fires.
         sub.Dispose();
         firstSubject.OnNext("late");
         firstSubject.OnCompleted();
@@ -220,7 +211,7 @@ public class FirstMatchFromCandidatesAsyncPathTests
             .FirstMatchFromCandidates(_ => subject, static raw => raw, static value => value == HitKey, Fallback)
             .Subscribe(results.Add, () => completed.TrySetResult());
         subject.OnNext(HitKey);
-        await completed.Task.WaitAsync(GuardTimeout);
+        await completed.Task;
         subject.OnNext("ignored-late");
         subject.OnError(new InvalidOperationException("ignored-late"));
         subject.OnCompleted();
@@ -234,10 +225,7 @@ public class FirstMatchFromCandidatesAsyncPathTests
     [Test]
     public async Task WhenAsyncSinkWalkHitsSyncErroringCandidate_ThenLoopingGuardSkipsAhead()
     {
-        // First candidate's projection is async (never completes during Subscribe), forcing
-        // TrySyncLoop to hand off to AsyncSink. Second candidate's projection synchronously
-        // errors during AsyncSink.TryNext's loop iteration, hitting AsyncSink.OnError with
-        // _looping == true.
+        // The second candidate errors synchronously after the first asynchronous candidate completes.
         string[] keys = [AsyncKey, SyncErrorKey, HitKey];
         Subject<string> asyncSubject = new();
         List<string> results = [];
@@ -253,12 +241,9 @@ public class FirstMatchFromCandidatesAsyncPathTests
             static value => value == HitKey,
             Fallback).Subscribe(results.Add, () => completed.TrySetResult());
 
-        // Complete the async subject — AsyncSink.OnCompleted runs (outside TryNext, so _looping
-        // is false), which invokes TryNext. The next iteration projects SyncErrorKey whose
-        // SyncErroringObservable.Subscribe calls observer.OnError synchronously, re-entering
-        // AsyncSink.OnError while _looping is still true — hitting the looping-guard return.
+        // Completing the first candidate starts the synchronously failing candidate.
         asyncSubject.OnCompleted();
-        await completed.Task.WaitAsync(GuardTimeout);
+        await completed.Task;
         await Assert.That(results).IsCollectionEqualTo([HitKey]);
     }
 
@@ -284,7 +269,7 @@ public class FirstMatchFromCandidatesAsyncPathTests
             static value => value == HitKey,
             Fallback).Subscribe(results.Add, () => completed.TrySetResult());
         asyncSubject.OnCompleted();
-        await completed.Task.WaitAsync(GuardTimeout);
+        await completed.Task;
         await Assert.That(results).IsCollectionEqualTo([HitKey]);
     }
 

@@ -38,10 +38,7 @@ public static class SubscribeExtensions
     /// <param name="source">Signals sequence to subscribe to.</param>
     extension<T>(IObservable<T> source)
     {
-        /// <summary>
-        /// Subscribes to the Signals sequence without specifying any handlers.
-        /// This method can be used to evaluate the Signals sequence for its side-effects only.
-        /// </summary>
+        /// <summary>Subscribes to the Signals sequence without specifying any handlers. This method can be used to evaluate the Signals sequence for its side-effects only.</summary>
         /// <returns><see cref="IDisposable"/> object used to unsubscribe from the Signals sequence.</returns>
         /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <c>null</c>.</exception>
         public IDisposable Subscribe()

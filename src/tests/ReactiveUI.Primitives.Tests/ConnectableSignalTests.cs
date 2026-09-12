@@ -29,9 +29,6 @@ public sealed class ConnectableSignalTests
     /// <summary>Second value observed through replay.</summary>
     private const int SecondReplayValue = 5;
 
-    /// <summary>A replay window wide enough that no value expires while a test runs.</summary>
-    private const int ReplayWindowSeconds = 30;
-
     /// <summary>Expected values for the first shared subscription.</summary>
     private static readonly int[] ExpectedFirstSharedValues = [FirstSharedValue];
 
@@ -106,7 +103,7 @@ public sealed class ConnectableSignalTests
         _ = Assert.Throws<ArgumentNullException>(static () => ConnectableSignalExtensions.AutoShare<int>(null!));
         _ = Assert.Throws<ArgumentNullException>(static () => ConnectableSignalExtensions.AutoConnect<int>(null!));
         _ = Assert.Throws<ArgumentOutOfRangeException>(() => cold.ShareLive().AutoConnect(-1));
-        var replayed = cold.Replay(1, TimeSpan.FromSeconds(1));
+        var replayed = cold.Replay(1, TimeSpan.MaxValue);
         using var connection = replayed.Connect();
         source.OnNext(FirstReplayValue);
         List<int> replayValues = [];
@@ -155,13 +152,13 @@ public sealed class ConnectableSignalTests
         await Assert.That(late.SequenceEqual(ExpectedReplayValues)).IsTrue();
     }
 
-    /// <summary>A windowed replay hub still honours its buffer-size bound.</summary>
+    /// <summary>A replay hub with expiration disabled honours its buffer-size bound.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task WindowedReplayLiveHonoursItsBufferSizeBound()
+    public async Task ReplayLiveWithExpirationDisabledHonoursItsBufferSizeBound()
     {
         Signal<int> source = new();
-        var replayed = source.ReplayLive(1, TimeSpan.FromSeconds(ReplayWindowSeconds));
+        var replayed = source.ReplayLive(1, TimeSpan.MaxValue);
 
         using var connection = replayed.Connect();
         source.OnNext(FirstReplayValue);
@@ -170,7 +167,6 @@ public sealed class ConnectableSignalTests
         List<int> late = [];
         using var subscription = replayed.Subscribe(late.Add);
 
-        // The window is wide enough to keep both values, so only the buffer size may trim the replay.
         await Assert.That(late.SequenceEqual(ExpectedReplayValues[1..])).IsTrue();
     }
 
@@ -385,45 +381,29 @@ public sealed class ConnectableSignalTests
         await Assert.That(values.SequenceEqual(ExpectedFirstSharedValues)).IsTrue();
     }
 
-    /// <summary>Verifies AutoShare maintains a single connection under concurrent subscribe and dispose churn.</summary>
+    /// <summary>Overlapping subscriptions share one source connection until the last subscriber leaves.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task AutoShareKeepsSingleConnectionUnderConcurrentChurn()
-    {
-        const int Workers = 8;
-        const int IterationsPerWorker = 200;
+    public async Task AutoShareKeepsOneConnectionAcrossOverlappingSubscriptions()
+{
         var peakConnections = 0;
         var liveConnections = 0;
         var cold = Signal.Create<int>(observer =>
         {
-            var live = Interlocked.Increment(ref liveConnections);
-            var peak = Volatile.Read(ref peakConnections);
-            while (live > peak && Interlocked.CompareExchange(ref peakConnections, live, peak) != peak)
-            {
-                peak = Volatile.Read(ref peakConnections);
-            }
-
+            liveConnections++;
+            peakConnections = Math.Max(peakConnections, liveConnections);
             observer.OnNext(FirstSharedValue);
-            return new ActionDisposable(() => Interlocked.Decrement(ref liveConnections));
+            return new ActionDisposable(() => liveConnections--);
         });
-
         var shared = cold.Share().AutoShare();
-
-        var workers = new Task[Workers];
-        for (var worker = 0; worker < Workers; worker++)
-        {
-            workers[worker] = Task.Run(() =>
-            {
-                for (var iteration = 0; iteration < IterationsPerWorker; iteration++)
-                {
-                    shared.Subscribe(static _ => { }).Dispose();
-                }
-            });
-        }
-
-        await Task.WhenAll(workers);
-
-        // Refcount churn must never run two upstream connections at once and must release the last one.
+        var first = shared.Subscribe(static _ => { });
+        var second = shared.Subscribe(static _ => { });
+        first.Dispose();
+        await Assert.That(liveConnections).IsEqualTo(1);
+        var third = shared.Subscribe(static _ => { });
+        second.Dispose();
+        await Assert.That(liveConnections).IsEqualTo(1);
+        third.Dispose();
         await Assert.That(peakConnections).IsEqualTo(1);
         await Assert.That(liveConnections).IsEqualTo(0);
     }

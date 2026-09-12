@@ -13,7 +13,6 @@ namespace ReactiveUI.Primitives.Async
         public static ReactiveUI.Primitives.Async.AsyncContext From(ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
         public static ReactiveUI.Primitives.Async.AsyncContext From(System.Threading.SynchronizationContext synchronizationContext) { }
         public static ReactiveUI.Primitives.Async.AsyncContext From(System.Threading.Tasks.TaskScheduler taskScheduler) { }
-        [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
         public static ReactiveUI.Primitives.Async.AsyncContext GetCurrent() { }
         [System.Diagnostics.DebuggerDisplay("AsyncContextSwitcherAwaitable: IsCompleted = {IsCompleted}, ForceYielding = {ForceYielding}")]
         public readonly record struct AsyncContextSwitcherAwaitable : System.IEquatable<ReactiveUI.Primitives.Async.AsyncContext.AsyncContextSwitcherAwaitable>, System.Runtime.CompilerServices.INotifyCompletion

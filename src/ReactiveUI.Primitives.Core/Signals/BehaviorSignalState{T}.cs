@@ -6,11 +6,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>
-/// Mutable state and mechanics backing the latest-value (behavior) signals. A single signal instance owns one
-/// of these inline (no separate heap object) and forwards its public surface here, so the latest-value logic
-/// lives in one place without inheritance or composition between the signal types.
-/// </summary>
+/// <summary>Stores the latest value, subscribers, and terminal state of a behavior signal.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 [System.Diagnostics.CodeAnalysis.SuppressMessage(
     "Performance",
@@ -86,12 +82,7 @@ internal record struct BehaviorSignalState<T>
         }
     }
 
-    /// <summary>Notifies all observers about the end of the sequence.</summary>
-    /// <remarks>
-    /// The broadcast runs under <see cref="_gate"/> so it serializes against <see cref="Subscribe"/>: a new
-    /// subscriber is either added before this completes (and is broadcast to here) or after (and replays the
-    /// terminal state itself), never seeing an out-of-order or duplicated notification.
-    /// </remarks>
+    /// <summary>Publishes completion under the subscription gate, preventing duplicate or out-of-order terminal notifications.</summary>
     internal void OnCompleted()
     {
         lock (_gate)
@@ -129,13 +120,8 @@ internal record struct BehaviorSignalState<T>
         }
     }
 
-    /// <summary>Notifies all observers about the arrival of the specified value.</summary>
+    /// <summary>Updates and broadcasts the latest value under the subscription gate, preserving initial-value ordering.</summary>
     /// <param name="value">The value to send to all observers.</param>
-    /// <remarks>
-    /// The latest-value update and the broadcast happen together under <see cref="_gate"/>, so they are atomic
-    /// with respect to <see cref="Subscribe"/>; a new subscriber never observes a live value before the initial
-    /// value it was promised, and never observes the same value twice.
-    /// </remarks>
     internal void OnNext(T value)
     {
         lock (_gate)
@@ -165,10 +151,7 @@ internal record struct BehaviorSignalState<T>
             ThrowIfDisposed();
             if (!_isStopped)
             {
-                // Add and deliver the initial value under the same gate that serializes live broadcast, so
-                // the new observer is either added before a concurrent OnNext (and sees the initial value
-                // first, then the live value) or after it (and the live value becomes its initial value).
-                // It can never observe a newer live value ahead of, or in addition to, its initial value.
+                // Serialize initial delivery with live broadcast to preserve order and prevent duplicates.
                 _broadcaster.Add(observer);
                 var subscription = new BehaviorWitnessHandler<T>(owner, observer);
                 observer.OnNext(_lastValue!);

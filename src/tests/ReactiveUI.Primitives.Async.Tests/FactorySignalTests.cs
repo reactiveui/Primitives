@@ -257,10 +257,13 @@ public class FactorySignalTests
     [Test]
     public async Task WhenTimerSingleShot_ThenEmitsSingleValueAfterDelay()
     {
-        var source = SignalAsync.Timer(SingleShotDelay);
-        var result = await source.ToListAsync();
-        await Assert.That(result).Count().IsEqualTo(1);
-        await Assert.That(result[0]).IsEqualTo(0L);
+        ManualTimeProvider time = new();
+        var pending = SignalAsync.Timer(SingleShotDelay, time).ToListAsync().AsTask();
+        var timer = await time.NextTimerAsync();
+        await Assert.That(pending.IsCompleted).IsFalse();
+        await Assert.That(timer.DueTime).IsEqualTo(SingleShotDelay);
+        timer.Fire();
+        await Assert.That(await pending).IsCollectionEqualTo([0L]);
     }
 
     /// <summary>Tests Timer periodic emits multiple values.</summary>
@@ -268,25 +271,16 @@ public class FactorySignalTests
     [Test]
     public async Task WhenTimerPeriodic_ThenEmitsMultipleValues()
     {
-        const int MinimumEmissions = 2;
-        var source = SignalAsync.Timer(PeriodicDueTime, PeriodicInterval);
-        List<long> items = [];
-        TaskCompletionSource minimumReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using var sub = await source.SubscribeAsync(
-            (x, _) =>
-            {
-                items.Add(x);
-                if (items.Count >= MinimumEmissions)
-                {
-                    IgnoredResult.Of(minimumReceived.TrySetResult());
-                }
-
-                return default;
-            },
-            null);
-        await minimumReceived.Task;
-        await Assert.That(items.Count).IsGreaterThanOrEqualTo(MinimumEmissions);
-        await Assert.That(items[0]).IsEqualTo(0L);
+        const int SecondValue = 2;
+        ManualTimeProvider time = new();
+        var pending = SignalAsync.Timer(PeriodicDueTime, PeriodicInterval, time).Take(SecondValue).ToListAsync().AsTask();
+        var first = await time.NextTimerAsync();
+        await Assert.That(first.DueTime).IsEqualTo(PeriodicDueTime);
+        first.Fire();
+        var second = await time.NextTimerAsync();
+        await Assert.That(second.DueTime).IsEqualTo(PeriodicInterval);
+        second.Fire();
+        await Assert.That(await pending).IsCollectionEqualTo([0L, 1L]);
     }
 
     /// <summary>Tests Timer negative due time.</summary>
@@ -370,46 +364,11 @@ public class FactorySignalTests
     [Test]
     public async Task WhenIntervalWithCancellation_ThenEmitsPeriodicValues()
     {
-        const int MinimumEmissions = 2;
-        using CancellationTokenSource cts = new();
-        var source = SignalAsync.Interval(PeriodicInterval);
-        List<long> items = [];
-        TaskCompletionSource minimumReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        var received = false;
-        try
-        {
-            await using var sub = await source.SubscribeAsync(
-                (x, _) =>
-                {
-                    items.Add(x);
-                    if (items.Count >= MinimumEmissions)
-                    {
-                        IgnoredResult.Of(minimumReceived.TrySetResult());
-                    }
-
-                    return default;
-                },
-                null,
-                null,
-                cts.Token);
-            await minimumReceived.Task;
-            received = true;
-        }
-        catch (OperationCanceledException)
-        {
-            // Expected — the timer is being cancelled to end the test.
-        }
-        finally
-        {
-            if (!cts.IsCancellationRequested)
-            {
-                await cts.CancelAsync();
-            }
-        }
-
-        await Assert.That(received).IsTrue();
-        await Assert.That(items.Count).IsGreaterThanOrEqualTo(MinimumEmissions);
-        await Assert.That(items[0]).IsEqualTo(1L);
+        const int SecondValue = 2;
+        const long SecondTick = 2L;
+        ManualTimeProvider time = new();
+        var values = await time.RunAsync(SignalAsync.Interval(PeriodicInterval, time).Take(SecondValue).ToListAsync().AsTask());
+        await Assert.That(values).IsCollectionEqualTo([1L, SecondTick]);
     }
 
     /// <summary>Tests that enumerable subscription emission returns early when the cancellation token is already cancelled.</summary>

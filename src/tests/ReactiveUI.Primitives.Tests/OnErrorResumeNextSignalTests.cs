@@ -9,7 +9,7 @@ using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>Focused coverage for the Rx-style on-error resume sequence coordinator.</summary>
+/// <summary>Tests continuation after source errors.</summary>
 public sealed class OnErrorResumeNextSignalTests
 {
     /// <summary>The integer constant one.</summary>

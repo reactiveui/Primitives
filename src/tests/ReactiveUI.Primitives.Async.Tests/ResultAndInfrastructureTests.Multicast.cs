@@ -13,17 +13,11 @@ namespace ReactiveUI.Primitives.Async.Tests;
 /// <summary>Multicast / RefCount tests.</summary>
 public class ResultAndInfrastructureTests
 {
-    /// <summary>Seconds a test waits for a notification before giving up.</summary>
-    private const int WaitTimeoutSeconds = 5;
-
     /// <summary>Number of values in the range sources used by the multicast tests.</summary>
     private const int SourceValueCount = 3;
 
     /// <summary>Value emitted by the single-value multicast source.</summary>
     private const int MulticastValue = 42;
-
-    /// <summary>Maximum time a test waits for a notification to arrive.</summary>
-    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(WaitTimeoutSeconds);
 
     /// <summary>Verifies concurrent observer exception constructors preserve messages and inner exceptions.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -82,38 +76,24 @@ public class ResultAndInfrastructureTests
         await Assert.That(observer.Cancelled).IsTrue();
     }
 
-    /// <summary>Verifies concurrent cross-thread observer calls are reported through the unhandled exception handler.</summary>
+    /// <summary>Verifies that an overlapping call from a different thread identifier is rejected and reported.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenObserverCalledConcurrentlyFromDifferentThread_ThenUnhandledExceptionReported()
     {
-        const int ConcurrentValue = 2;
+        const int FirstThreadId = 1;
+        const int SecondThreadId = 2;
         using UnhandledExceptionCapture capture = new();
-        BlockingObserver observer = new();
-        var first = Task.Factory.StartNew(
-            static async state =>
-            {
-                var blockingObserver = (BlockingObserver)state!;
-                await blockingObserver.OnNextAsync(1, CancellationToken.None);
-            },
-            observer,
-            CancellationToken.None,
-            TaskCreationOptions.LongRunning | TaskCreationOptions.DenyChildAttach,
-            TaskScheduler.Default).Unwrap();
-        try
-        {
-            await observer.Entered.Task.WaitAsync(WaitTimeout);
-            await observer.OnNextAsync(ConcurrentValue, CancellationToken.None);
-        }
-        finally
-        {
-            _ = observer.Release.TrySetResult();
-        }
-
-        await first.WaitAsync(WaitTimeout);
+        await using CallbackWitnessAsync<int> observer = new(static (_, _) => default);
+        var entered = observer.TryEnterOnSomethingCall(FirstThreadId, CancellationToken.None, out var scope);
+        var concurrentEntered = observer.TryEnterOnSomethingCall(SecondThreadId, CancellationToken.None, out var rejectedScope);
+        scope.Dispose();
+        rejectedScope.Dispose();
+        _ = observer.ExitOnSomethingCall();
+        await Assert.That(entered).IsTrue();
+        await Assert.That(concurrentEntered).IsFalse();
         var reported = await capture.WaitForAsync(
-            static exception => exception is ConcurrentWitnessCallsException,
-            WaitTimeout);
+            static exception => exception is ConcurrentWitnessCallsException);
         await Assert.That(reported).IsNotNull();
     }
 
@@ -326,7 +306,7 @@ public class ResultAndInfrastructureTests
                 return default;
             });
         await using var conn = await connectable.ConnectAsync(CancellationToken.None);
-        await completed.Task.WaitAsync(WaitTimeout);
+        await completed.Task;
         await Assert.That(items).IsCollectionEqualTo([FirstValue, SecondValue]);
     }
 
@@ -374,7 +354,7 @@ public class ResultAndInfrastructureTests
                 captured = ex;
                 return default;
             });
-        await AsyncTestHelpers.WaitForConditionAsync(() => captured is not null, WaitTimeout);
+        await Assert.That(captured is not null).IsTrue();
         await Assert.That(items).Contains(1);
         await Assert.That(captured).IsNotNull();
         await Assert.That(captured!.Message).IsEqualTo("refcount-error");
@@ -391,30 +371,6 @@ public class ResultAndInfrastructureTests
         {
             Cancelled = true;
             throw new OperationCanceledException(cancellationToken);
-        }
-
-        /// <inheritdoc/>
-        protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-            default;
-
-        /// <inheritdoc/>
-        protected override ValueTask OnCompletedAsyncCore(Result result) => default;
-    }
-
-    /// <summary>Observer that blocks OnNext until explicitly released.</summary>
-    private sealed class BlockingObserver : WitnessAsync<int>
-    {
-        /// <summary>Gets the signal set after the first OnNext call has entered.</summary>
-        public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        /// <summary>Gets the signal that releases the blocked OnNext call.</summary>
-        public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        /// <inheritdoc/>
-        protected override async ValueTask OnNextAsyncCore(int value, CancellationToken cancellationToken)
-        {
-            _ = Entered.TrySetResult();
-            await Release.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
         }
 
         /// <inheritdoc/>

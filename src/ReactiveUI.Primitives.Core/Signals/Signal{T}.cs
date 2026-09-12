@@ -25,23 +25,13 @@ public class Signal<T> : ISignal<T>
     /// <summary>Published in place of the observers once the signal has been disposed.</summary>
     private static readonly object DisposedMarker = new();
 
-    /// <summary>
-    /// Guards observer-set and terminal-state mutations. Dispatch does not take it: subscribe, remove, and
-    /// the terminal transitions each publish one new value to <see cref="_observers"/>, and they mutate
-    /// reusable array slots in place rather than copying, so subscribe/unsubscribe churn does not allocate a
-    /// new array per change.
-    /// </summary>
+    /// <summary>Serializes observer-set and terminal-state mutations; dispatch reads the published target without this gate.</summary>
     private readonly Lock _observerLock = new();
 
     /// <summary>Stores state for the signal implementation.</summary>
     private Exception? _exception;
 
-    /// <summary>
-    /// The dispatch target, and the only field <see cref="OnNext"/> reads: <see langword="null"/> while
-    /// nobody is subscribed, the subscription itself for exactly one subscriber, the slot array for more, or
-    /// one of the terminal markers. Every shape change publishes a single new value here, so a dispatch sees
-    /// either the whole change or none of it. That is what lets the emit path run without taking the gate.
-    /// </summary>
+    /// <summary>Atomically published dispatch target: empty, one subscription, a slot array, or a terminal marker.</summary>
     private object? _observers;
 
     /// <summary>The reusable slot array backing the multi-subscriber shape, kept across an empty period.</summary>
@@ -137,11 +127,7 @@ public class Signal<T> : ISignal<T>
 
     /// <summary>Called when [next].</summary>
     /// <param name="value">The value.</param>
-    /// <remarks>
-    /// One volatile read of <see cref="_observers"/> decides the whole dispatch, so emitting never takes the
-    /// observer gate. A terminal transition or a disposal publishes a marker to that same field, which is how
-    /// a stopped signal stays silent and a disposed one still throws without a lock on the emit path.
-    /// </remarks>
+    /// <remarks>Emission reads the published observer state without locking. Terminal signals ignore subsequent values; disposed signals throw.</remarks>
     public void OnNext(T value)
     {
         var observers = Volatile.Read(ref _observers);
@@ -207,7 +193,7 @@ public class Signal<T> : ISignal<T>
         return EmptyDisposable.Instance;
     }
 
-    /// <summary>Executes the SubscribeAction operation.</summary>
+    /// <summary>Registers a value callback, or rethrows the stored error if the signal has already failed.</summary>
     /// <param name="onNext">The onNext value.</param>
     /// <returns>The result.</returns>
     public IDisposable SubscribeAction(Action<T> onNext)
@@ -263,8 +249,7 @@ public class Signal<T> : ISignal<T>
         {
             _exception = null;
 
-            // Set before the marker is published: the marker goes out with a release write, so a dispatch
-            // that acquires it is guaranteed to see the disposed flag its trailing check reads.
+            // The release write publishes the disposed flag with the terminal marker.
             _isDisposed = true;
             observers = ClearObserversLocked(DisposedMarker);
         }
@@ -274,13 +259,9 @@ public class Signal<T> : ISignal<T>
 
     /// <summary>Creates the exception every use-after-disposal path throws.</summary>
     /// <returns>The exception to throw.</returns>
-    /// <remarks>
-    /// Returned rather than thrown so each caller ends in <c>throw</c>. The guard-clause shape the analyzers
-    /// require would otherwise leave every one of those methods with an epilogue nothing can reach.
-    /// </remarks>
     private static ObjectDisposedException Disposed() => new(string.Empty);
 
-    /// <summary>Executes the Completed operation.</summary>
+    /// <summary>Forwards completion to each subscription in the captured observer snapshot.</summary>
     /// <param name="observers">The observer shape captured while the signal was still running.</param>
     private static void Completed(object? observers)
     {
@@ -301,7 +282,7 @@ public class Signal<T> : ISignal<T>
         }
     }
 
-    /// <summary>Executes the Error operation.</summary>
+    /// <summary>Forwards an error to each subscription in the captured observer snapshot.</summary>
     /// <param name="observers">The observer shape captured while the signal was still running.</param>
     /// <param name="exception">The exception value.</param>
     private static void Error(object? observers, Exception exception)
@@ -323,7 +304,7 @@ public class Signal<T> : ISignal<T>
         }
     }
 
-    /// <summary>Executes the HasActionSubscribers operation.</summary>
+    /// <summary>Checks whether the captured snapshot contains any value-only callback subscriptions.</summary>
     /// <param name="observers">The observer shape captured while the signal was still running.</param>
     /// <returns>The result.</returns>
     private static bool HasActionSubscribers(object? observers)
@@ -349,7 +330,7 @@ public class Signal<T> : ISignal<T>
         return false;
     }
 
-    /// <summary>Executes the DisposeSubscriptions operation.</summary>
+    /// <summary>Detaches each subscription in the captured observer snapshot.</summary>
     /// <param name="observers">The observer shape captured before disposal.</param>
     private static void DisposeSubscriptions(object? observers)
     {
@@ -370,7 +351,7 @@ public class Signal<T> : ISignal<T>
         }
     }
 
-    /// <summary>Executes the DispatchSubscriptions operation.</summary>
+    /// <summary>Forwards a value to each occupied subscription slot.</summary>
     /// <param name="subscriptions">The subscription snapshot, which the observer field only ever holds non-null.</param>
     /// <param name="value">The value.</param>
     private static void DispatchSubscriptions(SignalSubscription?[] subscriptions, T value)
@@ -401,7 +382,7 @@ public class Signal<T> : ISignal<T>
         throw Disposed();
     }
 
-    /// <summary>Executes the ThrowIfDisposed operation.</summary>
+    /// <summary>Rejects operations after the signal has been disposed.</summary>
     private void ThrowIfDisposed()
     {
         if (!IsDisposed)
@@ -484,7 +465,7 @@ public class Signal<T> : ISignal<T>
         return observers;
     }
 
-    /// <summary>Executes the Remove operation.</summary>
+    /// <summary>Removes a subscription while holding the observer lock.</summary>
     /// <param name="subscription">The subscription value.</param>
     private void Remove(SignalSubscription subscription)
     {
@@ -504,14 +485,9 @@ public class Signal<T> : ISignal<T>
         }
     }
 
-    /// <summary>Removes an array-backed subscription, keeping the array for the next subscriber.</summary>
+    /// <summary>Removes a subscription from its owning slot array.</summary>
     /// <param name="slots">The active slot array.</param>
     /// <param name="subscription">The subscription value.</param>
-    /// <remarks>
-    /// A subscription disposes itself once and only ever sits in the array it was added to, so the search
-    /// always finds it. The index guard is what keeps that assumption from corrupting the slot array if it
-    /// ever stops holding.
-    /// </remarks>
     private void RemoveFromSlotsLocked(SignalSubscription?[] slots, SignalSubscription subscription)
     {
         var index = Array.IndexOf(slots, subscription);
@@ -577,8 +553,6 @@ public class Signal<T> : ISignal<T>
         /// <param name="value">The value.</param>
         public void OnNext(T value)
         {
-            // Branch on a null check of the typed fields rather than an `is Action<T>` test plus cast: this runs
-            // once per observer per value on the multicast dispatch hot path, where that overhead is measurable.
             var observer = _observer;
             if (observer is not null)
             {
@@ -598,7 +572,7 @@ public class Signal<T> : ISignal<T>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnCompleted() => _observer?.OnCompleted();
 
-        /// <summary>Executes the Dispose operation.</summary>
+        /// <summary>Detaches this subscription once.</summary>
         public void Dispose()
         {
             var subject = Interlocked.Exchange(ref _subject, null);

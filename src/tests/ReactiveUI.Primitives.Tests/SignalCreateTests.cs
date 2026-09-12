@@ -31,12 +31,6 @@ public class SignalCreateTests
     /// <summary>Expected values for create-with-state tests.</summary>
     private static readonly int[] CreateWithStateExpected = [Third];
 
-    /// <summary>A delay long enough that the subscription is always disposed before it elapses.</summary>
-    private static readonly TimeSpan NeverElapsingDelay = TimeSpan.FromSeconds(30);
-
-    /// <summary>How long the test waits for the cancellation callback before failing.</summary>
-    private static readonly TimeSpan CancellationTimeout = TimeSpan.FromSeconds(5);
-
     /// <summary>Creates the argument checking.</summary>
     [Test]
     public void Create_ArgumentChecking()
@@ -251,7 +245,6 @@ public class SignalCreateTests
         });
 
         var subscription = created.Subscribe(values.Add);
-        await Task.Yield();
         subscription.Dispose();
 
         await Assert.That(values.SequenceEqual([CreatedValue])).IsTrue();
@@ -261,16 +254,16 @@ public class SignalCreateTests
         InvalidOperationException expected = new("async-create");
         _ = Signal.Create<int>((_, _) => Task.FromException<IDisposable>(expected))
             .Subscribe(static _ => { }, error => observed = error);
-        await Task.Yield();
 
         await Assert.That(observed).IsSameReferenceAs(expected);
 
         TaskCompletionSource canceled = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var cancellable = Signal.Create<int>(async (_, cancellationToken) =>
         {
             try
             {
-                await Task.Delay(NeverElapsingDelay, cancellationToken).ConfigureAwait(false);
+                await release.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -283,11 +276,10 @@ public class SignalCreateTests
 
         var cancellableSubscription = cancellable.Subscribe(static _ => { });
         cancellableSubscription.Dispose();
-        await canceled.Task.WaitAsync(CancellationTimeout).ConfigureAwait(false);
+        await canceled.Task.ConfigureAwait(false);
 
         var nullDisposable = Signal.Create<int>(static (_, _) => Task.FromResult<IDisposable>(null!));
         var nullSubscription = nullDisposable.Subscribe(static _ => { });
-        await Task.Yield();
         nullSubscription.Dispose();
 
         _ = Assert.Throws<ArgumentNullException>(static () =>
@@ -304,7 +296,6 @@ public class SignalCreateTests
         List<int> values = [];
         _ = Signal.Defer(static () => Task.FromResult(Signal.Emit(CreatedValue))).Subscribe(values.Add);
         _ = Signal.Defer(static _ => Task.FromResult(Signal.Emit(First))).Subscribe(values.Add);
-        await Task.Yield();
 
         await Assert.That(values.SequenceEqual([CreatedValue, First])).IsTrue();
 
@@ -312,19 +303,23 @@ public class SignalCreateTests
         InvalidOperationException expected = new("defer");
         _ = Signal.Defer(() => Task.FromException<IObservable<int>>(expected))
             .Subscribe(static _ => { }, error => observed = error);
-        await Task.Yield();
 
         await Assert.That(observed).IsSameReferenceAs(expected);
 
-        TaskCompletionSource<IObservable<int>> delayedFactory = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        List<int> canceledValues = [];
-        var deferred = Signal.Defer(_ => delayedFactory.Task);
-        var subscription = deferred.Subscribe(canceledValues.Add);
-        subscription.Dispose();
-        delayedFactory.SetResult(Signal.Emit(Fourth));
-        await Task.Yield();
+        RecordingWitness<int> canceled = new();
+        AsyncSubscriptionLifetime lifetime = new();
+        using CreateWitness<int> witness = new(canceled);
+        witness.SetCancel(lifetime);
+        await AsyncDeferSignal<int>.RunAsyncFactory(
+            _ =>
+            {
+                lifetime.Dispose();
+                return Task.FromResult(Signal.Emit(Fourth));
+            },
+            witness,
+            lifetime);
 
-        await Assert.That(canceledValues.Count).IsEqualTo(0);
+        await Assert.That(canceled.Values.Count).IsEqualTo(0);
 
         _ = Assert.Throws<ArgumentNullException>(static () => Signal.Defer((Func<Task<IObservable<int>>>)null!));
         _ = Assert.Throws<ArgumentNullException>(static () =>

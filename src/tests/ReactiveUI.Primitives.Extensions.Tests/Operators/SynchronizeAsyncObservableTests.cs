@@ -2,12 +2,39 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using ReactiveUI.Primitives.Extensions.Operators;
+
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Tests for <c>SynchronizeAsyncObservable</c> — covers the after-terminal guards
-/// on the sink that only fire when the upstream pushes events past its own completion.</summary>
+/// <summary>Tests synchronization acknowledgements and notification handling after termination.</summary>
 public class SynchronizeAsyncObservableTests
 {
+    /// <summary>Verifies disposal completes an acknowledgement published after the disposal step.</summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task AcknowledgementPublishedAfterDisposalCompletes()
+    {
+        SynchronizeAsyncObservable<int>.SynchronizeAsyncSink.SyncSignal signal = new();
+        TaskCompletionSource<bool> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        signal.Dispose();
+        signal.CompleteIfDisposedRaced(completion);
+        signal.CompleteIfDisposedRaced(completion);
+        await Assert.That(completion.Task.IsCompletedSuccessfully).IsTrue();
+    }
+
+    /// <summary>Verifies a live acknowledgement remains pending until disposal.</summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task LiveAcknowledgementWaitsForDisposal()
+    {
+        SynchronizeAsyncObservable<int>.SynchronizeAsyncSink.SyncSignal signal = new();
+        var acknowledgement = signal.WaitForDisposeAsync();
+        await Assert.That(acknowledgement.IsCompleted).IsFalse();
+        signal.Dispose();
+        await acknowledgement;
+        await Assert.That(acknowledgement.IsCompletedSuccessfully).IsTrue();
+    }
+
     /// <summary>Verifies that <c>OnNext</c>, <c>OnError</c> and a duplicate <c>OnCompleted</c>
     /// arriving after the source has already completed are silently dropped.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>

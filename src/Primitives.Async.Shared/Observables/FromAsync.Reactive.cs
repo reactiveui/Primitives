@@ -24,10 +24,7 @@ public static partial class SignalAsyncReactiveExtensions
     /// to cancel the operation.</param>
     extension(Func<CancellationToken, ValueTask> factory)
     {
-        /// <summary>
-        /// Creates an asynchronous observable sequence that executes the specified factory function and signals completion
-        /// when the operation finishes.
-        /// </summary>
+        /// <summary>Creates an asynchronous observable sequence that executes the specified factory function and signals completion when the operation finishes.</summary>
         /// <returns>An observable sequence that emits a single value of <see cref="RxVoid"/> when the factory function completes,
         /// followed by a completion notification.</returns>
         /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="factory"/> is <see langword="null"/>.</exception>
@@ -37,7 +34,7 @@ public static partial class SignalAsyncReactiveExtensions
         [SuppressMessage(
             "Roslynator",
             "RCS1047:Non-asynchronous method name should not end with \'Async\'",
-            Justification = "This is an existing method")]
+            Justification = "Names the asynchronous observable factory.")]
         public IObservableAsync<RxVoid> FromAsync()
         {
             ArgumentExceptionHelper.ThrowIfNull(factory);

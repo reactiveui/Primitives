@@ -65,15 +65,11 @@ internal sealed class TaskSignal<T> : ITaskSignal<T>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose() => Dispose(true);
 
-    /// <summary>Creates a task-backed signal whose source the supplied factory builds.</summary>
+    /// <summary>Invokes the factory after the signal is fully initialized.</summary>
     /// <param name="observableFactory">Builds the source, receiving the signal it will belong to.</param>
     /// <param name="sequencer">The sequencer subscriptions are observed on.</param>
     /// <param name="cancellationTokenSource">The cancellation source to observe.</param>
     /// <returns>The created signal.</returns>
-    /// <remarks>
-    /// The factory receives the signal and may subscribe to, dispose, or store it the moment it is called, so
-    /// construction finishes before the factory runs rather than calling it from the constructor.
-    /// </remarks>
     internal static TaskSignal<T> Create(
         Func<ITaskSignal<T>, IObservable<T>> observableFactory,
         ISequencer? sequencer = null,

@@ -10,7 +10,7 @@ using ReactiveUI.Primitives.Disposables;
 namespace ReactiveUI.Primitives.Tests;
 
 /// <summary>Tests for the shared UI dispatch sequencer base.</summary>
-public sealed class DispatchSequencerBaseTests
+public sealed class DispatchSequencerStateTests
 {
     /// <summary>Expected post count after reentrant scheduling.</summary>
     private const int ExpectedReentrantPostCount = 2;
@@ -51,24 +51,10 @@ public sealed class DispatchSequencerBaseTests
     /// <summary>The single value recorded when only the live half of a pair of work items runs.</summary>
     private static readonly int[] ExpectedLiveOnly = [OuterDrainValue];
 
-    /// <summary>How far ahead delayed work is scheduled.</summary>
-    private static readonly TimeSpan DelayedDueTime = TimeSpan.FromMilliseconds(100);
-
-    /// <summary>
-    /// A due time far enough out that no scheduling pause between capturing the timestamp and reading the
-    /// remaining delay can elapse it. Asserting a still-pending delay against a short due time races the wall
-    /// clock: a loaded runner can spend longer than the due time inside the preceding assertion, leaving nothing
-    /// to wait for and clamping the result to zero.
-    /// </summary>
-    private static readonly TimeSpan UnreachableDueTime = TimeSpan.FromHours(1);
-
-    /// <summary>How long a test watches for delayed work that must never reach the dispatcher.</summary>
-    private static readonly TimeSpan CancelObservationWindow = TimeSpan.FromMilliseconds(400);
-
     /// <summary>Verifies a burst posts one dispatcher drain and preserves FIFO order.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task DispatchSequencerBaseCoalescesBurstIntoOneDrain()
+    public async Task CoalescesBurstIntoOneDrain()
     {
         var sequencer = TestDispatchSequencer.Create();
         List<int> values = [];
@@ -84,7 +70,7 @@ public sealed class DispatchSequencerBaseTests
     /// <summary>Verifies cancelled queued work is skipped when the drain runs.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task DispatchSequencerBaseSkipsCancelledQueuedWork()
+    public async Task SkipsCancelledQueuedWork()
     {
         var sequencer = TestDispatchSequencer.Create();
         List<int> values = [];
@@ -98,7 +84,7 @@ public sealed class DispatchSequencerBaseTests
     /// <summary>Verifies work scheduled from inside a drain runs in the next drain.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task DispatchSequencerBaseDefersReentrantWorkToNextDrain()
+    public async Task DefersReentrantWorkToNextDrain()
     {
         var sequencer = TestDispatchSequencer.Create();
         List<int> values = [];
@@ -142,12 +128,45 @@ public sealed class DispatchSequencerBaseTests
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task DelayUntilClampsElapsedDueTimestampsToZero()
-    {
-        var now = DispatchSequencerState.Timestamp;
+{
+        await Assert.That(DispatchSequencerState.DelayUntil(0)).IsEqualTo(TimeSpan.Zero);
+        await Assert.That(Sequencer.TimeUntil(ElapsedTimestampOffset, ElapsedTimestampOffset)).IsEqualTo(TimeSpan.Zero);
+        await Assert.That(Sequencer.TimeUntil(0, ElapsedTimestampOffset)).IsEqualTo(TimeSpan.Zero);
+        await Assert.That(Sequencer.TimeUntil(ElapsedTimestampOffset, 0)).IsGreaterThan(TimeSpan.Zero);
+    }
 
-        await Assert.That(DispatchSequencerState.DelayUntil(now - ElapsedTimestampOffset)).IsEqualTo(TimeSpan.Zero);
-        await Assert.That(DispatchSequencerState.DelayUntil(Sequencer.AddTimestamp(now, UnreachableDueTime)) > TimeSpan.Zero)
-            .IsTrue();
+    /// <summary>Active delayed work returns to its owning dispatch queue.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task MarshalOnDueQueuesActiveWorkOnItsOwner()
+    {
+        var sequencer = TestDispatchSequencer.Create();
+        List<int> values = [];
+        RecordingWorkItem item = new(values, OuterDrainValue);
+        DispatchSequencerState.MarshalOnDueWorkItem marshal = new(sequencer, item);
+        marshal.Execute();
+        await Assert.That(values.Count).IsEqualTo(0);
+        sequencer.RunNextDrain();
+        await Assert.That(values.SequenceEqual([OuterDrainValue])).IsTrue();
+    }
+
+    /// <summary>The fallback timer marshals delayed work through the owning dispatch queue.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task FallbackTimerMarshalsDelayedWorkToItsOwner()
+    {
+        ManualSequencer timer = new();
+        var sequencer = TestDispatchSequencer.Create(timer);
+        List<int> values = [];
+        RecordingWorkItem item = new(values, OuterDrainValue);
+        sequencer.Schedule(item, long.MaxValue);
+        await Assert.That(values.Count).IsEqualTo(0);
+        await Assert.That(sequencer.PostCount).IsEqualTo(0);
+        timer.RunPending();
+        await Assert.That(values.Count).IsEqualTo(0);
+        await Assert.That(sequencer.PostCount).IsEqualTo(1);
+        sequencer.RunNextDrain();
+        await Assert.That(values.SequenceEqual([OuterDrainValue])).IsTrue();
     }
 
     /// <summary>Verifies a platform delayed-scheduling override receives delayed work instead of the shared timer.</summary>
@@ -158,7 +177,7 @@ public sealed class DispatchSequencerBaseTests
         var sequencer = ConfigurableDispatchSequencer.CreateWithDelayedOverride();
         List<int> values = [];
         RecordingWorkItem item = new(values, OuterDrainValue);
-        var dueTimestamp = Sequencer.AddTimestamp(sequencer.Timestamp, DelayedDueTime);
+        const long dueTimestamp = long.MaxValue;
 
         sequencer.Schedule(item, dueTimestamp);
 
@@ -173,16 +192,13 @@ public sealed class DispatchSequencerBaseTests
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task DelayedWorkCancelledBeforeItIsDueNeverReachesTheDispatcher()
-    {
+{
         var sequencer = ConfigurableDispatchSequencer.Create();
         List<int> values = [];
         RecordingWorkItem item = new(values, OuterDrainValue);
-
-        sequencer.Schedule(item, Sequencer.AddTimestamp(sequencer.Timestamp, DelayedDueTime));
+        DispatchSequencerState.MarshalOnDueWorkItem marshal = new(sequencer, item);
         item.Dispose();
-
-        await Task.Delay(CancelObservationWindow);
-
+        marshal.Execute();
         await Assert.That(sequencer.PostCount).IsEqualTo(0);
         await Assert.That(values.Count).IsEqualTo(0);
     }
@@ -280,11 +296,14 @@ public sealed class DispatchSequencerBaseTests
 
         /// <summary>Creates a sequencer whose dispatch state is wired only after construction has finished,
         /// so the engine never sees a half-built owner.</summary>
+        /// <param name="sharedTimer">The optional fallback delay sequencer.</param>
         /// <returns>The wired sequencer.</returns>
-        public static TestDispatchSequencer Create()
+        public static TestDispatchSequencer Create(ISequencer? sharedTimer = null)
         {
             TestDispatchSequencer sequencer = new();
-            sequencer._state = new(sequencer, sequencer.Post, sequencer.RunDrain);
+            sequencer._state = sharedTimer is null
+                ? new(sequencer, sequencer.Post, sequencer.RunDrain)
+                : new(sequencer, sequencer.Post, sequencer.RunDrain, null, sharedTimer);
             return sequencer;
         }
 
@@ -337,10 +356,7 @@ public sealed class DispatchSequencerBaseTests
         public void Execute() => _values.Add(_value);
     }
 
-    /// <summary>
-    /// Dispatch sequencer whose post can be made to reject a drain or throw, and which can capture delayed work
-    /// through a platform override instead of falling back to the shared thread-pool timer.
-    /// </summary>
+    /// <summary>Captures delayed work and supports accepted, rejected, or throwing drain posts.</summary>
     private sealed class ConfigurableDispatchSequencer : ISequencer
     {
         /// <summary>Posted drains awaiting a run.</summary>

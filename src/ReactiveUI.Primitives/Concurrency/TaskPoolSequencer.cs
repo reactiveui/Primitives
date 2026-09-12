@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
-using System.Runtime.ExceptionServices;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
@@ -15,11 +14,26 @@ public sealed class TaskPoolSequencer : ISequencer
     /// <summary>Task factory used to schedule asynchronous work.</summary>
     private readonly TaskFactory _taskFactory;
 
+    /// <summary>Schedules delayed dispatch callbacks.</summary>
+    private readonly ISequencer _delaySequencer;
+
     /// <summary>Initializes a new instance of the <see cref="TaskPoolSequencer"/> class.</summary>
     /// <param name="taskFactory">The task factory.</param>
     /// <exception cref="ArgumentNullException"><paramref name="taskFactory"/> is <see langword="null"/>.</exception>
-    public TaskPoolSequencer(TaskFactory taskFactory) =>
+    public TaskPoolSequencer(TaskFactory taskFactory)
+        : this(taskFactory, ThreadPoolSequencer.Instance)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="TaskPoolSequencer"/> class.</summary>
+    /// <param name="taskFactory">The factory dispatching ready work.</param>
+    /// <param name="delaySequencer">The scheduler delivering delayed callbacks.</param>
+    /// <exception cref="ArgumentNullException">The task factory is null.</exception>
+    internal TaskPoolSequencer(TaskFactory taskFactory, ISequencer delaySequencer)
+    {
         _taskFactory = taskFactory ?? throw new ArgumentNullException(nameof(taskFactory));
+        _delaySequencer = delaySequencer;
+    }
 
     /// <summary>Gets the shared sequencer backed by <see cref="Task.Factory"/>.</summary>
     public static TaskPoolSequencer Instance { get; } = new(Task.Factory);
@@ -70,7 +84,7 @@ public sealed class TaskPoolSequencer : ISequencer
             return;
         }
 
-        ThreadPoolSequencer.Instance.Schedule(new DelayedDispatchWorkItem(this, item), dueTimestamp);
+        _delaySequencer.Schedule(new DelayedDispatchWorkItem(this, item), dueTimestamp);
     }
 
     /// <summary>Executes a work item and routes unhandled exceptions.</summary>
@@ -95,7 +109,7 @@ public sealed class TaskPoolSequencer : ISequencer
                 return;
             }
 
-            ExceptionDispatchInfo.Capture(ex).Throw();
+            throw;
         }
     }
 

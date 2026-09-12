@@ -40,6 +40,9 @@ public sealed class SynchronizeWitness<T> : IObserver<T>, IDisposable
         _gate = gate;
     }
 
+    /// <summary>Gets the gate serializing downstream notifications.</summary>
+    internal Lock Gate => _gate;
+
     /// <inheritdoc/>
     public void OnNext(T value)
     {

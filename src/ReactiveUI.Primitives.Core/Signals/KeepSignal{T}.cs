@@ -19,12 +19,12 @@ public sealed class KeepSignal<T>(IObservable<T> source, Func<T, bool> predicate
     /// <summary>Stores state for the signal implementation.</summary>
     private readonly Func<T, bool> _predicate = predicate;
 
-    /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
+    /// <summary>Preserves the source's current-thread subscription requirement.</summary>
     /// <returns>The result.</returns>
     public bool IsRequiredSubscribeOnCurrentThread() =>
         _source is IRequireCurrentThread<T> currentThread && currentThread.IsRequiredSubscribeOnCurrentThread();
 
-    /// <summary>Executes the Subscribe operation.</summary>
+    /// <summary>Subscribes an observer to source values accepted by the predicate.</summary>
     /// <param name="observer">The observer value.</param>
     /// <returns>The result.</returns>
     public IDisposable Subscribe(IObserver<T> observer)
@@ -48,7 +48,7 @@ public sealed class KeepSignal<T>(IObservable<T> source, Func<T, bool> predicate
         /// <summary>Stores state for the signal implementation.</summary>
         private int _stopped;
 
-        /// <summary>Executes the OnCompleted operation.</summary>
+        /// <summary>Forwards completion only while the sink is active.</summary>
         public void OnCompleted()
         {
             if (Interlocked.Exchange(ref _stopped, 1) != 0)
@@ -59,7 +59,7 @@ public sealed class KeepSignal<T>(IObservable<T> source, Func<T, bool> predicate
             _observer.OnCompleted();
         }
 
-        /// <summary>Executes the OnError operation.</summary>
+        /// <summary>Stops the sink and forwards its first error.</summary>
         /// <param name="error">The error value.</param>
         public void OnError(Exception error)
         {
@@ -71,7 +71,7 @@ public sealed class KeepSignal<T>(IObservable<T> source, Func<T, bool> predicate
             _observer.OnError(error);
         }
 
-        /// <summary>Executes the OnNext operation.</summary>
+        /// <summary>Filters active values and turns predicate failures into terminal errors.</summary>
         /// <param name="value">The value.</param>
         public void OnNext(T value)
         {

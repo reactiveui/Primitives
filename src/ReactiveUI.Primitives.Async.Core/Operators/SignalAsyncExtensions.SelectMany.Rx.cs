@@ -12,10 +12,7 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The source observable sequence.</param>
     extension<T>(IObservableAsync<T> source)
     {
-        /// <summary>
-        /// Projects each element of the observable sequence to an asynchronous observable sequence and
-        /// merges the resulting sequences into one observable sequence.
-        /// </summary>
+        /// <summary>Projects each element of the observable sequence to an asynchronous observable sequence and merges the resulting sequences into one observable sequence.</summary>
         /// <typeparam name="TResult">The type of the elements in the projected inner sequences.</typeparam>
         /// <param name="selector">A transform function to apply to each element.</param>
         /// <returns>An observable sequence whose elements are the merged projection results.</returns>

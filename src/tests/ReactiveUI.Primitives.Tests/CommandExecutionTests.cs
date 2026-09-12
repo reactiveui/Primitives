@@ -83,24 +83,15 @@ public class CommandExecutionTests
     /// <returns>A task that completes when the continuation assertions finish.</returns>
     [Test]
     public async Task TheAwaiterResumesAContinuationScheduledThroughOnCompleted()
-    {
-        using ManualResetEventSlim release = new(false);
-        using CommandSignal<int> command = new(async token =>
-        {
-            await Task.Run(() => release.Wait(token), token);
-            return CommandResult;
-        });
-
+{
+        TaskCompletionSource<int> release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using CommandSignal<int> command = new(release.Task.WaitAsync);
         var awaiter = command.ExecuteAsync().GetAwaiter();
         TaskCompletionSource resumed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         awaiter.OnCompleted(() => resumed.SetResult());
-
         await Assert.That(awaiter.IsCompleted).IsFalse();
-
-        release.Set();
+        release.SetResult(CommandResult);
         await resumed.Task;
-
-        await Assert.That(awaiter.IsCompleted).IsTrue();
         await Assert.That(awaiter.GetResult()).IsEqualTo(CommandResult);
     }
 

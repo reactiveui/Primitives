@@ -35,12 +35,8 @@ internal sealed record InstanceTargetModel(
     EquatableArray<DiagnosticInfo> Diagnostics,
     LocationInfo? Location)
 {
-    /// <summary>Creates the activation overload this host's wrapper is reached through.</summary>
+    /// <summary>Gets the activation signature independently of the host's event list.</summary>
     /// <returns>The overload model.</returns>
-    /// <remarks>
-    /// Projected out rather than stored, so the one file carrying every overload compares equal - and stays
-    /// uncompiled - when a host's events change but its signature does not.
-    /// </remarks>
     internal ActivationModel ToActivation() =>
         new(
             TypeReference,

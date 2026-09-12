@@ -27,14 +27,12 @@ public static partial class SignalAsyncReactiveExtensions
         /// <summary>Converts the specified task into an asynchronous observable sequence that signals completion when the task finishes.</summary>
         /// <returns>An asynchronous observable sequence that emits a single value when the task completes successfully, followed by
         /// a completion notification.</returns>
-        /// <remarks>The returned observable emits a single unit value upon task completion and then signals
-        /// completion. If the task is canceled or fails, the observable will propagate the corresponding error. This method
-        /// is useful for integrating task-based operations into observable workflows.</remarks>
+        /// <remarks>Task failure or cancellation terminates the sequence with the corresponding error.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [SuppressMessage(
             "Roslynator",
             "RCS1047:Non-asynchronous method name should not end with \'Async\'",
-            Justification = "This is an existing method")]
+            Justification = "Names the asynchronous observable conversion.")]
         public IObservableAsync<RxVoid> ToAsyncSignal() => new TaskToAsyncSignal(task);
     }
 }

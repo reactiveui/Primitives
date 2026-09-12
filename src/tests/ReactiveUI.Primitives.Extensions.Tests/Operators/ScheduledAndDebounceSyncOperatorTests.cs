@@ -8,12 +8,7 @@ using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Edge-case coverage batch for several small synchronous operators:
-/// <c>DetectStale</c>, <c>BufferUntilIdle</c>, <c>DebounceImmediate</c>,
-/// <c>DebounceUntil</c>, <c>Schedule</c> (value and source overloads),
-/// <c>LatestOrDefault</c>, <c>Pairwise</c>, <c>WaitUntil</c>,
-/// <c>SwitchIfEmpty</c>. Tests focus on the terminal/error/disposal branches
-/// that the existing happy-path tests don't already cover.</summary>
+/// <summary>Tests scheduled value delivery, debounce termination, and disposal.</summary>
 public class ScheduledAndDebounceSyncOperatorTests
 {
     /// <summary>Synthetic error message attached to source errors.</summary>
@@ -170,10 +165,8 @@ public class ScheduledAndDebounceSyncOperatorTests
         await Assert.That(results).IsCollectionEqualTo([Value1]);
     }
 
-    /// <summary>Verifies that <c>Schedule(this T value, TimeSpan, ISequencer)</c> emits the value after the delay.</summary>
+    /// <summary>Verifies scheduled delivery emits a value without completion.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
-    /// <remarks>The operator preserves the original <c>Observable.Create</c>-based semantics —
-    /// the scheduled callback emits <c>OnNext</c> only; <c>OnCompleted</c> is not signalled.</remarks>
     [Test]
     public async Task WhenScheduleValueWithDelay_ThenEmitsAfterDelay()
     {

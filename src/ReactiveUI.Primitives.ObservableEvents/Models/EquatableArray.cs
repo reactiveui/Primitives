@@ -6,15 +6,8 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.ObservableEvents.Models;
 
-/// <summary>An array that compares by value, so it can sit inside an incremental-pipeline model.</summary>
+/// <summary>An immutable array with element-wise equality and a cached hash.</summary>
 /// <typeparam name="T">The element type, which must itself compare by value.</typeparam>
-/// <remarks>
-/// The pipeline decides whether to re-run a downstream step by asking whether the model it produced equals the one
-/// from the previous run. An array compares by reference, so a model carrying a bare array is never equal to its
-/// predecessor and every step below it re-runs on every keystroke. Wrapping the array here is what makes the
-/// per-target caching real. A readonly struct so the value sits inline in its owning record rather than adding a
-/// heap object per collection.
-/// </remarks>
 internal readonly struct EquatableArray<T> : IEquatable<EquatableArray<T>>
     where T : notnull, IEquatable<T>
 {
@@ -59,11 +52,7 @@ internal readonly struct EquatableArray<T> : IEquatable<EquatableArray<T>>
     public static bool operator !=(EquatableArray<T> left, EquatableArray<T> right) => !left.Equals(right);
 
     /// <inheritdoc/>
-    /// <remarks>
-    /// A defaulted instance and one wrapping a zero-length array are the same value here. Treating them as
-    /// different would make an extraction that happened to build an empty array compare unequal to one that
-    /// returned <see cref="Empty"/>, and silently cost the caching this type exists for.
-    /// </remarks>
+    /// <summary>Compares elements in order, treating default and empty arrays as equal.</summary>
     public bool Equals(EquatableArray<T> other)
     {
         var values = _values;
@@ -101,13 +90,9 @@ internal readonly struct EquatableArray<T> : IEquatable<EquatableArray<T>>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal T[] AsArray() => _values ?? [];
 
-    /// <summary>Computes the deterministic hash of the elements.</summary>
+    /// <summary>Hashes elements in order, returning zero for an empty array.</summary>
     /// <param name="values">The elements to hash.</param>
     /// <returns>The combined hash.</returns>
-    /// <remarks>
-    /// Empty hashes to zero, which is what a default-constructed instance keeps in its field without calling
-    /// here - so the two forms of empty that <see cref="Equals(EquatableArray{T})"/> calls equal hash alike.
-    /// </remarks>
     private static int ComputeHashCode(T[] values)
     {
         if (values.Length == 0)

@@ -13,10 +13,7 @@ using RxObservable = System.Reactive.Linq.Observable;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
-/// <summary>
-/// Benchmarks for the pass-through and materialization operators converted to dedicated signals
-/// (Tap, IgnoreValues, Spark/Unspark materialize round-trip, SubscribeOn, Reattempt).
-/// </summary>
+/// <summary>Benchmarks for the pass-through and materialization operators converted to dedicated signals (Tap, IgnoreValues, Spark/Unspark materialize round-trip, SubscribeOn, Reattempt).</summary>
 [MemoryDiagnoser]
 public class OperatorPassThroughBenchmarks
 {

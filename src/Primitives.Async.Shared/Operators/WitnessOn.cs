@@ -15,9 +15,6 @@ namespace ReactiveUI.Primitives.Async;
 #endif
 
 /// <summary>Provides extension methods for controlling the execution context of asynchronous observable sequences.</summary>
-/// <remarks>The methods in this class allow you to specify the context on which observer callbacks are invoked
-/// for an asynchronous observable sequence. This is useful for ensuring that notifications are delivered on a
-/// particular synchronization or task context, such as a UI thread or a custom scheduler.</remarks>
 public static partial class SignalAsyncReactiveExtensions
 {
     /// <summary>Context-switching operators that control where observer callbacks are invoked for an observable source sequence.</summary>
@@ -79,9 +76,6 @@ public static partial class SignalAsyncReactiveExtensions
         /// <param name="scheduler">The scheduler on which to observe and deliver notifications to observers. Cannot be null.</param>
         /// <param name="forceYielding">true to force yielding to the scheduler even if already on the target context; otherwise, false.</param>
         /// <returns>An observable sequence whose notifications are delivered on the specified scheduler.</returns>
-        /// <remarks>Use this method to control the context (such as a UI thread or a specific task
-        /// scheduler) on which observers receive notifications. This is useful for ensuring thread safety or updating
-        /// UI elements from observable sequences.</remarks>
         public IObservableAsync<T> WitnessOn(ISequencer scheduler, bool forceYielding)
         {
             var asyncContext = AsyncContext.From(scheduler);

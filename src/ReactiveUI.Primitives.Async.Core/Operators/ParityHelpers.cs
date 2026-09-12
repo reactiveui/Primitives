@@ -226,10 +226,7 @@ public static partial class SignalAsyncExtensions
             return new PairwiseSignal<T>(source);
         }
 
-        /// <summary>
-        /// Partitions the source sequence into values that satisfy the predicate and values that do not.
-        /// The predicate is evaluated exactly once per element.
-        /// </summary>
+        /// <summary>Partitions the source sequence into values that satisfy the predicate and values that do not. The predicate is evaluated exactly once per element.</summary>
         /// <param name="predicate">The partition predicate.</param>
         /// <returns>A tuple of true and false partitions.</returns>
         public (IObservableAsync<T> True, IObservableAsync<T> False) Partition(Func<T, bool> predicate)

@@ -8,15 +8,10 @@ using Microsoft.CodeAnalysis.Text;
 
 namespace ReactiveUI.Primitives.ObservableEvents.Models;
 
-/// <summary>Where a diagnostic points, reduced to values the incremental pipeline can compare.</summary>
+/// <summary>Stores diagnostic coordinates without retaining syntax trees.</summary>
 /// <param name="FilePath">The source file the request was written in.</param>
 /// <param name="TextSpan">The span within that file.</param>
 /// <param name="LineSpan">The line and character span within that file.</param>
-/// <remarks>
-/// A <see cref="Location"/> holds onto its syntax tree, which would pin a whole compilation in the pipeline's cache
-/// and never compare equal between runs. Keeping the three values it is built from lets the location survive in a
-/// model and be rebuilt at the point a diagnostic is actually reported.
-/// </remarks>
 internal sealed record LocationInfo(string FilePath, TextSpan TextSpan, LinePositionSpan LineSpan)
 {
     /// <summary>Reduces a Roslyn location to its comparable values.</summary>

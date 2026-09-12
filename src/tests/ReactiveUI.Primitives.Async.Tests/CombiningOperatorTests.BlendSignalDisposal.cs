@@ -99,7 +99,6 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeSignalDisposedBeforeInnerEmission_ThenRelayNextAsyncReturns()
     {
-        const int WaitTimeoutSeconds = 5;
         var source = Signal.Create<int>();
         var inner = Signal.Create<IObservableAsync<int>>();
         List<int> items = [];
@@ -123,9 +122,7 @@ public partial class CombiningOperatorTests
         await inner.OnNextAsync(source.Values, CancellationToken.None);
         await inner.OnCompletedAsync(Result.Failure(new InvalidOperationException("force done")));
 
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => completionResult is not null,
-            TimeSpan.FromSeconds(WaitTimeoutSeconds));
+        await Assert.That(completionResult is not null).IsTrue();
 
         // After dispose, forwarding should be a no-op
         await source.OnNextAsync(Sentinel42, CancellationToken.None);
@@ -267,70 +264,25 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeSignalOfSignalsDisposedWhileGateHeld_ThenRelayNextAsyncReturnsPostGate()
     {
-        const int SecondEmissionValue = 2;
-        DirectSource<int> innerSource = new();
-        DirectSource<IObservableAsync<int>> outerSource = new();
-        List<int> items = [];
-        TaskCompletionSource gateHeld = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        TaskCompletionSource proceedWithFirstEmission = new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        var sub = await outerSource
-            .Merge()
-            .SubscribeAsync(
-                async (x, _) =>
-                {
-                    lock (_gate)
-                    {
-                        items.Add(x);
-                    }
-
-                    if (x == 1)
-                    {
-                        // Signal that the gate is being held by this OnNext call
-                        gateHeld.SetResult();
-
-                        // Wait here, keeping the gate held
-                        await proceedWithFirstEmission.Task;
-                    }
-                },
-                null);
-
-        // Subscribe the inner source through the outer
-        await outerSource.EmitNext(innerSource, CancellationToken.None);
-
-        // First emission holds the gate via the slow observer
-        var firstEmission = innerSource.EmitNext(1, CancellationToken.None);
-
-        // Wait until the gate is held
-        await gateHeld.Task;
-
-        // Start a second emission that will queue behind the gate
-        var secondEmissionTask = Task.Run(async () =>
+        const int SecondValue = 2;
+        List<int> values = [];
+        List<Exception> errors = [];
+        CallbackWitnessAsync<int> observer = new(
+            (value, _) =>
         {
-            try
-            {
-                await innerSource.EmitNext(SecondEmissionValue, CancellationToken.None);
-            }
-            catch (OperationCanceledException)
-            {
-                // Expected – the linked CTS may be cancelled
-            }
+            values.Add(value);
+            return default;
+        },
+            (exception, _) =>
+        {
+            errors.Add(exception);
+            return default;
         });
-
-        // Give the second emission time to start waiting for the gate
-        // Dispose while the second emission is waiting for the gate
-        var disposeTask = sub.DisposeAsync();
-
-        // Release the first emission so it completes and releases the gate
-        proceedWithFirstEmission.SetResult();
-
-        await firstEmission;
-        await disposeTask;
-        await secondEmissionTask;
-
-        // Only value 1 should have been emitted; value 2 hits the post-gate _disposed check
-        await Assert.That(items).Contains(1);
-        await Assert.That(items).DoesNotContain(SampleValue2);
+        SignalAsyncExtensions.BlendCoordinator<int> coordinator = new(observer);
+        await coordinator.DisposeAsync();
+        await coordinator.RelayNextIfActiveAsync(SecondValue);
+        await Assert.That(values).IsEmpty();
+        await Assert.That(errors).IsEmpty();
     }
 
     /// <summary>
@@ -341,65 +293,23 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeSignalOfSignalsDisposedWhileGateHeld_ThenRelayErrorAsyncReturnsPostGate()
     {
-        DirectSource<int> innerSource = new();
-        DirectSource<IObservableAsync<int>> outerSource = new();
+        List<int> values = [];
         List<Exception> errors = [];
-        TaskCompletionSource gateHeld = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        TaskCompletionSource proceedWithFirstEmission = new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        var sub = await outerSource
-            .Merge()
-            .SubscribeAsync(
-                async (_, _) =>
-                {
-                    // Hold the gate on the first emission
-                    gateHeld.SetResult();
-                    await proceedWithFirstEmission.Task;
-                },
-                (ex, _) =>
-                {
-                    lock (_gate)
-                    {
-                        errors.Add(ex);
-                    }
-
-                    return default;
-                });
-
-        // Subscribe the inner source through the outer
-        await outerSource.EmitNext(innerSource, CancellationToken.None);
-
-        // First emission holds the gate
-        var firstEmission = innerSource.EmitNext(1, CancellationToken.None);
-
-        // Wait until the gate is held
-        await gateHeld.Task;
-
-        // Start an error emission that will queue behind the gate
-        var errorTask = Task.Run(async () =>
+        CallbackWitnessAsync<int> observer = new(
+            (value, _) =>
         {
-            try
-            {
-                await innerSource.EmitError(new InvalidOperationException(LateErrorMessage), CancellationToken.None);
-            }
-            catch (OperationCanceledException)
-            {
-                // Expected
-            }
+            values.Add(value);
+            return default;
+        },
+            (exception, _) =>
+        {
+            errors.Add(exception);
+            return default;
         });
-
-        // Give the error emission time to start waiting for the gate
-        // Dispose while the error emission is waiting for the gate
-        var disposeTask = sub.DisposeAsync();
-
-        // Release the first emission
-        proceedWithFirstEmission.SetResult();
-
-        await firstEmission;
-        await disposeTask;
-        await errorTask;
-
-        // The error should not have been forwarded because the post-gate disposed check caught it
+        SignalAsyncExtensions.BlendCoordinator<int> coordinator = new(observer);
+        await coordinator.DisposeAsync();
+        await coordinator.RelayErrorIfActiveAsync(new InvalidOperationException("late"));
+        await Assert.That(values).IsEmpty();
         await Assert.That(errors).IsEmpty();
     }
 
@@ -482,7 +392,7 @@ public partial class CombiningOperatorTests
         await outer.OnNextAsync(inner, CancellationToken.None);
         await inner.EmitNext(1);
 
-        var failTask = Task.Run(() => outer.OnCompletedAsync(Result.Failure(new InvalidOperationException("fail"))));
+        var failTask = outer.OnCompletedAsync(Result.Failure(new InvalidOperationException("fail")));
         await completionBlocked.Task;
 
         await inner.EmitNext(Sentinel99);
@@ -501,7 +411,6 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeOfSignalsDisposedDuringEmission_ThenDropsSubsequentValues()
     {
-        const int WaitTimeoutSeconds = 5;
         DirectSource<IObservableAsync<int>> outerSource = new();
         DirectSource<int> innerSource = new();
         List<int> results = [];
@@ -519,9 +428,7 @@ public partial class CombiningOperatorTests
         await outerSource.EmitNext(innerSource);
         await innerSource.EmitNext(1);
 
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => results.Count >= 1,
-            TimeSpan.FromSeconds(WaitTimeoutSeconds));
+        await Assert.That(results.Count >= 1).IsTrue();
 
         await sub.DisposeAsync();
 
@@ -539,7 +446,6 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeOfSignalsDisposedDuringErrorResume_ThenDropsSubsequentErrors()
     {
-        const int WaitTimeoutSeconds = 5;
         DirectSource<IObservableAsync<int>> outerSource = new();
         DirectSource<int> innerSource = new();
         List<Exception> errors = [];
@@ -557,9 +463,7 @@ public partial class CombiningOperatorTests
         await outerSource.EmitNext(innerSource);
         await innerSource.EmitError(new InvalidOperationException(FirstLiteral));
 
-        await AsyncTestHelpers.WaitForConditionAsync(
-            () => errors.Count >= 1,
-            TimeSpan.FromSeconds(WaitTimeoutSeconds));
+        await Assert.That(errors.Count >= 1).IsTrue();
 
         await sub.DisposeAsync();
 

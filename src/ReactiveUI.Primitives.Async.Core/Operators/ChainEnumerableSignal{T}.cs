@@ -7,10 +7,7 @@ using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Represents an asynchronous observable sequence that concatenates multiple asynchronous observables, emitting their
-/// elements in order as each completes.
-/// </summary>
+/// <summary>Represents an asynchronous observable sequence that concatenates multiple asynchronous observables, emitting their elements in order as each completes.</summary>
 /// <typeparam name="T">The type of elements produced by the concatenated observable sequences.</typeparam>
 /// <param name="signals">A collection of asynchronous signals to be concatenated. Each signal is subscribed to sequentially; the next
 /// begins only after the previous completes.</param>
@@ -35,10 +32,7 @@ public sealed class ChainEnumerableSignal<T>(IEnumerable<IObservableAsync<T>> si
             subscription.SubscribeNextSignalAsync);
     }
 
-    /// <summary>
-    /// Manages sequential iteration through the enumerable of observables, subscribing to each
-    /// inner observable only after the previous one completes.
-    /// </summary>
+    /// <summary>Manages sequential iteration through the enumerable of observables, subscribing to each inner observable only after the previous one completes.</summary>
     internal sealed class ChainSequenceCoordinator : IAsyncDisposable
     {
         /// <summary>Enumerator that iterates through the collection of observable sequences to concatenate.</summary>
@@ -118,9 +112,7 @@ public sealed class ChainEnumerableSignal<T>(IEnumerable<IObservableAsync<T>> si
         /// <returns>A task representing the asynchronous operation.</returns>
         internal ValueTask RelayInnerErrorAsync(Exception exception, CancellationToken cancellationToken)
         {
-            // The inner subscription is rooted in _disposedCancellationToken (see SubscribeNextSignalAsync), so
-            // disposing it cascades into the inner observer's own cancellation. Forwarding that token directly
-            // gives the same cancellation semantics as a linked CTS without allocating one per emission.
+            // The inner subscription shares this disposal token.
             _ = cancellationToken;
             return _observer.OnErrorResumeAsync(exception, _disposedCancellationToken);
         }
@@ -135,10 +127,7 @@ public sealed class ChainEnumerableSignal<T>(IEnumerable<IObservableAsync<T>> si
             return _observer.OnNextAsync(value, _disposedCancellationToken);
         }
 
-        /// <summary>
-        /// Disposes the inner subscription and enumerator, and optionally forwards a completion result
-        /// to the downstream observer. This method is idempotent.
-        /// </summary>
+        /// <summary>Disposes the inner subscription and enumerator, and optionally forwards a completion result to the downstream observer. This method is idempotent.</summary>
         /// <param name="result">The completion result to forward, or <see langword="null"/> if disposing without signaling completion.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
         internal async ValueTask FinishAsync(Result? result)

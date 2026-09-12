@@ -14,10 +14,7 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The source observable sequence.</param>
     extension<T>(IObservableAsync<T> source)
     {
-        /// <summary>
-        /// Creates a new observable sequence that contains only the elements from the source sequence that satisfy the
-        /// specified asynchronous predicate.
-        /// </summary>
+        /// <summary>Creates a new observable sequence that contains only the elements from the source sequence that satisfy the specified asynchronous predicate.</summary>
         /// <param name="predicate">A function that evaluates each element and its associated cancellation token, returning a ValueTask that
         /// resolves to <see langword="true"/> to include the element in the resulting sequence; otherwise, <see
         /// langword="false"/>.</param>
@@ -29,10 +26,7 @@ public static partial class SignalAsyncExtensions
         public IObservableAsync<T> Keep(Func<T, CancellationToken, ValueTask<bool>> predicate) =>
             new KeepAsyncSignal<T>(source, predicate);
 
-        /// <summary>
-        /// Creates a new observable sequence that contains only the elements from the current sequence that satisfy the
-        /// specified predicate.
-        /// </summary>
+        /// <summary>Creates a new observable sequence that contains only the elements from the current sequence that satisfy the specified predicate.</summary>
         /// <param name="predicate">A function to test each element for a condition. The element is included in the resulting sequence if the
         /// function returns <see langword="true"/>.</param>
         /// <returns>An observable sequence that contains elements from the current sequence that satisfy the specified
@@ -56,20 +50,14 @@ public static partial class SignalAsyncExtensions
             return new KeepSyncSignal<T>(source, value => predicate(state, value));
         }
 
-        /// <summary>
-        /// Creates a new observable sequence that contains only the elements from the source sequence that satisfy the
-        /// specified asynchronous predicate.
-        /// </summary>
+        /// <summary>Creates a new observable sequence that contains only the elements from the source sequence that satisfy the specified asynchronous predicate.</summary>
         /// <param name="predicate">A function that evaluates each element and cancellation token.</param>
         /// <returns>An observable sequence that emits only those elements for which the predicate returns <see langword="true"/>.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> Where(Func<T, CancellationToken, ValueTask<bool>> predicate) =>
             new KeepAsyncSignal<T>(source, predicate);
 
-        /// <summary>
-        /// Creates a new observable sequence that contains only the elements from the current sequence that satisfy the
-        /// specified predicate.
-        /// </summary>
+        /// <summary>Creates a new observable sequence that contains only the elements from the current sequence that satisfy the specified predicate.</summary>
         /// <param name="predicate">A function to test each element for a condition.</param>
         /// <returns>An observable sequence that contains elements from the current sequence that satisfy the predicate.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

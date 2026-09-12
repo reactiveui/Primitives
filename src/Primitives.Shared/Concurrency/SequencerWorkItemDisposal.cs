@@ -11,13 +11,9 @@ namespace ReactiveUI.Primitives.Concurrency;
 /// <summary>Disposal helpers shared by sequencer work items.</summary>
 internal static class SequencerWorkItemDisposal
 {
-    /// <summary>Publishes the action's disposable into the shared slot, disposing it when disposal won the race.</summary>
+    /// <summary>Publishes the disposable or releases it if disposal owns the slot.</summary>
     /// <param name="slot">The disposable slot shared with the work item's disposal.</param>
     /// <param name="disposable">The disposable returned by the scheduled action.</param>
-    /// <remarks>
-    /// Disposal swaps a non-null sentinel into the slot, so a non-null exchange result means disposal owns the
-    /// slot and this caller must release the disposable it produced.
-    /// </remarks>
     internal static void Publish(ref IDisposable? slot, IDisposable disposable)
     {
         if (Interlocked.CompareExchange(ref slot, disposable, null) is null)

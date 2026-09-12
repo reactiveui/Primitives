@@ -34,25 +34,16 @@ internal static class GeneratorHarness
     internal static (Compilation Compilation, CSharpGeneratorDriver Driver) CreateColdState(CorpusSize size) =>
         (BuildCompilation(size), CreateDriver());
 
-    /// <summary>Creates a primed driver and the very compilation it was primed against.</summary>
+    /// <summary>Runs the generator with unchanged inputs to measure cache reuse.</summary>
     /// <param name="size">The corpus size.</param>
     /// <returns>The unchanged compilation and a driver that has already generated once.</returns>
-    /// <remarks>
-    /// The control the other incremental cases are only meaningful against: nothing whatsoever has changed, so
-    /// every cache that can hit must hit. Whatever this still costs is the floor no amount of caching removes, and
-    /// if it sits at the cold number then the caching is not buying wall-clock however green the step table looks.
-    /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static (Compilation Compilation, CSharpGeneratorDriver Driver) CreateUnchangedState(CorpusSize size) =>
         RunOnce(size);
 
-    /// <summary>Creates a primed driver and a compilation edited somewhere no request depends on.</summary>
+    /// <summary>Runs the generator after editing a file unrelated to event activation.</summary>
     /// <param name="size">The corpus size.</param>
     /// <returns>The edited compilation and a driver that has already generated once.</returns>
-    /// <remarks>
-    /// This is the keystroke case: the consumer typed in a file that declares no event and calls no activation, so
-    /// a pipeline that caches properly should do nothing beyond re-scanning the one new tree.
-    /// </remarks>
     internal static (Compilation Compilation, CSharpGeneratorDriver Driver) CreateUnrelatedEditState(CorpusSize size)
     {
         var primed = RunOnce(size);
@@ -61,13 +52,9 @@ internal static class GeneratorHarness
         return (edited, primed.Driver);
     }
 
-    /// <summary>Creates a primed driver and a compilation whose first host gained an event.</summary>
+    /// <summary>Runs the generator after changing one host's event declarations.</summary>
     /// <param name="size">The corpus size.</param>
     /// <returns>The edited compilation and a driver that has already generated once.</returns>
-    /// <remarks>
-    /// One host's file is replaced and no other. The edit changes what exactly one wrapper exposes, so the cost
-    /// here is the floor for a real change rather than for a full regeneration.
-    /// </remarks>
     internal static (Compilation Compilation, CSharpGeneratorDriver Driver) CreateEventEditState(CorpusSize size)
     {
         var primed = RunOnce(size);

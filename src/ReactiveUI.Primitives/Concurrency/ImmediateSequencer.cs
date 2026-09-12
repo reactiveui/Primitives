@@ -68,10 +68,18 @@ public sealed class ImmediateSequencer : ISequencer
     {
         ArgumentExceptionHelper.ThrowIfNull(item);
 
-        var dueTime = Sequencer.TimeUntil(dueTimestamp);
+        RunScheduled(item, Sequencer.TimeUntil(dueTimestamp), Wait);
+    }
+
+    /// <summary>Waits for a relative delay and executes work that remains active.</summary>
+    /// <param name="item">The scheduled work.</param>
+    /// <param name="dueTime">The remaining delay.</param>
+    /// <param name="wait">The blocking wait operation.</param>
+    internal static void RunScheduled(IWorkItem item, TimeSpan dueTime, Action<TimeSpan> wait)
+    {
         if (dueTime.Ticks > 0)
         {
-            Thread.Sleep(dueTime);
+            wait(dueTime);
         }
 
         if (Sequencer.IsCancelled(item))
@@ -81,4 +89,10 @@ public sealed class ImmediateSequencer : ISequencer
 
         item.Execute();
     }
+
+    /// <summary>Blocks the scheduling thread for the remaining delay.</summary>
+    /// <param name="dueTime">The remaining delay.</param>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    private static void Wait(TimeSpan dueTime) => Thread.Sleep(dueTime);
 }

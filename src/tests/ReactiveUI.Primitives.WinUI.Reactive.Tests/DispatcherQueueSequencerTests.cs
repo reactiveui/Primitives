@@ -8,24 +8,30 @@ using ReactiveUI.Primitives.Reactive.Concurrency;
 
 namespace ReactiveUI.Primitives.WinUI.Reactive.Tests;
 
-/// <summary>
-/// Tests for <see cref="DispatcherQueueSequencer"/> as an <see cref="IScheduler"/>, exercised against a real WinUI
-/// <see cref="DispatcherQueue"/> running on a dedicated thread so both the immediate and timer-based dispatch
-/// paths run end to end. Compiled only on Windows builds (see the csproj).
-/// </summary>
+/// <summary>Tests scheduler execution on a dedicated WinUI queue thread.</summary>
 public sealed class DispatcherQueueSequencerTests
 {
-    /// <summary>Maximum time to wait for work to be marshalled onto the dispatcher-queue thread before failing.</summary>
-    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(5);
-
-    /// <summary>How far into the future the delayed work is scheduled.</summary>
-    private static readonly TimeSpan ScheduleDelay = TimeSpan.FromMilliseconds(50);
-
     /// <summary>Verifies the constructor rejects a null dispatcher queue.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task ConstructorRejectsNullDispatcherQueue() =>
         await Assert.That(static () => new DispatcherQueueSequencer(null!)).ThrowsExactly<ArgumentNullException>();
+
+    /// <summary>Verifies a stopped dispatcher queue rejects scheduled work.</summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task SchedulingAfterQueueShutdownThrows()
+    {
+        var harness = new DispatcherQueueHarness();
+        DispatcherQueueSequencer scheduler = new(harness.DispatcherQueue);
+        await harness.DisposeAsync();
+        var executed = false;
+        await Assert.That(() => scheduler.Schedule(() => executed = true))
+            .ThrowsExactly<InvalidOperationException>();
+        await Assert.That(() => scheduler.Schedule(() => executed = true))
+            .ThrowsExactly<InvalidOperationException>();
+        await Assert.That(executed).IsFalse();
+    }
 
     /// <summary>Verifies immediate work is enqueued to and executed on the dispatcher-queue thread.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
@@ -38,22 +44,22 @@ public sealed class DispatcherQueueSequencerTests
 
         _ = scheduler.Schedule(() => completion.TrySetResult(harness.DispatcherQueue.HasThreadAccess));
 
-        var ranOnQueueThread = await completion.Task.WaitAsync(WaitTimeout);
+        var ranOnQueueThread = await completion.Task;
         await Assert.That(ranOnQueueThread).IsTrue();
     }
 
-    /// <summary>Verifies work due in the future is executed on the dispatcher-queue thread via the queue timer.</summary>
+    /// <summary>Verifies due work executes on the dispatcher queue thread.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
-    public async Task DelayedScheduleExecutesOnQueueThread()
+    public async Task DueScheduleExecutesOnQueueThread()
     {
         await using var harness = new DispatcherQueueHarness();
         var scheduler = new DispatcherQueueSequencer(harness.DispatcherQueue);
         var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        _ = scheduler.Schedule(ScheduleDelay, () => completion.TrySetResult(harness.DispatcherQueue.HasThreadAccess));
+        _ = scheduler.Schedule(TimeSpan.Zero, () => completion.TrySetResult(harness.DispatcherQueue.HasThreadAccess));
 
-        var ranOnQueueThread = await completion.Task.WaitAsync(WaitTimeout);
+        var ranOnQueueThread = await completion.Task;
         await Assert.That(ranOnQueueThread).IsTrue();
     }
 
@@ -75,6 +81,6 @@ public sealed class DispatcherQueueSequencerTests
 
         /// <inheritdoc/>
         /// <returns>A task representing the asynchronous operation.</returns>
-        public async ValueTask DisposeAsync() => await _controller.ShutdownQueueAsync().AsTask().WaitAsync(WaitTimeout);
+        public async ValueTask DisposeAsync() => await _controller.ShutdownQueueAsync().AsTask();
     }
 }

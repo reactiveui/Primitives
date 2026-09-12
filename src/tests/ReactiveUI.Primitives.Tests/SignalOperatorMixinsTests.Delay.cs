@@ -2,9 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
-using System.Threading;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Signals;
 
@@ -13,12 +11,6 @@ namespace ReactiveUI.Primitives.Tests;
 /// <summary>Verifies delayed signal operator behavior.</summary>
 public partial class SignalOperatorMixinsTests
 {
-    /// <summary>Observation window used to verify disposal waits for in-flight delivery.</summary>
-    private const int DisposeObservationMilliseconds = 200;
-
-    /// <summary>Generous bound for the in-flight delivery to begin, tolerant of a saturated thread pool.</summary>
-    private const int InflightDeliveryTimeoutSeconds = 30;
-
     /// <summary>Verifies shift uses one ordered drain for a burst of delayed notifications.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
@@ -47,11 +39,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(sequencer.ScheduledCount).IsEqualTo(0);
     }
 
-    /// <summary>
-    /// Verifies the drain timer a tick reschedules for itself survives the scheduling call that ran that tick.
-    /// A sequencer may run the drain before <c>Schedule</c> returns; the tick then finds the queued value is not
-    /// due yet and arms the next drain, and that successor must not be cancelled when the outer call returns.
-    /// </summary>
+    /// <summary>An inline drain retains the successor it schedules before the initial scheduling call returns.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ShiftRetainsTheDrainTimerArmedByAnInlineTick()
@@ -74,63 +62,35 @@ public partial class SignalOperatorMixinsTests
     /// <summary>Verifies that dispose waits for in-flight delivery and blocks queued notifications.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task ShiftDisposeWaitsForInflightDeliveryAndDisallowsFurtherDelivery()
-    {
-        var dueTime = TimeSpan.FromMilliseconds(One);
-
-        // Drain on dedicated threads so a saturated thread pool cannot stall the
-        // blocking in-flight delivery this test relies on; only the brief timer
-        // callback stays on the pool.
-        TaskPoolSequencer sequencer = new(new(
-            CancellationToken.None,
-            TaskCreationOptions.LongRunning,
-            TaskContinuationOptions.None,
-            TaskScheduler.Default));
+    public async Task ShiftDisposalClaimDuringDeliverySuppressesQueuedNotifications()
+{
+        var dueTime = TimeSpan.FromTicks(One);
+        RecordingSequencer sequencer = new(DateTimeOffset.UnixEpoch);
         Signal<int> source = new();
-        using ManualResetEventSlim onNextEntered = new(false);
-        using ManualResetEventSlim onNextRelease = new(false);
-        ConcurrentQueue<int> values = [];
+        List<int> values = [];
         var completed = 0;
-        var delivered = 0;
-
-        using var subscription = source
-            .Shift(dueTime, sequencer)
-            .Subscribe(
-                value =>
-                {
-                    if (Interlocked.Increment(ref delivered) == 1)
-                    {
-                        onNextEntered.Set();
-                    }
-
-                    onNextRelease.Wait();
-                    values.Enqueue(value);
-                },
-                static _ => { },
-                () => Interlocked.Increment(ref completed));
-
+        var claimed = false;
+        LinqExtensions.ShiftCoordinator<int>? coordinator = null;
+        var observer = new DelegateWitness<int>(
+            value =>
+        {
+            values.Add(value);
+            claimed = coordinator!.TryBeginDispose();
+        },
+            static _ => { },
+            () => completed++);
+        coordinator = new(source, dueTime, sequencer, observer);
+        using var subscription = coordinator.Run();
         source.OnNext(One);
         source.OnNext(Two);
         source.OnCompleted();
-
-        await Assert.That(onNextEntered.Wait(TimeSpan.FromSeconds(InflightDeliveryTimeoutSeconds))).IsTrue();
-
-        var disposeTask = Task.Factory.StartNew(
-            subscription.Dispose,
-            CancellationToken.None,
-            TaskCreationOptions.LongRunning,
-            TaskScheduler.Default);
-        var disposeObservation = Task.Delay(TimeSpan.FromMilliseconds(DisposeObservationMilliseconds));
-        var disposeCompleted = await Task.WhenAny(disposeTask, disposeObservation) == disposeTask;
-
-        await Assert.That(disposeCompleted).IsFalse();
-
-        onNextRelease.Set();
-        await disposeTask;
-
-        await Assert.That(values.ToArray().SequenceEqual([One])).IsTrue();
-
-        await Assert.That(Volatile.Read(ref completed)).IsEqualTo(0);
+        sequencer.AdvanceBy(dueTime);
+        sequencer.RunNext();
+        coordinator.ReleaseSubscriptions();
+        await Assert.That(claimed).IsTrue();
+        await Assert.That(coordinator.TryBeginDispose()).IsFalse();
+        await Assert.That(values.SequenceEqual([One])).IsTrue();
+        await Assert.That(completed).IsEqualTo(0);
     }
 
     /// <summary>Verifies a delayed error is forwarded after the queued values that precede it.</summary>

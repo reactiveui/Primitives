@@ -4,16 +4,10 @@
 
 namespace ReactiveUI.Primitives.Internal;
 
-/// <summary>
-/// Pure race-claim helpers shared by the async layer: a first-caller-wins sentinel transition, and a cancel call that
-/// treats a concurrently disposed token source as a lost race rather than a failure.
-/// </summary>
+/// <summary>Atomic ownership claims and cancellation tolerant of prior disposal.</summary>
 internal static class ConcurrencyRaceHelpers
 {
-    /// <summary>
-    /// Atomically transitions <paramref name="state"/> from <paramref name="openSentinel"/> to
-    /// <paramref name="claimedSentinel"/>.
-    /// </summary>
+    /// <summary>Atomically transitions <paramref name="state"/> from <paramref name="openSentinel"/> to <paramref name="claimedSentinel"/>.</summary>
     /// <param name="state">The reference to the state field.</param>
     /// <param name="openSentinel">The sentinel value the state must currently hold.</param>
     /// <param name="claimedSentinel">The sentinel value the state transitions to on success.</param>
@@ -23,9 +17,7 @@ internal static class ConcurrencyRaceHelpers
     internal static bool TryClaim(ref int state, int openSentinel, int claimedSentinel) =>
         Interlocked.CompareExchange(ref state, claimedSentinel, openSentinel) == openSentinel;
 
-    /// <summary>
-    /// Cancels <paramref name="cts"/>, swallowing the <see cref="ObjectDisposedException"/> a racing dispose raises.
-    /// </summary>
+    /// <summary>Cancels <paramref name="cts"/>, swallowing the <see cref="ObjectDisposedException"/> a racing dispose raises.</summary>
     /// <param name="cts">The cancellation token source to cancel.</param>
     /// <returns>
     /// <see langword="true"/> when the cancellation completed; <see langword="false"/> when a concurrent caller had

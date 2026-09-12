@@ -6,13 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Fused <c>.SelectMany(first).SelectMany(second)</c> operator that chains two one-shot
-/// async projections in a single operator allocation. The source emits a value, it's
-/// projected through <paramref name="first"/> producing an intermediate observable, whose
-/// single emission is then projected through <paramref name="second"/> producing the
-/// final result. Errors at any stage propagate to the downstream observer.
-/// </summary>
+/// <summary>Chains two one-shot observable projections and forwards errors from either stage.</summary>
 /// <typeparam name="TSource">The source element type.</typeparam>
 /// <typeparam name="TMid">The intermediate element type produced by the first projection.</typeparam>
 /// <typeparam name="TResult">The final element type produced by the second projection.</typeparam>
@@ -34,9 +28,7 @@ public sealed class SelectManyThenObservable<TSource, TMid, TResult>(
         return source.Subscribe(new SourceWitness(observer, first, second));
     }
 
-    /// <summary>Receives the source value and subscribes to the first projection. Holds a single
-    /// reusable <see cref="MidWitness"/> created at subscribe time — the mid observer captures
-    /// only <c>downstream</c> and <c>second</c>, so the same instance handles every source emission.</summary>
+    /// <summary>Subscribes the reusable intermediate observer to the first projection.</summary>
     private sealed class SourceWitness : IObserver<TSource>
     {
         /// <summary>The downstream observer that ultimately receives <typeparamref name="TResult"/> values.</summary>
@@ -84,8 +76,7 @@ public sealed class SelectManyThenObservable<TSource, TMid, TResult>(
         public void OnCompleted() => _downstream.OnCompleted();
     }
 
-    /// <summary>Receives the intermediate value, applies <c>second</c>, and subscribes the resulting
-    /// observable directly to <c>downstream</c> — no separate final-stage observer needed.</summary>
+    /// <summary>Receives the intermediate value, applies <c>second</c>, and subscribes the resulting observable directly to <c>downstream</c> — no separate final-stage observer needed.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="second">Second projection delegate.</param>
     private sealed class MidWitness(

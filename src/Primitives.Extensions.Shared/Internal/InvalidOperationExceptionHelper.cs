@@ -7,10 +7,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions;
 
-/// <summary>
-/// Throws <see cref="InvalidOperationException"/> when constructor-supplied operator state is missing at the
-/// point it is consumed, naming the captured member and the calling member in the message.
-/// </summary>
+/// <summary>Rejects missing operator state with the member and operation names.</summary>
 [ExcludeFromCodeCoverage]
 internal static class InvalidOperationExceptionHelper
 {
@@ -34,10 +31,7 @@ internal static class InvalidOperationExceptionHelper
             $"'{memberName}' was not supplied to '{operation}'.");
     }
 
-    /// <summary>
-    /// Returns <paramref name="argument"/> when non-null and otherwise throws, shaped for use in a primary
-    /// constructor initializer.
-    /// </summary>
+    /// <summary>Returns the argument or throws if it is null.</summary>
     /// <typeparam name="T">The type of the argument.</typeparam>
     /// <param name="argument">The argument to validate.</param>
     /// <param name="memberName">The validated argument's name, captured from the <paramref name="argument"/> expression.</param>
@@ -60,10 +54,7 @@ internal static class InvalidOperationExceptionHelper
             $"'{memberName}' was not supplied to '{operation}'.");
     }
 
-    /// <summary>
-    /// Returns <paramref name="argument"/> when it is neither null nor empty and otherwise throws, shaped for use
-    /// in a primary constructor initializer.
-    /// </summary>
+    /// <summary>Returns the argument or throws if it is null or empty.</summary>
     /// <param name="argument">The argument to validate.</param>
     /// <param name="memberName">The validated argument's name, captured from the <paramref name="argument"/> expression.</param>
     /// <param name="operation">The calling member's name.</param>

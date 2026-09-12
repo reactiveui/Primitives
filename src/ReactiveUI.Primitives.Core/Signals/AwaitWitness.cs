@@ -30,11 +30,11 @@ public sealed class AwaitWitness<T> : IObserver<T>
         _callback = callback;
     }
 
-    /// <summary>Executes the OnCompleted operation.</summary>
+    /// <summary>Resumes the awaiting continuation on completion.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnCompleted() => InvokeOnOriginalContext();
 
-    /// <summary>Executes the OnError operation.</summary>
+    /// <summary>Resumes the awaiting continuation when the source fails.</summary>
     /// <param name="error">The error value.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
@@ -46,13 +46,13 @@ public sealed class AwaitWitness<T> : IObserver<T>
             + "other; having one call the other would misrepresent an error as a completion.")]
     public void OnError(Exception error) => InvokeOnOriginalContext();
 
-    /// <summary>Executes the OnNext operation.</summary>
+    /// <summary>Ignores values; only terminal notifications resume the continuation.</summary>
     /// <param name="value">The value.</param>
     public void OnNext(T value)
     {
     }
 
-    /// <summary>Executes the InvokeOnOriginalContext operation.</summary>
+    /// <summary>Posts the continuation to its captured context, or invokes it directly when none was captured.</summary>
     private void InvokeOnOriginalContext()
     {
         if (_context is not null)

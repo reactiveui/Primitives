@@ -8,10 +8,7 @@ using System.Runtime.Serialization;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// The exception that is thrown when multiple concurrent calls are made to observer methods that do not support
-/// concurrent execution.
-/// </summary>
+/// <summary>The exception that is thrown when multiple concurrent calls are made to observer methods that do not support concurrent execution.</summary>
 /// <remarks><see cref="WitnessAsync{T}"/> serializes <c>OnNextAsync</c>, <c>OnErrorResumeAsync</c> and
 /// <c>OnCompletedAsync</c>; this exception reports one of those calls arriving while another is in flight. Await each
 /// call to completion before starting the next.</remarks>

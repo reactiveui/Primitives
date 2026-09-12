@@ -2,31 +2,47 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Microsoft.UI.Dispatching;
 using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.WinUI.Tests;
 
-/// <summary>
-/// Tests for <see cref="DispatcherQueueSequencer"/>, exercised against a real WinUI
-/// <see cref="DispatcherQueue"/> running on a dedicated thread so both the immediate and timer-based
-/// dispatch paths run end to end. Compiled only on Windows builds (see the csproj).
-/// </summary>
+/// <summary>Tests dispatcher execution on a dedicated WinUI queue thread.</summary>
 public sealed class DispatcherQueueSequencerTests
 {
-    /// <summary>Maximum time to wait for work to be marshalled onto the dispatcher-queue thread before failing.</summary>
-    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(5);
-
-    /// <summary>Stopwatch ticks until the delayed work falls due: one twentieth of a second, or 50 ms.</summary>
-    private static readonly long ScheduleDelayTicks = Stopwatch.Frequency / 20;
-
     /// <summary>Verifies the constructor rejects a null dispatcher queue.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task ConstructorRejectsNullDispatcherQueue() =>
         await Assert.That(static () => new DispatcherQueueSequencer(null!)).ThrowsExactly<ArgumentNullException>();
+
+    /// <summary>Verifies the clock uses UTC and debugger text identifies the sequencer.</summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task ClockUsesUtcAndDebuggerTextIdentifiesSequencer()
+    {
+        await using var harness = new DispatcherQueueHarness();
+        DispatcherQueueSequencer sequencer = new(harness.DispatcherQueue);
+        await Assert.That(sequencer.Now.Offset).IsEqualTo(TimeSpan.Zero);
+        await Assert.That(sequencer.DebuggerDisplay).IsEqualTo(typeof(DispatcherQueueSequencer).FullName);
+    }
+
+    /// <summary>Verifies a stopped dispatcher queue rejects scheduled work.</summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task SchedulingAfterQueueShutdownThrows()
+    {
+        var harness = new DispatcherQueueHarness();
+        DispatcherQueueSequencer sequencer = new(harness.DispatcherQueue);
+        await harness.DisposeAsync();
+        var executed = false;
+        await Assert.That(() => sequencer.Schedule(new DelegateWorkItem(() => executed = true)))
+            .ThrowsExactly<InvalidOperationException>();
+        await Assert.That(() => sequencer.Schedule(new DelegateWorkItem(() => executed = true)))
+            .ThrowsExactly<InvalidOperationException>();
+        await Assert.That(executed).IsFalse();
+    }
 
     /// <summary>Verifies immediate work is enqueued to and executed on the dispatcher-queue thread.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
@@ -39,23 +55,23 @@ public sealed class DispatcherQueueSequencerTests
 
         sequencer.Schedule(new DelegateWorkItem(() => completion.TrySetResult(harness.DispatcherQueue.HasThreadAccess)));
 
-        var ranOnQueueThread = await completion.Task.WaitAsync(WaitTimeout);
+        var ranOnQueueThread = await completion.Task;
         await Assert.That(ranOnQueueThread).IsTrue();
     }
 
-    /// <summary>Verifies work due in the future is executed on the dispatcher-queue thread via the queue timer.</summary>
+    /// <summary>Verifies due work executes on the dispatcher queue thread.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
-    public async Task DelayedScheduleExecutesOnQueueThread()
+    public async Task DueScheduleExecutesOnQueueThread()
     {
         await using var harness = new DispatcherQueueHarness();
         var sequencer = new DispatcherQueueSequencer(harness.DispatcherQueue);
         var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var due = sequencer.Timestamp + ScheduleDelayTicks;
+        var due = sequencer.Timestamp;
         sequencer.Schedule(new DelegateWorkItem(() => completion.TrySetResult(harness.DispatcherQueue.HasThreadAccess)), due);
 
-        var ranOnQueueThread = await completion.Task.WaitAsync(WaitTimeout);
+        var ranOnQueueThread = await completion.Task;
         await Assert.That(ranOnQueueThread).IsTrue();
     }
 
@@ -92,6 +108,6 @@ public sealed class DispatcherQueueSequencerTests
 
         /// <inheritdoc/>
         /// <returns>A task representing the asynchronous operation.</returns>
-        public async ValueTask DisposeAsync() => await _controller.ShutdownQueueAsync().AsTask().WaitAsync(WaitTimeout);
+        public async ValueTask DisposeAsync() => await _controller.ShutdownQueueAsync().AsTask();
     }
 }

@@ -282,12 +282,7 @@ public class ChooseSwitchSelectTests
             new Signal<string?>().SwitchSelect(static _ => Signal.None<int>()).Subscribe((IObserver<int>)null!));
     }
 
-    /// <summary>
-    /// An observable whose subscription deliberately ignores disposal, retaining its observer so a test
-    /// can keep pushing notifications after the operator has switched away from it or disposed it. A
-    /// well-behaved source unsubscribes on either event; this misbehaving source is what the operator's
-    /// race guards exist to defend against.
-    /// </summary>
+    /// <summary>Retains its observer after disposal and permits further notifications.</summary>
     /// <typeparam name = "T">The element type.</typeparam>
     private sealed class ManualObservable<T> : IObservable<T>
     {

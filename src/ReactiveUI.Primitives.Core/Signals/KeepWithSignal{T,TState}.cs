@@ -6,10 +6,7 @@ using ReactiveUI.Primitives.Advanced;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>
-/// Filters source values using a caller-supplied state value, without allocating a per-value closure: the state is
-/// stored on the sink and passed to the predicate for each element.
-/// </summary>
+/// <summary>Filters source values using a caller-supplied state value, without allocating a per-value closure: the state is stored on the sink and passed to the predicate for each element.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 /// <typeparam name="TState">The state type passed to the predicate.</typeparam>
 /// <param name="source">The source sequence.</param>

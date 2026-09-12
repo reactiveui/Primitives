@@ -68,8 +68,7 @@ public sealed class ConcurrencyLimiter<T>(IEnumerable<Task<T>> taskFunctions, in
         return subscription;
     }
 
-    /// <summary>Clears the lazy enumerator. Caller must hold <see cref="_gate"/> on the production
-    /// paths; exposed to internal tests that exercise the idempotent-second-call branch.</summary>
+    /// <summary>Clears the lazy enumerator. Caller must hold <see cref="_gate"/> on the production paths; exposed to internal tests that exercise the idempotent-second-call branch.</summary>
     internal void ClearRator()
     {
         _rator?.Dispose();
@@ -92,7 +91,7 @@ public sealed class ConcurrencyLimiter<T>(IEnumerable<Task<T>> taskFunctions, in
         "PSH1315:A blocking wait on an awaitable that may not be done",
         Justification =
             "Task is guaranteed complete at this call site (IsFaulted/IsCanceled were both false above); reading .Result drives the synchronous IObserver<T> contract without blocking.")]
-    private void ProcessTaskCompletion(Subscription subscription, Task<T> completed)
+    internal void ProcessTaskCompletion(Subscription subscription, Task<T> completed)
     {
         lock (_gate)
         {
@@ -152,9 +151,7 @@ public sealed class ConcurrencyLimiter<T>(IEnumerable<Task<T>> taskFunctions, in
 
             _outstanding++;
 
-            // The continuation passes the Subscription as state — already a reference type, so
-            // no per-task ValueTuple boxing is needed. The static lambda preserves zero closure
-            // capture.
+            // The subscription carries continuation state without boxing or closure capture.
             _rator.Current?.ContinueWith(
                 static (ant, state) =>
                 {
@@ -168,9 +165,7 @@ public sealed class ConcurrencyLimiter<T>(IEnumerable<Task<T>> taskFunctions, in
         }
     }
 
-    /// <summary>Per-subscription handle: holds the observer reference and a disposal latch.
-    /// Replaces the previous <c>ActionDisposable(() =&gt; Disposed = true)</c> pattern with a
-    /// dedicated class — no closure object per subscribe.</summary>
+    /// <summary>Holds the observer and prevents notification delivery after disposal.</summary>
     /// <param name="limiter">The owning limiter.</param>
     /// <param name="observer">The downstream observer.</param>
     internal sealed class Subscription(ConcurrencyLimiter<T> limiter, IObserver<T> observer) : IDisposable

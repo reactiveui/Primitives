@@ -46,9 +46,6 @@ public class FilteringOperatorTests
     /// <summary>Hoisted source array used by tests (was inline literal).</summary>
     private static readonly string[] SequenceAbcAbADefDe = ["abc", "ab", "a", "def", "de"];
 
-    /// <summary>Maximum time a test waits for a forwarded error to arrive.</summary>
-    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(5);
-
     /// <summary>Tests sync Where filters elements.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -383,7 +380,7 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("skip-while-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -407,7 +404,7 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("take-while-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -458,7 +455,7 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("skip-while-async-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -480,7 +477,7 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("take-while-async-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -501,7 +498,7 @@ public class FilteringOperatorTests
         });
         InvalidOperationException expected = new("distinct-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -523,7 +520,7 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("distinct-by-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -545,7 +542,7 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("distinct-until-changed-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -567,7 +564,7 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("distinct-until-changed-by-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -590,7 +587,7 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("where-sync-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -611,7 +608,7 @@ public class FilteringOperatorTests
         });
         InvalidOperationException expected = new("skip-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -633,7 +630,7 @@ public class FilteringOperatorTests
         });
         InvalidOperationException expected = new("take-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -655,7 +652,7 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("cast-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -677,7 +674,7 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("of-type-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -700,7 +697,7 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("select-sync-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -723,7 +720,7 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("select-async-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -746,7 +743,7 @@ public class FilteringOperatorTests
             });
         InvalidOperationException expected = new("where-async-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 }

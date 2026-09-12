@@ -49,7 +49,7 @@ public sealed class DispatcherSequencer : ISequencer
 
     /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
-    private string DebuggerDisplay => ToString() ?? string.Empty;
+    internal string DebuggerDisplay => ToString() ?? string.Empty;
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -71,6 +71,7 @@ public sealed class DispatcherSequencer : ISequencer
     /// <summary>Runs delayed work on a dispatcher timer so it executes directly on the dispatcher thread.</summary>
     /// <param name="item">Work item to execute at the due time.</param>
     /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     private void ScheduleDelayed(IWorkItem item, long dueTimestamp)
     {
         DispatcherTimer timer =

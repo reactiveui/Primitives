@@ -6,9 +6,7 @@ using System.Reactive.Subjects;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Coverage for the multi-subscriber and idempotent-dispose paths of
-/// <c>Partition</c> backed by <c>PartitionObservable&lt;T&gt;</c> — three observers on
-/// one side, mid-array removal, and double-dispose of a side subscription.</summary>
+/// <summary>Tests multiple partition subscribers and idempotent subscriber removal.</summary>
 public partial class PartitionObservableTests
 {
     /// <summary>Verifies that three observers on the same side each receive every matching value.</summary>

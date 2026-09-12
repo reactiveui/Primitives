@@ -12,10 +12,7 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The source observable sequence.</param>
     extension<T>(IObservableAsync<T> source)
     {
-        /// <summary>
-        /// Applies an accumulator function over the observable sequence and returns each intermediate result
-        /// using the specified asynchronous accumulator.
-        /// </summary>
+        /// <summary>Applies an accumulator function over the observable sequence and returns each intermediate result using the specified asynchronous accumulator.</summary>
         /// <typeparam name="TAcc">The type of the accumulated value.</typeparam>
         /// <param name="seed">The initial accumulator value.</param>
         /// <param name="accumulator">An asynchronous accumulator function to be invoked on each element.</param>

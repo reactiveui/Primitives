@@ -1,19 +1,16 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
-
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
 /// <summary>Projects each element to an asynchronous operation, but only the result of the latest operation is emitted.</summary>
-/// <typeparam name="TSource">The type of elements in the source sequence.</typeparam>
-/// <typeparam name="TResult">The type of the result of the asynchronous operation.</typeparam>
-/// <param name="source">The source observable.</param>
-/// <param name="selector">The asynchronous projection function.</param>
-public sealed class SelectLatestAsyncObservable<TSource, TResult>(
-    IObservable<TSource> source,
-    Func<TSource, Task<TResult>> selector) : IObservable<TResult>
+/// <typeparam name = "TSource">The type of elements in the source sequence.</typeparam>
+/// <typeparam name = "TResult">The type of the result of the asynchronous operation.</typeparam>
+/// <param name = "source">The source observable.</param>
+/// <param name = "selector">The asynchronous projection function.</param>
+public sealed class SelectLatestAsyncObservable<TSource, TResult>(IObservable<TSource> source, Func<TSource, Task<TResult>> selector) : IObservable<TResult>
 {
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<TResult> observer)
@@ -21,18 +18,15 @@ public sealed class SelectLatestAsyncObservable<TSource, TResult>(
         InvalidOperationExceptionHelper.ThrowIfNull(source);
         InvalidOperationExceptionHelper.ThrowIfNull(selector);
         ArgumentExceptionHelper.ThrowIfNull(observer);
-
         SelectLatestAsyncSink sink = new(observer, selector);
         var sub = source.Subscribe(sink);
         return new DisposableBag(sub, sink);
     }
 
-    /// <summary>Sink that manages the latest async projection.</summary>
-    /// <param name="downstream">The downstream observer.</param>
-    /// <param name="selector">The async selector.</param>
-    private sealed class SelectLatestAsyncSink(
-        IObserver<TResult> downstream,
-        Func<TSource, Task<TResult>> selector) : IObserver<TSource>, IDisposable
+    /// <summary>Processes source values and owns the subscription state.</summary>
+    /// <param name = "downstream">The downstream observer.</param>
+    /// <param name = "selector">The asynchronous operation.</param>
+    internal sealed class SelectLatestAsyncSink(IObserver<TResult> downstream, Func<TSource, Task<TResult>> selector) : IObserver<TSource>, IDisposable
     {
         /// <summary>The gate for state access.</summary>
         private readonly Lock _gate = new();
@@ -53,25 +47,8 @@ public sealed class SelectLatestAsyncObservable<TSource, TResult>(
         private bool _disposed;
 
         /// <inheritdoc/>
-        public void OnNext(TSource value)
-        {
-            long id;
-            lock (_gate)
-            {
-                if (_sourceCompleted || _disposed)
-                {
-                    return;
-                }
-
-                id = ++_currentId;
-            }
-
-            var task = ProcessAsync(value, id);
-            lock (_gate)
-            {
-                _latestTask = task;
-            }
-        }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnNext(TSource value) => _ = OnNextAsync(value);
 
         /// <inheritdoc/>
         public void OnError(Exception error)
@@ -110,10 +87,7 @@ public sealed class SelectLatestAsyncObservable<TSource, TResult>(
                 return;
             }
 
-            _ = toAwait.ContinueWith(
-                static (_, s) => ((SelectLatestAsyncSink)s!).SignalCompleted(),
-                this,
-                TaskScheduler.Default);
+            _ = toAwait.ContinueWith(static (_, s) => ((SelectLatestAsyncSink)s!).SignalCompleted(), this, TaskScheduler.Default);
         }
 
         /// <inheritdoc/>
@@ -125,8 +99,33 @@ public sealed class SelectLatestAsyncObservable<TSource, TResult>(
             }
         }
 
+        /// <summary>Processes a value and returns its active operation.</summary>
+        /// <param name = "value">The source value.</param>
+        /// <returns>The processing task, or a completed task when no work starts.</returns>
+        internal Task OnNextAsync(TSource value)
+        {
+            long id;
+            lock (_gate)
+            {
+                if (_sourceCompleted || _disposed)
+                {
+                    return Task.CompletedTask;
+                }
+
+                id = ++_currentId;
+            }
+
+            var task = ProcessAsync(value, id);
+            lock (_gate)
+            {
+                _latestTask = task;
+            }
+
+            return task;
+        }
+
         /// <summary>Signals downstream completion exactly once after the latest projection has finished.</summary>
-        private void SignalCompleted()
+        internal void SignalCompleted()
         {
             lock (_gate)
             {
@@ -141,8 +140,8 @@ public sealed class SelectLatestAsyncObservable<TSource, TResult>(
         }
 
         /// <summary>Processes the async operation and checks for latest ID.</summary>
-        /// <param name="value">The value to project.</param>
-        /// <param name="id">The ID of this operation.</param>
+        /// <param name = "value">The value to project.</param>
+        /// <param name = "id">The ID of this operation.</param>
         /// <returns>A task representing the operation.</returns>
         private async Task ProcessAsync(TSource value, long id)
         {

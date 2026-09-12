@@ -10,11 +10,6 @@ using Microsoft.CodeAnalysis.CSharp;
 namespace ReactiveUI.Primitives.ObservableEvents.Tests;
 
 /// <summary>Verifies generated handlers match the nullability of the delegates they are assigned to.</summary>
-/// <remarks>
-/// A handler whose parameter nullability differs from its delegate's is assignable but warns (CS8622), and a
-/// consumer building warnings-as-errors cannot use the generated wrapper at all. The annotations are therefore part
-/// of the contract - but only where the consumer's language version can express them, which is what these pin down.
-/// </remarks>
 public sealed partial class EventGeneratorTests
 {
     /// <summary>The nullable directive a generated file opens with when the consumer's language allows it.</summary>
@@ -26,11 +21,7 @@ public sealed partial class EventGeneratorTests
     /// <summary>The same handler with the annotation dropped, as an older language version requires.</summary>
     private const string ObliviousSenderHandler = "void Handler(object sender, global::System.EventArgs e)";
 
-    /// <summary>Consumer source valid on every language version the generator supports.</summary>
-    /// <remarks>
-    /// Requests both an instance wrapper and a static one, so every generated file the language gate touches - the
-    /// wrapper, the shared overloads, and the namespace's static class - is exercised at both language versions.
-    /// </remarks>
+    /// <summary>Checks nullability output for instance wrappers, activation overloads, and static event classes.</summary>
     private const string ConventionalEventSource = """
         using System;
         using ReactiveUI.Primitives.ObservableEvents;

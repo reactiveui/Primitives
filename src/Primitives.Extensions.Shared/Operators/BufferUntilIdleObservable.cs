@@ -10,10 +10,7 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
-/// <summary>
-/// Buffers elements and emits them when the stream has been idle for a specified duration. Backs both
-/// the <c>BufferUntilIdle</c> and <c>BufferUntilInactive</c> public operators.
-/// </summary>
+/// <summary>Buffers elements and emits them when the stream has been idle for a specified duration. Backs both the <c>BufferUntilIdle</c> and <c>BufferUntilInactive</c> public operators.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="idleTime">The duration of inactivity required to flush the buffer.</param>

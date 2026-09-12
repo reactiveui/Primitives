@@ -74,6 +74,61 @@ public static partial class Signal
         CancellationTokenSource? cancellationTokenSource) =>
         CreateTaskSignal(actionAsync, scheduler, cancellationTokenSource);
 
+    /// <summary>Builds a disposer that cancels the source if it wins the terminal transition.</summary>
+    /// <param name="gate">The terminal-notification gate shared with the continuation.</param>
+    /// <param name="source">The cancellation source to cancel on disposal.</param>
+    /// <returns>The disposer.</returns>
+    internal static ActionDisposable CancelOnDispose(TaskStopGate gate, CancellationTokenSource source) =>
+        new(() =>
+        {
+            if (!gate.TryStop())
+            {
+                return;
+            }
+
+            Cancel(source);
+        });
+
+    /// <summary>Delivers task completion only if the subscription has not claimed disposal.</summary>
+    /// <typeparam name="TResult">The result type.</typeparam>
+    /// <param name="cancellableTask">The task raced against cancellation.</param>
+    /// <param name="observer">The observer receiving the notification.</param>
+    /// <param name="gate">The terminal-notification gate shared with the disposer.</param>
+    /// <param name="token">The token checked for cancellation.</param>
+    /// <returns>A task that completes once the notification is forwarded or suppressed.</returns>
+    internal static async Task ObserveTask<TResult>(
+        Task<(TResult Value, bool IsCanceled)> cancellableTask,
+        IObserver<TResult> observer,
+        TaskStopGate gate,
+        CancellationToken token)
+    {
+        try
+        {
+            var (result, isCanceled) = await cancellableTask.ConfigureAwait(false);
+            if (!gate.TryStop())
+            {
+                return;
+            }
+
+            if (!isCanceled && !token.IsCancellationRequested)
+            {
+                observer.OnNext(result);
+                observer.OnCompleted();
+            }
+            else
+            {
+                observer.OnError(new OperationCanceledException());
+            }
+        }
+        catch (Exception error)
+        {
+            if (gate.TryStop())
+            {
+                observer.OnError(error);
+            }
+        }
+    }
+
     /// <summary>Builds the task-backed signal, taking a direct-subscription form for the immediate sequencer.</summary>
     /// <typeparam name="TResult">The result type.</typeparam>
     /// <param name="execution">The function to execute.</param>
@@ -128,30 +183,12 @@ public static partial class Signal
         return CancelOnDispose(gate, source);
     }
 
-    /// <summary>Builds a disposer that cancels the source if it wins the terminal transition.</summary>
-    /// <param name="gate">The terminal-notification gate shared with the continuation.</param>
-    /// <param name="source">The cancellation source to cancel on disposal.</param>
-    /// <returns>The disposer.</returns>
-    private static ActionDisposable CancelOnDispose(TaskStopGate gate, CancellationTokenSource source) =>
-        new(() =>
-        {
-            if (!gate.TryStop())
-            {
-                return;
-            }
-
-            Cancel(source);
-        });
-
-    /// <summary>Emits the terminal notification synchronously when the task has finished.</summary>
+    /// <summary>Delivers synchronous completion before the subscription handle is returned.</summary>
     /// <typeparam name="TResult">The result type.</typeparam>
     /// <param name="task">The task to inspect.</param>
     /// <param name="observer">The observer receiving the notification.</param>
     /// <param name="token">The token checked for cancellation.</param>
     /// <returns><see langword="true"/> when a synchronous terminal notification was produced.</returns>
-    /// <remarks>
-    /// Runs before any disposer is handed out, so no dispose race is possible and the emission needs no gate.
-    /// </remarks>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Concurrency",
         "PSH1315:A blocking wait on an awaitable that may not be done",
@@ -183,50 +220,6 @@ public static partial class Signal
         return true;
     }
 
-    /// <summary>Observes a pending task and forwards the terminal notification while honoring disposal.</summary>
-    /// <typeparam name="TResult">The result type.</typeparam>
-    /// <param name="cancellableTask">The task raced against cancellation.</param>
-    /// <param name="observer">The observer receiving the notification.</param>
-    /// <param name="gate">The terminal-notification gate shared with the disposer.</param>
-    /// <param name="token">The token checked for cancellation.</param>
-    /// <returns>A task that completes once the notification is forwarded or suppressed.</returns>
-    /// <remarks>
-    /// The notification is gated on <see cref="TaskStopGate.TryStop"/>, the transition the disposer wins on teardown,
-    /// so a subscription disposed while this continuation runs observes nothing.
-    /// </remarks>
-    private static async Task ObserveTask<TResult>(
-        Task<(TResult Value, bool IsCanceled)> cancellableTask,
-        IObserver<TResult> observer,
-        TaskStopGate gate,
-        CancellationToken token)
-    {
-        try
-        {
-            var (result, isCanceled) = await cancellableTask.ConfigureAwait(false);
-            if (!gate.TryStop())
-            {
-                return;
-            }
-
-            if (!isCanceled && !token.IsCancellationRequested)
-            {
-                observer.OnNext(result);
-                observer.OnCompleted();
-            }
-            else
-            {
-                observer.OnError(new OperationCanceledException());
-            }
-        }
-        catch (Exception error)
-        {
-            if (gate.TryStop())
-            {
-                observer.OnError(error);
-            }
-        }
-    }
-
     /// <summary>Cancels the source, tolerating a source another completion path disposed.</summary>
     /// <param name="source">The cancellation source to cancel.</param>
     private static void Cancel(CancellationTokenSource source)
@@ -239,6 +232,17 @@ public static partial class Signal
         {
             // Another completion path released the token source.
         }
+    }
+
+    /// <summary>Claims completion before notifying the observer, excluding disposed subscriptions.</summary>
+    internal sealed class TaskStopGate
+    {
+        /// <summary>Non-zero once the continuation has emitted or the subscription has been disposed.</summary>
+        private int _stopped;
+
+        /// <summary>Attempts to win the terminal transition.</summary>
+        /// <returns><see langword="true"/> when this caller won the stop race.</returns>
+        internal bool TryStop() => Interlocked.Exchange(ref _stopped, 1) == 0;
     }
 
     /// <summary>Task signal that starts the task in <c>Subscribe</c> rather than through a nested observable pipeline.</summary>
@@ -343,20 +347,5 @@ public static partial class Signal
 
             throw new ObjectDisposedException(nameof(ImmediateTaskSignal<>));
         }
-    }
-
-    /// <summary>Atomic gate that serializes the terminal notification against subscription disposal.</summary>
-    /// <remarks>
-    /// The task continuation and the disposer race on a single <see cref="Interlocked.Exchange(ref int, int)"/> and only
-    /// the winner proceeds, so no notification reaches a disposed subscription.
-    /// </remarks>
-    private sealed class TaskStopGate
-    {
-        /// <summary>Non-zero once the continuation has emitted or the subscription has been disposed.</summary>
-        private int _stopped;
-
-        /// <summary>Attempts to win the terminal transition.</summary>
-        /// <returns><see langword="true"/> when this caller won the stop race.</returns>
-        public bool TryStop() => Interlocked.Exchange(ref _stopped, 1) == 0;
     }
 }

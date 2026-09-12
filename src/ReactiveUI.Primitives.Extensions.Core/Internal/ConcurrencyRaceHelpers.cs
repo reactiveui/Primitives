@@ -4,14 +4,7 @@
 
 namespace ReactiveUI.Primitives.Extensions.Internal;
 
-/// <summary>
-/// Pure helpers for the two recurring race-claim primitives in the async layer:
-/// the "first caller wins" <see cref="Interlocked.CompareExchange(ref int, int, int)"/>
-/// transition used by <c>PooledDelaySource</c>, and the "tolerate already-disposed CTS"
-/// <c>CancellationTokenSource.CancelAsync</c> wrapper used by <c>ObserverAsync</c>'s
-/// dispose path. Both are pure functions over their inputs and are directly RxVoid-tested
-/// against this class.
-/// </summary>
+/// <summary>Claims one-time transitions and tolerates cancellation of disposed token sources.</summary>
 internal static class ConcurrencyRaceHelpers
 {
     /// <summary>
@@ -29,13 +22,7 @@ internal static class ConcurrencyRaceHelpers
     internal static bool TryClaim(ref int state, int openSentinel, int claimedSentinel) =>
         Interlocked.CompareExchange(ref state, claimedSentinel, openSentinel) == openSentinel;
 
-    /// <summary>
-    /// Calls <c>CancellationTokenSource.CancelAsync</c> on <paramref name="cts"/>,
-    /// tolerating the <see cref="ObjectDisposedException"/> that another concurrent dispose
-    /// may have already raced ahead with. Returns <see langword="true"/> if the cancellation
-    /// went through; <see langword="false"/> if another caller had already cancelled-and-
-    /// disposed the source.
-    /// </summary>
+    /// <summary>Cancels the source asynchronously, tolerating concurrent disposal.</summary>
     /// <param name="cts">The cancellation token source to cancel.</param>
     /// <returns>
     /// <see langword="true"/> if the cancellation completed; <see langword="false"/> if the

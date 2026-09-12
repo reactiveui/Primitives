@@ -17,13 +17,11 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task SubscribeSynchronus_RunsWithAsyncTasksInSubscriptions()
     {
-        // Given, When. SubscribeSynchronous queues each OnNext and drains the queue one handler at
-        // a time; each handler resumes on a pool thread, so the counters use Interlocked. The
-        // alternating +1 / -1 handlers cancel out once all six have run.
+        // Each handler completes after updating the shared counters.
         var result = 0;
         var itterations = 0;
         Subject<bool> subject = new();
-        TaskCompletionSource allHandled = new();
+        TaskCompletionSource allHandled = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var disposable = subject.SubscribeSynchronous(async x =>
         {
             await Task.Yield();
@@ -47,10 +45,7 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task SynchronizeSynchronous_RunsWithAsyncTasksInSubscriptions()
     {
-        // Given, When. SynchronizeSynchronous dispatches each OnNext through an independent
-        // Continuation so the six HandleAsync invocations can run concurrently — the int
-        // read-modify-write therefore needs Interlocked. The test asserts pair-wise
-        // (+1, -1) sums to zero after WhenAll completes.
+        // Each handler completes after updating the shared counters.
         var result = 0;
         var itterations = 0;
         Subject<bool> subject = new();
@@ -92,13 +87,11 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task SubscribeAsync_RunsWithAsyncTasksInSubscriptions()
     {
-        // Given, When. SubscribeAsync queues each OnNext and drains the queue one handler at a
-        // time; each handler resumes on a pool thread, so the counters use Interlocked. The
-        // alternating +1 / -1 handlers cancel out once all six have run.
+        // Each handler completes after updating the shared counters.
         var result = 0;
         var itterations = 0;
         Subject<bool> subject = new();
-        TaskCompletionSource allHandled = new();
+        TaskCompletionSource allHandled = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var disposable = subject.SubscribeAsync(async x =>
         {
             await Task.Yield();
@@ -125,40 +118,33 @@ public partial class ReactiveExtensionsTests
         const int MaxConcurrency = 3;
         var inFlight = 0;
         var maxConcurrent = 0;
-        Queue<TaskCompletionSource<int>> pulled = new();
+        var pulled = System.Threading.Channels.Channel.CreateUnbounded<TaskCompletionSource<int>>();
         List<int> results = [];
-        var completed = false;
-
-        // Each task only finishes when the test completes its gate, so the pull count the limiter
-        // holds open is observable exactly rather than sampled while real tasks overlap.
+        TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         IEnumerable<Task<int>> CreateTasks()
         {
             for (var i = 1; i <= SampleValue10; i++)
             {
-                TaskCompletionSource<int> gate = new();
-                pulled.Enqueue(gate);
-                inFlight++;
-                maxConcurrent = Math.Max(maxConcurrent, inFlight);
+                TaskCompletionSource<int> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+                var current = Interlocked.Increment(ref inFlight);
+                maxConcurrent = Math.Max(maxConcurrent, current);
+                _ = pulled.Writer.TryWrite(gate);
                 yield return gate.Task;
             }
         }
 
         using var sub = CreateTasks().WithLimitedConcurrency(MaxConcurrency)
-            .Subscribe(results.Add, () => completed = true);
-        var next = 0;
-        while (pulled.Count > 0)
+            .Subscribe(results.Add, completed.SetResult);
+        for (var next = 1; next <= SampleValue10; next++)
         {
-            var gate = pulled.Dequeue();
-            inFlight--;
-            gate.SetResult(++next);
+            var gate = await pulled.Reader.ReadAsync();
+            _ = Interlocked.Decrement(ref inFlight);
+            gate.SetResult(next);
         }
 
-        using (Assert.Multiple())
-        {
-            await Assert.That(results).Count().IsEqualTo(SampleValue10);
-            await Assert.That(maxConcurrent).IsLessThanOrEqualTo(MaxConcurrency);
-            await Assert.That(completed).IsTrue();
-        }
+        await completed.Task;
+        await Assert.That(results).Count().IsEqualTo(SampleValue10);
+        await Assert.That(maxConcurrent).IsEqualTo(MaxConcurrency);
     }
 
     /// <summary>Verifies an empty limited-concurrency task sequence completes immediately.</summary>
@@ -207,16 +193,15 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WithLimitedConcurrency_DisposeBeforeTaskContinuation_DropsWork()
     {
-        // The limiter attaches its continuation with ExecuteSynchronously, so SetResult runs the
-        // dropped-work path inline before it returns.
-        TaskCompletionSource<int> task = new();
+        ConcurrencyLimiter<int> limiter = new([], 1);
         List<int> values = [];
         Exception? caught = null;
         var completed = false;
-        var sub = new[] { task.Task }.WithLimitedConcurrency(1)
-            .Subscribe(values.Add, ex => caught = ex, () => completed = true);
-        sub.Dispose();
-        task.SetResult(SampleValue10);
+        ConcurrencyLimiter<int>.Subscription subscription = new(
+            limiter,
+            Observer.Create<int>(values.Add, ex => caught = ex, () => completed = true));
+        subscription.Dispose();
+        limiter.ProcessTaskCompletion(subscription, Task.FromResult(SampleValue10));
         await Assert.That(values).IsEmpty();
         await Assert.That(caught).IsNull();
         await Assert.That(completed).IsFalse();
@@ -311,7 +296,9 @@ public partial class ReactiveExtensionsTests
             observer.OnError(new InvalidOperationException());
             return EmptyDisposable.Instance;
         });
-        using var sub = source.SubscribeAsync(async x => results.Add(x), ex =>
+        using var sub = source.SubscribeAsync(
+            async x => results.Add(x),
+            ex =>
         {
             caughtException = ex;
             _ = errorSource.TrySetResult(true);

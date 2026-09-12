@@ -9,17 +9,31 @@ namespace ReactiveUI.Primitives.Concurrency;
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class SynchronizationContextSequencer : ISequencer
 {
+    /// <summary>Schedules delayed marshal callbacks.</summary>
+    private readonly ISequencer _delaySequencer;
+
     /// <summary>Initializes a new instance of the <see cref="SynchronizationContextSequencer"/> class.</summary>
     /// <param name="context">The synchronization context used to schedule work.</param>
     /// <exception cref="ArgumentNullException"><paramref name="context"/> is <see langword="null"/>.</exception>
-    public SynchronizationContextSequencer(SynchronizationContext context) =>
+    public SynchronizationContextSequencer(SynchronizationContext context)
+        : this(context, ThreadPoolSequencer.Instance)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="SynchronizationContextSequencer"/> class.</summary>
+    /// <param name="context">The context receiving ready work.</param>
+    /// <param name="delaySequencer">The scheduler delivering delayed callbacks.</param>
+    /// <exception cref="ArgumentNullException">The synchronization context is null.</exception>
+    internal SynchronizationContextSequencer(SynchronizationContext context, ISequencer delaySequencer)
+    {
         Context = context ?? throw new ArgumentNullException(nameof(context));
+        _delaySequencer = delaySequencer;
+    }
 
     /// <summary>Gets a sequencer for the current synchronization context.</summary>
     /// <exception cref="InvalidOperationException">There is no current synchronization context.</exception>
     public static SynchronizationContextSequencer Current
     {
-        [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
         get => new(SynchronizationContext.Current
             ?? throw new InvalidOperationException("There is no current synchronization context."));
     }
@@ -57,7 +71,7 @@ public sealed class SynchronizationContextSequencer : ISequencer
             return;
         }
 
-        ThreadPoolSequencer.Instance.Schedule(new DelayedPostWorkItem(this, item), dueTimestamp);
+        _delaySequencer.Schedule(new DelayedPostWorkItem(this, item), dueTimestamp);
     }
 
     /// <summary>Executes the work item unless it has been cancelled.</summary>

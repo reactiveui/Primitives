@@ -14,17 +14,7 @@ namespace ReactiveUI.Primitives.ObservableEvents.Benchmarks;
 /// Allocation baselines for the generator's cold and incremental runs, with a GC-verbose trace naming the frames
 /// the allocations come from. Opt in with <c>--filter "*GcProfile*"</c>.
 /// </summary>
-/// <remarks>
-/// <para>
-/// Only the largest corpus is profiled: it is where an allocation per event or per file actually shows up against
-/// the compiler's own overhead.
-/// </para>
-/// <para>
-/// The trace is the measurement, not a summary column. An inclusive per-operation total is nearly all Roslyn here
-/// - parsing, symbols, and the driver's own state - so it moves with the compiler rather than with this generator.
-/// What is actionable is which frames allocated, which is what the GC-verbose trace carries.
-/// </para>
-/// </remarks>
+/// <remarks>Profiles allocation call stacks for the largest event corpus.</remarks>
 [ShortRunJob]
 [EventPipeProfiler(EventPipeProfile.GcVerbose)]
 [System.Diagnostics.DebuggerDisplay("EventGeneratorGcProfileBenchmarks: {nameof(EventGeneratorGcProfileBenchmarks),nq}")]

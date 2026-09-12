@@ -2,17 +2,14 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Reactive.Concurrency;
 
 namespace ReactiveUI.Primitives.Blazor.Reactive.Tests;
 
-/// <summary>
-/// Tests for <see cref="CoalescingDispatchScheduler"/>, driven through a test subclass that controls what its
-/// dispatcher <c>Post</c> does: whether it accepts the drain, defers it, rejects it, or throws. This exercises
-/// the immediate and delayed scheduling paths and the coalescing/drain bookkeeping without a real UI dispatcher.
-/// </summary>
+/// <summary>Tests dispatch acceptance, rejection, reentrancy, and delayed delivery using explicit drain callbacks.</summary>
 public sealed class CoalescingDispatchSchedulerTests
 {
     /// <summary>The scheduled state value the tests pass through the scheduler.</summary>
@@ -20,9 +17,6 @@ public sealed class CoalescingDispatchSchedulerTests
 
     /// <summary>The number of posts expected once a second drain has been requested.</summary>
     private const int TwoPosts = 2;
-
-    /// <summary>Guard timeout for the timer-driven delayed dispatch.</summary>
-    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
 
     /// <summary>A short but non-zero due time that forces the delayed dispatch path.</summary>
     private static readonly TimeSpan ShortDelay = TimeSpan.FromMilliseconds(20);
@@ -68,12 +62,13 @@ public sealed class CoalescingDispatchSchedulerTests
         await Assert.That(ran).IsTrue();
     }
 
-    /// <summary>A positive due time defers the work through the default dispatcher timer path.</summary>
+    /// <summary>A positive due time defers work until the delay scheduler advances.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task PositiveDueTimeRunsThroughTheDispatcherTimerPath()
+    public async Task PositiveDueTimeRunsAfterTheDelaySchedulerAdvances()
     {
-        TestDispatchScheduler scheduler = new() { RunDrainInline = true };
+        HistoricalScheduler clock = new();
+        TestDispatchScheduler scheduler = new(clock) { RunDrainInline = true };
         TaskCompletionSource ran = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         using var handle = scheduler.Schedule(State, ShortDelay, (_, _) =>
@@ -82,7 +77,9 @@ public sealed class CoalescingDispatchSchedulerTests
             return Disposable.Empty;
         });
 
-        await ran.Task.WaitAsync(GuardTimeout);
+        await Assert.That(ran.Task.IsCompleted).IsFalse();
+        clock.AdvanceBy(ShortDelay);
+        await Assert.That(ran.Task.IsCompletedSuccessfully).IsTrue();
     }
 
     /// <summary>A dispatcher that refuses the drain resets the coalescing gate so a later drain can be posted.</summary>
@@ -165,11 +162,49 @@ public sealed class CoalescingDispatchSchedulerTests
         await Assert.That(scheduler.PostCount).IsEqualTo(TwoPosts);
     }
 
+    /// <summary>Verifies a nested drain may empty the queue before the outer batch finishes.</summary>
+    /// <returns>A task representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task NestedDrainClaimsRemainingItemsExactlyOnce()
+    {
+        const int First = 1;
+        const int Second = 2;
+        const int Third = 3;
+        TestDispatchScheduler scheduler = new();
+        List<int> values = [];
+        _ = scheduler.Schedule(First, (owner, value) =>
+        {
+            values.Add(value);
+            _ = owner.Schedule(Third, (_, next) =>
+            {
+                values.Add(next);
+                return Disposable.Empty;
+            });
+            return Disposable.Empty;
+        });
+        _ = scheduler.Schedule(Second, (_, value) =>
+        {
+            values.Add(value);
+            return Disposable.Empty;
+        });
+        scheduler.RunDrainInline = true;
+        scheduler.RunPostedDrains();
+
+        await Assert.That(values).IsEquivalentTo([First, Second, Third], EqualityComparer<int>.Default, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+    }
+
     /// <summary>A <see cref="CoalescingDispatchScheduler"/> whose dispatcher post the test drives explicitly.</summary>
     private sealed class TestDispatchScheduler : CoalescingDispatchScheduler
     {
         /// <summary>Drains handed to <see cref="Post"/> that have not yet been run.</summary>
         private readonly Queue<Action> _postedDrains = new();
+
+        /// <summary>Initializes a new instance of the <see cref="TestDispatchScheduler"/> class.</summary>
+        /// <param name="clock">The delay scheduler.</param>
+        public TestDispatchScheduler(IScheduler? clock = null)
+            : base(clock ?? new HistoricalScheduler())
+        {
+        }
 
         /// <summary>Gets the number of times the dispatcher was asked to post a drain.</summary>
         public int PostCount { get; private set; }

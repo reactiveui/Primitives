@@ -20,5 +20,6 @@ public sealed class DispatcherSequencer : ReactiveUI.Primitives.Reactive.Concurr
     public System.Windows.Threading.Dispatcher Dispatcher { get; }
     public System.Windows.Threading.DispatcherPriority Priority { get; }
     protected override bool Post(System.Action drain) { }
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     protected override System.IDisposable ScheduleOnDispatcher(System.Action work, System.TimeSpan dueTime) { }
 }

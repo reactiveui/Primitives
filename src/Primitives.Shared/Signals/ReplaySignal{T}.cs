@@ -137,6 +137,9 @@ public sealed class ReplaySignal<T> : ISignal<T>
     /// <summary>Gets a value indicating whether this instance is disposed.</summary>
     public bool IsDisposed { get; private set; }
 
+    /// <summary>Gets the gate shared by replay and live delivery.</summary>
+    internal Lock Gate => _observerLock;
+
     /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
@@ -214,10 +217,7 @@ public sealed class ReplaySignal<T> : ISignal<T>
 
     /// <summary>Buffers the value for replay and broadcasts it to the current observers.</summary>
     /// <param name="value">The value to emit.</param>
-    /// <remarks>
-    /// The append and the broadcast share the gate <see cref="Subscribe"/> holds while it attaches an observer and
-    /// replays the buffer, so a value reaches a new observer either through replay or live, never both or out of order.
-    /// </remarks>
+    /// <remarks>Concurrent subscription receives each value once, through replay or live delivery, in emission order.</remarks>
     public void OnNext(T value)
     {
         // Read the scheduler clock outside the lock; the window inputs are immutable.

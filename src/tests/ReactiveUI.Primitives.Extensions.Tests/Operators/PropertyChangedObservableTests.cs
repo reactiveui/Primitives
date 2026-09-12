@@ -6,10 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Edge-case coverage for <c>ToPropertyObservable</c> backed by
-/// <c>PropertyChangedObservable&lt;T, TProperty&gt;</c> — initial-value emission,
-/// matching-name forwarding, unmatched-name filtering, getter-throws forwarding,
-/// and dispose detaches the handler.</summary>
+/// <summary>Tests initial property values, name filtering, getter errors, and handler removal.</summary>
 public class PropertyChangedObservableTests
 {
     /// <summary>Initial property value.</summary>
@@ -114,16 +111,13 @@ public class PropertyChangedObservableTests
 
         sub.Dispose();
 
-        // Even after Dispose, the retaining owner still references the handler — invoking the
-        // event delivers to it, but the handler observes _disposed != 0 and returns early.
+        // The owner retains the handler after disposal; further events must be ignored.
         owner.Raise();
 
         await Assert.That(results).IsCollectionEqualTo([0]);
     }
 
-    /// <summary>INPC owner that retains every handler ever attached and exposes a manual
-    /// <c>Raise</c> so a test can fire the PropertyChanged event after the subscription that
-    /// added the handler has already been disposed.</summary>
+    /// <summary>Retains removed event handlers so tests can invoke callbacks after disposal.</summary>
     private sealed class RetainingObservableOwner : INotifyPropertyChanged
     {
         /// <summary>The retained handler list.</summary>
@@ -139,9 +133,7 @@ public class PropertyChangedObservableTests
             }
         }
 
-        /// <summary>Gets the observed property. This fixture never writes it, so every read yields zero —
-        /// what is under test is the notification, not the value. It stays an instance auto-property
-        /// because that is what the <c>ToPropertyObservable</c> expression tree resolves against.</summary>
+        /// <summary>Gets the observed property, whose value remains zero.</summary>
         public int Value { get; }
 
         /// <summary>Invokes the retained handler with a <c>PropertyChanged</c> event for <see cref="Value"/>.</summary>

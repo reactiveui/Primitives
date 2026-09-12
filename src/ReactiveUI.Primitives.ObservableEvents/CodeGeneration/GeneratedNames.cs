@@ -7,13 +7,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.ObservableEvents.CodeGeneration;
 
-/// <summary>Builds the wrapper class and generated file names, from the identity of the host they belong to.</summary>
-/// <remarks>
-/// Sanitizing punctuation out of a fully qualified name maps distinct hosts onto the same identifier -
-/// <c>Samples.A_B.C</c> and <c>Samples.A.B_C</c> both flatten to <c>Samples_A_B_C</c> - so a hash of the unflattened
-/// identity is appended to keep them apart, while the readable half keeps a generated file recognisable in a build
-/// log.
-/// </remarks>
+/// <summary>Builds readable identifiers with an identity hash to distinguish flattened names.</summary>
 internal static class GeneratedNames
 {
     /// <summary>The prefix of a generated wrapper class name.</summary>

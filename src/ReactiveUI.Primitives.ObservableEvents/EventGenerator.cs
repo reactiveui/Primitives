@@ -12,13 +12,7 @@ using ReactiveUI.Primitives.ObservableEvents.Models;
 namespace ReactiveUI.Primitives.ObservableEvents;
 
 /// <summary>Generates observable wrappers for the event-bearing types a consumer asks for.</summary>
-/// <remarks>
-/// Generation is requested either by an <c>Events()</c> call, whose receiver names the host, or by an assembly
-/// attribute naming a static host; both converge on the same extraction and the same emitters. Everything leaving a
-/// semantic transform is a model of strings that compares by value, and every output is keyed on the smallest model
-/// that decides it - one wrapper per host, one file per namespace of static events, one file of activation
-/// overloads - so an edit to one host's events re-emits that host's file alone.
-/// </remarks>
+/// <remarks>Requests come from Events() calls or static-host attributes. Output is cached per host, namespace, and activation signature.</remarks>
 [Generator(LanguageNames.CSharp)]
 public sealed class EventGenerator : IIncrementalGenerator
 {
@@ -27,8 +21,7 @@ public sealed class EventGenerator : IIncrementalGenerator
     {
         RegisterActivationOutput(in context);
 
-        // Which observable library is referenced decides every type name in the generated source but nothing about
-        // which events exist, so resolving it separately keeps extraction from re-running when references move.
+        // Resolve provider names independently so reference changes do not invalidate event extraction.
         var provider = context.CompilationProvider
             .Select(static (compilation, _) => ProviderResolver.Resolve(compilation))
             .WithTrackingName(GeneratorStepNames.Provider);
@@ -57,14 +50,8 @@ public sealed class EventGenerator : IIncrementalGenerator
         RegisterStaticOutputs(in context, staticTargets, provider);
     }
 
-    /// <summary>Registers the activation API a consumer writes against.</summary>
+    /// <summary>Registers activation source without modifying the semantic input compilation.</summary>
     /// <param name="context">The generator initialization context.</param>
-    /// <remarks>
-    /// An ordinary source output rather than post-initialization output: post-initialization source is added to the
-    /// compilation the pipeline then runs against, making that compilation new on every run and discarding every
-    /// semantic result cached against the one it replaces. One inert post-initialization file costs that, so this
-    /// generator registers none.
-    /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void RegisterActivationOutput(in IncrementalGeneratorInitializationContext context) =>
         context.RegisterSourceOutput(
@@ -96,14 +83,10 @@ public sealed class EventGenerator : IIncrementalGenerator
             static (output, data) => EmitActivationOverloads(in output, data.Left, data.Right));
     }
 
-    /// <summary>Registers the per-namespace static wrapper files and their request diagnostics.</summary>
+    /// <summary>Registers per-request diagnostics and per-namespace static event output.</summary>
     /// <param name="context">The generator initialization context.</param>
     /// <param name="targets">The distinct requested static hosts.</param>
     /// <param name="provider">The resolved observable implementation.</param>
-    /// <remarks>
-    /// Diagnostics hang off the individual requests while source hangs off the namespace groups, because a request
-    /// that produced no events still has something to say about itself but contributes nothing to a file.
-    /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void RegisterStaticOutputs(
         in IncrementalGeneratorInitializationContext context,
@@ -199,14 +182,10 @@ public sealed class EventGenerator : IIncrementalGenerator
         output.AddSource(model.HintName, StaticEventsEmitter.Emit(model, provider));
     }
 
-    /// <summary>Reports that nothing can be generated for a request because no provider is referenced.</summary>
+    /// <summary>Reports a missing provider, or the extraction diagnostics when a provider is available.</summary>
     /// <param name="output">The source-production context.</param>
     /// <param name="displayName">The requested host's readable name.</param>
     /// <param name="location">Where the request was written.</param>
-    /// <remarks>
-    /// Reported instead of, not alongside, whatever else extraction found: without a provider nothing would compile
-    /// anyway, and the one actionable thing to say is which package to reference.
-    /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void ReportMissingProvider(
         in SourceProductionContext output,

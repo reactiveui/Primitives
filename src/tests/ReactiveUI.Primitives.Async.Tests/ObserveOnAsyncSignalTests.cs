@@ -16,9 +16,6 @@ public class ObserveOnAsyncSignalTests
     /// <summary>Single sentinel emitted by the happy-path tests.</summary>
     private const int Sentinel = 7;
 
-    /// <summary>Maximum time a test waits for a forwarded notification to arrive.</summary>
-    private static readonly TimeSpan ForwardTimeout = TimeSpan.FromSeconds(5);
-
     /// <summary>Verifies the <c>forceYielding: true</c> overload forwards values via the context-switching slow path.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -169,7 +166,7 @@ public class ObserveOnAsyncSignalTests
         InvalidOperationException expected = new("observeon-resume");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
-        await errorTcs.Task.WaitAsync(ForwardTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -186,7 +183,7 @@ public class ObserveOnAsyncSignalTests
 
         await sut.ForwardAfterContextSwitchAsync(Sentinel, CancellationToken.None);
 
-        var received = await captured.Task.WaitAsync(ForwardTimeout);
+        var received = await captured.Task;
         await Assert.That(received).IsEqualTo(Sentinel);
     }
 
@@ -202,7 +199,7 @@ public class ObserveOnAsyncSignalTests
 
         await sut.ForwardErrorAfterContextSwitchAsync(expected, CancellationToken.None);
 
-        var received = await captured.Task.WaitAsync(ForwardTimeout);
+        var received = await captured.Task;
         await Assert.That(received).IsSameReferenceAs(expected);
     }
 
@@ -217,7 +214,7 @@ public class ObserveOnAsyncSignalTests
 
         await sut.ForwardCompletionAfterContextSwitchAsync(Result.Success);
 
-        var result = await captured.Task.WaitAsync(ForwardTimeout);
+        var result = await captured.Task;
         await Assert.That(result.IsSuccess).IsTrue();
     }
 
@@ -240,7 +237,7 @@ public class ObserveOnAsyncSignalTests
 
         await signal.OnNextAsync(Sentinel, CancellationToken.None);
 
-        var value = await received.Task.WaitAsync(ForwardTimeout);
+        var value = await received.Task;
         await Assert.That(value).IsEqualTo(Sentinel);
     }
 
@@ -267,7 +264,7 @@ public class ObserveOnAsyncSignalTests
         InvalidOperationException expected = new("context-switch-resume");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
-        await errorTcs.Task.WaitAsync(ForwardTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 

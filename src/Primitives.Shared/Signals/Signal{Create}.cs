@@ -76,10 +76,7 @@ public static partial class Signal
         return new CreateSignal<T>(subscribe, isRequiredSubscribeOnCurrentThread);
     }
 
-    /// <summary>
-    /// Creates a signal that passes the state to the subscribe function for each observer, so the function can be
-    /// static instead of capturing a closure.
-    /// </summary>
+    /// <summary>Creates a signal that passes the state to the subscribe function for each observer, so the function can be static instead of capturing a closure.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <typeparam name="TState">The type of the captured state.</typeparam>
     /// <param name="state">The state passed to <paramref name="subscribe"/> on each subscription.</param>
@@ -95,10 +92,7 @@ public static partial class Signal
         return new CreateSignal<T, TState>(state, subscribe);
     }
 
-    /// <summary>
-    /// Creates a signal that passes the state to the subscribe function for each observer, so the function can be
-    /// static instead of capturing a closure.
-    /// </summary>
+    /// <summary>Creates a signal that passes the state to the subscribe function for each observer, so the function can be static instead of capturing a closure.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <typeparam name="TState">The type of the captured state.</typeparam>
     /// <param name="state">The state passed to <paramref name="subscribe"/> on each subscription.</param>
@@ -116,10 +110,7 @@ public static partial class Signal
         return new CreateSignal<T, TState>(state, subscribe, isRequiredSubscribeOnCurrentThread);
     }
 
-    /// <summary>
-    /// Creates a signal that runs the subscribe function for each observer and releases the subscription when a
-    /// downstream <c>OnNext</c> throws, which suits cold signals.
-    /// </summary>
+    /// <summary>Creates a signal that runs the subscribe function for each observer and releases the subscription when a downstream <c>OnNext</c> throws, which suits cold signals.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="subscribe">Invoked for each observer; returns the disposable that releases the subscription.</param>
     /// <returns>A signal backed by <paramref name="subscribe"/>.</returns>
@@ -131,10 +122,7 @@ public static partial class Signal
         return new CreateSafeSignal<T>(subscribe);
     }
 
-    /// <summary>
-    /// Creates a signal that runs the subscribe function for each observer and releases the subscription when a
-    /// downstream <c>OnNext</c> throws, which suits cold signals.
-    /// </summary>
+    /// <summary>Creates a signal that runs the subscribe function for each observer and releases the subscription when a downstream <c>OnNext</c> throws, which suits cold signals.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="subscribe">Invoked for each observer; returns the disposable that releases the subscription.</param>
     /// <param name="isRequiredSubscribeOnCurrentThread">Whether subscription must be dispatched through the current-thread sequencer.</param>

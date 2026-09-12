@@ -6,9 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Provides the clock-driven factory methods: a one-shot value after a delay, and periodic ticks.
-/// </summary>
+/// <summary>Provides the clock-driven factory methods: a one-shot value after a delay, and periodic ticks.</summary>
 public static partial class SignalAsync
 {
     /// <summary>Creates an observable sequence that produces a single value (0) after the specified delay, then completes.</summary>
@@ -22,10 +20,7 @@ public static partial class SignalAsync
         return new TimerSignal(dueTime, null, TimeProvider.System);
     }
 
-    /// <summary>
-    /// Creates an observable sequence that produces a single value (0) after the specified delay,
-    /// then continues to produce sequential values at each specified period.
-    /// </summary>
+    /// <summary>Creates an observable sequence that produces a single value (0) after the specified delay, then continues to produce sequential values at each specified period.</summary>
     /// <param name="dueTime">The initial delay before the first value is produced. Must be non-negative.</param>
     /// <param name="period">The interval between subsequent values after the initial delay. Must be positive.</param>
     /// <returns>An observable sequence that produces values starting after the initial delay and continuing
@@ -77,10 +72,7 @@ public static partial class SignalAsync
         return new TimerSignal(dueTime, null, timeProvider ?? TimeProvider.System);
     }
 
-    /// <summary>
-    /// Creates an observable sequence that produces a single value (0) after the specified delay,
-    /// then continues to produce sequential values at each specified period.
-    /// </summary>
+    /// <summary>Creates an observable sequence that produces a single value (0) after the specified delay, then continues to produce sequential values at each specified period.</summary>
     /// <param name="dueTime">The initial delay before the first value is produced. Must be non-negative.</param>
     /// <param name="period">The interval between subsequent values after the initial delay. Must be positive.</param>
     /// <returns>An observable sequence that produces values starting after the initial delay and continuing
@@ -90,10 +82,7 @@ public static partial class SignalAsync
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservableAsync<long> Timer(TimeSpan dueTime, TimeSpan period) => After(dueTime, period);
 
-    /// <summary>
-    /// Creates an observable sequence that produces a single value (0) after the specified delay,
-    /// then continues to produce sequential values at each specified period.
-    /// </summary>
+    /// <summary>Creates an observable sequence that produces a single value (0) after the specified delay, then continues to produce sequential values at each specified period.</summary>
     /// <param name="dueTime">The initial delay before the first value is produced. Must be non-negative.</param>
     /// <param name="period">The interval between subsequent values after the initial delay. Must be positive.</param>
     /// <param name="timeProvider">An optional time provider for controlling timing. If null, <see cref="TimeProvider.System"/>

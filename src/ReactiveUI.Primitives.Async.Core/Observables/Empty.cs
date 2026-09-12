@@ -32,10 +32,7 @@ public static partial class SignalAsync
         Justification = "There are no parameters to infer from; the caller states the element type: SignalAsync.Empty<int>().")]
     public static IObservableAsync<T> Empty<T>() => EmptySignalAsync<T>.Instance;
 
-    /// <summary>
-    /// Signals successful completion on subscribe and hands back <see cref="DisposableAsync.Empty"/>, from a cached
-    /// instance per element type.
-    /// </summary>
+    /// <summary>Signals successful completion on subscribe and hands back <see cref="DisposableAsync.Empty"/>, from a cached instance per element type.</summary>
     /// <typeparam name="T">The element type of the empty sequence.</typeparam>
     internal sealed class EmptySignalAsync<T> : IObservableAsync<T>
     {

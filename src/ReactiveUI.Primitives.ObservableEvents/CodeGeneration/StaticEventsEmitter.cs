@@ -15,14 +15,10 @@ internal static class StaticEventsEmitter
     /// <summary>The room to reserve per generated observable property.</summary>
     private const int PropertyCapacity = 512;
 
-    /// <summary>Emits the static observable properties for one namespace.</summary>
+    /// <summary>Emits static event properties in a partial class within each requested namespace.</summary>
     /// <param name="model">The namespace and its static events.</param>
     /// <param name="provider">The observable implementation to write against.</param>
     /// <returns>The generated source.</returns>
-    /// <remarks>
-    /// A static event has no instance to hang an extension method off, so it is reached through a class named the
-    /// same in every namespace, left partial so a consumer can add to it.
-    /// </remarks>
     internal static string Emit(StaticNamespaceModel model, ObservableProvider provider)
     {
         var events = model.Events.AsArray();

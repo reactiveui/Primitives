@@ -10,12 +10,6 @@ using Microsoft.CodeAnalysis.CSharp;
 namespace ReactiveUI.Primitives.ObservableEvents.Tests;
 
 /// <summary>Verifies the generator's pipeline caches, so an unrelated edit costs nothing to recompute.</summary>
-/// <remarks>
-/// Correct output alone does not prove a generator is incremental: a pipeline that reruns everything on every
-/// keystroke produces exactly the same files. What proves it is the driver's own record of why each step ran, which
-/// is what these tests read. They are the guard against a model quietly regaining a symbol, a syntax node, or the
-/// compilation, any of which makes every step compare unequal and every file regenerate on every keystroke.
-/// </remarks>
 public sealed partial class EventGeneratorTests
 {
     /// <summary>Consumer source that exercises both the instance and the static request routes at once.</summary>
@@ -79,12 +73,7 @@ public sealed partial class EventGeneratorTests
         GeneratorStepNames.StaticNamespaces,
     ];
 
-    /// <summary>The steps that must not recompute at all when an unrelated file is edited.</summary>
-    /// <remarks>
-    /// These are the two that run the semantic model, and they are the expensive half of the generator. Accepting
-    /// <c>Unchanged</c> here would let a regression through: a transform that re-runs and happens to produce an
-    /// equal value still paid for every symbol walk, which is the cost this pipeline exists to avoid.
-    /// </remarks>
+    /// <summary>Asserts that semantic extraction steps reuse their cached results.</summary>
     private static readonly string[] SemanticStepNames =
     [
         GeneratorStepNames.InstanceTargets,
@@ -116,8 +105,7 @@ public sealed partial class EventGeneratorTests
         GeneratorDriver driver = CreateTrackingDriver();
         driver = driver.RunGenerators(compilation);
 
-        // A clone is a different compilation object holding the same trees, so every step is asked again and
-        // every step has to answer that its value is unchanged.
+        // A cloned compilation preserves its syntax trees and model values.
         driver = driver.RunGenerators(compilation.Clone());
         var reasons = CollectTrackedStepReasons(driver.GetRunResult());
 
@@ -156,14 +144,8 @@ public sealed partial class EventGeneratorTests
             static reason => reason.Reason != IncrementalStepRunReason.Cached)).IsEmpty();
     }
 
-    /// <summary>Verifies the generator emits no post-initialization output, which would defeat all caching.</summary>
+    /// <summary>Verifies activation source does not invalidate cached semantic extraction.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
-    /// <remarks>
-    /// Post-initialization source is added to the compilation the pipeline runs against, so producing any at all -
-    /// even one file nothing refers to - makes that compilation new on every run and discards every semantic result
-    /// cached against the previous one. Measured at roughly a hundredfold on an unchanged re-run, so this is worth
-    /// a test of its own: the activation API has to arrive as an ordinary source output instead.
-    /// </remarks>
     [Test]
     [RequiresAssemblyFiles]
     public async Task EventGeneratorEmitsNoPostInitializationOutput()
@@ -181,10 +163,6 @@ public sealed partial class EventGeneratorTests
 
     /// <summary>Verifies re-running against the very same compilation recomputes nothing at all.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
-    /// <remarks>
-    /// The strongest statement the pipeline can make, and the one that only holds while no post-initialization
-    /// output exists: handed back the identical compilation, every semantic transform is skipped outright.
-    /// </remarks>
     [Test]
     [RequiresAssemblyFiles]
     public async Task EventGeneratorRecomputesNothingForTheSameCompilation()
@@ -240,8 +218,7 @@ public sealed partial class EventGeneratorTests
         await Assert.That(reasons.Exists(static reason =>
             reason.StepName == GeneratorStepNames.InstanceTargets && !IsCached(reason.Reason))).IsTrue();
 
-        // Its signature did not move, so the shared overload file must not be rebuilt, and neither the static
-        // request nor the resolved provider has anything to do with an instance event being added.
+        // Only this host's wrapper depends on the added event.
         await Assert.That(reasons.FindAll(static reason =>
                 reason.StepName != GeneratorStepNames.InstanceTargets && !IsCached(reason.Reason)))
             .IsEmpty();

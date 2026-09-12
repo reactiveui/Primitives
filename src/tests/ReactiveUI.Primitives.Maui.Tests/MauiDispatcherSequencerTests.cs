@@ -17,9 +17,6 @@ public sealed class MauiDispatcherSequencerTests
     /// <summary>Expected values produced by an immediate burst, used to verify FIFO order.</summary>
     private static readonly int[] ExpectedBurst = [1, 2, 3];
 
-    /// <summary>Due time far enough out that the delay reaching the dispatcher is positive whatever the call costs.</summary>
-    private static readonly TimeSpan FutureDueTime = TimeSpan.FromHours(1);
-
     /// <summary>Verifies the constructor rejects a null dispatcher.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
@@ -68,8 +65,7 @@ public sealed class MauiDispatcherSequencerTests
         MauiDispatcherSequencer sequencer = new(dispatcher);
         var executed = false;
 
-        // The relative overload converts the due time against the sequencer's own clock, so the test needs none.
-        _ = sequencer.Schedule(FutureDueTime, () => executed = true);
+        sequencer.Schedule(new DelegateWorkItem(() => executed = true), long.MaxValue);
 
         await Assert.That(executed).IsTrue();
         await Assert.That(dispatcher.DispatchDelayedCount).IsEqualTo(1);
@@ -109,7 +105,7 @@ public sealed class MauiDispatcherSequencerTests
             sequencer.Schedule(new DelegateWorkItem(() => values.Add(captured)));
         }
 
-        await Assert.That(values).IsEquivalentTo(ExpectedBurst, EqualityComparer<int>.Default);
+        await Assert.That(values).IsEquivalentTo(ExpectedBurst, EqualityComparer<int>.Default, TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 
     /// <summary>Verifies the sequencer surfaces the shared dispatch clock through both clock properties.</summary>

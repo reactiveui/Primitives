@@ -12,10 +12,7 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The source observable sequence.</param>
     extension<T>(IObservableAsync<T> source)
     {
-        /// <summary>
-        /// Creates a new observable sequence that continues with a handler-provided sequence when an exception occurs
-        /// in the source sequence.
-        /// </summary>
+        /// <summary>Creates a new observable sequence that continues with a handler-provided sequence when an exception occurs in the source sequence.</summary>
         /// <param name="handler">A function that receives the exception thrown by the source sequence and returns an alternative observable
         /// sequence to continue with.</param>
         /// <returns>An observable sequence that emits items from the source sequence, or from the handler-provided sequence if
@@ -29,10 +26,7 @@ public static partial class SignalAsyncExtensions
             return new CatchSignal<T>(source, handler, null);
         }
 
-        /// <summary>
-        /// Creates a new observable sequence that continues with a handler-provided sequence when an exception occurs
-        /// in the source sequence.
-        /// </summary>
+        /// <summary>Creates a new observable sequence that continues with a handler-provided sequence when an exception occurs in the source sequence.</summary>
         /// <param name="handler">A function that receives the exception thrown by the source sequence and returns an alternative observable
         /// sequence to continue with.</param>
         /// <param name="onErrorResume">An optional asynchronous callback invoked when an error occurs. If not specified, the observer's default

@@ -10,10 +10,7 @@ namespace ReactiveUI.Primitives.Reactive.Advanced;
 namespace ReactiveUI.Primitives.Advanced;
 #endif
 
-/// <summary>
-/// Forwarding observer that releases its upstream cancel resource when the sequence terminates or a downstream
-/// <c>OnNext</c> throws, rethrowing the latter after release.
-/// </summary>
+/// <summary>Forwarding observer that releases its upstream cancel resource when the sequence terminates or a downstream <c>OnNext</c> throws, rethrowing the latter after release.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("GuardedWitness: Disposed = {_disposed}, Observer = {_observer}")]
 public sealed class GuardedWitness<T> : IObserver<T>, IDisposable

@@ -712,11 +712,7 @@ public static partial class ReactiveExtensions
         public IObservable<T> CatchReturn(T fallback) =>
             new CatchReturnObservable<T>(source, fallback);
 
-        /// <summary>
-        /// Projects every source element to a stored constant, avoiding the closure
-        /// allocation of <c>.Select(_ =&gt; value)</c>. Common in fire-then-return-value
-        /// chains.
-        /// </summary>
+        /// <summary>Projects every source element to a stored constant, avoiding the closure allocation of <c>.Select(_ =&gt; value)</c>. Common in fire-then-return-value chains.</summary>
         /// <typeparam name="TResult">The result element type.</typeparam>
         /// <param name="constant">The constant value emitted for each source element.</param>
         /// <returns>An observable that emits <paramref name="constant"/> for each source element.</returns>
@@ -736,10 +732,7 @@ public static partial class ReactiveExtensions
         public IObservable<TOut> TrySelect<TOut>(Func<T, TOut?> selector) =>
             new TrySelectObservable<T, TOut>(source, selector);
 
-        /// <summary>
-        /// Chains two one-shot <c>SelectMany</c> projections into a single operator.
-        /// Replaces <c>.SelectMany(a).SelectMany(b)</c> (2 operator allocations) with 1.
-        /// </summary>
+        /// <summary>Chains two one-shot <c>SelectMany</c> projections into a single operator. Replaces <c>.SelectMany(a).SelectMany(b)</c> (2 operator allocations) with 1.</summary>
         /// <typeparam name="TMid">The intermediate element type.</typeparam>
         /// <typeparam name="TResult">The final result type.</typeparam>
         /// <param name="first">First projection: source → intermediate observable.</param>

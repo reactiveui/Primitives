@@ -10,6 +10,7 @@ public sealed class AvaloniaScheduler : ReactiveUI.Primitives.Reactive.Concurren
     public Avalonia.Threading.Dispatcher Dispatcher { get; }
     public Avalonia.Threading.DispatcherPriority Priority { get; }
     protected override bool Post(System.Action drain) { }
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     protected override System.IDisposable ScheduleOnDispatcher(System.Action work, System.TimeSpan dueTime) { }
 }
 [System.Diagnostics.DebuggerDisplay("CoalescingDispatchScheduler: ReadyCount = {_readyCount}, DrainPosted = {_drainPosted}")]

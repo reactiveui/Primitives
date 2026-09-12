@@ -34,10 +34,7 @@ internal static class SyncTimerObservable
         return _timerList.GetOrAdd((timeSpan, scheduler), _create);
     }
 
-    /// <summary>
-    /// Connectable timer that fans each tick out to its observers: the tick path reads a swap-on-write observer
-    /// array lock-free, while subscribe and unsubscribe take the gate and publish a fresh array.
-    /// </summary>
+    /// <summary>Broadcasts ticks through immutable observer snapshots; subscription changes publish a new snapshot under the gate.</summary>
     /// <param name="timeSpan">The period.</param>
     /// <param name="scheduler">The scheduler.</param>
     private sealed class SharedTimer(TimeSpan timeSpan, ISequencer scheduler) : IObservable<DateTime>
@@ -48,10 +45,7 @@ internal static class SyncTimerObservable
         /// <summary>The gate for subscribe/unsubscribe writes.</summary>
         private readonly Lock _gate = new();
 
-        /// <summary>
-        /// Snapshot of active observers, replaced rather than mutated on subscribe and unsubscribe under
-        /// <see cref="_gate"/> so the tick path can read it without the lock.
-        /// </summary>
+        /// <summary>Snapshot of active observers, replaced rather than mutated on subscribe and unsubscribe under <see cref="_gate"/> so the tick path can read it without the lock.</summary>
         private IObserver<DateTime>[] _observers = _emptyObservers;
 
         /// <summary>The active timer subscription, or <see langword="null"/> when no observers are attached.</summary>

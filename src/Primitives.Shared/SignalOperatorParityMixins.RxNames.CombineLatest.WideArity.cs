@@ -19,10 +19,7 @@ public static partial class LinqExtensions
     /// <param name="source">Source observable 1 whose latest value is combined.</param>
     extension<T>(IObservable<T> source)
     {
-        /// <summary>
-        /// Combines the latest values from 10 observable sources into a single sequence,
-        /// projecting them through <paramref name="selector"/> whenever any source emits.
-        /// </summary>
+        /// <summary>Combines the latest values from 10 observable sources into a single sequence, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
         /// <typeparam name="T3">The element type of source 3.</typeparam>
         /// <typeparam name="T4">The element type of source 4.</typeparam>
@@ -73,10 +70,7 @@ public static partial class LinqExtensions
                 source10,
                 selector);
 
-        /// <summary>
-        /// Combines the latest values from 11 observable sources into a single sequence,
-        /// projecting them through <paramref name="selector"/> whenever any source emits.
-        /// </summary>
+        /// <summary>Combines the latest values from 11 observable sources into a single sequence, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
         /// <typeparam name="T3">The element type of source 3.</typeparam>
         /// <typeparam name="T4">The element type of source 4.</typeparam>
@@ -131,10 +125,7 @@ public static partial class LinqExtensions
                 source11,
                 selector);
 
-        /// <summary>
-        /// Combines the latest values from 12 observable sources into a single sequence,
-        /// projecting them through <paramref name="selector"/> whenever any source emits.
-        /// </summary>
+        /// <summary>Combines the latest values from 12 observable sources into a single sequence, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
         /// <typeparam name="T3">The element type of source 3.</typeparam>
         /// <typeparam name="T4">The element type of source 4.</typeparam>
@@ -193,10 +184,7 @@ public static partial class LinqExtensions
                 source12,
                 selector);
 
-        /// <summary>
-        /// Combines the latest values from 13 observable sources into a single sequence,
-        /// projecting them through <paramref name="selector"/> whenever any source emits.
-        /// </summary>
+        /// <summary>Combines the latest values from 13 observable sources into a single sequence, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
         /// <typeparam name="T3">The element type of source 3.</typeparam>
         /// <typeparam name="T4">The element type of source 4.</typeparam>
@@ -259,10 +247,7 @@ public static partial class LinqExtensions
                 source13,
                 selector);
 
-        /// <summary>
-        /// Combines the latest values from 14 observable sources into a single sequence,
-        /// projecting them through <paramref name="selector"/> whenever any source emits.
-        /// </summary>
+        /// <summary>Combines the latest values from 14 observable sources into a single sequence, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
         /// <typeparam name="T3">The element type of source 3.</typeparam>
         /// <typeparam name="T4">The element type of source 4.</typeparam>
@@ -329,10 +314,7 @@ public static partial class LinqExtensions
                 source14,
                 selector);
 
-        /// <summary>
-        /// Combines the latest values from 15 observable sources into a single sequence,
-        /// projecting them through <paramref name="selector"/> whenever any source emits.
-        /// </summary>
+        /// <summary>Combines the latest values from 15 observable sources into a single sequence, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
         /// <typeparam name="T3">The element type of source 3.</typeparam>
         /// <typeparam name="T4">The element type of source 4.</typeparam>
@@ -403,10 +385,7 @@ public static partial class LinqExtensions
                 source15,
                 selector);
 
-        /// <summary>
-        /// Combines the latest values from 16 observable sources into a single sequence,
-        /// projecting them through <paramref name="selector"/> whenever any source emits.
-        /// </summary>
+        /// <summary>Combines the latest values from 16 observable sources into a single sequence, projecting them through <paramref name="selector"/> whenever any source emits.</summary>
         /// <typeparam name="T2">The element type of source 2.</typeparam>
         /// <typeparam name="T3">The element type of source 3.</typeparam>
         /// <typeparam name="T4">The element type of source 4.</typeparam>

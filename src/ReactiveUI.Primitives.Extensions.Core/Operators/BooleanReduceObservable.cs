@@ -88,11 +88,7 @@ public sealed class BooleanReduceObservable(IEnumerable<IObservable<bool>> sourc
         return trimmed;
     }
 
-    /// <summary>
-    /// Sink that holds the latest value per source and reduces them against <paramref name="target"/>.
-    /// Composes <see cref="ReduceSinkState{TIn, TOut}"/> for the shared gate / value cache / OnError /
-    /// OnCompleted plumbing so this class carries only the per-operator reduce step.
-    /// </summary>
+    /// <summary>Compares each source's latest value with the target using shared value and terminal state.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="count">The number of sources.</param>
     /// <param name="target">The value every source must hold for emit to be <c>true</c>.</param>

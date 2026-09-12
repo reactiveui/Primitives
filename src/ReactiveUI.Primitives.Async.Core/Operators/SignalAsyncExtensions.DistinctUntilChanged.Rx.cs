@@ -12,10 +12,7 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The source observable sequence.</param>
     extension<T>(IObservableAsync<T> source)
     {
-        /// <summary>
-        /// Returns an observable sequence that emits only distinct consecutive elements, suppressing duplicates that
-        /// are equal to the previous element.
-        /// </summary>
+        /// <summary>Returns an observable sequence that emits only distinct consecutive elements, suppressing duplicates that are equal to the previous element.</summary>
         /// <returns>An observable sequence that contains only the elements from the source sequence that are not equal to their
         /// immediate predecessor.</returns>
         public IObservableAsync<T> DistinctUntilChanged()
@@ -42,10 +39,7 @@ public static partial class SignalAsyncExtensions
             return new UniqueSignal<T>(source, equalityComparer);
         }
 
-        /// <summary>
-        /// Returns an observable sequence that emits elements from the source sequence, suppressing consecutive
-        /// duplicates as determined by a key selector function.
-        /// </summary>
+        /// <summary>Returns an observable sequence that emits elements from the source sequence, suppressing consecutive duplicates as determined by a key selector function.</summary>
         /// <typeparam name="TKey">The type of the key that decides whether consecutive elements are duplicates.</typeparam>
         /// <param name="keySelector">A function that extracts the comparison key from each element in the source sequence.</param>
         /// <returns>An observable sequence that contains only the elements from the source sequence that are not consecutive
@@ -59,10 +53,7 @@ public static partial class SignalAsyncExtensions
             return new UniqueBySignal<T, TKey>(source, keySelector, equalityComparer);
         }
 
-        /// <summary>
-        /// Returns an observable sequence that emits elements from the source sequence, suppressing consecutive
-        /// duplicates as determined by a key selector and equality comparer.
-        /// </summary>
+        /// <summary>Returns an observable sequence that emits elements from the source sequence, suppressing consecutive duplicates as determined by a key selector and equality comparer.</summary>
         /// <typeparam name="TKey">The type of the key that decides whether consecutive elements are duplicates.</typeparam>
         /// <param name="keySelector">A function that extracts the comparison key from each element in the source sequence.</param>
         /// <param name="equalityComparer">The comparer that compares keys for equality.</param>

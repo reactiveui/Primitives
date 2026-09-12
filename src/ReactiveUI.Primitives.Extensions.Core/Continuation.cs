@@ -100,10 +100,7 @@ public class Continuation : IDisposable
     private static void SignalPhaseSync(object? state) =>
         ((Continuation)state!)._phaseSync.SignalAndWait(CancellationToken.None);
 
-    /// <summary>Schedules <see cref="SignalPhaseSync"/> on the default task scheduler. Hoisted
-    /// out of the <see cref="Lock{T}"/> and <see cref="UnLock"/> call sites because cobertura
-    /// tags the multi-argument <c>Task.Factory.StartNew(...)</c> call as a branch line — the
-    /// per-call overload-resolution metadata is collapsed here so it counts once.</summary>
+    /// <summary>Schedules an action on the default task scheduler.</summary>
     /// <returns>The task representing the scheduled signal work.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private Task ScheduleSignalPhase() =>

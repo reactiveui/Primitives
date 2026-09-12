@@ -12,7 +12,7 @@ using ReactiveUI.Primitives.Signals;
 namespace ReactiveUI.Primitives.Tests;
 
 /// <summary>Tests for the signal type.</summary>
-public class SignalTests
+public partial class SignalTests
 {
     /// <summary>The integer constant one.</summary>
     private const int One = 1;
@@ -523,12 +523,7 @@ public class SignalTests
         _ = Assert.Throws<ObjectDisposedException>(() => disposedSubject.OnNext(1));
     }
 
-    /// <summary>
-    /// A signal disposed from inside a subscriber's value callback has torn its state down under the dispatch
-    /// that is still running. The remaining subscribers in that dispatch snapshot still see the value — they
-    /// were already promised it — but the caller is told the signal is gone, rather than the disposal being
-    /// swallowed.
-    /// </summary>
+    /// <summary>Disposal during dispatch preserves the captured observer delivery and reports disposal to the caller.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task OnNextReportsDisposalWhenASubscriberDisposesTheSignalMidDispatch()

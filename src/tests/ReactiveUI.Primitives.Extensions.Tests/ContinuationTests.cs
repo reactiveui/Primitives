@@ -14,9 +14,6 @@ public class ContinuationTests
     /// <summary>Item pushed while the continuation is already locked; the barrier is expected to drop it.</summary>
     private const int DroppedItem = 2;
 
-    /// <summary>Guard timeout to keep barrier rendezvous from hanging the test run.</summary>
-    private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(5);
-
     /// <summary>Verifies <see cref="Continuation.LockValueTask{T}"/> pushes the item downstream, locks, and completes once the phase is signalled by an unlock.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -29,8 +26,8 @@ public class ContinuationTests
         var lockTask = continuation.LockValueTask(1, observer);
         var unlockTask = continuation.UnLock();
 
-        await lockTask.AsTask().WaitAsync(Timeout);
-        await unlockTask.WaitAsync(Timeout);
+        await lockTask.AsTask();
+        await unlockTask;
 
         await Assert.That(values.Count).IsEqualTo(1);
         await Assert.That(values[0]).IsEqualTo(1);
@@ -53,8 +50,8 @@ public class ContinuationTests
         await second;
 
         var unlockTask = continuation.UnLock();
-        await first.AsTask().WaitAsync(Timeout);
-        await unlockTask.WaitAsync(Timeout);
+        await first.AsTask();
+        await unlockTask;
 
         await Assert.That(values.Count).IsEqualTo(1);
         await Assert.That(values[0]).IsEqualTo(1);
@@ -72,8 +69,8 @@ public class ContinuationTests
         var lockTask = continuation.Lock(1, observer);
         var unlockTask = continuation.UnLock();
 
-        await lockTask.WaitAsync(Timeout);
-        await unlockTask.WaitAsync(Timeout);
+        await lockTask;
+        await unlockTask;
 
         await Assert.That(values.Count).IsEqualTo(1);
     }
@@ -93,8 +90,8 @@ public class ContinuationTests
         await Assert.That(second.IsCompleted).IsTrue();
 
         var unlockTask = continuation.UnLock();
-        await first.WaitAsync(Timeout);
-        await unlockTask.WaitAsync(Timeout);
+        await first;
+        await unlockTask;
 
         await Assert.That(values.Count).IsEqualTo(1);
     }
@@ -106,7 +103,7 @@ public class ContinuationTests
     {
         using Continuation continuation = new();
 
-        await continuation.UnLock().WaitAsync(Timeout);
+        await continuation.UnLock();
 
         await Assert.That(continuation.CompletedPhases).IsEqualTo(0);
     }

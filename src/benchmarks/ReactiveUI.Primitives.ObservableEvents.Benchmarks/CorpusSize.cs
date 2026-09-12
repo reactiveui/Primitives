@@ -5,7 +5,6 @@
 namespace ReactiveUI.Primitives.ObservableEvents.Benchmarks;
 
 /// <summary>How much event-bearing source the benchmarks put in front of the generator.</summary>
-/// <remarks>Public because BenchmarkDotNet reads it off a public benchmark parameter.</remarks>
 public enum CorpusSize
 {
     /// <summary>One wrapped host, the shape a small view model has.</summary>

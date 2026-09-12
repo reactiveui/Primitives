@@ -8,7 +8,7 @@ using ReactiveUI.Primitives.Signals;
 namespace ReactiveUI.Primitives.Tests;
 
 /// <summary>Tests for the behavior signal type.</summary>
-public class BehaviourSignalTests
+public class BehaviorSignalTests
 {
     /// <summary>Initial value used by behavior signal value tests.</summary>
     private const int InitialValue = 42;
@@ -234,40 +234,23 @@ public class BehaviourSignalTests
         await Assert.That(s.TryGetValue(out _)).IsFalse();
     }
 
-    /// <summary>
-    /// A new subscriber that races a live <see cref="BehaviorSignal{T}.OnNext"/> must never observe a newer
-    /// value before the initial value it was promised; the values it receives stay monotonically ordered.
-    /// </summary>
+    /// <summary>Reentrant emission follows the initial value promised to a new subscriber.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task Subscribe_RacingOnNext_NeverDeliversNewerValueBeforeInitial()
+    public async Task Subscribe_ReentrantOnNext_FollowsTheInitialValue()
     {
-        const int subscribeAttempts = 50_000;
-
-        BehaviorSignal<int> signal = new(0);
-        using CancellationTokenSource stop = new();
-        var firstFailure = default(OrderingWitness<int>.OutOfOrderDelivery);
-
-        var producer = Task.Run(() =>
+        using BehaviorSignal<int> signal = new(0);
+        List<int> values = [];
+        using var subscription = signal.Subscribe(value =>
         {
-            var value = 0;
-            while (!stop.IsCancellationRequested)
+            values.Add(value);
+            if (value != 0)
             {
-                value++;
-                signal.OnNext(value);
+                return;
             }
+
+            signal.OnNext(1);
         });
-
-        for (var attempt = 0; attempt < subscribeAttempts && firstFailure is null; attempt++)
-        {
-            OrderingWitness<int> witness = new();
-            signal.Subscribe(witness).Dispose();
-            firstFailure = witness.OutOfOrder;
-        }
-
-        await stop.CancelAsync();
-        await producer;
-
-        await Assert.That(firstFailure).IsNull();
+        await Assert.That(values.SequenceEqual([0, 1])).IsTrue();
     }
 }

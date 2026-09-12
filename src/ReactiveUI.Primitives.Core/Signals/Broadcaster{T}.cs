@@ -37,10 +37,7 @@ public struct Broadcaster<T> : IEquatable<Broadcaster<T>>
     /// <returns><see langword="true"/> when the broadcasters reference different observer sets; otherwise, <see langword="false"/>.</returns>
     public static bool operator !=(Broadcaster<T> left, Broadcaster<T> right) => !left.Equals(right);
 
-    /// <summary>
-    /// Adds an observer to the broadcaster. The update is a lock-free compare-and-swap, so the
-    /// broadcaster is self-contained and does not rely on an external lock for correctness.
-    /// </summary>
+    /// <summary>Adds an observer to the broadcaster. The update is a lock-free compare-and-swap, so the broadcaster is self-contained and does not rely on an external lock for correctness.</summary>
     /// <param name="observer">Observer to add.</param>
     public void Add(IObserver<T> observer)
     {
@@ -173,16 +170,7 @@ public struct Broadcaster<T> : IEquatable<Broadcaster<T>>
         obj is Broadcaster<T> other && Equals(other);
 
     /// <inheritdoc/>
-    /// <remarks>
-    /// The hash is taken over the observers the broadcaster is holding, not over the object it happens to
-    /// hold them in. That keeps it agreeing with <see cref="Equals(Broadcaster{T})"/> — two broadcasters
-    /// sharing a set share its observers — while saying something about the value rather than about which
-    /// array the copy-on-write path last allocated. No observers hashes to zero.
-    /// <para>
-    /// It moves as observers come and go, which is inherent: equality here is the observer set, and the
-    /// set is what changes. A broadcaster is compared, never filed in a hash table.
-    /// </para>
-    /// </remarks>
+    /// <remarks>The hash reflects the current observers and changes with subscriptions. Do not use a mutable broadcaster as a hash key.</remarks>
     [SuppressMessage(
         "Maintainability",
         "SST1482:GetHashCode reads mutable state",

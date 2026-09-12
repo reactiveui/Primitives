@@ -91,7 +91,6 @@ public partial class CombineLatestOperatorTests
     [Test]
     public async Task WhenCombineLatestSelectorThrows_ThenCompletesWithFailure()
     {
-        const int TerminalTimeoutSeconds = 5;
         var a = Signal.Create<int>();
         var b = Signal.Create<int>();
         IReadOnlyList<IObservableAsync<int>> sources = [a.Values, b.Values];
@@ -111,7 +110,7 @@ public partial class CombineLatestOperatorTests
         await a.OnNextAsync(1, CancellationToken.None);
         await b.OnNextAsync(SelectorThrowSecondValue, CancellationToken.None);
 
-        var terminal = await completed.Task.WaitAsync(TimeSpan.FromSeconds(TerminalTimeoutSeconds));
+        var terminal = await completed.Task;
         await Assert.That(terminal.IsFailure).IsTrue();
         await Assert.That(terminal.Exception).IsSameReferenceAs(expected);
     }

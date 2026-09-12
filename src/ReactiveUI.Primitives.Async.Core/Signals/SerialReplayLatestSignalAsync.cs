@@ -12,11 +12,7 @@ namespace ReactiveUI.Primitives.Async.Signals;
 /// </summary>
 /// <typeparam name="T">The type of the elements processed by the Signal.</typeparam>
 /// <param name="startValue">An optional initial value to be emitted to new subscribers before any other values are published.</param>
-/// <remarks>This Signal is designed for scenarios where only the most recent value is relevant to subscribers.
-/// When a new observer subscribes, it immediately receives the latest value (if any) and then all subsequent
-/// notifications. All observer notifications are performed asynchronously and in a serial order, ensuring thread
-/// safety. This type is suitable for use cases where replaying only the latest value is desired, such as event streams
-/// or state broadcasts.</remarks>
+/// <remarks>New subscribers receive the latest value, if present. Each observer notification is awaited before invoking the next observer.</remarks>
 [System.Diagnostics.DebuggerDisplay("SerialReplayLatestSignalAsync: LastValue = {_state.LastValue}, IsDisposed = {_state.IsDisposed}")]
 public sealed class SerialReplayLatestSignalAsync<T>(Optional<T> startValue) : ISignalAsync<T>
 {

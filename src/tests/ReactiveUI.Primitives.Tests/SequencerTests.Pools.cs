@@ -8,26 +8,11 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Tests;
 
-/// <summary>
-/// Verifies the sequencers that hand work to a pool or a dispatcher: how a faulting work item is routed, how the
-/// shared delay timer is armed and released, and how delayed work is marshalled back onto its own thread.
-/// </summary>
+/// <summary>Tests delayed dispatch, cancellation, and failure routing through pool and context sequencers.</summary>
 public partial class SequencerTests
 {
     /// <summary>Message carried by the work item that faults on purpose.</summary>
     private const string FaultMessage = "scheduled work failed";
-
-    /// <summary>How far ahead delayed work is scheduled, so the sequencer's delay timer really has to arm.</summary>
-    private static readonly TimeSpan DelayedDueTime = TimeSpan.FromMilliseconds(20);
-
-    /// <summary>How far ahead work that is cancelled before it becomes due is scheduled.</summary>
-    private static readonly TimeSpan CancelledDueTime = TimeSpan.FromMilliseconds(100);
-
-    /// <summary>How long a test watches for work that must never run.</summary>
-    private static readonly TimeSpan CancelObservationWindow = TimeSpan.FromMilliseconds(400);
-
-    /// <summary>How long a test lets a drain finish disarming before it releases the sequencer's timer.</summary>
-    private static readonly TimeSpan DrainSettleWindow = TimeSpan.FromMilliseconds(100);
 
     /// <summary>Verifies a faulting work item is handed to the sequencer's unhandled-exception handler.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
@@ -67,63 +52,68 @@ public partial class SequencerTests
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ThreadPoolSequencerRunsDelayedWorkAndDrainsItsQueue()
-    {
-        using var sequencer = CreateIsolatedThreadPoolSequencer();
-        TaskCompletionSource ran = new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        sequencer.Schedule(
-            new CallbackWorkItem(() => ran.TrySetResult()),
-            Sequencer.AddTimestamp(sequencer.Timestamp, DelayedDueTime));
-
-        await ran.Task.WaitAsync(TimeSpan.FromSeconds(TimeoutSeconds));
-        await Assert.That(ran.Task.IsCompletedSuccessfully).IsTrue();
-
-        // Let the drain finish disarming the timer before this scope releases it.
-        await Task.Delay(DrainSettleWindow);
+{
+        using ManualThreadPool pool = new();
+        CancellableWorkItem first = new();
+        CancellableWorkItem second = new();
+        pool.Sequencer.Schedule(first, One);
+        pool.Sequencer.Schedule(second, Two);
+        pool.RunDue(0);
+        await Assert.That(first.ExecuteCount).IsEqualTo(0);
+        pool.RunDue(One);
+        await Assert.That(first.ExecuteCount).IsEqualTo(1);
+        await Assert.That(second.ExecuteCount).IsEqualTo(0);
+        pool.RunDue(Two);
+        await Assert.That(second.ExecuteCount).IsEqualTo(1);
+        await Assert.That(pool.Delays[^1]).IsEqualTo(Timeout.InfiniteTimeSpan);
     }
 
-    /// <summary>
-    /// Verifies a disposed thread-pool sequencer rejects new work rather than accepting work it can never run: the
-    /// delay timer is gone, so an accepted delayed item would sit in the queue forever, and an accepted immediate
-    /// item would run on a sequencer its owner has already torn down. Both overloads fail fast instead.
-    /// </summary>
+    /// <summary>Elapsed and current timestamps queue immediate work without arming a timer.</summary>
+    /// <returns>The asynchronous test.</returns>
+    [Test]
+    public async Task ThreadPoolSequencerRoutesElapsedTimestampsToItsImmediateQueue()
+    {
+        using ManualThreadPool pool = new() { Timestamp = Two };
+        CancellableWorkItem elapsed = new();
+        CancellableWorkItem current = new();
+        pool.Sequencer.Schedule(elapsed, One);
+        pool.Sequencer.Schedule(current, Two);
+        await Assert.That(elapsed.ExecuteCount).IsEqualTo(0);
+        await Assert.That(current.ExecuteCount).IsEqualTo(0);
+        await Assert.That(pool.Delays).IsEmpty();
+        pool.RunReady();
+        await Assert.That(elapsed.ExecuteCount).IsEqualTo(1);
+        await Assert.That(current.ExecuteCount).IsEqualTo(1);
+    }
+
+    /// <summary>A disposed thread-pool sequencer rejects immediate and delayed work.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ThreadPoolSequencerRejectsWorkScheduledAfterDispose()
-    {
-        var sequencer = CreateIsolatedThreadPoolSequencer();
+{
+        using ManualThreadPool pool = new();
         CancellableWorkItem immediate = new();
         CancellableWorkItem delayed = new();
-
-        sequencer.Dispose();
-
-        await Assert.That(() => sequencer.Schedule(immediate)).ThrowsExactly<ObjectDisposedException>();
-        await Assert
-            .That(() => sequencer.Schedule(delayed, Sequencer.AddTimestamp(sequencer.Timestamp, DelayedDueTime)))
-            .ThrowsExactly<ObjectDisposedException>();
-
-        await Task.Delay(CancelObservationWindow);
+        pool.Sequencer.Dispose();
+        await Assert.That(() => pool.Sequencer.Schedule(immediate)).ThrowsExactly<ObjectDisposedException>();
+        await Assert.That(() => pool.Sequencer.Schedule(delayed, One)).ThrowsExactly<ObjectDisposedException>();
+        pool.RunReady();
+        pool.RunDue(One);
         await Assert.That(immediate.ExecuteCount).IsEqualTo(0);
         await Assert.That(delayed.ExecuteCount).IsEqualTo(0);
     }
 
-    /// <summary>
-    /// Verifies disposing a thread-pool sequencer releases the delayed work still queued behind its timer: the
-    /// pending item is cancelled, not stranded in the queue of a sequencer that can no longer arm a timer for it.
-    /// </summary>
+    /// <summary>Disposal cancels queued delayed work.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ThreadPoolSequencerDisposeCancelsQueuedDelayedWork()
-    {
-        var sequencer = CreateIsolatedThreadPoolSequencer();
+{
+        using ManualThreadPool pool = new();
         CancellableWorkItem pending = new();
-
-        sequencer.Schedule(pending, Sequencer.AddTimestamp(sequencer.Timestamp, CancelledDueTime));
-        sequencer.Dispose();
-
+        pool.Sequencer.Schedule(pending, One);
+        pool.Sequencer.Dispose();
+        pool.RunDue(One);
         await Assert.That(pending.IsDisposed).IsTrue();
-
-        await Task.Delay(CancelObservationWindow);
         await Assert.That(pending.ExecuteCount).IsEqualTo(0);
     }
 
@@ -143,20 +133,43 @@ public partial class SequencerTests
         await Assert.That(item.ExecuteCount).IsEqualTo(0);
     }
 
+    /// <summary>The current-context factory captures the active context and rejects an absent context.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task SynchronizationContextSequencerCapturesTheCurrentContext()
+    {
+        var previous = SynchronizationContext.Current;
+        RecordingSynchronizationContext context = new();
+        CancellableWorkItem item = new();
+        try
+        {
+            SynchronizationContext.SetSynchronizationContext(context);
+            SynchronizationContextSequencer.Current.Schedule(item);
+            SynchronizationContext.SetSynchronizationContext(null);
+            _ = Assert.Throws<InvalidOperationException>(static () => _ = SynchronizationContextSequencer.Current);
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(previous);
+        }
+
+        await Assert.That(context.PostCount).IsEqualTo(1);
+        await Assert.That(item.ExecuteCount).IsEqualTo(1);
+    }
+
     /// <summary>Verifies delayed work is marshalled back through the synchronization context once it is due.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task SynchronizationContextSequencerPostsDelayedWorkOnceItIsDue()
-    {
+{
         RecordingSynchronizationContext context = new();
-        SynchronizationContextSequencer sequencer = new(context);
-        TaskCompletionSource ran = new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        sequencer.Schedule(
-            new CallbackWorkItem(() => ran.TrySetResult()),
-            Sequencer.AddTimestamp(sequencer.Timestamp, DelayedDueTime));
-
-        await ran.Task.WaitAsync(TimeSpan.FromSeconds(TimeoutSeconds));
+        ManualSequencer delays = new();
+        SynchronizationContextSequencer sequencer = new(context, delays);
+        CancellableWorkItem item = new();
+        sequencer.Schedule(item, long.MaxValue);
+        await Assert.That(context.PostCount).IsEqualTo(0);
+        delays.RunPending();
+        await Assert.That(item.ExecuteCount).IsEqualTo(1);
         await Assert.That(context.PostCount).IsEqualTo(1);
     }
 
@@ -164,89 +177,50 @@ public partial class SequencerTests
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task SynchronizationContextSequencerDropsDelayedWorkCancelledBeforeItIsDue()
-    {
+{
         RecordingSynchronizationContext context = new();
-        SynchronizationContextSequencer sequencer = new(context);
+        ManualSequencer delays = new();
+        SynchronizationContextSequencer sequencer = new(context, delays);
         CancellableWorkItem item = new();
-
-        sequencer.Schedule(item, Sequencer.AddTimestamp(sequencer.Timestamp, CancelledDueTime));
+        sequencer.Schedule(item, long.MaxValue);
         item.Dispose();
-
-        await Task.Delay(CancelObservationWindow);
-
+        delays.RunPending();
         await Assert.That(item.ExecuteCount).IsEqualTo(0);
         await Assert.That(context.PostCount).IsEqualTo(0);
     }
 
-    /// <summary>
-    /// Verifies disposing a thread-pool sequencer twice releases its queued work exactly once and leaves the sequencer
-    /// closed. The second disposal must be a no-op rather than a second release of work the first disposal already
-    /// cancelled and handed back to its owner.
-    /// </summary>
+    /// <summary>Repeated disposal releases queued work once and keeps the sequencer closed.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ThreadPoolSequencerDisposeIsIdempotent()
-    {
-        var sequencer = CreateIsolatedThreadPoolSequencer();
+{
+        using ManualThreadPool pool = new();
         DisposeCountingWorkItem pending = new();
-
-        sequencer.Schedule(pending, Sequencer.AddTimestamp(sequencer.Timestamp, CancelledDueTime));
-
-        sequencer.Dispose();
+        pool.Sequencer.Schedule(pending, One);
+        pool.Sequencer.Dispose();
         await Assert.That(pending.DisposeCount).IsEqualTo(1);
-
-        await Assert.That(sequencer.Dispose).ThrowsNothing();
-
-        // The queued item was released once, and the sequencer is still closed rather than reopened by the second call.
+        await Assert.That(pool.Sequencer.Dispose).ThrowsNothing();
         await Assert.That(pending.DisposeCount).IsEqualTo(1);
-        await Assert.That(() => sequencer.Schedule(new CancellableWorkItem()))
+        await Assert.That(() => pool.Sequencer.Schedule(new CancellableWorkItem()))
             .ThrowsExactly<ObjectDisposedException>();
     }
 
-    /// <summary>
-    /// Verifies a drain still unwinding when the sequencer is disposed does not re-arm the timer disposal has already
-    /// released. The drain runs its items outside the gate, so disposal can land mid-drain; when the drain takes the
-    /// gate again it must observe the disposal and stop rather than arm a timer that no longer exists.
-    /// </summary>
+    /// <summary>Disposal during a drain cancels pending work and prevents timer rearming.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ThreadPoolSequencerDisposeDuringADrainStopsTheDrainRearmingTheTimer()
-    {
-        var sequencer = CreateIsolatedThreadPoolSequencer();
-        TaskCompletionSource draining = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        using ManualResetEventSlim release = new(false);
-
-        // Park the drain inside a due item, so the disposal below provably lands while RunDue is mid-loop.
-        sequencer.Schedule(
-            new CallbackWorkItem(() =>
-            {
-                _ = draining.TrySetResult();
-                _ = release.Wait(TimeSpan.FromSeconds(TimeoutSeconds));
-            }),
-            Sequencer.AddTimestamp(sequencer.Timestamp, DelayedDueTime));
-
-        await draining.Task.WaitAsync(TimeSpan.FromSeconds(TimeoutSeconds));
-
+{
+        using ManualThreadPool pool = new();
         CancellableWorkItem queued = new();
-        sequencer.Schedule(queued, Sequencer.AddTimestamp(sequencer.Timestamp, CancelledDueTime));
-
-        sequencer.Dispose();
-
-        // Let the parked drain resume: it must unwind quietly instead of arming the timer disposal released.
-        release.Set();
-        await Task.Delay(CancelObservationWindow);
-
+        pool.Sequencer.Schedule(new CallbackWorkItem(pool.Sequencer.Dispose), One);
+        pool.Sequencer.Schedule(queued, Two);
+        var changes = pool.Delays.Count;
+        pool.RunDue(One);
         await Assert.That(queued.IsDisposed).IsTrue();
         await Assert.That(queued.ExecuteCount).IsEqualTo(0);
-        await Assert.That(sequencer.Dispose).ThrowsNothing();
+        await Assert.That(pool.Delays.Count).IsEqualTo(changes);
+        await Assert.That(pool.Sequencer.Dispose).ThrowsNothing();
     }
-
-    /// <summary>
-    /// Creates a thread-pool sequencer that owns its own delay queue and timer, so a test can dispose it without
-    /// disturbing the shared singleton every other test schedules through.
-    /// </summary>
-    /// <returns>The isolated sequencer.</returns>
-    private static ThreadPoolSequencer CreateIsolatedThreadPoolSequencer() => new();
 
     /// <summary>Work item that counts how many times a sequencer released it.</summary>
     private sealed class DisposeCountingWorkItem : IWorkItem, IsDisposed

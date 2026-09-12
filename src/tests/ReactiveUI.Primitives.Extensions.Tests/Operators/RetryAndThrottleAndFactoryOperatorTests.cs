@@ -8,12 +8,7 @@ using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Edge-case coverage for several small synchronous operators:
-/// <c>WhereSelect</c>, <c>FromArray</c>, <c>RetryWithDelay</c>,
-/// <c>RetryForeverWithDelay</c>, <c>ThrottleOnScheduler</c>,
-/// <c>ThrottleDistinct</c> (sync), <c>SubscribeAndComplete</c> error path,
-/// <c>Schedule</c> with side-effect and transform overloads,
-/// <c>ToReadOnlyBehavior</c>, and <c>Pairwise</c> after-error path.</summary>
+/// <summary>Tests retry, throttle, scheduling, and source factory termination.</summary>
 public class RetryAndThrottleAndFactoryOperatorTests
 {
     /// <summary>Synthetic error message attached to source errors.</summary>
@@ -135,14 +130,14 @@ public class RetryAndThrottleAndFactoryOperatorTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Verifies that <c>RetryWithDelay</c> retries the configured number of times with
-    /// a zero delay (so retries happen synchronously on the default scheduler).</summary>
+    /// <summary>Verifies zero-delay retries exhaust the configured count and forward the source error.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenRetryWithDelayAlwaysFails_ThenRetriesThenErrors()
     {
         const int RetryCount = 3;
         var attempts = 0;
+        Exception? caught = null;
         InvalidOperationException expected = new("attempt failed");
         var source = Observable.Create<int>(o =>
         {
@@ -152,10 +147,10 @@ public class RetryAndThrottleAndFactoryOperatorTests
         });
         using var sub = source.RetryWithDelay(RetryCount, static _ => TimeSpan.Zero).Subscribe(
             static _ => { },
-            static _ => { });
+            error => caught = error);
 
-        // Initial attempt + RetryCount retries = RetryCount+1 total invocations.
-        await Assert.That(attempts).IsGreaterThan(1);
+        await Assert.That(attempts).IsEqualTo(RetryCount + 1);
+        await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
     /// <summary>Verifies that <c>RetryForeverWithDelay</c> keeps retrying after failures.</summary>
@@ -181,7 +176,7 @@ public class RetryAndThrottleAndFactoryOperatorTests
         });
         List<int> results = [];
         using var sub = source.RetryForeverWithDelay(TimeSpan.Zero).Subscribe(results.Add);
-        await Assert.That(attempts).IsGreaterThanOrEqualTo(Value3);
+        await Assert.That(attempts).IsEqualTo(Value3);
         await Assert.That(results).IsCollectionEqualTo([Value1]);
     }
 
@@ -217,7 +212,7 @@ public class RetryAndThrottleAndFactoryOperatorTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Verifies that <c>ThrottleDistinct</c> (sync overload, no scheduler) emits distinct values respecting the throttle window.</summary>
+    /// <summary>Verifies the default-scheduler overload forwards source errors.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenThrottleDistinctSyncDefaultScheduler_ThenForwardsSourceError()
@@ -246,7 +241,7 @@ public class RetryAndThrottleAndFactoryOperatorTests
         subject.OnNext(Value1);
         subject.OnNext(Value1);
         scheduler.AdvanceBy(AdvancePastWindowTicks);
-        await Assert.That(results.Count).IsLessThanOrEqualTo(1);
+        await Assert.That(results).IsCollectionEqualTo([Value1]);
     }
 
     /// <summary>Verifies that <c>ToReadOnlyBehavior</c> returns a paired observable / observer that

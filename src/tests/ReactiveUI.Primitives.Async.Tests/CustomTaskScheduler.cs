@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async.Tests;
 
 /// <summary>
@@ -34,5 +36,6 @@ internal sealed class CustomTaskScheduler : TaskScheduler
     /// <summary>Runs a queued task on the pool thread that picked it up.</summary>
     /// <param name="task">The queued task.</param>
     /// <returns><see langword="true"/> when the task was executed.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private bool ExecuteQueued(Task task) => TryExecuteTask(task);
 }

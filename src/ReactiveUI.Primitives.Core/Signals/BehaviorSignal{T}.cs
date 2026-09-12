@@ -20,15 +20,7 @@ public sealed class BehaviorSignal<T> : ISignal<T>, IWitnessRemovable<T>
 
     /// <summary>Gets the current value or throws an exception.</summary>
     /// <value>The initial value passed to the constructor until <see cref="OnNext"/> is called; after which, the last value passed to <see cref="OnNext"/>.</value>
-    /// <remarks>
-    /// <para><see cref="Value"/> is frozen after <see cref="OnCompleted"/> is called.</para>
-    /// <para>After <see cref="OnError"/> is called, <see cref="Value"/> always throws the specified exception.</para>
-    /// <para>An exception is always thrown after <see cref="Dispose()"/> is called.</para>
-    /// <alert type="caller">
-    /// Reading <see cref="Value"/> is a thread-safe operation, though there's a potential race condition when <see cref="OnNext"/> or <see cref="OnError"/> are being invoked concurrently.
-    /// In some cases, it may be necessary for a caller to use external synchronization to avoid race conditions.
-    /// </alert>
-    /// </remarks>
+    /// <remarks>Completion freezes the value. Failure makes value reads throw the terminal exception, and disposal makes them throw ObjectDisposedException.</remarks>
     public T Value => _state.GetValue();
 
     /// <summary>Gets a value indicating whether this instance has observers.</summary>
@@ -50,14 +42,7 @@ public sealed class BehaviorSignal<T> : ISignal<T>, IWitnessRemovable<T>
     /// <summary>Tries to get the current value or throws an exception.</summary>
     /// <param name="value">The initial value passed to the constructor until <see cref="OnNext"/> is called; after which, the last value passed to <see cref="OnNext"/>.</param>
     /// <returns>true if a value is available; false if the subject was disposed.</returns>
-    /// <remarks>
-    /// <para>The value returned from <see cref="TryGetValue"/> is frozen after <see cref="OnCompleted"/> is called.</para>
-    /// <para>After <see cref="OnError"/> is called, <see cref="TryGetValue"/> always throws the specified exception.</para>
-    /// <alert type="caller">
-    /// Calling <see cref="TryGetValue"/> is a thread-safe operation, though there's a potential race condition when <see cref="OnNext"/> or <see cref="OnError"/> are being invoked concurrently.
-    /// In some cases, it may be necessary for a caller to use external synchronization to avoid race conditions.
-    /// </alert>
-    /// </remarks>
+    /// <remarks>Completion freezes the value; failure makes reads throw the terminal exception. Each read is synchronized, but a separate read and state check are not atomic.</remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryGetValue(out T? value) => _state.TryGetValue(out value);
 

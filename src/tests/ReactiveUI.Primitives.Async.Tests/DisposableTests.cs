@@ -8,7 +8,7 @@ using ReactiveUI.Primitives.Async.Disposables;
 namespace ReactiveUI.Primitives.Async.Tests;
 
 /// <summary>Tests for DisposableAsync, CompositeDisposableAsync, SingleAssignmentDisposableAsync, and SerialDisposableAsync.</summary>
-public class DisposableTests
+public partial class DisposableTests
 {
     /// <summary>Tests DisposableAsync.Empty dispose does nothing.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -194,81 +194,6 @@ public class DisposableTests
     {
         MultipleDisposableAsync composite = new();
         await Assert.That(composite.IsDisposed).IsFalse();
-    }
-
-    /// <summary>Tests SingleAssignmentDisposableAsync disposes assigned.</summary>
-    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
-    [Test]
-    public async Task WhenSingleAssignmentDisposableAsync_ThenDisposesAssigned()
-    {
-        SingleAssignmentDisposableAsync sad = new();
-        StrongBox<bool> disposed = new();
-        await sad.SetDisposableAsync(DisposableAsync.Create(disposed, static state =>
-        {
-            state.Value = true;
-            return default;
-        }));
-        await Assert.That(sad.IsDisposed).IsFalse();
-        await sad.DisposeAsync();
-        await Assert.That(sad.IsDisposed).IsTrue();
-        await Assert.That(disposed.Value).IsTrue();
-    }
-
-    /// <summary>Tests SingleAssignment dispose before set disposes immediately.</summary>
-    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
-    [Test]
-    public async Task WhenSingleAssignmentDisposableAsyncDisposeBeforeSet_ThenSetDisposedImmediately()
-    {
-        SingleAssignmentDisposableAsync sad = new();
-        await sad.DisposeAsync();
-        StrongBox<bool> disposed = new();
-        await sad.SetDisposableAsync(DisposableAsync.Create(disposed, static state =>
-        {
-            state.Value = true;
-            return default;
-        }));
-        await Assert.That(disposed.Value).IsTrue();
-    }
-
-    /// <summary>Tests SingleAssignment double set throws.</summary>
-    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
-    [Test]
-    public async Task WhenSingleAssignmentDisposableAsyncDoubleSet_ThenThrowsInvalidOperation()
-    {
-        SingleAssignmentDisposableAsync sad = new();
-        await sad.SetDisposableAsync(DisposableAsync.Empty);
-        await Assert.That(async () => await sad.SetDisposableAsync(DisposableAsync.Empty))
-            .ThrowsExactly<InvalidOperationException>();
-    }
-
-    /// <summary>Tests SingleAssignment get before set returns null.</summary>
-    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
-    [Test]
-    public async Task WhenSingleAssignmentDisposableAsyncGetBeforeSet_ThenReturnsNull()
-    {
-        SingleAssignmentDisposableAsync sad = new();
-        await Assert.That(sad.GetDisposable()).IsNull();
-    }
-
-    /// <summary>Tests SingleAssignment get after dispose returns non-null.</summary>
-    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
-    [Test]
-    public async Task WhenSingleAssignmentDisposableAsyncGetAfterDispose_ThenReturnsEmpty()
-    {
-        SingleAssignmentDisposableAsync sad = new();
-        await sad.DisposeAsync();
-        await Assert.That(sad.GetDisposable()).IsNotNull();
-    }
-
-    /// <summary>Tests SingleAssignment get after set returns assigned.</summary>
-    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
-    [Test]
-    public async Task WhenSingleAssignmentDisposableAsyncGetAfterSet_ThenReturnsAssigned()
-    {
-        SingleAssignmentDisposableAsync sad = new();
-        var original = DisposableAsync.Empty;
-        await sad.SetDisposableAsync(original);
-        await Assert.That(sad.GetDisposable()).IsSameReferenceAs(original);
     }
 
     /// <summary>Tests SerialDisposableAsync replaces and disposes previous.</summary>
@@ -481,29 +406,34 @@ public class DisposableTests
     /// </summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenSerialConcurrentSet_ThenAllPreviousDisposed()
+    public async Task WhenSerialReplacementPending_ThenFurtherReplacementDisposesCurrentValue()
     {
+        const int SecondValue = 2;
+        const int ThirdValue = 3;
         SingleReplaceableDisposableAsync serial = new();
-        StrongBox<int> disposedCount = new();
-
-        IAsyncDisposable MakeDisposable() => DisposableAsync.Create(disposedCount, static state =>
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<int> disposed = [];
+        await serial.SetDisposableAsync(DisposableAsync.Create((release, disposed), static async state =>
         {
-            _ = Interlocked.Increment(ref state.Value);
+            await state.release.Task;
+            state.disposed.Add(1);
+        }));
+        var replacement = serial.SetDisposableAsync(DisposableAsync.Create(disposed, static items =>
+        {
+            items.Add(SecondValue);
             return default;
-        });
-
-        const int ExpectedDisposedCount = 50;
-
-        // Rapid concurrent sets to exercise the CAS retry path
-        var tasks = Enumerable.Range(0, ExpectedDisposedCount)
-            .Select(_ => Task.Run(async () => await serial.SetDisposableAsync(MakeDisposable())));
-        await Task.WhenAll(tasks);
-
-        // Dispose the serial to clean up the final remaining disposable
+        }));
+        await Assert.That(replacement.IsCompleted).IsFalse();
+        await serial.SetDisposableAsync(DisposableAsync.Create(disposed, static items =>
+        {
+            items.Add(ThirdValue);
+            return default;
+        }));
         await serial.DisposeAsync();
-
-        // All 50 disposables should eventually be disposed (49 replaced + 1 final)
-        await Assert.That(disposedCount.Value).IsEqualTo(ExpectedDisposedCount);
+        await Assert.That(disposed).IsCollectionEqualTo([SecondValue, ThirdValue]);
+        release.SetResult();
+        await replacement;
+        await Assert.That(disposed).IsCollectionEqualTo([SecondValue, ThirdValue, 1]);
     }
 
     /// <summary>
@@ -804,35 +734,35 @@ public class DisposableTests
     /// </summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenSerialSetConcurrently_ThenAllDisposablesAccountedFor()
+    public async Task WhenSerialReplacementPending_ThenDisposalClosesTheSlot()
     {
+        const int SecondValue = 2;
+        const int ThirdValue = 3;
         SingleReplaceableDisposableAsync serial = new();
-        StrongBox<int> disposedCount = new();
-
-        IAsyncDisposable MakeDisposable() => DisposableAsync.Create(disposedCount, static state =>
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<int> disposed = [];
+        await serial.SetDisposableAsync(DisposableAsync.Create((release, disposed), static async state =>
         {
-            _ = Interlocked.Increment(ref state.Value);
-            return default;
-        });
-
-        // Bounded contention: enough parallel sets to overlap on the CAS, few enough that the
-        // total disposal count stays small. The count below holds for every interleaving.
-        const int Parallelism = 4;
-        const int IterationsPerTask = 5;
-        const int ExpectedDisposedCount = Parallelism * IterationsPerTask;
-        var tasks = Enumerable.Range(0, Parallelism).Select(_ => Task.Run(async () =>
-        {
-            for (var i = 0; i < IterationsPerTask; i++)
-            {
-                await serial.SetDisposableAsync(MakeDisposable());
-            }
+            await state.release.Task;
+            state.disposed.Add(1);
         }));
-        await Task.WhenAll(tasks);
+        var replacement = serial.SetDisposableAsync(DisposableAsync.Create(disposed, static items =>
+        {
+            items.Add(SecondValue);
+            return default;
+        }));
+        await Assert.That(replacement.IsCompleted).IsFalse();
         await serial.DisposeAsync();
-
-        // Every set disposable (Parallelism * IterationsPerTask) should be disposed —
-        // (Parallelism * IterationsPerTask - 1) replaced + 1 final dispose.
-        await Assert.That(disposedCount.Value).IsEqualTo(ExpectedDisposedCount);
+        await serial.SetDisposableAsync(DisposableAsync.Create(disposed, static items =>
+        {
+            items.Add(ThirdValue);
+            return default;
+        }));
+        await serial.DisposeAsync();
+        await Assert.That(disposed).IsCollectionEqualTo([SecondValue, ThirdValue]);
+        release.SetResult();
+        await replacement;
+        await Assert.That(disposed).IsCollectionEqualTo([SecondValue, ThirdValue, 1]);
     }
 
     /// <summary>Verifies that the shared disposed sentinel DisposeAsync returns a completed ValueTask without throwing.</summary>

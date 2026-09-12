@@ -29,10 +29,7 @@ public static class SignalExtensions
             return new SignalAsyncWitness<T>(source);
         }
 
-        /// <summary>
-        /// Creates a new signal that applies a transformation to the values of the source signal using the specified
-        /// mapping function.
-        /// </summary>
+        /// <summary>Creates a new signal that applies a transformation to the values of the source signal using the specified mapping function.</summary>
         /// <param name="mapper">A function that takes an asynchronous observable of type T and returns a transformed asynchronous observable of
         /// type T. This function defines how the values are mapped.</param>
         /// <returns>A signal that publishes into <paramref name="source"/> but exposes the mapped sequence to its own
@@ -51,8 +48,8 @@ public static class SignalExtensions
     /// <summary>A signal that applies a transformation to the observable values of the source signal.</summary>
     /// <typeparam name="T">The type of elements processed by the signal.</typeparam>
     /// <param name="original">The source signal.</param>
-    /// <param name="mapper">A function that takes an asynchronous observable of type T and returns a transformed asynchronous observable of
-    /// type T. This function defines how the values are mapped.</param>
+    /// <param name="mapper">Transforms the source's value sequence
+    /// once during construction.</param>
     internal sealed class MappedSignal<T>(
         ISignalAsync<T> original,
         Func<IObservableAsync<T>, IObservableAsync<T>> mapper) : ISignalAsync<T>
@@ -91,11 +88,7 @@ public static class SignalExtensions
     /// <param name="signal">The signal to forward notifications to.</param>
     internal sealed class SignalAsyncWitness<T>(ISignalAsync<T> signal) : WitnessAsync<T>
     {
-        /// <summary>
-        /// Forwards the value to the wrapped signal under <see cref="CancellationToken.None"/>, which every downstream
-        /// <see cref="WitnessAsync{T}"/> takes its no-link fast path on. Passing this observer's own dispose token
-        /// instead would buy nothing: disposal stops values from reaching this method at all.
-        /// </summary>
+        /// <summary>Forwards the value with an uncancelable token after the observer's disposal check.</summary>
         /// <param name="value">The value to be processed by the observer.</param>
         /// <param name="cancellationToken">The token captured by the base observer's TryEnter scope. Ignored on the forward.</param>
         /// <returns>A ValueTask that represents the asynchronous operation.</returns>

@@ -34,7 +34,7 @@ public class DisposableTests
     /// <summary>The number of disposables added to the multiple-disposable group.</summary>
     private const int Twenty = 20;
 
-    /// <summary>Calendar year used by value-type timestamp coverage.</summary>
+    /// <summary>Calendar year used by timestamp values.</summary>
     private const int CalendarYear = 2024;
 
     /// <summary>The disposal count produced when a slot disposes twice.</summary>
@@ -175,7 +175,7 @@ public class DisposableTests
         _ = Assert.Throws<ArgumentNullException>(() => current.Schedule((Action)null!));
         _ = Assert.Throws<ArgumentNullException>(() => current.Schedule(One, TimeSpan.Zero, null!));
         List<int> scheduled = [];
-        current.Schedule(One, TimeSpan.FromMilliseconds(1), (_, state) =>
+        current.Schedule(One, TimeSpan.Zero, (_, state) =>
         {
             scheduled.Add(state);
             return EmptyDisposable.Instance;
@@ -368,7 +368,7 @@ public class DisposableTests
         _ = Assert.Throws<InvalidOperationException>(() => Handle<int, int, int>.Throw(exception, 1, Two, Three));
     }
 
-    /// <summary>Exposes the protected dispose path for coverage.</summary>
+    /// <summary>Exposes disposal without managed-resource cleanup.</summary>
     private sealed class ExposedSingleDisposable : SingleDisposable
     {
         /// <summary>Initializes a new instance of the <see cref="ExposedSingleDisposable"/> class.</summary>
@@ -383,7 +383,7 @@ public class DisposableTests
         public void DisposeFalse() => Dispose(false);
     }
 
-    /// <summary>Exposes the protected dispose path for coverage.</summary>
+    /// <summary>Exposes disposal without managed-resource cleanup.</summary>
     private sealed class ExposedSingleReplaceableDisposable : SingleReplaceableDisposable
     {
         /// <summary>Initializes a new instance of the <see cref="ExposedSingleReplaceableDisposable"/> class.</summary>
@@ -398,7 +398,7 @@ public class DisposableTests
         public void DisposeFalse() => Dispose(false);
     }
 
-    /// <summary>Exposes the protected dispose path for coverage.</summary>
+    /// <summary>Exposes disposal without managed-resource cleanup.</summary>
     private sealed class ExposedMultipleDisposable : MultipleDisposable
     {
         /// <summary>Initializes a new instance of the <see cref="ExposedMultipleDisposable"/> class.</summary>

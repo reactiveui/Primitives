@@ -131,8 +131,7 @@ public sealed class ForkJoinWitness<TLeft, TRight, TResult>
         }
     }
 
-    /// <summary>Emits the result and completes once both sources are done.</summary>
-    /// <remarks>Must be called while holding <see cref="_gate"/> so the terminal notification stays serialized.</remarks>
+    /// <summary>Sends the terminal notification while the caller holds the gate.</summary>
     private void TryFinish()
     {
         if (!IsLeftDone || !IsRightDone)

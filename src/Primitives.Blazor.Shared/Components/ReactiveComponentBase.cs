@@ -159,11 +159,7 @@ public class ReactiveComponentBase : ComponentBase, IDisposable
         _subscriptions.Dispose();
     }
 
-    /// <summary>
-    /// Runs a callback through the renderer and routes failures into Blazor's error handling
-    /// (<see cref="ComponentBase.DispatchExceptionAsync(Exception)"/>) so error boundaries observe them
-    /// instead of the fault being lost with the discarded task.
-    /// </summary>
+    /// <summary>Runs a renderer callback and forwards failures to Blazor error boundaries.</summary>
     /// <param name="callback">Callback to run on the renderer dispatcher.</param>
     /// <returns>A task that completes when the callback (or its failure dispatch) has finished.</returns>
     private async Task InvokeGuardedAsync(Action callback)

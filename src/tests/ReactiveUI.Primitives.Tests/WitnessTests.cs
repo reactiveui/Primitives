@@ -2,7 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Disposables;
@@ -11,7 +10,7 @@ using ReactiveUI.Primitives.Signals;
 namespace ReactiveUI.Primitives.Tests;
 
 /// <summary>Verifies <see cref="Witness"/> routing and safe-termination contracts.</summary>
-public class WitnessTests
+public partial class WitnessTests
 {
     /// <summary>A reusable value for one.</summary>
     private const int One = 1;
@@ -36,9 +35,6 @@ public class WitnessTests
 
     /// <summary>A reusable value for fourteen.</summary>
     private const int Fourteen = 14;
-
-    /// <summary>Timeout used when awaiting a witness task that has already been driven to its terminal.</summary>
-    private const int TimeoutSeconds = 2;
 
     /// <summary>Shared state value.</summary>
     private const string State = "state";
@@ -157,11 +153,7 @@ public class WitnessTests
         _ = Assert.Throws<ArgumentNullException>(() => safe.OnError(null!));
     }
 
-    /// <summary>
-    /// Verifies the witness holds every notification back until its sequencer runs the queued drain, then replays
-    /// values and the completion through the observer in order. The dispatch is driven by a sequencer the test owns
-    /// so the handover is observed exactly rather than raced against a pool thread.
-    /// </summary>
+    /// <summary>The witness defers notifications until its sequencer drains them in source order.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task WitnessOnDefersNextAndCompletedUntilTheSequencerDrainsThem()
@@ -280,19 +272,19 @@ public class WitnessTests
         any.OnNext(One);
         any.OnNext(Two);
         any.OnCompleted();
-        await Assert.That(await WaitForAsync(any.Task)).IsTrue();
+        await Assert.That(await any.Task).IsTrue();
         await Assert.That(anySubscription.DisposeCount).IsEqualTo(One);
 
         TaskAnyWitness<int> unmatched = new(static value => value > Four, CancellationToken.None);
         unmatched.OnNext(One);
         unmatched.OnCompleted();
         unmatched.OnNext(Four);
-        await Assert.That(await WaitForAsync(unmatched.Task)).IsFalse();
+        await Assert.That(await unmatched.Task).IsFalse();
 
         InvalidOperationException predicateError = new("any-predicate");
         TaskAnyWitness<int> predicateFault = new(_ => throw predicateError, CancellationToken.None);
         predicateFault.OnNext(One);
-        var observedPredicateError = await Assert.That(() => WaitForAsync(predicateFault.Task))
+        var observedPredicateError = await Assert.That(() => predicateFault.Task)
             .ThrowsExactly<InvalidOperationException>();
         await Assert.That(observedPredicateError).IsSameReferenceAs(predicateError);
 
@@ -300,7 +292,7 @@ public class WitnessTests
         TaskAnyWitness<int> sourceFault = new(CancellationToken.None);
         sourceFault.OnError(sourceError);
         sourceFault.OnCompleted();
-        var observedSourceError = await Assert.That(() => WaitForAsync(sourceFault.Task))
+        var observedSourceError = await Assert.That(() => sourceFault.Task)
             .ThrowsExactly<InvalidOperationException>();
         await Assert.That(observedSourceError).IsSameReferenceAs(sourceError);
     }
@@ -315,7 +307,7 @@ public class WitnessTests
         all.OnNext(Two);
         all.OnCompleted();
         all.OnNext(Three);
-        await Assert.That(await WaitForAsync(all.Task)).IsEqualTo(Two);
+        await Assert.That(await all.Task).IsEqualTo(Two);
 
         TaskCountWitness<int> even = new(static value => value % Two == 0, CancellationToken.None);
         even.OnNext(One);
@@ -324,12 +316,12 @@ public class WitnessTests
         even.OnNext(Four);
         even.OnCompleted();
         even.OnError(new InvalidOperationException("late"));
-        await Assert.That(await WaitForAsync(even.Task)).IsEqualTo(Two);
+        await Assert.That(await even.Task).IsEqualTo(Two);
 
         InvalidOperationException predicateError = new("count-predicate");
         TaskCountWitness<int> predicateFault = new(_ => throw predicateError, CancellationToken.None);
         predicateFault.OnNext(One);
-        var observedPredicateError = await Assert.That(() => WaitForAsync(predicateFault.Task))
+        var observedPredicateError = await Assert.That(() => predicateFault.Task)
             .ThrowsExactly<InvalidOperationException>();
         await Assert.That(observedPredicateError).IsSameReferenceAs(predicateError);
 
@@ -337,7 +329,7 @@ public class WitnessTests
         TaskCountWitness<int> sourceFault = new(CancellationToken.None);
         sourceFault.OnError(sourceError);
         sourceFault.OnNext(Two);
-        var observedSourceError = await Assert.That(() => WaitForAsync(sourceFault.Task))
+        var observedSourceError = await Assert.That(() => sourceFault.Task)
             .ThrowsExactly<InvalidOperationException>();
         await Assert.That(observedSourceError).IsSameReferenceAs(sourceError);
     }
@@ -352,7 +344,7 @@ public class WitnessTests
         completed.SetSubscription(completedSubscription);
         completed.OnCompleted();
         completed.Dispose();
-        await Assert.That(await WaitForAsync(completed.Task)).IsFalse();
+        await Assert.That(await completed.Task).IsFalse();
         await Assert.That(completedSubscription.DisposeCount).IsEqualTo(One);
 
         TaskAnyWitness<int> alreadyStopped = new(CancellationToken.None);
@@ -955,173 +947,5 @@ public class WitnessTests
         var result = witness.Remove(absent);
 
         await Assert.That(result).IsSameReferenceAs(witness);
-    }
-
-    /// <summary>Asserts each witness rejects the callback or observer it cannot work without.</summary>
-    private static void AssertWitnessConstructorsRejectMissingCallbacks()
-    {
-        _ = Assert.Throws<ArgumentNullException>(static () =>
-        {
-            CallbackWitness<int> invalid = new(null!, null, null);
-            GC.KeepAlive(invalid);
-        });
-        _ = Assert.Throws<ArgumentNullException>(static () =>
-        {
-            ForwardingWitness<int> invalid = new(null!);
-            GC.KeepAlive(invalid);
-        });
-        _ = Assert.Throws<ArgumentNullException>(static () =>
-        {
-            StatefulWitness<int, string> invalid = new(State, null!, null, null);
-            GC.KeepAlive(invalid);
-        });
-    }
-
-    /// <summary>Asserts a callback witness forwards each notification, and rethrows when no error callback was given.</summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    private static async Task AssertCallbackWitnessForwardsEachNotification()
-    {
-        List<int> callbackValues = [];
-        List<Exception> callbackErrors = [];
-        List<Result> callbackCompletions = [];
-        CallbackWitness<int> callback = new(callbackValues.Add, callbackErrors.Add, callbackCompletions.Add);
-        InvalidOperationException callbackError = new("callback");
-        callback.OnNext(One);
-        callback.OnError(callbackError);
-        callback.OnCompleted();
-        await Assert.That(callbackValues.SequenceEqual([One])).IsTrue();
-        await Assert.That(callbackErrors[0]).IsSameReferenceAs(callbackError);
-        await Assert.That(callbackCompletions[0].IsSuccess).IsTrue();
-        InvalidOperationException callbackFallback = new("callback fallback");
-        _ = Assert.Throws<InvalidOperationException>(() =>
-            new CallbackWitness<int>(static _ => { }, null, null).OnError(callbackFallback));
-        new CallbackWitness<int>(static _ => { }, null, null).OnCompleted();
-    }
-
-    /// <summary>Asserts a forwarding witness passes every notification through to the observer it wraps.</summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    private static async Task AssertForwardingWitnessForwardsEachNotification()
-    {
-        Recorder<int> forwarded = new();
-        ForwardingWitness<int> forwarding = new(forwarded);
-        InvalidOperationException forwardingError = new("forwarding");
-        forwarding.OnNext(Two);
-        forwarding.OnError(forwardingError);
-        forwarding.OnCompleted();
-        await Assert.That(forwarded.Values.SequenceEqual([Two])).IsTrue();
-        await Assert.That(forwarded.Errors[0]).IsSameReferenceAs(forwardingError);
-        await Assert.That(forwarded.Completed).IsEqualTo(1);
-    }
-
-    /// <summary>Asserts a stateful witness hands its state to every callback, and rethrows without an error callback.</summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    private static async Task AssertStatefulWitnessForwardsEachNotificationWithItsState()
-    {
-        List<string> statefulValues = [];
-        List<string> statefulErrors = [];
-        List<string> statefulCompletions = [];
-        StatefulWitness<int, string> stateful = new(
-            State,
-            (value, state) => statefulValues.Add($"{state}:{value}"),
-            (error, state) => statefulErrors.Add($"{state}:{error.Message}"),
-            (result, state) => statefulCompletions.Add($"{state}:{result.IsSuccess}"));
-        InvalidOperationException statefulError = new("stateful");
-        stateful.OnNext(One);
-        stateful.OnError(statefulError);
-        stateful.OnCompleted();
-        await Assert.That(statefulValues.SequenceEqual([$"{State}:{One}"])).IsTrue();
-        await Assert.That(statefulErrors.SequenceEqual([$"{State}:{statefulError.Message}"])).IsTrue();
-        await Assert.That(statefulCompletions.SequenceEqual([$"{State}:True"])).IsTrue();
-        InvalidOperationException statefulFallback = new("stateful fallback");
-        _ = Assert.Throws<InvalidOperationException>(() =>
-            new StatefulWitness<int, string>(State, static (_, _) => { }, null, null).OnError(statefulFallback));
-        new StatefulWitness<int, string>(State, static (_, _) => { }, null, null).OnCompleted();
-    }
-
-    /// <summary>Asserts a safe witness drops every notification that arrives after its first terminal one.</summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    private static async Task AssertSafeWitnessIgnoresNotificationsAfterTheTerminal()
-    {
-        List<int> safeValues = [];
-        List<Exception> safeErrors = [];
-        var safeCompleted = 0;
-        var safe = Witness.Safe(Witness.Create<int>(safeValues.Add, safeErrors.Add, () => safeCompleted++));
-        safe.OnNext(One);
-        safe.OnCompleted();
-        safe.OnNext(Two);
-        safe.OnError(new InvalidOperationException("ignored"));
-        safe.OnCompleted();
-        await Assert.That(safeValues.SequenceEqual([One])).IsTrue();
-        await Assert.That(safeErrors.Count).IsEqualTo(0);
-        await Assert.That(safeCompleted).IsEqualTo(1);
-    }
-
-    /// <summary>Waits for a task with a bounded timeout.</summary>
-    /// <param name="task">The task to wait for.</param>
-    /// <returns>A task that completes when the supplied task completes.</returns>
-    /// <exception cref="TimeoutException">The supplied task did not complete within the bounded timeout.</exception>
-    private static async Task WaitForAsync(Task task)
-    {
-        var timeout = Task.Delay(TimeSpan.FromSeconds(TimeoutSeconds));
-        var completed = await Task.WhenAny(task, timeout).ConfigureAwait(false);
-        if (completed == timeout)
-        {
-            throw new TimeoutException("Timed out waiting for the witness task to complete.");
-        }
-
-        await task.ConfigureAwait(false);
-    }
-
-    /// <summary>Waits for a task with a bounded timeout and returns its result.</summary>
-    /// <typeparam name="T">The task result type.</typeparam>
-    /// <param name="task">The task to wait for.</param>
-    /// <returns>The task result.</returns>
-    private static async Task<T> WaitForAsync<T>(Task<T> task)
-    {
-        await WaitForAsync((Task)task).ConfigureAwait(false);
-        return await task.ConfigureAwait(false);
-    }
-
-    /// <summary>Records observer notifications.</summary>
-    /// <typeparam name="T">The observed value type.</typeparam>
-    private sealed class Recorder<T> : IObserver<T>
-    {
-        /// <summary>Gets observed values.</summary>
-        public List<T> Values { get; } = [];
-
-        /// <summary>Gets observed errors.</summary>
-        public List<Exception> Errors { get; } = [];
-
-        /// <summary>Gets the number of completion notifications.</summary>
-        public int Completed { get; private set; }
-
-        /// <inheritdoc/>
-        public void OnCompleted() => Completed++;
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void OnError(Exception error) => Errors.Add(error);
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void OnNext(T value) => Values.Add(value);
-    }
-
-    /// <summary>Observable with a disposable subscription tracker and captured observer.</summary>
-    /// <typeparam name="T">The source value type.</typeparam>
-    private sealed class RecordingDisposableObservable<T> : IObservable<T>
-    {
-        /// <summary>Gets the captured observer.</summary>
-        public IObserver<T>? Observer { get; private set; }
-
-        /// <summary>Gets the number of times the source subscription was disposed.</summary>
-        public int DisposeCount { get; private set; }
-
-        /// <inheritdoc/>
-        public IDisposable Subscribe(IObserver<T> observer)
-        {
-            Observer = observer;
-            return new ActionDisposable(() => DisposeCount++);
-        }
     }
 }
