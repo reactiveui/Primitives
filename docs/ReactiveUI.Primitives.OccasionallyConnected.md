@@ -365,11 +365,11 @@ public interface IOccasionallyConnectedStream<TState, TInput> : IAsyncDisposable
 
     ValueTask<PublishReceipt> PublishAsync(
         TInput value,
-        RemotePublishOptions? options = null,
-        CancellationToken cancellationToken = default);
+        RemotePublishOptions? options,
+        CancellationToken cancellationToken);
 
-    ValueTask StartAsync(CancellationToken cancellationToken = default);
-    ValueTask StopAsync(CancellationToken cancellationToken = default);
+    ValueTask StartAsync(CancellationToken cancellationToken);
+    ValueTask StopAsync(CancellationToken cancellationToken);
 }
 
 public interface IOccasionallyConnectedStream<T>
@@ -379,6 +379,8 @@ public interface IOccasionallyConnectedStream<T>
 ```
 
 `Local` replays the latest committed local state to new subscribers. `Remote` exposes decoded, deduplicated server event payloads of `TInput` after durable inbox application; the non-generic `RemoteEvent` envelope remains an engine/storage boundary type. `Remote` does not replay by default. A replaying remote view is opt-in through a normal Primitives replay operator.
+
+Core extension overloads provide `PublishAsync(value)`, `PublishAsync(value, options)`, and `PublishAsync(value, cancellationToken)`, forwarding omitted options as `null` and omitted cancellation as `CancellationToken.None`. Parameterless `StartAsync()` and `StopAsync()` likewise forward `CancellationToken.None`; the interface declares no optional parameters.
 
 ### 7.5 Projection and conflict contracts
 
