@@ -616,3 +616,16 @@ Conflict resolution retained the current Core APIs, SQLite registration, impleme
   net8, 115 on net9/net10/net11 and 58 branches throughout. All eight Server library targets build cleanly.
 - This is an internal ordering primitive. The concrete resolver, authenticated stamp creation and atomic server commit
   integration remain subsequent work; the primitive itself does not authenticate identities or persist timestamps.
+
+### Stage 5d: canonical operation fingerprints
+
+- Added an internal, versioned SHA-256 encoding of authenticated tenant/client scope and complete operation intent,
+  including actual payload bytes, all policy fields and ordinally sorted metadata. Diagnostic timestamps are excluded.
+- Canonical UTF-8 bytes are counted before payload copies and hash staging; malformed text and oversized operations fail.
+  This is a per-operation bound, not a global admission or durability guarantee.
+- Root reviewed production encoding and strengthened the independent test encoder with platform binary primitives and
+  a sequence using every 64-bit byte. Tests cover fixed vectors, Unicode chunk boundaries, exact size limits, identity
+  separation, changed payload with unchanged claimed hash and policy changes.
+- All 42 Server TUnit tests pass in Release on net8/net9/net10/net11. MTP confirms 100% matching Server line and branch
+  coverage (245 lines on net8, 244 on the other targets, 80 branches). All eight library targets build without warnings
+  or errors. Journal integration and durable duplicate-response replay remain subsequent work.
