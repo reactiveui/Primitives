@@ -317,11 +317,11 @@ public interface IRemoteObserver<T>
     ValueTask<PublishReceipt> PublishAsync(
         T value,
         RemotePublishOptions options,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken);
 
     IObserver<T> AsObserver(
         RemotePublishOptions options,
-        ObserverInputOptions? inputOptions = null);
+        ObserverInputOptions? inputOptions);
 }
 
 public sealed record RemoteMessage<T>(
@@ -338,7 +338,9 @@ public sealed record PublishReceipt(
     DateTimeOffset SavedAtUtc);
 ```
 
-`PublishAsync` is the authoritative write API. `AsObserver` is a convenience bridge: `OnNext` enqueues into a bounded in-memory admission queue, `OnError` reports a producer fault, and `OnCompleted` closes only that producer. Persistence or overflow failures are emitted on `Faults`; therefore callers that require a durable receipt MUST use `PublishAsync`.
+Core extension overloads provide `PublishAsync(value, options)` with `CancellationToken.None` and `AsObserver(options)` with default observer input options. The interface itself keeps cancellation and observer input explicit; it declares no optional parameters.
+
+`IRemoteObservable<T>` emits only decoded messages that have committed locally after deduplication. `PublishAsync` is the authoritative write API. `AsObserver` is a convenience bridge: `OnNext` performs bounded in-memory admission, `OnError` reports a producer fault, and `OnCompleted` closes only that producer. Persistence or overflow failures are emitted on `Faults`; therefore callers that require a durable receipt MUST use `PublishAsync`.
 
 ### 7.4 Local-first stream facade
 
