@@ -209,6 +209,7 @@ internal sealed class SqliteLocalStoreAdapterSizing
         bytes = Add(bytes, StringBytes(remoteEvent.ServerCursor));
         bytes = Add(bytes, DateTimeOffsetBytes);
         bytes = Add(bytes, remoteEvent.CausedByOperationId.HasValue ? GuidBytes : NullableMarkerBytes);
+        bytes = Add(bytes, remoteEvent.Origin is null ? NullableMarkerBytes : Add(ObjectHeaderBytes, Add(StringBytes(remoteEvent.Origin.ClientId), GuidBytes)));
         bytes = Add(bytes, PayloadBytes(remoteEvent.Payload));
         return Add(bytes, DictionaryBytes(remoteEvent.Metadata));
     }
