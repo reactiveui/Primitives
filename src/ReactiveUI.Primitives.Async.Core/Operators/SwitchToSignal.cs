@@ -238,7 +238,7 @@ public sealed class SwitchToSignal<T>(IObservableAsync<IObservableAsync<T>> sour
             }
         }
 
-        /// <summary>Disposes the current inner subscription, the outer subscription, and optionally forwards a completion result to the downstream observer. This method is idempotent.</summary>
+    /// <summary>Disposes the current inner and outer subscriptions once, optionally forwarding completion.</summary>
         /// <param name="result">The completion result to forward, or <see langword="null"/> if disposing without signaling completion.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
         internal async ValueTask FinishAsync(Result? result)

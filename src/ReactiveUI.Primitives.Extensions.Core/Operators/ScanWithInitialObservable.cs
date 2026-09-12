@@ -6,10 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions;
 
-/// <summary>
-/// Emits <paramref name="initial"/> on subscribe, then the running accumulation after each source element. An exception
-/// thrown by <paramref name="accumulator"/> terminates the sequence and the accumulation stops there.
-/// </summary>
+/// <summary>Emits the initial value followed by each accumulation result, terminating if the accumulator throws.</summary>
 /// <typeparam name="TSource">The type of elements in the source sequence.</typeparam>
 /// <typeparam name="TAccumulate">The type of the accumulated value.</typeparam>
 /// <param name="source">The source observable.</param>

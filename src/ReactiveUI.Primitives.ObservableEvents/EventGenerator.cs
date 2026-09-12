@@ -12,7 +12,7 @@ using ReactiveUI.Primitives.ObservableEvents.Models;
 namespace ReactiveUI.Primitives.ObservableEvents;
 
 /// <summary>Generates observable wrappers for the event-bearing types a consumer asks for.</summary>
-/// <remarks>Requests come from Events() calls or static-host attributes. Output is cached per host, namespace, and activation signature.</remarks>
+/// <remarks>Requests come from Events() calls or static-host attributes.</remarks>
 [Generator(LanguageNames.CSharp)]
 public sealed class EventGenerator : IIncrementalGenerator
 {
@@ -21,7 +21,6 @@ public sealed class EventGenerator : IIncrementalGenerator
     {
         RegisterActivationOutput(in context);
 
-        // Resolve provider names independently so reference changes do not invalidate event extraction.
         var provider = context.CompilationProvider
             .Select(static (compilation, _) => ProviderResolver.Resolve(compilation))
             .WithTrackingName(GeneratorStepNames.Provider);
@@ -72,7 +71,6 @@ public sealed class EventGenerator : IIncrementalGenerator
             targets.Combine(provider),
             static (output, data) => EmitInstanceTarget(in output, data.Left, data.Right));
 
-        // Keyed on the overload signatures alone, so changing what a wrapper exposes leaves this file untouched.
         context.RegisterSourceOutput(
             targets
                 .Where(static target => !target.Events.IsEmpty)

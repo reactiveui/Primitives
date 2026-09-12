@@ -233,7 +233,7 @@ internal sealed class WitnessOnSignal<T>(IObservable<T> source, ISequencer sched
             public Exception Exception { get; }
 
             /// <summary>Creates an OnNext notification.</summary>
-            /// <param name="value">The value.</param>
+            /// <param name="value">The value to carry.</param>
             /// <returns>The notification.</returns>
             public static Notification OnNext(T value) => new(SparkKind.OnNext, value, null);
 

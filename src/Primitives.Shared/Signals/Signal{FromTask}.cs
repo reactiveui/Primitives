@@ -230,7 +230,7 @@ public static partial class Signal
         }
         catch (ObjectDisposedException)
         {
-            // Another completion path released the token source.
+            // Cancellation remains harmless after task completion.
         }
     }
 

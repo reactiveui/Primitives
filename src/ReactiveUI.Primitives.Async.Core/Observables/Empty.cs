@@ -14,7 +14,6 @@ public static partial class SignalAsync
     /// <summary>Creates an observable sequence that completes immediately without emitting any items.</summary>
     /// <typeparam name="T">The type of elements in the observable sequence.</typeparam>
     /// <returns>An observable sequence of type <typeparamref name="T"/> that completes immediately without producing any values.</returns>
-    /// <remarks>The returned instance is a singleton per element type.</remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [SuppressMessage(
         "Design",

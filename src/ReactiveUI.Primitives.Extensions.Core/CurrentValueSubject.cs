@@ -18,7 +18,7 @@ public sealed class CurrentValueSubject<T> : IObservable<T>, IObserver<T>, IDisp
     /// <summary>Single-observer fast path; non-null when exactly one observer is subscribed.</summary>
     private IObserver<T>? _observer;
 
-    /// <summary>Multi-observer snapshot; non-null when two or more observers are subscribed. Copy-on-write.</summary>
+    /// <summary>The observer snapshot, copied on modification and populated when at least two observers subscribe.</summary>
     private IObserver<T>[]? _observers;
 
     /// <summary>Latest value, replayed to new subscribers.</summary>
@@ -253,7 +253,6 @@ public sealed class CurrentValueSubject<T> : IObservable<T>, IObserver<T>, IDisp
 
             if (existing.Length == 2)
             {
-                // Collapse back to the single-observer fast path.
                 _observer = index == 0 ? existing[1] : existing[0];
                 _observers = null;
                 return;

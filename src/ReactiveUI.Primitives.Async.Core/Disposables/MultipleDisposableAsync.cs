@@ -33,7 +33,7 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
     /// <summary>Backing array; a removal zeroes its slot, so <see cref="_length"/> is the high-water mark and <see cref="_count"/> the non-null slots.</summary>
     private IAsyncDisposable?[]? _items;
 
-    /// <summary>High-water mark of used slots in <see cref="_items"/>. Includes slots zeroed by Remove.</summary>
+    /// <summary>The used array length, including gaps left by removed items.</summary>
     private int _length;
 
     /// <summary>The number of non-<see langword="null"/> disposables in the collection.</summary>
@@ -73,11 +73,7 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
         _count = disposables.Length;
     }
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="MultipleDisposableAsync"/> class that contains the specified
-    /// disposables. The backing array is sized exactly when <paramref name="disposables"/> implements
-    /// <see cref="ICollection{T}"/>; otherwise it grows from the default capacity.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="MultipleDisposableAsync"/> class containing the supplied disposables.</summary>
     /// <param name="disposables">The collection of <see cref="IAsyncDisposable"/> instances to include.</param>
     public MultipleDisposableAsync(IEnumerable<IAsyncDisposable> disposables)
     {
@@ -250,7 +246,7 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
     /// <param name="arrayIndex">The index in <paramref name="array"/> at which copying begins.</param>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="arrayIndex"/> falls outside
     /// <paramref name="array"/>, or the space from it to the end of the array cannot hold every item.</exception>
-    /// <remarks>A disposed collection copies nothing and raises nothing.</remarks>
+    /// <remarks>A disposed collection copies nothing, but destination index validation still applies.</remarks>
     public void CopyTo(IAsyncDisposable[]? array, int arrayIndex)
     {
         if (arrayIndex < 0 || arrayIndex >= array?.Length)
@@ -281,7 +277,7 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
 
     /// <summary>Asynchronously releases all resources used by the collection and disposes of each contained asynchronous disposable object.</summary>
     /// <returns>A task that represents the asynchronous dispose operation.</returns>
-    /// <remarks>Idempotent. Items are disposed one after another in insertion order.</remarks>
+    /// <remarks>Disposes items once, sequentially in insertion order.</remarks>
     public async ValueTask DisposeAsync()
     {
         IAsyncDisposable?[]? snapshot;
@@ -373,7 +369,7 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
         }
     }
 
-    /// <summary>Ensures <see cref="_items"/> has at least one free slot at index <see cref="_length"/>. Allocates the default-capacity array on first use; doubles on subsequent overflow.</summary>
+    /// <summary>Grows the array when no unused slot remains.</summary>
     private void EnsureCapacityForOneMore()
     {
         if (_items is null)
@@ -392,7 +388,7 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
         _items = grown;
     }
 
-    /// <summary>Removes null gaps inside <see cref="_items"/> and shrinks the backing array to half its capacity. Caller must hold <see cref="_gate"/>.</summary>
+    /// <summary>Compacts and halves the array while the caller holds the gate.</summary>
     private void CompactInPlace()
     {
         var src = _items!;

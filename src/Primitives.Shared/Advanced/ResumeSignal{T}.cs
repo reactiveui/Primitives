@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Reactive.Advanced;
 namespace ReactiveUI.Primitives.Advanced;
 #endif
 
-/// <summary>Cold signal that mirrors the source and, when it produces any error, subscribes the fallback sequence in its place. The error is not forwarded downstream.</summary>
+/// <summary>Replaces a failed source with the fallback sequence without forwarding the source error.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="fallback">The fallback observable subscribed to after the source errors.</param>

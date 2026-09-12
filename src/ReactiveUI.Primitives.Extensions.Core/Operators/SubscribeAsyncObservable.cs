@@ -6,12 +6,11 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Subscribes to a source and runs an asynchronous handler for each element, one at a time, queueing values that arrive
-/// while a handler runs. A handler failure goes to the error callback and stops further processing; the completion
-/// callback runs once the queue drains after the source completes, and disposal drops the subscription and the queue.
-/// </summary>
+/// <summary>Queues source values and invokes the asynchronous handler one value at a time.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
+/// <remarks>
+/// Handler failure invokes the error callback and stops processing. Completion waits for queued values; disposal drops them and unsubscribes.
+/// </remarks>
 [System.Diagnostics.DebuggerDisplay("SubscribeAsyncObservable: Queued = {_queue.Count}, Processing = {_isProcessing}, Done = {_done}")]
 public sealed class SubscribeAsyncObservable<T> : IDisposable
 {

@@ -14,10 +14,7 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The source observable sequence.</param>
     extension<T>(IObservableAsync<T> source)
     {
-        /// <summary>
-        /// Applies a time limit between elements. If the next element does not arrive within
-        /// <paramref name="dueTime"/>, the sequence completes with a <see cref="TimeoutException"/>.
-        /// </summary>
+        /// <summary>Completes with a TimeoutException when the next element misses the deadline.</summary>
         /// <param name="dueTime">The maximum time span allowed between consecutive elements. Must be positive.</param>
         /// <returns>An observable sequence that mirrors the source but completes with a
         /// <see cref="TimeoutException"/> once an inter-element gap exceeds <paramref name="dueTime"/>.</returns>
@@ -84,7 +81,7 @@ public static partial class SignalAsyncExtensions
                 }
                 catch (Exception e)
                 {
-                    // Timer creation failure is reported; values continue without timeout enforcement.
+                    // If timeout setup fails, values continue without timeout enforcement.
                     UnhandledExceptionHandler.ReportUnhandledException(e);
                 }
             }

@@ -19,7 +19,7 @@ public static partial class LinqExtensions
         /// <param name="disposables">The container.</param>
         /// <returns>The original disposable.</returns>
         /// <exception cref="ArgumentExceptionHelper"><paramref name="disposables"/> is <see langword="null"/>.</exception>
-        /// <remarks>This exact container overload resolves DisposeWith calls when System.Reactive's composite overload is also in scope.</remarks>
+        /// <remarks>This overload resolves DisposeWith calls when System.Reactive also supplies a composite overload.</remarks>
         public T DisposeWith(ContainerDisposable disposables)
         {
             ArgumentExceptionHelper.ThrowIfNull(disposables);

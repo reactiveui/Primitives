@@ -4,12 +4,8 @@
 
 namespace ReactiveUI.Primitives.Disposables;
 
-/// <summary>
-/// A disposable holder whose inner disposable can be set exactly once. A second
-/// assignment throws <see cref="InvalidOperationException"/>; if the holder was disposed
-/// before the assignment, the supplied disposable is disposed immediately and no exception
-/// is thrown.
-/// </summary>
+/// <summary>Holds a disposable that can be assigned once.</summary>
+/// <remarks>Repeated assignment throws InvalidOperationException; an assignment after disposal is disposed immediately.</remarks>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class OnceDisposable : IsDisposed
 {
@@ -25,7 +21,7 @@ public sealed class OnceDisposable : IsDisposed
     /// <summary>Gets a value indicating whether this instance has been disposed.</summary>
     public bool IsDisposed => ReferenceEquals(Volatile.Read(ref _current), DisposedSentinel);
 
-    /// <summary>Gets or sets the inner disposable. Setting more than once throws.</summary>
+    /// <summary>Gets or sets the inner disposable, throwing on repeated assignment.</summary>
     public IDisposable? Disposable
     {
         get
@@ -75,7 +71,7 @@ public sealed class OnceDisposable : IsDisposed
         /// <inheritdoc/>
         public void Dispose()
         {
-            // Intentionally empty.
+            // Disposing the terminal marker has no effect.
         }
     }
 }

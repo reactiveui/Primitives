@@ -56,7 +56,6 @@ internal sealed class TaskTerminalCompletion<T>
     /// <returns>The terminal task.</returns>
     internal Task<T> Attach(IDisposable subscription, CancellationToken cancellationToken)
     {
-        // Writing the subscription before registering publishes it to the thread that runs the cancellation callback.
         _subscription = subscription;
         if (_completion.Task.IsCompleted)
         {
@@ -71,8 +70,6 @@ internal sealed class TaskTerminalCompletion<T>
                 static state => ((TaskTerminalCompletion<T>)state!).Cancel(),
                 this);
 
-            // A source that completed while the registration was being created saw a default registration in the
-            // observer callbacks, so release the real one here.
             if (_completion.Task.IsCompleted)
             {
                 _ = _cancellationRegistration.Unregister();

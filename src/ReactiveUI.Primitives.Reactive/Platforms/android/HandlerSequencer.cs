@@ -3,16 +3,12 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Disposables;
+using System.Runtime.CompilerServices;
 using Android.OS;
 
 namespace ReactiveUI.Primitives.Reactive.Concurrency;
 
-/// <summary>
-/// System.Reactive-flavoured Android scheduler that coalesces scheduled work onto the thread backing a
-/// <see cref="Handler"/> (typically the main/UI looper). Immediate work is batched through a single cached
-/// <see cref="Java.Lang.IRunnable"/> drain, so the per-post path allocates nothing; delayed work uses the native
-/// <see cref="Handler.PostDelayed(Java.Lang.IRunnable, long)"/>.
-/// </summary>
+/// <summary>Schedules immediate and delayed work on the Android handler thread.</summary>
 /// <seealso cref="System.Reactive.Concurrency.IScheduler" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class HandlerSequencer : CoalescingDispatchScheduler
@@ -47,13 +43,30 @@ public sealed class HandlerSequencer : CoalescingDispatchScheduler
     protected override bool Post(Action drain)
     {
         _drainRunnable ??= new Java.Lang.Runnable(drain);
-        return Handler.Post(_drainRunnable);
+        return PostToHandler(_drainRunnable);
     }
 
     /// <inheritdoc/>
     protected override IDisposable ScheduleOnDispatcher(Action work, TimeSpan dueTime)
     {
         var runnable = new Java.Lang.Runnable(work);
+        return ScheduleOnHandler(runnable, dueTime);
+    }
+
+    /// <summary>Posts the runnable through the native handler.</summary>
+    /// <param name="runnable">The runnable to post.</param>
+    /// <returns>Whether the handler accepted the runnable.</returns>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool PostToHandler(Java.Lang.IRunnable runnable) => Handler.Post(runnable);
+
+    /// <summary>Schedules cancellable work through the native handler.</summary>
+    /// <param name="runnable">The callback to run.</param>
+    /// <param name="dueTime">The requested delay.</param>
+    /// <returns>The callback cancellation handle.</returns>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    private IDisposable ScheduleOnHandler(Java.Lang.IRunnable runnable, TimeSpan dueTime)
+    {
         _ = Handler.PostDelayed(runnable, (long)dueTime.TotalMilliseconds);
         return Disposable.Create((Handler, runnable), static state => state.Handler.RemoveCallbacks(state.runnable));
     }

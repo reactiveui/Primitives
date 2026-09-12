@@ -18,14 +18,14 @@ public readonly struct RxVoid : IEquatable<RxVoid>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
-    /// <summary>Determines whether the two specified <see cref="RxVoid"/> values are not equal. Because <see cref="RxVoid"/> has a single value, this always returns <c>false</c>.</summary>
+    /// <summary>Returns false because all RxVoid values are equal.</summary>
     /// <param name="first">The first <see cref="RxVoid"/> value to compare.</param>
     /// <param name="second">The second <see cref="RxVoid"/> value to compare.</param>
     /// <returns>Because <see cref="RxVoid"/> has a single value, this always returns <c>false</c>.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool operator !=(RxVoid first, RxVoid second) => false;
 
-    /// <summary>Determines whether the two specified <see cref="RxVoid"/> values are equal. Because <see cref="RxVoid"/> has a single value, this always returns <c>true</c>.</summary>
+    /// <summary>Returns true because all RxVoid values are equal.</summary>
     /// <param name="first">The first <see cref="RxVoid"/> value to compare.</param>
     /// <param name="second">The second <see cref="RxVoid"/> value to compare.</param>
     /// <returns>Because <see cref="RxVoid"/> has a single value, this always returns <c>true</c>.</returns>

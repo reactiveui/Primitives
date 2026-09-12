@@ -430,6 +430,24 @@ public sealed class WasmSchedulerTests
         await Assert.That(ran).IsEqualTo(0);
     }
 
+    /// <summary>Final cancellation cleanup does not release a result or attached timer twice.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task CancellationAfterPublication_ReleasesResultAndTimerOnce()
+    {
+        using var scheduler = CreateIsolatedScheduler();
+        CountingDisposable result = new();
+        CountingDisposable timer = new();
+        WasmScheduler.StatefulWorkItem<int> item = new(scheduler, 0, (_, _) => result);
+        item.Run();
+        item.AttachTimer(timer);
+        item.Dispose();
+        item.ReleaseCanceledResult();
+        item.ReleaseCanceledTimer();
+        await Assert.That(result.DisposeCount).IsEqualTo(1);
+        await Assert.That(timer.DisposeCount).IsEqualTo(1);
+    }
+
     /// <summary>Verifies a dispatched periodic callback observes disposal before invoking the action.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
@@ -563,6 +581,16 @@ public sealed class WasmSchedulerTests
     /// <summary>Creates a scheduler with manually dispatched timers.</summary>
     /// <returns>The isolated scheduler.</returns>
     private static WasmScheduler CreateIsolatedScheduler() => new(new ManualTimeProvider());
+
+    /// <summary>Counts every release, including duplicate calls.</summary>
+    private sealed class CountingDisposable : IDisposable
+    {
+        /// <summary>Gets the number of release calls.</summary>
+        internal int DisposeCount { get; private set; }
+
+        /// <inheritdoc/>
+        public void Dispose() => DisposeCount++;
+    }
 
     /// <summary>Stores timer callbacks until the test dispatches them.</summary>
     private sealed class ManualTimeProvider : TimeProvider

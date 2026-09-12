@@ -101,14 +101,21 @@ public sealed class FromAsyncSubscription<T> : IDisposable
         }
 
         FromAsyncTaskObservation<T> observation = new(Observer, Lifetime, ExternalCancellation, linkedSource);
+        RegisterObservation(task, observation);
+        return this;
+    }
+
+    /// <summary>Registers the callback that receives a pending task's terminal state.</summary>
+    /// <param name="task">The pending task.</param>
+    /// <param name="observation">The terminal-state observer.</param>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    private static void RegisterObservation(Task<T> task, FromAsyncTaskObservation<T> observation) =>
         _ = task.ContinueWith(
             static (completedTask, state) => ((FromAsyncTaskObservation<T>)state!).Observe(completedTask),
             observation,
             CancellationToken.None,
             TaskContinuationOptions.ExecuteSynchronously,
             TaskScheduler.Default);
-        return this;
-    }
 
     /// <summary>Forwards a task that has reached a terminal state.</summary>
     /// <param name="task">The task to observe.</param>

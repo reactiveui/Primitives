@@ -84,7 +84,6 @@ public sealed class MergeCoordinator<T> : IDisposable
             Active++;
         }
 
-        // Latch completion per source so duplicate terminal notifications cannot decrement a sibling's count.
         var completed = 0;
         Subscriptions.Add(source.Subscribe(
             OnInnerNext,

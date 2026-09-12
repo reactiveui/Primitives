@@ -18,7 +18,6 @@ public static partial class SignalAsyncExtensions
         /// <param name="value">The value to prepend to the sequence.</param>
         /// <returns>An observable sequence that emits the specified value first, followed by the elements
         /// of the source sequence.</returns>
-        /// <remarks>Equivalent to <c>Prepend(T)</c>, under the System.Reactive name.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> StartWith(T value) => new LeadSignal<T>(source, [value]);
 
@@ -26,8 +25,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="values">The values to prepend to the sequence. Cannot be null.</param>
         /// <returns>An observable sequence that emits the specified values first, followed by the elements
         /// of the source sequence.</returns>
-        /// <remarks>Equivalent to <c>Prepend(IEnumerable&lt;T&gt;)</c>, under the System.Reactive name; the values are
-        /// emitted in collection order.</remarks>
+        /// <remarks>The values are emitted in enumeration order.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> StartWith(IEnumerable<T> values) => new LeadSignal<T>(source, values);
 

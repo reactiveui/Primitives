@@ -6,12 +6,8 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Disposables;
 
-/// <summary>
-/// A disposable holder whose inner disposable can be re-assigned. The displaced inner
-/// disposable is NOT disposed when replaced (in contrast to <see cref="SwapDisposable"/>).
-/// Once this object is disposed, any inner disposable assigned afterwards is disposed
-/// immediately.
-/// </summary>
+/// <summary>Holds a replaceable disposable without disposing the displaced value.</summary>
+/// <remarks>Assignments after disposal are disposed immediately.</remarks>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class MutableDisposable : IsDisposed
 {

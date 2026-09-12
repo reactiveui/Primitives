@@ -7,10 +7,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives;
 
-/// <summary>
-/// Represents an optional value, letting an API distinguish an absent value from a default one without using
-/// <see langword="null"/>. A <see langword="null"/> value is treated as absent.
-/// </summary>
+/// <summary>Represents a value that may be absent, treating null as absent.</summary>
 /// <typeparam name="T">The type of the value that may be contained by the optional.</typeparam>
 [System.Diagnostics.DebuggerDisplay("Optional: HasValue = {HasValue}, Value = {_value}")]
 public readonly record struct Optional<T>

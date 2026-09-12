@@ -3,84 +3,169 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Concurrency;
+using System.Reactive.Disposables;
 using Microsoft.UI.Dispatching;
 using ReactiveUI.Primitives.Reactive.Concurrency;
+using TUnit.Assertions.Enums;
 
 namespace ReactiveUI.Primitives.WinUI.Reactive.Tests;
 
-/// <summary>Tests scheduler execution on a dedicated WinUI queue thread.</summary>
+/// <summary>Tests dispatcher queue batching, rejection, and cancellation through controlled callbacks.</summary>
 public sealed class DispatcherQueueSequencerTests
 {
-    /// <summary>Verifies the constructor rejects a null dispatcher queue.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    /// <summary>The second value in a scheduled batch.</summary>
+    private const int SecondValue = 2;
+
+    /// <summary>Expected values after both queued items run.</summary>
+    private static readonly int[] BatchValues = [1, SecondValue];
+
+    /// <summary>Expected values before the reentrant batch runs.</summary>
+    private static readonly int[] FirstBatchValues = [1];
+
+    /// <summary>Public constructors reject a missing dispatcher queue.</summary>
+    /// <returns>The test operation.</returns>
     [Test]
-    public async Task ConstructorRejectsNullDispatcherQueue() =>
+    public async Task ConstructorRejectsNullDispatcherQueue()
+    {
         await Assert.That(static () => new DispatcherQueueSequencer(null!)).ThrowsExactly<ArgumentNullException>();
+        await Assert.That(static () => new DispatcherQueueSequencer(null!, DispatcherQueuePriority.High))
+            .ThrowsExactly<ArgumentNullException>();
+    }
 
-    /// <summary>Verifies a stopped dispatcher queue rejects scheduled work.</summary>
-    /// <returns>A task representing the asynchronous test operation.</returns>
+    /// <summary>Queued actions preserve order and cancellation until the drain runs.</summary>
+    /// <returns>The test operation.</returns>
     [Test]
-    public async Task SchedulingAfterQueueShutdownThrows()
+    public async Task ScheduleCoalescesOrderedWorkAndSkipsCancellation()
     {
-        var harness = new DispatcherQueueHarness();
-        DispatcherQueueSequencer scheduler = new(harness.DispatcherQueue);
-        await harness.DisposeAsync();
-        var executed = false;
-        await Assert.That(() => scheduler.Schedule(() => executed = true))
+        ManualDispatcher dispatcher = new();
+        var scheduler = dispatcher.Create();
+        List<int> values = [];
+        using var first = scheduler.Schedule(() => values.Add(1));
+        var cancelled = scheduler.Schedule(() => values.Add(0));
+        using var second = scheduler.Schedule(TimeSpan.Zero, () => values.Add(SecondValue));
+        cancelled.Dispose();
+        await Assert.That(values).IsEmpty();
+        await Assert.That(dispatcher.Drains).Count().IsEqualTo(1);
+        await Assert.That(dispatcher.LastPriority).IsEqualTo(DispatcherQueuePriority.High);
+        await Assert.That(scheduler.Priority).IsEqualTo(DispatcherQueuePriority.High);
+        dispatcher.Drains.Dequeue()();
+        await Assert.That(values).IsEquivalentTo(BatchValues, EqualityComparer<int>.Default, CollectionOrdering.Matching);
+    }
+
+    /// <summary>A rejected post retains queued actions and reuses its cached callback on retry.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task RejectedPostCanRetryWithoutLosingQueuedWork()
+    {
+        ManualDispatcher dispatcher = new() { AcceptsPosts = false };
+        var scheduler = dispatcher.Create();
+        List<int> values = [];
+        await Assert.That(() => scheduler.Schedule(() => values.Add(1)))
             .ThrowsExactly<InvalidOperationException>();
-        await Assert.That(() => scheduler.Schedule(() => executed = true))
-            .ThrowsExactly<InvalidOperationException>();
-        await Assert.That(executed).IsFalse();
+        await Assert.That(values).IsEmpty();
+        var rejectedHandler = dispatcher.LastHandler;
+        dispatcher.AcceptsPosts = true;
+        using var next = scheduler.Schedule(() => values.Add(SecondValue));
+        await Assert.That(dispatcher.LastHandler).IsSameReferenceAs(rejectedHandler);
+        dispatcher.Drains.Dequeue()();
+        await Assert.That(values).IsEquivalentTo(BatchValues, EqualityComparer<int>.Default, CollectionOrdering.Matching);
     }
 
-    /// <summary>Verifies immediate work is enqueued to and executed on the dispatcher-queue thread.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    /// <summary>Actions queued from inside a callback wait for a later drain.</summary>
+    /// <returns>The test operation.</returns>
     [Test]
-    public async Task ImmediateScheduleExecutesOnQueueThread()
+    public async Task ReentrantScheduleRunsInTheNextBatch()
     {
-        await using var harness = new DispatcherQueueHarness();
-        var scheduler = new DispatcherQueueSequencer(harness.DispatcherQueue);
-        var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        _ = scheduler.Schedule(() => completion.TrySetResult(harness.DispatcherQueue.HasThreadAccess));
-
-        var ranOnQueueThread = await completion.Task;
-        await Assert.That(ranOnQueueThread).IsTrue();
-    }
-
-    /// <summary>Verifies due work executes on the dispatcher queue thread.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    [Test]
-    public async Task DueScheduleExecutesOnQueueThread()
-    {
-        await using var harness = new DispatcherQueueHarness();
-        var scheduler = new DispatcherQueueSequencer(harness.DispatcherQueue);
-        var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        _ = scheduler.Schedule(TimeSpan.Zero, () => completion.TrySetResult(harness.DispatcherQueue.HasThreadAccess));
-
-        var ranOnQueueThread = await completion.Task;
-        await Assert.That(ranOnQueueThread).IsTrue();
-    }
-
-    /// <summary>Hosts a WinUI <see cref="DispatcherQueue"/> on a dedicated thread and shuts the queue down on disposal.</summary>
-    private sealed class DispatcherQueueHarness : IAsyncDisposable
-    {
-        /// <summary>The controller owning the dedicated dispatcher-queue thread.</summary>
-        private readonly DispatcherQueueController _controller;
-
-        /// <summary>Initializes a new instance of the <see cref="DispatcherQueueHarness"/> class.</summary>
-        public DispatcherQueueHarness()
+        ManualDispatcher dispatcher = new();
+        var scheduler = dispatcher.Create();
+        List<int> values = [];
+        using var first = scheduler.Schedule(() =>
         {
-            _controller = DispatcherQueueController.CreateOnDedicatedThread();
-            DispatcherQueue = _controller.DispatcherQueue;
+            values.Add(1);
+            _ = scheduler.Schedule(() => values.Add(SecondValue));
+        });
+        dispatcher.Drains.Dequeue()();
+        await Assert.That(values).IsEquivalentTo(FirstBatchValues, EqualityComparer<int>.Default, CollectionOrdering.Matching);
+        dispatcher.Drains.Dequeue()();
+        await Assert.That(values).IsEquivalentTo(BatchValues, EqualityComparer<int>.Default, CollectionOrdering.Matching);
+    }
+
+    /// <summary>Timer cancellation suppresses a callback even when it is delivered late.</summary>
+    /// <param name="cancel">Whether cancellation precedes delivery.</param>
+    /// <returns>The test operation.</returns>
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task DelayedScheduleHonorsCancellationBeforeDelivery(bool cancel)
+    {
+        ManualDispatcher dispatcher = new();
+        var scheduler = dispatcher.Create();
+        var calls = 0;
+        var delay = TimeSpan.FromSeconds(1);
+        var handle = scheduler.Schedule(delay, () => calls++);
+        var pending = dispatcher.Delays.Dequeue();
+        await Assert.That(calls).IsEqualTo(0);
+        await Assert.That(dispatcher.Drains).IsEmpty();
+        await Assert.That(pending.Delay).IsEqualTo(delay);
+        if (cancel)
+        {
+            handle.Dispose();
         }
 
-        /// <summary>Gets the hosted dispatcher queue.</summary>
-        public DispatcherQueue DispatcherQueue { get; }
+        pending.Callback();
+        await Assert.That(pending.Cancellation.IsDisposed).IsEqualTo(cancel);
+        await Assert.That(calls).IsEqualTo(cancel ? 0 : 1);
+        if (cancel)
+        {
+            return;
+        }
 
-        /// <inheritdoc/>
-        /// <returns>A task representing the asynchronous operation.</returns>
-        public async ValueTask DisposeAsync() => await _controller.ShutdownQueueAsync().AsTask();
+        handle.Dispose();
+    }
+
+    /// <summary>Retains callbacks until they are explicitly delivered.</summary>
+    private sealed class ManualDispatcher
+    {
+        /// <summary>Gets queued drains.</summary>
+        public Queue<DispatcherQueueHandler> Drains { get; } = new();
+
+        /// <summary>Gets delayed callbacks and their cancellation handles.</summary>
+        public Queue<(Action Callback, TimeSpan Delay, BooleanDisposable Cancellation)> Delays { get; } = new();
+
+        /// <summary>Gets or sets whether enqueue attempts succeed.</summary>
+        public bool AcceptsPosts { get; set; } = true;
+
+        /// <summary>Gets the most recently posted handler.</summary>
+        public DispatcherQueueHandler? LastHandler { get; private set; }
+
+        /// <summary>Gets the priority of the most recent post.</summary>
+        public DispatcherQueuePriority LastPriority { get; private set; }
+
+        /// <summary>Creates a scheduler using the retained callbacks.</summary>
+        /// <returns>The scheduler.</returns>
+        public DispatcherQueueSequencer Create() =>
+            new(DispatcherQueuePriority.High, TryEnqueue, (callback, delay) =>
+            {
+                BooleanDisposable cancellation = new();
+                Delays.Enqueue((callback, delay, cancellation));
+                return cancellation;
+            });
+
+        /// <summary>Accepts or rejects a drain without executing it.</summary>
+        /// <param name="priority">The requested priority.</param>
+        /// <param name="handler">The drain callback.</param>
+        /// <returns>Whether the callback was accepted.</returns>
+        private bool TryEnqueue(DispatcherQueuePriority priority, DispatcherQueueHandler handler)
+        {
+            LastPriority = priority;
+            LastHandler = handler;
+            if (!AcceptsPosts)
+            {
+                return false;
+            }
+
+            Drains.Enqueue(handler);
+            return true;
+        }
     }
 }

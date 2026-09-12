@@ -7,8 +7,8 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Async.Disposables;
 
 /// <summary>Owns one asynchronous disposable at a time, replacing it on assignment.</summary>
-/// <remarks>Exactly one resource is live at a time: each assignment disposes the one it displaces, and disposing this
-/// instance closes the slot so a further assignment disposes its argument. Safe to use from several threads.</remarks>
+/// <remarks>Assignments await disposal of the replaced resource; assignments after disposal release their incoming resource.
+/// Concurrent calls are supported.</remarks>
 [System.Diagnostics.DebuggerDisplay("SingleReplaceableDisposableAsync: Current = {_current}")]
 public class SingleReplaceableDisposableAsync : IAsyncDisposable
 {

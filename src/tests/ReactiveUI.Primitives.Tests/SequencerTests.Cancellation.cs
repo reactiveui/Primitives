@@ -99,15 +99,28 @@ public partial class SequencerTests
     public async Task ThreadPoolFinalCancellationCleanupDoesNotReleaseTheResultTwice()
     {
         using ManualThreadPool pool = new();
-        var releases = 0;
+        RecordingDisposable result = new();
         ThreadPoolSequencer.ScheduledWorkItem<int> item = new(
             pool.Sequencer,
             0,
-            (_, _) => new ActionDisposable(() => releases++));
+            (_, _) => result);
         item.Execute();
         item.Dispose();
         item.ReleaseCanceledResult();
-        await Assert.That(releases).IsEqualTo(1);
+        await Assert.That(result.DisposeCount).IsEqualTo(1);
         await Assert.That(item.IsDisposed).IsTrue();
+    }
+
+    /// <summary>Cancellation after publication leaves no result for final cleanup to release again.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task DelegateFinalCancellationCleanupDoesNotReleaseTheResultTwice()
+    {
+        RecordingDisposable result = new();
+        Sequencer.DelegateWorkItem<int> item = new(Sequencer.Immediate, 0, (_, _) => result);
+        item.Execute();
+        item.Dispose();
+        item.ReleaseCanceledResult();
+        await Assert.That(result.DisposeCount).IsEqualTo(1);
     }
 }

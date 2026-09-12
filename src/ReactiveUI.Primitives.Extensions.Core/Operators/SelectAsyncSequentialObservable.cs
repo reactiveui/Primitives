@@ -5,15 +5,12 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Projects each element through an asynchronous selector one operation at a time, queueing values that arrive while an
-/// operation runs so results keep source order. The first selector failure terminates the sequence, and the source's
-/// completion waits for the queue to drain.
-/// </summary>
+/// <summary>Queues asynchronous projections and emits results in source order.</summary>
 /// <typeparam name = "TSource">The type of elements in the source sequence.</typeparam>
 /// <typeparam name = "TResult">The type of the result of the asynchronous operation.</typeparam>
 /// <param name = "source">The source observable.</param>
 /// <param name = "selector">The asynchronous projection function.</param>
+/// <remarks>Selector failure terminates immediately; source completion waits for queued projections to finish.</remarks>
 public sealed class SelectAsyncSequentialObservable<TSource, TResult>(IObservable<TSource> source, Func<TSource, Task<TResult>> selector) : IObservable<TResult>
 {
     /// <inheritdoc/>

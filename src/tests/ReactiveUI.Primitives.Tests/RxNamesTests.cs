@@ -857,7 +857,7 @@ public partial class RxNamesTests
 
     /// <summary>Returns the value unchanged.</summary>
     /// <param name = "value">The source value.</param>
-    /// <returns>The value.</returns>
+    /// <returns>The same value.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int Identity(int value) => value;
 

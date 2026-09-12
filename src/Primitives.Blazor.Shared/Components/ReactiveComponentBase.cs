@@ -12,9 +12,10 @@ namespace ReactiveUI.Primitives.Blazor.Components;
 #endif
 
 /// <summary>Base component that tracks reactive subscriptions and refreshes through Blazor's renderer dispatcher.</summary>
-/// <remarks>Every observed callback is marshalled onto the renderer dispatcher, so a handler can touch component state
-/// directly, and a callback that throws is dispatched to the enclosing error boundary instead of faulting a detached
-/// task. Disposing the component disposes every tracked subscription.</remarks>
+/// <remarks>
+/// Callbacks run on the renderer dispatcher; callback exceptions reach the enclosing error boundary. Component disposal releases tracked
+/// subscriptions.
+/// </remarks>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public class ReactiveComponentBase : ComponentBase, IDisposable
 {

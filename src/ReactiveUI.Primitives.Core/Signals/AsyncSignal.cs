@@ -265,7 +265,6 @@ public sealed class AsyncSignal<T> : IAwaitSignal<T>
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     private static void WaitForCompletion(AsyncSignal<T> signal)
     {
-        // Registration precedes waiting so completion cannot be missed.
         using ManualResetEvent completionEvent = new(false);
         signal.SubscribeCompletion(() => completionEvent.Set(), false);
         _ = completionEvent.WaitOne();

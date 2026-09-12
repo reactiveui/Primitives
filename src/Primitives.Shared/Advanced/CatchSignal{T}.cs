@@ -171,7 +171,7 @@ internal sealed class CatchSignal<T> : IRequireCurrentThread<T>
             }
         }
 
-        /// <summary>Advances the enumerator to the next source. Call while holding <see cref="_gate"/>.</summary>
+        /// <summary>Advances the enumerator to the next source while the caller holds the gate.</summary>
         /// <param name="next">The next source, or <see langword="null"/> once the sequence is exhausted.</param>
         /// <param name="error">The exception the sequence raised, when it raised one.</param>
         /// <returns><see langword="true"/> when the sequence advanced without raising.</returns>

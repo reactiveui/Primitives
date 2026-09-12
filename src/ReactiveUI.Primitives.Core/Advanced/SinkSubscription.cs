@@ -6,11 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Advanced;
 
-/// <summary>
-/// Assign-once, dispose-once management of a sink's single upstream subscription. Each helper takes the
-/// caller-owned <see cref="IDisposable"/> field by <see langword="ref"/>, so a sink can implement
-/// <see cref="IObserver{T}"/> directly without deriving from a shared base class.
-/// </summary>
+/// <summary>Assigns and disposes a single upstream subscription held in a caller-owned field.</summary>
 public static class SinkSubscription
 {
     /// <summary>Sentinel stored once a sink is disposed so any late subscription is torn down immediately.</summary>

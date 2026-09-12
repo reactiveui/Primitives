@@ -111,4 +111,44 @@ public class TaskPoolSequencerTests
         using var scheduled = sequencer.Schedule(dueTime, static () => { });
         await Assert.That(scheduled).IsNotNull();
     }
+
+    /// <summary>Cancellation between the delay callback and task dispatch suppresses the action.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Schedule_CancelAfterDelayBeforeDispatch_DropsWork()
+    {
+        using ManualThreadPool delays = new();
+        ManualTaskScheduler tasks = new();
+        TaskPoolSequencer sequencer = new(new(tasks), delays.Sequencer);
+        StrongBox<int> runs = new();
+        var scheduled = sequencer.Schedule(runs, TimeSpan.FromSeconds(1), static state => state.Value++);
+
+        tasks.RunPending();
+        await Assert.That(runs.Value).IsEqualTo(0);
+        delays.RunDue(Sequencer.ToTimestampDelta(TimeSpan.FromSeconds(1)));
+        scheduled.Dispose();
+        tasks.RunPending();
+        await Assert.That(runs.Value).IsEqualTo(0);
+    }
+
+    /// <summary>Work remains delayed until the supplied monotonic clock reaches its due timestamp.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Schedule_AdvanceClockToDue_DispatchesOnce()
+    {
+        using ManualThreadPool delays = new();
+        ManualTaskScheduler tasks = new();
+        TaskPoolSequencer sequencer = new(new(tasks), delays.Sequencer);
+        StrongBox<int> runs = new();
+        using var scheduled = sequencer.Schedule(runs, TimeSpan.FromSeconds(1), static state => state.Value++);
+        var due = Sequencer.ToTimestampDelta(TimeSpan.FromSeconds(1));
+        delays.RunDue(due - 1);
+        tasks.RunPending();
+        await Assert.That(runs.Value).IsEqualTo(0);
+        delays.RunDue(due);
+        await Assert.That(sequencer.Timestamp).IsEqualTo(due);
+        await Assert.That(runs.Value).IsEqualTo(0);
+        tasks.RunPending();
+        await Assert.That(runs.Value).IsEqualTo(1);
+    }
 }

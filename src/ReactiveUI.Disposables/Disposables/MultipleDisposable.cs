@@ -8,11 +8,6 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Disposables;
 
 /// <summary>A disposable pocket that contains a set of disposables and disposes them together.</summary>
-/// <remarks>
-/// Implements <see cref="ICollection{T}"/> over <see cref="IDisposable"/> so it can stand in for a
-/// composite disposable: it supports collection initializers, membership queries, and
-/// <c>DisposeWith</c>-style extension methods that accept an <see cref="ICollection{T}"/>.
-/// </remarks>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public class MultipleDisposable : IsDisposed, ICollection<IDisposable>
 {
@@ -86,7 +81,7 @@ public class MultipleDisposable : IsDisposed, ICollection<IDisposable>
     /// <summary>Gets a value indicating whether the object is disposed.</summary>
     public bool IsDisposed => Volatile.Read(ref _disposed);
 
-    /// <summary>Gets the number of disposables currently held. Returns zero once disposed.</summary>
+    /// <summary>Gets the number of held disposables, or zero after disposal.</summary>
     public int Count
     {
         get
@@ -114,7 +109,7 @@ public class MultipleDisposable : IsDisposed, ICollection<IDisposable>
         }
     }
 
-    /// <summary>Gets a value indicating whether the collection is read-only. Always <see langword="false"/>.</summary>
+    /// <summary>Gets a value indicating whether the collection is read-only, which is always false.</summary>
     public bool IsReadOnly => false;
 
     /// <summary>Gets the debugger display text.</summary>

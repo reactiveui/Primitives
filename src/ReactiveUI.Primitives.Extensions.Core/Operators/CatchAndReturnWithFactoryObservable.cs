@@ -6,15 +6,12 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Catches <typeparamref name="TException"/>, emits a fallback built from it, and completes. Other exception types
-/// propagate unchanged, and an exception thrown by <paramref name="fallbackFactory"/> terminates the sequence in place
-/// of the caught one.
-/// </summary>
+/// <summary>Replaces matching errors with a factory-produced fallback value and completes.</summary>
 /// <typeparam name="T">Element type.</typeparam>
 /// <typeparam name="TException">Exception type to catch.</typeparam>
 /// <param name="source">Upstream source.</param>
 /// <param name="fallbackFactory">Builds the fallback from the caught exception.</param>
+/// <remarks>Other error types propagate unchanged; a fallback factory failure replaces the caught error.</remarks>
 public sealed class CatchAndReturnWithFactoryObservable<T, TException>(
     IObservable<T> source,
     Func<TException, T> fallbackFactory) : IObservable<T>

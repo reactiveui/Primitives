@@ -21,10 +21,7 @@ public static partial class SignalAsyncExtensions
         public ConnectableSignalAsync<T> Multicast(ISignalAsync<T> signal) =>
             new(source, signal);
 
-        /// <summary>
-        /// Returns a connectable observable sequence that shares a single subscription to the underlying asynchronous
-        /// observable. Observers will receive all notifications published after they subscribe.
-        /// </summary>
+        /// <summary>Shares one source subscription, forwarding live notifications to connected observers.</summary>
         /// <returns>A connectable observable sequence that multicasts notifications to all subscribed observers. The sequence
         /// does not begin emitting items until its Connect method is called.</returns>
         /// <remarks>Notifications are delivered to observers serially.</remarks>

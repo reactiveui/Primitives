@@ -21,11 +21,11 @@ public sealed class StartSignal : IRequireCurrentThread<RxVoid>
         Scheduler = scheduler;
     }
 
+    /// <summary>Gets the sequencer that runs the action.</summary>
+    internal ISequencer Scheduler { get; }
+
     /// <summary>Gets the action to run.</summary>
     private Action Action { get; }
-
-    /// <summary>Gets the sequencer that runs the action.</summary>
-    private ISequencer Scheduler { get; }
 
     /// <inheritdoc/>
     public bool IsRequiredSubscribeOnCurrentThread() => Scheduler == Sequencer.CurrentThread;
@@ -43,7 +43,7 @@ public sealed class StartSignal : IRequireCurrentThread<RxVoid>
 
     /// <summary>Runs the action and forwards its terminal notification.</summary>
     /// <param name="observer">The downstream observer.</param>
-    private void Run(IObserver<RxVoid> observer)
+    internal void Run(IObserver<RxVoid> observer)
     {
         try
         {

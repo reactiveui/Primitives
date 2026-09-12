@@ -7,9 +7,7 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides a mechanism for registering a global handler to process unhandled exceptions that occur during application execution.</summary>
-/// <remarks>The process-wide default writes the exception to <see cref="System.Diagnostics.Trace"/>. Register a
-/// handler to log, clean up or notify instead. Cancellation is treated as normal flow and never reaches the
-/// handler.</remarks>
+/// <remarks>The default handler writes to System.Diagnostics.Trace; cancellation exceptions are ignored.</remarks>
 public static class UnhandledExceptionHandler
 {
     /// <summary>The currently registered handler action invoked when an unhandled exception occurs.</summary>
@@ -20,8 +18,7 @@ public static class UnhandledExceptionHandler
 
     /// <summary>Registers a handler to be invoked when an unhandled exception occurs.</summary>
     /// <param name="unhandledExceptionHandler">The action that receives each unhandled exception. Cannot be null.</param>
-    /// <remarks>There is one handler per process and registration replaces it, so a library that registers here takes
-    /// the sink away from the host application. A handler that throws has its exception swallowed.</remarks>
+    /// <remarks>Replaces the process-wide handler; exceptions thrown by the handler are ignored.</remarks>
     public static void Register(Action<Exception> unhandledExceptionHandler) =>
         _unhandledException = unhandledExceptionHandler;
 
@@ -44,7 +41,7 @@ public static class UnhandledExceptionHandler
         }
         catch
         {
-            // Ignored
+            // Exceptions from the registered handler are ignored.
         }
     }
 

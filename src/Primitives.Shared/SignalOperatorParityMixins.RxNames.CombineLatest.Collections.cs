@@ -24,7 +24,7 @@ public static partial class LinqExtensions
         /// may keep it. An empty source collection produces an empty sequence.
         /// </returns>
         /// <exception cref="ArgumentNullException"><paramref name="sources"/> or one of its elements is <see langword="null"/>.</exception>
-        /// <remarks>The collection is enumerated once, when the operator is called, not on each subscription.</remarks>
+        /// <remarks>The collection is enumerated once when the operator is called.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<IList<T>> CombineLatest() => CombineLatestOf(CombineLatestSources(sources));
 
@@ -33,7 +33,7 @@ public static partial class LinqExtensions
         /// <param name="resultSelector">Projects the latest value of every source into a result.</param>
         /// <returns>An observable sequence of projected results. An empty source collection produces an empty sequence.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="sources"/>, one of its elements, or <paramref name="resultSelector"/> is <see langword="null"/>.</exception>
-        /// <remarks>The collection is enumerated once, when the operator is called, not on each subscription.</remarks>
+        /// <remarks>The collection is enumerated once when the operator is called.</remarks>
         public IObservable<TResult> CombineLatest<TResult>(Func<IList<T>, TResult> resultSelector)
         {
             ArgumentExceptionHelper.ThrowIfNull(resultSelector);
@@ -54,8 +54,7 @@ public static partial class LinqExtensions
     /// </returns>
     /// <exception cref="ArgumentNullException"><paramref name="sources"/> or one of its elements is <see langword="null"/>.</exception>
     /// <remarks>
-    /// Ranked below the tuple overloads, so two to sixteen same-typed sources listed inline bind to the tuple
-    /// overload instead; this one takes over past that arity and whenever the sources arrive as an array.
+    /// Inline calls with two through sixteen same-typed sources select tuple overloads; larger calls and arrays select this overload.
     /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [OverloadResolutionPriority(-2)]

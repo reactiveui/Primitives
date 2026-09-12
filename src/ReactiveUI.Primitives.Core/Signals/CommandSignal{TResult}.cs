@@ -341,7 +341,6 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
     /// <param name="value">The running state.</param>
     private void SetRunning(bool value)
     {
-        // Publish the flag and stream value under the installation gate.
         lock (_runningGate)
         {
             _isRunning = value;
@@ -365,7 +364,7 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
         }
     }
 
-    /// <summary>Pushes the authoritative running flag onto the stream when one is installed. Caller holds the gate.</summary>
+    /// <summary>Publishes the current running state, when observed, while the caller holds the gate.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void PublishRunningState() => Volatile.Read(ref _isRunningState)?.OnNext(_isRunning);
 
@@ -413,7 +412,6 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     private void AddResult(IObserver<TResult> observer)
     {
-        // Retry only when another thread replaced the observed snapshot.
         while (true)
         {
             if (TryAddResult(ref _resultObservers, Volatile.Read(ref _resultObservers), observer))
@@ -432,7 +430,6 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     private void RemoveResult(IObserver<TResult> observer)
     {
-        // Retry only when another thread replaced the observed snapshot.
         while (true)
         {
             if (TryRemoveResult(ref _resultObservers, Volatile.Read(ref _resultObservers), observer))

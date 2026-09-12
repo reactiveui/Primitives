@@ -7,11 +7,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>
-/// A signal that passes notifications through immediately while they are not delayed, but buffers them while delayed
-/// and emits a de-duplicated batch when <see cref="Flush"/> is called (typically as the delay window opens or closes).
-/// Equivalent to the <c>Buffer(boundary).SelectMany(distinct).Publish().RefCount()</c> pipeline in a single sink.
-/// </summary>
+/// <summary>Forwards notifications immediately unless delayed, then buffers them until Flush emits a batch with duplicates removed.</summary>
 /// <typeparam name="T">The notification type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("DelayableNotificationSignal: Stopped = {_stopped}, Buffer = {_buffer}")]
 public sealed class DelayableNotificationSignal<T> : ISignal<T>

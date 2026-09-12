@@ -39,11 +39,11 @@ internal sealed class ReplayLatestSignalAsyncStateObserverLease<T>(
         }
         catch (OperationCanceledException)
         {
-            // The signal was disposed while removal was waiting to enter the gate.
+            // Unsubscription is harmless after signal disposal.
         }
         catch (ObjectDisposedException)
         {
-            // The gate was disposed while removal was waiting to enter it.
+            // Unsubscription is harmless after signal disposal.
         }
     }
 }

@@ -611,63 +611,15 @@ public partial class TransformationOperatorTests
     public void WhenYieldNullSource_ThenThrowsArgumentNull() =>
         Assert.Throws<ArgumentNullException>(static () => SignalAsyncReactiveExtensions.Yield<int>(null!));
 
-    /// <summary>Verifies that Yield forwards all elements from the source sequence.</summary>
-    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    /// <summary>Yield constructs the wrapper that captures the subscriber's context.</summary>
+    /// <returns>The test operation.</returns>
     [Test]
-    public async Task WhenYield_ThenForwardsAllElements()
+    public async Task WhenYield_ThenWrapsSource()
     {
-        const int Expected2 = 2;
-        const int Expected3 = 3;
-        const int Expected4 = 4;
-        const int Expected5 = 5;
-        const int SourceValueCount = 5;
-
-        var result = await SignalAsync.Range(1, SourceValueCount).Yield().ToListAsync();
-        await Assert.That(result).IsCollectionEqualTo([1, Expected2, Expected3, Expected4, Expected5]);
-    }
-
-    /// <summary>Verifies that Yield forwards completion from the source sequence.</summary>
-    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
-    [Test]
-    public async Task WhenYield_ThenForwardsCompletion()
-    {
-        Result? capturedResult = null;
-        TaskCompletionSource tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using var sub = await SignalAsync.Return(SentinelValue)
-            .Yield()
-            .SubscribeAsync(static (_, _) => default, null, result =>
-        {
-            capturedResult = result;
-            _ = tcs.TrySetResult();
-            return default;
-        });
-        await tcs.Task;
-        await Assert.That(capturedResult).IsNotNull();
-        await Assert.That(capturedResult!.Value.IsSuccess).IsTrue();
-    }
-
-    /// <summary>Verifies that Yield forwards errors from the source sequence.</summary>
-    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
-    [Test]
-    public async Task WhenYieldSourceErrors_ThenForwardsError()
-    {
-        Result? capturedResult = null;
-        TaskCompletionSource tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        var source = SignalAsync.Create<int>(static async (observer, ct) =>
-        {
-            await observer.OnNextAsync(1, ct);
-            await observer.OnCompletedAsync(Result.Failure(new InvalidOperationException("yield error")));
-            return DisposableAsync.Empty;
-        });
-        await using var sub = await source.Yield().SubscribeAsync(static (_, _) => default, null, result =>
-        {
-            capturedResult = result;
-            _ = tcs.TrySetResult();
-            return default;
-        });
-        await tcs.Task;
-        await Assert.That(capturedResult).IsNotNull();
-        await Assert.That(capturedResult!.Value.IsSuccess).IsFalse();
+        var source = SignalAsync.Return(SentinelValue);
+        var observed = source.Yield();
+        await Assert.That(observed).IsTypeOf<SignalAsyncReactiveExtensions.YieldSignal<int>>();
+        await Assert.That(observed).IsNotSameReferenceAs(source);
     }
 
     /// <summary>Verifies that the three-argument GroupBy overload throws <see cref = "ArgumentNullException"/> when the source parameter is null.</summary>

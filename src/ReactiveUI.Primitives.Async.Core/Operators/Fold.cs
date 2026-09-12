@@ -64,8 +64,6 @@ public static partial class SignalAsyncExtensions
         {
             FoldAsyncWitness sink = new(observer, seed, accumulator, cancellationToken);
 
-            // Wire sink's dispose token into the downstream's link chain so the downstream's hot path
-            // recognises this token without allocating a per-emission linked CTS.
             if (observer is WitnessAsync<TAcc> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
@@ -87,8 +85,7 @@ public static partial class SignalAsyncExtensions
             Func<TAcc, T, CancellationToken, ValueTask<TAcc>> accumulator,
             CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
         {
-            /// <summary>The running accumulator state. Mutated only inside <see cref="OnNextAsyncCore"/>, which the
-            /// base observer serializes via its reentrancy gate, so no additional locking is required.</summary>
+            /// <summary>The accumulator state protected by the observer's notification gate.</summary>
             private TAcc _acc = seed;
 
             /// <inheritdoc/>
@@ -145,8 +142,6 @@ public static partial class SignalAsyncExtensions
         {
             FoldSyncWitness sink = new(observer, seed, accumulator, cancellationToken);
 
-            // Wire sink's dispose token into the downstream's link chain so the downstream's hot path
-            // recognises this token without allocating a per-emission linked CTS.
             if (observer is WitnessAsync<TAcc> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
@@ -168,8 +163,7 @@ public static partial class SignalAsyncExtensions
             Func<TAcc, T, TAcc> accumulator,
             CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
         {
-            /// <summary>The running accumulator state. Mutated only inside <see cref="OnNextAsyncCore"/>, which the
-            /// base observer serializes via its reentrancy gate, so no additional locking is required.</summary>
+            /// <summary>The accumulator state protected by the observer's notification gate.</summary>
             private TAcc _acc = seed;
 
             /// <inheritdoc/>

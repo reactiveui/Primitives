@@ -26,7 +26,7 @@ public sealed record AsyncContext
     public static AsyncContext Default { get; } = new();
 
     /// <summary>Gets the synchronization context to use for marshaling callbacks and continuations.</summary>
-    /// <remarks>A specified synchronization context receives posted continuations; otherwise the task scheduler determines execution.</remarks>
+    /// <remarks>A synchronization context takes precedence over the task scheduler and sequencer.</remarks>
     public SynchronizationContext? SynchronizationContext { get; init; }
 
     /// <summary>Gets the task scheduler to use for scheduling tasks, or null to use the default scheduler.</summary>
@@ -67,8 +67,7 @@ public sealed record AsyncContext
     /// <param name="scheduler">The sequencer to use for configuring the AsyncContext.</param>
     /// <returns>An AsyncContext instance configured with the provided scheduler.</returns>
     /// <exception cref="ArgumentNullException">Thrown if scheduler is null.</exception>
-    /// <remarks>If the provided sequencer directly implements <see cref="SynchronizationContext"/>, that instance is used
-    /// directly. Otherwise, continuations are scheduled as direct <see cref="IWorkItem"/> instances on the sequencer.</remarks>
+    /// <remarks>A sequencer that is also a synchronization context receives posted continuations.</remarks>
     public static AsyncContext From(ISequencer scheduler)
     {
         ArgumentExceptionHelper.ThrowIfNull(scheduler);
@@ -122,7 +121,7 @@ public sealed record AsyncContext
 
         /// <summary>Schedules the specified continuation action to be invoked when the operation has completed.</summary>
         /// <param name="continuation">The action to execute when the operation is complete. Cannot be null.</param>
-        /// <remarks>Continuations use the synchronization context or task scheduler; cancellation invokes them immediately on the current thread.</remarks>
+        /// <remarks>An already cancelled token invokes the continuation immediately on the caller's thread.</remarks>
         public void OnCompleted(Action continuation)
         {
             ArgumentExceptionHelper.ThrowIfNull(continuation);
@@ -136,18 +135,14 @@ public sealed record AsyncContext
             var sc = AsyncContext.SynchronizationContext;
             if (sc is not null)
             {
-                sc.Post(static c => ((Action)c!).Invoke(), continuation);
+                PostContinuation(sc, continuation);
                 return;
             }
 
             var ts = AsyncContext.TaskScheduler;
             if (ts is not null && ts != TaskScheduler.Default)
             {
-                _ = Task.Factory.StartNew(
-                    continuation,
-                    CancellationToken.None,
-                    TaskCreationOptions.DenyChildAttach,
-                    ts);
+                ScheduleContinuation(ts, continuation);
                 return;
             }
 
@@ -158,12 +153,35 @@ public sealed record AsyncContext
                 return;
             }
 
-            // Queue directly to avoid allocating a Task for each continuation.
-            if (ts is null || ts == TaskScheduler.Default)
-            {
-                _ = ThreadPool.UnsafeQueueUserWorkItem(static c => ((Action)c!).Invoke(), continuation);
-            }
+            QueueContinuation(continuation);
         }
+
+        /// <summary>Posts a continuation to the supplied synchronization context.</summary>
+        /// <param name="context">The context receiving the continuation.</param>
+        /// <param name="continuation">The continuation to invoke.</param>
+        [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void PostContinuation(SynchronizationContext context, Action continuation) =>
+            context.Post(static c => ((Action)c!).Invoke(), continuation);
+
+        /// <summary>Schedules a continuation through the supplied task scheduler.</summary>
+        /// <param name="scheduler">The scheduler receiving the continuation.</param>
+        /// <param name="continuation">The continuation to invoke.</param>
+        [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void ScheduleContinuation(TaskScheduler scheduler, Action continuation) =>
+            _ = Task.Factory.StartNew(
+                continuation,
+                CancellationToken.None,
+                TaskCreationOptions.DenyChildAttach,
+                scheduler);
+
+        /// <summary>Queues a continuation on the thread pool without capturing execution context.</summary>
+        /// <param name="continuation">The continuation to invoke.</param>
+        [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void QueueContinuation(Action continuation) =>
+            _ = ThreadPool.UnsafeQueueUserWorkItem(static c => ((Action)c!).Invoke(), continuation);
 
         /// <summary>Work item used to schedule context-switch continuations directly on an <see cref="ISequencer"/>.</summary>
         /// <param name="continuation">The continuation to invoke.</param>

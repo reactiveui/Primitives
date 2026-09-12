@@ -112,7 +112,7 @@ public sealed class ChainEnumerableSignal<T>(IEnumerable<IObservableAsync<T>> si
         /// <returns>A task representing the asynchronous operation.</returns>
         internal ValueTask RelayInnerErrorAsync(Exception exception, CancellationToken cancellationToken)
         {
-            // The inner subscription shares this disposal token.
+            // Notifications use subscription cancellation instead of the supplied token.
             _ = cancellationToken;
             return _observer.OnErrorResumeAsync(exception, _disposedCancellationToken);
         }
@@ -127,7 +127,7 @@ public sealed class ChainEnumerableSignal<T>(IEnumerable<IObservableAsync<T>> si
             return _observer.OnNextAsync(value, _disposedCancellationToken);
         }
 
-        /// <summary>Disposes the inner subscription and enumerator, and optionally forwards a completion result to the downstream observer. This method is idempotent.</summary>
+    /// <summary>Disposes the inner subscription and enumerator once, optionally forwarding completion.</summary>
         /// <param name="result">The completion result to forward, or <see langword="null"/> if disposing without signaling completion.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
         internal async ValueTask FinishAsync(Result? result)

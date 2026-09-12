@@ -389,11 +389,21 @@ public static partial class SignalAsyncExtensions
 
             /// <summary>Callback invoked when the external cancellation token is canceled; forwards completion to the observer.</summary>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            internal void CompleteFromCancellation() => FireAndForgetHelper.Run(async () =>
+            internal void CompleteFromCancellation() => FireAndForgetHelper.Run(CompleteAfterYieldAsync);
+
+            /// <summary>Forwards successful completion through the notification gate.</summary>
+            /// <returns>The completion notification.</returns>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            internal ValueTask CompleteFromCancellationAsync() => _lifecycle.RelayCompletionAsync(Result.Success);
+
+            /// <summary>Defers completion until after the cancellation callback returns.</summary>
+            /// <returns>The deferred completion notification.</returns>
+            [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+            private async ValueTask CompleteAfterYieldAsync()
             {
                 await Task.Yield();
-                await _lifecycle.RelayCompletionAsync(Result.Success).ConfigureAwait(false);
-            });
+                await CompleteFromCancellationAsync().ConfigureAwait(false);
+            }
         }
     }
 
@@ -492,7 +502,7 @@ public static partial class SignalAsyncExtensions
             {
                 Volatile.Write(ref _stopRegistration, _parent._stopSignal(Stop));
 
-                // Release registrations returned after a synchronous stop notification.
+                // Registrations returned after termination are disposed immediately.
                 if (Volatile.Read(ref _stopSignalled) != 1)
                 {
                     return;
@@ -552,7 +562,7 @@ public static partial class SignalAsyncExtensions
                 }
                 catch (Exception disposeError)
                 {
-                    // Best-effort: a secondary dispose failure while ending the sequence goes to the global handler.
+                    // Secondary disposal failures reach the global handler.
                     UnhandledExceptionHandler.ReportUnhandledException(disposeError);
                 }
             }

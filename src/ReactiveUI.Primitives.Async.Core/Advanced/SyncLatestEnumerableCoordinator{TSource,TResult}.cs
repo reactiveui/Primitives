@@ -99,7 +99,7 @@ public sealed class SyncLatestEnumerableCoordinator<TSource, TResult> : IAsyncDi
 
     /// <summary>Records the source's latest value and emits the projected snapshot once every source has produced one.</summary>
     /// <param name="index">The source index.</param>
-    /// <param name="indexValue">The value.</param>
+    /// <param name="indexValue">That source's latest value.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A value task representing the operation.</returns>
     internal async ValueTask OnNextAsync(int index, TSource indexValue, CancellationToken cancellationToken)
@@ -162,7 +162,7 @@ public sealed class SyncLatestEnumerableCoordinator<TSource, TResult> : IAsyncDi
 
     /// <summary>Completes the combined sequence when the source failed, completed without a value, or was the last to complete.</summary>
     /// <param name="index">The source index.</param>
-    /// <param name="result">The result.</param>
+    /// <param name="result">That source's completion result.</param>
     /// <returns>A value task representing the operation.</returns>
     internal ValueTask OnCompletedAsync(int index, Result result)
     {

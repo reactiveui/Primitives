@@ -13,8 +13,7 @@ public static partial class SignalAsync
     /// <typeparam name="T">The type of the value to be emitted by the observable sequence.</typeparam>
     /// <param name="value">The value to be emitted by the observable sequence.</param>
     /// <returns>An observable sequence that emits the specified value and then signals completion.</returns>
-    /// <remarks>Subscribing returns before the value is observed: the emit and the completion are scheduled onto the
-    /// thread pool, so an observer must not assume it has seen the value by the time subscribe finishes.</remarks>
+    /// <remarks>Notification starts during subscription and may finish synchronously.</remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservableAsync<T> Emit<T>(T value) => new ReturnSignalAsync<T>(value);
 

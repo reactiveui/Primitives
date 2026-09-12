@@ -6,17 +6,14 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Projects each source element through <paramref name="first"/> and each intermediate element through
-/// <paramref name="second"/>, emitting the second stage's values. An exception from either projection terminates the
-/// sequence, and the first inner sequence to complete completes the result.
-/// </summary>
+/// <summary>Projects each source value through two successive observable selectors and forwards the second-stage values.</summary>
 /// <typeparam name="TSource">The source element type.</typeparam>
 /// <typeparam name="TMid">The intermediate element type produced by the first projection.</typeparam>
 /// <typeparam name="TResult">The final element type produced by the second projection.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="first">First projection: source element → intermediate observable.</param>
 /// <param name="second">Second projection: intermediate element → result observable.</param>
+/// <remarks>A selector failure terminates the sequence; the first inner completion completes the result.</remarks>
 public sealed class SelectManyThenObservable<TSource, TMid, TResult>(
     IObservable<TSource> source,
     Func<TSource, IObservable<TMid>> first,

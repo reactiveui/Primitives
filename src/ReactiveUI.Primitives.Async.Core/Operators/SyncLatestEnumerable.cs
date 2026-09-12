@@ -21,7 +21,6 @@ public static partial class SignalAsyncExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(sources);
 
-            // An identity selector lets one subscription implementation back both shapes.
             return new SyncLatestEnumerableSignal<TSource, IReadOnlyList<TSource>>(sources, static s => s);
         }
 

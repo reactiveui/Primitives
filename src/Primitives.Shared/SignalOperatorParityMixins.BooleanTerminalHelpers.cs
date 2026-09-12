@@ -38,7 +38,6 @@ public static partial class LinqExtensions
                 return EmptyDisposable.Instance;
             }
 
-            // Acquire the subscription before a rejected value can terminate the source.
             if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
             {
                 return SubscribeCore(observer);
@@ -127,7 +126,6 @@ public static partial class LinqExtensions
                 return EmptyDisposable.Instance;
             }
 
-            // Acquire the subscription before a match can terminate the source.
             if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
             {
                 return SubscribeCore(observer);

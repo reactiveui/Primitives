@@ -42,10 +42,10 @@ public sealed class SynchronizationContextSequencer : ISequencer
     public SynchronizationContext Context { get; }
 
     /// <summary>Gets the scheduler's notion of current time.</summary>
-    public DateTimeOffset Now => Sequencer.Now;
+    public DateTimeOffset Now => _delaySequencer.Now;
 
     /// <summary>Gets the scheduler's monotonic timestamp.</summary>
-    public long Timestamp => Sequencer.Timestamp;
+    public long Timestamp => _delaySequencer.Timestamp;
 
     /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
@@ -57,7 +57,7 @@ public sealed class SynchronizationContextSequencer : ISequencer
     {
         ArgumentExceptionHelper.ThrowIfNull(item);
 
-        Context.Post(static state => ExecutePosted((IWorkItem)state!), item);
+        Post(item);
     }
 
     /// <inheritdoc/>
@@ -76,7 +76,7 @@ public sealed class SynchronizationContextSequencer : ISequencer
 
     /// <summary>Executes the work item unless it has been cancelled.</summary>
     /// <param name="item">Work item to execute.</param>
-    private static void ExecutePosted(IWorkItem item)
+    internal static void ExecutePosted(IWorkItem item)
     {
         if (Sequencer.IsCancelled(item))
         {
@@ -85,6 +85,12 @@ public sealed class SynchronizationContextSequencer : ISequencer
 
         item.Execute();
     }
+
+    /// <summary>Posts a work item to the captured context.</summary>
+    /// <param name="item">The callback state.</param>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    private void Post(IWorkItem item) => Context.Post(static state => ExecutePosted((IWorkItem)state!), item);
 
     /// <summary>Delayed post work item.</summary>
     /// <param name="owner">Owning sequencer.</param>

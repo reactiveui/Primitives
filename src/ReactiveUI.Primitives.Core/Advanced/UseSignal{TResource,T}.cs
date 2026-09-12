@@ -7,14 +7,12 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Advanced;
 
-/// <summary>
-/// Signal that creates a resource for each subscription and disposes it once the inner signal terminates or
-/// the subscription is disposed. A fault from either factory is delivered to the observer as an error.
-/// </summary>
+/// <summary>Creates a resource per subscription and disposes it when the sequence terminates or the subscription is disposed.</summary>
 /// <typeparam name="TResource">The resource type, disposed with the subscription.</typeparam>
 /// <typeparam name="T">The value type.</typeparam>
 /// <param name="resourceFactory">Creates the resource, once per subscription.</param>
 /// <param name="signalFactory">Creates the signal that consumes the resource.</param>
+/// <remarks>A failure from either factory is delivered to the observer.</remarks>
 [System.Diagnostics.DebuggerDisplay("UseSignal: ResourceFactory = {_resourceFactory}, SignalFactory = {_signalFactory}")]
 public sealed class UseSignal<TResource, T>(
     Func<TResource> resourceFactory,

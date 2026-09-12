@@ -6,11 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Advanced;
 
-/// <summary>
-/// Observer that serializes notifications behind a gate, so downstream operators observe the single-threaded
-/// <c>OnNext*</c> then <c>OnError</c>|<c>OnCompleted</c> grammar even when the upstream source delivers
-/// concurrently. Place one ahead of a stateful sink to consume a source that does not honour that grammar.
-/// </summary>
+/// <summary>Serializes concurrent observer notifications so values precede a single terminal notification.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("SynchronizeWitness: Observer = {_observer}, Subscription = {_subscription}")]
 public sealed class SynchronizeWitness<T> : IObserver<T>, IDisposable

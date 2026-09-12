@@ -55,7 +55,7 @@ public abstract class SyncLatestCoordinatorBase<TResult> : IAsyncDisposable
         return Lifecycle.OnErrorResumeAsync(error);
     }
 
-    /// <summary>Projects the latest values once every source has emitted. Called after updating a slot under ValuesLock.</summary>
+    /// <summary>Projects the latest values under ValuesLock once every source has emitted.</summary>
     /// <returns>A ValueTask representing the asynchronous emit.</returns>
     internal abstract ValueTask EmitLatestAsync();
 

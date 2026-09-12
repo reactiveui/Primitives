@@ -127,7 +127,7 @@ public class Signal<T> : ISignal<T>
 
     /// <summary>Emits a value to the current observers; a stopped signal drops it and a disposed signal throws <see cref="ObjectDisposedException"/>.</summary>
     /// <param name="value">The value to emit.</param>
-    /// <remarks>Dispatch reads the published observer set without taking the lock, so concurrent calls are not serialized against each other.</remarks>
+    /// <remarks>Concurrent notification calls are not serialized.</remarks>
     public void OnNext(T value)
     {
         var observers = Volatile.Read(ref _observers);
@@ -247,7 +247,6 @@ public class Signal<T> : ISignal<T>
         {
             _exception = null;
 
-            // The release write publishes the disposed flag with the terminal marker.
             _isDisposed = true;
             observers = ClearObserversLocked(DisposedMarker);
         }
@@ -509,7 +508,6 @@ public class Signal<T> : ISignal<T>
             return;
         }
 
-        // Keep the array for the next subscriber; only the shape published to dispatch goes back to empty.
         _subscriptionTail = 0;
         Volatile.Write(ref _observers, null);
     }

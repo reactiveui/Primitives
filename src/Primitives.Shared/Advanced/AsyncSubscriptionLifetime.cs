@@ -100,7 +100,7 @@ public sealed class AsyncSubscriptionLifetime : IDisposable
         }
         catch (ObjectDisposedException)
         {
-            // Completion can release the CTS concurrently; disposal continues with the inner subscription.
+            // Concurrent completion does not prevent subscription disposal.
         }
     }
 }

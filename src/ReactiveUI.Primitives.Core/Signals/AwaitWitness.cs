@@ -49,12 +49,20 @@ public sealed class AwaitWitness<T> : IObserver<T>
     {
     }
 
+    /// <summary>Posts a continuation to the captured context.</summary>
+    /// <param name="context">The context receiving the callback.</param>
+    /// <param name="callback">The callback to post.</param>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void Post(SynchronizationContext context, Action callback) =>
+        context.Post(static state => ((Action?)state)?.Invoke(), callback);
+
     /// <summary>Posts the continuation to its captured context, or invokes it directly when none was captured.</summary>
     private void InvokeOnOriginalContext()
     {
         if (_context is not null)
         {
-            _context.Post(static state => ((Action?)state)?.Invoke(), _callback);
+            Post(_context, _callback);
         }
         else
         {

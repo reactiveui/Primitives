@@ -4,11 +4,7 @@
 
 namespace ReactiveUI.Primitives.Advanced;
 
-/// <summary>
-/// Terminal-forwarding helpers for single-source sink observers: deliver one terminal notification
-/// downstream and dispose the sink afterwards, optionally latching a caller-owned <c>done</c> flag so only
-/// the first terminal call reaches the observer.
-/// </summary>
+/// <summary>Forwards a terminal notification and disposes the sink, optionally preventing repeated terminal delivery.</summary>
 public static class SinkTerminal
 {
     /// <summary>Forwards a fault to <paramref name="observer"/> and then disposes <paramref name="sink"/>.</summary>

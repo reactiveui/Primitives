@@ -7,8 +7,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// <summary>A subscription that runs a cancellable asynchronous job feeding a single observer, and joins that job on disposal.</summary>
 /// <typeparam name="T">The type of the elements observed by the subscription.</typeparam>
 /// <param name="observer">The observer that receives notifications for the subscription. Cannot be null.</param>
-/// <remarks>Disposal cancels the running job and waits for it to finish before releasing resources;
-/// derived classes supply the job body in <see cref="ExecuteAsyncCore"/>.</remarks>
+/// <remarks>Disposal waits for the cancelled job except when called from inside that job.</remarks>
 [System.Diagnostics.DebuggerDisplay("TaskSignalSubscription: Disposed = {_disposed}, Completed = {_tcs.Task.IsCompleted}")]
 public abstract class TaskSignalSubscription<T>(IObserverAsync<T> observer) : IAsyncDisposable
 {
@@ -49,10 +48,7 @@ public abstract class TaskSignalSubscription<T>(IObserverAsync<T> observer) : IA
         GC.SuppressFinalize(this);
     }
 
-    /// <summary>
-    /// Attempts to complete the observer with a failure result. If the observer's completion handler
-    /// also throws, the exception is routed to <see cref="UnhandledExceptionHandler"/>.
-    /// </summary>
+    /// <summary>Forwards a failure result, reporting a throwing completion handler to the unhandled exception handler.</summary>
     /// <param name="observer">The observer to complete.</param>
     /// <param name="error">The original exception.</param>
     /// <returns>A <see cref="ValueTask"/> representing the operation.</returns>

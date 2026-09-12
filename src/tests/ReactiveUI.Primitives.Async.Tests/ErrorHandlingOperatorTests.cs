@@ -132,7 +132,7 @@ public class ErrorHandlingOperatorTests
                 await obs.OnNextAsync(SuccessValue, ct);
                 await obs.OnCompletedAsync(Result.Success);
             },
-            CustomTaskScheduler.Instance);
+            new CustomTaskScheduler());
         var result = await source.Retry(RetryCount).ToListAsync();
         await Assert.That(result).IsCollectionEqualTo([SuccessValue]);
         await Assert.That(attempt).IsEqualTo(ExpectedAttempts);
@@ -226,7 +226,7 @@ public class ErrorHandlingOperatorTests
                 attempt++;
                 await obs.OnCompletedAsync(Result.Failure(new InvalidOperationException($"attempt {attempt}")));
             },
-            CustomTaskScheduler.Instance);
+            new CustomTaskScheduler());
         await using var sub = await source.Retry(0).SubscribeAsync(static (_, _) => default, null, result =>
         {
             _ = completed.TrySetResult(result);
@@ -253,7 +253,7 @@ public class ErrorHandlingOperatorTests
                 attempt++;
                 await obs.OnCompletedAsync(Result.Failure(new InvalidOperationException($"attempt {attempt}")));
             },
-            CustomTaskScheduler.Instance);
+            new CustomTaskScheduler());
         await using var sub = await source.Retry(RetryCount).SubscribeAsync(static (_, _) => default, null, result =>
         {
             _ = completed.TrySetResult(result);
@@ -278,7 +278,7 @@ public class ErrorHandlingOperatorTests
                 attempt++;
                 await obs.OnCompletedAsync(Result.Failure(new InvalidOperationException($"attempt {attempt}")));
             },
-            CustomTaskScheduler.Instance);
+            new CustomTaskScheduler());
         await using var sub = await source.Retry(1).SubscribeAsync(static (_, _) => default, null, result =>
         {
             _ = completed.TrySetResult(result);
@@ -480,7 +480,7 @@ public class ErrorHandlingOperatorTests
                 await obs.OnNextAsync(SuccessValue, ct);
                 await obs.OnCompletedAsync(Result.Success);
             },
-            CustomTaskScheduler.Instance);
+            new CustomTaskScheduler());
         var result = await source.Retry().ToListAsync();
         await Assert.That(result).IsCollectionEqualTo([SuccessValue]);
         await Assert.That(attempt).IsEqualTo(ExpectedAttempts);

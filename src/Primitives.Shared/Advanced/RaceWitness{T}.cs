@@ -52,7 +52,7 @@ public sealed class RaceWitness<T> : IDisposable
     /// <summary>Handles completion of the outer source.</summary>
     private static void OnOuterCompleted()
     {
-        // Race completion is controlled by the first inner source to win.
+        // Only the winning source determines completion.
     }
 
     /// <summary>Subscribes to a candidate source.</summary>

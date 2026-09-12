@@ -39,8 +39,8 @@ public static partial class SignalAsyncExtensions
     {
         /// <summary>Merges multiple asynchronous observable sequences into a single observable sequence that emits items from all inner sequences as they arrive.</summary>
         /// <returns>An asynchronous observable sequence that emits items from all inner observable sequences as they are produced.</returns>
-        /// <remarks>Every inner sequence stays subscribed at once; the result completes only after the outer sequence
-        /// and all inner sequences have completed, and an error from any of them propagates and terminates it.</remarks>
+        /// <remarks>All inner sources remain subscribed; completion waits for the outer source and every inner source,
+        /// and any error terminates immediately.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> Blend() =>
             new BlendSignalSourcesSignal<T>(source);
@@ -390,7 +390,6 @@ public static partial class SignalAsyncExtensions
             }
             finally
             {
-                // The observer releases its semaphore slot once; failed subscriptions also dispose it here.
                 if (!subscribed)
                 {
                     await innerObserver.DisposeAsync().ConfigureAwait(false);
@@ -515,7 +514,6 @@ public static partial class SignalAsyncExtensions
                 _reentrant.Value = true;
                 try
                 {
-                    // Hold a sentinel while subscribing so synchronous sources cannot complete the merge early.
                     _ = Interlocked.Increment(ref _active);
 
                     foreach (var src in _sources)
@@ -539,7 +537,6 @@ public static partial class SignalAsyncExtensions
                         }
                     }
 
-                    // Remove sentinel: if all inner sources completed during the loop, this triggers final completion.
                     if (Interlocked.Decrement(ref _active) == 0)
                     {
                         await FinishAsync(Result.Success).ConfigureAwait(false);

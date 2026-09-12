@@ -15,10 +15,7 @@ namespace ReactiveUI.Primitives.Signals;
 /// <summary>Factory methods that build signals from subscribe functions and deferred sources.</summary>
 public static partial class Signal
 {
-    /// <summary>
-    /// Creates a signal that runs the subscribe function for each observer. A downstream <c>OnNext</c> that throws
-    /// leaves the subscription intact, which suits hot signals built over operators and events.
-    /// </summary>
+    /// <summary>Runs the subscription factory for each observer and preserves the subscription when a downstream OnNext throws.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="subscribe">Invoked for each observer; returns the disposable that releases the subscription.</param>
     /// <returns>A signal backed by <paramref name="subscribe"/>.</returns>
@@ -31,7 +28,7 @@ public static partial class Signal
     }
 
     /// <summary>Creates an observable from an asynchronous subscription function.</summary>
-    /// <typeparam name="T">The type.</typeparam>
+    /// <typeparam name="T">The element type of the created sequence.</typeparam>
     /// <param name="subscribe">The asynchronous subscription function.</param>
     /// <returns>An observable sequence backed by the asynchronous subscription.</returns>
     /// <exception cref="ArgumentExceptionHelper"><paramref name="subscribe"/> is <see langword="null"/>.</exception>
@@ -43,7 +40,7 @@ public static partial class Signal
     }
 
     /// <summary>Creates an observable from a cancellable asynchronous subscription function.</summary>
-    /// <typeparam name="T">The type.</typeparam>
+    /// <typeparam name="T">The element type of the created sequence.</typeparam>
     /// <param name="subscribe">The asynchronous subscription function.</param>
     /// <returns>An observable sequence backed by the asynchronous subscription.</returns>
     /// <exception cref="ArgumentExceptionHelper"><paramref name="subscribe"/> is <see langword="null"/>.</exception>
@@ -58,10 +55,7 @@ public static partial class Signal
         return new AsyncCreateSignal<T>(subscribe);
     }
 
-    /// <summary>
-    /// Creates a signal that runs the subscribe function for each observer. A downstream <c>OnNext</c> that throws
-    /// leaves the subscription intact, which suits hot signals built over operators and events.
-    /// </summary>
+    /// <summary>Runs the subscription factory for each observer and preserves the subscription when a downstream OnNext throws.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="subscribe">Invoked for each observer; returns the disposable that releases the subscription.</param>
     /// <param name="isRequiredSubscribeOnCurrentThread">Whether subscription must be dispatched through the current-thread sequencer.</param>

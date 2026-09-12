@@ -10,11 +10,10 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Reactive.Concurrency;
 
 /// <summary>Base <see cref="IScheduler"/> for UI-thread dispatchers that drains queued work one batch per dispatcher post.</summary>
-/// <remarks>Work runs on the dispatcher thread; scheduling from that thread queues the item for the next posted batch
-/// rather than running it inline, so a scheduled action never re-enters the caller. The disposable a
-/// <c>Schedule</c> overload returns suppresses work that has not started and disposes what a started action
-/// returned. A platform scheduler supplies <see cref="Post"/> and may replace the delayed path by overriding
-/// <see cref="ScheduleOnDispatcher"/>.</remarks>
+/// <remarks>
+/// Work runs in posted dispatcher batches without inline reentrancy. Disposing a scheduled action suppresses unstarted work and disposes the
+/// resource returned by an action that has started.
+/// </remarks>
 [System.Diagnostics.DebuggerDisplay("CoalescingDispatchScheduler: ReadyCount = {_readyCount}, DrainPosted = {_drainPosted}")]
 public abstract class CoalescingDispatchScheduler : LocalScheduler
 {

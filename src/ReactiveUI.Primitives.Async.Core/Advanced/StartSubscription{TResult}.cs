@@ -43,7 +43,21 @@ public sealed class StartSubscription<TResult> : TaskSignalSubscription<TResult>
             return;
         }
 
-        await Task.Factory.StartNew(
+        await ExecuteOnSchedulerAsync(observer, taskScheduler, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Starts the function through the supplied scheduler.</summary>
+    /// <param name="observer">The observer receiving the produced value.</param>
+    /// <param name="taskScheduler">The scheduler that starts the function.</param>
+    /// <param name="cancellationToken">Cancellation for the scheduled task and notifications.</param>
+    /// <returns>The scheduled function and notification operation.</returns>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    private Task ExecuteOnSchedulerAsync(
+        IObserverAsync<TResult> observer,
+        TaskScheduler taskScheduler,
+        CancellationToken cancellationToken) =>
+        Task.Factory.StartNew(
                 static s =>
                 {
                     var (self, observer, cancellationToken) =
@@ -54,9 +68,7 @@ public sealed class StartSubscription<TResult> : TaskSignalSubscription<TResult>
                 cancellationToken,
                 TaskCreationOptions.DenyChildAttach,
                 taskScheduler)
-            .Unwrap()
-            .ConfigureAwait(false);
-    }
+            .Unwrap();
 
     /// <summary>Invokes the function and forwards its result to the observer.</summary>
     /// <param name="observer">The observer receiving the produced value.</param>

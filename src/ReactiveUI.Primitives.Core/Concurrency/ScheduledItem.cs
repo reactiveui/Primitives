@@ -127,10 +127,7 @@ public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICompa
     /// the same due-time ordering, or a value greater than zero when this item is due later. Any non-null item compares
     /// greater than <see langword="null"/>.
     /// </returns>
-    /// <remarks>
-    /// Ordering is by due time and says nothing about equality: <see cref="Equals(object?)"/> and the equality
-    /// operators compare reference identity instead.
-    /// </remarks>
+    /// <remarks>Ordering compares due times; equality compares reference identity.</remarks>
     public int CompareTo(ScheduledItem<TAbsolute>? other) =>
         other is null ? 1 : _comparer.Compare(DueTime, other.DueTime);
 
@@ -182,10 +179,7 @@ public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICompa
     public override int GetHashCode() => RuntimeHelpers.GetHashCode(this);
 
     /// <summary>Runs this scheduled work item if it has not been canceled.</summary>
-    /// <remarks>
-    /// The callback runs once and the disposable it returns is stored. Cancellation before, during, or immediately
-    /// after the call disposes that disposable, so cancellation reaches work the callback created.
-    /// </remarks>
+    /// <remarks>Cancellation disposes the resource returned by the callback, including when cancellation overlaps its execution.</remarks>
     public void Invoke()
     {
         if (IsDisposed)
@@ -201,11 +195,17 @@ public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICompa
             return;
         }
 
+        ReleaseCanceledResult();
+    }
+
+    /// <summary>Releases the published result if the work item is cancelled.</summary>
+    internal void ReleaseCanceledResult()
+    {
         if (!IsDisposed)
         {
             return;
         }
 
-        disposable.Dispose();
+        Interlocked.Exchange(ref _disposable, EmptyDisposable.Instance)?.Dispose();
     }
 }

@@ -99,7 +99,7 @@ public sealed class LeadSubscription<T> : IAsyncDisposable
         }
         catch (OperationCanceledException)
         {
-            // Cooperative subscription cancellation.
+            // Subscription cancellation is not reported as a failure.
         }
         catch (Exception e)
         {

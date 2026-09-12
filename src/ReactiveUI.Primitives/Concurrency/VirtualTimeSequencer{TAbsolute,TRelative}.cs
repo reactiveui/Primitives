@@ -6,11 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
-/// <summary>
-/// Virtual time scheduler that runs scheduled work against a controllable clock. Per-clock arithmetic is supplied
-/// as delegates at construction, so a single sealed type serves every <typeparamref name="TAbsolute"/>/
-/// <typeparamref name="TRelative"/> pairing without an inheritance hierarchy.
-/// </summary>
+/// <summary>Runs scheduled work against a controllable clock using the supplied time arithmetic.</summary>
 /// <typeparam name="TAbsolute">Absolute time representation type.</typeparam>
 /// <typeparam name="TRelative">Relative time representation type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]

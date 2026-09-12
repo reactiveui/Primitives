@@ -37,62 +37,24 @@ public struct Broadcaster<T> : IEquatable<Broadcaster<T>>
     /// <returns><see langword="true"/> when the broadcasters reference different observer sets; otherwise, <see langword="false"/>.</returns>
     public static bool operator !=(Broadcaster<T> left, Broadcaster<T> right) => !left.Equals(right);
 
-    /// <summary>Adds an observer with a lock-free compare-and-swap, so no external lock is required.</summary>
+    /// <summary>Adds an observer safely during concurrent updates.</summary>
     /// <param name="observer">Observer to add.</param>
     public void Add(IObserver<T> observer)
     {
-        while (true)
-        {
-            var current = Volatile.Read(ref _observers);
-            object next;
-            if (current is IObserver<T>[] many)
-            {
-                var copy = new IObserver<T>[many.Length + 1];
-                Array.Copy(many, copy, many.Length);
-                copy[many.Length] = observer;
-                next = copy;
-            }
-            else if (current is IObserver<T> single)
-            {
-                next = new[] { single, observer };
-            }
-            else if (Interlocked.CompareExchange(ref _observers, observer, null) is null)
-            {
-                return;
-            }
-            else
-            {
-                continue;
-            }
-
-            if (ReferenceEquals(Interlocked.CompareExchange(ref _observers, next, current), current))
-            {
-                return;
-            }
-        }
+        var current = Volatile.Read(ref _observers);
+        AddWithRetry(current, observer);
     }
 
     /// <summary>Removes all observers from the broadcaster.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Clear() => Volatile.Write(ref _observers, null);
 
-    /// <summary>Removes an observer from the broadcaster using a lock-free compare-and-swap.</summary>
+    /// <summary>Removes an observer safely during concurrent updates.</summary>
     /// <param name="observer">Observer to remove.</param>
     public void Remove(IObserver<T> observer)
     {
-        while (true)
-        {
-            var current = Volatile.Read(ref _observers);
-            if (!TryComputeRemoval(current, observer, out var next))
-            {
-                return;
-            }
-
-            if (ReferenceEquals(Interlocked.CompareExchange(ref _observers, next, current), current))
-            {
-                return;
-            }
-        }
+        var current = Volatile.Read(ref _observers);
+        RemoveWithRetry(current, observer);
     }
 
     /// <summary>Broadcasts a value to the current observers.</summary>
@@ -197,6 +159,42 @@ public struct Broadcaster<T> : IEquatable<Broadcaster<T>>
         return hash;
     }
 
+    /// <summary>Adds an observer if the observed slot has not changed.</summary>
+    /// <param name="observers">The live observer slot.</param>
+    /// <param name="current">The observed slot value.</param>
+    /// <param name="observer">The observer to add.</param>
+    /// <returns>True when the observer was added; false when the observed slot was stale.</returns>
+    internal static bool TryAdd(ref object? observers, object? current, IObserver<T> observer)
+    {
+        object next;
+        if (current is IObserver<T>[] many)
+        {
+            var copy = new IObserver<T>[many.Length + 1];
+            Array.Copy(many, copy, many.Length);
+            copy[many.Length] = observer;
+            next = copy;
+        }
+        else if (current is IObserver<T> single)
+        {
+            next = new[] { single, observer };
+        }
+        else
+        {
+            return Interlocked.CompareExchange(ref observers, observer, null) is null;
+        }
+
+        return ReferenceEquals(Interlocked.CompareExchange(ref observers, next, current), current);
+    }
+
+    /// <summary>Removes an observer if the observed slot has not changed.</summary>
+    /// <param name="observers">The live observer slot.</param>
+    /// <param name="current">The observed slot value.</param>
+    /// <param name="observer">The observer to remove.</param>
+    /// <returns>True when removal completed or the observer was absent; false when the observed slot was stale.</returns>
+    internal static bool TryRemove(ref object? observers, object? current, IObserver<T> observer) =>
+        !TryComputeRemoval(current, observer, out var next)
+        || ReferenceEquals(Interlocked.CompareExchange(ref observers, next, current), current);
+
     /// <summary>Computes the observer-set value that results from removing an observer.</summary>
     /// <param name="current">The current observer-set snapshot.</param>
     /// <param name="observer">The observer to remove.</param>
@@ -232,5 +230,39 @@ public struct Broadcaster<T> : IEquatable<Broadcaster<T>>
         Array.Copy(many, index + 1, copy, index, many.Length - index - 1);
         next = copy;
         return true;
+    }
+
+    /// <summary>Retries observer addition until the observed slot is current.</summary>
+    /// <param name="current">The initial observer snapshot.</param>
+    /// <param name="observer">The observer to add.</param>
+    [ExcludeFromCodeCoverage]
+    private void AddWithRetry(object? current, IObserver<T> observer)
+    {
+        while (true)
+        {
+            if (TryAdd(ref _observers, current, observer))
+            {
+                return;
+            }
+
+            current = Volatile.Read(ref _observers);
+        }
+    }
+
+    /// <summary>Retries observer removal until the observed slot is current.</summary>
+    /// <param name="current">The initial observer snapshot.</param>
+    /// <param name="observer">The observer to remove.</param>
+    [ExcludeFromCodeCoverage]
+    private void RemoveWithRetry(object? current, IObserver<T> observer)
+    {
+        while (true)
+        {
+            if (TryRemove(ref _observers, current, observer))
+            {
+                return;
+            }
+
+            current = Volatile.Read(ref _observers);
+        }
     }
 }

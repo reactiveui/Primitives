@@ -246,7 +246,6 @@ internal sealed class PooledStringBuilder
             return;
         }
 
-        // Doubling unless the caller asked for more outright, so a run of small appends does not re-rent per append.
         var next = RentBuffer(Math.Max(required, _buffer.Length * GrowthFactor));
         Array.Copy(_buffer, next, _position);
         var toReturn = _buffer;

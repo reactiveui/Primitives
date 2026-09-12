@@ -30,7 +30,6 @@ internal static class ActivationExtensionsEmitter
         var builder = new PooledStringBuilder(ScaffoldCapacity + (models.Length * OverloadCapacity));
         _ = builder.Append(Constants.GeneratedFileHeader);
 
-        // Every overload was extracted from the same compilation, so they agree on what its language allows.
         if (models[0].SupportsNullableAnnotations)
         {
             _ = builder.Append(Constants.NullableEnableDirective);

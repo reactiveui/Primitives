@@ -10,12 +10,9 @@ namespace ReactiveUI.Primitives.Reactive.Advanced;
 namespace ReactiveUI.Primitives.Advanced;
 #endif
 
-/// <summary>
-/// The observer handed to create-style subscription factories. It forwards notifications until terminated and owns
-/// the cancel resource the factory returns; when constructed with <c>disposeOnNextThrow</c> it also releases that
-/// resource before rethrowing if a downstream <c>OnNext</c> throws.
-/// </summary>
+/// <summary>Forwards notifications until termination and owns the resource returned by the subscription factory.</summary>
 /// <typeparam name="T">The value type.</typeparam>
+/// <remarks>When disposeOnNextThrow is enabled, a downstream OnNext failure disposes the resource before rethrowing.</remarks>
 [System.Diagnostics.DebuggerDisplay("CreateSink: Stopped = {_stopped}, Observer = {_observer}")]
 public sealed class CreateSink<T> : IDisposable, IObserver<T>
 {

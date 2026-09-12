@@ -380,7 +380,7 @@ public static partial class LinqExtensions
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal override IDisposable Subscribe() => source.Subscribe(this);
 
-        /// <summary>Records the latest value. Called by the coordinator while it holds the serialization gate.</summary>
+        /// <summary>Records the latest value while the coordinator holds the serialization gate.</summary>
         /// <param name="value">The value the source produced.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void Accept(T value) => Value = value;
@@ -444,7 +444,6 @@ public static partial class LinqExtensions
         /// <returns>This coordinator.</returns>
         internal CombineLatestCoordinator<TResult> Run(Func<TResult> project)
         {
-            // Installed before the first subscribe, so a source that emits inside its own Subscribe has a target.
             _project = project;
             _flags = new bool[_slots.Count * FlagsPerSource];
             _missingValues = _slots.Count;

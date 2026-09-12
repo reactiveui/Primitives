@@ -247,7 +247,7 @@ public class FactorySignalTests
                 await observer.OnNextAsync(SentinelValue, ct);
                 await observer.OnCompletedAsync(Result.Success);
             },
-            CustomTaskScheduler.Instance);
+            new CustomTaskScheduler());
         var result = await source.ToListAsync();
         await Assert.That(result).IsCollectionEqualTo([SentinelValue]);
     }

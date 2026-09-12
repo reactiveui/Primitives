@@ -45,10 +45,10 @@ public sealed class TaskPoolSequencer : ISequencer
     public Action<Exception>? UnhandledExceptionHandler { get; set; }
 
     /// <summary>Gets the scheduler's notion of current time.</summary>
-    public DateTimeOffset Now => Sequencer.Now;
+    public DateTimeOffset Now => _delaySequencer.Now;
 
     /// <summary>Gets the scheduler's monotonic timestamp.</summary>
-    public long Timestamp => Sequencer.Timestamp;
+    public long Timestamp => _delaySequencer.Timestamp;
 
     /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
@@ -62,12 +62,7 @@ public sealed class TaskPoolSequencer : ISequencer
     {
         ArgumentExceptionHelper.ThrowIfNull(item);
 
-        _ = _taskFactory.StartNew(
-            static state => ((DispatchState)state!).Run(),
-            new DispatchState(this, item),
-            _taskFactory.CancellationToken,
-            _taskFactory.CreationOptions,
-            _taskFactory.Scheduler ?? TaskScheduler.Default);
+        Queue(new(this, item));
     }
 
     /// <summary>Schedules a work item to be executed through the task factory at a monotonic timestamp.</summary>
@@ -89,7 +84,7 @@ public sealed class TaskPoolSequencer : ISequencer
 
     /// <summary>Executes a work item and routes unhandled exceptions.</summary>
     /// <param name="item">Work item to execute.</param>
-    private void Execute(IWorkItem item)
+    internal void Execute(IWorkItem item)
     {
         if (Sequencer.IsCancelled(item))
         {
@@ -112,6 +107,17 @@ public sealed class TaskPoolSequencer : ISequencer
             throw;
         }
     }
+
+    /// <summary>Queues a callback on the task factory's scheduler.</summary>
+    /// <param name="state">The callback state.</param>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    private void Queue(DispatchState state) =>
+        _ = _taskFactory.StartNew(
+            static value => ((DispatchState)value!).Run(),
+            state,
+            _taskFactory.CancellationToken,
+            _taskFactory.CreationOptions,
+            _taskFactory.Scheduler ?? TaskScheduler.Default);
 
     /// <summary>Task factory dispatch state.</summary>
     /// <param name="owner">Owning sequencer.</param>

@@ -109,7 +109,7 @@ public static partial class LinqExtensions
                 return;
             }
 
-            // Latch termination to reject notifications from sources that ignore disposal.
+            // Notifications received after termination are ignored.
             lock (_gate)
             {
                 _done = true;
@@ -206,7 +206,7 @@ public static partial class LinqExtensions
         /// <returns>An empty disposable.</returns>
         private EmptyDisposable Tick()
         {
-            // Hold the gate across the emission so the sample cannot interleave with a terminal.
+            // Samples cannot interleave with terminal notifications.
             lock (_gate)
             {
                 if (_done || !_hasLatest)

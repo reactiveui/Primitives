@@ -60,8 +60,6 @@ public sealed class AutoConnectSignal<T> : IObservable<T>
 
         var subscription = Source.Subscribe(observer);
 
-        // Auto-connect only ever counts up and connects once, so no lock is needed: a single
-        // CompareExchange latches the connect once the threshold is reached.
         var count = Interlocked.Increment(ref _count);
         if (count >= SubscriberCount && Interlocked.CompareExchange(ref _connected, 1, 0) == 0)
         {

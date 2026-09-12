@@ -48,7 +48,6 @@ public sealed class IsEmptySignal<T> : IRequireCurrentThread<bool>
             return EmptyDisposable.Instance;
         }
 
-        // Acquire the subscription before the first value can terminate the source.
         if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
         {
             return SubscribeCore(observer);

@@ -13,7 +13,7 @@ public sealed class BackgroundJobSignal<T> : IObservableAsync<T>
     /// <param name="job">The job to execute for each subscription.</param>
     /// <param name="startSynchronously">A value indicating whether the job starts synchronously on subscribe.</param>
     /// <param name="taskScheduler">The scheduler that starts the job, or <see langword="null"/> to start it on
-    /// the thread pool after a yield.</param>
+    /// the current context after yielding.</param>
     public BackgroundJobSignal(
         Func<IObserverAsync<T>, CancellationToken, ValueTask> job,
         bool startSynchronously,
@@ -59,6 +59,7 @@ public sealed class BackgroundJobSignal<T> : IObservableAsync<T>
     /// <param name="observer">The observer receiving job notifications.</param>
     /// <param name="cancellationToken">The cancellation token for the job.</param>
     /// <returns>A task representing the job.</returns>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     private async ValueTask ExecuteAfterYieldAsync(IObserverAsync<T> observer, CancellationToken cancellationToken)
     {
         await Task.Yield();
@@ -70,6 +71,7 @@ public sealed class BackgroundJobSignal<T> : IObservableAsync<T>
     /// <param name="taskScheduler">The scheduler that runs the job.</param>
     /// <param name="cancellationToken">The cancellation token for the job.</param>
     /// <returns>A task representing the job.</returns>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     private async ValueTask ExecuteOnSchedulerAsync(
         IObserverAsync<T> observer,
         TaskScheduler taskScheduler,

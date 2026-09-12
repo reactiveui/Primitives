@@ -6,13 +6,11 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Runs <paramref name="asyncAction"/> for each source value and forwards the value once it finishes, dropping every
-/// value that arrives while an action is in flight. An exception from the action terminates the sequence.
-/// </summary>
+/// <summary>Runs the action before forwarding each value, dropping values received while the action is running.</summary>
 /// <typeparam name = "T">The element type.</typeparam>
 /// <param name = "source">The source observable.</param>
 /// <param name = "asyncAction">The asynchronous action to execute for each forwarded element.</param>
+/// <remarks>An action failure terminates the sequence.</remarks>
 public sealed class DropIfBusyObservable<T>(IObservable<T> source, Func<T, ValueTask> asyncAction) : IObservable<T>
 {
     /// <inheritdoc/>

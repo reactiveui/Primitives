@@ -4,10 +4,7 @@
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Emits the fixed initial value to each subscriber, then subscribes independently to the source.
-/// Late subscribers receive that initial value, not a cached source emission.
-/// </summary>
+/// <summary>Emits the fixed initial value to each subscriber before subscribing independently to the source.</summary>
 /// <typeparam name="T">The element type of the source observable.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="initialValue">The initial value emitted to every new subscriber.</param>

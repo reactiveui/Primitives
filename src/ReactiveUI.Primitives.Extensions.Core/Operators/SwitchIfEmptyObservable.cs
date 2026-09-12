@@ -6,11 +6,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Forwards the source's values, and when the source completes without having emitted any, subscribes
-/// <paramref name="fallback"/> and forwards that sequence instead. A source error propagates without the fallback being
-/// tried.
-/// </summary>
+/// <summary>Subscribes to the fallback only when the source completes without emitting, propagating source errors unchanged.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="fallback">The fallback observable.</param>

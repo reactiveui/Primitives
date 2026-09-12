@@ -6,12 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>
-/// A lightweight <see cref="IObserver{T}"/> that forwards each notification to the supplied delegates.
-/// Use it to subscribe to an <see cref="IObservable{T}"/> without allocating a bespoke observer class.
-/// The <paramref name="onError"/> and <paramref name="onCompleted"/> delegates are optional; when omitted
-/// the corresponding terminal notification is ignored.
-/// </summary>
+/// <summary>Forwards notifications to supplied delegates and ignores terminal notifications whose delegate is omitted.</summary>
 /// <typeparam name="T">The type of the value being observed.</typeparam>
 /// <param name="onNext">The delegate invoked with each value pushed to <see cref="IObserver{T}.OnNext"/>.</param>
 /// <param name="onError">The optional delegate invoked with the exception when the sequence faults via <see cref="IObserver{T}.OnError"/>.</param>

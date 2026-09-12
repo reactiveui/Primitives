@@ -21,7 +21,7 @@ public static class ObservableSubscriptionExtensions
     /// <param name="source">The observable to subscribe to.</param>
     extension(IObservable<RxVoid> source)
     {
-        /// <summary>Subscribes to a <see cref="RxVoid"/>-producing observable, discarding the value. Safe only when the sequence terminates synchronously.</summary>
+        /// <summary>Subscribes to a synchronously terminating sequence and discards its value.</summary>
         public void SubscribeAndComplete()
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -127,7 +127,7 @@ public static class ObservableSubscriptionExtensions
         public T? WaitForValue(ISequencer scheduler, TimeSpan timeout) =>
             WaitForValueCore(source, scheduler, timeout);
 
-        /// <summary>Blocks until the source terminates; returns any captured error (does NOT rethrow). Default 30s timeout.</summary>
+        /// <summary>Blocks until the source terminates or the timeout expires, returning any captured error without throwing it.</summary>
         /// <returns>The captured error, or <see langword="null"/> if completion was normal.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Exception? WaitForError() =>
@@ -175,7 +175,7 @@ public static class ObservableSubscriptionExtensions
         BlockingValueWitness<T> sink = new(done);
         using var subscription = ScheduledSubscribe(source, sink, scheduler);
 
-        if (!done.Wait(timeout))
+        if (!WaitForTerminal(done, timeout))
         {
             throw new TimeoutException(
                 $"WaitForValue timed out after {timeout.TotalSeconds}s.");
@@ -197,7 +197,7 @@ public static class ObservableSubscriptionExtensions
         BlockingTerminalWitness<RxVoid> sink = new(done);
         using var subscription = ScheduledSubscribe(source, sink, scheduler);
 
-        if (!done.Wait(timeout))
+        if (!WaitForTerminal(done, timeout))
         {
             throw new TimeoutException(
                 $"WaitForCompletion timed out after {timeout.TotalSeconds}s.");
@@ -226,7 +226,7 @@ public static class ObservableSubscriptionExtensions
         BlockingTerminalWitness<T> sink = new(done);
         using var subscription = ScheduledSubscribe(source, sink, scheduler);
 
-        if (!done.Wait(timeout))
+        if (!WaitForTerminal(done, timeout))
         {
             throw new TimeoutException(
                 $"WaitForError timed out after {timeout.TotalSeconds}s.");
@@ -234,6 +234,14 @@ public static class ObservableSubscriptionExtensions
 
         return sink.Error;
     }
+
+    /// <summary>Blocks until a terminal signal arrives or the timeout expires.</summary>
+    /// <param name="done">The terminal signal.</param>
+    /// <param name="timeout">The maximum wait duration.</param>
+    /// <returns>True when the signal arrives; false on timeout.</returns>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool WaitForTerminal(ManualResetEventSlim done, TimeSpan timeout) => done.Wait(timeout);
 
     /// <summary>Subscribes <paramref name="observer"/> to <paramref name="source"/> on <paramref name="scheduler"/>, or inline when no scheduler is supplied.</summary>
     /// <typeparam name="T">The type of the elements in <paramref name="source"/>.</typeparam>

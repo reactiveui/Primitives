@@ -8,13 +8,13 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Emits whether every source's latest boolean equals <paramref name="target"/>, re-evaluating on each value once all
-/// sources have produced one. An empty source list emits <c>true</c> and completes on subscribe; any source's error
-/// terminates the sequence, and the sequence completes when every source completes or one completes without emitting.
-/// </summary>
+/// <summary>Emits whether every latest source value equals the target, starting after every source has emitted.</summary>
 /// <param name="sources">The source observables.</param>
 /// <param name="target">The value every source must hold for the operator to emit <c>true</c>.</param>
+/// <remarks>
+/// Empty input emits true and completes. An error terminates immediately; otherwise completion waits for all sources unless one completes
+/// without emitting.
+/// </remarks>
 [System.Diagnostics.DebuggerDisplay("BooleanReduceObservable: Sources = {_sourceList}")]
 public sealed class BooleanReduceObservable(IEnumerable<IObservable<bool>> sources, bool target) : IObservable<bool>
 {

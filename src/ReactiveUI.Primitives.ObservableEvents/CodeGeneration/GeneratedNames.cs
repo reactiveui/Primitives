@@ -71,8 +71,7 @@ internal static class GeneratedNames
         var start = 0;
         var end = identity.Length;
 
-        // Leading and trailing punctuation would sanitize to uninformative underscores; the hash separates
-        // identities that differ only there.
+        // Identity differences in leading or trailing punctuation contribute to the generated name.
         while (start < end && !char.IsLetterOrDigit(identity[start]))
         {
             start++;

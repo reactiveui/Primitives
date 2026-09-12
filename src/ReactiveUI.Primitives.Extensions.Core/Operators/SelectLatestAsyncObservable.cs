@@ -5,15 +5,12 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Projects each element through an asynchronous selector and emits only the latest projection's result. A superseded
-/// operation keeps running but its result and its failure are both discarded, and the source's completion is deferred
-/// until the latest projection finishes.
-/// </summary>
+/// <summary>Emits only the latest asynchronous projection, discarding superseded results and errors.</summary>
 /// <typeparam name = "TSource">The type of elements in the source sequence.</typeparam>
 /// <typeparam name = "TResult">The type of the result of the asynchronous operation.</typeparam>
 /// <param name = "source">The source observable.</param>
 /// <param name = "selector">The asynchronous projection function.</param>
+/// <remarks>Superseded operations continue running; source completion waits for the latest projection.</remarks>
 public sealed class SelectLatestAsyncObservable<TSource, TResult>(IObservable<TSource> source, Func<TSource, Task<TResult>> selector) : IObservable<TResult>
 {
     /// <inheritdoc/>
@@ -91,7 +88,7 @@ public sealed class SelectLatestAsyncObservable<TSource, TResult>(IObservable<TS
                 return;
             }
 
-            _ = toAwait.ContinueWith(static (_, s) => ((SelectLatestAsyncSink)s!).SignalCompleted(), this, TaskScheduler.Default);
+            RegisterCompletion(toAwait, this);
         }
 
         /// <inheritdoc/>
@@ -142,6 +139,14 @@ public sealed class SelectLatestAsyncObservable<TSource, TResult>(IObservable<TS
                 downstream.OnCompleted();
             }
         }
+
+        /// <summary>Registers completion delivery for the pending projection.</summary>
+        /// <param name="task">The pending projection.</param>
+        /// <param name="sink">The completion recipient.</param>
+        [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        private static void RegisterCompletion(Task task, SelectLatestAsyncSink sink) =>
+            _ = task.ContinueWith(static (_, state) => ((SelectLatestAsyncSink)state!).SignalCompleted(), sink, TaskScheduler.Default);
 
         /// <summary>Awaits the selector and emits or faults only while this operation is the latest one.</summary>
         /// <param name = "value">The value to project.</param>

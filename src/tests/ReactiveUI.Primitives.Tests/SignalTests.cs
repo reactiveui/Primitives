@@ -752,7 +752,7 @@ public partial class SignalTests
         public int Errors { get; private set; }
 
         /// <summary>Receives the next value.</summary>
-        /// <param name = "value">The value.</param>
+        /// <param name = "value">The observed value.</param>
         public void OnNext(int value) => Total += value;
 
         /// <summary>Receives an error.</summary>

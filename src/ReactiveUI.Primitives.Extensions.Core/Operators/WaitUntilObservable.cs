@@ -7,9 +7,7 @@ using ReactiveUI.Primitives.Disposables;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
 /// <summary>
-/// Emits the first source value that satisfies <paramref name="predicate"/>, completes, and disposes the source
-/// subscription. An exception from the predicate terminates the sequence, and the source completing first ends the
-/// sequence without a value.
+/// Emits the first predicate match and completes, propagating predicate failures and completing without a value if the source ends first.
 /// </summary>
 /// <typeparam name="T">The element type of the source observable.</typeparam>
 /// <param name="source">The source observable.</param>

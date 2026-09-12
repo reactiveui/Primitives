@@ -90,7 +90,7 @@ public static partial class Signal
         return new UnfoldSignal<TState, TResult>(initialState, condition, iterate, resultSelector);
     }
 
-    /// <summary>Generates a finite signal from state. Alias of <see cref="Unfold{TState, TResult}(TState, Func{TState, bool}, Func{TState, TState}, Func{TState, TResult})"/>.</summary>
+    /// <summary>Generates a finite signal by advancing state while the condition holds.</summary>
     /// <typeparam name="TState">The type of the state.</typeparam>
     /// <typeparam name="TResult">The type of the result.</typeparam>
     /// <param name="initialState">The initial state.</param>

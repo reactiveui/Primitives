@@ -98,7 +98,7 @@ public sealed class AsyncEnumerableSignal<T> : IAsyncEnumerableBackedSignal<T>
                 Volatile.Write(ref _enumerator, enumerator);
                 while (!_cts.IsCancellationRequested && await enumerator.MoveNextAsync().ConfigureAwait(false))
                 {
-                    // Cancellation during the move suppresses its buffered value.
+                    // Cancellation discards the current buffered value.
                     if (_cts.IsCancellationRequested)
                     {
                         break;
@@ -114,7 +114,7 @@ public sealed class AsyncEnumerableSignal<T> : IAsyncEnumerableBackedSignal<T>
             }
             catch (OperationCanceledException) when (_cts.IsCancellationRequested)
             {
-                // Disposal requested cancellation; observers should not receive a terminal signal.
+                // Subscription disposal does not send a terminal notification.
             }
             catch (Exception error) when (!_cts.IsCancellationRequested)
             {
@@ -135,7 +135,7 @@ public sealed class AsyncEnumerableSignal<T> : IAsyncEnumerableBackedSignal<T>
         /// <param name="enumerator">The enumerator to dispose.</param>
         private static void FireAndForgetDispose(IAsyncEnumerator<T> enumerator)
         {
-            // IDisposable cannot await enumerator disposal.
+            // Disposal returns before asynchronous enumerator cleanup finishes.
             _ = ObserveAsync(enumerator);
 
             static async Task ObserveAsync(IAsyncEnumerator<T> enumerator)
@@ -146,7 +146,7 @@ public sealed class AsyncEnumerableSignal<T> : IAsyncEnumerableBackedSignal<T>
                 }
                 catch (NotSupportedException)
                 {
-                    // Some enumerators only support disposal from the enumeration path.
+                    // Unsupported concurrent enumerator disposal is ignored.
                 }
             }
         }

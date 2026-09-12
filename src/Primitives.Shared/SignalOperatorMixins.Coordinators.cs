@@ -388,7 +388,7 @@ public static partial class LinqExtensions
         /// <summary>Handles completion of the outer sequence.</summary>
         private static void OnOuterCompleted()
         {
-            // Race completion is controlled by the first inner source to win.
+            // Only the winning source determines completion.
         }
     }
 

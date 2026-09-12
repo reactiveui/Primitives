@@ -80,7 +80,6 @@ internal static class TargetCollections
                 continue;
             }
 
-            // Every request came out of the same compilation, so they agree on what its language allows.
             supportsNullableAnnotations = target.SupportsNullableAnnotations;
             if (!byNamespace.TryGetValue(target.Namespace, out var events))
             {

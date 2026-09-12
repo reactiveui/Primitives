@@ -25,7 +25,7 @@ public static partial class SignalAsyncExtensions
         /// <returns>A value task that represents the asynchronous operation. The result is an <see cref="IAsyncDisposable"/>
         /// that can be disposed to unsubscribe from the data source.</returns>
         /// <exception cref="ArgumentNullException">The source sequence or <paramref name="onNextAsync"/> is <see langword="null"/>.</exception>
-        /// <remarks>Callbacks may be invoked concurrently, so the supplied delegates must be thread-safe.</remarks>
+        /// <remarks>Callbacks are serialized per subscription; overlapping notifications from another thread are rejected.</remarks>
         public ValueTask<IAsyncDisposable> SubscribeAsync(
             Func<T, CancellationToken, ValueTask> onNextAsync,
             Func<Exception, CancellationToken, ValueTask>? onErrorResumeAsync,

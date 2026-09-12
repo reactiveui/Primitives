@@ -41,7 +41,7 @@ public sealed class CancellationDisposable : IsDisposed
     /// <summary>Cancels the source on the first call; repeated calls have no further effect.</summary>
     public void Dispose()
     {
-        // Atomic run-once latch so concurrent disposal cannot cancel the source twice.
+        // Concurrent disposal cancels the source at most once.
         if (Interlocked.Exchange(ref _isDisposed, 1) != 0)
         {
             return;

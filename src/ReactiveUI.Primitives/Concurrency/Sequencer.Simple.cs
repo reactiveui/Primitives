@@ -2,7 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 
@@ -141,20 +140,18 @@ public static partial class Sequencer
                 return;
             }
 
-            DisposeIfRaced(disposable);
+            ReleaseCanceledResult();
         }
 
-        /// <summary>Releases what the scheduled action returned when a concurrent <see cref="Dispose"/> latches the cancellation flag after the slot is claimed.</summary>
-        /// <param name="disposable">The disposable the scheduled action returned.</param>
-        [ExcludeFromCodeCoverage]
-        private void DisposeIfRaced(IDisposable disposable)
+        /// <summary>Releases the published result if the work item is cancelled.</summary>
+        internal void ReleaseCanceledResult()
         {
             if (!IsDisposed)
             {
                 return;
             }
 
-            disposable.Dispose();
+            Interlocked.Exchange(ref _disposable, EmptyDisposable.Instance)?.Dispose();
         }
     }
 

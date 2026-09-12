@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Reactive.Core;
 namespace ReactiveUI.Primitives.Core;
 #endif
 
-/// <summary>Represents a spark to an observer. Being a value type, materializing a sequence allocates no per-notification heap object.</summary>
+/// <summary>Represents a value, error, or completion notification.</summary>
 /// <typeparam name="T">The type of the elements received by the observer.</typeparam>
 [Serializable]
 [DebuggerDisplay("{DebuggerDisplay,nq}")]
@@ -32,11 +32,7 @@ public readonly record struct Spark<T>
         _exception = exception;
     }
 
-    /// <summary>
-    /// Gets the value carried by an OnNext spark, or the default value for OnError and OnCompleted
-    /// sparks. Check <see cref="HasValue"/> (or <see cref="Kind"/>) to determine whether the value is
-    /// meaningful, and read <see cref="Exception"/> for the error carried by an OnError spark.
-    /// </summary>
+    /// <summary>Gets the value for an OnNext notification, or the default value for an error or completion notification.</summary>
     public T Value { get; }
 
     /// <summary>Gets a value indicating whether the spark carries a value.</summary>

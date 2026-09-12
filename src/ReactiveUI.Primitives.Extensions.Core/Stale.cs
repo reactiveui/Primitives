@@ -4,12 +4,12 @@
 
 namespace ReactiveUI.Primitives.Extensions;
 
-/// <summary>
-/// Carries either a staleness signal or a value update from an observable sequence. <c>default(Stale&lt;T&gt;)</c> is a
-/// value update holding the default <typeparamref name="T"/>; construct a staleness signal with
-/// <c>new Stale&lt;T&gt;()</c>, and read <see cref="Update"/> only when <see cref="IsStale"/> is <see langword="false"/>.
-/// </summary>
+/// <summary>Represents either a staleness notification or a value update.</summary>
 /// <typeparam name="T">The type of the update value.</typeparam>
+/// <remarks>
+/// The default struct value is an update containing the default T; the parameterless constructor creates a staleness notification. Read Update
+/// only when IsStale is false.
+/// </remarks>
 [System.Diagnostics.DebuggerDisplay("Stale: IsStale = {IsStale}")]
 public readonly record struct Stale<T> : IStale<T>
 {

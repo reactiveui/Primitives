@@ -39,7 +39,7 @@ public static class FireAndForgetHelper
         }
         catch (Exception e)
         {
-            // Fire-and-forget has no caller to propagate to; surface the failure to the global handler.
+            // Detached-operation failures reach the global handler.
             UnhandledExceptionHandler.ReportUnhandledException(e);
         }
     }

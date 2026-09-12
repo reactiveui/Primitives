@@ -4,13 +4,12 @@
 
 using System.Collections.Concurrent;
 using System.Reactive.Concurrency;
+using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Reactive.Concurrency;
 
-/// <summary>
-/// Schedules work on a single-threaded event loop without blocking or starting threads. Immediate work runs in
-/// batches between event-loop turns; delayed and periodic work use timers. Long-running scheduling is unsupported.
-/// </summary>
+/// <summary>Schedules immediate batches and timed work on a single-threaded event loop.</summary>
+/// <remarks>Immediate batches yield between event-loop turns; long-running scheduling is unsupported.</remarks>
 [System.Diagnostics.DebuggerDisplay("WasmScheduler: ReadyCount = {_readyCount}, DrainState = {_drainState}, Disposed = {_isDisposed}")]
 public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposable
 {
@@ -54,14 +53,15 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
     internal WasmScheduler(TimeProvider? timeProvider = null)
     {
         _timeProvider = timeProvider ?? TimeProvider.System;
-        _drainTimer = _timeProvider.CreateTimer(
+        _drainTimer = CreateTimer(
+            _timeProvider,
             static state => ((WasmScheduler)state!).RunDrain(),
             this,
             Timeout.InfiniteTimeSpan,
             Timeout.InfiniteTimeSpan);
     }
 
-    /// <summary>A queued work item awaiting an event-loop drain or a one-shot timer. Disposing it cancels it.</summary>
+    /// <summary>Represents queued work that disposal cancels before execution.</summary>
     internal interface IReadyWorkItem : IDisposable
     {
         /// <summary>Runs the scheduled action unless cancelled.</summary>
@@ -115,17 +115,11 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
 
         var item = new StatefulWorkItem<TState>(this, state, action);
 
-        // The timer roots itself while armed through the callback's target (the work item), which stores the
-        // timer; the item's Dispose cancels and releases it.
-        item.AttachTimer(_timeProvider.CreateTimer(static s => ((IReadyWorkItem)s!).Run(), item, dt, Timeout.InfiniteTimeSpan));
+        item.AttachTimer(CreateTimer(_timeProvider, static s => ((IReadyWorkItem)s!).Run(), item, dt, Timeout.InfiniteTimeSpan));
         return item;
     }
 
-    /// <summary>
-    /// Schedules a periodic action. Periods below one millisecond (including zero) are clamped to one millisecond:
-    /// a tight sequential loop would starve a single-threaded event loop, and browsers clamp nested
-    /// <c>setTimeout</c> anyway.
-    /// </summary>
+    /// <summary>Schedules a periodic action, clamping periods below one millisecond to one millisecond.</summary>
     /// <typeparam name="TState">The type of the state passed to the action.</typeparam>
     /// <param name="state">Initial state passed to the action upon the first iteration.</param>
     /// <param name="period">Period for running the work periodically.</param>
@@ -148,10 +142,8 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
         return PeriodicWorkItem<TState>.Start(state, period, action, _timeProvider);
     }
 
-    /// <summary>
-    /// Releases the drain timer and cancels queued work. Subsequent scheduling throws ObjectDisposedException.
-    /// Running work completes; callers retain responsibility for cancelling delayed work through its returned handle.
-    /// </summary>
+    /// <summary>Cancels queued immediate work and rejects further scheduling, allowing running work to finish.</summary>
+    /// <remarks>Delayed work remains owned by its returned cancellation handle.</remarks>
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _isDisposed, 1) != 0)
@@ -170,7 +162,6 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
         QueueReady(item);
         PostDrain();
 
-        // Release work enqueued after disposal drained the queue.
         if (!IsDisposed)
         {
             return;
@@ -223,6 +214,26 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
         return true;
     }
 
+    /// <summary>Registers a timer callback with the supplied provider.</summary>
+    /// <param name="provider">The timer provider.</param>
+    /// <param name="callback">The callback invoked when due.</param>
+    /// <param name="state">The callback state.</param>
+    /// <param name="dueTime">The initial delay.</param>
+    /// <param name="period">The repeat interval.</param>
+    /// <returns>The timer's cancellation handle.</returns>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static ITimer CreateTimer(TimeProvider provider, TimerCallback callback, object state, TimeSpan dueTime, TimeSpan period) =>
+        provider.CreateTimer(callback, state, dueTime, period);
+
+    /// <summary>Updates a timer's next firing and repeat interval.</summary>
+    /// <param name="timer">The timer to update.</param>
+    /// <param name="dueTime">The initial delay.</param>
+    /// <param name="period">The repeat interval.</param>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void ChangeTimer(ITimer timer, TimeSpan dueTime, TimeSpan period) => _ = timer.Change(dueTime, period);
+
     /// <summary>Cancels and removes every queued work item.</summary>
     private void ReleaseReady()
     {
@@ -248,14 +259,13 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
     /// <summary>Yields the claimed drain batch to the event loop, or hands the latch back when disposal beat it.</summary>
     private void ArmDrain()
     {
-        // Release the drain claim when disposal prevents arming the timer.
         if (IsDisposed)
         {
             Volatile.Write(ref _drainState, DrainIdle);
             return;
         }
 
-        _ = _drainTimer.Change(TimeSpan.Zero, Timeout.InfiniteTimeSpan);
+        ChangeTimer(_drainTimer, TimeSpan.Zero, Timeout.InfiniteTimeSpan);
     }
 
     /// <summary>Drains queued batches until no further pass is requested.</summary>
@@ -263,11 +273,8 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
     {
         do
         {
-            // Claim this pass; a concurrent PostDrain that observes DrainRunning will bump it to DrainRunningPending.
             Volatile.Write(ref _drainState, DrainRunning);
             RunReadyBatch();
-
-            // Finish only when no work was flagged during this pass.
         }
         while (Interlocked.CompareExchange(ref _drainState, DrainIdle, DrainRunning) != DrainRunning);
 
@@ -276,7 +283,6 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
             return;
         }
 
-        // Cover the narrow window where an item was enqueued but its PostDrain has not run yet.
         PostDrain();
     }
 
@@ -299,7 +305,6 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
         /// <inheritdoc/>
         public void Dispose()
         {
-            // Publish cancellation before reclaiming timers so a concurrent attachment releases its handle.
             if (!TryClaimDispose())
             {
                 return;
@@ -314,12 +319,18 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
         internal void AttachTimer(IDisposable timer)
         {
             Volatile.Write(ref _timer, timer);
+            ReleaseCanceledTimer();
+        }
+
+        /// <summary>Releases the attached timer when the work item is cancelled.</summary>
+        internal void ReleaseCanceledTimer()
+        {
             if (!IsDisposed)
             {
                 return;
             }
 
-            timer.Dispose();
+            Interlocked.Exchange(ref _timer, null)?.Dispose();
         }
     }
 
@@ -363,7 +374,6 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
 
                 _isDisposed = true;
 
-                // Start assigns the timer before returning; only the first Dispose reaches this point.
                 _timer!.Dispose();
                 _timer = null;
                 _state = default!;
@@ -383,14 +393,15 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
             TimeProvider timeProvider)
         {
             PeriodicWorkItem<TState> item = new(state, action);
-            var timer = timeProvider.CreateTimer(
+            var timer = CreateTimer(
+                timeProvider,
                 static s => ((PeriodicWorkItem<TState>)s!).Tick(),
                 item,
                 Timeout.InfiniteTimeSpan,
                 Timeout.InfiniteTimeSpan);
 
             item._timer = timer;
-            _ = timer.Change(period, period);
+            ChangeTimer(timer, period, period);
             return item;
         }
 

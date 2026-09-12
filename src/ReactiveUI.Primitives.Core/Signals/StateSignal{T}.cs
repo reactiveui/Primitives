@@ -21,7 +21,7 @@ public sealed class StateSignal<T> : ISignal<T>, IWitnessRemovable<T>
     /// <summary>Gets the observable stream of current and subsequent values.</summary>
     public IObservable<T> Changed => this;
 
-    /// <summary>Gets or sets the current value. Setting the value notifies observers even when equal to the previous value.</summary>
+    /// <summary>Gets or sets the current value, notifying observers on every assignment even when the value is unchanged.</summary>
     public T Value
     {
         get => _state.GetValue();

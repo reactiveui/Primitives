@@ -4,12 +4,7 @@
 
 namespace ReactiveUI.Primitives.Async.Advanced;
 
-/// <summary>
-/// Per-source <see cref="WitnessAsync{T}"/> for a <c>CombineLatestN</c> subscription: records each
-/// value into the parent's typed slot under the values-lock, then asks the parent to emit. One
-/// instance is built per source at subscribe time, so the per-emission cost is a single delegate
-/// invoke.
-/// </summary>
+/// <summary>Updates one source's latest value and requests a combined notification.</summary>
 /// <typeparam name="TSource">The element type of the upstream source this witness subscribes to.</typeparam>
 /// <typeparam name="TResult">The downstream element type owned by the parent subscription.</typeparam>
 /// <param name="parent">The parent subscription that owns the values-lock and lifecycle.</param>

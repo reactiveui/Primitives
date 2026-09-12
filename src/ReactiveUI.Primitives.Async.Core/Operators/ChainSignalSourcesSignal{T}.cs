@@ -177,7 +177,7 @@ public sealed class ChainSignalSourcesSignal<T>(IObservableAsync<IObservableAsyn
             }
         }
 
-        /// <summary>Disposes the inner and outer subscriptions and optionally forwards a completion result to the downstream observer. This method is idempotent.</summary>
+    /// <summary>Disposes the inner and outer subscriptions once, optionally forwarding completion.</summary>
         /// <param name="result">The completion result to forward, or <see langword="null"/> if disposing without signaling completion.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
         internal async ValueTask FinishAsync(Result? result)
@@ -219,7 +219,7 @@ public sealed class ChainSignalSourcesSignal<T>(IObservableAsync<IObservableAsyn
                 Exception error,
                 CancellationToken cancellationToken)
             {
-                // The outer subscription shares this disposal token.
+                // Notifications use subscription cancellation instead of the supplied token.
                 _ = cancellationToken;
                 var token = subscription._disposedCancellationToken;
                 using (await subscription._observerOnSomethingGate.EnterAsync(token).ConfigureAwait(false))

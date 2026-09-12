@@ -17,7 +17,7 @@ internal sealed class BooleanSignalWitness : IObserver<bool>
     internal int ErrorCount { get; private set; }
 
     /// <summary>Called when a value is received.</summary>
-    /// <param name="value">The value.</param>
+    /// <param name="value">The observed value.</param>
     public void OnNext(bool value) => Value = value;
 
     /// <summary>Called when an error is observed.</summary>

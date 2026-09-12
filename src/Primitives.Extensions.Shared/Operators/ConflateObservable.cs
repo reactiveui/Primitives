@@ -128,7 +128,6 @@ internal sealed class ConflateObservable<T>(
 
                     default:
                         {
-                            // Completed is the only remaining kind; this arm keeps the switch exhaustive.
                             ForwardCompleted();
                             return;
                         }

@@ -185,11 +185,7 @@ public static partial class SignalAsyncExtensions
             return new DropIfBusySignal<T>(source, asyncAction);
         }
 
-        /// <summary>
-        /// Emits the latest value or the provided default value before the source produces its first value.
-        /// If the first source value equals <paramref name="defaultValue"/>, it will be suppressed by the
-        /// distinct-until-changed filter.
-        /// </summary>
+        /// <summary>Starts with the default value and emits subsequent source values only when they change.</summary>
         /// <param name="defaultValue">The default value to emit first.</param>
         /// <returns>A sequence that starts with the provided default value and then emits distinct source updates.</returns>
         public IObservableAsync<T> LatestOrDefault(T defaultValue)
@@ -230,7 +226,7 @@ public static partial class SignalAsyncExtensions
             return new PairwiseSignal<T>(source);
         }
 
-        /// <summary>Partitions the source sequence into values that satisfy the predicate and values that do not. The predicate is evaluated exactly once per element.</summary>
+        /// <summary>Partitions the source into matches and nonmatches, evaluating the predicate once per element.</summary>
         /// <param name="predicate">The partition predicate.</param>
         /// <returns>A tuple of true and false partitions.</returns>
         public (IObservableAsync<T> True, IObservableAsync<T> False) Partition(Func<T, bool> predicate)

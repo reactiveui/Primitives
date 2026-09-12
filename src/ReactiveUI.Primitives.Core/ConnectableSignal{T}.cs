@@ -22,7 +22,7 @@ public sealed class ConnectableSignal<T> : IObservable<T>
     /// <summary>Multicast hub that receives source values.</summary>
     private readonly ISignal<T> _hub;
 
-    /// <summary>Active source connection slot. The returned connection handle owns disposal.</summary>
+    /// <summary>The active source connection, whose returned handle owns disposal.</summary>
     private StrongBox<Connection>? _connection;
 
     /// <summary>Set after the source sends a terminal notification to the hub.</summary>
@@ -54,7 +54,6 @@ public sealed class ConnectableSignal<T> : IObservable<T>
                 return Scope.Empty;
             }
 
-            // A dedicated disposable type for the handle, so connecting captures no closure.
             if (_connection?.Value is { } activeConnection)
             {
                 return activeConnection;

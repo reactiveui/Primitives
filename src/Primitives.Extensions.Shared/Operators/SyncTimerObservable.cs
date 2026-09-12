@@ -85,14 +85,11 @@ internal static class SyncTimerObservable
         {
             lock (_gate)
             {
-                // Never null: Dispose's Interlocked guard admits one Remove per subscription, and the
-                // observer was added under this same lock before the disposable was handed out.
                 var updated = ObserverArrayHelpers.RemoveOrNull(_observers, observer, _emptyObservers)!;
 
                 Volatile.Write(ref _observers, updated);
                 if (ReferenceEquals(updated, _emptyObservers))
                 {
-                    // Never null: reaching an empty set means Subscribe ran, which arms the timer.
                     _timerSubscription!.Dispose();
                     _timerSubscription = null;
                 }

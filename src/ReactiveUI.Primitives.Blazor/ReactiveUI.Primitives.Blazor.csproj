@@ -24,4 +24,8 @@
     <ProjectReference Include="..\ReactiveUI.Primitives\ReactiveUI.Primitives.csproj"/>
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Blazor.Tests"/>
+  </ItemGroup>
+
 </Project>

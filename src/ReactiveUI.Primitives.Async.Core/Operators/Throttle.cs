@@ -12,13 +12,12 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The source observable sequence.</param>
     extension<T>(IObservableAsync<T> source)
     {
-        /// <summary>Ignores elements from the source sequence that are followed by another element within the specified time span. Only the last element in each burst is forwarded.</summary>
+        /// <summary>Forwards the latest element after a full quiet period.</summary>
         /// <param name="dueTime">The time span that must elapse after the last element before it is forwarded.
         /// Must be non-negative.</param>
         /// <returns>An observable sequence containing only those elements that are not followed by another
         /// element within the specified due time.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="dueTime"/> is negative.</exception>
-        /// <remarks>Each source element restarts the quiet period, so a continuous burst forwards only its final element.</remarks>
         public IObservableAsync<T> Throttle(TimeSpan dueTime)
         {
             ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(dueTime, TimeSpan.Zero);
@@ -26,7 +25,7 @@ public static partial class SignalAsyncExtensions
             return new ThrottleSignal<T>(source, dueTime, TimeProvider.System);
         }
 
-        /// <summary>Ignores elements from the source sequence that are followed by another element within the specified time span. Only the last element in each burst is forwarded.</summary>
+        /// <summary>Forwards the latest element after a full quiet period.</summary>
         /// <param name="dueTime">The time span that must elapse after the last element before it is forwarded.
         /// Must be non-negative.</param>
         /// <param name="timeProvider">An optional time provider for controlling timing. If null, <see cref="TimeProvider.System"/>
@@ -34,7 +33,6 @@ public static partial class SignalAsyncExtensions
         /// <returns>An observable sequence containing only those elements that are not followed by another
         /// element within the specified due time.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="dueTime"/> is negative.</exception>
-        /// <remarks>Each source element restarts the quiet period, so a continuous burst forwards only its final element.</remarks>
         public IObservableAsync<T> Throttle(TimeSpan dueTime, TimeProvider? timeProvider)
         {
             ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(dueTime, TimeSpan.Zero);
@@ -55,9 +53,17 @@ public static partial class SignalAsyncExtensions
             TimeProvider timeProvider,
             CancellationToken cancellationToken) =>
             timeProvider == TimeProvider.System
-                ? new(Task.Delay(delay, cancellationToken))
+                ? DelayOnSystemClockAsync(delay, cancellationToken)
                 : PooledDelaySource.Rent().BeginAsync(delay, timeProvider, cancellationToken);
     }
+
+    /// <summary>Waits for the system clock or cancellation.</summary>
+    /// <param name="delay">The duration to wait.</param>
+    /// <param name="cancellationToken">Cancellation for the wait.</param>
+    /// <returns>The delay operation.</returns>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    private static ValueTask DelayOnSystemClockAsync(TimeSpan delay, CancellationToken cancellationToken) =>
+        new(Task.Delay(delay, cancellationToken));
 
     /// <summary>Async observable that debounces the source sequence, only forwarding elements that are not followed by another element within the specified due time.</summary>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
@@ -128,8 +134,6 @@ public static partial class SignalAsyncExtensions
                 }
                 catch (Exception e)
                 {
-                    // UnhandledExceptionHandler filters OperationCanceledException internally so
-                    // a separate OCE-only catch would just duplicate the silent-drop behavior.
                     UnhandledExceptionHandler.ReportUnhandledException(e);
                 }
             }
@@ -171,7 +175,7 @@ public static partial class SignalAsyncExtensions
                 return observer.OnCompletedAsync(result);
             }
 
-            /// <summary>Marks any in-flight delay as superseded during disposal. The dispose token threaded through <see cref="DelayAsync"/> by the base observer also unblocks the awaits.</summary>
+            /// <summary>Invalidates pending values before releasing the observer.</summary>
             /// <returns>A completed task.</returns>
             protected override ValueTask DisposeAsyncCore()
             {

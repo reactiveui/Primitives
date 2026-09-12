@@ -7,15 +7,14 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions;
 
-/// <summary>
-/// Drains a task sequence with at most <paramref name="maxConcurrency"/> tasks in flight, emitting each result as it
-/// completes and completing once the sequence is exhausted. A faulted or cancelled task terminates the sequence with
-/// that task's exception. Subscribers share one enumerator over <paramref name="taskFunctions"/>, so a second
-/// subscription continues draining where the first stopped, and disposing any subscription halts the drain for all.
-/// </summary>
+/// <summary>Runs task factories with bounded concurrency and emits results in completion order.</summary>
 /// <typeparam name="T">The type of the task results.</typeparam>
 /// <param name="taskFunctions">The task functions to drain.</param>
 /// <param name="maxConcurrency">The maximum concurrency.</param>
+/// <remarks>
+/// Subscribers share progress; disposing any subscription stops every drain. A task fault or cancellation terminates the sequence with its
+/// error.
+/// </remarks>
 [System.Diagnostics.DebuggerDisplay("ConcurrencyLimiter: Outstanding = {_outstanding}, Disposed = {_disposed}")]
 public sealed class ConcurrencyLimiter<T>(IEnumerable<Task<T>> taskFunctions, int maxConcurrency) : IObservable<T>
 {
@@ -115,6 +114,22 @@ public sealed class ConcurrencyLimiter<T>(IEnumerable<Task<T>> taskFunctions, in
         }
     }
 
+    /// <summary>Registers result delivery for the pending task.</summary>
+    /// <param name="task">The pending task.</param>
+    /// <param name="subscription">The result recipient.</param>
+    [ExcludeFromCodeCoverage]
+    private static void RegisterCompletion(Task<T> task, Subscription subscription) =>
+        _ = task.ContinueWith(
+            static (completed, state) =>
+            {
+                var owner = (Subscription)state!;
+                owner.Limiter.ProcessTaskCompletion(owner, completed);
+            },
+            subscription,
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
+
     /// <summary>Pulls the next task and schedules its continuation against this limiter.</summary>
     /// <param name="subscription">The owning subscription.</param>
     private void PullNextTask(Subscription subscription)
@@ -144,16 +159,10 @@ public sealed class ConcurrencyLimiter<T>(IEnumerable<Task<T>> taskFunctions, in
 
             _outstanding++;
 
-            _rator.Current?.ContinueWith(
-                static (ant, state) =>
-                {
-                    var sub = (Subscription)state!;
-                    sub.Limiter.ProcessTaskCompletion(sub, ant);
-                },
-                subscription,
-                CancellationToken.None,
-                TaskContinuationOptions.ExecuteSynchronously,
-                TaskScheduler.Default);
+            if (_rator.Current is { } task)
+            {
+                RegisterCompletion(task, subscription);
+            }
         }
     }
 

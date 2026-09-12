@@ -44,7 +44,7 @@ internal sealed class ReduceSinkState<TIn, TOut>
     /// <summary>Gets a value indicating whether every source has produced at least one value.</summary>
     internal bool AllValuesPresent => HasValueCount >= Values.Length;
 
-    /// <summary>Records source <paramref name="index"/>'s latest value and emits the reduced result once every source has one. Runs under the gate.</summary>
+    /// <summary>Records the source value and emits the reduction once every source has a value, while the caller holds the gate.</summary>
     /// <param name="index">The 0-based source index that emitted.</param>
     /// <param name="value">The latest value from that source.</param>
     /// <param name="reduce">Projects the per-source latest values into the downstream result.</param>
@@ -73,7 +73,7 @@ internal sealed class ReduceSinkState<TIn, TOut>
         }
     }
 
-    /// <summary>Forwards a terminal error to the downstream observer and marks the sink terminal. Idempotent.</summary>
+    /// <summary>Forwards the first terminal error and marks the sink terminal.</summary>
     /// <param name="error">The error to forward.</param>
     internal void HandleError(Exception error)
     {

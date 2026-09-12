@@ -80,7 +80,7 @@ public sealed class SwitchWitness<T> : IDisposable
             error => OnError(current, error),
             () => OnCompleted(current));
 
-        // Reentrant subscription can install a newer generation; only the current generation may occupy the slot.
+        // Only the newest subscription remains active after reentrant subscription.
         var superseded = false;
         lock (_gate)
         {

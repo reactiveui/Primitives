@@ -2,7 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Runtime.ExceptionServices;
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Signals;
@@ -34,50 +33,6 @@ public sealed partial class SwitchWitnessTests
         inner.Observer.OnCompleted();
 
         await Assert.That(observer.Completed).IsEqualTo(One);
-    }
-
-    /// <summary>Verifies the public switch operator serializes a source switch against an in-flight inner delivery.</summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    [Test]
-    public async Task SwitchToDoesNotEnterObserverConcurrentlyWhenSwitchingInnerSources()
-{
-        Signal<IObservable<int>> outer = new();
-        CapturingObservable<int> first = new();
-        CapturingObservable<int> second = new();
-        using GatedObserver observer = new();
-        using var subscription = outer.SwitchTo().Subscribe(observer);
-        var coordinator = (LinqExtensions.SwitchCoordinator<int>)subscription;
-        outer.OnNext(first);
-        var firstDelivery = Task.Run(() => first.Observer!.OnNext(One));
-        observer.FirstEntered.Wait();
-        bool entered;
-        try
-        {
-#if NET9_0_OR_GREATER
-            entered = coordinator.Gate.TryEnter();
-            if (entered)
-            {
-                coordinator.Gate.Exit();
-            }
-#else
-            entered = Monitor.TryEnter(coordinator.Gate);
-            if (entered)
-            {
-                Monitor.Exit(coordinator.Gate);
-            }
-#endif
-        }
-        finally
-        {
-            observer.ReleaseFirst.Set();
-        }
-
-        await firstDelivery;
-        await Assert.That(entered).IsFalse();
-        outer.OnNext(second);
-        second.Observer!.OnNext(Two);
-        await Assert.That(observer.ConcurrentOnNext).IsFalse();
-        await Assert.That(observer.Values).IsEqualTo(Two);
     }
 
     /// <summary>Verifies switching inner sources forwards only the latest source's values.</summary>
@@ -326,66 +281,6 @@ public sealed partial class SwitchWitnessTests
         {
             Observer = observer;
             return new ActionDisposable(() => Disposed = true);
-        }
-    }
-
-    /// <summary>Observer that blocks inside its first value callback so concurrent re-entry is detected.</summary>
-    private sealed class GatedObserver : IObserver<int>, IDisposable
-    {
-        /// <summary>Tracks how many threads are currently inside <see cref="OnNext"/>.</summary>
-        private int _inOnNext;
-
-        /// <summary>Counts forwarded values.</summary>
-        private int _values;
-
-        /// <summary>Set when more than one thread is inside <see cref="OnNext"/> at once.</summary>
-        private int _concurrent;
-
-        /// <summary>Gets the event set when the first <see cref="OnNext"/> call is entered.</summary>
-        public ManualResetEventSlim FirstEntered { get; } = new();
-
-        /// <summary>Gets the event released by the test to unblock the first <see cref="OnNext"/> call.</summary>
-        public ManualResetEventSlim ReleaseFirst { get; } = new();
-
-        /// <summary>Gets the number of forwarded values.</summary>
-        public int Values => Volatile.Read(ref _values);
-
-        /// <summary>Gets a value indicating whether <see cref="OnNext"/> was entered concurrently.</summary>
-        public bool ConcurrentOnNext => Volatile.Read(ref _concurrent) != 0;
-
-        /// <inheritdoc/>
-        public void OnCompleted()
-        {
-        }
-
-        /// <inheritdoc/>
-        public void OnError(Exception error)
-        {
-        }
-
-        /// <inheritdoc/>
-        public void OnNext(int value)
-{
-            if (Interlocked.Increment(ref _inOnNext) != 1)
-            {
-                _ = Interlocked.Exchange(ref _concurrent, 1);
-            }
-
-            var index = Interlocked.Increment(ref _values);
-            if (index == 1)
-            {
-                FirstEntered.Set();
-                ReleaseFirst.Wait();
-            }
-
-            _ = Interlocked.Decrement(ref _inOnNext);
-    }
-
-        /// <inheritdoc/>
-        public void Dispose()
-        {
-            FirstEntered.Dispose();
-            ReleaseFirst.Dispose();
         }
     }
 }

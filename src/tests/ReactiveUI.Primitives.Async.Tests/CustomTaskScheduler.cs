@@ -2,37 +2,64 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Runtime.CompilerServices;
-
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>A scheduler distinct from <see cref="TaskScheduler.Default"/> that runs each queued task on the thread pool.</summary>
+/// <summary>Runs tasks on the calling thread, queuing nested work until the current task returns.</summary>
 internal sealed class CustomTaskScheduler : TaskScheduler
 {
-    /// <summary>Singleton instance.</summary>
-    internal static readonly CustomTaskScheduler Instance = new();
+    /// <summary>Serializes access to pending work.</summary>
+    private readonly Lock _gate = new();
+
+    /// <summary>Tasks waiting for the current task to return.</summary>
+    private readonly Queue<Task> _tasks = new();
+
+    /// <summary>Whether a caller is executing pending work.</summary>
+    private bool _isDraining;
 
     /// <summary>Initializes a new instance of the <see cref="CustomTaskScheduler"/> class.</summary>
-    private CustomTaskScheduler()
+    internal CustomTaskScheduler()
     {
     }
 
     /// <inheritdoc/>
-    protected override void QueueTask(Task task) =>
-        ThreadPool.UnsafeQueueUserWorkItem(
-            static state => IgnoredResult.Of(state.Scheduler.ExecuteQueued(state.Work)),
-            (Scheduler: this, Work: task),
-            false);
+    protected override void QueueTask(Task task)
+    {
+        lock (_gate)
+        {
+            _tasks.Enqueue(task);
+            if (_isDraining)
+            {
+                return;
+            }
+
+            _isDraining = true;
+        }
+
+        while (true)
+        {
+            Task? next;
+            lock (_gate)
+            {
+                if (!_tasks.TryDequeue(out next))
+                {
+                    _isDraining = false;
+                    return;
+                }
+            }
+
+            IgnoredResult.Of(TryExecuteTask(next));
+        }
+    }
 
     /// <inheritdoc/>
     protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued) => false;
 
     /// <inheritdoc/>
-    protected override IEnumerable<Task>? GetScheduledTasks() => null;
-
-    /// <summary>Runs a queued task on the pool thread that picked it up.</summary>
-    /// <param name="task">The queued task.</param>
-    /// <returns><see langword="true"/> when the task was executed.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private bool ExecuteQueued(Task task) => TryExecuteTask(task);
+    protected override IEnumerable<Task>? GetScheduledTasks()
+    {
+        lock (_gate)
+        {
+            return _tasks.ToArray();
+        }
+    }
 }

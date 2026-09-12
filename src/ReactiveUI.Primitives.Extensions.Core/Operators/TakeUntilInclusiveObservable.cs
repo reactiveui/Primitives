@@ -4,10 +4,7 @@
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Forwards source elements until <paramref name="predicate"/> returns <see langword="true"/>, emits that element too,
-/// then completes. An exception from the predicate terminates the sequence before that element is emitted.
-/// </summary>
+/// <summary>Emits values through the first predicate match and completes, terminating before emission if the predicate throws.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="predicate">The predicate to determine when to stop taking elements.</param>
@@ -39,7 +36,7 @@ public sealed class TakeUntilInclusiveObservable<T>(
         private bool _done;
 
         /// <inheritdoc/>
-        /// <param name="value">The value.</param>
+        /// <param name="value">The value to forward.</param>
         public void OnNext(T value)
         {
             lock (_gate)

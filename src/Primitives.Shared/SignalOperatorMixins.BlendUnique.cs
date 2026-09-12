@@ -10,20 +10,14 @@ namespace ReactiveUI.Primitives.Reactive;
 namespace ReactiveUI.Primitives;
 #endif
 
-/// <summary>
-/// Fused <c>Blend</c> + <c>Unique</c> operator: concurrently merges a fixed set of sources and forwards a value
-/// only when it differs from the last forwarded one, through one sink instead of two.
-/// </summary>
+/// <summary>Concurrently merges sources and suppresses values equal to the last forwarded value.</summary>
 public static partial class LinqExtensions
 {
-    /// <summary>
-    /// Concurrently merges the supplied sources and forwards only values that differ from the last forwarded
-    /// value, using the default equality comparer. Errors are forwarded from the first failing source;
-    /// completion is signalled once every source has completed.
-    /// </summary>
+    /// <summary>Concurrently merges sources and suppresses adjacent duplicate values using the default equality comparer.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="sources">The sources to merge.</param>
     /// <returns>An observable of the distinct merged values.</returns>
+    /// <remarks>The first source error terminates the result; successful completion waits for every source.</remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservable<T> BlendUnique<T>(params IObservable<T>[] sources) =>
         BlendUnique(sources, null);
@@ -105,10 +99,8 @@ public static partial class LinqExtensions
         /// <param name="sources">The sources to merge.</param>
         public void Run(IObservable<T>[] sources)
         {
-            // Sources and their elements are validated eagerly by the public entry point, so no null check here.
             if (sources.Length == 0)
             {
-                // Runs once during subscription before any source can notify, so no _done check is needed.
                 lock (_gate)
                 {
                     _done = true;

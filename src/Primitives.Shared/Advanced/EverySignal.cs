@@ -99,7 +99,6 @@ public sealed class EverySignal(TimeSpan period, ISequencer scheduler) : IRequir
         /// <summary>Emits the current tick and reschedules unless cancelled.</summary>
         private void Tick()
         {
-            // The sequencer checks cancellation before invoking this item, not before the observer is called.
             if (_slot.IsDisposed)
             {
                 return;
@@ -109,7 +108,7 @@ public sealed class EverySignal(TimeSpan period, ISequencer scheduler) : IRequir
             _tick++;
             _observer.OnNext(tick);
 
-            // An observer that disposes from inside OnNext must stop the schedule rather than re-arm it.
+            // Disposal from OnNext stops future notifications.
             if (_slot.IsDisposed)
             {
                 return;

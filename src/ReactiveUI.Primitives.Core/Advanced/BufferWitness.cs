@@ -51,7 +51,6 @@ public sealed class BufferWitness<T>(IObserver<IList<T>> observer, int count, in
             _buffer = buffer;
         }
 
-        // Take while not skipping; the window index doubles as the array slot.
         if (idx >= 0)
         {
             buffer![idx] = value;
@@ -64,11 +63,9 @@ public sealed class BufferWitness<T>(IObserver<IList<T>> observer, int count, in
             return;
         }
 
-        // Reset the index before a throwing observer can release the buffer.
         _buffer = null;
         _index = 0 - _skip;
 
-        // A full window is exactly the right size, so it needs no trimming.
         Emit(buffer!);
     }
 
@@ -119,7 +116,7 @@ public sealed class BufferWitness<T>(IObserver<IList<T>> observer, int count, in
     /// <inheritdoc/>
     public void Dispose()
     {
-        // Reject further values on every teardown path, including observer failure.
+        // Values after teardown are ignored, including after observer failure.
         Volatile.Write(ref _done, 1);
         SinkSubscription.Dispose(ref _subscription);
     }

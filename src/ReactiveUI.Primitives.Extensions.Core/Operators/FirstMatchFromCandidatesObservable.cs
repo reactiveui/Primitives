@@ -7,10 +7,7 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Projects candidates sequentially and emits the first transformed value satisfying the predicate.
-/// Projection errors skip the candidate. If none matches, emits the fallback value and completes.
-/// </summary>
+/// <summary>Projects candidates sequentially, skipping projection errors, and emits the first matching transformed value or the fallback.</summary>
 /// <typeparam name="TKey">The type of candidate keys.</typeparam>
 /// <typeparam name="TRaw">The element type emitted by the projected observable.</typeparam>
 /// <typeparam name="TResult">The final result type emitted to downstream after transformation.</typeparam>
@@ -19,7 +16,9 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <param name="transform">Synchronous transform applied to each raw value to produce the result.</param>
 /// <param name="predicate">Returns <see langword="true"/> when a transformed value is a match.</param>
 /// <param name="fallback">Value emitted when no candidate matches.</param>
-/// <remarks>A projection that completes synchronously runs on the subscribing thread; one that does not keeps the walk alive until its callbacks arrive.</remarks>
+/// <remarks>
+/// Synchronous projections run on the subscribing thread; asynchronous projections continue the candidate search from their callbacks.
+/// </remarks>
 public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
     IReadOnlyList<TKey> candidates,
     Func<TKey, IObservable<TRaw>> project,
@@ -240,7 +239,6 @@ public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
 
             if (_looping)
             {
-                // The walk in TryNext reads this terminal notification off the probe instead.
                 return;
             }
 
@@ -262,7 +260,6 @@ public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
 
             if (_looping)
             {
-                // The walk in TryNext reads this terminal notification off the probe instead.
                 return;
             }
 

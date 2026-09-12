@@ -5,16 +5,13 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Projects each element through an asynchronous selector with at most <paramref name="maxConcurrency"/> operations in
-/// flight and queues the rest, so results arrive in completion order rather than source order. The first selector
-/// failure terminates the sequence, and the source's completion is held back until the queue drains.
-/// </summary>
+/// <summary>Queues asynchronous projections with bounded concurrency and emits results in completion order.</summary>
 /// <typeparam name = "TSource">The type of elements in the source sequence.</typeparam>
 /// <typeparam name = "TResult">The type of the result of the asynchronous operation.</typeparam>
 /// <param name = "source">The source observable.</param>
 /// <param name = "selector">The asynchronous projection function.</param>
 /// <param name = "maxConcurrency">The maximum number of concurrent operations.</param>
+/// <remarks>Selector failure terminates immediately; source completion waits for queued projections to finish.</remarks>
 public sealed class SelectAsyncConcurrentObservable<TSource, TResult>(IObservable<TSource> source, Func<TSource, Task<TResult>> selector, int maxConcurrency) : IObservable<TResult>
 {
     /// <inheritdoc/>

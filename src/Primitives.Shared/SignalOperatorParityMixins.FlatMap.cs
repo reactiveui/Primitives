@@ -228,7 +228,6 @@ public static partial class LinqExtensions
         /// <param name="value">The inner value.</param>
         private void OnInnerNext(TResult value)
         {
-            // One inner source runs at a time; the volatile disposal check needs no delivery gate.
             if (Volatile.Read(ref _disposed))
             {
                 return;

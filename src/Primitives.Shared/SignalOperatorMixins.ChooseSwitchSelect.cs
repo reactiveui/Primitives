@@ -22,10 +22,7 @@ public static partial class LinqExtensions
         /// <typeparam name="TOut">The element type of the projected inner observables.</typeparam>
         /// <param name="selector">Projects each source value to an inner observable.</param>
         /// <returns>An observable that mirrors the latest projected inner observable.</returns>
-        /// <remarks>
-        /// Every source value switches, a null among them included. Skipping nulls, which leaves the active
-        /// inner subscription in place, is <see cref="SwitchSelect{TSource, TResult}"/> instead.
-        /// </remarks>
+        /// <remarks>Null switches the active subscription too; use SwitchSelect to ignore nulls and keep the current subscription.</remarks>
         public IObservable<TOut> SwitchMap<TOut>(Func<TIn, IObservable<TOut>> selector)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -35,11 +32,7 @@ public static partial class LinqExtensions
             return new SwitchMapSignal<TIn, TOut>(source, selector);
         }
 
-        /// <summary>
-        /// Maps each source value to a <c>(HasValue, Value)</c> pair and forwards only the values whose
-        /// <c>HasValue</c> is <see langword="true"/> — a single fused sink in place of <c>Where(...).Select(...)</c>.
-        /// Unlike a <c>TOut?</c>-returning projection, the explicit flag lets a non-nullable value type be skipped.
-        /// </summary>
+        /// <summary>Projects each value to a value-and-flag pair and forwards the value only when the flag is true.</summary>
         /// <typeparam name="TOut">The forwarded element type.</typeparam>
         /// <param name="chooser">Maps a source value to <c>(HasValue, Value)</c>; the value is skipped when <c>HasValue</c> is <see langword="false"/>.</param>
         /// <returns>An observable of the chosen values.</returns>

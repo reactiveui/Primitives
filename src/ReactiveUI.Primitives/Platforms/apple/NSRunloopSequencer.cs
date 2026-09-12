@@ -8,11 +8,7 @@ using ReactiveUI.Primitives.Advanced;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
-/// <summary>
-/// Apple sequencer that coalesces scheduled work onto the main <see cref="DispatchQueue"/> (the UI thread on
-/// iOS, tvOS, Mac Catalyst, and macOS). Immediate work is batched through a single cached <see cref="DispatchBlock"/>
-/// drain, so the per-post path allocates nothing; delayed work uses <see cref="DispatchQueue.DispatchAfter(DispatchTime, Action)"/>.
-/// </summary>
+/// <summary>Schedules immediate and delayed work on the Apple main dispatch queue.</summary>
 /// <seealso cref="ISequencer" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class NSRunloopSequencer : ISequencer
@@ -56,11 +52,18 @@ public sealed class NSRunloopSequencer : ISequencer
     /// <summary>Runs delayed work through the main queue's native delayed dispatch.</summary>
     /// <param name="item">Work item to execute at the due time.</param>
     /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     private static void ScheduleDelayed(IWorkItem item, long dueTimestamp)
     {
         var nanoseconds = (long)DispatchSequencerState.DelayUntil(dueTimestamp).TotalMilliseconds * NanosecondsPerMillisecond;
         DispatchQueue.MainQueue.DispatchAfter(new(DispatchTime.Now, nanoseconds), () => DispatchSequencerState.RunIfActive(item));
     }
+
+    /// <summary>Posts the block through the native main queue.</summary>
+    /// <param name="block">The callback block to post.</param>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void DispatchOnMainQueue(DispatchBlock block) => DispatchQueue.MainQueue.DispatchAsync(block);
 
     /// <summary>Marshals the cached drain callback onto the main dispatch queue.</summary>
     /// <param name="drain">The drain callback.</param>
@@ -68,7 +71,7 @@ public sealed class NSRunloopSequencer : ISequencer
     private bool Post(Action drain)
     {
         _drainBlock ??= new DispatchBlock(drain);
-        DispatchQueue.MainQueue.DispatchAsync(_drainBlock);
+        DispatchOnMainQueue(_drainBlock);
         return true;
     }
 

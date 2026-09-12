@@ -17,7 +17,7 @@ internal sealed class IntR3ActionWitness : Observer<int>
     public IntR3ActionWitness(Action<int>? onNext = null) => _onNext = onNext;
 
     /// <summary>Receives the next value.</summary>
-    /// <param name="value">The value.</param>
+    /// <param name="value">The observed value.</param>
     protected override void OnNextCore(int value) => _onNext?.Invoke(value);
 
     /// <summary>Receives an error.</summary>

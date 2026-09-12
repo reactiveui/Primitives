@@ -97,7 +97,7 @@ internal sealed class TaskSignal<T> : ITaskSignal<T>
         }
         catch (ObjectDisposedException)
         {
-            // The token source can be disposed by the task completion path.
+            // Cancellation remains harmless after task completion.
         }
 
         _cleanUp.Dispose();

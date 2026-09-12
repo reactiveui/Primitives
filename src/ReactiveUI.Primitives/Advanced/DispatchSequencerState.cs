@@ -9,11 +9,7 @@ using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Advanced;
 
-/// <summary>
-/// Coalescing engine shared by UI-thread sequencers. A sequencer holds one inline and supplies its platform
-/// <c>post</c> delegate, an optional <c>scheduleDelayed</c> delegate and a cached drain callback; immediate work is
-/// queued and drained one batch per post.
-/// </summary>
+/// <summary>Queues immediate work into posted batches and schedules delayed work through the supplied delegates.</summary>
 [SuppressMessage(
     "Performance",
     "SST1803:Make record struct readonly",

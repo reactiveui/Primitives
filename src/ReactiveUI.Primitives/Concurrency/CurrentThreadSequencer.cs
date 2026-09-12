@@ -105,7 +105,7 @@ public sealed class CurrentThreadSequencer : ISequencer
 
         SequencerQueue<long>? queue;
 
-        // Nothing is running on this thread, so the item runs inline rather than through the trampoline.
+        // Initial work executes before Schedule returns.
         if (!_running)
         {
             SetRunning(true);
@@ -126,7 +126,7 @@ public sealed class CurrentThreadSequencer : ISequencer
                 throw;
             }
 
-            // Work the item scheduled recursively runs on the same trampoline before returning.
+            // Nested work finishes before the outer Schedule call returns.
             queue = GetQueue();
             if (queue is not null)
             {
@@ -150,7 +150,7 @@ public sealed class CurrentThreadSequencer : ISequencer
 
         queue = GetQueue();
 
-        // Work is running on this thread, so the item joins the trampoline queue, created on first use.
+        // Nested work waits for the current item to finish.
         if (queue is null)
         {
             queue = new(InitialQueueCapacity);

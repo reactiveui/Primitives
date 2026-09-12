@@ -7,8 +7,6 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides factory methods for creating asynchronous observables and background jobs that emit values to observers asynchronously.</summary>
-/// <remarks>These are the entry points for turning an arbitrary asynchronous producer into a sequence: supply the
-/// subscribe logic yourself, or hand over a job to run per subscriber.</remarks>
 public static partial class SignalAsync
 {
     /// <summary>Creates a new asynchronous observable sequence using the specified subscription function.</summary>

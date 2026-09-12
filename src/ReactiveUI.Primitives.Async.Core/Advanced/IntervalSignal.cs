@@ -4,8 +4,7 @@
 
 namespace ReactiveUI.Primitives.Async.Advanced;
 
-/// <summary>An observable that emits incrementing ticks at a fixed interval. Ticks are numbered from one, each
-/// emitted after a further period has elapsed, and continue until the subscription is disposed.</summary>
+/// <summary>Emits ticks numbered from one, waiting one period between notifications until disposal.</summary>
 [System.Diagnostics.DebuggerDisplay("IntervalSignal: Period = {Period}, TimeProvider = {TimeProvider}")]
 public sealed class IntervalSignal : IObservableAsync<long>
 {

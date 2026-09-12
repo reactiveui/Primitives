@@ -80,8 +80,6 @@ public static partial class SignalAsyncExtensions
         {
             CatchWitness sink = new(observer, handler, onErrorResume, cancellationToken);
 
-            // Wire sink's dispose token into the downstream's link chain so the downstream's hot path
-            // recognises this token without allocating a per-emission linked CTS.
             if (observer is WitnessAsync<T> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);

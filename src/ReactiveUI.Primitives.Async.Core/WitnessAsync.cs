@@ -11,9 +11,8 @@ namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Base class for an asynchronous observer: handles the notification gate, cancellation linking and disposal so a derived sink only has to implement the three <c>Core</c> methods.</summary>
 /// <typeparam name="T">The type of the elements received by the observer.</typeparam>
-/// <remarks>One notification runs at a time. A reentrant call from the thread that holds the gate is allowed, but an
-/// overlapping call from another thread is a contract violation: the notification is dropped and a
-/// <see cref="ConcurrentWitnessCallsException"/> goes to <see cref="UnhandledExceptionHandler"/>.</remarks>
+/// <remarks>Reentrant calls on the active thread are allowed; overlapping calls from another thread are dropped and
+/// reported to UnhandledExceptionHandler as <see cref="ConcurrentWitnessCallsException"/>.</remarks>
 [System.Diagnostics.DebuggerDisplay("WitnessAsync: Disposed = {_disposed}, CallState = {_callState}")]
 public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDisposable
 {
@@ -51,10 +50,7 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
     /// <param name="externalLink">The external token whose cancellation should trigger this observer's disposal.</param>
     protected WitnessAsync(CancellationToken externalLink) => LinkExternalCancellation(externalLink);
 
-    /// <summary>
-    /// Gets the cancellation token that fires when this observer disposes, for an operator to link into a downstream
-    /// observer's dispose chain. Reading it creates the backing <see cref="CancellationTokenSource"/>.
-    /// </summary>
+    /// <summary>Gets the lazily created token cancelled when this observer is disposed.</summary>
     public CancellationToken InternalDisposedToken => GetOrCreateDisposeCts().Token;
 
     /// <summary>Gets a value indicating whether this observer has been disposed.</summary>
@@ -366,7 +362,7 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
         }
     }
 
-    /// <summary>Handles the sequence's terminal result. Called at most once, before this observer is disposed.</summary>
+    /// <summary>Handles the terminal result at most once, before disposal.</summary>
     /// <param name="result">The result of the operation to be processed during completion.</param>
     /// <returns>A task that completes when the result has been handled.</returns>
     protected abstract ValueTask OnCompletedAsyncCore(Result result);
@@ -376,13 +372,11 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
     [DebuggerStepThrough]
     protected void LinkExternalCancellation(CancellationToken external)
     {
-        // A token that cannot fire adds nothing to the dispose chain, so skip creating the source entirely.
         if (!external.CanBeCanceled)
         {
             return;
         }
 
-        // A cancelled token needs the source created only to hold the cancelled state for later token requests.
         if (external.IsCancellationRequested)
         {
             Volatile.Write(ref _disposed, 1);
@@ -413,7 +407,6 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
     [DebuggerStepThrough]
     protected virtual async ValueTask DisposeAsyncCore()
     {
-        // First disposer wins; the latch moves whether or not a dispose source exists.
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
         {
             return;
@@ -429,7 +422,7 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
             allOnSomethingCallsCompleted = PublishCallCompletionWaiter();
         }
 
-        // Only an existing source needs the cancellation broadcast; a later token request builds one pre-cancelled.
+        // Tokens requested after disposal are already cancelled.
         var cts = Volatile.Read(ref _disposeCts);
         if (cts is not null)
         {
@@ -490,7 +483,7 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
         }
         catch (OperationCanceledException)
         {
-            // Cooperative cancellation; swallow.
+            // Cancellation does not report a handler failure.
         }
         catch (Exception e)
         {

@@ -181,7 +181,7 @@ public sealed class MaxConcurrentBlendCoordinator<T> : IDisposable
         _ = SubscribeNext();
     }
 
-    /// <summary>Marks the coordinator failed and forwards the error. Caller must hold the gate.</summary>
+    /// <summary>Marks the coordinator failed and forwards the error while the caller holds the gate.</summary>
     /// <param name="error">The terminal error.</param>
     private void FailCore(Exception error)
     {
@@ -189,7 +189,7 @@ public sealed class MaxConcurrentBlendCoordinator<T> : IDisposable
         _observer.OnError(error);
     }
 
-    /// <summary>Completes downstream once enumeration and all active sources have completed. Caller must hold the gate.</summary>
+    /// <summary>Completes downstream after enumeration and all active sources finish, while the caller holds the gate.</summary>
     private void TryCompleteCore()
     {
         if (_done || !_enumerationCompleted || _active != 0)

@@ -8,11 +8,7 @@ using ReactiveUI.Primitives.Advanced;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
-/// <summary>
-/// Android sequencer that coalesces scheduled work onto the thread backing a <see cref="Handler"/> (typically the
-/// main/UI looper). Immediate work is batched through a single cached <see cref="Java.Lang.IRunnable"/> drain, so the
-/// per-post path allocates nothing; delayed work uses the native <see cref="Handler.PostDelayed(Java.Lang.IRunnable, long)"/>.
-/// </summary>
+/// <summary>Schedules immediate and delayed work on the Android handler thread.</summary>
 /// <seealso cref="ISequencer" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class HandlerSequencer : ISequencer
@@ -69,12 +65,20 @@ public sealed class HandlerSequencer : ISequencer
     private bool Post(Action drain)
     {
         _drainRunnable ??= new Java.Lang.Runnable(drain);
-        return Handler.Post(_drainRunnable);
+        return PostToHandler(_drainRunnable);
     }
+
+    /// <summary>Posts the runnable through the native handler.</summary>
+    /// <param name="runnable">The runnable to post.</param>
+    /// <returns>Whether the handler accepted the runnable.</returns>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool PostToHandler(Java.Lang.IRunnable runnable) => Handler.Post(runnable);
 
     /// <summary>Runs delayed work through the handler's native delayed post.</summary>
     /// <param name="item">Work item to execute at the due time.</param>
     /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void ScheduleDelayed(IWorkItem item, long dueTimestamp) =>
         Handler.PostDelayed(

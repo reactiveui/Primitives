@@ -4,12 +4,9 @@
 
 namespace ReactiveUI.Primitives.Extensions;
 
-/// <summary>
-/// Carries either a heartbeat tick or a value update from an observable sequence. <c>default(Heartbeat&lt;T&gt;)</c> is a
-/// value update holding the default <typeparamref name="T"/>; construct a heartbeat tick with
-/// <c>new Heartbeat&lt;T&gt;()</c>.
-/// </summary>
+/// <summary>Represents either a heartbeat tick or a value update.</summary>
 /// <typeparam name="T">The type of the update value.</typeparam>
+/// <remarks>The default struct value is an update containing the default T; the parameterless constructor creates a heartbeat tick.</remarks>
 [System.Diagnostics.DebuggerDisplay("Heartbeat: IsHeartbeat = {IsHeartbeat}, Update = {Update}")]
 public readonly record struct Heartbeat<T> : IHeartbeat<T>
 {

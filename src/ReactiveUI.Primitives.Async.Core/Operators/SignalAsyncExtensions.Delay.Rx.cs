@@ -12,7 +12,7 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The source observable sequence.</param>
     extension<T>(IObservableAsync<T> source)
     {
-        /// <summary>Time-shifts the observable sequence by the specified time span. Each element notification is delayed by the specified duration.</summary>
+        /// <summary>Delays each element notification by the specified duration.</summary>
         /// <param name="delayInterval">The time span by which to delay each element notification. Must be non-negative.</param>
         /// <returns>An observable sequence with element notifications time-shifted by the specified duration.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="delayInterval"/> is negative.</exception>
@@ -25,7 +25,7 @@ public static partial class SignalAsyncExtensions
                 : new DelaySignal<T>(source, delayInterval, TimeProvider.System);
         }
 
-        /// <summary>Time-shifts the observable sequence by the specified time span. Each element notification is delayed by the specified duration.</summary>
+        /// <summary>Delays each element notification by the specified duration.</summary>
         /// <param name="delayInterval">The time span by which to delay each element notification. Must be non-negative.</param>
         /// <param name="timeProvider">An optional time provider for controlling timing. If null, <see cref="TimeProvider.System"/>
         /// is used.</param>

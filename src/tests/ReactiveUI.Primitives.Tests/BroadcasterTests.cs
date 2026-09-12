@@ -19,6 +19,91 @@ public class BroadcasterTests
     /// <summary>The literal three.</summary>
     private const int Three = 3;
 
+    /// <summary>A stale observer snapshot cannot replace a newer addition.</summary>
+    /// <param name="observerCount">The number of observers in the original snapshot.</param>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    [Arguments(0)]
+    [Arguments(One)]
+    [Arguments(Two)]
+    public async Task TryAdd_StaleSnapshot_PreservesCompetingAddition(int observerCount)
+    {
+        RecordingWitness<int> first = new();
+        RecordingWitness<int> second = new();
+        RecordingWitness<int> competing = new();
+        RecordingWitness<int> incoming = new();
+        IObserver<int>[] initial = observerCount switch
+        {
+            0 => [],
+            One => [first],
+            _ => [first, second],
+        };
+        object? observers = observerCount switch
+        {
+            0 => null,
+            One => first,
+            _ => initial,
+        };
+        var stale = observers;
+        await Assert.That(Broadcaster<int>.TryAdd(ref observers, stale, competing)).IsTrue();
+        var current = observers;
+
+        await Assert.That(Broadcaster<int>.TryAdd(ref observers, stale, incoming)).IsFalse();
+        await Assert.That(observers).IsSameReferenceAs(current);
+
+        await Assert.That(Broadcaster<int>.TryAdd(ref observers, current, incoming)).IsTrue();
+        var actual = await Assert.That(observers).IsTypeOf<IObserver<int>[]>().And.IsNotNull();
+        await Assert.That(actual.SequenceEqual(initial.Append(competing).Append(incoming))).IsTrue();
+    }
+
+    /// <summary>Removal retries against the current snapshot without losing a competing addition.</summary>
+    /// <param name="multiple">True when the original snapshot contains two observers.</param>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task TryRemove_StaleSnapshot_PreservesCompetingAddition(bool multiple)
+    {
+        RecordingWitness<int> removed = new();
+        RecordingWitness<int> retained = new();
+        RecordingWitness<int> competing = new();
+        object? observers = multiple ? new IObserver<int>[] { removed, retained } : removed;
+        var stale = observers;
+        await Assert.That(Broadcaster<int>.TryAdd(ref observers, stale, competing)).IsTrue();
+        var current = observers;
+
+        await Assert.That(Broadcaster<int>.TryRemove(ref observers, stale, removed)).IsFalse();
+        await Assert.That(observers).IsSameReferenceAs(current);
+        await Assert.That(Broadcaster<int>.TryRemove(ref observers, current, removed)).IsTrue();
+
+        if (multiple)
+        {
+            var actual = await Assert.That(observers).IsTypeOf<IObserver<int>[]>().And.IsNotNull();
+            await Assert.That(actual.SequenceEqual([retained, competing])).IsTrue();
+        }
+        else
+        {
+            await Assert.That(observers).IsSameReferenceAs(competing);
+        }
+    }
+
+    /// <summary>Removing an absent observer does not change an empty or single-observer slot.</summary>
+    /// <param name="empty">True when no observer is registered.</param>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task TryRemove_AbsentObserver_LeavesSlotUnchanged(bool empty)
+    {
+        RecordingWitness<int> retained = new();
+        RecordingWitness<int> missing = new();
+        object? observers = empty ? null : retained;
+        var current = observers;
+
+        await Assert.That(Broadcaster<int>.TryRemove(ref observers, current, missing)).IsTrue();
+        await Assert.That(ReferenceEquals(observers, current)).IsTrue();
+    }
+
     /// <summary>The equality operators compare the underlying observer set by reference.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]

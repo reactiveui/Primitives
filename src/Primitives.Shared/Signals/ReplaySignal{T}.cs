@@ -220,7 +220,6 @@ public sealed class ReplaySignal<T> : ISignal<T>
     /// <remarks>Concurrent subscription receives each value once, through replay or live delivery, in emission order.</remarks>
     public void OnNext(T value)
     {
-        // Read the scheduler clock outside the lock; the window inputs are immutable.
         var interval = _usesWindow ? _scheduler.Now - _startTime : TimeSpan.Zero;
         lock (_observerLock)
         {

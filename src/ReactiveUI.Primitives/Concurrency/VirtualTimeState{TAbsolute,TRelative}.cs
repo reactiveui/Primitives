@@ -301,7 +301,6 @@ internal record struct VirtualTimeState<TAbsolute, TRelative>
     {
         ArgumentExceptionHelper.ThrowIfNull(action);
 
-        // Capture the queue reference; a struct member cannot capture this in a closure.
         var queue = _queue;
 
         ScheduledItem<TAbsolute> si = new(dueTime, _comparer, self =>

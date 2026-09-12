@@ -15,9 +15,7 @@ public static partial class SignalAsyncExtensions
         /// <summary>Returns an observable sequence that emits only distinct consecutive elements, suppressing duplicates that are equal to the previous element.</summary>
         /// <returns>An observable sequence that contains only the elements from the source sequence that are not equal to their
         /// immediate predecessor.</returns>
-        /// <remarks>Elements are compared using the default equality comparer for the type <typeparamref
-        /// name="T"/>. Only consecutive duplicate elements are suppressed; non-consecutive duplicates are not
-        /// affected.</remarks>
+        /// <remarks>Uses the default equality comparer.</remarks>
         public IObservableAsync<T> Unique()
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -33,8 +31,6 @@ public static partial class SignalAsyncExtensions
         /// <returns>An observable sequence that contains only distinct consecutive elements from the source sequence, as
         /// determined by the specified equality comparer.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="equalityComparer"/> is <see langword="null"/>.</exception>
-        /// <remarks>Only elements that differ from their immediate predecessor, as judged by <paramref
-        /// name="equalityComparer"/>, are emitted; non-consecutive duplicates are not suppressed.</remarks>
         public IObservableAsync<T> Unique(IEqualityComparer<T> equalityComparer)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -48,9 +44,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="keySelector">A function that extracts the comparison key from each element in the source sequence.</param>
         /// <returns>An observable sequence that contains only the elements from the source sequence that are not consecutive
         /// duplicates according to the specified key.</returns>
-        /// <remarks>The comparison of keys uses the default equality comparer for the type <typeparamref
-        /// name="TKey"/>. Only consecutive duplicate elements are suppressed; non-consecutive duplicates are not
-        /// affected.</remarks>
+        /// <remarks>Compares keys with the default equality comparer.</remarks>
         public IObservableAsync<T> UniqueBy<TKey>(Func<T, TKey> keySelector)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -66,9 +60,6 @@ public static partial class SignalAsyncExtensions
         /// <returns>An observable sequence that contains only the elements from the source sequence that are not consecutive
         /// duplicates according to the specified key and comparer.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="keySelector"/> or <paramref name="equalityComparer"/> is null.</exception>
-        /// <remarks>The first element in the sequence is always emitted. Subsequent elements are emitted
-        /// only if their key, as determined by <paramref name="keySelector"/>, is not equal to the key of the
-        /// immediately preceding element, as determined by <paramref name="equalityComparer"/>.</remarks>
         public IObservableAsync<T> UniqueBy<TKey>(
             Func<T, TKey> keySelector,
             IEqualityComparer<TKey> equalityComparer)

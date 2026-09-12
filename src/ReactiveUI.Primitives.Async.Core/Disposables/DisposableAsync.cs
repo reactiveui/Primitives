@@ -25,11 +25,7 @@ public static class DisposableAsync
         return new DelegateAsyncDisposable(disposeAsync);
     }
 
-    /// <summary>
-    /// Creates a new asynchronous disposable that invokes the specified delegate, passing the supplied state, when
-    /// disposed asynchronously. Preferred over <see cref="Create(Func{ValueTask})"/> wherever the lambda would capture
-    /// locals or <c>this</c>: passing them as state lets the lambda be <c>static</c> and costs no closure.
-    /// </summary>
+    /// <summary>Creates a disposable that passes explicit state to its cleanup delegate.</summary>
     /// <typeparam name="TState">The type of the state passed to the dispose delegate.</typeparam>
     /// <param name="state">The state forwarded to <paramref name="disposeAsync"/> at dispose time.</param>
     /// <param name="disposeAsync">The dispose delegate. Must not be null.</param>

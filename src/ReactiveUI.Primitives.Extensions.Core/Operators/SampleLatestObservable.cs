@@ -7,14 +7,11 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Emits the source's latest value each time <paramref name="trigger"/> fires, repeating it when no newer value has
-/// arrived and emitting nothing until the source produces its first. An error from either sequence terminates the
-/// result; the source's completion completes it, while the trigger's completion is ignored.
-/// </summary>
+/// <summary>Emits the latest source value on each trigger after the source first emits.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="trigger">The trigger observable.</param>
+/// <remarks>Source completion or either error terminates the result; trigger completion is ignored.</remarks>
 public sealed class SampleLatestObservable<T>(
     IObservable<T> source,
     IObservable<object> trigger) : IObservable<T>

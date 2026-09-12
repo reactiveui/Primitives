@@ -14,7 +14,7 @@ namespace ReactiveUI.Primitives.Signals;
 public static partial class SignalExtensions
 {
     /// <summary>Cancellation-handling operators for an observable source sequence.</summary>
-    /// <typeparam name="TResult">The type.</typeparam>
+    /// <typeparam name="TResult">The source element type.</typeparam>
     /// <param name="asyncTask">The asynchronous task.</param>
     extension<TResult>(IObservable<TResult> asyncTask)
     {
@@ -34,7 +34,7 @@ public static partial class SignalExtensions
             try
             {
                 token.ThrowIfCancellationRequested();
-                return await Task.Run(async () => await asyncTask, token).ConfigureAwait(false);
+                return await AwaitOnTaskPoolAsync(asyncTask, token).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -110,19 +110,12 @@ public static partial class SignalExtensions
 
             try
             {
-                // Create a task that completes when either the async operation completes,
-                // or cancellation is requested.
                 var readyTask = await Task.WhenAny(asyncTask, cancellationTask).ConfigureAwait(false);
 
-                // In case of cancellation, register a continuation to observe any unhandled
-                // exceptions from the asynchronous operation once it completes.
+                // Faults from work that outlives cancellation are still observed.
                 if (readyTask == cancellationTask)
                 {
-                    _ = asyncTask.ContinueWith(
-                        static task => _ = task.Exception,
-                        CancellationToken.None,
-                        TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
-                        TaskScheduler.Default);
+                    TaskFaultObservation.Register(asyncTask);
                 }
 
                 return (await readyTask.ConfigureAwait(false), tcs.Task.IsCanceled || readyTask.IsCanceled);
@@ -137,4 +130,14 @@ public static partial class SignalExtensions
             }
         }
     }
+
+    /// <summary>Starts an observable wait on the task pool.</summary>
+    /// <typeparam name="TResult">The source value type.</typeparam>
+    /// <param name="source">The source to await.</param>
+    /// <param name="token">The token cancelling dispatch.</param>
+    /// <returns>The source's terminal result.</returns>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static Task<TResult> AwaitOnTaskPoolAsync<TResult>(IObservable<TResult> source, CancellationToken token) =>
+        Task.Run(async () => await source, token);
 }

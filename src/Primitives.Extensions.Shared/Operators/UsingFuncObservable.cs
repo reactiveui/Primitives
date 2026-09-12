@@ -70,7 +70,7 @@ internal sealed class UsingFuncObservable<T, TResult>(
             }
             catch
             {
-                // Swallow secondary dispose failure; the primary exception is what callers care about.
+                // Secondary disposal errors do not replace the original failure.
             }
 
             observer.OnError(error);

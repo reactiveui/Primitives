@@ -103,8 +103,7 @@ public class SingleDisposable : IsDisposed
         /// <inheritdoc/>
         public void Dispose()
         {
-            // Intentionally empty: a reference-identity sentinel marking a disposed slot. It is only ever
-            // compared with ReferenceEquals and never itself disposed, so this body is unreachable.
+            // Disposing the terminal marker has no effect.
         }
     }
 }

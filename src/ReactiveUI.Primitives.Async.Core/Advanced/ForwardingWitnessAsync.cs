@@ -4,10 +4,7 @@
 
 namespace ReactiveUI.Primitives.Async.Advanced;
 
-/// <summary>
-/// Base observer that forwards every notification unchanged to a downstream observer. A derived type
-/// overrides only the notifications it needs to intercept and inherits pass-through behaviour for the rest.
-/// </summary>
+/// <summary>Forwards notifications unchanged unless a derived observer overrides them.</summary>
 /// <typeparam name="T">The observed element type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("ForwardingWitnessAsync: Downstream = {Downstream}")]
 public class ForwardingWitnessAsync<T> : WitnessAsync<T>

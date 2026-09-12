@@ -7,10 +7,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Reorders each array the source emits in place with non-cryptographic randomness and forwards that same instance, so
-/// any other holder of the array sees the new order. A null array is forwarded untouched.
-/// </summary>
+/// <summary>Shuffles each array in place with non-cryptographic randomness and forwards the same instance, passing null through unchanged.</summary>
 /// <typeparam name="T">The array element type.</typeparam>
 /// <param name="source">The source observable emitting arrays.</param>
 public sealed class ShuffleObservable<T>(IObservable<T[]> source) : IObservable<T[]>
@@ -48,11 +45,7 @@ public sealed class ShuffleObservable<T>(IObservable<T[]> source) : IObservable<
                 return;
             }
 
-#if NET8_0_OR_GREATER
-            Random.Shared.Shuffle(value);
-#else
             ShuffleInPlace(value);
-#endif
 
             downstream.OnNext(value);
         }
@@ -65,24 +58,28 @@ public sealed class ShuffleObservable<T>(IObservable<T[]> source) : IObservable<
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnCompleted() => downstream.OnCompleted();
 
-#if !NET8_0_OR_GREATER
-        /// <summary>Fisher-Yates over a per-thread <see cref="Random"/> for targets without <c>Random.Shuffle</c>.</summary>
+        /// <summary>Randomly reorders the array in place.</summary>
         /// <param name="array">The array to shuffle in place.</param>
+#if NET8_0_OR_GREATER
+        [ExcludeFromCodeCoverage]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void ShuffleInPlace(T[] array) => Random.Shared.Shuffle(array);
+#else
         private static void ShuffleInPlace(T[] array)
         {
-            var random = _threadRandom;
-            if (random is null)
-            {
-                random = new();
-                _threadRandom = random;
-            }
-
             for (var n = array.Length - 1; n > 0; n--)
             {
-                var k = random.Next(n + 1);
+                var k = NextIndex(n + 1);
                 (array[n], array[k]) = (array[k], array[n]);
             }
         }
+
+        /// <summary>Returns a random index below the exclusive bound.</summary>
+        /// <param name="exclusiveUpperBound">The exclusive upper bound.</param>
+        /// <returns>A nonnegative index below the bound.</returns>
+        [ExcludeFromCodeCoverage]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int NextIndex(int exclusiveUpperBound) => (_threadRandom ??= new()).Next(exclusiveUpperBound);
 #endif
     }
 }

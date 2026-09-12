@@ -53,7 +53,7 @@ public sealed class FlatMapCoordinator<TResult> : IAsyncDisposable
     /// <summary>Gets or sets a value indicating whether this coordinator has been disposed.</summary>
     private bool Disposed { get; set; }
 
-    /// <summary>Takes ownership of the outer subscription, disposing it immediately when this coordinator has finished. Callable once per coordinator.</summary>
+    /// <summary>Accepts the outer subscription once, disposing it immediately if this coordinator has finished.</summary>
     /// <param name="observer">The outer subscription to own.</param>
     /// <returns>A task that completes once the subscription has been stored or disposed.</returns>
     /// <exception cref="InvalidOperationException">Thrown when an outer subscription is set twice.</exception>
@@ -61,8 +61,7 @@ public sealed class FlatMapCoordinator<TResult> : IAsyncDisposable
     public ValueTask SetOuterObserverAsync(IAsyncDisposable observer) =>
         OuterObserver.SetDisposableAsync(observer);
 
-    /// <summary>Cancels this coordinator's lifetime when <paramref name="external"/> is cancelled. A token that
-    /// cannot be cancelled is ignored; a token cancelled at call time cancels the lifetime immediately.</summary>
+    /// <summary>Links external cancellation to this lifetime, immediately honoring an already cancelled token.</summary>
     /// <param name="external">The subscribe-time cancellation token.</param>
     public void LinkExternalCancellation(CancellationToken external)
     {
@@ -86,8 +85,7 @@ public sealed class FlatMapCoordinator<TResult> : IAsyncDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask DisposeAsync() => FinishAsync(null);
 
-    /// <summary>Subscribes to an inner sequence and counts it as active until it completes. A failure raised while
-    /// subscribing finishes the whole sequence with that failure; a call after teardown is a no-op.</summary>
+    /// <summary>Tracks an inner subscription until completion, terminating the sequence if subscribing fails.</summary>
     /// <param name="inner">The inner sequence.</param>
     /// <returns>A task that completes once the inner sequence has been subscribed.</returns>
     public async ValueTask SubscribeInnerAsync(IObservableAsync<TResult> inner)
@@ -117,7 +115,7 @@ public sealed class FlatMapCoordinator<TResult> : IAsyncDisposable
     }
 
     /// <summary>Forwards an inner value downstream, serialized against the other inner sequences so the observer is never entered concurrently.</summary>
-    /// <param name="value">The value.</param>
+    /// <param name="value">The inner value to forward.</param>
     /// <returns>A task that completes once the observer has accepted the value.</returns>
     public async ValueTask RelayNextAsync(TResult value)
     {
@@ -172,7 +170,7 @@ public sealed class FlatMapCoordinator<TResult> : IAsyncDisposable
         return shouldComplete ? FinishAsync(result) : default;
     }
 
-    /// <summary>Completes the downstream observer and disposes every tracked subscription. Idempotent; a failure handed in after teardown goes to the unhandled exception handler.</summary>
+    /// <summary>Completes and releases this coordinator once, reporting subsequent failures to the unhandled exception handler.</summary>
     /// <param name="result">The result to forward, or <see langword="null"/> to tear down without completing
     /// the observer.</param>
     /// <returns>A task that completes once teardown has finished.</returns>

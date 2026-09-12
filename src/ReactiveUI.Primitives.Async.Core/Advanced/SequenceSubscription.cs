@@ -34,7 +34,6 @@ public sealed class SequenceSubscription : TaskSignalSubscription<int>
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            // Keep the observer notification token-free on the hot path; the loop checks the subscription token.
             await observer.OnNextAsync(StartValue + i, CancellationToken.None).ConfigureAwait(false);
         }
 

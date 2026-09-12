@@ -48,11 +48,7 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
             "The timer is created disarmed, so nothing can call back into it until Schedule arms it after construction.")]
     internal ThreadPoolSequencer()
     {
-        _timer = new(
-            static state => ((ThreadPoolSequencer)state!).RunDue(),
-            this,
-            Timeout.InfiniteTimeSpan,
-            Timeout.InfiniteTimeSpan);
+        _timer = CreateTimer(this);
         _timestamp = static () => Sequencer.Timestamp;
         _queueImmediate = QueueOnThreadPool;
         _changeTimer = ChangeTimer;
@@ -115,7 +111,6 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
 
         lock (_gate)
         {
-            // Queue under the disposal gate so accepted items are released during teardown.
             ObjectDisposedExceptionHelper.ThrowIf(IsDisposed, this);
 
             _queue.Enqueue(new(item, dueTimestamp));
@@ -123,14 +118,9 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
         }
     }
 
-    /// <summary>
-    /// Releases the delay timer this sequencer owns and cancels the delayed work queued behind it. Scheduling through
-    /// a disposed sequencer throws <see cref="ObjectDisposedException"/> rather than accepting work that could never
-    /// become due. Work the thread pool has picked up runs to completion.
-    /// </summary>
+    /// <summary>Cancels pending delayed work and rejects further scheduling, allowing work already picked up by the thread pool to finish.</summary>
     public void Dispose()
     {
-        // The gate prevents rearming after disposal; timer disposal does not wait for callbacks.
         lock (_gate)
         {
             if (IsDisposed)
@@ -170,6 +160,13 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void QueueOnThreadPool(WaitCallback callback, object state) =>
         ThreadPool.UnsafeQueueUserWorkItem(callback, state);
+
+    /// <summary>Creates a disarmed timer that drains due work.</summary>
+    /// <param name="owner">The sequencer receiving timer callbacks.</param>
+    /// <returns>The disarmed timer.</returns>
+    [ExcludeFromCodeCoverage]
+    private static Timer CreateTimer(ThreadPoolSequencer owner) =>
+        new(static state => ((ThreadPoolSequencer)state!).RunDue(), owner, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
 
     /// <summary>Executes the work item unless it has been cancelled.</summary>
     /// <param name="item">Work item to execute.</param>
@@ -228,7 +225,6 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
     {
         if (IsDisposed)
         {
-            // A callback unwinding after disposal must not rearm the timer.
             return;
         }
 

@@ -3,85 +3,193 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Concurrency;
+using ReactiveUI.Primitives.Disposables;
+using TUnit.Assertions.Enums;
 
 namespace ReactiveUI.Primitives.WinForms.Tests;
 
-/// <summary>Tests control dispatch on a dedicated Windows Forms STA thread.</summary>
+/// <summary>Tests control dispatch with manually delivered callbacks and handle notifications.</summary>
 public sealed class ControlSequencerTests
 {
-    /// <summary>Verifies the constructor rejects a null control.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    /// <summary>The second value in a scheduled batch.</summary>
+    private const int SecondValue = 2;
+
+    /// <summary>Constructor validation rejects a missing control.</summary>
+    /// <returns>The test operation.</returns>
     [Test]
     public async Task ConstructorRejectsNullControl() =>
         await Assert.That(static () => new ControlSequencer(null!)).ThrowsExactly<ArgumentNullException>();
 
-    /// <summary>Verifies immediate work is posted to and executed on the control's UI thread.</summary>
-    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    /// <summary>Work rejected before handle creation is retried in order when the handle becomes ready.</summary>
+    /// <returns>The test operation.</returns>
     [Test]
-    public async Task ImmediateScheduleExecutesOnControlThread()
+    public async Task HandleCreatedRetriesQueuedWorkAndSkipsCancellation()
     {
-        using var harness = new ControlHarness();
-        var sequencer = new ControlSequencer(harness.Control);
-        var completion = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var control = CreateControl();
+        Queue<Action> drains = new();
+        var ready = false;
+        ControlSequencer sequencer = new(
+            control,
+            drain =>
+            {
+                if (!ready)
+                {
+                    return false;
+                }
 
-        sequencer.Schedule(new DelegateWorkItem(() => completion.TrySetResult(Environment.CurrentManagedThreadId)));
-
-        var ranOnThreadId = await completion.Task;
-        await Assert.That(ranOnThreadId).IsEqualTo(harness.ThreadId);
+                drains.Enqueue(drain);
+                return true;
+            },
+            null);
+        List<int> values = [];
+        RecordingWorkItem cancelled = new(() => values.Add(0));
+        sequencer.Schedule(new RecordingWorkItem(() => values.Add(1)));
+        sequencer.Schedule(cancelled);
+        sequencer.Schedule(new RecordingWorkItem(() => values.Add(SecondValue)), 0);
+        cancelled.Dispose();
+        await Assert.That(sequencer.Control).IsSameReferenceAs(control);
+        await Assert.That(drains).IsEmpty();
+        await Assert.That(values).IsEmpty();
+        ready = true;
+        sequencer.OnHandleCreated(control, EventArgs.Empty);
+        await Assert.That(drains).Count().IsEqualTo(1);
+        drains.Dequeue()();
+        await Assert.That(values).IsEquivalentTo([1, SecondValue], EqualityComparer<int>.Default, CollectionOrdering.Matching);
+        sequencer.OnHandleCreated(control, EventArgs.Empty);
+        await Assert.That(drains).IsEmpty();
     }
 
-    /// <summary>Work item that invokes a delegate when executed.</summary>
-    private sealed class DelegateWorkItem : IWorkItem
+    /// <summary>A missing handle rejects a post before invoking the native dispatcher.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task TryPostWithoutAHandleDoesNotInvoke()
     {
-        /// <summary>The action to run on execution.</summary>
-        private readonly Action _action;
+        using var control = CreateControl();
+        var accepted = ControlSequencer.TryPost(
+            control,
+            false,
+            static () => { },
+            static (_, _) => throw new InvalidOperationException("Unexpected dispatch."));
+        await Assert.That(accepted).IsFalse();
+    }
 
-        /// <summary>Initializes a new instance of the <see cref="DelegateWorkItem"/> class.</summary>
-        /// <param name="action">The action to run on execution.</param>
-        public DelegateWorkItem(Action action) => _action = action;
+    /// <summary>A live handle forwards exactly the supplied callback.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task TryPostWithAHandleForwardsTheCallback()
+    {
+        using var control = CreateControl();
+        var calls = 0;
+        Action callback = () => calls++;
+        Action? posted = null;
+        var accepted = ControlSequencer.TryPost(control, true, callback, (_, drain) => posted = drain);
+        await Assert.That(accepted).IsTrue();
+        await Assert.That<Action?>(posted).IsSameReferenceAs(callback);
+        await Assert.That(calls).IsEqualTo(0);
+        posted!();
+        await Assert.That(calls).IsEqualTo(1);
+    }
+
+    /// <summary>A disappeared handle rejects the post while disposal propagates the failure.</summary>
+    /// <param name="dispose">Whether disposal occurs during dispatch.</param>
+    /// <returns>The test operation.</returns>
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task TryPostHandlesDispatcherFailureAccordingToDisposal(bool dispose)
+    {
+        using var control = CreateControl();
+        InvalidOperationException failure = new("Handle lost.");
+        bool Post() => ControlSequencer.TryPost(
+            control,
+            true,
+            static () => { },
+            (target, _) =>
+            {
+                if (dispose)
+                {
+                    target.Dispose();
+                }
+
+                throw failure;
+            });
+        if (dispose)
+        {
+            var observed = await Assert.That(Post).ThrowsExactly<InvalidOperationException>();
+            await Assert.That(observed).IsSameReferenceAs(failure);
+        }
+        else
+        {
+            await Assert.That(Post()).IsFalse();
+        }
+    }
+
+    /// <summary>Disposed controls reject work before dispatch.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task TryPostAfterDisposalThrows()
+    {
+        var control = CreateControl();
+        control.Dispose();
+        await Assert.That(() => ControlSequencer.TryPost(control, true, static () => { }, static (_, _) => { }))
+            .ThrowsExactly<ObjectDisposedException>();
+    }
+
+    /// <summary>Delayed work waits for its callback and skips cancellation.</summary>
+    /// <param name="cancel">Whether to cancel before delivery.</param>
+    /// <returns>The test operation.</returns>
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task DelayedScheduleWaitsForItsCallback(bool cancel)
+    {
+        using var control = CreateControl();
+        Queue<(IWorkItem Item, long Due)> delayed = new();
+        ControlSequencer sequencer = new(control, static _ => false, (item, due) => delayed.Enqueue((item, due)));
+        var calls = 0;
+        RecordingWorkItem item = new(() => calls++);
+        sequencer.Schedule(item, long.MaxValue);
+        await Assert.That(calls).IsEqualTo(0);
+        var pending = delayed.Dequeue();
+        await Assert.That(pending.Due).IsEqualTo(long.MaxValue);
+        if (cancel)
+        {
+            item.Dispose();
+        }
+
+        DispatchSequencerState.RunIfActive(pending.Item);
+        await Assert.That(calls).IsEqualTo(cancel ? 0 : 1);
+    }
+
+    /// <summary>Creates a control without changing the caller's synchronization context.</summary>
+    /// <returns>The control.</returns>
+    private static Control CreateControl()
+    {
+        var previous = SynchronizationContext.Current;
+        try
+        {
+            return new();
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(previous);
+        }
+    }
+
+    /// <summary>Records execution and supports cancellation.</summary>
+    /// <param name="action">The callback to run.</param>
+    private sealed class RecordingWorkItem(Action action) : IWorkItem, IsDisposed
+    {
+        /// <inheritdoc/>
+        public bool IsDisposed { get; private set; }
+
+        /// <inheritdoc/>
+        public void Dispose() => IsDisposed = true;
 
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Execute() => _action();
-    }
-
-    /// <summary>Owns the control and its STA message loop.</summary>
-    private sealed class ControlHarness : IDisposable
-    {
-        /// <summary>The thread running the Windows Forms message loop.</summary>
-        private readonly Thread _thread;
-
-        /// <summary>Initializes a new instance of the <see cref="ControlHarness"/> class with a created control handle.</summary>
-        public ControlHarness()
-        {
-            using var ready = new ManualResetEventSlim(false);
-            _thread = new(() =>
-            {
-                Control = new();
-                _ = Control.Handle; // Force handle creation so BeginInvoke can marshal work.
-                ThreadId = Environment.CurrentManagedThreadId;
-                ready.Set();
-                Application.Run();
-            }) { IsBackground = true, Name = "WinFormsControlHarness" };
-
-            _thread.SetApartmentState(ApartmentState.STA);
-            _thread.Start();
-            ready.Wait();
-        }
-
-        /// <summary>Gets the hosted control.</summary>
-        public Control Control { get; private set; } = null!;
-
-        /// <summary>Gets the managed thread id the control runs on.</summary>
-        public int ThreadId { get; private set; }
-
-        /// <inheritdoc/>
-        public void Dispose()
-        {
-            _ = Control.BeginInvoke(Application.ExitThread);
-            _thread.Join();
-            Control.Dispose();
-        }
+        public void Execute() => action();
     }
 }

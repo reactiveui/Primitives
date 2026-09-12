@@ -6,12 +6,10 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Forwards each source value paired with a fresh disposable handle the consumer disposes to acknowledge it. Each value
-/// carries its own handle, and a handle left undisposed leaves only its own acknowledgement wait outstanding.
-/// </summary>
+/// <summary>Pairs each source value with an independent disposable acknowledgement handle.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
+/// <remarks>An undisposed handle leaves only its own acknowledgement pending.</remarks>
 public sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IObservable<(T Value, IDisposable Sync)>
 {
     /// <inheritdoc/>
@@ -39,7 +37,7 @@ public sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IObse
         private bool _disposed;
 
         /// <inheritdoc/>
-        /// <param name="value">The value.</param>
+        /// <param name="value">The value to forward.</param>
         public void OnNext(T value)
         {
             lock (_gate)

@@ -8,8 +8,6 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for converting tasks, asynchronous enumerables, and enumerable sequences into asynchronous observable sequences.</summary>
-/// <remarks>Every overload is spelled <c>ToAsyncSignal</c>, so the conversion reads the same whatever the source, and a
-/// sequence that is an <see cref="IObservableAsync{T}"/> passes straight through.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Observable-conversion operators for an asynchronous enumerable source.</summary>
@@ -33,11 +31,10 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The enumerable sequence to convert to an asynchronous observable. Cannot be null.</param>
     extension<T>(IEnumerable<T> source)
     {
-        /// <summary>Converts the specified enumerable sequence to an asynchronous observable sequence, emitting each element in the background.</summary>
+        /// <summary>Emits the enumerable's elements, awaiting each observer notification.</summary>
         /// <returns>An asynchronous observable sequence that emits each element from the source enumerable and completes when all
         /// elements have been emitted.</returns>
-        /// <remarks>Enumeration runs on a background thread, once per subscriber, so a blocking or side-effecting
-        /// sequence neither stalls the subscribe call nor is shared between observers.</remarks>
+        /// <remarks>Enumeration starts on the subscribing thread, once per subscriber.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [SuppressMessage(
             "Roslynator",

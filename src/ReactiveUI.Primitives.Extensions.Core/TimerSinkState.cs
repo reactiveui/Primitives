@@ -24,7 +24,7 @@ public sealed class TimerSinkState<T>(IObserver<T> downstream)
     /// <summary>Gets a value indicating whether the sink has terminated through error, completion or disposal; read it under the owning sink's gate.</summary>
     public bool Done { get; private set; }
 
-    /// <summary>Forwards a terminal error to the downstream observer and tears the sink down. The caller must hold the sink's gate.</summary>
+    /// <summary>Forwards an error and disposes the sink while the caller holds its gate.</summary>
     /// <param name="error">The error to forward.</param>
     public void HandleErrorLocked(Exception error)
     {
@@ -38,7 +38,7 @@ public sealed class TimerSinkState<T>(IObserver<T> downstream)
         downstream.OnError(error);
     }
 
-    /// <summary>Forwards completion to the downstream observer and tears the sink down. The caller must hold the sink's gate.</summary>
+    /// <summary>Forwards completion and disposes the sink while the caller holds its gate.</summary>
     public void HandleCompletedLocked()
     {
         if (Done)
@@ -51,7 +51,7 @@ public sealed class TimerSinkState<T>(IObserver<T> downstream)
         downstream.OnCompleted();
     }
 
-    /// <summary>Marks the sink terminal and disposes the timer without forwarding a notification. The caller must hold the sink's gate.</summary>
+    /// <summary>Marks the sink terminal and disposes its timer without notification, while the caller holds its gate.</summary>
     public void HandleDisposeLocked()
     {
         Done = true;

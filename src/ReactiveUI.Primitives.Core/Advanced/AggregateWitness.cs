@@ -6,11 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Advanced;
 
-/// <summary>
-/// Single-source sink that folds every observed value through an immutable value-type <typeparamref name="TAggregator"/>
-/// and emits the aggregate result once the source completes. The accumulator is advanced functionally: each value
-/// yields a replacement accumulator rather than mutating the current one.
-/// </summary>
+/// <summary>Folds source values through an immutable accumulator and emits the result when the source completes.</summary>
 /// <typeparam name="T">The observed value type.</typeparam>
 /// <typeparam name="TResult">The terminal result type.</typeparam>
 /// <typeparam name="TAggregator">The value-type accumulator that folds values and yields the result.</typeparam>

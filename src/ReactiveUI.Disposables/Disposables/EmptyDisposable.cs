@@ -24,6 +24,6 @@ public sealed class EmptyDisposable : IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
-        // Intentionally empty: represents the absence of a resource, so there is nothing to release.
+        // Disposing an empty resource has no effect.
     }
 }

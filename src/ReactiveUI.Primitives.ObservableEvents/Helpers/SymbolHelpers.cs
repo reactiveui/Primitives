@@ -169,7 +169,6 @@ internal static class SymbolHelpers
     /// <returns>The escaped text, or the original instance when nothing needed escaping.</returns>
     internal static string EscapeXml(string value)
     {
-        // Most references have nothing to escape, so the scan is what keeps the common case allocation-free.
         if (value.IndexOfAny(XmlSpecialCharacters) < 0)
         {
             return value;
@@ -241,7 +240,7 @@ internal static class SymbolHelpers
 
         if (parameter.HasReferenceTypeConstraint)
         {
-            // Omit referenced nullable constraints when the consumer's language cannot express them.
+            // Generated constraints omit nullable syntax unsupported by the consumer language version.
             return supportsNullableAnnotations
                 && parameter.ReferenceTypeConstraintNullableAnnotation == NullableAnnotation.Annotated
                 ? "class?"

@@ -10,15 +10,12 @@ namespace ReactiveUI.Primitives.Reactive.Advanced;
 namespace ReactiveUI.Primitives.Advanced;
 #endif
 
-/// <summary>
-/// Cold signal that mirrors the source and, on an error of type <typeparamref name="TException"/>, switches to
-/// the sequence the handler selects for it. Any other error, and an error thrown by the handler itself, is
-/// forwarded downstream unchanged.
-/// </summary>
+/// <summary>Mirrors the source and switches to a handler-selected sequence on errors of the specified type.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 /// <typeparam name="TException">The handled exception type.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="handler">The handler that selects the fallback sequence for a caught error.</param>
+/// <remarks>Other error types and exceptions thrown by the handler propagate unchanged.</remarks>
 [System.Diagnostics.DebuggerDisplay("RecoverSignal: Source = {_source}")]
 public sealed class RecoverSignal<T, TException>(IObservable<T> source, Func<TException, IObservable<T>> handler) : IRequireCurrentThread<T>
     where TException : Exception

@@ -6,10 +6,7 @@ using ReactiveUI.Primitives.Advanced;
 
 namespace ReactiveUI.Primitives.Signals;
 
-/// <summary>
-/// Projects each source value into a new form using a caller-supplied state value, without allocating a per-value
-/// closure: the state is stored on the sink and passed to the selector for each element.
-/// </summary>
+/// <summary>Projects each source value using the supplied state and selector.</summary>
 /// <typeparam name="TSource">The source value type.</typeparam>
 /// <typeparam name="TState">The state type passed to the selector.</typeparam>
 /// <typeparam name="TResult">The result value type.</typeparam>

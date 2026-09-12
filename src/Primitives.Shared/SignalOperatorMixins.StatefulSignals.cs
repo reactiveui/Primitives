@@ -36,7 +36,6 @@ public static partial class LinqExtensions
                 return EmptyDisposable.Instance;
             }
 
-            // Acquire the subscription before the trampoline delivers values that can terminate it.
             if (!CurrentThreadRequirement.IsRequired(_source) || !CurrentThreadSequencer.IsScheduleRequired)
             {
                 return SubscribeCore(observer);
@@ -82,7 +81,6 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            // Acquire both subscriptions before either trampoline starts delivering values.
             if ((!CurrentThreadRequirement.IsRequired(_source) && !CurrentThreadRequirement.IsRequired(_other))
                 || !CurrentThreadSequencer.IsScheduleRequired)
             {
@@ -454,7 +452,6 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            // Acquire the subscription before a predicate can stop the source.
             if (!CurrentThreadRequirement.IsRequired(_source) || !CurrentThreadSequencer.IsScheduleRequired)
             {
                 return SubscribeCore(observer);

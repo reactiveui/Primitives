@@ -82,7 +82,7 @@ public sealed class AsyncRenameCoverageTests
         await Assert.That(AsyncContext.Default.UsesDefaultSequencer).IsTrue();
         await Assert.That(sequencerContext.UsesDefaultSequencer).IsFalse();
         await Assert.That(AsyncContext.From(new SynchronizationContext()).UsesDefaultSequencer).IsFalse();
-        await Assert.That(AsyncContext.From(CustomTaskScheduler.Instance).UsesDefaultSequencer).IsFalse();
+        await Assert.That(AsyncContext.From(new CustomTaskScheduler()).UsesDefaultSequencer).IsFalse();
         await Assert.That(syncSequencerContext.SynchronizationContext).IsSameReferenceAs(syncSequencer);
         await Assert.That(sequencerContext.IsSameAsCurrentAsyncContext()).IsFalse();
         await Assert.That(scheduler.Sequencer).IsSameReferenceAs(sequencer);
@@ -121,7 +121,7 @@ public sealed class AsyncRenameCoverageTests
         canceledAwaitable.OnCompleted(() => cancellationCallbacks++);
         await Assert.That(cancellationCallbacks).IsEqualTo(1);
         TaskCompletionSource scheduled = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        var schedulerAwaitable = AsyncContext.From(CustomTaskScheduler.Instance)
+        var schedulerAwaitable = AsyncContext.From(new CustomTaskScheduler())
             .SwitchContextAsync(true, CancellationToken.None);
         schedulerAwaitable.OnCompleted(scheduled.SetResult);
         await scheduled.Task.ConfigureAwait(false);

@@ -237,7 +237,6 @@ public static partial class SignalAsyncExtensions
             ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
                 IObserverAsync<T> observer,
                 CancellationToken cancellationToken) =>
-                // The coordinator's constructor sets Coordinator on both branches, so it is never null here.
                 Coordinator.SubscribeBranchAsync(isTrueBranch, observer, cancellationToken);
         }
 

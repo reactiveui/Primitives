@@ -4,10 +4,7 @@
 
 namespace ReactiveUI.Primitives.Advanced;
 
-/// <summary>
-/// Interlocked single-assignment subscription slots for a sink that resubscribes: a slot holds at most one live
-/// subscription and, once released, swaps to a sentinel so a late assignment is disposed instead of stored.
-/// </summary>
+/// <summary>Holds one subscription per slot and disposes assignments made after a slot is released.</summary>
 public static class SubscriptionSlots
 {
     /// <summary>The sentinel stored in a slot once it has been released.</summary>

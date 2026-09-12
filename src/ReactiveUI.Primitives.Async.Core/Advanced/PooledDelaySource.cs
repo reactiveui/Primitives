@@ -8,12 +8,8 @@ using ReactiveUI.Primitives.Internal;
 
 namespace ReactiveUI.Primitives.Async.Advanced;
 
-/// <summary>Poolable <see cref="IValueTaskSource"/> backing <c>DelayAsync</c> for non-System <see cref="TimeProvider"/> instances, so a delay costs no per-call allocation.</summary>
-/// <remarks>
-/// Whichever of the timer callback and the cancellation registration fires first claims completion
-/// through an <see cref="Interlocked.CompareExchange(ref int, int, int)"/> on a state flag; the
-/// loser is a no-op.
-/// </remarks>
+/// <summary>Provides reusable cancellable delays driven by a supplied time provider.</summary>
+/// <remarks>The first timer or cancellation callback determines the result.</remarks>
 [System.Diagnostics.DebuggerDisplay("PooledDelaySource: Completed = {_completed}, Timer = {_timer}")]
 public sealed class PooledDelaySource : IValueTaskSource
 {
@@ -27,7 +23,7 @@ public sealed class PooledDelaySource : IValueTaskSource
     [ThreadStatic]
     private static PooledDelaySource? _threadCached;
 
-    /// <summary>Backing source. Continuations run asynchronously so awaiters never re-enter the timer / cancel path.</summary>
+    /// <summary>The completion source, whose continuations run asynchronously.</summary>
     private ManualResetValueTaskSourceCore<bool> _core = new() { RunContinuationsAsynchronously = true };
 
     /// <summary>Tracks completion: <see cref="StateOpen"/> until the timer or cancellation claims completion; then <see cref="StateClaimed"/>.</summary>
@@ -58,15 +54,12 @@ public sealed class PooledDelaySource : IValueTaskSource
         return cached;
     }
 
-    /// <summary>
-    /// Begins the delay. The returned <see cref="ValueTask"/> completes when the timer fires or
-    /// the cancellation token is signalled — whichever happens first. The caller MUST await it
-    /// exactly once; the instance returns to the pool inside <see cref="GetResult(short)"/>.
-    /// </summary>
+    /// <summary>Begins a delay that completes when its timer or cancellation fires first.</summary>
     /// <param name="delay">The dueTime passed to <see cref="TimeProvider.CreateTimer"/>.</param>
     /// <param name="timeProvider">The non-System time provider supplying the timer.</param>
     /// <param name="cancellationToken">Cancellation token observed while waiting.</param>
     /// <returns>A <see cref="ValueTask"/> backed by this source.</returns>
+    /// <remarks>Await the returned value exactly once; consuming its result returns this source to the pool.</remarks>
     public ValueTask BeginAsync(TimeSpan delay, TimeProvider timeProvider, CancellationToken cancellationToken)
     {
         if (cancellationToken.IsCancellationRequested)
@@ -76,8 +69,6 @@ public sealed class PooledDelaySource : IValueTaskSource
             return new(this, _core.Version);
         }
 
-        // CreateTimer may invoke the callback synchronously, flipping _completed to Claimed before
-        // this call returns.
         _timer = timeProvider.CreateTimer(
             static state => ((PooledDelaySource)state!).OnTimerFired(),
             this,
@@ -86,7 +77,6 @@ public sealed class PooledDelaySource : IValueTaskSource
 
         if (Volatile.Read(ref _completed) == StateClaimed)
         {
-            // Sync-fire fast path: the source is complete, so no cancellation registration is needed.
             return new(this, _core.Version);
         }
 
@@ -159,7 +149,6 @@ public sealed class PooledDelaySource : IValueTaskSource
         _completed = StateOpen;
         _core.Reset();
 
-        // One instance cached per thread; any extra instances are dropped for the GC.
         _threadCached ??= this;
     }
 }

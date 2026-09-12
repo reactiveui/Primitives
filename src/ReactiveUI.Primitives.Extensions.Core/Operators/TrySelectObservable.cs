@@ -24,7 +24,7 @@ public sealed class TrySelectObservable<TIn, TOut>(
         return source.Subscribe(new TrySelectWitness(observer, selector));
     }
 
-    /// <summary>Observer that applies the selector and only forwards non-null results. Exceptions from the selector are routed to <see cref="IObserver{T}.OnError"/>.</summary>
+    /// <summary>Projects values and forwards non-null results, reporting selector exceptions through OnError.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="selector">The projection delegate.</param>
     private sealed class TrySelectWitness(

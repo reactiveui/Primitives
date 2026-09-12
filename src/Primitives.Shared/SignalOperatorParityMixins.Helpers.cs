@@ -543,7 +543,6 @@ public static partial class LinqExtensions
 
                 _done = true;
 
-                // Completion flushes the pending value; the timer clears the same flag under this gate.
                 if (_hasLatest)
                 {
                     _hasLatest = false;
@@ -576,7 +575,6 @@ public static partial class LinqExtensions
                 return;
             }
 
-            // Serialize the timer emission against a concurrent terminal notification.
             lock (_gate)
             {
                 if (_done)

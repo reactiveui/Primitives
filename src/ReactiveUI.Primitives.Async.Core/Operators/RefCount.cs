@@ -81,7 +81,6 @@ public static partial class SignalAsyncExtensions
         {
             using (await _gate.EnterAsync(cancellationToken).ConfigureAwait(false))
             {
-                // Increment before subscribing: a source that completes during the subscribe decrements it again.
                 ++_refCount;
                 var needConnect = _refCount == 1;
                 RefCountWitness refCountWitness = new(this, observer);

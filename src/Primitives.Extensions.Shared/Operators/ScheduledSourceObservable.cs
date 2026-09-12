@@ -108,13 +108,13 @@ internal sealed class ScheduledSourceObservable<T> : IObservable<T>
         /// <inheritdoc/>
         public void OnError(Exception error)
         {
-            // Not forwarded: this operator is next-only by contract.
+            // Terminal notifications are not forwarded.
         }
 
         /// <inheritdoc/>
         public void OnCompleted()
         {
-            // Not forwarded: this operator is next-only by contract.
+            // Terminal notifications are not forwarded.
         }
     }
 }

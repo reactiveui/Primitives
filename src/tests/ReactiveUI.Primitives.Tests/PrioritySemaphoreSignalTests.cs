@@ -138,6 +138,39 @@ public sealed class PrioritySemaphoreSignalTests
         subscription.Dispose();
     }
 
+    /// <summary>A release retries against a count changed by an intervening release.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task ReleaseWithStaleCountRetriesAgainstCurrentCapacity()
+    {
+        using PrioritySemaphoreSignal<int> signal = new(SecondValue);
+        RecordingObserver<int> observer = new();
+        using var subscription = signal.Subscribe(observer);
+        signal.OnNext(FirstValue);
+        signal.OnNext(SecondValue);
+        signal.Release();
+        signal.ReleaseObserved(SecondValue);
+        signal.OnNext(ThirdValue);
+        signal.OnNext(FourthValue);
+        await Assert.That(observer.Values.SequenceEqual([FirstValue, SecondValue, ThirdValue, FourthValue])).IsTrue();
+    }
+
+    /// <summary>A stale occupied count cannot release capacity after the last slot was released.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task ReleaseWithStaleCountStopsWhenCapacityIsAlreadyFree()
+    {
+        using PrioritySemaphoreSignal<int> signal = new(1);
+        RecordingObserver<int> observer = new();
+        using var subscription = signal.Subscribe(observer);
+        signal.OnNext(FirstValue);
+        signal.Release();
+        signal.ReleaseObserved(1);
+        signal.OnNext(SecondValue);
+        signal.OnNext(ThirdValue);
+        await Assert.That(observer.Values.SequenceEqual([FirstValue, SecondValue])).IsTrue();
+    }
+
     /// <summary>Error stops the queue and forwards the exact exception.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]

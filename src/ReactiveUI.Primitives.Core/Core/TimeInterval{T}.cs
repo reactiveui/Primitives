@@ -7,10 +7,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Core;
 
-/// <summary>
-/// Represents a value paired with a time interval, whose meaning is the producer's: how long the value took to
-/// produce, the gap since the previous value, or its delivery time relative to a base.
-/// </summary>
+/// <summary>Pairs a value with a producer-defined time interval.</summary>
 /// <typeparam name="T">The annotated value type.</typeparam>
 [Serializable]
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]

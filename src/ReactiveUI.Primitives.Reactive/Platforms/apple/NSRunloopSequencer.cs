@@ -3,17 +3,13 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Disposables;
+using System.Runtime.CompilerServices;
 
 using CoreFoundation;
 
 namespace ReactiveUI.Primitives.Reactive.Concurrency;
 
-/// <summary>
-/// System.Reactive-flavoured Apple scheduler that coalesces scheduled work onto the main <see cref="DispatchQueue"/>
-/// (the UI thread on iOS, tvOS, Mac Catalyst, and macOS). Immediate work is batched through a single cached
-/// <see cref="DispatchBlock"/> drain, so the per-post path allocates nothing; delayed work uses
-/// <see cref="DispatchQueue.DispatchAfter(DispatchTime, DispatchBlock)"/>.
-/// </summary>
+/// <summary>Schedules immediate and delayed work on the Apple main dispatch queue.</summary>
 /// <seealso cref="System.Reactive.Concurrency.IScheduler" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class NSRunloopSequencer : CoalescingDispatchScheduler
@@ -43,7 +39,7 @@ public sealed class NSRunloopSequencer : CoalescingDispatchScheduler
     protected override bool Post(Action drain)
     {
         _drainBlock ??= new DispatchBlock(drain);
-        DispatchQueue.MainQueue.DispatchAsync(_drainBlock);
+        DispatchOnMainQueue(_drainBlock);
         return true;
     }
 
@@ -51,6 +47,22 @@ public sealed class NSRunloopSequencer : CoalescingDispatchScheduler
     protected override IDisposable ScheduleOnDispatcher(Action work, TimeSpan dueTime)
     {
         var block = new DispatchBlock(work);
+        return ScheduleOnMainQueue(block, dueTime);
+    }
+
+    /// <summary>Posts the block through the native main queue.</summary>
+    /// <param name="block">The callback block to post.</param>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void DispatchOnMainQueue(DispatchBlock block) => DispatchQueue.MainQueue.DispatchAsync(block);
+
+    /// <summary>Schedules a cancellable block through the native main queue.</summary>
+    /// <param name="block">The callback block to run.</param>
+    /// <param name="dueTime">The requested delay.</param>
+    /// <returns>The block cancellation handle.</returns>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    private static IDisposable ScheduleOnMainQueue(DispatchBlock block, TimeSpan dueTime)
+    {
         var nanoseconds = (long)dueTime.TotalMilliseconds * NanosecondsPerMillisecond;
         DispatchQueue.MainQueue.DispatchAfter(new(DispatchTime.Now, nanoseconds), block);
         return Disposable.Create(block, static b => b.Cancel());

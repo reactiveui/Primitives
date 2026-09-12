@@ -57,25 +57,7 @@ public class SingleReplaceableDisposable : IsDisposed
     public void Create(IDisposable disposable)
     {
         ArgumentExceptionHelper.ThrowIfNull(disposable);
-
-        while (true)
-        {
-            var current = Volatile.Read(ref _disposable);
-            if (ReferenceEquals(current, DisposedSentinel))
-            {
-                disposable.Dispose();
-                _action?.Invoke();
-                return;
-            }
-
-            if (!ReferenceEquals(Interlocked.CompareExchange(ref _disposable, disposable, current), current))
-            {
-                continue;
-            }
-
-            current?.Dispose();
-            return;
-        }
+        CreateWithRetry(disposable);
     }
 
     /// <summary>Disposes the inner value and blocks further assignments; repeated calls have no further effect.</summary>
@@ -83,6 +65,28 @@ public class SingleReplaceableDisposable : IsDisposed
     {
         Dispose(true);
         GC.SuppressFinalize(this);
+    }
+
+    /// <summary>Replaces the observed value, or disposes the incoming value when the slot is closed.</summary>
+    /// <param name="current">The observed slot value.</param>
+    /// <param name="disposable">The incoming disposable.</param>
+    /// <returns>True when the incoming value was handled; false when the observed slot was stale.</returns>
+    internal bool TryCreate(IDisposable? current, IDisposable disposable)
+    {
+        if (ReferenceEquals(current, DisposedSentinel))
+        {
+            disposable.Dispose();
+            _action?.Invoke();
+            return true;
+        }
+
+        if (!ReferenceEquals(Interlocked.CompareExchange(ref _disposable, disposable, current), current))
+        {
+            return false;
+        }
+
+        current?.Dispose();
+        return true;
     }
 
     /// <summary>Disposes the inner value and then invokes the constructor-supplied action, once.</summary>
@@ -99,6 +103,20 @@ public class SingleReplaceableDisposable : IsDisposed
         _action?.Invoke();
     }
 
+    /// <summary>Retries replacement until the observed slot is current.</summary>
+    /// <param name="disposable">The incoming disposable.</param>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    private void CreateWithRetry(IDisposable disposable)
+    {
+        while (true)
+        {
+            if (TryCreate(Volatile.Read(ref _disposable), disposable))
+            {
+                return;
+            }
+        }
+    }
+
     /// <summary>Disposable marker for disposed slots.</summary>
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     private sealed class DisposedMarker : IDisposable
@@ -106,8 +124,7 @@ public class SingleReplaceableDisposable : IsDisposed
         /// <inheritdoc/>
         public void Dispose()
         {
-            // Intentionally empty: a reference-identity sentinel marking a disposed slot. It is only ever
-            // compared with ReferenceEquals and never itself disposed, so this body is unreachable.
+            // Disposing the terminal marker has no effect.
         }
     }
 }

@@ -7,15 +7,12 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Emits the larger or smaller of the latest values from two sources, starting once both have produced one. An error
-/// from either source terminates the sequence; completion waits for both sources, or fires as soon as one completes
-/// without having emitted.
-/// </summary>
+/// <summary>Emits the larger or smaller latest value after both sources have emitted.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 /// <param name="left">The first source.</param>
 /// <param name="right">The second source.</param>
 /// <param name="emitMaximum"><c>true</c> to emit the maximum; <c>false</c> to emit the minimum.</param>
+/// <remarks>An error terminates immediately; successful completion waits for both sources unless one completes without emitting.</remarks>
 [System.Diagnostics.DebuggerDisplay("BinaryMinMaxObservable: Left = {_left}, Right = {_right}")]
 public sealed class BinaryMinMaxObservable<T>(IObservable<T> left, IObservable<T> right, bool emitMaximum) : IObservable<T>
     where T : struct, IComparable<T>
@@ -68,7 +65,7 @@ public sealed class BinaryMinMaxObservable<T>(IObservable<T> left, IObservable<T
 
         /// <summary>Records one side's latest value and emits the winning comparison once both sides have a value.</summary>
         /// <param name="isLeft"><c>true</c> for the left source.</param>
-        /// <param name="value">The value.</param>
+        /// <param name="value">That side's latest value.</param>
         public void OnNext(bool isLeft, T value)
         {
             lock (_gate)

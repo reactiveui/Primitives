@@ -7,11 +7,7 @@ using System.Text;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Buffers characters from <paramref name="startsWith"/> through <paramref name="endsWith"/> inclusive and emits each
-/// delimited run as one string, discarding characters outside a run. Completion flushes a run whose end delimiter never
-/// arrived.
-/// </summary>
+/// <summary>Emits strings delimited by startsWith and endsWith, including both delimiters and flushing an unfinished string on completion.</summary>
 /// <param name="source">The source observable of characters.</param>
 /// <param name="startsWith">The starting delimiter.</param>
 /// <param name="endsWith">The ending delimiter.</param>

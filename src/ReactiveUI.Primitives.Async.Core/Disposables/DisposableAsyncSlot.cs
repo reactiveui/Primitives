@@ -7,21 +7,13 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async.Disposables;
 
-/// <summary>
-/// Zero-allocation static helpers that implement <see cref="SingleReplaceableDisposableAsync"/>-style swap
-/// and <see cref="SingleAssignmentDisposableAsync"/>-style single-assignment semantics directly
-/// against a caller-owned <see cref="IAsyncDisposable"/> field. Use these when the wrapper-class
-/// allocation that the convenience types incur is on a hot path.
-/// </summary>
+/// <summary>Manages atomic replacement, single assignment, and disposal of a caller-owned resource slot.</summary>
 public static class DisposableAsyncSlot
 {
     /// <summary>Shared marker used by all async-disposable slot implementations once a slot is closed.</summary>
     internal static readonly IAsyncDisposable DisposedSentinel = new DisposedAsyncDisposable();
 
-    /// <summary>Swaps the slot's current contents with <paramref name="value"/> and asynchronously
-    /// disposes the previous occupant. Equivalent to
-    /// <see cref="SingleReplaceableDisposableAsync.SetDisposableAsync"/>, but operates on a caller-owned field
-    /// so no wrapper instance is allocated.</summary>
+    /// <summary>Replaces the slot's resource and asynchronously disposes the previous value.</summary>
     /// <param name="slot">Reference to the caller-owned <see cref="IAsyncDisposable"/> field.</param>
     /// <param name="value">The new value to store, or <see langword="null"/> to clear the slot.</param>
     /// <returns>A <see cref="ValueTask"/> that completes once the previous occupant (if any) has been disposed.</returns>
@@ -30,9 +22,7 @@ public static class DisposableAsyncSlot
     public static ValueTask SwapAsync(ref IAsyncDisposable? slot, IAsyncDisposable? value) =>
         SwapObservedAsync(ref slot, value, Volatile.Read(ref slot));
 
-    /// <summary>Atomically fills an empty slot with <paramref name="value"/>. A closed slot disposes
-    /// <paramref name="value"/> instead. Equivalent to
-    /// <see cref="SingleAssignmentDisposableAsync.SetDisposableAsync(IAsyncDisposable?)"/>.</summary>
+    /// <summary>Assigns an empty slot once, disposing the supplied value if the slot is closed.</summary>
     /// <param name="slot">Reference to the caller-owned <see cref="IAsyncDisposable"/> field.</param>
     /// <param name="value">The value to assign, or <see langword="null"/>.</param>
     /// <returns>A <see cref="ValueTask"/> that completes once <paramref name="value"/> has been disposed when the slot
@@ -52,9 +42,7 @@ public static class DisposableAsyncSlot
             : throw CreateAlreadyAssignedException();
     }
 
-    /// <summary>Asynchronously disposes the slot's current contents and marks the slot as disposed.
-    /// Subsequent <see cref="SwapAsync"/> / <see cref="AssignAsync"/> calls will dispose their incoming
-    /// value rather than store it. Idempotent.</summary>
+    /// <summary>Closes and disposes the slot once, causing future assignments to dispose their incoming values.</summary>
     /// <param name="slot">Reference to the caller-owned <see cref="IAsyncDisposable"/> field.</param>
     /// <returns>A <see cref="ValueTask"/> that completes once the prior occupant has been disposed.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

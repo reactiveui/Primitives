@@ -145,13 +145,13 @@ public static partial class ReactiveExtensions
     /// <param name="source">The source observable sequence.</param>
     extension<T>(IObservable<T> source)
     {
-        /// <summary>Returns only values that are not null. Converts the nullability.</summary>
+        /// <summary>Filters out null values and returns a sequence with a non-nullable element type.</summary>
         /// <returns>A non nullable version of the observable that only emits valid values.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> WhereIsNotNull() =>
             new WhereIsNotNullObservable<T>(source);
 
-        /// <summary>Change the source observable type to <see cref="RxVoid"/>. This allows us to be notified when the observable emits a value.</summary>
+        /// <summary>Replaces each source value with RxVoid.</summary>
         /// <returns>The signal.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<RxVoid> AsSignal() =>
@@ -189,11 +189,7 @@ public static partial class ReactiveExtensions
         public IObservable<Stale<T>> DetectStale(TimeSpan stalenessPeriod, ISequencer scheduler) =>
             new DetectStaleObservable<T>(source, stalenessPeriod, scheduler);
 
-        /// <summary>
-        /// Applies a conflation algorithm to an observable stream. Anytime the stream OnNext twice
-        /// below minimumUpdatePeriod, the second update gets delayed to respect the
-        /// minimumUpdatePeriod. If more than 2 updates happen, only the last update is pushed.
-        /// </summary>
+        /// <summary>Emits updates at least minimumUpdatePeriod apart, retaining only the latest pending update.</summary>
         /// <param name="minimumUpdatePeriod">Minimum delay between two updates.</param>
         /// <param name="scheduler">Scheduler to publish updates.</param>
         /// <returns>The conflated stream.</returns>
@@ -216,7 +212,7 @@ public static partial class ReactiveExtensions
         public IObservable<T> LatestOrDefault(T defaultValue) =>
             new LatestOrDefaultObservable<T>(source, defaultValue);
 
-        /// <summary>Logs the errors. Inline error logging without terminating the stream.</summary>
+        /// <summary>Logs errors without terminating the sequence.</summary>
         /// <param name="logger">The logger.</param>
         /// <returns>A sequence that logs errors.</returns>
         public IObservable<T> LogErrors(Action<Exception> logger)
@@ -398,11 +394,7 @@ public static partial class ReactiveExtensions
         public IObservable<T> SwitchIfEmpty(IObservable<T> fallback) =>
             new SwitchIfEmptyObservable<T>(source, fallback);
 
-        /// <summary>
-        /// Synchronizes the asynchronous operations in downstream operations.
-        /// Use SubscribeSynchronus instead for a simpler version.
-        /// Call Sync.Dispose() to release the lock in the downstream methods.
-        /// </summary>
+        /// <summary>Pairs each value with a disposable acknowledgement that releases its downstream wait.</summary>
         /// <returns>An Observable of T and a release mechanism.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<(T Value, IDisposable Sync)> SynchronizeAsync() =>
@@ -531,13 +523,7 @@ public static partial class ReactiveExtensions
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Task<T> ToHotTask() => FirstAsTaskHelper.FirstAsTask(source);
 
-        /// <summary>
-        /// Convert an observable to a <see cref="ValueTask{T}"/> that starts immediately. Backed by a
-        /// pooled <see cref="System.Threading.Tasks.Sources.IValueTaskSource{T}"/> implementation, so
-        /// steady-state callers pay no allocations after the per-type pool warms up. Prefer this over
-        /// <see cref="ToHotTask{T}"/> when the call site can consume a <see cref="ValueTask{T}"/>
-        /// (single await, no caching, no <c>WhenAll</c>).
-        /// </summary>
+        /// <summary>Subscribes immediately and returns a ValueTask for the first value that must be consumed exactly once.</summary>
         /// <returns>A <see cref="ValueTask{T}"/> that completes with the first value, faults on source error, or faults on empty completion.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T> ToHotValueTask() =>
@@ -692,11 +678,7 @@ public static partial class ReactiveExtensions
         public IObservable<T> DoOnDispose(Action disposeAction) =>
             new DoOnDisposeObservable<T>(source, disposeAction);
 
-        /// <summary>
-        /// Fused <c>Where(predicate).Select(selector)</c>. Allocates a single observer
-        /// per subscription instead of two, eliminating the intermediate operator that
-        /// the equivalent Rx chain would build.
-        /// </summary>
+        /// <summary>Projects source values that satisfy the predicate.</summary>
         /// <typeparam name="TOut">The projected element type.</typeparam>
         /// <param name="predicate">Filter applied to each source element.</param>
         /// <param name="selector">Projection applied to elements that pass <paramref name="predicate"/>.</param>
@@ -712,7 +694,7 @@ public static partial class ReactiveExtensions
         public IObservable<T> CatchReturn(T fallback) =>
             new CatchReturnObservable<T>(source, fallback);
 
-        /// <summary>Projects every source element to a stored constant, avoiding the closure allocation of <c>.Select(_ =&gt; value)</c>. Common in fire-then-return-value chains.</summary>
+        /// <summary>Replaces each source value with the supplied constant.</summary>
         /// <typeparam name="TResult">The result element type.</typeparam>
         /// <param name="constant">The constant value emitted for each source element.</param>
         /// <returns>An observable that emits <paramref name="constant"/> for each source element.</returns>
@@ -720,11 +702,7 @@ public static partial class ReactiveExtensions
         public IObservable<TResult> SelectConstant<TResult>(TResult constant) =>
             new SelectConstantObservable<T, TResult>(source, constant);
 
-        /// <summary>
-        /// Applies <paramref name="selector"/> and emits only non-null results.
-        /// Replaces <c>.Select(f).Where(x =&gt; x is not null).Select(x =&gt; x!)</c>
-        /// with a single operator allocation.
-        /// </summary>
+        /// <summary>Projects source values and forwards only non-null results.</summary>
         /// <typeparam name="TOut">The projected element type.</typeparam>
         /// <param name="selector">Projection that may return <see langword="null"/>.</param>
         /// <returns>An observable that emits only non-null projected values.</returns>
@@ -732,7 +710,7 @@ public static partial class ReactiveExtensions
         public IObservable<TOut> TrySelect<TOut>(Func<T, TOut?> selector) =>
             new TrySelectObservable<T, TOut>(source, selector);
 
-        /// <summary>Chains two one-shot <c>SelectMany</c> projections into a single operator. Replaces <c>.SelectMany(a).SelectMany(b)</c> (2 operator allocations) with 1.</summary>
+        /// <summary>Projects each source value through two successive observable selectors.</summary>
         /// <typeparam name="TMid">The intermediate element type.</typeparam>
         /// <typeparam name="TResult">The final result type.</typeparam>
         /// <param name="first">First projection: source → intermediate observable.</param>
@@ -795,8 +773,8 @@ public static partial class ReactiveExtensions
     }
 
     /// <summary>Null-skipping operators for an observable source sequence of reference types.</summary>
-    /// <typeparam name="T">The type.</typeparam>
-    /// <param name="source">The source.</param>
+    /// <typeparam name="T">The reference type of the source elements.</typeparam>
+    /// <param name="source">The source observable.</param>
     extension<T>(IObservable<T> source)
         where T : class
     {
@@ -904,12 +882,7 @@ public static partial class ReactiveExtensions
     /// <param name="sources">The observables to run in order.</param>
     extension(IReadOnlyList<IObservable<RxVoid>> sources)
     {
-        /// <summary>
-        /// Runs a list of one-shot <see cref="IObservable{RxVoid}"/> sequentially and emits
-        /// a single <see cref="RxVoid.Default"/> when all have completed. Replaces
-        /// <c>.Concat().LastOrDefaultAsync()</c> with a single operator that avoids stack
-        /// overflow on inline-completing sources.
-        /// </summary>
+        /// <summary>Runs sources sequentially and emits RxVoid after all complete.</summary>
         /// <returns>A one-shot observable that completes after all sources.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<RxVoid> RunAll() =>
@@ -922,11 +895,7 @@ public static partial class ReactiveExtensions
     extension<TKey>(IReadOnlyList<TKey> candidates)
     {
         /// <summary>
-        /// Walks a list of candidate keys sequentially, projects each into a one-shot
-        /// observable, transforms the raw value, and emits the first transformed value
-        /// that satisfies <paramref name="predicate"/>. Errors from individual projections
-        /// are swallowed (the candidate is skipped). If no candidate matches, emits
-        /// <paramref name="fallback"/>.
+        /// Projects candidates sequentially, skipping projection errors, and emits the first matching transformed value or the fallback.
         /// </summary>
         /// <typeparam name="TRaw">The raw element type emitted by the projection.</typeparam>
         /// <typeparam name="TResult">The transformed result type.</typeparam>
@@ -977,14 +946,9 @@ public static partial class ReactiveExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(action);
 
-            if (scheduler is null)
-            {
-                Thread.Sleep(dueTime);
-                action();
-                return EmptyDisposable.Instance;
-            }
-
-            return scheduler.Schedule(dueTime, action);
+            return scheduler is null
+                ? ScheduledWait.Run(dueTime, action)
+                : scheduler.Schedule(dueTime, action);
         }
     }
 
@@ -1054,8 +1018,8 @@ public static partial class ReactiveExtensions
     }
 
     /// <summary>Scheduling operators for a single value.</summary>
-    /// <typeparam name="T">The type.</typeparam>
-    /// <param name="value">The value.</param>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="value">The value to schedule.</param>
     extension<T>(T value)
     {
         /// <summary>Schedules a single value after a delay.</summary>
@@ -1138,7 +1102,7 @@ public static partial class ReactiveExtensions
         new StartFuncObservable<TResult>(function, scheduler);
 
     /// <summary>Builds a current-value subject pair: a read-only observable and the push-side observer.</summary>
-    /// <typeparam name="T">The type.</typeparam>
+    /// <typeparam name="T">The value type carried by the subject.</typeparam>
     /// <param name="initialValue">The initial value.</param>
     /// <returns>A tuple of IObservable and IObserver.</returns>
     public static (IObservable<T> Observable, IObserver<T> Observer) ToReadOnlyBehavior<T>(T initialValue)

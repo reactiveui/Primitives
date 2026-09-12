@@ -6,11 +6,7 @@ using System.Reactive.Disposables;
 
 namespace ReactiveUI.Primitives.Reactive.Disposables;
 
-/// <summary>
-/// A <see cref="MultipleDisposable"/> that a System.Reactive consumer can use as a
-/// <see cref="CompositeDisposable"/>, so an activation-scoped container flows into APIs written against
-/// System.Reactive - <c>DisposeWith</c> above all - without the caller converting it by hand.
-/// </summary>
+/// <summary>Holds disposables and supports implicit conversion to a System.Reactive composite disposable.</summary>
 /// <remarks>Conversions reuse a composite owned by the container. Composite registrations occupy one container slot and are not individually visible through Count, Contains, or Remove.</remarks>
 [System.Diagnostics.DebuggerDisplay("ContainerDisposable: Count = {Count}, IsDisposed = {IsDisposed}")]
 public sealed class ContainerDisposable : MultipleDisposable
@@ -77,7 +73,7 @@ public sealed class ContainerDisposable : MultipleDisposable
             var created = new CompositeDisposable();
             _composite = created;
 
-            // Register the composite so its lifetime follows the container.
+            // Composite disposal follows container disposal.
             Add(created);
             return created;
         }
@@ -88,7 +84,7 @@ public sealed class ContainerDisposable : MultipleDisposable
     {
         base.Dispose(disposing);
 
-        // The container owns the composite; repeated disposal is harmless.
+        // Repeated composite disposal has no effect.
         _composite?.Dispose();
     }
 }

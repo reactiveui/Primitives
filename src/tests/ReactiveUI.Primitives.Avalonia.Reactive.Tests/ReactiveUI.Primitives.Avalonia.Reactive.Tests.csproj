@@ -7,7 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Avalonia.Headless"/>
     <PackageReference Include="System.Reactive"/>
     <ProjectReference Include="..\..\ReactiveUI.Primitives.Avalonia.Reactive\ReactiveUI.Primitives.Avalonia.Reactive.csproj"/>
   </ItemGroup>

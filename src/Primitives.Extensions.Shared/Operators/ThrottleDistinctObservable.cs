@@ -27,7 +27,6 @@ internal sealed class ThrottleDistinctObservable<T>(
         InvalidOperationExceptionHelper.ThrowIfNull(scheduler);
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        // Equivalent to DistinctUntilChanged().Throttle(throttle, scheduler).DistinctUntilChanged(), fused into one sink.
         ThrottleDistinctSink sink = new(observer, throttle, scheduler);
         var subscription = source.Subscribe(sink);
         return new DisposableBag(subscription, sink);

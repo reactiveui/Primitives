@@ -4,11 +4,7 @@
 
 namespace ReactiveUI.Primitives.Async.Advanced;
 
-/// <summary>
-/// Subscription lifecycle for the TakeUntil family of operators (CancellationToken, Task,
-/// raw-signal, async-observable and async-predicate triggers): owns the serialization gate, the
-/// dispose cancellation source, the external-link registration and the gated observer fan-out.
-/// </summary>
+/// <summary>Serializes TakeUntil notifications and links their lifetime to subscription cancellation.</summary>
 /// <typeparam name="T">The downstream element type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("TakeUntilLifecycle: Observer = {_observer}, DisposeRequested = {DisposeToken.IsCancellationRequested}")]
 public sealed class TakeUntilLifecycle<T> : IAsyncDisposable
@@ -92,11 +88,7 @@ public sealed class TakeUntilLifecycle<T> : IAsyncDisposable
         }
     }
 
-    /// <summary>
-    /// Cancels the dispose token, releases the external-link registration and disposes the gate. The
-    /// owning subscription disposes its own per-operator handles (source subscription, token
-    /// callback) separately, in whichever order that operator requires.
-    /// </summary>
+    /// <summary>Cancels notifications and releases cancellation registration and serialization resources.</summary>
     /// <returns>A ValueTask representing the asynchronous teardown.</returns>
     public async ValueTask DisposeAsync()
     {

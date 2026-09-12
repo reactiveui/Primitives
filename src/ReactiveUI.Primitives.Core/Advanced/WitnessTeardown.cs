@@ -13,7 +13,7 @@ public static class WitnessTeardown
     /// <returns><see langword="true"/> on the first disposal; otherwise <see langword="false"/>.</returns>
     public static bool Dispose(ref int disposed, ref IDisposable? cancel)
     {
-        // Atomic run-once latch so concurrent disposal cannot double-tear-down.
+        // Concurrent disposal runs teardown at most once.
         if (Interlocked.Exchange(ref disposed, 1) != 0)
         {
             return false;

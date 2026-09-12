@@ -8,12 +8,9 @@ using System.Threading;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Splits a sequence into a <see cref="True"/> and a <see cref="False"/> side by predicate. Both sides share one
-/// subscription to the source, opened when the first side is subscribed and released when the last subscription is
-/// disposed; each value reaches one side only, while an error or completion reaches both.
-/// </summary>
+/// <summary>Partitions values by predicate into two outputs that share a source subscription.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
+/// <remarks>The first subscriber connects and the last disposal disconnects; terminal notifications reach both outputs.</remarks>
 [System.Diagnostics.DebuggerDisplay("PartitionObservable: Source = {_source}, Subscriptions = {_subscriptionCount}")]
 public sealed class PartitionObservable<T>
 {
@@ -106,12 +103,10 @@ public sealed class PartitionObservable<T>
 
             lock (_parent._gate)
             {
-                // Subscribe assigns the sink under this lock before returning the handle.
                 _parent._sink!.Remove(_observer, _side);
                 _parent._subscriptionCount--;
                 if (_parent._subscriptionCount == 0)
                 {
-                    // Set alongside the sink under this same lock, so the last disposal finds it non-null.
                     _parent._sourceSubscription!.Dispose();
                     _parent._sourceSubscription = null;
                     _parent._sink = null;

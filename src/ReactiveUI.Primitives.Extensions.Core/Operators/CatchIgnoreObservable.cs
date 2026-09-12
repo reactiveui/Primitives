@@ -6,14 +6,12 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Catches <typeparamref name="TException"/>, hands it to <paramref name="errorAction"/> and completes. Other exception
-/// types propagate unchanged, and an exception thrown by the action terminates the sequence in place of the caught one.
-/// </summary>
+/// <summary>Passes matching errors to the action and completes.</summary>
 /// <typeparam name="TSource">The type of the elements in the source sequence.</typeparam>
 /// <typeparam name="TException">The type of the exception to catch.</typeparam>
 /// <param name="source">The source observable sequence.</param>
 /// <param name="errorAction">Action to invoke when an exception of type <typeparamref name="TException"/> occurs.</param>
+/// <remarks>Other error types propagate unchanged; an action failure replaces the caught error.</remarks>
 [System.Diagnostics.DebuggerDisplay("CatchIgnoreObservable: Source = {_source}, ErrorAction = {_errorAction}")]
 public sealed class CatchIgnoreObservable<TSource, TException>(
     IObservable<TSource> source,

@@ -7,11 +7,7 @@ using System.Threading.Tasks.Sources;
 
 namespace ReactiveUI.Primitives.Extensions;
 
-/// <summary>
-/// <see cref="ValueTask{T}"/>-returning counterpart to <see cref="FirstAsTaskHelper"/>. The returned value task is
-/// backed by a pooled <see cref="IValueTaskSource{T}"/>, so each one must be consumed exactly once: awaiting it twice,
-/// or reading its result after the backing instance returns to the pool, observes another caller's outcome.
-/// </summary>
+/// <summary>Returns the first source value as a ValueTask that must be consumed exactly once.</summary>
 /// <typeparam name="T">The element type.</typeparam>
 public static class FirstAsValueTaskHelper<T>
 {

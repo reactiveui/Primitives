@@ -60,7 +60,7 @@ public static partial class LinqExtensions
     /// <param name="source">The source sequence.</param>
     extension<T>(IObservable<T> source)
     {
-        /// <summary>Prepends a value before the source sequence. Alias of <c>Prepend</c> using Primitives vocabulary.</summary>
+        /// <summary>Prepends a value before the source sequence.</summary>
         /// <param name="value">The value to emit before the source.</param>
         /// <returns>A sequence that emits <paramref name="value"/> before the source values.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
@@ -128,7 +128,7 @@ public static partial class LinqExtensions
                 : new AppendSignal<T>(source, value);
         }
 
-        /// <summary>Returns the source as an observable. This is an identity adapter for BCL observable sources.</summary>
+        /// <summary>Returns the source observable unchanged.</summary>
         /// <returns>The supplied source sequence.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
         public IObservable<T> AsObservable() => source ?? throw new ArgumentNullException(nameof(source));
@@ -836,12 +836,8 @@ public static partial class LinqExtensions
         }
         catch (OperationCanceledException)
         {
-            // Observe faults from work that outlives cancellation of the wait.
-            _ = task.ContinueWith(
-                static abandoned => _ = abandoned.Exception,
-                CancellationToken.None,
-                TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
-                TaskScheduler.Default);
+            // Faults are observed even after the wait is cancelled.
+            TaskFaultObservation.Register(task);
             throw;
         }
     }

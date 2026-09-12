@@ -313,7 +313,6 @@ public static partial class SignalAsyncExtensions
                 }
                 catch (Exception e)
                 {
-                    // ReportUnhandledException drops cancellation itself, so no separate catch for it.
                     UnhandledExceptionHandler.ReportUnhandledException(e);
                 }
             }
@@ -514,7 +513,7 @@ public static partial class SignalAsyncExtensions
             {
                 if (condition(value))
                 {
-                    // Bypass path: cancel any pending delay and emit immediately.
+                    // Bypass cancels pending delayed delivery and emits immediately.
                     lock (_gate)
                     {
                         _id++;
@@ -580,7 +579,6 @@ public static partial class SignalAsyncExtensions
                 }
                 catch (Exception e)
                 {
-                    // ReportUnhandledException drops cancellation itself, so no separate catch for it.
                     UnhandledExceptionHandler.ReportUnhandledException(e);
                 }
             }

@@ -36,7 +36,7 @@ public sealed class IntervalSubscription : TaskSignalSubscription<long>
         {
             if (TimeProvider is null || TimeProvider == TimeProvider.System)
             {
-                await Task.Delay(Period, cancellationToken).ConfigureAwait(false);
+                await SignalAsyncExtensions.DelayAsync(Period, TimeProvider.System, cancellationToken).ConfigureAwait(false);
             }
             else
             {

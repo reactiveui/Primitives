@@ -150,7 +150,7 @@ internal record struct BehaviorSignalState<T>
             ThrowIfDisposed();
             if (!_isStopped)
             {
-                // Serialize initial delivery with live broadcast to preserve order and prevent duplicates.
+                // Initial and live values are delivered in order without duplicates.
                 _broadcaster.Add(observer);
                 var subscription = new BehaviorWitnessHandler<T>(owner, observer);
                 observer.OnNext(_lastValue!);

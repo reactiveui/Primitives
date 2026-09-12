@@ -60,7 +60,6 @@ public static class VirtualTimeSequencerExtensions
 
             ArgumentExceptionHelper.ThrowIfNull(action);
 
-            // A static lambda rather than a method group, so the compiler caches the delegate.
             return scheduler.ScheduleRelative(action, dueTime, static (_, a) => Invoke(a));
         }
 

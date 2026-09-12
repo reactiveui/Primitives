@@ -60,12 +60,18 @@ internal class DispatchWorkItemBase<TState>
             return;
         }
 
+        ReleaseCanceledResult();
+    }
+
+    /// <summary>Releases the published result if the work item is cancelled.</summary>
+    internal void ReleaseCanceledResult()
+    {
         if (!IsDisposed)
         {
             return;
         }
 
-        disposable.Dispose();
+        ReleaseStartedWork();
     }
 
     /// <summary>Atomically claims the single cancellation transition for this work item.</summary>

@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using ReactiveUI.Primitives.Advanced;
+using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
@@ -60,25 +62,21 @@ public partial class SignalFactoriesTests
         await Assert.That(witness.Errors.Count).IsEqualTo(1);
     }
 
-    /// <summary>Verifies the sequencer-free <c>Start</c> factories run their work and emit its outcome.</summary>
+    /// <summary>The sequencer-free Start factories select the default sequencer without invoking their work.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task StartWithoutASequencerRunsTheWorkOnTheDefaultSequencer()
+    public async Task StartWithoutASequencerSelectsTheDefaultSequencer()
     {
-        AwaitableWitness<int> functionWitness = new();
-        using var functionSubscription = Signal.Start(static () => Two).Subscribe(functionWitness);
-        await functionWitness.ValueCountReaching(1);
-        await Assert.That(functionWitness.Values.SequenceEqual([Two])).IsTrue();
+        var functionRuns = 0;
+        var function = await Assert.That(Signal.Start(() => ++functionRuns)).IsTypeOf<StartSignal<int>>().And.IsNotNull();
         var actionRuns = 0;
-        AwaitableWitness<RxVoid> actionWitness = new();
-
-        // A void method group selects Start(Action); a lambda over 'actionRuns++' would bind to Start<T>.
         void RunAction() => actionRuns++;
+        var action = await Assert.That(Signal.Start(RunAction)).IsTypeOf<StartSignal>().And.IsNotNull();
 
-        using var actionSubscription = Signal.Start(RunAction).Subscribe(actionWitness);
-        await actionWitness.ValueCountReaching(1);
-        await Assert.That(actionRuns).IsEqualTo(1);
-        await Assert.That(actionWitness.Values[0]).IsEqualTo(RxVoid.Default);
+        await Assert.That(function.Scheduler).IsSameReferenceAs(Sequencer.Default);
+        await Assert.That(action.Scheduler).IsSameReferenceAs(Sequencer.Default);
+        await Assert.That(functionRuns).IsEqualTo(0);
+        await Assert.That(actionRuns).IsEqualTo(0);
     }
 
     /// <summary>Each scheduled callback emits the next tick.</summary>

@@ -11,4 +11,8 @@
     <ProjectReference Include="..\ReactiveUI.Primitives\ReactiveUI.Primitives.csproj"/>
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="ReactiveUI.Primitives.Avalonia.Tests"/>
+  </ItemGroup>
+
 </Project>

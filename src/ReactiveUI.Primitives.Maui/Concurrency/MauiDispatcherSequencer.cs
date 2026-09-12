@@ -9,9 +9,10 @@ using ReactiveUI.Primitives.Advanced;
 namespace ReactiveUI.Primitives.Concurrency;
 
 /// <summary>MAUI dispatcher sequencer that coalesces scheduled work through an <see cref="IDispatcher"/>.</summary>
-/// <remarks>Work runs on the dispatcher's thread, one batch per posted drain; scheduling from that thread queues the
-/// item for the next drain rather than running it inline. Delayed work goes to the dispatcher's own delayed dispatch,
-/// which cannot be called off once armed, so a cancelled item is skipped when the delay elapses.</remarks>
+/// <remarks>
+/// Callbacks run in posted dispatcher batches without inline reentrancy; cancellation suppresses delayed actions without cancelling the
+/// underlying delay.
+/// </remarks>
 /// <seealso cref="ISequencer" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class MauiDispatcherSequencer : ISequencer

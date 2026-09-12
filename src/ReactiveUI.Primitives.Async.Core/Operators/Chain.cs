@@ -17,8 +17,7 @@ public static partial class SignalAsyncExtensions
         /// <summary>Concatenates multiple asynchronous observable sequences into a single sequence that emits items from each source in order.</summary>
         /// <returns>An asynchronous observable sequence that emits all items from each source sequence in the order they appear in
         /// the collection.</returns>
-        /// <remarks>A source is subscribed only after the previous one completes, so at most one source is active at a
-        /// time; an error from any source stops the concatenation and is propagated.</remarks>
+        /// <remarks>Sources run one at a time in sequence; any error propagates and terminates the result.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> Chain() =>
             new ChainEnumerableSignal<T>(sources);

@@ -57,7 +57,7 @@ internal sealed class FromAsyncTaskObservation<T>
         }
         catch (Exception) when (Lifetime.IsCancellationRequested)
         {
-            // Subscription disposal owns this cancellation path and must stay silent downstream.
+            // Subscription cancellation does not send a terminal notification.
         }
         catch (Exception error)
         {

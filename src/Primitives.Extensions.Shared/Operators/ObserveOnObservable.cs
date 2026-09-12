@@ -23,7 +23,6 @@ internal sealed class ObserveOnObservable<T>(IObservable<T> source, ISequencer s
         InvalidOperationExceptionHelper.ThrowIfNull(scheduler);
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        // The immediate sequencer runs scheduled work inline, so queue-and-drain would change nothing.
         if (ReferenceEquals(scheduler, Sequencer.Immediate))
         {
             return source.Subscribe(observer);
@@ -103,7 +102,6 @@ internal sealed class ObserveOnObservable<T>(IObservable<T> source, ISequencer s
 
                     default:
                         {
-                            // Completed is the only remaining kind; this arm keeps the switch exhaustive.
                             _state.Terminate();
                             _downstream.OnCompleted();
                             return;

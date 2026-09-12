@@ -103,17 +103,8 @@ public sealed class PrioritySemaphoreSignal<T> : ISignal<T>
     /// <summary>Releases one semaphore slot and drains queued values when capacity is available.</summary>
     public void Release()
     {
-        int previousCount;
-        do
-        {
-            previousCount = Volatile.Read(ref _count);
-            if (previousCount <= 0)
-            {
-                return;
-            }
-        } while (Interlocked.CompareExchange(ref _count, previousCount - 1, previousCount) != previousCount);
-
-        YieldUntilEmptyOrBlocked();
+        var previousCount = Volatile.Read(ref _count);
+        ReleaseObserved(previousCount);
     }
 
     /// <inheritdoc />
@@ -174,6 +165,23 @@ public sealed class PrioritySemaphoreSignal<T> : ISignal<T>
         _inner.Dispose();
     }
 
+    /// <summary>Releases one occupied slot, retrying when the observed count has changed.</summary>
+    /// <param name="previousCount">The count observed before attempting release.</param>
+    internal void ReleaseObserved(int previousCount)
+    {
+        while (previousCount > 0)
+        {
+            var currentCount = Interlocked.CompareExchange(ref _count, previousCount - 1, previousCount);
+            if (currentCount == previousCount)
+            {
+                YieldUntilEmptyOrBlocked();
+                return;
+            }
+
+            previousCount = currentCount;
+        }
+    }
+
     /// <summary>Queues a value while the signal accepts input.</summary>
     /// <param name="value">The value to enqueue.</param>
     /// <returns><see langword="true"/> when the value was queued; otherwise, <see langword="false"/>.</returns>
@@ -208,7 +216,6 @@ public sealed class PrioritySemaphoreSignal<T> : ISignal<T>
                 Deliver(item);
             }
 
-            // TryTakeNextDrainItem cleared ownership when it returned false.
             owned = false;
         }
         finally
@@ -248,7 +255,6 @@ public sealed class PrioritySemaphoreSignal<T> : ISignal<T>
                 return true;
             }
 
-            // Release ownership under the queue gate so subsequent producers can start a drain.
             _isDraining = false;
             return false;
         }

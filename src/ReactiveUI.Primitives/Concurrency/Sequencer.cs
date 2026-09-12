@@ -17,9 +17,11 @@ public static partial class Sequencer
     public static ISequencer Default => TaskPoolSequencer.Default;
 
     /// <summary>Gets the shared wall-clock time used by real-time sequencers.</summary>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     internal static DateTimeOffset Now => TimeProvider.System.GetUtcNow();
 
     /// <summary>Gets the current monotonic timestamp used by real-time sequencers.</summary>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     internal static long Timestamp => System.Diagnostics.Stopwatch.GetTimestamp();
 
     /// <summary>Normalizes the specified <see cref="TimeSpan"/> value to a positive value.</summary>

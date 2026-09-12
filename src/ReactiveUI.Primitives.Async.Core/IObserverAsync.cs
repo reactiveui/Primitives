@@ -6,8 +6,7 @@ namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Defines an asynchronous observer that receives notifications about a sequence of values, completion, or errors, and supports asynchronous resource cleanup.</summary>
 /// <typeparam name="T">The type of the elements received by the observer.</typeparam>
-/// <remarks>Every notification is awaitable and cancellable, so a producer that awaits them gets backpressure for
-/// free: the observer's handler has to finish before the next value is pushed.</remarks>
+/// <remarks>Producers must await each notification before sending the next.</remarks>
 public interface IObserverAsync<in T> : IAsyncDisposable
 {
     /// <summary>Signals that the sequence has terminated, successfully or with a failure.</summary>
@@ -19,8 +18,7 @@ public interface IObserverAsync<in T> : IAsyncDisposable
     /// <param name="error">The exception to report.</param>
     /// <param name="cancellationToken">A token that cancels the observer's handling of the error.</param>
     /// <returns>A task that completes when the observer has handled the error.</returns>
-    /// <remarks>Unlike a faulted <see cref="OnCompletedAsync"/>, this does not end the sequence; an implementation
-    /// chooses whether to swallow the error or tear itself down.</remarks>
+    /// <remarks>The observer may handle the error and continue receiving notifications or dispose its subscription.</remarks>
     ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken);
 
     /// <summary>Delivers the next value in the sequence.</summary>

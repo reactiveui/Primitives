@@ -77,7 +77,7 @@ public static partial class LinqExtensions
                 values.Add(_range.Start + i);
             }
 
-            // A value-type argument is not covariant, so this cast holds only because every call site fixes T to int.
+            // This helper requires T to be int.
             observer.OnNext((IList<T>)(object)values);
             observer.OnCompleted();
             return EmptyDisposable.Instance;
@@ -106,7 +106,7 @@ public static partial class LinqExtensions
                 values[i] = _range.Start + i;
             }
 
-            // A value-type argument is not covariant, so this cast holds only because every call site fixes T to int.
+            // This helper requires T to be int.
             observer.OnNext((T[])(object)values);
             observer.OnCompleted();
             return EmptyDisposable.Instance;

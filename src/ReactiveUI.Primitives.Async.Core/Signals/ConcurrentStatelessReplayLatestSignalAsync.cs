@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Async.Signals;
 /// <typeparam name="T">The type of the elements processed by the Signal.</typeparam>
 /// <param name="startValue">The value replayed until something is published, and restored when the last observer
 /// leaves.</param>
-/// <remarks>Cancellation can stop some observers from receiving a notification the others do receive.</remarks>
+/// <remarks>Completion order across observers is unspecified, and a cancelled notification does not stop the others.</remarks>
 [System.Diagnostics.DebuggerDisplay("ConcurrentStatelessReplayLatestSignalAsync: Value = {_state.Value}, IsDisposed = {_state.IsDisposed}")]
 public sealed class ConcurrentStatelessReplayLatestSignalAsync<T>(Optional<T> startValue) : ISignalAsync<T>
 {

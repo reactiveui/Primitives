@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
-/// <summary>Runs sources sequentially, ignores their values, and emits RxVoid on completion. Empty input completes immediately; source errors propagate.</summary>
+/// <summary>Runs sources sequentially and emits RxVoid on completion, propagating source errors and completing immediately for empty input.</summary>
 /// <param name="sources">The list of one-shot observables to run in order.</param>
 internal sealed class RunAllObservable(IReadOnlyList<IObservable<RxVoid>> sources) : IObservable<RxVoid>
 {
@@ -56,7 +56,7 @@ internal sealed class RunAllObservable(IReadOnlyList<IObservable<RxVoid>> source
         /// <inheritdoc/>
         public void OnNext(RxVoid value)
         {
-            // Ignore — we only care about completion.
+            // Values are ignored; completion advances to the next source.
         }
 
         /// <inheritdoc/>
@@ -80,7 +80,6 @@ internal sealed class RunAllObservable(IReadOnlyList<IObservable<RxVoid>> source
 
             if (_looping)
             {
-                // Inside the loop the surrounding RunNext reads _iterationTerminated; no recursion.
                 Volatile.Write(ref _iterationTerminated, 1);
                 return;
             }

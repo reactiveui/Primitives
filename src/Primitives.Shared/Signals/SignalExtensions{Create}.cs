@@ -46,7 +46,7 @@ public static partial class SignalExtensions
                 },
                 completed.Set);
 
-            completed.Wait();
+            WaitForCompletion(completed);
 
             if (error is not null)
             {
@@ -56,4 +56,10 @@ public static partial class SignalExtensions
             return values;
         }
     }
+
+    /// <summary>Blocks until the source signals completion.</summary>
+    /// <param name="completed">The source's completion signal.</param>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void WaitForCompletion(ManualResetEventSlim completed) => completed.Wait();
 }

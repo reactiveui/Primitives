@@ -7,10 +7,7 @@ using System.Text.RegularExpressions;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Forwards the source strings that <paramref name="regex"/> matches, dropping non-matches and nulls. An exception
-/// raised while matching, such as a regex timeout, terminates the sequence.
-/// </summary>
+/// <summary>Forwards non-null strings that match the regex and terminates on matching errors.</summary>
 /// <param name="source">The source observable emitting strings.</param>
 /// <param name="regex">The regex to use for filtering.</param>
 public sealed class FilterRegexObservable(

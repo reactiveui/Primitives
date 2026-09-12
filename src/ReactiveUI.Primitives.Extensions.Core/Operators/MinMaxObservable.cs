@@ -8,14 +8,14 @@ using ReactiveUI.Primitives.Extensions.Internal;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
-/// <summary>
-/// Emits the maximum or minimum of the latest values from every source, re-evaluating on each value once all sources
-/// have produced one. An empty source list completes on subscribe; any source's error terminates the sequence, and the
-/// sequence completes when every source completes or one completes without emitting.
-/// </summary>
+/// <summary>Emits the minimum or maximum latest value after every source has emitted.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 /// <param name="sources">The source observables.</param>
 /// <param name="emitMaximum"><c>true</c> to emit the maximum; <c>false</c> to emit the minimum.</param>
+/// <remarks>
+/// Empty input completes immediately. An error terminates immediately; otherwise completion waits for all sources unless one completes without
+/// emitting.
+/// </remarks>
 [System.Diagnostics.DebuggerDisplay("MinMaxObservable: Sources = {_sourceList.Count}")]
 public sealed class MinMaxObservable<T>(IReadOnlyList<IObservable<T>> sources, bool emitMaximum) : IObservable<T>
     where T : struct, IComparable<T>

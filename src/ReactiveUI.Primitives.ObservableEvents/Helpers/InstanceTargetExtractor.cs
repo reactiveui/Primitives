@@ -71,7 +71,7 @@ internal static class InstanceTargetExtractor
         var typeParameterList = SymbolHelpers.BuildTypeParameterList(typeParameters, typeParameterNames);
         var typeReference = SymbolHelpers.Display(host, typeParameterNames, supportsNullableAnnotations);
 
-        // Keyed on the unannotated name, so a generated file does not change identity with the language version.
+        // Generated file identity is independent of nullable annotations.
         var identity = host.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         var displayName = host.ToDisplayString();
         var namespaceName = host.ContainingNamespace.IsGlobalNamespace

@@ -102,8 +102,6 @@ public sealed class AutoShareSignal<T> : IObservable<T>
         {
             _isConnecting = false;
 
-            // _connection is null here: _isConnecting gated every other subscriber out of Connect, and
-            // Release only ever nulls _connection. Publish the connection while subscribers remain.
             if (_count != 0)
             {
                 _connection = connection;
@@ -111,8 +109,7 @@ public sealed class AutoShareSignal<T> : IObservable<T>
             }
         }
 
-        // A re-entrant or concurrent Release drained the count while connecting, so the connection is
-        // orphaned and disposed here.
+        // A connection completed after the last unsubscription is disposed.
         connection.Dispose();
     }
 

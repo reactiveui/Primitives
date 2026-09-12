@@ -8,10 +8,8 @@ using Timer = System.Threading.Timer;
 
 namespace ReactiveUI.Primitives.Concurrency;
 
-/// <summary>
-/// Schedules batches on a single-threaded event loop without blocking or starting threads.
-/// Delayed work uses the shared timer; immediate batches yield between event-loop turns.
-/// </summary>
+/// <summary>Schedules immediate batches and delayed work on a single-threaded event loop.</summary>
+/// <remarks>Immediate batches yield between event-loop turns.</remarks>
 /// <seealso cref="ISequencer" />
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class WasmSequencer : ISequencer, IDisposable
@@ -42,11 +40,7 @@ public sealed class WasmSequencer : ISequencer, IDisposable
             "The timer is created disarmed, and _state is a struct held inline in this object, so neither reference escapes.")]
     internal WasmSequencer()
     {
-        _timer = new(
-            static state => ((WasmSequencer)state!).RunDrain(),
-            this,
-            Timeout.InfiniteTimeSpan,
-            Timeout.InfiniteTimeSpan);
+        _timer = CreateTimer(this);
         _postDrain = ArmDrainTimer;
         _scheduleDelayed = ThreadPoolSequencer.Instance.Schedule;
         _state = new(this, Post, RunDrain, ScheduleDelayed);
@@ -98,13 +92,10 @@ public sealed class WasmSequencer : ISequencer, IDisposable
         ReleaseQueuedIfDisposed();
     }
 
-    /// <summary>
-    /// Releases the drain timer and cancels queued work. Further scheduling throws.
-    /// Delayed work on the shared timer is released when due unless its caller cancels it first.
-    /// </summary>
+    /// <summary>Cancels queued immediate work and rejects further scheduling.</summary>
+    /// <remarks>Delayed work is released when due unless its caller cancels it first.</remarks>
     public void Dispose()
     {
-        // Timer arming and disposal share the gate; disposal does not wait for active callbacks.
         lock (_gate)
         {
             if (IsDisposed)
@@ -127,6 +118,13 @@ public sealed class WasmSequencer : ISequencer, IDisposable
         ReleaseQueuedIfDisposed();
     }
 
+    /// <summary>Creates a disarmed timer that drains ready work.</summary>
+    /// <param name="owner">The sequencer receiving timer callbacks.</param>
+    /// <returns>The disarmed timer.</returns>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    private static Timer CreateTimer(WasmSequencer owner) =>
+        new(static state => ((WasmSequencer)state!).RunDrain(), owner, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+
     /// <summary>Arms the drain timer to fire on the next event-loop turn.</summary>
     /// <param name="drain">The callback to post.</param>
     /// <returns><see langword="true"/> when the timer accepted the change.</returns>
@@ -134,7 +132,6 @@ public sealed class WasmSequencer : ISequencer, IDisposable
     {
         lock (_gate)
         {
-            // Reject posts after disposal so the drain claim is released.
             return !IsDisposed && _postDrain(drain);
         }
     }
@@ -193,7 +190,6 @@ public sealed class WasmSequencer : ISequencer, IDisposable
                 return;
             }
 
-            // A disposal racing this enqueue is caught by ScheduleReady, which releases the queue it just joined.
             _owner.ScheduleReady(_item);
         }
 

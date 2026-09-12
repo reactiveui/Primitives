@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async.Advanced;
 
-/// <summary>Serializes asynchronous critical sections with disposable leases. Reentrant acquisition is allowed only on the managed thread that currently owns the gate.</summary>
+/// <summary>Serializes asynchronous critical sections, permitting reentry only from the owning managed thread.</summary>
 [System.Diagnostics.DebuggerDisplay("AsyncSerialGate: OwnerThreadId = {_ownerThreadId}, Waiters = {_waiters}, RecursionDepth = {_recursionDepth}")]
 public sealed class AsyncSerialGate : IDisposable
 {
@@ -75,7 +75,7 @@ public sealed class AsyncSerialGate : IDisposable
             : WaitForEntryAsync(cancellationToken);
     }
 
-    /// <summary>Exits the gate. Decrements the recursion depth on a nested exit, or clears the owner and signals one waiter (if any) on the outermost release.</summary>
+    /// <summary>Releases one acquisition, waking a waiter after the outermost release.</summary>
     internal void Exit()
     {
         if (_recursionDepth > 0)
@@ -98,8 +98,6 @@ public sealed class AsyncSerialGate : IDisposable
         {
             while (true)
             {
-                // Retry the CAS before waiting; closes the race where the owner releases between
-                // the caller's fast-path failure and our increment of _waiters.
                 if (Interlocked.CompareExchange(ref _ownerThreadId, Environment.CurrentManagedThreadId, 0) == 0)
                 {
                     return new(this);
