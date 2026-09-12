@@ -83,6 +83,34 @@ Linux and macOS across the four modern frameworks. Full-solution CI builds remai
 - Release coverage independently inspected through Mtpunittestmcp: 165/165 lines and 112/112 branches per framework.
 - Runtime batching and enforcement of smaller negotiated server limits remain pending.
 
-Only the identities and local option validation are verified. Adapter capability negotiation, remaining contracts
-and every runtime/durability stage are still incomplete. Passing option validation alone does not establish a
+### Stage 6a: standalone endpoint circuit breaker
+
+- Added the lean runtime project and a deterministic, thread-safe circuit breaker with an injected `TimeProvider`.
+- Five consecutive transient failures open an endpoint for 30 seconds by default. Only one concurrent caller gets
+  the half-open probe. A successful handshake resets the circuit; a failed or abandoned probe reopens it.
+- Late failures do not extend an already-open deadline. Failure counts and extreme UTC deadlines cannot overflow.
+- Root review expanded the worker's six-test handoff, removed unreachable state branches, and completed the gate.
+  Ignoring the configured threshold caused seven tests to fail.
+- GREEN: 106 Core tests plus 15 runtime tests passed per modern framework (484 executions).
+- Mtpunittestmcp confirmed Core coverage of 173/173 lines and 118/118 branches, and runtime coverage of 57/57 lines
+  and 20/20 branches, on each modern framework.
+- Engine integration, retry persistence and endpoint fault classification remain pending.
+
+### Stage 6b: standalone retry policy
+
+- Added persisted retry state and deterministic decorrelated jitter with injected time and randomness.
+- Server retry hints are lower bounds. Scheduling stops at the retry-age or calendar limit, rather than overflowing
+  a deadline or retrying immediately. A backwards clock cannot increase the configured remaining-age budget.
+- Authentication retries require an explicit renewed credential version and allow one immediate retry per version.
+  Permanent failures stop; invalid persisted state and negative server delays are rejected.
+- Root review added executable regression tests before fixing twelve failures in the initial handoff, including
+  overflow, missing renewal evidence, invalid state and retry-age boundaries.
+- GREEN: 120 Core tests plus 49 runtime tests passed per modern framework (676 executions).
+- Mtpunittestmcp confirmed Core coverage of 216/216 lines and 128/128 branches, and runtime coverage of 139/139 lines
+  and 72/72 branches, on each modern framework. All eight library targets build with zero warnings and errors.
+- The synchronization engine must persist decisions, respect stored due times after restart, and only invoke retry
+  for an operation whose delivery guarantee permits another attempt. That integration remains pending.
+
+Identities, local option validation and the standalone circuit and retry policies are verified. Adapter capability negotiation,
+remaining contracts and integrated runtime/durability stages are still incomplete. Passing option validation alone does not establish a
 delivery guarantee or establish that a custom policy preserves durable work; the runtime must enforce both.
