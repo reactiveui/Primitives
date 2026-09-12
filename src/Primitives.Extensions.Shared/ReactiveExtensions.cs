@@ -166,7 +166,7 @@ public static partial class ReactiveExtensions
 
         /// <summary>Emit a batch when the stream goes quiet.</summary>
         /// <param name="idleTime">The idle time.</param>
-        /// <param name="scheduler">The scheduler.</param>
+        /// <param name="scheduler">The sequencer that times the quiet period.</param>
         /// <returns>A sequence of buffered lists.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<IList<T>> BufferUntilIdle(TimeSpan idleTime, ISequencer? scheduler) =>
@@ -183,7 +183,7 @@ public static partial class ReactiveExtensions
 
         /// <summary>Detects when a stream becomes inactive for some period of time.</summary>
         /// <param name="stalenessPeriod">If source stream does not OnNext any update during this period, it is declared stale.</param>
-        /// <param name="scheduler">The scheduler.</param>
+        /// <param name="scheduler">The sequencer that times the inactivity window.</param>
         /// <returns>Observable stale markers or updates.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<Stale<T>> DetectStale(TimeSpan stalenessPeriod, ISequencer scheduler) =>
@@ -230,7 +230,7 @@ public static partial class ReactiveExtensions
 
         /// <summary>Conditionally switch schedulers.</summary>
         /// <param name="condition">if set to <c>true</c> [condition].</param>
-        /// <param name="scheduler">The scheduler.</param>
+        /// <param name="scheduler">The sequencer used while the condition holds.</param>
         /// <returns>An IObservable of T.</returns>
         public IObservable<T> ObserveOnIf(bool condition, ISequencer scheduler) =>
             condition ? new ObserveOnObservable<T>(source, scheduler) : source;
@@ -285,7 +285,7 @@ public static partial class ReactiveExtensions
 
         /// <summary>Schedules the specified due time.</summary>
         /// <param name="dueTime">The due time.</param>
-        /// <param name="scheduler">The scheduler.</param>
+        /// <param name="scheduler">The sequencer the work runs on.</param>
         /// <returns>An IObservable of T.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> Schedule(TimeSpan dueTime, ISequencer scheduler) =>
@@ -293,7 +293,7 @@ public static partial class ReactiveExtensions
 
         /// <summary>Schedules the specified due time.</summary>
         /// <param name="dueTime">The due time.</param>
-        /// <param name="scheduler">The scheduler.</param>
+        /// <param name="scheduler">The sequencer the work runs on.</param>
         /// <returns>An IObservable of T.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> Schedule(DateTimeOffset dueTime, ISequencer scheduler) =>
@@ -301,8 +301,8 @@ public static partial class ReactiveExtensions
 
         /// <summary>Schedules the specified due time.</summary>
         /// <param name="dueTime">The due time.</param>
-        /// <param name="scheduler">The scheduler.</param>
-        /// <param name="action">The action.</param>
+        /// <param name="scheduler">The sequencer the work runs on.</param>
+        /// <param name="action">The work to run.</param>
         /// <returns>An IObservable of T.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> Schedule(TimeSpan dueTime, ISequencer scheduler, Action<T> action) =>
@@ -310,15 +310,15 @@ public static partial class ReactiveExtensions
 
         /// <summary>Schedules the specified due time.</summary>
         /// <param name="dueTime">The due time.</param>
-        /// <param name="scheduler">The scheduler.</param>
-        /// <param name="action">The action.</param>
+        /// <param name="scheduler">The sequencer the work runs on.</param>
+        /// <param name="action">The work to run.</param>
         /// <returns>An IObservable of T.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> Schedule(DateTimeOffset dueTime, ISequencer scheduler, Action<T> action) =>
             new ScheduledSourceObservable<T>(source, ScheduleConfig<T>.Absolute(scheduler, dueTime).WithAction(action));
 
         /// <summary>Schedules the specified due time.</summary>
-        /// <param name="scheduler">The scheduler.</param>
+        /// <param name="scheduler">The sequencer the work runs on.</param>
         /// <param name="function">The function.</param>
         /// <returns>An IObservable of T.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -327,7 +327,7 @@ public static partial class ReactiveExtensions
 
         /// <summary>Schedules the specified due time.</summary>
         /// <param name="dueTime">The due time.</param>
-        /// <param name="scheduler">The scheduler.</param>
+        /// <param name="scheduler">The sequencer the work runs on.</param>
         /// <param name="function">The function.</param>
         /// <returns>An IObservable of T.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -538,7 +538,7 @@ public static partial class ReactiveExtensions
 
         /// <summary>Throttle but only emit when the value actually changes.</summary>
         /// <param name="throttle">The throttle.</param>
-        /// <param name="scheduler">The scheduler.</param>
+        /// <param name="scheduler">The sequencer that times the throttle window.</param>
         /// <returns>A throttled distinct sequence.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> ThrottleDistinct(TimeSpan throttle, ISequencer scheduler) =>
@@ -789,7 +789,7 @@ public static partial class ReactiveExtensions
 
     /// <summary>Operators for an observable source sequence that may emit null values.</summary>
     /// <typeparam name="TSource">The type of the source.</typeparam>
-    /// <param name="source">The source.</param>
+    /// <param name="source">The source observable.</param>
     extension<TSource>(IObservable<TSource?> source)
     {
         /// <summary>Catch exception and return Observable.Empty.</summary>
@@ -993,7 +993,7 @@ public static partial class ReactiveExtensions
 
     /// <summary>Change-notification operators for a notifying object.</summary>
     /// <typeparam name="T">The type of the source.</typeparam>
-    /// <param name="source">The source.</param>
+    /// <param name="source">The notifying object.</param>
     extension<T>(T source)
         where T : INotifyPropertyChanged
     {
@@ -1032,7 +1032,7 @@ public static partial class ReactiveExtensions
 
         /// <summary>Schedules the specified due time.</summary>
         /// <param name="dueTime">The due time.</param>
-        /// <param name="scheduler">The scheduler.</param>
+        /// <param name="scheduler">The sequencer the work runs on.</param>
         /// <returns>An IObservable of T.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> Schedule(DateTimeOffset dueTime, ISequencer scheduler) =>
@@ -1040,8 +1040,8 @@ public static partial class ReactiveExtensions
 
         /// <summary>Schedules the specified due time.</summary>
         /// <param name="dueTime">The due time.</param>
-        /// <param name="scheduler">The scheduler.</param>
-        /// <param name="action">The action.</param>
+        /// <param name="scheduler">The sequencer the work runs on.</param>
+        /// <param name="action">The work to run.</param>
         /// <returns>An IObservable of T.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> Schedule(TimeSpan dueTime, ISequencer scheduler, Action<T> action) =>
@@ -1049,15 +1049,15 @@ public static partial class ReactiveExtensions
 
         /// <summary>Schedules the specified due time.</summary>
         /// <param name="dueTime">The due time.</param>
-        /// <param name="scheduler">The scheduler.</param>
-        /// <param name="action">The action.</param>
+        /// <param name="scheduler">The sequencer the work runs on.</param>
+        /// <param name="action">The work to run.</param>
         /// <returns>An IObservable of T.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> Schedule(DateTimeOffset dueTime, ISequencer scheduler, Action<T> action) =>
             new ScheduledValueObservable<T>(value, scheduler, null, dueTime, null, action);
 
         /// <summary>Schedules the specified due time.</summary>
-        /// <param name="scheduler">The scheduler.</param>
+        /// <param name="scheduler">The sequencer the work runs on.</param>
         /// <param name="function">The function.</param>
         /// <returns>An IObservable of T.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1066,7 +1066,7 @@ public static partial class ReactiveExtensions
 
         /// <summary>Schedules the specified due time.</summary>
         /// <param name="dueTime">The due time.</param>
-        /// <param name="scheduler">The scheduler.</param>
+        /// <param name="scheduler">The sequencer the work runs on.</param>
         /// <param name="function">The function.</param>
         /// <returns>An IObservable of T.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

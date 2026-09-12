@@ -55,7 +55,7 @@ public sealed class PartitionObservable<T>
     public IObservable<T> False { get; }
 
     /// <summary>Subscribes an observer to the specified side of the partition.</summary>
-    /// <param name="observer">The observer.</param>
+    /// <param name="observer">The observer receiving that side's elements.</param>
     /// <param name="side">The side (true or false).</param>
     /// <returns>A disposable to unsubscribe.</returns>
     private Subscription Subscribe(IObserver<T> observer, bool side)
@@ -77,14 +77,14 @@ public sealed class PartitionObservable<T>
 
     /// <summary>Represents a subscription to the partition.</summary>
     /// <param name="parent">The parent observable.</param>
-    /// <param name="observer">The observer.</param>
+    /// <param name="observer">The observer receiving that side's elements.</param>
     /// <param name="side">The side.</param>
     private sealed class Subscription(PartitionObservable<T> parent, IObserver<T> observer, bool side) : IDisposable
     {
         /// <summary>The parent observable.</summary>
         private readonly PartitionObservable<T> _parent = parent;
 
-        /// <summary>The observer.</summary>
+        /// <summary>The observer receiving this side's elements.</summary>
         private readonly IObserver<T> _observer = observer;
 
         /// <summary>The side.</summary>

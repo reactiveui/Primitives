@@ -25,7 +25,7 @@ internal static class SyncTimerObservable
 
     /// <summary>Gets a shared timer for the specified period and scheduler.</summary>
     /// <param name="timeSpan">The period.</param>
-    /// <param name="scheduler">The scheduler.</param>
+    /// <param name="scheduler">The sequencer that times each tick.</param>
     /// <returns>A shared observable sequence of timer ticks.</returns>
     internal static IObservable<DateTime> Get(TimeSpan timeSpan, ISequencer scheduler)
     {
@@ -36,7 +36,7 @@ internal static class SyncTimerObservable
 
     /// <summary>Broadcasts ticks through immutable observer snapshots; subscription changes publish a new snapshot under the gate.</summary>
     /// <param name="timeSpan">The period.</param>
-    /// <param name="scheduler">The scheduler.</param>
+    /// <param name="scheduler">The sequencer that times each tick.</param>
     private sealed class SharedTimer(TimeSpan timeSpan, ISequencer scheduler) : IObservable<DateTime>
     {
         /// <summary>Sentinel empty observer array, shared so unsubscribing the last observer doesn't allocate.</summary>

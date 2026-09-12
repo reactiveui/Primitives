@@ -37,7 +37,7 @@ internal sealed class DetectStaleObservable<T>(
     /// <summary>Sink that re-arms the staleness timer on each upstream value and emits a stale marker when the window elapses.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="stalenessPeriod">The staleness period.</param>
-    /// <param name="scheduler">The scheduler.</param>
+    /// <param name="scheduler">The sequencer that times the staleness window.</param>
     private sealed class DetectStaleSink(
         IObserver<Stale<T>> downstream,
         TimeSpan stalenessPeriod,

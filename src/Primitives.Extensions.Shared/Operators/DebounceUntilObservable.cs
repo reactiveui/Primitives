@@ -39,7 +39,7 @@ internal sealed class DebounceUntilObservable<T>(
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="debounce">The debounce duration.</param>
     /// <param name="condition">The condition.</param>
-    /// <param name="scheduler">The scheduler.</param>
+    /// <param name="scheduler">The sequencer that times the debounce window.</param>
     private sealed class DebounceUntilSink(
         IObserver<T> downstream,
         TimeSpan debounce,

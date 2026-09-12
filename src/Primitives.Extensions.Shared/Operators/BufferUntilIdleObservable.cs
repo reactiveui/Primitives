@@ -35,7 +35,7 @@ internal sealed class BufferUntilIdleObservable<T>(
     /// <summary>Sink that accumulates elements and emits the buffer once the idle timer elapses.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="idleTime">The idle time period.</param>
-    /// <param name="scheduler">The scheduler.</param>
+    /// <param name="scheduler">The sequencer that times the idle period.</param>
     private sealed class BufferUntilIdleSink(
         IObserver<IList<T>> downstream,
         TimeSpan idleTime,
