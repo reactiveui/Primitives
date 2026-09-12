@@ -1512,7 +1512,7 @@ dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.Maui.R
 | `Observable.Using(...)`             | `Signal.Use(...)`                                                                | Resource scoped to subscription.                               |
 | `Observable.Timer(dueTime)`         | `Signal.After(dueTime)`                                                          | Emits `long` tick `0`.                                         |
 | `Observable.Timer(dueTime, period)` | `Signal.After(dueTime, period)`                                                  | Periodic `long` ticks.                                         |
-| `Observable.Interval(period)`       | `Signal.Pulse(period)` or `Signal.Every(period)`                                 | Repeating ticks.                                               |
+| `Observable.Interval(period)`       | `Signal.Pulse(period)` , `Signal.Every(period)`  or `Signal.Interval(period)`    | Repeating ticks.                                               |
 | `ToObservable()` from enumerable    | `Signal.FromEnumerable(values)`, `values.ToSignal()`, or `values.ToObservable()` | Cancellation-token overloads are available.                    |
 | task conversion                     | `Signal.FromTask(task)`                                                          | Function-based task signals also exist.                        |
 
