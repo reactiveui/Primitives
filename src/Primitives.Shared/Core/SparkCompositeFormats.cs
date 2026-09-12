@@ -12,9 +12,8 @@ namespace ReactiveUI.Primitives.Core;
 
 /// <summary>Holds the parsed composite formats <see cref="Spark{T}"/> renders with.</summary>
 /// <remarks>
-/// The formats sit on a non-generic type on purpose. A static field inside <see cref="Spark{T}"/> is
-/// a field of each closed generic, so the format would be parsed once per <c>T</c>; one shared instance
-/// serves every one of them.
+/// A static field in <see cref="Spark{T}"/> is a distinct field per closed generic, so the formats live on a
+/// non-generic type to be parsed once for every <c>T</c>.
 /// </remarks>
 internal static class SparkCompositeFormats
 {

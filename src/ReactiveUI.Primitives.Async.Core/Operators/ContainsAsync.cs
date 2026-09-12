@@ -7,9 +7,6 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides a set of extension methods for working with asynchronous observable sequences.</summary>
-/// <remarks>The methods in this class enable querying and manipulation of asynchronous observables, such as
-/// determining whether a sequence contains a specified element. These extensions are designed to integrate with the
-/// SignalAsync{T} pattern for asynchronous, push-based data streams.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Asynchronous containment operators for an observable source sequence.</summary>

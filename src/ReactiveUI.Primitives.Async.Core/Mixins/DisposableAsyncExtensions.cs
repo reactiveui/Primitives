@@ -7,9 +7,6 @@ using System.Diagnostics.CodeAnalysis;
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for converting synchronous disposable objects to asynchronous disposables.</summary>
-/// <remarks>These extension methods enable the use of existing IDisposable implementations in asynchronous
-/// disposal scenarios by wrapping them as IAsyncDisposable. This is useful when working with APIs that require
-/// asynchronous disposal, but only a synchronous Dispose method is available.</remarks>
 public static class DisposableAsyncExtensions
 {
     /// <summary>Asynchronous-disposal wrapping operators for an <see cref="IDisposable"/> instance.</summary>
@@ -19,13 +16,11 @@ public static class DisposableAsyncExtensions
         /// <summary>Converts an <see cref="IDisposable"/> instance to an <see cref="IAsyncDisposable"/> wrapper.</summary>
         /// <returns>An <see cref="IAsyncDisposable"/> that disposes the underlying <see cref="IDisposable"/> when disposed
         /// asynchronously.</returns>
-        /// <remarks>The returned <see cref="IAsyncDisposable"/> invokes the synchronous <see
-        /// cref="IDisposable.Dispose"/> method when <see cref="IAsyncDisposable.DisposeAsync"/> is called. This is useful
-        /// for integrating synchronous disposables into asynchronous disposal patterns.</remarks>
+        /// <remarks>Disposal runs synchronously on the caller's thread; the returned handle only adapts the shape.</remarks>
         [SuppressMessage(
             "Roslynator",
             "RCS1047:Non-asynchronous method name should not end with \'Async\'",
-            Justification = "This is an existing method")]
+            Justification = "The suffix names the IAsyncDisposable the method returns, not asynchronous work.")]
         public IAsyncDisposable ToDisposableAsync()
         {
             ArgumentExceptionHelper.ThrowIfNull(disposable);
@@ -35,14 +30,10 @@ public static class DisposableAsyncExtensions
     }
 
     /// <summary>
-    /// Provides an implementation of <see cref="IAsyncDisposable"/> that wraps a synchronous <see cref="IDisposable"/>
-    /// instance, enabling it to be used in asynchronous disposal scenarios.
+    /// Presents a synchronous <see cref="IDisposable"/> as an <see cref="IAsyncDisposable"/>, calling
+    /// <see cref="IDisposable.Dispose"/> inline and completing synchronously.
     /// </summary>
     /// <param name="disposable">The <see cref="IDisposable"/> instance to be wrapped for asynchronous disposal. Cannot be null.</param>
-    /// <remarks>This class allows objects that implement <see cref="IDisposable"/> but not <see
-    /// cref="IAsyncDisposable"/> to be used in contexts that require asynchronous disposal. The asynchronous dispose
-    /// operation is performed by invoking the synchronous <see cref="IDisposable.Dispose"/> method; no actual
-    /// asynchronous work is performed.</remarks>
     internal sealed class DisposableToDisposableAsync(IDisposable disposable) : IAsyncDisposable
     {
         /// <inheritdoc/>

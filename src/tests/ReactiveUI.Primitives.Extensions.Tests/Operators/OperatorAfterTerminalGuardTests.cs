@@ -7,6 +7,7 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Disposables;
+using ReactiveUI.Primitives.Extensions.Operators;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
@@ -18,8 +19,8 @@ namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 /// notifications past the terminal to verify the guard silently drops them.</summary>
 public class OperatorAfterTerminalGuardTests
 {
-    /// <summary>Settle window used to let scheduler-marshalled tests fire any racing emission.</summary>
-    private const int SettleDelayMilliseconds = 50;
+    /// <summary>Retry delay handed to the retry operators under test.</summary>
+    private const int RetryDelayMilliseconds = 50;
 
     /// <summary>Tick window for fast-scheduler tests.</summary>
     private const int TickWindow = 100;
@@ -29,9 +30,6 @@ public class OperatorAfterTerminalGuardTests
 
     /// <summary>Second sentinel value used in after-terminal pushes.</summary>
     private const int SecondValue = 2;
-
-    /// <summary>Guard timeout so a hung rendezvous fails this test rather than stalling the run.</summary>
-    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
 
     /// <summary>Verifies <c>OnErrorRetry</c>'s sink silently drops events after a downstream
     /// completion has set the <c>_disposed</c> latch — and that a second dispose hits the
@@ -65,7 +63,7 @@ public class OperatorAfterTerminalGuardTests
     {
         SyncDirectSource<int> source = new();
         Exception? caught = null;
-        var sub = source.RetryForeverWithDelay(TimeSpan.FromMilliseconds(SettleDelayMilliseconds)).Subscribe(
+        var sub = source.RetryForeverWithDelay(TimeSpan.FromMilliseconds(RetryDelayMilliseconds)).Subscribe(
             static _ => { },
             ex => caught = ex);
         sub.Dispose();
@@ -84,7 +82,7 @@ public class OperatorAfterTerminalGuardTests
     [Test]
     public async Task WhenRetryWithDelayDisposedDuringDelay_ThenSubscribeToSourceGuardSkipsRetry()
     {
-        const int LongDelayMs = 250;
+        VirtualClock scheduler = new();
         var subscribeCount = 0;
         var source = Observable.Create<int>(o =>
         {
@@ -92,14 +90,18 @@ public class OperatorAfterTerminalGuardTests
             o.OnError(new InvalidOperationException("retry-after-dispose"));
             return EmptyDisposable.Instance;
         });
-        var sub = source.RetryForeverWithDelay(TimeSpan.FromMilliseconds(LongDelayMs)).Subscribe(static _ => { });
+        var sub = new RetryWithDelayObservable<int>(
+            source,
+            int.MaxValue,
+            static _ => TimeSpan.FromTicks(TickWindow),
+            scheduler).Subscribe(static _ => { });
 
         // First subscribe ran; source errored synchronously and a retry has been scheduled.
         sub.Dispose();
 
-        // Wait past the delay window so the scheduled callback fires while _disposed = true,
+        // Moving past the delay window fires the scheduled callback while _disposed = true,
         // hitting the SubscribeToSource _disposed guard rather than re-subscribing.
-        await Task.Delay(LongDelayMs + LongDelayMs);
+        scheduler.AdvanceBy(TickWindow * SettleMultiplier);
         await Assert.That(subscribeCount).IsEqualTo(1);
     }
 
@@ -108,8 +110,8 @@ public class OperatorAfterTerminalGuardTests
     [Test]
     public async Task WhenRetryWithBackoffDisposedDuringDelay_ThenSubscribeToSourceGuardSkipsRetry()
     {
-        const int LongDelayMs = 250;
         const int RetryAttempts = 10;
+        VirtualClock scheduler = new();
         var subscribeCount = 0;
         var source = Observable.Create<int>(o =>
         {
@@ -120,10 +122,10 @@ public class OperatorAfterTerminalGuardTests
         var sub = source.OnErrorRetry<int, InvalidOperationException>(
             static _ => { },
             RetryAttempts,
-            TimeSpan.FromMilliseconds(LongDelayMs),
-            TaskPoolSequencer.Default).Subscribe(static _ => { });
+            TimeSpan.FromTicks(TickWindow),
+            scheduler).Subscribe(static _ => { });
         sub.Dispose();
-        await Task.Delay(LongDelayMs + LongDelayMs);
+        scheduler.AdvanceBy(TickWindow * SettleMultiplier);
         await Assert.That(subscribeCount).IsEqualTo(1);
     }
 
@@ -404,7 +406,7 @@ public class OperatorAfterTerminalGuardTests
     {
         SyncDirectSource<int> source = new();
         Exception? caught = null;
-        var sub = source.RetryWithBackoff(1, TimeSpan.FromMilliseconds(SettleDelayMilliseconds)).Subscribe(
+        var sub = source.RetryWithBackoff(1, TimeSpan.FromMilliseconds(RetryDelayMilliseconds)).Subscribe(
             static _ => { },
             ex => caught = ex);
         sub.Dispose();
@@ -461,14 +463,14 @@ public class OperatorAfterTerminalGuardTests
     public async Task WhenSubscribeSynchronousOmitsErrorAndCompletedCallbacks_ThenNullPathsTaken()
     {
         Subject<int> subject = new();
-        TaskCompletionSource processed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource processed = new();
         using var sub = subject.SubscribeSynchronous(value =>
         {
             _ = processed.TrySetResult();
             return default;
         });
         subject.OnNext(1);
-        await processed.Task.WaitAsync(GuardTimeout);
+        await processed.Task;
 
         // Subject silently terminates without invoking the optional callbacks.
         subject.OnError(new InvalidOperationException("ignored"));

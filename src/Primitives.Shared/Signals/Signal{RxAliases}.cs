@@ -137,8 +137,7 @@ public static partial class Signal
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
-        Justification =
-            "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
+        Justification = "The element type cannot be inferred from the arguments.")]
     public static IObservable<T> Empty<T>() => ImmutableEmptySignal<T>.Instance;
 
     /// <summary>Returns an empty observable sequence on the supplied scheduler.</summary>
@@ -148,8 +147,7 @@ public static partial class Signal
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
-        Justification =
-            "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
+        Justification = "The element type cannot be inferred from the arguments.")]
     public static IObservable<T> Empty<T>(ISequencer scheduler)
     {
         ArgumentExceptionHelper.ThrowIfNull(scheduler);
@@ -164,8 +162,7 @@ public static partial class Signal
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
-        Justification =
-            "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
+        Justification = "The element type cannot be inferred from the arguments.")]
     public static IObservable<T> Never<T>() => ImmutableNeverSignal<T>.Instance;
 
     /// <summary>Returns an observable sequence that terminates with an error.</summary>
@@ -176,8 +173,7 @@ public static partial class Signal
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
-        Justification =
-            "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
+        Justification = "The element type cannot be inferred from the arguments.")]
     public static IObservable<T> Throw<T>(Exception error) => new ImmediateThrowSignal<T>(error);
 
     /// <summary>Returns an observable sequence that terminates with a scheduled error.</summary>
@@ -188,8 +184,7 @@ public static partial class Signal
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
-        Justification =
-            "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
+        Justification = "The element type cannot be inferred from the arguments.")]
     public static IObservable<T> Throw<T>(Exception error, ISequencer scheduler)
     {
         ArgumentExceptionHelper.ThrowIfNull(scheduler);

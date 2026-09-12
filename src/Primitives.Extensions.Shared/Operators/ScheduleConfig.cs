@@ -10,9 +10,7 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 
 /// <summary>
 /// Bundled scheduling configuration shared by <see cref="ScheduledValueObservable{T}"/> and
-/// <see cref="ScheduledSourceObservable{T}"/>. Carrying these parameters as a single readonly record
-/// struct keeps observable/observer constructor parameter counts low, avoids SA1117-style parameter
-/// soup, and lets the compiler copy the configuration into capture-free scheduler lambdas.
+/// <see cref="ScheduledSourceObservable{T}"/>, copied by value into capture-free scheduler lambdas.
 /// </summary>
 /// <typeparam name="T">The element type emitted by the configured observable.</typeparam>
 /// <param name="Scheduler">The scheduler on which each emission is dispatched.</param>

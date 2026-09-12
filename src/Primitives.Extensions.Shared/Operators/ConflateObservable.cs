@@ -34,11 +34,9 @@ internal sealed class ConflateObservable<T>(
     }
 
     /// <summary>
-    /// Single observer that combines two previously-distinct concerns into one allocation:
-    /// (1) marshals upstream notifications onto the scheduler thread — delegated to the shared
-    /// <see cref="ScheduledDrainState{T}"/> FIFO queue and scheduled drain — and (2) applies the conflate
-    /// time-window throttle to each <see cref="DrainNotificationKind.Next"/> notification. End-user-observable
-    /// semantics are unchanged from the prior two-observer implementation.
+    /// Single observer that both marshals upstream notifications onto the scheduler thread, through the
+    /// <see cref="ScheduledDrainState{T}"/> queue and scheduled drain, and applies the conflate time-window
+    /// throttle to each <see cref="DrainNotificationKind.Next"/> notification.
     /// </summary>
     internal sealed class ConflateSink : IObserver<T>, IDisposable, IDrainTarget
     {
@@ -149,10 +147,8 @@ internal sealed class ConflateObservable<T>(
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void AttachSourceSubscription(IDisposable subscription) => _state.Attach(subscription);
 
-        /// <summary>Applies the throttle-window decision to a dequeued value and either emits inline or
-        /// schedules a deferred emission. The emission bodies live in covered helpers; only this
-        /// race-guarded shell (whose already-done early-out is reachable only when a concurrent dispose
-        /// flips the flag between the drain dequeue and this gate acquisition) is excluded.</summary>
+        /// <summary>Applies the throttle-window decision to a dequeued value, emitting it inline or scheduling a
+        /// deferred emission at the end of the window.</summary>
         /// <param name="value">The value to forward.</param>
         [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
         private void ProcessNext(T value)
@@ -162,6 +158,7 @@ internal sealed class ConflateObservable<T>(
 
             lock (_gate)
             {
+                // Race-only: a concurrent dispose can flip the done flag between the drain dequeue and this gate.
                 if (_state.Done)
                 {
                     return;
@@ -228,13 +225,12 @@ internal sealed class ConflateObservable<T>(
 
         /// <summary>Forwards an error to downstream and terminates the sink.</summary>
         /// <param name="error">The error to forward.</param>
-        /// <remarks>The already-terminated early-out is reachable only when a concurrent dispose flips the
-        /// flag between the drain dequeue and this gate acquisition; excluded as race-only.</remarks>
         [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
         private void ForwardError(Exception error)
         {
             lock (_gate)
             {
+                // Race-only: a concurrent dispose can flip the done flag between the drain dequeue and this gate.
                 if (_state.Done)
                 {
                     return;
@@ -247,14 +243,13 @@ internal sealed class ConflateObservable<T>(
             _downstream.OnError(error);
         }
 
-        /// <summary>Forwards completion, deferring if a throttled emission is still scheduled.</summary>
-        /// <remarks>The already-terminated early-out is reachable only when a concurrent dispose flips the
-        /// flag between the drain dequeue and this gate acquisition; excluded as race-only.</remarks>
+        /// <summary>Forwards completion, deferring it when a throttled emission is scheduled.</summary>
         [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
         private void ForwardCompleted()
         {
             lock (_gate)
             {
+                // Race-only: a concurrent dispose can flip the done flag between the drain dequeue and this gate.
                 if (_state.Done)
                 {
                     return;

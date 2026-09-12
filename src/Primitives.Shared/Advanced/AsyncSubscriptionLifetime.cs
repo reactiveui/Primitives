@@ -47,7 +47,7 @@ public sealed class AsyncSubscriptionLifetime : IDisposable
     public void SetSubscription(IDisposable? disposable) =>
         _subscription.Create(disposable ?? EmptyDisposable.Instance);
 
-    /// <summary>Marks asynchronous setup complete and releases the cancellation source when still owned here.</summary>
+    /// <summary>Marks asynchronous setup complete and releases the cancellation source while it is owned here.</summary>
     public void Complete() => _ = TryComplete();
 
     /// <inheritdoc/>
@@ -71,7 +71,7 @@ public sealed class AsyncSubscriptionLifetime : IDisposable
         _cts.Dispose();
     }
 
-    /// <summary>Attempts to mark asynchronous setup complete and release the cancellation source when still owned here.</summary>
+    /// <summary>Attempts to mark asynchronous setup complete and release the cancellation source while it is owned here.</summary>
     /// <returns><see langword="true"/> when this call completed the lifetime.</returns>
     internal bool TryComplete()
     {
@@ -100,7 +100,7 @@ public sealed class AsyncSubscriptionLifetime : IDisposable
         }
         catch (ObjectDisposedException)
         {
-            // Completion can release the CTS concurrently; disposal still continues with the inner subscription.
+            // Completion can release the CTS concurrently; disposal continues with the inner subscription.
         }
     }
 }

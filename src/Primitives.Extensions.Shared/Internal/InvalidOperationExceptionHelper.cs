@@ -8,23 +8,16 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Extensions;
 
 /// <summary>
-/// Provides helper methods for throwing <see cref="InvalidOperationException"/> when
-/// constructor-supplied state on an operator is missing at the time it is consumed.
-/// The thrown message is composed of the captured member name and the caller member
-/// (typically <c>Subscribe</c> or the enclosing type), so call sites just pass the
-/// field being validated.
+/// Throws <see cref="InvalidOperationException"/> when constructor-supplied operator state is missing at the
+/// point it is consumed, naming the captured member and the calling member in the message.
 /// </summary>
 [ExcludeFromCodeCoverage]
 internal static class InvalidOperationExceptionHelper
 {
-    /// <summary>
-    /// Throws an <see cref="InvalidOperationException"/> if <paramref name="argument"/> is null.
-    /// The exception message is composed from the captured argument expression and the
-    /// caller member, e.g. <c>"'source' was not supplied to 'Subscribe'."</c>.
-    /// </summary>
+    /// <summary>Throws <see cref="InvalidOperationException"/> when <paramref name="argument"/> is null.</summary>
     /// <param name="argument">The reference type field to validate as non-null.</param>
-    /// <param name="memberName">The validated member's name, captured from the <paramref name="argument"/> expression via <see cref="CallerArgumentExpressionAttribute"/>.</param>
-    /// <param name="operation">The void-throwing caller's name, captured via <see cref="CallerMemberNameAttribute"/>.</param>
+    /// <param name="memberName">The validated member's name, captured from the <paramref name="argument"/> expression.</param>
+    /// <param name="operation">The calling member's name.</param>
     /// <exception cref="InvalidOperationException"><paramref name="argument"/> is <see langword="null"/>.</exception>
     internal static void ThrowIfNull(
         [NotNull] object? argument,
@@ -42,13 +35,13 @@ internal static class InvalidOperationExceptionHelper
     }
 
     /// <summary>
-    /// Validates an argument and returns it if it is not null, otherwise throws an <see cref="InvalidOperationException"/>.
-    /// Designed for use in primary constructor initializers.
+    /// Returns <paramref name="argument"/> when non-null and otherwise throws, shaped for use in a primary
+    /// constructor initializer.
     /// </summary>
     /// <typeparam name="T">The type of the argument.</typeparam>
     /// <param name="argument">The argument to validate.</param>
-    /// <param name="memberName">The validated reference-type argument's name, captured from the <paramref name="argument"/> expression via <see cref="CallerArgumentExpressionAttribute"/>.</param>
-    /// <param name="operation">The reference-type-checking caller's name, captured via <see cref="CallerMemberNameAttribute"/>.</param>
+    /// <param name="memberName">The validated argument's name, captured from the <paramref name="argument"/> expression.</param>
+    /// <param name="operation">The calling member's name.</param>
     /// <returns>The non-null argument.</returns>
     /// <exception cref="InvalidOperationException"><paramref name="argument"/> is <see langword="null"/>.</exception>
     internal static T Check<T>(
@@ -68,12 +61,12 @@ internal static class InvalidOperationExceptionHelper
     }
 
     /// <summary>
-    /// Validates a string argument and returns it if it is not null or empty, otherwise throws an <see cref="InvalidOperationException"/>.
-    /// Designed for use in primary constructor initializers.
+    /// Returns <paramref name="argument"/> when it is neither null nor empty and otherwise throws, shaped for use
+    /// in a primary constructor initializer.
     /// </summary>
     /// <param name="argument">The argument to validate.</param>
-    /// <param name="memberName">The validated string argument's name, captured from the <paramref name="argument"/> expression via <see cref="CallerArgumentExpressionAttribute"/>.</param>
-    /// <param name="operation">The string-checking caller's name, captured via <see cref="CallerMemberNameAttribute"/>.</param>
+    /// <param name="memberName">The validated argument's name, captured from the <paramref name="argument"/> expression.</param>
+    /// <param name="operation">The calling member's name.</param>
     /// <returns>The non-null, non-empty argument.</returns>
     /// <exception cref="InvalidOperationException"><paramref name="argument"/> is <see langword="null"/> or empty.</exception>
     internal static string Check(

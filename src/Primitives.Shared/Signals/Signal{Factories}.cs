@@ -18,7 +18,7 @@ public static partial class Signal
     /// <summary>Creates a finite integer signal from <paramref name="start"/> for <paramref name="count"/> values.</summary>
     /// <param name="start">The first value to emit.</param>
     /// <param name="count">The number of values to emit.</param>
-    /// <returns>An Signals.</returns>
+    /// <returns>A signal that emits <paramref name="count"/> consecutive integers and completes.</returns>
     public static IObservable<int> Sequence(int start, int count)
     {
         ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(count);
@@ -29,8 +29,8 @@ public static partial class Signal
     /// <summary>Creates a finite integer signal from <paramref name="start"/> for <paramref name="count"/> values on <paramref name="scheduler"/>.</summary>
     /// <param name="start">The first value to emit.</param>
     /// <param name="count">The number of values to emit.</param>
-    /// <param name="scheduler">The scheduler.</param>
-    /// <returns>An Signals.</returns>
+    /// <param name="scheduler">The scheduler the values are emitted on.</param>
+    /// <returns>A signal that emits <paramref name="count"/> consecutive integers and completes.</returns>
     public static IObservable<int> Sequence(int start, int count, ISequencer scheduler)
     {
         ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(count);
@@ -48,18 +48,18 @@ public static partial class Signal
     }
 
     /// <summary>Creates a signal that repeats a value forever.</summary>
-    /// <typeparam name="T">The type.</typeparam>
-    /// <param name="value">The value.</param>
-    /// <returns>An Signals.</returns>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="value">The value to repeat.</param>
+    /// <returns>A signal that repeats <paramref name="value"/> and never completes.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservable<T> Loop<T>(T value) =>
         new LoopSignal<T>(value);
 
     /// <summary>Creates a signal that repeats a value <paramref name="count"/> times.</summary>
-    /// <typeparam name="T">The type.</typeparam>
-    /// <param name="value">The value.</param>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="value">The value to repeat.</param>
     /// <param name="count">The number of times to repeat the value.</param>
-    /// <returns>An Signals.</returns>
+    /// <returns>A signal that emits <paramref name="value"/> <paramref name="count"/> times and completes.</returns>
     public static IObservable<T> Loop<T>(T value, int count)
     {
         ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(count);
@@ -74,7 +74,7 @@ public static partial class Signal
     /// <param name="condition">The condition that determines whether to continue.</param>
     /// <param name="iterate">The function that advances the state.</param>
     /// <param name="resultSelector">The function that produces the result from the state.</param>
-    /// <returns>An Signals.</returns>
+    /// <returns>A signal that emits a projection of each state until the condition fails, then completes.</returns>
     public static IObservable<TResult> Unfold<TState, TResult>(
         TState initialState,
         Func<TState, bool> condition,
@@ -97,7 +97,7 @@ public static partial class Signal
     /// <param name="condition">The condition that determines whether to continue.</param>
     /// <param name="iterator">The function that advances the state.</param>
     /// <param name="resultSelector">The function that produces the result from the state.</param>
-    /// <returns>An Signals.</returns>
+    /// <returns>A signal that emits a projection of each state until the condition fails, then completes.</returns>
     public static IObservable<TResult> Iterate<TState, TResult>(
         TState initialState,
         Func<TState, bool> condition,
@@ -115,10 +115,10 @@ public static partial class Signal
 
     /// <summary>Creates a signal whose subscription lifetime owns a resource.</summary>
     /// <typeparam name="TResource">The type of the resource.</typeparam>
-    /// <typeparam name="T">The type.</typeparam>
+    /// <typeparam name="T">The element type.</typeparam>
     /// <param name="resourceFactory">The factory that creates the resource.</param>
     /// <param name="signalFactory">The factory that creates the signal from the resource.</param>
-    /// <returns>An Signals.</returns>
+    /// <returns>A signal that disposes the resource when the subscription ends.</returns>
     public static IObservable<T> Use<TResource, T>(
         Func<TResource> resourceFactory,
         Func<TResource, IObservable<T>> signalFactory)
@@ -134,7 +134,7 @@ public static partial class Signal
     /// <summary>Converts an event into a signal of event pattern values.</summary>
     /// <param name="addHandler">The action that subscribes the event handler.</param>
     /// <param name="removeHandler">The action that unsubscribes the event handler.</param>
-    /// <returns>An Signals.</returns>
+    /// <returns>A signal that emits an event pattern for each raised event.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservable<EventPattern<EventArgs>> FromEventPattern(
         Action<EventHandler> addHandler,
@@ -163,7 +163,7 @@ public static partial class Signal
     /// <typeparam name="TEventArgs">The type of the event arguments.</typeparam>
     /// <param name="addHandler">The action that subscribes the event handler.</param>
     /// <param name="removeHandler">The action that unsubscribes the event handler.</param>
-    /// <returns>An Signals.</returns>
+    /// <returns>A signal that emits an event pattern for each raised event.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservable<EventPattern<TEventArgs>> FromEventPattern<TEventArgs>(
         Action<EventHandler<TEventArgs>> addHandler,
@@ -202,8 +202,7 @@ public static partial class Signal
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
-        Justification =
-            "The event argument type is part of the returned EventPattern and must be specified for non-generic event handlers.")]
+        Justification = "The event argument type appears only in the return type.")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservable<EventPattern<TEventArgs>> FromEventPattern<TEventHandler, TEventArgs>(
         Action<TEventHandler> addHandler,
@@ -224,8 +223,7 @@ public static partial class Signal
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
-        Justification =
-            "The event argument type is part of the returned EventPattern and must be specified for non-generic event handlers.")]
+        Justification = "The event argument type appears only in the return type.")]
     public static IObservable<EventPattern<TEventArgs>> FromEventPattern<TEventHandler, TEventArgs>(
         Action<TEventHandler> addHandler,
         Action<TEventHandler> removeHandler,
@@ -299,7 +297,7 @@ public static partial class Signal
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
-        Justification = "The sender type is part of the returned EventPattern and cannot be inferred from the handler conversion.")]
+        Justification = "The sender type appears only in the return type.")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservable<EventPattern<TSender, TEventArgs>> FromEventPattern<TEventHandler, TSender, TEventArgs>(
         Func<EventHandler<TEventArgs>, TEventHandler> conversion,
@@ -323,7 +321,7 @@ public static partial class Signal
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
-        Justification = "The sender type is part of the returned EventPattern and cannot be inferred from the handler conversion.")]
+        Justification = "The sender type appears only in the return type.")]
     public static IObservable<EventPattern<TSender, TEventArgs>> FromEventPattern<TEventHandler, TSender, TEventArgs>(
         Func<EventHandler<TEventArgs>, TEventHandler> conversion,
         Action<TEventHandler> addHandler,
@@ -401,9 +399,9 @@ public static partial class Signal
     }
 
     /// <summary>Creates a signal from an enumerable sequence.</summary>
-    /// <typeparam name="T">The type.</typeparam>
+    /// <typeparam name="T">The element type.</typeparam>
     /// <param name="values">The values to emit.</param>
-    /// <returns>An Signals.</returns>
+    /// <returns>A signal that emits each value in order and completes.</returns>
     public static IObservable<T> FromEnumerable<T>(IEnumerable<T> values)
     {
         ArgumentExceptionHelper.ThrowIfNull(values);
@@ -412,10 +410,10 @@ public static partial class Signal
     }
 
     /// <summary>Creates a signal from an enumerable sequence and stops enumeration when the token is cancelled.</summary>
-    /// <typeparam name="T">The type.</typeparam>
+    /// <typeparam name="T">The element type.</typeparam>
     /// <param name="values">The values to emit.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>An Signals.</returns>
+    /// <param name="cancellationToken">The token that stops enumeration.</param>
+    /// <returns>A signal that emits each value in order and completes.</returns>
     public static IObservable<T> FromEnumerable<T>(IEnumerable<T> values, CancellationToken cancellationToken)
     {
         ArgumentExceptionHelper.ThrowIfNull(values);
@@ -426,14 +424,13 @@ public static partial class Signal
     }
 
     /// <summary>Creates a signal from a task instance.</summary>
-    /// <typeparam name="T">The type.</typeparam>
+    /// <typeparam name="T">The element type.</typeparam>
     /// <param name="task">The task to convert.</param>
-    /// <returns>An Signals.</returns>
+    /// <returns>A signal that emits the task result and completes, or fails with the task error.</returns>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Concurrency",
         "PSH1315:A blocking wait on an awaitable that may not be done",
-        Justification =
-            "Synchronous read of an already-completed (RanToCompletion) task for an allocation-free fast path; await is invalid in this synchronous factory.")]
+        Justification = "The result is read only once the task status is RanToCompletion.")]
     public static IObservable<T> FromTask<T>(Task<T> task)
     {
         ArgumentExceptionHelper.ThrowIfNull(task);
@@ -454,9 +451,9 @@ public static partial class Signal
     }
 
     /// <summary>Creates a signal by invoking an asynchronous factory at subscription time.</summary>
-    /// <typeparam name="T">The type.</typeparam>
+    /// <typeparam name="T">The element type.</typeparam>
     /// <param name="taskFactory">The factory that creates the task.</param>
-    /// <returns>An Signals.</returns>
+    /// <returns>A signal that emits the task result and completes.</returns>
     public static IObservable<T> FromAsync<T>(Func<Task<T>> taskFactory)
     {
         ArgumentExceptionHelper.ThrowIfNull(taskFactory);
@@ -465,18 +462,18 @@ public static partial class Signal
     }
 
     /// <summary>Creates a signal by invoking an asynchronous factory at subscription time.</summary>
-    /// <typeparam name="T">The type.</typeparam>
+    /// <typeparam name="T">The element type.</typeparam>
     /// <param name="taskFactory">The factory that creates the task.</param>
-    /// <returns>An Signals.</returns>
+    /// <returns>A signal that emits the task result and completes, cancelling the task when the subscription ends.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservable<T> FromAsync<T>(Func<CancellationToken, Task<T>> taskFactory) =>
         new FromAsyncSignal<T>(taskFactory);
 
     /// <summary>Creates a signal by invoking an asynchronous factory at subscription time.</summary>
-    /// <typeparam name="T">The type.</typeparam>
+    /// <typeparam name="T">The element type.</typeparam>
     /// <param name="taskFactory">The factory that creates the task.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>An Signals.</returns>
+    /// <param name="cancellationToken">The external token that cancels the task.</param>
+    /// <returns>A signal that emits the task result and completes.</returns>
     public static IObservable<T> FromAsync<T>(
         Func<CancellationToken, Task<T>> taskFactory,
         CancellationToken cancellationToken)
@@ -512,10 +509,10 @@ public static partial class Signal
         return new ExpireSignal<T>(source, dueTime, scheduler);
     }
 
-    /// <summary>Runs a function on the supplied scheduler and emits its result.</summary>
-    /// <typeparam name="T">The type.</typeparam>
+    /// <summary>Runs a function on the default sequencer and emits its result.</summary>
+    /// <typeparam name="T">The element type.</typeparam>
     /// <param name="function">The function to run.</param>
-    /// <returns>An Signals.</returns>
+    /// <returns>A signal that emits the function result and completes.</returns>
     public static IObservable<T> Start<T>(Func<T> function)
     {
         ArgumentExceptionHelper.ThrowIfNull(function);
@@ -524,10 +521,10 @@ public static partial class Signal
     }
 
     /// <summary>Runs a function on the supplied scheduler and emits its result.</summary>
-    /// <typeparam name="T">The type.</typeparam>
+    /// <typeparam name="T">The element type.</typeparam>
     /// <param name="function">The function to run.</param>
-    /// <param name="scheduler">The scheduler.</param>
-    /// <returns>An Signals.</returns>
+    /// <param name="scheduler">The scheduler the function runs on.</param>
+    /// <returns>A signal that emits the function result and completes.</returns>
     public static IObservable<T> Start<T>(Func<T> function, ISequencer scheduler)
     {
         ArgumentExceptionHelper.ThrowIfNull(function);
@@ -537,9 +534,9 @@ public static partial class Signal
         return new StartSignal<T>(function, scheduler);
     }
 
-    /// <summary>Runs an action on the supplied scheduler and emits <see cref="RxVoid.Default"/> when it completes.</summary>
+    /// <summary>Runs an action on the default sequencer and emits <see cref="RxVoid.Default"/> when it completes.</summary>
     /// <param name="action">The action to run.</param>
-    /// <returns>An Signals.</returns>
+    /// <returns>A signal that emits the unit value and completes.</returns>
     public static IObservable<RxVoid> Start(Action action)
     {
         ArgumentExceptionHelper.ThrowIfNull(action);
@@ -549,8 +546,8 @@ public static partial class Signal
 
     /// <summary>Runs an action on the supplied scheduler and emits <see cref="RxVoid.Default"/> when it completes.</summary>
     /// <param name="action">The action to run.</param>
-    /// <param name="scheduler">The scheduler.</param>
-    /// <returns>An Signals.</returns>
+    /// <param name="scheduler">The scheduler the action runs on.</param>
+    /// <returns>A signal that emits the unit value and completes.</returns>
     public static IObservable<RxVoid> Start(Action action, ISequencer scheduler)
     {
         ArgumentExceptionHelper.ThrowIfNull(action);
@@ -562,9 +559,9 @@ public static partial class Signal
 
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER || NET5_0_OR_GREATER
     /// <summary>Creates a signal from an async enumerable sequence and cancels enumeration when disposed.</summary>
-    /// <typeparam name="T">The type.</typeparam>
+    /// <typeparam name="T">The element type.</typeparam>
     /// <param name="values">The values to emit.</param>
-    /// <returns>An Signals.</returns>
+    /// <returns>A signal that emits each value in order and completes.</returns>
     public static IObservable<T> FromAsyncEnumerable<T>(IAsyncEnumerable<T> values)
     {
         ArgumentExceptionHelper.ThrowIfNull(values);
@@ -573,10 +570,10 @@ public static partial class Signal
     }
 
     /// <summary>Creates a signal from an async enumerable sequence and cancels enumeration when disposed.</summary>
-    /// <typeparam name="T">The type.</typeparam>
+    /// <typeparam name="T">The element type.</typeparam>
     /// <param name="values">The values to emit.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>An Signals.</returns>
+    /// <param name="cancellationToken">The token that stops enumeration.</param>
+    /// <returns>A signal that emits each value in order and completes.</returns>
     public static IObservable<T> FromAsyncEnumerable<T>(IAsyncEnumerable<T> values, CancellationToken cancellationToken)
     {
         ArgumentExceptionHelper.ThrowIfNull(values);
@@ -588,15 +585,15 @@ public static partial class Signal
 
     /// <summary>Emits a single zero tick after the due time.</summary>
     /// <param name="dueTime">The relative time after which to emit the tick.</param>
-    /// <returns>An Signals.</returns>
+    /// <returns>A signal that emits 0 after <paramref name="dueTime"/> and completes.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservable<long> After(TimeSpan dueTime) =>
         new AfterSignal(dueTime, ThreadPoolSequencer.Instance);
 
     /// <summary>Emits a single zero tick after the due time.</summary>
     /// <param name="dueTime">The relative time after which to emit the tick.</param>
-    /// <param name="scheduler">The scheduler.</param>
-    /// <returns>An Signals.</returns>
+    /// <param name="scheduler">The scheduler the tick is emitted on.</param>
+    /// <returns>A signal that emits 0 after <paramref name="dueTime"/> and completes.</returns>
     public static IObservable<long> After(TimeSpan dueTime, ISequencer scheduler)
     {
         ArgumentExceptionHelper.ThrowIfNull(scheduler);
@@ -606,15 +603,15 @@ public static partial class Signal
 
     /// <summary>Emits a single zero tick at the specified absolute due time.</summary>
     /// <param name="dueTime">The absolute time at which to emit the tick.</param>
-    /// <returns>An Signals.</returns>
+    /// <returns>A signal that emits 0 at <paramref name="dueTime"/> and completes.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservable<long> After(DateTimeOffset dueTime) =>
         new AfterSignal(Sequencer.Normalize(dueTime - ThreadPoolSequencer.Instance.Now), ThreadPoolSequencer.Instance);
 
     /// <summary>Emits a single zero tick at the specified absolute due time.</summary>
     /// <param name="dueTime">The absolute time at which to emit the tick.</param>
-    /// <param name="scheduler">The scheduler.</param>
-    /// <returns>An Signals.</returns>
+    /// <param name="scheduler">The scheduler the tick is emitted on.</param>
+    /// <returns>A signal that emits 0 at <paramref name="dueTime"/> and completes.</returns>
     public static IObservable<long> After(DateTimeOffset dueTime, ISequencer scheduler)
     {
         ArgumentExceptionHelper.ThrowIfNull(scheduler);
@@ -625,7 +622,7 @@ public static partial class Signal
     /// <summary>Emits first after <paramref name="dueTime"/> and then at <paramref name="period"/>.</summary>
     /// <param name="dueTime">The relative time before the first tick.</param>
     /// <param name="period">The period between subsequent ticks.</param>
-    /// <returns>An Signals.</returns>
+    /// <returns>A signal that emits increasing ticks, the first after <paramref name="dueTime"/>.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservable<long> After(TimeSpan dueTime, TimeSpan period) =>
         new AfterSignal(dueTime, period, ThreadPoolSequencer.Instance);
@@ -633,8 +630,8 @@ public static partial class Signal
     /// <summary>Emits first after <paramref name="dueTime"/> and then at <paramref name="period"/>.</summary>
     /// <param name="dueTime">The relative time before the first tick.</param>
     /// <param name="period">The period between subsequent ticks.</param>
-    /// <param name="scheduler">The scheduler.</param>
-    /// <returns>An Signals.</returns>
+    /// <param name="scheduler">The scheduler the ticks are emitted on.</param>
+    /// <returns>A signal that emits increasing ticks, the first after <paramref name="dueTime"/>.</returns>
     public static IObservable<long> After(TimeSpan dueTime, TimeSpan period, ISequencer scheduler)
     {
         ArgumentExceptionHelper.ThrowIfNull(scheduler);
@@ -644,7 +641,7 @@ public static partial class Signal
 
     /// <summary>Emits monotonically increasing ticks at the specified period.</summary>
     /// <param name="period">The period between ticks.</param>
-    /// <returns>An Signals.</returns>
+    /// <returns>A signal that emits increasing ticks every <paramref name="period"/>.</returns>
     public static IObservable<long> Every(TimeSpan period)
     {
         ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(period, TimeSpan.Zero);
@@ -654,8 +651,8 @@ public static partial class Signal
 
     /// <summary>Emits monotonically increasing ticks at the specified period.</summary>
     /// <param name="period">The period between ticks.</param>
-    /// <param name="scheduler">The scheduler.</param>
-    /// <returns>An Signals.</returns>
+    /// <param name="scheduler">The scheduler the ticks are emitted on.</param>
+    /// <returns>A signal that emits increasing ticks every <paramref name="period"/>.</returns>
     public static IObservable<long> Every(TimeSpan period, ISequencer scheduler)
     {
         ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(period, TimeSpan.Zero);
@@ -666,9 +663,9 @@ public static partial class Signal
     }
 
     /// <summary>Concatenates the supplied signals.</summary>
-    /// <typeparam name="T">The type.</typeparam>
+    /// <typeparam name="T">The element type.</typeparam>
     /// <param name="sources">The signals to concatenate.</param>
-    /// <returns>An Signals.</returns>
+    /// <returns>A signal that subscribes to each source after the previous one completes.</returns>
     public static IObservable<T> Chain<T>(params IObservable<T>[] sources)
     {
         var validated = ValidateSources(sources);
@@ -677,9 +674,9 @@ public static partial class Signal
     }
 
     /// <summary>Merges the supplied signals.</summary>
-    /// <typeparam name="T">The type.</typeparam>
+    /// <typeparam name="T">The element type.</typeparam>
     /// <param name="sources">The signals to merge.</param>
-    /// <returns>An Signals.</returns>
+    /// <returns>A signal that forwards values from every source.</returns>
     public static IObservable<T> Blend<T>(params IObservable<T>[] sources)
     {
         var validated = ValidateSources(sources);
@@ -688,23 +685,23 @@ public static partial class Signal
     }
 
     /// <summary>Races the supplied signals and mirrors the first one to produce a value or terminal signal.</summary>
-    /// <typeparam name="T">The type.</typeparam>
+    /// <typeparam name="T">The element type.</typeparam>
     /// <param name="sources">The signals to race.</param>
-    /// <returns>An Signals.</returns>
+    /// <returns>A signal that mirrors the first source to respond.</returns>
     public static IObservable<T> Race<T>(params IObservable<T>[] sources)
     {
         var validated = ValidateSources(sources);
         return validated.Length > 0 && validated[0] is RangeSignal ? validated[0] : new RaceSignal<T>(validated);
     }
 
-    /// <summary>Mirrors the first supplied signal to produce a value or terminal signal.</summary>
+    /// <summary>Pairs values from two signals by position and emits the combined result.</summary>
     /// <typeparam name="TLeft">The type of the left signal values.</typeparam>
     /// <typeparam name="TRight">The type of the right signal values.</typeparam>
     /// <typeparam name="TResult">The type of the result.</typeparam>
     /// <param name="left">The left signal.</param>
     /// <param name="right">The right signal.</param>
     /// <param name="selector">The function that combines the paired values.</param>
-    /// <returns>An Signals.</returns>
+    /// <returns>A signal that emits one combined result per pair of values.</returns>
     public static IObservable<TResult> Pair<TLeft, TRight, TResult>(
         IObservable<TLeft> left,
         IObservable<TRight> right,
@@ -729,7 +726,7 @@ public static partial class Signal
     /// <param name="left">The left signal.</param>
     /// <param name="right">The right signal.</param>
     /// <param name="selector">The function that combines the latest values.</param>
-    /// <returns>An Signals.</returns>
+    /// <returns>A signal that emits a combined result whenever either side produces a value.</returns>
     public static IObservable<TResult> SyncLatest<TLeft, TRight, TResult>(
         IObservable<TLeft> left,
         IObservable<TRight> right,
@@ -754,7 +751,7 @@ public static partial class Signal
     /// <param name="left">The left signal.</param>
     /// <param name="right">The right signal.</param>
     /// <param name="selector">The function that combines the last values.</param>
-    /// <returns>An Signals.</returns>
+    /// <returns>A signal that emits one combined result once both sources complete.</returns>
     public static IObservable<TResult> ForkJoin<TLeft, TRight, TResult>(
         IObservable<TLeft> left,
         IObservable<TRight> right,

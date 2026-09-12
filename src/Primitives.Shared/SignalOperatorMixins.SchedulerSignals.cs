@@ -11,10 +11,8 @@ namespace ReactiveUI.Primitives;
 #endif
 
 /// <summary>
-/// Dedicated signals for the scheduler/time operators, replacing the per-subscription
-/// <c>Signal.Create(observer =&gt; ...)</c> closures. The current-thread variants follow the
-/// <c>ExpireSignal</c>/<c>ProbeSignal</c> pattern: implement <see cref="IRequireCurrentThread{T}"/>
-/// and schedule the subscription onto the current-thread sequencer when required.
+/// Signals for the scheduler and time operators. The current-thread variants implement
+/// <see cref="IRequireCurrentThread{T}"/> and schedule their subscription onto the current-thread sequencer.
 /// </summary>
 public static partial class LinqExtensions
 {
@@ -153,7 +151,7 @@ public static partial class LinqExtensions
         /// <summary>A value indicating whether a timer or drain is active.</summary>
         private bool _timerActive;
 
-        /// <summary>A value indicating whether the source has already signaled terminal notification.</summary>
+        /// <summary>A value indicating whether the source has signaled a terminal notification.</summary>
         private bool _sourceStopped;
 
         /// <summary>A value indicating whether a terminal notification has been delivered.</summary>
@@ -348,7 +346,7 @@ public static partial class LinqExtensions
         /// <summary>A delayed source notification.</summary>
         private sealed class DelayedNotification
         {
-            /// <summary>Initializes a new instance of the <see cref="DelayedNotification"/> struct.</summary>
+            /// <summary>Initializes a new instance of the <see cref="DelayedNotification"/> class.</summary>
             /// <param name="kind">The notification kind.</param>
             /// <param name="value">The notification value.</param>
             /// <param name="error">The notification error.</param>

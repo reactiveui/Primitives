@@ -42,7 +42,7 @@ public sealed class ChainSignalSourcesSignal<T>(IObservableAsync<IObservableAsyn
         /// <summary>Cancellation token source used to signal disposal of the subscription.</summary>
         private readonly CancellationTokenSource _disposeCts = new();
 
-        /// <summary>Cached cancellation token from the dispose cancellation token source.</summary>
+        /// <summary>Token signalled when this subscription is disposed.</summary>
         private readonly CancellationToken _disposedCancellationToken;
 
         /// <summary>Disposable that holds the single outer subscription.</summary>
@@ -75,8 +75,8 @@ public sealed class ChainSignalSourcesSignal<T>(IObservableAsync<IObservableAsyn
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask DisposeAsync() => FinishAsync(null);
 
-        /// <summary>Handles a second call to <see cref="FinishAsync"/> when already disposed, routing any failure exception to the unhandled exception handler.</summary>
-        /// <param name="result">The completion result from the second call.</param>
+        /// <summary>Routes the failure carried by a redundant <see cref="FinishAsync"/> call to the unhandled exception handler.</summary>
+        /// <param name="result">The completion result from the redundant call.</param>
         internal static void HandleAlreadyDisposed(Result? result)
         {
             if (result?.Exception is not { } exception)
@@ -237,10 +237,9 @@ public sealed class ChainSignalSourcesSignal<T>(IObservableAsync<IObservableAsyn
                 Exception error,
                 CancellationToken cancellationToken)
             {
-                // The outer subscription is rooted in _disposedCancellationToken, so its disposal
-                // already cascades into this observer's cancellation. Forwarding the dispose token
-                // directly preserves the cancellation semantics that a linked CTS would have
-                // provided, without the per-emission Linked2CancellationTokenSource alloc.
+                // The outer subscription is rooted in _disposedCancellationToken, so disposing it cascades
+                // into this observer's cancellation. Forwarding the dispose token directly gives the same
+                // cancellation semantics as a linked CTS without allocating one per emission.
                 _ = cancellationToken;
                 var token = subscription._disposedCancellationToken;
                 using (await subscription._observerOnSomethingGate.EnterAsync(token).ConfigureAwait(false))

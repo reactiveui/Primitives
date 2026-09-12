@@ -19,9 +19,9 @@ public static partial class SignalExtensions
     /// <param name="source">The source signal.</param>
     extension<T>(IObservable<T> source)
     {
-        /// <summary>Witnesses the on.</summary>
-        /// <param name="scheduler">The scheduler.</param>
-        /// <returns>An Observable.</returns>
+        /// <summary>Delivers the source notifications on the supplied sequencer.</summary>
+        /// <param name="scheduler">The sequencer that notifications are delivered on.</param>
+        /// <returns>A signal that forwards the source on <paramref name="scheduler"/>.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> WitnessOn(ISequencer scheduler) =>
             new WitnessOnSignal<T>(source, scheduler);

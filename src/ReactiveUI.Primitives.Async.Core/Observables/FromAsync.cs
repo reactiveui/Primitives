@@ -7,10 +7,6 @@ using System.Diagnostics.CodeAnalysis;
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides factory methods for creating asynchronous observables from asynchronous operations.</summary>
-/// <remarks>The methods in this class allow integration of asynchronous tasks or functions into the observable
-/// pattern, enabling consumers to subscribe to results produced by asynchronous operations. All created observables
-/// execute the provided asynchronous factory as a background job and emit the result to subscribers upon
-/// completion.</remarks>
 public static partial class SignalAsync
 {
     /// <summary>Creates an asynchronous observable sequence that emits a single value produced by the specified factory function.</summary>
@@ -18,14 +14,13 @@ public static partial class SignalAsync
     /// <param name="factory">A function that asynchronously produces a value of type <typeparamref name="T"/> when invoked with a <see
     /// cref="CancellationToken"/>. Cannot be null.</param>
     /// <returns>An observable that emits the value returned by the factory function and then completes.</returns>
-    /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="factory"/> is null.</exception>
-    /// <remarks>The observable sequence will emit the value produced by the factory and then signal
-    /// completion. The factory function is invoked when the sequence is subscribed to, and supports cancellation via
-    /// the provided <see cref="CancellationToken"/>.</remarks>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="factory"/> is null.</exception>
+    /// <remarks><paramref name="factory"/> runs once per subscriber, started by the subscribe call rather than awaited
+    /// by it.</remarks>
     [SuppressMessage(
         "Roslynator",
         "RCS1047:Non-asynchronous method name should not end with \'Async\'",
-        Justification = "This is an existing method")]
+        Justification = "The name states where the values come from; the method itself returns a sequence synchronously.")]
     public static IObservableAsync<T> FromAsync<T>(Func<CancellationToken, ValueTask<T>> factory)
     {
         ArgumentExceptionHelper.ThrowIfNull(factory);

@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Reactive.Advanced;
 namespace ReactiveUI.Primitives.Advanced;
 #endif
 
-/// <summary>An allocation-free observable that emits a single value and then completes; the concrete singleton backing for the RxVoid emit path.</summary>
+/// <summary>Emits <see cref="RxVoid.Default"/> inline and completes, without allocating a subscription.</summary>
 public sealed class ImmutableReturnRxVoidSignal : IRequireCurrentThread<RxVoid>, IInlineSignal<RxVoid>
 {
     /// <summary>The shared singleton instance.</summary>
@@ -21,14 +21,14 @@ public sealed class ImmutableReturnRxVoidSignal : IRequireCurrentThread<RxVoid>,
     {
     }
 
-    /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
-    /// <returns>The result.</returns>
+    /// <summary>Reports that subscription needs no current-thread dispatch.</summary>
+    /// <returns>Always <see langword="false"/>.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() => false;
 
-    /// <summary>Executes the Subscribe operation.</summary>
-    /// <param name="observer">The observer value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Emits <see cref="RxVoid.Default"/> and completes before returning.</summary>
+    /// <param name="observer">The downstream observer.</param>
+    /// <returns>An empty disposable; the sequence has ended and there is nothing to cancel.</returns>
     public IDisposable Subscribe(IObserver<RxVoid> observer)
     {
         observer.OnNext(RxVoid.Default);
@@ -36,11 +36,11 @@ public sealed class ImmutableReturnRxVoidSignal : IRequireCurrentThread<RxVoid>,
         return EmptyDisposable.Instance;
     }
 
-    /// <summary>Executes the Subscribe operation.</summary>
-    /// <param name="onNext">The onNext value.</param>
-    /// <param name="onError">The onError value.</param>
-    /// <param name="onCompleted">The onCompleted value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Invokes <paramref name="onNext"/> with <see cref="RxVoid.Default"/> and then <paramref name="onCompleted"/>.</summary>
+    /// <param name="onNext">The value callback.</param>
+    /// <param name="onError">The error callback, which is never invoked.</param>
+    /// <param name="onCompleted">The completion callback.</param>
+    /// <returns>An empty disposable; the sequence has ended and there is nothing to cancel.</returns>
     public IDisposable Subscribe(Action<RxVoid> onNext, Action<Exception> onError, Action onCompleted)
     {
         onNext(RxVoid.Default);

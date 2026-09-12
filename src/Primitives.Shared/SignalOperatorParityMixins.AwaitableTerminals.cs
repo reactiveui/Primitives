@@ -66,8 +66,8 @@ public static partial class LinqExtensions
         /// <param name="cancellationToken">The token used to cancel the task and dispose the subscription.</param>
         /// <returns>A task that completes with the first source value, or <see langword="default"/> when the source is empty.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
-        /// <remarks>Deprioritized so calls like <c>FirstOrDefaultAsync(default!)</c> keep binding to the
-        /// <c>FirstOrDefaultAsync(T)</c> overload they compiled against before this overload existed.</remarks>
+        /// <remarks>Deprioritized, so a call like <c>FirstOrDefaultAsync(default!)</c> binds to the
+        /// <c>FirstOrDefaultAsync(T)</c> overload rather than this one.</remarks>
         [OverloadResolutionPriority(-1)]
         public Task<T> FirstOrDefaultAsync(CancellationToken cancellationToken)
         {
@@ -141,8 +141,8 @@ public static partial class LinqExtensions
         /// <param name="cancellationToken">The token used to cancel the task and dispose the subscription.</param>
         /// <returns>A task that completes with the final source value, or <see langword="default"/> when the source is empty.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
-        /// <remarks>Deprioritized so calls like <c>LastOrDefaultAsync(default!)</c> keep binding to the
-        /// <c>LastOrDefaultAsync(T)</c> overload they compiled against before this overload existed.</remarks>
+        /// <remarks>Deprioritized, so a call like <c>LastOrDefaultAsync(default!)</c> binds to the
+        /// <c>LastOrDefaultAsync(T)</c> overload rather than this one.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [OverloadResolutionPriority(-1)]
         public Task<T> LastOrDefaultAsync(CancellationToken cancellationToken) =>

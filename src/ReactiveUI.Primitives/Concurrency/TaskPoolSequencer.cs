@@ -21,10 +21,7 @@ public sealed class TaskPoolSequencer : ISequencer
     public TaskPoolSequencer(TaskFactory taskFactory) =>
         _taskFactory = taskFactory ?? throw new ArgumentNullException(nameof(taskFactory));
 
-    /// <summary>Gets the instance.</summary>
-    /// <value>
-    /// The instance.
-    /// </value>
+    /// <summary>Gets the shared sequencer backed by <see cref="Task.Factory"/>.</summary>
     public static TaskPoolSequencer Instance { get; } = new(Task.Factory);
 
     /// <summary>Gets the default task-pool scheduler.</summary>

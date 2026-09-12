@@ -9,38 +9,31 @@ using ReactiveUI.Primitives.Internal;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>Represents an asynchronous observer that processes notifications of type <typeparamref name="T"/> using asynchronous methods.</summary>
+/// <summary>Base class for an asynchronous observer: handles the notification gate, cancellation linking and disposal
+/// so a derived sink only has to implement the three <c>Core</c> methods.</summary>
 /// <typeparam name="T">The type of the elements received by the observer.</typeparam>
-/// <remarks>Implement this abstract class to handle asynchronous event streams or push-based data sources, where
-/// notifications may arrive concurrently or in rapid succession. The observer provides asynchronous methods for
-/// handling new data, errors, and completion signals, and supports proper resource cleanup via asynchronous disposal.
-/// Instances are not thread-safe for concurrent notification handling; notifications are processed sequentially, and
-/// reentrant calls are detected and reported as unhandled exceptions.</remarks>
+/// <remarks>One notification runs at a time. A reentrant call from the thread that holds the gate is allowed, but an
+/// overlapping call from another thread is a contract violation: the notification is dropped and a
+/// <see cref="ConcurrentWitnessCallsException"/> goes to <see cref="UnhandledExceptionHandler"/>.</remarks>
 [System.Diagnostics.DebuggerDisplay("WitnessAsync: Disposed = {_disposed}, CallState = {_callState}")]
 public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDisposable
 {
-    /// <summary>Lazily-created CTS that signals disposal to in-flight operations. Stays
-    /// <see langword="null"/> until someone requests <see cref="InternalDisposedToken"/>,
-    /// <see cref="LinkExternalCancellation"/> wires a real token, or <see cref="DisposeAsync"/>
-    /// is called. Terminal observers (most user-facing sinks) never trigger creation and save
-    /// the ~72 B per instance the CTS would cost.</summary>
+    /// <summary>Signals disposal to in-flight operations; created on the first request for a dispose token, so a
+    /// terminal sink that never needs one does not pay for it.</summary>
     private CancellationTokenSource? _disposeCts;
 
-    /// <summary>Disposal latch. Set independently of <see cref="_disposeCts"/> so the lazy-CTS
-    /// path can detect post-dispose state before the CTS has been materialized.</summary>
+    /// <summary>Disposal latch, set independently of <see cref="_disposeCts"/> so the lazy path can report
+    /// post-dispose state with no source in existence.</summary>
     private int _disposed;
 
-    /// <summary>Set when disposal is requested from within this observer's own in-flight notification
-    /// (see <see cref="IReentrantAsyncDisposable.DisposeFromNotificationAsync"/>). Tells
-    /// <see cref="DisposeAsyncCore"/> to skip the in-flight-call wait, which would otherwise self-join on the
-    /// very call awaiting the dispose once its continuation has hopped threads. Monotonic: only ever set, never
-    /// cleared, since disposal happens once.</summary>
+    /// <summary>Set when disposal is requested from inside this observer's own notification, telling
+    /// <see cref="DisposeAsyncCore"/> to skip the in-flight-call wait that would self-join on the caller once its
+    /// continuation hops threads.</summary>
     private int _disposeFromNotification;
 
-    /// <summary>Packed call-state: high 32 bits hold the managed-thread ID of the thread
-    /// currently inside <c>OnNext/OnError/OnCompleted</c>; low 32 bits hold the in-flight call
-    /// depth. Updated lock-free via <see cref="Interlocked.CompareExchange(ref long, long, long)"/>.
-    /// Replaces a monitor gate + two separate <c>int</c> fields, saving ~24 B per observer.</summary>
+    /// <summary>Packed call state: the high 32 bits hold the managed thread ID inside
+    /// <c>OnNext/OnError/OnCompleted</c>, the low 32 bits the in-flight call depth, updated lock-free through
+    /// <see cref="Interlocked.CompareExchange(ref long, long, long)"/>.</summary>
     private long _callState;
 
     /// <summary>Completion source that is set when all in-flight calls finish after disposal has been requested.</summary>
@@ -52,12 +45,8 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
     /// <summary>Registration created by <see cref="LinkExternalCancellation(CancellationToken)"/> so the link can be released when the observer disposes.</summary>
     private CancellationTokenRegistration _externalLinkRegistration;
 
-    /// <summary>
-    /// The external token last passed to <see cref="LinkExternalCancellation(CancellationToken)"/>. Cached so
-    /// <see cref="TryEnterOnSomethingCall(CancellationToken, out LinkedTokenScope)"/> can treat it as a
-    /// fast-path-equal token: its cancellation already propagates to <see cref="_disposeCts"/>, so combining
-    /// it again per emission would allocate a redundant linked CTS.
-    /// </summary>
+    /// <summary>The token last passed to <see cref="LinkExternalCancellation(CancellationToken)"/>, cached because its
+    /// cancellation reaches <see cref="_disposeCts"/> anyway, so a call carrying it needs no linked source.</summary>
     private CancellationToken _externalLinkedToken;
 
     /// <summary>Initializes a new instance of the <see cref="WitnessAsync{T}"/> class.</summary>
@@ -74,19 +63,19 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
     protected WitnessAsync(CancellationToken externalLink) => LinkExternalCancellation(externalLink);
 
     /// <summary>
-    /// Gets the cancellation token that fires when this observer disposes, so a sibling operator can wire it
-    /// into a downstream observer's link chain (letting the downstream's hot-path equality check skip the
-    /// per-emission linked CTS allocation). Lazily materializes the backing <see cref="CancellationTokenSource"/>.
+    /// Gets the cancellation token that fires when this observer disposes, for an operator to link into a downstream
+    /// observer's dispose chain. Reading it creates the backing <see cref="CancellationTokenSource"/>.
     /// </summary>
     public CancellationToken InternalDisposedToken => GetOrCreateDisposeCts().Token;
 
     /// <summary>Gets a value indicating whether this observer has been disposed.</summary>
     internal bool HasDisposed => Volatile.Read(ref _disposed) != 0;
 
-    /// <summary>Asynchronously processes the next value in the sequence.</summary>
+    /// <summary>Delivers a value to <see cref="OnNextAsyncCore"/>, dropping it silently when this observer is disposed,
+    /// the token is cancelled, or another thread holds the notification gate.</summary>
     /// <param name="value">The value to be processed.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <returns>A task that completes once the core handler and its bookkeeping have run.</returns>
     public ValueTask OnNextAsync(T value, CancellationToken cancellationToken)
     {
         if (!TryEnterOnSomethingCall(cancellationToken, out var scope))
@@ -120,10 +109,11 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
         return OnNextAsyncSlow(core, scope);
     }
 
-    /// <summary>Handles an error by attempting to resume processing asynchronously.</summary>
+    /// <summary>Routes a non-terminal error to <see cref="OnErrorResumeAsyncCore"/>, never propagating a failure back
+    /// to the producer.</summary>
     /// <param name="error">The exception that triggered the error handling logic. Cannot be null.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
-    /// <returns>A task that represents the asynchronous error handling operation.</returns>
+    /// <returns>A task that completes once the error has been handled.</returns>
     public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken)
     {
         if (!TryEnterOnSomethingCall(cancellationToken, out var scope))
@@ -131,10 +121,8 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
             return default;
         }
 
-        // RouteObserverErrorAsync is an async ValueTask method — any sync or async exception
-        // it raises is captured into the returned ValueTask and surfaces through the await in
-        // OnErrorResumeAsyncSlow. A try/catch around the invocation expression itself would be
-        // dead code in modern C# async semantics.
+        // RouteObserverErrorAsync is an async method, so a synchronous throw is captured into the returned
+        // ValueTask too and surfaces at the await in OnErrorResumeAsyncSlow; a try/catch here is dead code.
         var core = RouteObserverErrorAsync(error, scope.Token);
 
         if (core.IsCompletedSuccessfully)
@@ -147,14 +135,11 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
         return OnErrorResumeAsyncSlow(core, scope);
     }
 
-    /// <summary>
-    /// Asynchronously performs completion logic when the operation has finished, handling any finalization or cleanup
-    /// tasks required.
-    /// </summary>
+    /// <summary>Delivers the terminal result to <see cref="OnCompletedAsyncCore"/> and then disposes this observer.</summary>
     /// <param name="result">The result of the completed operation, containing information about its outcome.</param>
-    /// <returns>A task that represents the asynchronous completion operation.</returns>
-    /// <remarks>If an unhandled exception occurs during completion, it is passed to the unhandled exception
-    /// handler. This method ensures that necessary resources are released after completion.</remarks>
+    /// <returns>A task that completes once the core handler has run and this observer is torn down.</returns>
+    /// <remarks>A failure from the core handler goes to <see cref="UnhandledExceptionHandler"/>; disposal runs either
+    /// way.</remarks>
     [DebuggerStepThrough]
     public ValueTask OnCompletedAsync(Result result)
     {
@@ -186,10 +171,9 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
 
     /// <summary>Asynchronously releases the resources used by the object.</summary>
     /// <returns>A task that represents the asynchronous dispose operation.</returns>
-    /// <remarks>Call this method to clean up resources when the object is no longer needed. This method is
-    /// safe to call multiple times; subsequent calls after disposal will have no effect. Any unhandled exceptions that
-    /// occur during disposal are captured and reported but do not prevent the completion of the dispose
-    /// operation.</remarks>
+    /// <remarks>Idempotent. Disposal waits out a notification in flight on another thread, and a failure while
+    /// releasing the source subscription is reported to <see cref="UnhandledExceptionHandler"/> rather than
+    /// thrown.</remarks>
     [DebuggerStepThrough]
     public async ValueTask DisposeAsync()
     {
@@ -216,11 +200,8 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
         SingleAssignmentDisposableAsync.AssignDisposableAsync(ref _sourceSubscription, value);
 
     /// <summary>
-    /// Internal wrapper around <see cref="LinkExternalCancellation(CancellationToken)"/> so sibling operators
-    /// (in their <c>SubscribeAsyncCore</c>) can wire an upstream observer's dispose token into this observer's
-    /// link chain. Combined with the cached <see cref="_externalLinkedToken"/> fast-path inside
-    /// <see cref="TryEnterOnSomethingCall(CancellationToken, out LinkedTokenScope)"/>, this turns chained
-    /// operator pipelines into per-emission allocation-free flows.
+    /// Makes an upstream observer's disposal dispose this observer too, so an operator chain tears down from the top
+    /// and its emissions need no linked cancellation source.
     /// </summary>
     /// <param name="upstream">The upstream observer's dispose token.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -270,9 +251,9 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
         }
     }
 
-    /// <summary>Exits a notification call, decrementing counters and signalling completion if disposal is pending.</summary>
-    /// <returns><see langword="true"/> if the caller should proceed with disposal; <see langword="false"/> if
-    /// disposal was already signalled to a waiting <see cref="DisposeAsync"/> call.</returns>
+    /// <summary>Leaves a notification call, releasing a <see cref="DisposeAsync"/> that is waiting on the last one.</summary>
+    /// <returns><see langword="true"/> when the caller should proceed with disposal itself; <see langword="false"/>
+    /// when a waiting <see cref="DisposeAsync"/> call was signalled instead.</returns>
     [DebuggerStepThrough]
     internal bool ExitOnSomethingCall()
     {
@@ -306,7 +287,8 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
         }
     }
 
-    /// <summary>Internal error-resume handler that delegates to <see cref="OnErrorResumeAsyncCore"/> and routes unhandled or cancelled errors to the <see cref="UnhandledExceptionHandler"/>.</summary>
+    /// <summary>Runs <see cref="OnErrorResumeAsyncCore"/>, sending anything it throws — and the original error when the
+    /// call is cancelled — to <see cref="UnhandledExceptionHandler"/>.</summary>
     /// <param name="error">The exception that triggered error handling.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
@@ -332,32 +314,27 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
         }
     }
 
-    /// <summary>Performs asynchronous completion logic when the operation has finished processing the specified result.</summary>
+    /// <summary>Handles the sequence's terminal result. Called at most once, before this observer is disposed.</summary>
     /// <param name="result">The result of the operation to be processed during completion.</param>
-    /// <returns>A ValueTask that represents the asynchronous completion operation.</returns>
+    /// <returns>A task that completes when the result has been handled.</returns>
     protected abstract ValueTask OnCompletedAsyncCore(Result result);
 
     /// <summary>
-    /// Links an external cancellation token into this observer's dispose chain. When <paramref name="external"/>
-    /// is cancelled, the observer disposes — propagating cancellation through the linked token that subclasses
-    /// receive in their <c>OnNextAsyncCore</c> / <c>OnErrorResumeAsyncCore</c> arguments. This eliminates the
-    /// need to allocate a per-emission linked <see cref="CancellationTokenSource"/>. Each observer supports at
-    /// most one link; calling this method again replaces the previous registration.
+    /// Links an external cancellation token into this observer's dispose chain: cancelling <paramref name="external"/>
+    /// disposes the observer and cancels the token handed to <c>OnNextAsyncCore</c> and
+    /// <c>OnErrorResumeAsyncCore</c>. An observer holds at most one link, and a second call replaces it.
     /// </summary>
     /// <param name="external">The external token whose cancellation should trigger this observer's disposal.</param>
     [DebuggerStepThrough]
     protected void LinkExternalCancellation(CancellationToken external)
     {
-        // No-op fast path: token can't fire, so the dispose chain doesn't need it. Skip CTS
-        // materialization entirely — terminal observers that get CancellationToken.None
-        // pay nothing.
+        // A token that cannot fire adds nothing to the dispose chain, so skip creating the source entirely.
         if (!external.CanBeCanceled)
         {
             return;
         }
 
-        // External token already cancelled — materialize the CTS only to mark it cancelled
-        // (so future InternalDisposedToken consumers see the cancelled state).
+        // A cancelled token needs the source created only to hold the cancelled state for later token requests.
         if (external.IsCancellationRequested)
         {
             Volatile.Write(ref _disposed, 1);
@@ -383,16 +360,14 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
         _externalLinkedToken = external;
     }
 
-    /// <summary>Performs application-defined tasks associated with asynchronously releasing unmanaged resources.</summary>
+    /// <summary>Performs the observer's asynchronous teardown.</summary>
     /// <returns>A task that represents the asynchronous dispose operation.</returns>
-    /// <remarks>Override this method to provide custom asynchronous resource cleanup logic in a derived
-    /// class. This method is called by DisposeAsync to perform the actual resource release.</remarks>
+    /// <remarks>An override must call the base implementation: it claims disposal for the first caller, waits out a
+    /// notification in flight on another thread, and releases the cancellation link and source subscription.</remarks>
     [DebuggerStepThrough]
     protected virtual async ValueTask DisposeAsyncCore()
     {
-        // First-disposer wins the race. Lazy-CTS observers set the _disposed flag without
-        // necessarily materializing a CTS; only callers that previously requested the token
-        // need the cancellation broadcast.
+        // First disposer wins; the latch moves whether or not a dispose source exists.
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
         {
             return;
@@ -407,18 +382,13 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
         {
             TaskCompletionSource<object?> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-            // Publish with an interlocked exchange rather than a release store: the re-read below must not
-            // be reordered ahead of the publish. ExitOnSomethingCall decrements the count under a full-fence
-            // CAS and only then reads this field, so once the publish is fenced, an Exit that still reads a
-            // null TCS must already have made its decrement visible to the re-read — one of the two sides
-            // always signals. A plain Volatile.Write leaves that store/load pair unordered and both sides
-            // can miss: Exit sees no TCS while this thread still sees a non-zero count, and the await below
-            // then never completes.
+            // Interlocked rather than a release store, so the re-read below cannot be reordered ahead of this
+            // publish. ExitOnSomethingCall decrements under a full-fence CAS and only then reads this field, so
+            // with the publish fenced, an Exit that reads a null source has made its decrement visible here and
+            // one of the two sides always signals. Unfenced, both can miss and the await below never completes.
             _ = Interlocked.Exchange(ref _allCallsCompletedTcs, tcs);
 
-            // Re-read after publishing the TCS — Exit may have raced past us and decremented
-            // the count to zero before our publish became visible. Self-signal so the awaiter
-            // doesn't deadlock.
+            // Exit may have dropped the count to zero before the publish became visible, so self-signal.
             var stateAfter = Volatile.Read(ref _callState);
             if ((int)stateAfter == 0)
             {
@@ -428,9 +398,7 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
             allOnSomethingCallsCompleted = tcs.Task;
         }
 
-        // Materialized CTS holders need cancellation propagated; lazy holders skip this step
-        // (any future InternalDisposedToken request will create a pre-cancelled CTS via
-        // GetOrCreateDisposeCts's post-disposed branch).
+        // Only an existing source needs the cancellation broadcast; a later token request builds one pre-cancelled.
         var cts = Volatile.Read(ref _disposeCts);
         if (cts is not null)
         {
@@ -440,26 +408,24 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
         await CompleteDisposeAfterCancelAsync(allOnSomethingCallsCompleted).ConfigureAwait(false);
     }
 
-    /// <summary>Handles an error by providing an asynchronous mechanism to resume execution after an exception occurs.</summary>
+    /// <summary>Handles a non-terminal error; the sequence may deliver more values afterwards.</summary>
     /// <param name="error">The exception that triggered the error handling logic. Cannot be null.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous error handling operation.</param>
-    /// <returns>A ValueTask that represents the asynchronous operation of resuming execution after the error.</returns>
-    /// <remarks>Override this method to implement custom error recovery or resumption logic in derived
-    /// classes. The method is called when an error occurs and allows the operation to continue or perform cleanup
-    /// asynchronously.</remarks>
+    /// <returns>A task that completes when the error has been handled.</returns>
+    /// <remarks>An exception thrown from an override is reported to <see cref="UnhandledExceptionHandler"/> instead of
+    /// reaching the producer.</remarks>
     protected abstract ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken);
 
     /// <summary>Processes the next value in the asynchronous sequence.</summary>
     /// <param name="value">The value to be processed.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
-    /// <returns>A ValueTask that represents the asynchronous operation.</returns>
+    /// <returns>A task that completes when the value has been handled.</returns>
+    /// <remarks>An exception thrown from an override is fed to <see cref="OnErrorResumeAsyncCore"/>, so the sequence
+    /// survives a failed value; a cancellation is swallowed.</remarks>
     protected abstract ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken);
 
-    /// <summary>
-    /// Finishes the teardown after this caller won the cancellation race. Separated from
-    /// <see cref="DisposeAsyncCore"/> so the race-loser branch is just the absence of this
-    /// call, with no <c>return;</c> sequence point to mark uncovered.
-    /// </summary>
+    /// <summary>Awaits any in-flight notifications, then releases the cancellation link, the dispose source and the
+    /// source subscription.</summary>
     /// <param name="allOnSomethingCallsCompleted">Optional gate awaited for in-flight On* calls.</param>
     /// <returns>A task representing the asynchronous teardown.</returns>
     private async ValueTask CompleteDisposeAfterCancelAsync(Task? allOnSomethingCallsCompleted)
@@ -486,11 +452,9 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
         }
     }
 
-    /// <summary>Returns the dispose task on the race-winner path (<see cref="ExitOnSomethingCall"/>
-    /// reports the last in-flight On* call just exited), or a completed default <see cref="ValueTask"/>
-    /// otherwise. Isolated from coverage because the race-winner branch is only reachable when a
-    /// concurrent <see cref="DisposeAsync"/> set the in-flight gate while this On* call was running.</summary>
-    /// <returns>The dispose task on race-winner, or default otherwise.</returns>
+    /// <summary>Chains into <see cref="DisposeAsync"/> when this exiting call owns disposal, which happens only when a
+    /// concurrent <see cref="DisposeAsync"/> raised the in-flight gate while the notification was running.</summary>
+    /// <returns>The dispose task when this caller owns disposal; otherwise a completed task.</returns>
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     private ValueTask CompleteOrChainDispose() =>
         ExitOnSomethingCall() ? DisposeAsync() : default;
@@ -521,9 +485,8 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
     }
 
     /// <summary>
-    /// Async continuation for <see cref="OnNextAsync"/> when <see cref="OnNextAsyncCore"/> threw synchronously.
-    /// Routes the error through <see cref="RouteObserverErrorAsync"/> off the fast path so the
-    /// caller-visible <see cref="OnNextAsync"/> stays state-machine free in the common case.
+    /// Routes a synchronous throw from <see cref="OnNextAsyncCore"/> through <see cref="RouteObserverErrorAsync"/>,
+    /// out of line so <see cref="OnNextAsync"/> itself needs no state machine.
     /// </summary>
     /// <param name="error">The exception thrown by the core.</param>
     /// <param name="scope">The linked-token scope to release on completion.</param>
@@ -583,10 +546,9 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
         }
     }
 
-    /// <summary>Builds the <see cref="LinkedTokenScope"/> for the current call, allocating a
-    /// linked CTS only when the caller token isn't already one of the fast-path equivalents
-    /// (<see cref="CancellationToken.None"/>, our own dispose token if materialized, or the
-    /// upstream token already linked via <see cref="LinkExternalCancellation"/>).</summary>
+    /// <summary>Builds the <see cref="LinkedTokenScope"/> for one call, allocating a linked source only when the
+    /// caller's token is none of <see cref="CancellationToken.None"/>, this observer's own dispose token, or the token
+    /// linked through <see cref="LinkExternalCancellation"/> — each of which cancels the call anyway.</summary>
     /// <param name="cancellationToken">The caller-supplied cancellation token.</param>
     /// <returns>A scope whose <c>Token</c> drives the in-flight call's cancellation.</returns>
     private LinkedTokenScope BuildLinkedTokenScope(CancellationToken cancellationToken)
@@ -604,19 +566,14 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
         return new(linkedCts, linkedCts.Token);
     }
 
-    /// <summary>Returns the existing <see cref="_disposeCts"/> or lazily creates it. If <see cref="_disposed"/>
-    /// was set before this call (the observer was disposed before any token was requested), the
-    /// freshly-created CTS is cancelled immediately so its <see cref="CancellationToken.IsCancellationRequested"/>
-    /// matches the post-dispose state callers expect.</summary>
-    /// <returns>The dispose CTS, freshly cancelled if disposal was already signaled.</returns>
+    /// <summary>Returns the dispose source, creating it on first request.</summary>
+    /// <returns>The dispose source, cancelled when this observer is disposed.</returns>
     private CancellationTokenSource GetOrCreateDisposeCts() =>
         Volatile.Read(ref _disposeCts) ?? MaterializeDisposeCts();
 
-    /// <summary>Creates and publishes the dispose CTS on first request, discarding the freshly-created instance
-    /// if another thread published one first, and pre-cancelling it when disposal was already signaled.</summary>
-    /// <returns>The published dispose CTS.</returns>
-    /// <remarks>The compare-exchange-lost branch is only reachable when two threads materialize the CTS
-    /// concurrently; isolated here and excluded from coverage as race-only.</remarks>
+    /// <summary>Creates and publishes the dispose source, discarding this instance when another thread wins the
+    /// publish, and cancelling it when the observer is disposed before any token was requested.</summary>
+    /// <returns>The published dispose source.</returns>
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     private CancellationTokenSource MaterializeDisposeCts()
     {
@@ -637,9 +594,8 @@ public abstract class WitnessAsync<T> : IObserverAsync<T>, IReentrantAsyncDispos
     }
 
     /// <summary>
-    /// A lightweight scope that wraps an optional <see cref="CancellationTokenSource"/> and exposes the
-    /// effective <see cref="CancellationToken"/>. When no linked source is needed (e.g. the caller token
-    /// is <see cref="CancellationToken.None"/>), the scope avoids allocating a linked CTS entirely.
+    /// Pairs one notification call's effective cancellation token with the linked source backing it, if one was
+    /// needed, so disposing the scope releases that source.
     /// </summary>
     /// <param name="Cts">The linked CTS to dispose, or <see langword="null"/> if no allocation was needed.</param>
     /// <param name="Token">The effective cancellation token for the notification call.</param>

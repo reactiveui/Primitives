@@ -142,10 +142,7 @@ public static partial class LinqExtensions
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "PublicApi",
         "PAS0003:Public API differs from the baseline",
-        Justification =
-            "This overload and its 'where T : struct' twin have identical signatures apart from the generic "
-            + "constraint. The baseline records both, but an entry is resolved by the constraint-erased signature "
-            + "and compared against the first match, so only one of the pair can ever be matched.")]
+        Justification = "The twin overloads differ only by a generic constraint, which the baseline lookup erases.")]
     public static IDisposable SubscribeSafe<T>(
         IObservable<T?> source,
         Action<Exception> onError,
@@ -167,10 +164,7 @@ public static partial class LinqExtensions
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2318:Members should not have identical bodies",
-        Justification =
-            "Reference-type and value-type constraint overloads (where T : class / where T : struct) of the same "
-            + "operator. The bodies are necessarily identical, and the two cannot forward to one another because their "
-            + "generic constraints differ; both must exist so nullable T? resolves for either kind of T.")]
+        Justification = "The class-constrained and struct-constrained overloads cannot forward to one another.")]
     public static IDisposable SubscribeSafe<T>(
         IObservable<T?> source,
         Action<Exception> onError,
@@ -213,17 +207,11 @@ public static partial class LinqExtensions
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2318:Members should not have identical bodies",
-        Justification =
-            "Reference-type and value-type constraint overloads (where T : class / where T : struct) of the same "
-            + "operator. The bodies are necessarily identical, and the two cannot forward to one another because their "
-            + "generic constraints differ; both must exist so nullable T? resolves for either kind of T.")]
+        Justification = "The class-constrained and struct-constrained overloads cannot forward to one another.")]
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "PublicApi",
         "PAS0003:Public API differs from the baseline",
-        Justification =
-            "This overload and its 'where T : class' twin have identical signatures apart from the generic "
-            + "constraint. The baseline records both, but an entry is resolved by the constraint-erased signature "
-            + "and compared against the first match, so only one of the pair can ever be matched.")]
+        Justification = "The twin overloads differ only by a generic constraint, which the baseline lookup erases.")]
     public static IDisposable SubscribeSafe<T>(
         IObservable<T?> source,
         Action<Exception> onError,

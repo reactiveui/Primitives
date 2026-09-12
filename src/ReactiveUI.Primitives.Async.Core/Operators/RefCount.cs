@@ -10,9 +10,6 @@ using ReactiveUI.Primitives.Async.Disposables;
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for working with asynchronous observable sequences.</summary>
-/// <remarks>The methods in this class enable advanced operations on asynchronous observables, such as reference
-/// counting for connectable observables. These utilities are intended to be used with types that implement asynchronous
-/// observer patterns.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Reference-counting operators for a connectable observable source sequence.</summary>
@@ -25,9 +22,6 @@ public static partial class SignalAsyncExtensions
         /// subscribes, and disconnects when the last observer unsubscribes.
         /// </summary>
         /// <returns>An observable sequence that stays connected to the source as long as there is at least one subscription.</returns>
-        /// <remarks>This operator is useful for sharing a single subscription to the underlying connectable
-        /// observable among multiple subscribers. When the last observer unsubscribes, the connection to the source is
-        /// automatically disposed.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> RefCount() =>
             new RefCountSignal<T>(source);
@@ -41,7 +35,7 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The connectable observable to manage with reference counting.</param>
     internal sealed class RefCountSignal<T>(ConnectableSignalAsync<T> source) : IObservableAsync<T>, IDisposable
     {
-        /// <summary>The asynchronous gate used to serialize subscribe and dispose operations.</summary>
+        /// <summary>The asynchronous gate that serializes subscribe and dispose operations.</summary>
         private readonly AsyncSerialGate _gate = new();
 
         /// <summary>The current number of active subscribers.</summary>
@@ -62,8 +56,7 @@ public static partial class SignalAsyncExtensions
         [SuppressMessage(
             "Concurrency",
             "PSH1315:A blocking wait on an awaitable that may not be done",
-            Justification =
-                "IDisposable.Dispose is intrinsically synchronous; this method must tear down the async connection on the sync dispose path.")]
+            Justification = "IDisposable.Dispose is synchronous and must tear down the asynchronous connection.")]
         internal void Dispose(bool disposing)
         {
             if (Interlocked.Exchange(ref _disposedValue, 1) != 0)
@@ -94,7 +87,7 @@ public static partial class SignalAsyncExtensions
         {
             using (await _gate.EnterAsync(cancellationToken).ConfigureAwait(false))
             {
-                // incr refCount before Subscribe(completed source decrement refCxount in Subscribe)
+                // Increment before subscribing: a source that completes during the subscribe decrements it again.
                 ++_refCount;
                 var needConnect = _refCount == 1;
                 RefCountWitness refCountWitness = new(this, observer);

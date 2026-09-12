@@ -10,11 +10,7 @@ namespace ReactiveUI.Primitives.Reactive;
 namespace ReactiveUI.Primitives;
 #endif
 
-/// <summary>
-/// The System.Reactive names for the hot-sharing operators, so code written against Rx reads unchanged here.
-/// Each one builds its hub directly rather than forwarding to its Primitives-named twin in
-/// <see cref="ConnectableSignalExtensions"/>, so an alias costs nothing at the call site.
-/// </summary>
+/// <summary>System.Reactive names for the hot-sharing operators, so code written against Rx compiles unchanged.</summary>
 public static class ConnectableSignalRxNameExtensions
 {
     /// <summary>Reference-counting operators for a connectable signal source.</summary>
@@ -51,7 +47,7 @@ public static class ConnectableSignalRxNameExtensions
         [SuppressMessage(
             "Design",
             "SST2318:Members should not have identical bodies",
-            Justification = "Share and Publish are the same operator under two names callers expect; forwarding one to the other would only add a hop.")]
+            Justification = "Share and Publish are the same operator under two names callers expect.")]
         public ConnectableSignal<T> Share()
         {
             ArgumentExceptionHelper.ThrowIfNull(source);

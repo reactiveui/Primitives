@@ -7,10 +7,6 @@ using System.Diagnostics.CodeAnalysis;
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for working with asynchronous observable sequences.</summary>
-/// <remarks>The SignalAsync class contains static methods that extend the functionality of asynchronous
-/// observables, enabling additional operations such as type casting and sequence manipulation. These methods are
-/// intended to be used with the SignalAsync{T} type to facilitate reactive programming patterns in asynchronous
-/// scenarios.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Type-casting operators for an observable source sequence.</summary>
@@ -22,13 +18,12 @@ public static partial class SignalAsyncExtensions
         /// <typeparam name="TResult">The type to which the elements of the sequence are cast.</typeparam>
         /// <returns>An observable sequence whose elements are the result of casting each element of the source sequence to
         /// <typeparamref name="TResult"/>.</returns>
-        /// <remarks>If an element in the source sequence cannot be cast to <typeparamref
-        /// name="TResult"/>, the sequence completes with a failure containing the exception. This method is useful for
-        /// working with sequences of objects when the actual element type is known at runtime.</remarks>
+        /// <remarks>A failed cast does not throw at the call site: the sequence completes with a failure carrying the
+        /// cast exception.</remarks>
         [SuppressMessage(
             "Design",
             "SST2307:Generic method type parameters should be inferable from the parameters",
-            Justification = "Public extension API — caller specifies TResult explicitly: source.Cast<Derived>().")]
+            Justification = "The caller chooses TResult; no parameter carries it.")]
         public IObservableAsync<TResult> Cast<TResult>()
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -47,7 +42,7 @@ public static partial class SignalAsyncExtensions
         [SuppressMessage(
             "Design",
             "SST2307:Generic method type parameters should be inferable from the parameters",
-            Justification = "Deliberate lack of type inference.")]
+            Justification = "The caller chooses TResult; no parameter carries it.")]
         public IObservableAsync<TResult> CastTo<TResult>()
         {
             ArgumentExceptionHelper.ThrowIfNull(source);

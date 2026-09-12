@@ -9,14 +9,14 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <summary>Sink that suppresses adjacent duplicate values.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 /// <param name="observer">The downstream observer.</param>
-/// <param name="comparer">The comparer used to compare adjacent values.</param>
+/// <param name="comparer">The comparer applied to adjacent values.</param>
 [System.Diagnostics.DebuggerDisplay("UniqueWitness: HasLast = {_hasLast}, Last = {_last}")]
 public sealed class UniqueWitness<T>(IObserver<T> observer, IEqualityComparer<T> comparer) : IObserver<T>, IDisposable
 {
     /// <summary>The downstream observer.</summary>
     private readonly IObserver<T> _observer = observer;
 
-    /// <summary>The comparer used to compare adjacent values.</summary>
+    /// <summary>The comparer applied to adjacent values.</summary>
     private readonly IEqualityComparer<T> _comparer = comparer;
 
     /// <summary>A value indicating whether a previous value has been observed.</summary>
@@ -57,7 +57,7 @@ public sealed class UniqueWitness<T>(IObserver<T> observer, IEqualityComparer<T>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnCompleted() => SinkTerminal.Complete(_observer, this);
 
-    /// <summary>Assigns the upstream subscription, disposing it if one is already held.</summary>
+    /// <summary>Assigns the upstream subscription, disposing the incoming one when this sink holds a subscription or has been disposed.</summary>
     /// <param name="subscription">The upstream subscription.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetSubscription(IDisposable subscription) => SinkSubscription.Set(ref _subscription, subscription);

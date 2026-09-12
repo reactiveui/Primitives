@@ -7,9 +7,6 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides a set of extension methods for working with asynchronous observable sequences.</summary>
-/// <remarks>The methods in this class enable querying and evaluating asynchronous observable sequences, such as
-/// determining whether any or all elements satisfy a condition. These methods are designed to be used with types that
-/// implement asynchronous observation patterns.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Asynchronous quantifier operators that evaluate elements of an observable source sequence.</summary>
@@ -53,7 +50,7 @@ public static partial class SignalAsyncExtensions
         /// <returns>A task that represents the asynchronous operation. The task result contains <see langword="true"/> if every
         /// element of the sequence passes the test in the specified predicate, or if the sequence is empty; otherwise,
         /// <see langword="false"/>.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="predicate"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="predicate"/> is <see langword="null"/>.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<bool> AllAsync(Func<T, bool> predicate) => source.AllAsync(predicate, CancellationToken.None);
 
@@ -64,7 +61,7 @@ public static partial class SignalAsyncExtensions
         /// <returns>A task that represents the asynchronous operation. The task result contains <see langword="true"/> if every
         /// element of the sequence passes the test in the specified predicate, or if the sequence is empty; otherwise,
         /// <see langword="false"/>.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="predicate"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="predicate"/> is <see langword="null"/>.</exception>
         public async ValueTask<bool> AllAsync(Func<T, bool> predicate, CancellationToken cancellationToken)
         {
             ArgumentExceptionHelper.ThrowIfNull(predicate);
@@ -105,7 +102,7 @@ public static partial class SignalAsyncExtensions
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     internal sealed class AllTaskWitness<T>(Func<T, bool> predicate, CancellationToken cancellationToken) : TaskResultWitnessAsyncBase<T, bool>(cancellationToken)
     {
-        /// <summary>The predicate function used to test each element in the sequence.</summary>
+        /// <summary>The test applied to every element.</summary>
         private readonly Func<T, bool> _predicate = predicate;
 
         /// <inheritdoc/>

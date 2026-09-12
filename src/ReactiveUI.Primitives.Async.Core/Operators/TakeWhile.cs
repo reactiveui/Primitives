@@ -5,8 +5,6 @@
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides TakeWhile extension methods for asynchronous observable sequences.</summary>
-/// <remarks>TakeWhile emits elements from the source sequence as long as a predicate is satisfied,
-/// then completes the sequence when the predicate returns false.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>TakeWhile operators for an observable source sequence.</summary>
@@ -42,10 +40,7 @@ public static partial class SignalAsyncExtensions
         }
     }
 
-    /// <summary>
-    /// Synchronous-predicate <c>TakeWhile</c> as a single-observer-layer observable. Forwards while
-    /// the predicate holds; on the first miss signals downstream completion and stops.
-    /// </summary>
+    /// <summary>Forwards values while the predicate holds; the first miss completes the sequence and stops.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     /// <param name="predicate">The take-while predicate.</param>
@@ -108,7 +103,7 @@ public static partial class SignalAsyncExtensions
         }
     }
 
-    /// <summary>Async-predicate <c>TakeWhile</c> as a single-observer-layer observable with a sync-completion fast path.</summary>
+    /// <summary>Forwards values while the asynchronous predicate holds; the first miss completes the sequence.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     /// <param name="predicate">The async take-while predicate.</param>
@@ -133,7 +128,7 @@ public static partial class SignalAsyncExtensions
             return sink;
         }
 
-        /// <summary>Per-subscription observer with an async predicate sync-completion fast path.</summary>
+        /// <summary>Per-subscription observer that skips the await when the predicate completes synchronously.</summary>
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="predicate">The async take-while predicate.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>

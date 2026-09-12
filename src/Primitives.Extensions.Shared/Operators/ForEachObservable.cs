@@ -11,11 +11,8 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
 /// <summary>
-/// Flattening operator that subscribes to an upstream sequence of
-/// <see cref="IEnumerable{T}"/> batches and emits each contained element
-/// individually. Replaces the
-/// <c>Observable.Create&lt;T&gt;(o =&gt; source.ObserveOnSafe(s).Subscribe(v =&gt; o.FastForEach(v)))</c>
-/// pattern with a single operator + observer pair.
+/// Flattening operator that subscribes to an upstream sequence of <see cref="IEnumerable{T}"/> batches and emits
+/// each contained element individually.
 /// </summary>
 /// <typeparam name="T">The element type emitted to the downstream observer.</typeparam>
 /// <param name="source">The source observable of enumerables.</param>

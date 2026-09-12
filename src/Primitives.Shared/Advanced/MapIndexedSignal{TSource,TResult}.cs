@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Reactive.Advanced;
 namespace ReactiveUI.Primitives.Advanced;
 #endif
 
-/// <summary>Indexed map signal.</summary>
+/// <summary>Projects each source value together with its zero-based position in the sequence.</summary>
 /// <typeparam name="TSource">The source value type.</typeparam>
 /// <typeparam name="TResult">The projected value type.</typeparam>
 /// <param name="source">The source observable.</param>

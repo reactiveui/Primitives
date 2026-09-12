@@ -16,20 +16,16 @@ public static partial class SignalAsyncExtensions
         /// <returns>An observable sequence that emits a snapshot of the latest values whenever any source produces a new value,
         /// after all sources have produced at least one value.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="sources"/> is <see langword="null"/>.</exception>
-        /// <remarks>
-        /// <para>For perf reasons each emitted <see cref="IReadOnlyList{T}"/> is a reference to a single shared buffer
-        /// owned by the subscription, not a fresh allocation. Downstream observers MUST consume the snapshot synchronously
-        /// inside their <c>OnNextAsync</c> handler; retaining a reference past the handler will surface the next
-        /// emission's values instead, because the buffer is overwritten under the operator's gate before each emit.
-        /// If you need a stable copy, project to one via the projecting <c>CombineLatest</c> overload or
-        /// <c>.Select(static s =&gt; s.ToArray())</c>.</para>
-        /// </remarks>
+        /// <remarks>Each emitted <see cref="IReadOnlyList{T}"/> is a reference to one buffer owned by the subscription,
+        /// not a fresh allocation. An observer must consume the snapshot inside its <c>OnNextAsync</c> handler: the buffer
+        /// is overwritten under the operator's gate before each emit, so a retained reference surfaces the next emission's
+        /// values. For a stable copy, use the projecting <c>CombineLatest</c> overload or
+        /// <c>.Select(static s =&gt; s.ToArray())</c>.</remarks>
         public IObservableAsync<IReadOnlyList<TSource>> SyncLatest()
         {
             ArgumentExceptionHelper.ThrowIfNull(sources);
 
-            // Use the projecting sink with an identity selector so one subscription implementation
-            // backs both shapes. The static lambda avoids capturing enclosing state.
+            // An identity selector lets one subscription implementation back both shapes.
             return new SyncLatestEnumerableSignal<TSource, IReadOnlyList<TSource>>(sources, static s => s);
         }
 

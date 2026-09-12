@@ -17,7 +17,6 @@ public sealed class SynchronizationContextSequencer : ISequencer
 
     /// <summary>Gets a sequencer for the current synchronization context.</summary>
     /// <exception cref="InvalidOperationException">There is no current synchronization context.</exception>
-    /// <remarks>Coverage excludes the getter because the ambient context cannot be changed safely by parallel tests.</remarks>
     public static SynchronizationContextSequencer Current
     {
         [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
@@ -61,7 +60,7 @@ public sealed class SynchronizationContextSequencer : ISequencer
         ThreadPoolSequencer.Instance.Schedule(new DelayedPostWorkItem(this, item), dueTimestamp);
     }
 
-    /// <summary>Executes work when it has not already been cancelled.</summary>
+    /// <summary>Executes the work item unless it has been cancelled.</summary>
     /// <param name="item">Work item to execute.</param>
     private static void ExecutePosted(IWorkItem item)
     {

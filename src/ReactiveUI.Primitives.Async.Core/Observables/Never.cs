@@ -9,22 +9,17 @@ using ReactiveUI.Primitives.Async.Disposables;
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides static methods for creating and composing asynchronous observable sequences.</summary>
-/// <remarks>This class contains factory and utility methods for working with asynchronous observables. Use these
-/// methods to construct, transform, or combine observable sequences in asynchronous scenarios. All members are
-/// thread-safe and can be used in concurrent environments.</remarks>
 public static partial class SignalAsync
 {
     /// <summary>Creates an observable sequence that never produces any values and never completes.</summary>
     /// <typeparam name="T">The type of elements in the observable sequence.</typeparam>
     /// <returns>An observable sequence of type <typeparamref name="T"/> that never emits any items and never terminates.</returns>
-    /// <remarks>This method is useful for testing or composing observables where a sequence that remains idle
-    /// is required. The returned observable will not invoke any callbacks and will not signal completion or
-    /// error.</remarks>
+    /// <remarks>The returned instance is a singleton per element type.</remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
-        Justification = "Public factory API — caller specifies T explicitly: SignalAsync.Never<int>().")]
+        Justification = "There are no parameters to infer from; the caller states the element type: SignalAsync.Never<int>().")]
     public static IObservableAsync<T> Never<T>() => NeverSignalAsync<T>.Instance;
 
     /// <summary>An observable sequence that never produces any values and never completes.</summary>

@@ -7,10 +7,6 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for working with asynchronous observable sequences.</summary>
-/// <remarks>The methods in this class enable querying and retrieving elements from asynchronous observables, such
-/// as obtaining the first element that matches a condition or a default value if no such element exists. These
-/// extensions are designed to be used with types implementing asynchronous observable patterns and support cancellation
-/// via cancellation tokens.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>First-or-default operators for an observable source sequence.</summary>

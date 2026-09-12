@@ -13,34 +13,28 @@ namespace ReactiveUI.Primitives.Signals;
 /// <summary>Provides static factory and operator methods for signals.</summary>
 public static partial class Signal
 {
-    /// <summary>Handles Asnyc Tasks with cancellation.</summary>
+    /// <summary>Creates a task-backed signal that runs the function on subscription, handing it the cancellation source disposal cancels.</summary>
     /// <param name="execution">The function to execute.</param>
-    /// <returns>
-    /// An ITaskSignal of T.
-    /// </returns>
+    /// <returns>A signal that emits the function's result and completes.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ITaskSignal<RxVoid> FromTask(Func<CancellationTokenSource, Task<RxVoid>> execution) =>
         FromTask(execution, null, null);
 
-    /// <summary>Handles Asnyc Tasks with cancellation.</summary>
+    /// <summary>Creates a task-backed signal that runs the function on subscription and notifies on the supplied sequencer.</summary>
     /// <param name="execution">The function to execute.</param>
-    /// <param name="scheduler">The scheduler.</param>
-    /// <returns>
-    /// An ITaskSignal of T.
-    /// </returns>
+    /// <param name="scheduler">The sequencer notifications are delivered on, or <see langword="null"/> for the current thread.</param>
+    /// <returns>A signal that emits the function's result and completes.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ITaskSignal<RxVoid> FromTask(
         Func<CancellationTokenSource, Task<RxVoid>> execution,
         ISequencer? scheduler) =>
         FromTask(execution, scheduler, null);
 
-    /// <summary>Handles Asnyc Tasks with cancellation.</summary>
+    /// <summary>Creates a task-backed signal that runs the function on subscription, observing the supplied cancellation source.</summary>
     /// <param name="execution">The function to execute.</param>
-    /// <param name="scheduler">The scheduler.</param>
-    /// <param name="cancellationTokenSource">The cancellation token source.</param>
-    /// <returns>
-    /// An ITaskSignal of T.
-    /// </returns>
+    /// <param name="scheduler">The sequencer notifications are delivered on, or <see langword="null"/> for the current thread.</param>
+    /// <param name="cancellationTokenSource">The cancellation source handed to the function, or <see langword="null"/> to own a new one.</param>
+    /// <returns>A signal that emits the function's result and completes.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ITaskSignal<RxVoid> FromTask(
         Func<CancellationTokenSource, Task<RxVoid>> execution,
@@ -48,37 +42,31 @@ public static partial class Signal
         CancellationTokenSource? cancellationTokenSource) =>
         CreateTaskSignal(execution, scheduler, cancellationTokenSource);
 
-    /// <summary>Froms the asynchronous.</summary>
+    /// <summary>Creates a task-backed signal that runs the function on subscription, handing it the cancellation source disposal cancels.</summary>
     /// <typeparam name="TResult">The type of the return value.</typeparam>
-    /// <param name="actionAsync">The action asynchronous.</param>
-    /// <returns>
-    /// An TaskSignal of T.
-    /// </returns>
+    /// <param name="actionAsync">The function to execute.</param>
+    /// <returns>A signal that emits the function's result and completes.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ITaskSignal<TResult> FromTask<TResult>(Func<CancellationTokenSource, Task<TResult>> actionAsync) =>
         FromTask(actionAsync, null, null);
 
-    /// <summary>Froms the asynchronous.</summary>
+    /// <summary>Creates a task-backed signal that runs the function on subscription and notifies on the supplied sequencer.</summary>
     /// <typeparam name="TResult">The type of the return value.</typeparam>
-    /// <param name="actionAsync">The action asynchronous.</param>
-    /// <param name="scheduler">The scheduler.</param>
-    /// <returns>
-    /// An TaskSignal of T.
-    /// </returns>
+    /// <param name="actionAsync">The function to execute.</param>
+    /// <param name="scheduler">The sequencer notifications are delivered on, or <see langword="null"/> for the current thread.</param>
+    /// <returns>A signal that emits the function's result and completes.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ITaskSignal<TResult> FromTask<TResult>(
         Func<CancellationTokenSource, Task<TResult>> actionAsync,
         ISequencer? scheduler) =>
         FromTask(actionAsync, scheduler, null);
 
-    /// <summary>Froms the asynchronous.</summary>
+    /// <summary>Creates a task-backed signal that runs the function on subscription, observing the supplied cancellation source.</summary>
     /// <typeparam name="TResult">The type of the return value.</typeparam>
-    /// <param name="actionAsync">The action asynchronous.</param>
-    /// <param name="scheduler">The scheduler.</param>
-    /// <param name="cancellationTokenSource">The cancellation token source.</param>
-    /// <returns>
-    /// An TaskSignal of T.
-    /// </returns>
+    /// <param name="actionAsync">The function to execute.</param>
+    /// <param name="scheduler">The sequencer notifications are delivered on, or <see langword="null"/> for the current thread.</param>
+    /// <param name="cancellationTokenSource">The cancellation source handed to the function, or <see langword="null"/> to own a new one.</param>
+    /// <returns>A signal that emits the function's result and completes.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ITaskSignal<TResult> FromTask<TResult>(
         Func<CancellationTokenSource, Task<TResult>> actionAsync,
@@ -86,12 +74,12 @@ public static partial class Signal
         CancellationTokenSource? cancellationTokenSource) =>
         CreateTaskSignal(actionAsync, scheduler, cancellationTokenSource);
 
-    /// <summary>Executes the CreateTaskSignal operation.</summary>
-    /// <typeparam name="TResult">The TResult type.</typeparam>
-    /// <param name="execution">The execution value.</param>
-    /// <param name="scheduler">The scheduler value.</param>
-    /// <param name="cancellationTokenSource">The cancellationTokenSource value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Builds the task-backed signal, taking a direct-subscription form for the immediate sequencer.</summary>
+    /// <typeparam name="TResult">The result type.</typeparam>
+    /// <param name="execution">The function to execute.</param>
+    /// <param name="scheduler">The sequencer notifications are delivered on.</param>
+    /// <param name="cancellationTokenSource">The cancellation source handed to the function.</param>
+    /// <returns>The task-backed signal.</returns>
     private static ITaskSignal<TResult> CreateTaskSignal<TResult>(
         Func<CancellationTokenSource, Task<TResult>> execution,
         ISequencer? scheduler,
@@ -103,12 +91,12 @@ public static partial class Signal
                 scheduler,
                 cancellationTokenSource);
 
-    /// <summary>Executes the SubscribeTask operation.</summary>
-    /// <typeparam name="TResult">The TResult type.</typeparam>
-    /// <param name="signal">The signal value.</param>
-    /// <param name="execution">The execution value.</param>
-    /// <param name="observer">The observer value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Starts the task for one subscription and forwards its terminal notification to the observer.</summary>
+    /// <typeparam name="TResult">The result type.</typeparam>
+    /// <param name="signal">The signal whose cancellation source the task runs under.</param>
+    /// <param name="execution">The function producing the task.</param>
+    /// <param name="observer">The observer receiving the result.</param>
+    /// <returns>A disposable that cancels the task when it wins the terminal transition.</returns>
     /// <exception cref="InvalidOperationException"><paramref name="execution"/> returned <see langword="null"/>.</exception>
     private static IDisposable SubscribeTask<TResult>(
         ITaskSignal<TResult> signal,
@@ -155,20 +143,19 @@ public static partial class Signal
             Cancel(source);
         });
 
-    /// <summary>Emits a synchronous terminal notification when the task has already finished.</summary>
-    /// <typeparam name="TResult">The TResult type.</typeparam>
+    /// <summary>Emits the terminal notification synchronously when the task has finished.</summary>
+    /// <typeparam name="TResult">The result type.</typeparam>
     /// <param name="task">The task to inspect.</param>
-    /// <param name="observer">The observer value.</param>
-    /// <param name="token">The token value.</param>
+    /// <param name="observer">The observer receiving the notification.</param>
+    /// <param name="token">The token checked for cancellation.</param>
     /// <returns><see langword="true"/> when a synchronous terminal notification was produced.</returns>
     /// <remarks>
-    /// Runs before any disposer is handed out, so no dispose race is possible and the emission is ungated.
+    /// Runs before any disposer is handed out, so no dispose race is possible and the emission needs no gate.
     /// </remarks>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Concurrency",
         "PSH1315:A blocking wait on an awaitable that may not be done",
-        Justification =
-            "Synchronous read of an already-completed (RanToCompletion) task for an allocation-free fast path; await is invalid in this synchronous factory.")]
+        Justification = "The result is read only once the task status is RanToCompletion.")]
     private static bool TryEmitSynchronously<TResult>(
         Task<TResult> task,
         IObserver<TResult> observer,
@@ -197,16 +184,15 @@ public static partial class Signal
     }
 
     /// <summary>Observes a pending task and forwards the terminal notification while honoring disposal.</summary>
-    /// <typeparam name="TResult">The TResult type.</typeparam>
-    /// <param name="cancellableTask">The cancellableTask value.</param>
-    /// <param name="observer">The observer value.</param>
+    /// <typeparam name="TResult">The result type.</typeparam>
+    /// <param name="cancellableTask">The task raced against cancellation.</param>
+    /// <param name="observer">The observer receiving the notification.</param>
     /// <param name="gate">The terminal-notification gate shared with the disposer.</param>
-    /// <param name="token">The token value.</param>
-    /// <returns>The result.</returns>
+    /// <param name="token">The token checked for cancellation.</param>
+    /// <returns>A task that completes once the notification is forwarded or suppressed.</returns>
     /// <remarks>
-    /// The terminal notification is gated on <see cref="TaskStopGate.TryStop"/>, the same atomic
-    /// transition the disposer wins when the subscription is torn down. Only the winner emits, so a
-    /// subscription disposed while the task continuation runs never observes a post-dispose notification.
+    /// The notification is gated on <see cref="TaskStopGate.TryStop"/>, the transition the disposer wins on teardown,
+    /// so a subscription disposed while this continuation runs observes nothing.
     /// </remarks>
     private static async Task ObserveTask<TResult>(
         Task<(TResult Value, bool IsCanceled)> cancellableTask,
@@ -241,8 +227,8 @@ public static partial class Signal
         }
     }
 
-    /// <summary>Executes the Cancel operation.</summary>
-    /// <param name="source">The source value.</param>
+    /// <summary>Cancels the source, tolerating a source another completion path disposed.</summary>
+    /// <param name="source">The cancellation source to cancel.</param>
     private static void Cancel(CancellationTokenSource source)
     {
         try
@@ -251,15 +237,15 @@ public static partial class Signal
         }
         catch (ObjectDisposedException)
         {
-            // Another completion path already released the token source.
+            // Another completion path released the token source.
         }
     }
 
-    /// <summary>Immediate task signal that subscribes directly instead of building a nested observable pipeline.</summary>
+    /// <summary>Task signal that starts the task in <c>Subscribe</c> rather than through a nested observable pipeline.</summary>
     /// <typeparam name="TResult">The result type.</typeparam>
     private sealed class ImmediateTaskSignal<TResult> : ITaskSignal<TResult>
     {
-        /// <summary>Executes the task.</summary>
+        /// <summary>The factory that starts the task for each subscription.</summary>
         private readonly Func<CancellationTokenSource, Task<TResult>> _execution;
 
         /// <summary>Non-zero after disposal.</summary>
@@ -346,8 +332,8 @@ public static partial class Signal
             SourceCore.Dispose();
         }
 
-        /// <summary>Throws when disposed.</summary>
-        /// <exception cref="ObjectDisposedException">The signal has already been disposed.</exception>
+        /// <summary>Throws when the signal has been disposed.</summary>
+        /// <exception cref="ObjectDisposedException">The signal has been disposed.</exception>
         private void ThrowIfDisposed()
         {
             if (!IsDisposed)
@@ -361,9 +347,8 @@ public static partial class Signal
 
     /// <summary>Atomic gate that serializes the terminal notification against subscription disposal.</summary>
     /// <remarks>
-    /// Mirrors the <c>TaskInstanceSubscription.TryStop()</c> pattern: both the task continuation and the
-    /// disposer race on a single <see cref="Interlocked.Exchange(ref int, int)"/>; only the winner proceeds,
-    /// so a notification can never reach a subscription that has already been disposed.
+    /// The task continuation and the disposer race on a single <see cref="Interlocked.Exchange(ref int, int)"/> and only
+    /// the winner proceeds, so no notification reaches a disposed subscription.
     /// </remarks>
     private sealed class TaskStopGate
     {

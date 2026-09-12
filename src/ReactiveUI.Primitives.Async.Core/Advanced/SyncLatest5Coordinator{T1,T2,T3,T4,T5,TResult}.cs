@@ -107,10 +107,7 @@ public sealed class SyncLatest5Coordinator<T1, T2, T3, T4, T5, TResult> : SyncLa
             _ => Sources.Source5.SubscribeAsync(new SyncLatestWitness<T5, TResult>(this, Source5Bit, value => Value5 = new(value)), cancellationToken)
         };
 
-    /// <summary>
-    /// Reads every source's latest value into a single snapshot. Returns <see langword="false"/>
-    /// until every source has produced at least one value.
-    /// </summary>
+    /// <summary>Reads every source's latest value into a single snapshot.</summary>
     /// <param name="values">When the method returns <see langword="true"/>, the snapshot.</param>
     /// <returns><see langword="true"/> when every source has produced a value; otherwise <see langword="false"/>.</returns>
     private bool TryReadValues(out (T1 V1, T2 V2, T3 V3, T4 V4, T5 V5) values)

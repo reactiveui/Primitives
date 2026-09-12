@@ -14,7 +14,7 @@ public sealed class StartSignal : IRequireCurrentThread<RxVoid>
 {
     /// <summary>Initializes a new instance of the <see cref="StartSignal"/> class.</summary>
     /// <param name="action">The action to run.</param>
-    /// <param name="scheduler">The scheduler used to run the action.</param>
+    /// <param name="scheduler">The sequencer that runs the action.</param>
     public StartSignal(Action action, ISequencer scheduler)
     {
         Action = action;
@@ -24,7 +24,7 @@ public sealed class StartSignal : IRequireCurrentThread<RxVoid>
     /// <summary>Gets the action to run.</summary>
     private Action Action { get; }
 
-    /// <summary>Gets the scheduler used to run the action.</summary>
+    /// <summary>Gets the sequencer that runs the action.</summary>
     private ISequencer Scheduler { get; }
 
     /// <inheritdoc/>

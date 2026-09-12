@@ -7,9 +7,6 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides Timeout extension methods for asynchronous observable sequences.</summary>
-/// <remarks>Timeout applies a time limit to the observable sequence. If the sequence does not produce
-/// a value within the specified time span, a <see cref="TimeoutException"/> is signalled as a failure
-/// completion.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Timeout operators for an observable source sequence.</summary>
@@ -18,13 +15,13 @@ public static partial class SignalAsyncExtensions
     extension<T>(IObservableAsync<T> source)
     {
         /// <summary>
-        /// Applies a dueTime policy to the observable sequence. If the next element is not received within
-        /// the specified time span, the sequence completes with a <see cref="TimeoutException"/>.
+        /// Applies a time limit between elements. If the next element does not arrive within
+        /// <paramref name="dueTime"/>, the sequence completes with a <see cref="TimeoutException"/>.
         /// </summary>
         /// <param name="dueTime">The maximum time span allowed between consecutive elements. Must be positive.</param>
         /// <returns>An observable sequence that mirrors the source but completes with a
-        /// <see cref="TimeoutException"/> if any inter-element interval exceeds the specified dueTime.</returns>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="dueTime"/> is negative or zero.</exception>
+        /// <see cref="TimeoutException"/> once an inter-element gap exceeds <paramref name="dueTime"/>.</returns>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="dueTime"/> is negative or zero.</exception>
         public IObservableAsync<T> Expire(TimeSpan dueTime)
         {
             ArgumentOutOfRangeExceptionHelper.ThrowIfLessThanOrEqual(dueTime, TimeSpan.Zero);
@@ -35,15 +32,15 @@ public static partial class SignalAsyncExtensions
 
     /// <summary>
     /// Async observable that mirrors the source but completes with a <see cref="TimeoutException"/>
-    /// if any inter-element interval exceeds the specified dueTime.
+    /// once an inter-element gap exceeds the configured interval.
     /// </summary>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
     /// <param name="source">The source observable sequence.</param>
     /// <param name="dueTime">The maximum allowed inter-element interval.</param>
-    /// <param name="timeProvider">The time provider used for scheduling the dueTime.</param>
+    /// <param name="timeProvider">The time provider used to schedule the deadline.</param>
     internal sealed class TimeoutSignal<T>(IObservableAsync<T> source, TimeSpan dueTime, TimeProvider timeProvider) : IObservableAsync<T>
     {
-        /// <summary>Subscribes the specified observer and starts the dueTime timer.</summary>
+        /// <summary>Subscribes the specified observer and starts the deadline timer.</summary>
         /// <param name="observer">The observer to receive elements from the source.</param>
         /// <param name="cancellationToken">A token to cancel the subscription.</param>
         /// <returns>An async disposable that tears down the subscription when disposed.</returns>
@@ -59,30 +56,27 @@ public static partial class SignalAsyncExtensions
 
         /// <summary>
         /// Observer that resets a timer on each received element and signals a <see cref="TimeoutException"/>
-        /// if no element arrives within the configured dueTime.
+        /// if no element arrives within the configured interval.
         /// </summary>
         /// <param name="observer">The downstream observer to forward elements to.</param>
         /// <param name="dueTime">The maximum allowed inter-element interval.</param>
-        /// <param name="timeProvider">The time provider used for scheduling the dueTime.</param>
+        /// <param name="timeProvider">The time provider used to schedule the deadline.</param>
         internal sealed class TimeoutWitness(IObserverAsync<T> observer, TimeSpan dueTime, TimeProvider timeProvider) : WitnessAsync<T>
         {
             /// <summary>Synchronization gate protecting timer state.</summary>
             private readonly Lock _gate = new();
 
             /// <summary>
-            /// Single pre-allocated timer rearmed via <see cref="ITimer.Change(TimeSpan, TimeSpan)"/>
-            /// on every emission. Replaces the previous per-emission fire-and-forget
-            /// <c>OnTimeoutAsync</c> task; the per-emission allocations (linked CTS, async state
-            /// machine box for OnTimeoutAsync, Task.Delay's TimerQueueTimer) collapse to a single
-            /// <c>Change</c> call which is highly optimised in the BCL.
+            /// The one timer for this subscription, rearmed via <see cref="ITimer.Change(TimeSpan, TimeSpan)"/> on
+            /// every emission so that tracking the deadline costs no per-emission allocation.
             /// </summary>
             private ITimer? _timer;
 
-            /// <summary>Indicates whether the observer has already received a completion signal; ignored timeouts once true.</summary>
+            /// <summary>Set once the observer has been terminated; suppresses any later timeout signal.</summary>
             private bool _completed;
 
-            /// <summary>Allocates the timer and schedules the first dueTime tick.</summary>
-            /// <param name="cancellationToken">Cancellation token; unused after the redesign but kept for API compatibility.</param>
+            /// <summary>Allocates the timer and schedules the first deadline tick.</summary>
+            /// <param name="cancellationToken">Unused; the timer carries its own deadline.</param>
             internal void StartTimer(CancellationToken cancellationToken)
             {
                 _ = cancellationToken;
@@ -96,15 +90,14 @@ public static partial class SignalAsyncExtensions
                 }
                 catch (Exception e)
                 {
-                    // Preserve the legacy contract: CreateTimer failures route to the unhandled
-                    // exception handler rather than tearing down the subscription. Without a timer
-                    // the operator degrades to a pass-through; downstream callers continue to
-                    // receive emissions without a timeout signal.
+                    // A CreateTimer failure routes to the unhandled exception handler rather than tearing
+                    // down the subscription: with no timer the operator degrades to a pass-through that
+                    // forwards every emission and never signals a timeout.
                     UnhandledExceptionHandler.ReportUnhandledException(e);
                 }
             }
 
-            /// <summary>Rearms the dueTime timer and forwards the element to the downstream observer.</summary>
+            /// <summary>Rearms the deadline timer and forwards the element to the downstream observer.</summary>
             /// <param name="value">The element to forward.</param>
             /// <param name="cancellationToken">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
@@ -114,7 +107,7 @@ public static partial class SignalAsyncExtensions
                 return observer.OnNextAsync(value, cancellationToken);
             }
 
-            /// <summary>Stops the dueTime timer and forwards the error to the downstream observer.</summary>
+            /// <summary>Stops the deadline timer and forwards the error to the downstream observer.</summary>
             /// <param name="error">The error to forward.</param>
             /// <param name="cancellationToken">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
@@ -129,7 +122,7 @@ public static partial class SignalAsyncExtensions
                 return observer.OnErrorResumeAsync(error, cancellationToken);
             }
 
-            /// <summary>Stops the dueTime timer and forwards completion to the downstream observer.</summary>
+            /// <summary>Stops the deadline timer and forwards completion to the downstream observer.</summary>
             /// <param name="result">The completion result.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
             protected override ValueTask OnCompletedAsyncCore(Result result)
@@ -143,7 +136,7 @@ public static partial class SignalAsyncExtensions
                 return observer.OnCompletedAsync(result);
             }
 
-            /// <summary>Disposes the dueTime timer during teardown.</summary>
+            /// <summary>Disposes the deadline timer during teardown.</summary>
             /// <returns>A completed task.</returns>
             protected override async ValueTask DisposeAsyncCore()
             {
@@ -176,7 +169,7 @@ public static partial class SignalAsyncExtensions
                 }
             }
 
-            /// <summary>Timer callback: signals the downstream observer with a <see cref="TimeoutException"/> completion unless the observer has already terminated.</summary>
+            /// <summary>Timer callback: completes the downstream observer with a <see cref="TimeoutException"/> unless it has terminated.</summary>
             private void OnTimerFired()
             {
                 lock (_gate)
@@ -192,18 +185,15 @@ public static partial class SignalAsyncExtensions
                 _ = FireTimeoutAsync(observer);
             }
 
-            /// <summary>Rearms the timeout deadline for the next emission. Isolated from
-            /// coverage because the <c>_timer is null</c> branch is only reachable when the
-            /// source emits after the sink's <c>DisposeAsyncCore</c> has nulled the timer —
-            /// a race the single-threaded test harness cannot deterministically trigger.</summary>
+            /// <summary>Rearms the timeout deadline for the next emission; <c>_timer</c> is null only when the source
+            /// emits after <c>DisposeAsyncCore</c> has torn the timer down, a race no deterministic test can hit.</summary>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
             private void RearmTimer() =>
                 _timer?.Change(dueTime, System.Threading.Timeout.InfiniteTimeSpan);
 
-            /// <summary>Stops the timeout deadline on terminal forwarding. Isolated from
-            /// coverage because the <c>_timer is null</c> branch is only reachable under the
-            /// same source-after-Dispose race that <see cref="RearmTimer"/> guards against.</summary>
+            /// <summary>Stops the timeout deadline on terminal forwarding; <c>_timer</c> is null only under the same
+            /// post-teardown race as <see cref="RearmTimer"/>.</summary>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
             private void StopTimer() =>
@@ -213,20 +203,20 @@ public static partial class SignalAsyncExtensions
 
     /// <summary>
     /// Async observable that mirrors the source but switches to a fallback observable
-    /// if any inter-element interval exceeds the specified dueTime.
+    /// once an inter-element gap exceeds the configured interval.
     /// </summary>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
     /// <param name="source">The source observable sequence.</param>
     /// <param name="dueTime">The maximum allowed inter-element interval.</param>
-    /// <param name="fallback">The fallback observable to switch to on dueTime.</param>
-    /// <param name="timeProvider">The time provider used for scheduling the dueTime.</param>
+    /// <param name="fallback">The observable to switch to when the interval elapses.</param>
+    /// <param name="timeProvider">The time provider used to schedule the deadline.</param>
     internal sealed class TimeoutWithFallbackSignal<T>(
         IObservableAsync<T> source,
         TimeSpan dueTime,
         IObservableAsync<T> fallback,
         TimeProvider timeProvider) : IObservableAsync<T>
     {
-        /// <summary>Subscribes the specified observer by wrapping the source with a dueTime and a catch-to-fallback.</summary>
+        /// <summary>Subscribes the specified observer by wrapping the source with a deadline and a catch-to-fallback.</summary>
         /// <param name="observer">The observer to receive elements.</param>
         /// <param name="cancellationToken">A token to cancel the subscription.</param>
         /// <returns>An async disposable that tears down the subscription when disposed.</returns>

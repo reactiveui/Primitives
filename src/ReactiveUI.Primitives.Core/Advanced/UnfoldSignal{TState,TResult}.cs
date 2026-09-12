@@ -7,13 +7,13 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Advanced;
 
-/// <summary>Finite state expansion signal.</summary>
-/// <typeparam name="TState">State type.</typeparam>
-/// <typeparam name="TResult">Result type.</typeparam>
-/// <param name="initialState">Initial state.</param>
-/// <param name="condition">Loop condition.</param>
-/// <param name="iterate">State iterator.</param>
-/// <param name="resultSelector">Result selector.</param>
+/// <summary>Signal that walks a state machine synchronously, emitting one projected value per iteration.</summary>
+/// <typeparam name="TState">The state type.</typeparam>
+/// <typeparam name="TResult">The emitted value type.</typeparam>
+/// <param name="initialState">The state the walk starts from.</param>
+/// <param name="condition">Evaluated before each iteration; emission stops when it returns <see langword="false"/>.</param>
+/// <param name="iterate">Produces the next state from the current one.</param>
+/// <param name="resultSelector">Projects the current state to the emitted value.</param>
 [System.Diagnostics.DebuggerDisplay("UnfoldSignal: InitialState = {_initialState}, Condition = {_condition}")]
 public sealed class UnfoldSignal<TState, TResult>(
     TState initialState,
@@ -21,16 +21,16 @@ public sealed class UnfoldSignal<TState, TResult>(
     Func<TState, TState> iterate,
     Func<TState, TResult> resultSelector) : IRequireCurrentThread<TResult>, IInlineSignal<TResult>
 {
-    /// <summary>Initial state.</summary>
+    /// <summary>The state the walk starts from.</summary>
     private readonly TState _initialState = initialState;
 
-    /// <summary>Loop condition.</summary>
+    /// <summary>The continuation condition, evaluated before each iteration.</summary>
     private readonly Func<TState, bool> _condition = condition;
 
-    /// <summary>State iterator.</summary>
+    /// <summary>The transition from the current state to the next.</summary>
     private readonly Func<TState, TState> _iterate = iterate;
 
-    /// <summary>Result selector.</summary>
+    /// <summary>The projection from state to emitted value.</summary>
     private readonly Func<TState, TResult> _resultSelector = resultSelector;
 
     /// <inheritdoc/>

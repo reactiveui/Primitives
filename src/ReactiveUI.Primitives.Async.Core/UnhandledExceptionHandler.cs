@@ -10,35 +10,30 @@ namespace ReactiveUI.Primitives.Async;
 /// Provides a mechanism for registering a global handler to process unhandled exceptions that occur during
 /// application execution.
 /// </summary>
-/// <remarks>Use this class to specify a custom action to be invoked when an unhandled exception is
-/// encountered. By default, unhandled exceptions are written to the console. Registering a handler allows
-/// applications to perform custom logging, cleanup, or user notification in response to unexpected errors. This
-/// class does not handle exceptions of type OperationCanceledException.</remarks>
+/// <remarks>The process-wide default writes the exception to <see cref="System.Diagnostics.Trace"/>. Register a
+/// handler to log, clean up or notify instead. Cancellation is treated as normal flow and never reaches the
+/// handler.</remarks>
 public static class UnhandledExceptionHandler
 {
     /// <summary>The currently registered handler action invoked when an unhandled exception occurs.</summary>
     private static Action<Exception> _unhandledException = TraceUnhandledException;
 
-    /// <summary>Gets the currently registered handler. Used for save/restore in tests.</summary>
+    /// <summary>Gets the handler that <see cref="ReportUnhandledException"/> routes to.</summary>
     internal static Action<Exception> CurrentHandler => _unhandledException;
 
     /// <summary>Registers a handler to be invoked when an unhandled exception occurs.</summary>
-    /// <param name="unhandledExceptionHandler">An action to execute when an unhandled exception is encountered. The exception instance is passed as a
-    /// parameter to the handler. Cannot be null.</param>
-    /// <remarks>Registering a new handler replaces any previously registered handler. The handler
-    /// will be called for each unhandled exception that occurs after registration.</remarks>
+    /// <param name="unhandledExceptionHandler">The action that receives each unhandled exception. Cannot be null.</param>
+    /// <remarks>There is one handler per process and registration replaces it, so a library that registers here takes
+    /// the sink away from the host application. A handler that throws has its exception swallowed.</remarks>
     public static void Register(Action<Exception> unhandledExceptionHandler) =>
         _unhandledException = unhandledExceptionHandler;
 
     /// <summary>Invokes the application's unhandled exception handler for exceptions that are not operation cancellations.</summary>
     /// <param name="e">The exception to be processed by the unhandled exception handler. Cannot be null.</param>
-    /// <remarks>OperationCanceledException instances are ignored and not passed to the
-    /// handler.</remarks>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST1429:Handle, rethrow, or narrow this catch; an empty catch of the base exception hides failures",
-        Justification =
-            "This is the last-resort handler; if the registered handler itself throws there is no further sink to route to without recursing.")]
+        Justification = "This is the last-resort sink, so rethrowing a handler's own failure would have nowhere to go but back here.")]
     internal static void ReportUnhandledException(Exception e)
     {
         if (e is OperationCanceledException)
@@ -56,11 +51,8 @@ public static class UnhandledExceptionHandler
         }
     }
 
-    /// <summary>Handles unhandled exceptions by writing an error message to the console output.</summary>
+    /// <summary>The default handler: writes the exception to <see cref="System.Diagnostics.Trace"/> as an error.</summary>
     /// <param name="exception">The exception that was not handled. Cannot be null.</param>
-    /// <remarks>This method is intended to be used as a default handler for unhandled exceptions in
-    /// an application. It writes the exception details to the standard console output for diagnostic
-    /// purposes.</remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void TraceUnhandledException(Exception exception) =>
         System.Diagnostics.Trace.TraceError("UnhandleException: {0}", exception);

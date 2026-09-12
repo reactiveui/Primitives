@@ -18,21 +18,17 @@ public static partial class SignalExtensions
     /// <param name="asyncTask">The asynchronous task.</param>
     extension<TResult>(IObservable<TResult> asyncTask)
     {
-        /// <summary>Handles the cancellation.</summary>
-        /// <param name="token">The token.</param>
-        /// <returns>
-        /// A Task.
-        /// </returns>
+        /// <summary>Awaits the source and returns its final value, or the default value when the token cancels the wait.</summary>
+        /// <param name="token">The token that cancels the wait.</param>
+        /// <returns>A task carrying the final source value, or the default value on cancellation.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Task<TResult?> HandleCancellation(CancellationToken token) =>
             asyncTask.HandleCancellation(null, token);
 
-        /// <summary>Handles the cancellation.</summary>
-        /// <param name="action">The action.</param>
-        /// <param name="token">The token.</param>
-        /// <returns>
-        /// A Task.
-        /// </returns>
+        /// <summary>Awaits the source and returns its final value; on cancellation invokes the action and returns the default value.</summary>
+        /// <param name="action">Invoked when the wait is cancelled.</param>
+        /// <param name="token">The token that cancels the wait.</param>
+        /// <returns>A task carrying the final source value, or the default value on cancellation.</returns>
         public async Task<TResult?> HandleCancellation(Action? action, CancellationToken token)
         {
             try
@@ -53,14 +49,14 @@ public static partial class SignalExtensions
     /// <param name="asyncTask">The asynchronous task.</param>
     extension(Task asyncTask)
     {
-        /// <summary>Handles the cancellation.</summary>
-        /// <returns>A Task.</returns>
+        /// <summary>Awaits the task and completes normally when it is cancelled.</summary>
+        /// <returns>A task that completes once the awaited task finishes or is cancelled.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Task HandleCancellation() => asyncTask.HandleCancellation(null);
 
-        /// <summary>Handles the cancellation.</summary>
-        /// <param name="action">The action.</param>
-        /// <returns>A Task.</returns>
+        /// <summary>Awaits the task and invokes the action instead of throwing when it is cancelled.</summary>
+        /// <param name="action">Invoked when the task is cancelled.</param>
+        /// <returns>A task that completes once the awaited task finishes or is cancelled.</returns>
         public async Task HandleCancellation(Action? action)
         {
             try
@@ -79,14 +75,14 @@ public static partial class SignalExtensions
     /// <param name="asyncTask">The asynchronous task.</param>
     extension<TResult>(Task<TResult> asyncTask)
     {
-        /// <summary>Handles the cancellation.</summary>
-        /// <returns>A Task of TResult.</returns>
+        /// <summary>Awaits the task and returns its result, or the default value when it is cancelled.</summary>
+        /// <returns>A task carrying the result, or the default value on cancellation.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Task<TResult?> HandleCancellation() => asyncTask.HandleCancellation(null);
 
-        /// <summary>Handles the cancellation.</summary>
-        /// <param name="action">The action.</param>
-        /// <returns>A Task of TResult.</returns>
+        /// <summary>Awaits the task and returns its result; on cancellation invokes the action and returns the default value.</summary>
+        /// <param name="action">Invoked when the task is cancelled.</param>
+        /// <returns>A task carrying the result, or the default value on cancellation.</returns>
         public async Task<TResult?> HandleCancellation(Action? action)
         {
             try
@@ -101,9 +97,9 @@ public static partial class SignalExtensions
             return default;
         }
 
-        /// <summary>Executes the WhenCancelled operation.</summary>
-        /// <param name="cancellationToken">The cancellationToken value.</param>
-        /// <returns>The result.</returns>
+        /// <summary>Awaits whichever completes first, the task or the token, and reports which one it was.</summary>
+        /// <param name="cancellationToken">The token raced against the task.</param>
+        /// <returns>The task result, and whether the wait ended in cancellation.</returns>
         internal async Task<(TResult Value, bool IsCanceled)> WhenCancelled(CancellationToken cancellationToken)
         {
             TaskCompletionSource<TResult> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);

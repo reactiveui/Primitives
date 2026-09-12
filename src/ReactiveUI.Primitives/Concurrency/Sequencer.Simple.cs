@@ -144,14 +144,7 @@ public static partial class Sequencer
             DisposeIfRaced(disposable);
         }
 
-        /// <summary>
-        /// Race-only cleanup: releases what the action returned when <see cref="Dispose"/> latched the
-        /// flag after the store above claimed the slot. Single-threaded this can never fire - a completed
-        /// <see cref="Dispose"/> leaves the slot holding <see cref="EmptyDisposable.Instance"/>, so the
-        /// compare-exchange takes the already-claimed branch instead and never reaches here. Only a real
-        /// concurrent disposal lands in this window, so it is excluded rather than chased with a
-        /// timing-dependent test.
-        /// </summary>
+        /// <summary>Releases what the scheduled action returned when a concurrent <see cref="Dispose"/> latches the cancellation flag after the slot is claimed.</summary>
         /// <param name="disposable">The disposable the scheduled action returned.</param>
         [ExcludeFromCodeCoverage]
         private void DisposeIfRaced(IDisposable disposable)
@@ -250,7 +243,7 @@ public static partial class Sequencer
             /// <summary>Gets or sets a value indicating whether the disposable was added to the collection.</summary>
             public bool IsAdded { get; set; }
 
-            /// <summary>Gets or sets a value indicating whether the rescheduled work item already ran.</summary>
+            /// <summary>Gets or sets a value indicating whether the rescheduled work item has run.</summary>
             public bool IsDone { get; set; }
         }
     }

@@ -5,20 +5,16 @@
 namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>
-/// Per-source <see cref="WitnessAsync{T}"/> used by every <c>CombineLatestN</c> subscription. The
-/// per-arity class previously declared N hand-rolled <c>OnNextN</c> / <c>OnCompletedN</c> method
-/// pairs whose bodies differed only in which <c>Optional&lt;TN&gt;</c> field they wrote and which
-/// completion bit they passed to the lifecycle. Pre-building N of these witnesses at subscription
-/// time keeps the typing exact and eliminates the per-source method declarations from the per-arity
-/// files. The closure cost (one delegate per source for the value-write) is paid once at subscribe
-/// and not per emission; the actual per-emission cost is one indirect delegate invoke under the
-/// values-lock.
+/// Per-source <see cref="WitnessAsync{T}"/> for a <c>CombineLatestN</c> subscription: records each
+/// value into the parent's typed slot under the values-lock, then asks the parent to emit. One
+/// instance is built per source at subscribe time, so the per-emission cost is a single delegate
+/// invoke.
 /// </summary>
 /// <typeparam name="TSource">The element type of the upstream source this witness subscribes to.</typeparam>
 /// <typeparam name="TResult">The downstream element type owned by the parent subscription.</typeparam>
 /// <param name="parent">The parent subscription that owns the values-lock and lifecycle.</param>
 /// <param name="sourceBit">The completion bitmask bit owned by this source (1 &lt;&lt; index).</param>
-/// <param name="recordValue">Stores the freshly-emitted value into the parent's typed <c>_valN</c> slot.</param>
+/// <param name="recordValue">Stores the emitted value into the parent's typed slot for this source.</param>
 public sealed class SyncLatestIndexedWitness<TSource, TResult>(
     SyncLatestCoordinatorBase<TResult> parent,
     int sourceBit,

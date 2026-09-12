@@ -11,7 +11,8 @@ public sealed class IntervalSubscription : TaskSignalSubscription<long>
     /// <summary>Initializes a new instance of the <see cref="IntervalSubscription"/> class.</summary>
     /// <param name="observer">The observer receiving ticks.</param>
     /// <param name="period">The delay between ticks.</param>
-    /// <param name="timeProvider">The time provider used for custom scheduling.</param>
+    /// <param name="timeProvider">The time provider that schedules the ticks, or <see langword="null"/> for the
+    /// system clock.</param>
     public IntervalSubscription(IObserverAsync<long> observer, TimeSpan period, TimeProvider? timeProvider)
         : base(observer)
     {

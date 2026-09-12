@@ -26,8 +26,8 @@ internal static class ActivationExtensionsEmitter
     /// <param name="models">The overloads to emit, in request order.</param>
     /// <returns>The generated source.</returns>
     /// <remarks>
-    /// The overloads join the same partial class as the placeholder they displace, so a call site resolves to the
-    /// concrete overload without the consumer importing anything new: a non-generic candidate beats the generic
+    /// The overloads join the same partial class as the placeholder they displace, so a call site binds to the
+    /// concrete overload without the consumer importing anything: a non-generic candidate beats the generic
     /// placeholder outright.
     /// </remarks>
     internal static string Emit(ImmutableArray<ActivationModel> models)

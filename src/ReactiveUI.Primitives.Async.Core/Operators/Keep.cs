@@ -7,10 +7,6 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for creating and manipulating asynchronous observable sequences.</summary>
-/// <remarks>The SignalAsync class offers LINQ-style operators for working with asynchronous observables,
-/// enabling developers to compose, filter, and transform event streams in an asynchronous context. These methods are
-/// designed to integrate with the SignalAsync{T} type, supporting both synchronous and asynchronous predicate
-/// functions for filtering sequences.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Filtering (Keep/Where) operators for an observable source sequence.</summary>
@@ -27,10 +23,8 @@ public static partial class SignalAsyncExtensions
         /// langword="false"/>.</param>
         /// <returns>An observable sequence that emits only those elements for which the predicate returns <see
         /// langword="true"/>.</returns>
-        /// <remarks>The predicate is invoked asynchronously for each element as it is observed. If the
-        /// predicate throws an exception or the ValueTask is faulted, the resulting sequence will propagate the error
-        /// to its observers. The cancellation token provided to the predicate can be used to observe cancellation
-        /// requests during predicate evaluation.</remarks>
+        /// <remarks>An exception thrown by <paramref name="predicate"/>, or a faulted task from it, propagates to the
+        /// observers of the resulting sequence.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> Keep(Func<T, CancellationToken, ValueTask<bool>> predicate) =>
             new KeepAsyncSignal<T>(source, predicate);
@@ -43,9 +37,6 @@ public static partial class SignalAsyncExtensions
         /// function returns <see langword="true"/>.</param>
         /// <returns>An observable sequence that contains elements from the current sequence that satisfy the specified
         /// predicate.</returns>
-        /// <remarks>The resulting observable emits only those elements for which the <paramref
-        /// name="predicate"/> returns <see langword="true"/>. The order and timing of element emission are preserved
-        /// from the original sequence.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> Keep(Func<T, bool> predicate) =>
             new KeepSyncSignal<T>(source, predicate);
@@ -55,6 +46,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="state">The caller-supplied state passed to the predicate.</param>
         /// <param name="predicate">The predicate that values and the state must satisfy.</param>
         /// <returns>An observable sequence of values that satisfy the predicate.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="predicate"/> is <see langword="null"/>.</exception>
         public IObservableAsync<T> KeepWith<TState>(
             TState state,
             Func<TState, T, bool> predicate)
@@ -86,9 +78,8 @@ public static partial class SignalAsyncExtensions
     }
 
     /// <summary>
-    /// Async-predicate variant of <see cref="Keep{T}(IObservableAsync{T}, Func{T,CancellationToken,ValueTask{bool}})"/>.
-    /// Allocates one observable wrapper and one sealed observer per subscription — no per-emission closure or
-    /// state-machine box from the previous <c>Create&lt;T&gt;((observer, token) =&gt; ...)</c> pattern.
+    /// Async-predicate variant of <see cref="Keep{T}(IObservableAsync{T}, Func{T,CancellationToken,ValueTask{bool}})"/>,
+    /// allocating one observer per subscription and nothing per emission.
     /// </summary>
     /// <typeparam name="T">The element type of the source sequence.</typeparam>
     /// <param name="source">The source observable.</param>
@@ -145,9 +136,8 @@ public static partial class SignalAsyncExtensions
     }
 
     /// <summary>
-    /// Synchronous-predicate variant of <see cref="Keep{T}(IObservableAsync{T}, Func{T,bool})"/>. Same allocation
-    /// profile as <see cref="KeepAsyncSignal{T}"/> but the per-emission <c>OnNextAsyncCore</c> is sync-completed
-    /// when the predicate rejects, avoiding any state-machine box on rejection.
+    /// Synchronous-predicate variant of <see cref="Keep{T}(IObservableAsync{T}, Func{T,bool})"/>, whose per-emission
+    /// path completes synchronously when the predicate rejects a value.
     /// </summary>
     /// <typeparam name="T">The element type of the source sequence.</typeparam>
     /// <param name="source">The source observable.</param>

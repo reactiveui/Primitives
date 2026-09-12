@@ -71,10 +71,7 @@ public sealed class SyncLatest2Coordinator<T1, T2, TResult> : SyncLatestCoordina
             _ => Sources.Source2.SubscribeAsync(new SyncLatestWitness<T2, TResult>(this, Source2Bit, value => Value2 = new(value)), cancellationToken)
         };
 
-    /// <summary>
-    /// Reads every source's latest value into a single snapshot. Returns <see langword="false"/>
-    /// until every source has produced at least one value.
-    /// </summary>
+    /// <summary>Reads every source's latest value into a single snapshot.</summary>
     /// <param name="values">When the method returns <see langword="true"/>, the snapshot.</param>
     /// <returns><see langword="true"/> when every source has produced a value; otherwise <see langword="false"/>.</returns>
     private bool TryReadValues(out (T1 V1, T2 V2) values)

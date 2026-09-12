@@ -7,9 +7,6 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for working with asynchronous observable sequences.</summary>
-/// <remarks>The SignalAsync class offers utility methods that enable manipulation and composition of
-/// asynchronous observables, such as prepending values to a sequence. These methods facilitate common operations when
-/// building reactive, asynchronous workflows.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Prepend (value-prepending) operators for an observable source sequence.</summary>
@@ -39,9 +36,8 @@ public static partial class SignalAsyncExtensions
         /// <param name="values">The collection of values to emit before the original sequence. Cannot be null.</param>
         /// <returns>An observable sequence that emits the specified values first, followed by the items from the current
         /// sequence.</returns>
-        /// <remarks>The values in the provided collection are emitted in order before any items from the
-        /// original sequence. If the sequence is unsubscribed before completion, remaining values may not be
-        /// emitted.</remarks>
+        /// <remarks>Disposing the subscription while <paramref name="values"/> is being emitted drops the
+        /// remainder.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> Prepend(IEnumerable<T> values) => new LeadSignal<T>(source, values);
     }

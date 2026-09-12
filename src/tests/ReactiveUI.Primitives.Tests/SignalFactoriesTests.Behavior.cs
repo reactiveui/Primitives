@@ -46,9 +46,16 @@ public partial class SignalFactoriesTests
             throw new InvalidOperationException("async");
         }
 
+        TaskCompletionSource asyncFailed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         _ = Signal.FromAsyncEnumerable(ThrowingAsyncEnumerable())
-            .Subscribe(asyncValues.Add, ex => asyncErrors.Add(ex.Message));
-        await TestPolling.SpinUntil(() => asyncErrors.Count == 1, TimeSpan.FromSeconds(TimeoutSeconds));
+            .Subscribe(
+                asyncValues.Add,
+                ex =>
+                {
+                    asyncErrors.Add(ex.Message);
+                    _ = asyncFailed.TrySetResult();
+                });
+        await asyncFailed.Task;
         var firstFailure = await AssertTaskFault(
             static () => Signal.None<int>().FirstAsync(),
             typeof(InvalidOperationException));
@@ -73,8 +80,15 @@ public partial class SignalFactoriesTests
     /// <returns>A task that completes when the error has been observed.</returns>
     private static async Task ObserveTaskError(Task<int> task, List<string> errors)
     {
-        _ = Signal.FromTask(task).Subscribe(static _ => { }, ex => errors.Add(ex.GetType().Name));
-        await TestPolling.SpinUntil(() => errors.Count > 0, TimeSpan.FromSeconds(TimeoutSeconds));
+        TaskCompletionSource failed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        _ = Signal.FromTask(task).Subscribe(
+            static _ => { },
+            ex =>
+            {
+                errors.Add(ex.GetType().Name);
+                _ = failed.TrySetResult();
+            });
+        await failed.Task;
     }
 
     /// <summary>Asserts that a task factory faults with the expected exception type.</summary>

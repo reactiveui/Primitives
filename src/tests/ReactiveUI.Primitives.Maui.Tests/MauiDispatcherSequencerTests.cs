@@ -2,7 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Microsoft.Maui.Dispatching;
 using ReactiveUI.Primitives.Concurrency;
@@ -17,6 +16,9 @@ public sealed class MauiDispatcherSequencerTests
 {
     /// <summary>Expected values produced by an immediate burst, used to verify FIFO order.</summary>
     private static readonly int[] ExpectedBurst = [1, 2, 3];
+
+    /// <summary>Due time far enough out that the delay reaching the dispatcher is positive whatever the call costs.</summary>
+    private static readonly TimeSpan FutureDueTime = TimeSpan.FromHours(1);
 
     /// <summary>Verifies the constructor rejects a null dispatcher.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
@@ -66,8 +68,8 @@ public sealed class MauiDispatcherSequencerTests
         MauiDispatcherSequencer sequencer = new(dispatcher);
         var executed = false;
 
-        var due = sequencer.Timestamp + Stopwatch.Frequency; // ~1 second into the future.
-        sequencer.Schedule(new DelegateWorkItem(() => executed = true), due);
+        // The relative overload converts the due time against the sequencer's own clock, so the test needs none.
+        _ = sequencer.Schedule(FutureDueTime, () => executed = true);
 
         await Assert.That(executed).IsTrue();
         await Assert.That(dispatcher.DispatchDelayedCount).IsEqualTo(1);
@@ -83,7 +85,8 @@ public sealed class MauiDispatcherSequencerTests
         MauiDispatcherSequencer sequencer = new(dispatcher);
         var executed = false;
 
-        var due = sequencer.Timestamp - Stopwatch.Frequency; // already elapsed.
+        // A timestamp read before the call cannot be later than the monotonic clock the sequencer reads inside it.
+        var due = sequencer.Timestamp;
         sequencer.Schedule(new DelegateWorkItem(() => executed = true), due);
 
         await Assert.That(executed).IsTrue();

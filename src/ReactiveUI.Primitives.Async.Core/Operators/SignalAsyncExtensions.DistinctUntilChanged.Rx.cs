@@ -30,7 +30,7 @@ public static partial class SignalAsyncExtensions
         /// Returns an observable sequence that emits elements from the source sequence only when the current element is
         /// not equal to the previous element, as determined by the specified equality comparer.
         /// </summary>
-        /// <param name="equalityComparer">An equality comparer used to determine whether consecutive elements are considered equal.</param>
+        /// <param name="equalityComparer">The comparer that decides whether consecutive elements are equal.</param>
         /// <returns>An observable sequence that contains only distinct consecutive elements from the source sequence, as
         /// determined by the specified equality comparer.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="equalityComparer"/> is <see langword="null"/>.</exception>
@@ -46,7 +46,7 @@ public static partial class SignalAsyncExtensions
         /// Returns an observable sequence that emits elements from the source sequence, suppressing consecutive
         /// duplicates as determined by a key selector function.
         /// </summary>
-        /// <typeparam name="TKey">The type of the key used to determine whether consecutive elements are considered duplicates.</typeparam>
+        /// <typeparam name="TKey">The type of the key that decides whether consecutive elements are duplicates.</typeparam>
         /// <param name="keySelector">A function that extracts the comparison key from each element in the source sequence.</param>
         /// <returns>An observable sequence that contains only the elements from the source sequence that are not consecutive
         /// duplicates according to the specified key.</returns>
@@ -63,9 +63,9 @@ public static partial class SignalAsyncExtensions
         /// Returns an observable sequence that emits elements from the source sequence, suppressing consecutive
         /// duplicates as determined by a key selector and equality comparer.
         /// </summary>
-        /// <typeparam name="TKey">The type of the key used to determine whether consecutive elements are considered duplicates.</typeparam>
+        /// <typeparam name="TKey">The type of the key that decides whether consecutive elements are duplicates.</typeparam>
         /// <param name="keySelector">A function that extracts the comparison key from each element in the source sequence.</param>
-        /// <param name="equalityComparer">An equality comparer used to compare keys for equality.</param>
+        /// <param name="equalityComparer">The comparer that compares keys for equality.</param>
         /// <returns>An observable sequence that contains only the elements from the source sequence that are not consecutive
         /// duplicates according to the specified key and comparer.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="keySelector"/> or <paramref name="equalityComparer"/> is null.</exception>

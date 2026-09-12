@@ -9,9 +9,9 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>
 /// Asynchronous mutual-exclusion primitive that serializes critical sections in the async pipeline.
-/// Uncontended acquire is a pure <see cref="Interlocked.CompareExchange(ref int, int, int)"/> (no
-/// <see cref="SemaphoreSlim"/> touch); the contended path waits on a signal-only semaphore and retries
-/// the CAS after each signal. Same-thread reentry is granted via the owner-thread-id and a recursion counter.
+/// Each acquire hands back a <see cref="Lease"/> that releases the gate when disposed. Ownership is keyed
+/// on the managed thread id, so a nested acquire on the holding thread is granted immediately and reentry
+/// is recognised only while the caller stays on the thread that took the gate.
 /// </summary>
 [System.Diagnostics.DebuggerDisplay("AsyncSerialGate: OwnerThreadId = {_ownerThreadId}, Waiters = {_waiters}, RecursionDepth = {_recursionDepth}")]
 public sealed class AsyncSerialGate : IDisposable
@@ -31,9 +31,7 @@ public sealed class AsyncSerialGate : IDisposable
     /// <summary>Disposal latch; non-zero once this instance has been disposed.</summary>
     private int _disposedValue;
 
-    /// <summary>Gets the number of awaiters currently parked on the slow path. Exposed for
-    /// deterministic contention tests so they can spin-wait until a contender has entered
-    /// <see cref="WaitForEntryAsync"/> before tripping the release.</summary>
+    /// <summary>Gets the number of awaiters parked on the slow path.</summary>
     internal int WaitersCount => Volatile.Read(ref _waiters);
 
     /// <summary>Asynchronously acquires the gate, returning a <see cref="Lease"/> that releases it on disposal.</summary>
@@ -44,14 +42,17 @@ public sealed class AsyncSerialGate : IDisposable
         EnterAsync(CancellationToken.None);
 
     /// <summary>Asynchronously acquires the gate, returning a <see cref="Lease"/> that releases it on disposal.</summary>
-    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <param name="cancellationToken">Observed only while waiting for a contended gate; an uncontended acquire
+    /// never checks it.</param>
     /// <returns>A <see cref="ValueTask{Lease}"/> that completes when the gate has been acquired.</returns>
+    /// <exception cref="OperationCanceledException">Thrown when the token is cancelled before the gate is
+    /// acquired.</exception>
     [DebuggerStepThrough]
     public ValueTask<Lease> EnterAsync(CancellationToken cancellationToken)
     {
         var currentThreadId = Environment.CurrentManagedThreadId;
 
-        // Same-thread reentry: bump depth, no synchronization needed (we already own it).
+        // Same-thread reentry: the calling thread owns the gate, so bumping depth needs no synchronization.
         if (Volatile.Read(ref _ownerThreadId) == currentThreadId)
         {
             _recursionDepth++;
@@ -92,9 +93,8 @@ public sealed class AsyncSerialGate : IDisposable
     }
 
     /// <summary>
-    /// Signals one parked waiter if any are present. An extra signal observed across the
-    /// <see cref="_waiters"/> read / <see cref="SemaphoreSlim.Release()"/> race lands harmlessly in
-    /// the semaphore count and is consumed by the next waiter that arrives.
+    /// Signals one parked waiter if any are present. A signal released after the last waiter has left
+    /// lands in the semaphore count and is consumed by the next waiter to arrive.
     /// </summary>
     private void WakeNextWaiter()
     {
@@ -132,7 +132,7 @@ public sealed class AsyncSerialGate : IDisposable
         }
     }
 
-    /// <summary>Releases a previously acquired <see cref="AsyncSerialGate"/> when disposed.</summary>
+    /// <summary>Holds one acquisition of an <see cref="AsyncSerialGate"/> and releases it on disposal.</summary>
     [System.Diagnostics.DebuggerDisplay("Lease: Parent = {_parent}")]
     public readonly record struct Lease : IDisposable
     {

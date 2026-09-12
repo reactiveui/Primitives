@@ -8,20 +8,13 @@ using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// The shared upstream coordinator backing the <c>Partition</c> parity helper. It lives apart from the
-/// other fused operators because it is the only one that fans a single subscription out to two
-/// observables, so its state is a branch table rather than a per-subscription witness.
-/// </summary>
+/// <summary>Provides the shared upstream coordinator backing the <c>Partition</c> parity helper.</summary>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>
-    /// Coordinates the shared upstream subscription and the two branch observables produced by
-    /// <c>Partition</c>. Maintains a single source subscription that is started when the first
-    /// branch subscribes and torn down when the last branch disposes. Each upstream emission
-    /// evaluates the predicate exactly once and dispatches to the branch observer (if any)
-    /// subscribed at that moment — no <c>Publish</c>/<c>RefCount</c>/intermediate-signal
-    /// allocations on the per-emission path.
+    /// Shares one upstream subscription between the two <c>Partition</c> branches, starting it when the first branch
+    /// subscribes and tearing it down when the last one disposes. Each emission dispatches to whichever branch observer
+    /// the predicate selects, or to nothing when that branch has no subscriber.
     /// </summary>
     /// <typeparam name="T">The element type partitioned across the two branches.</typeparam>
     internal sealed class PartitionCoordinator<T>
@@ -112,14 +105,10 @@ public static partial class SignalAsyncExtensions
             return new BranchSubscription(this, isTrueBranch);
         }
 
-        /// <summary>Attempts to attach an in-flight upstream subscription to the coordinator.
-        /// Extracted as an <see langword="internal"/> method so the both-branches-gone race
-        /// (the subscribe completes after every branch has already disposed) can be tested
-        /// directly without racing the subscription pipeline.</summary>
+        /// <summary>Attaches an in-flight upstream subscription unless both branches have gone away first.</summary>
         /// <param name="subscription">The freshly-created upstream subscription.</param>
-        /// <returns><see langword="true"/> if the subscription was attached and the caller
-        /// should leave it running; <see langword="false"/> if both branches are gone and the
-        /// caller should dispose the subscription.</returns>
+        /// <returns><see langword="true"/> when the subscription was attached and the caller should leave it running;
+        /// <see langword="false"/> when both branches are gone and the caller should dispose it.</returns>
         internal bool TryAttachSourceSubscription(IAsyncDisposable subscription)
         {
             lock (_gate)
@@ -134,11 +123,7 @@ public static partial class SignalAsyncExtensions
             }
         }
 
-        /// <summary>Attempts to attach the just-created upstream subscription and disposes it if
-        /// both branches have raced ahead and already disposed. The dispose branch is only
-        /// reachable under genuine concurrent disposal during in-flight subscribe, so the entire
-        /// helper is isolated and excluded from coverage; <see cref="TryAttachSourceSubscription"/>
-        /// itself is covered by direct unit tests.</summary>
+        /// <summary>Attaches the new upstream subscription, disposing it when both branches disposed during the subscribe.</summary>
         /// <param name="subscription">The freshly-created upstream subscription.</param>
         /// <returns>A task that completes once the subscription has been attached or disposed.</returns>
         [ExcludeFromCodeCoverage]
@@ -258,8 +243,7 @@ public static partial class SignalAsyncExtensions
             ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
                 IObserverAsync<T> observer,
                 CancellationToken cancellationToken) =>
-                // The PartitionBranchSignal is created by the coordinator's constructor; the
-                // coordinator field is filled in below.
+                // The coordinator's constructor sets Coordinator on both branches, so it is never null here.
                 Coordinator.SubscribeBranchAsync(isTrueBranch, observer, cancellationToken);
         }
 

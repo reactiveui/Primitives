@@ -47,7 +47,6 @@ public sealed class CallbackWitness<T> : IObserver<T>
 
     /// <summary>Rethrows the supplied exception without losing its stack information.</summary>
     /// <param name="error">The exception to rethrow.</param>
-    /// <remarks>Excluded from coverage: the unreachable sequence point after <see cref="ExceptionDispatchInfo"/> rethrow cannot be credited by cobertura.</remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     private static void Rethrow(Exception error) => ExceptionDispatchInfo.Capture(error).Throw();

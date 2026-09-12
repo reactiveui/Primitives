@@ -67,17 +67,17 @@ public sealed class EmptyWitness<T> : IObserver<T>
         _onCompleted = onCompleted;
     }
 
-    /// <summary>Calls the action implementing <see cref="IObserver{T}.OnCompleted()"/>.</summary>
+    /// <summary>Invokes the completion callback, doing nothing when none was supplied.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnCompleted() => (_onCompleted ?? nop)();
 
-    /// <summary>Calls the action implementing <see cref="IObserver{T}.OnError(Exception)"/>.</summary>
-    /// <param name="error">Error notification.</param>
+    /// <summary>Invokes the error callback, swallowing the error when none was supplied.</summary>
+    /// <param name="error">The terminal error.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnError(Exception error) => (_onError ?? nope)(error);
 
-    /// <summary>Calls the action implementing <see cref="IObserver{T}.OnNext(T)"/>.</summary>
-    /// <param name="value">Value notification.</param>
+    /// <summary>Invokes the value callback.</summary>
+    /// <param name="value">The observed value.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnNext(T value) => _onNext(value);
 }

@@ -7,9 +7,6 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for working with asynchronous observable sequences.</summary>
-/// <remarks>The methods in this class enable the addition of side effects, such as logging or resource
-/// management, to asynchronous observable sequences without modifying their elements or control flow. These methods are
-/// intended to be used as part of a fluent query or processing pipeline for asynchronous observables.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Side-effect (Tap/Do) operators that invoke callbacks for each notification of an observable source sequence.</summary>

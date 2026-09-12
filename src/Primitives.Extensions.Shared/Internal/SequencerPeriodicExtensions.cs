@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Internal;
 namespace ReactiveUI.Primitives.Extensions.Internal;
 #endif
 
-/// <summary>Periodic scheduling helpers used by migrated extension operators.</summary>
+/// <summary>Periodic scheduling helpers for <see cref="ISequencer"/>.</summary>
 internal static class SequencerPeriodicExtensions
 {
     /// <summary>Periodic scheduling helpers for a sequencer.</summary>
@@ -67,10 +67,7 @@ internal static class SequencerPeriodicExtensions
         return subscription;
     }
 
-    /// <summary>
-    /// Disposable state for one periodic schedule. Internal (rather than private) so coverage tests can
-    /// drive <see cref="Tick"/> directly instead of via reflection.
-    /// </summary>
+    /// <summary>Disposable state for one periodic schedule, re-arming itself after each tick until disposed.</summary>
     /// <typeparam name="TState">The state type.</typeparam>
     /// <param name="scheduler">The scheduler used for each tick.</param>
     /// <param name="state">The state passed to each tick.</param>
@@ -127,7 +124,7 @@ internal static class SequencerPeriodicExtensions
             });
         }
 
-        /// <summary>Runs a tick and schedules the next one when still active.</summary>
+        /// <summary>Runs one tick and schedules the next, unless disposed.</summary>
         internal void Tick()
         {
             if (Volatile.Read(ref _disposed) != 0)

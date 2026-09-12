@@ -11,9 +11,8 @@ namespace ReactiveUI.Primitives.Advanced;
 #endif
 
 /// <summary>
-/// Dedicated cold signal for <c>Resume</c> (continue with a fixed fallback sequence after any error). Holds the
-/// fallback observable directly so no per-subscription closure is allocated, mirroring the slot-based subscription
-/// management of <see cref="RecoverSignal{T, TException}"/>.
+/// Cold signal that mirrors the source and, when it produces any error, subscribes the fallback sequence in its
+/// place. The error is not forwarded downstream.
 /// </summary>
 /// <typeparam name="T">The value type.</typeparam>
 /// <param name="source">The source observable.</param>

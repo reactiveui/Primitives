@@ -69,19 +69,26 @@ public partial class CombiningOperatorTests
     public async Task WhenMergeWithMaxConcurrency_ThenRespectsLimit()
     {
         const int SourceCount = 5;
-        const int WorkDelayMilliseconds = 50;
         const int ConcurrencyLimit = 2;
         var activeConcurrency = 0;
         var maxConcurrency = 0;
+
+        // Each job parks until the gate opens, so the limit is observed with every slot occupied.
+        TaskCompletionSource limitReached = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource releaseJobs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var source = SignalAsync.Range(1, SourceCount).Select(i => SignalAsync.CreateAsBackgroundJob<int>(async (obs, ct) =>
         {
             lock (_gate)
             {
                 activeConcurrency++;
                 maxConcurrency = Math.Max(maxConcurrency, activeConcurrency);
+                if (activeConcurrency == ConcurrencyLimit)
+                {
+                    IgnoredResult.Of(limitReached.TrySetResult());
+                }
             }
 
-            await Task.Delay(WorkDelayMilliseconds, ct);
+            await releaseJobs.Task;
             lock (_gate)
             {
                 activeConcurrency--;
@@ -90,7 +97,10 @@ public partial class CombiningOperatorTests
             await obs.OnNextAsync(i, ct);
             await obs.OnCompletedAsync(Result.Success);
         }));
-        var result = await source.Merge(ConcurrencyLimit).ToListAsync();
+        var merged = source.Merge(ConcurrencyLimit).ToListAsync().AsTask();
+        await limitReached.Task;
+        IgnoredResult.Of(releaseJobs.TrySetResult());
+        var result = await merged;
         await Assert.That(result).Count().IsEqualTo(SourceCount);
         await Assert.That(maxConcurrency).IsLessThanOrEqualTo(ConcurrencyLimit);
     }
@@ -121,7 +131,6 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeWithMaxConcurrencySubscriptionThrows_ThenErrorPropagates()
     {
-        const int CompletionTimeoutSeconds = 2;
         var failing = SignalAsync.Create<int>(static (_, _) =>
         {
             try
@@ -134,15 +143,14 @@ public partial class CombiningOperatorTests
             }
         });
         var source = new[] { failing }.ToAsyncSignal();
-        Result? completionResult = null;
+        TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await source.Merge(1).SubscribeAsync(static (_, _) => default, null, result =>
         {
-            completionResult = result;
+            IgnoredResult.Of(completed.TrySetResult(result));
             return default;
         });
-        await AsyncTestHelpers.WaitForConditionAsync(() => completionResult.HasValue, TimeSpan.FromSeconds(CompletionTimeoutSeconds));
-        await Assert.That(completionResult).IsNotNull();
-        await Assert.That(completionResult!.Value.IsFailure).IsTrue();
+        var completionResult = await completed.Task;
+        await Assert.That(completionResult.IsFailure).IsTrue();
     }
 
     /// <summary>Verifies that merging an enumerable of observables where one inner source errors propagates the failure.</summary>
@@ -422,8 +430,6 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableBeginSubscribingThrows_ThenCatchBlockHandled()
     {
-        const int CompletionTimeoutSeconds = 5;
-
         // BeginSubscribing contains an async void path that catches exceptions
         // We exercise this by ensuring an error during inner subscription is caught
         static IEnumerable<IObservableAsync<int>> ThrowingEnumerable()
@@ -432,7 +438,7 @@ public partial class CombiningOperatorTests
             throw new InvalidOperationException("enumeration boom");
         }
 
-        Result? completionResult = null;
+        TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         List<int> items = [];
         await using var sub = await ThrowingEnumerable().Merge().SubscribeAsync(
             (x, _) =>
@@ -443,12 +449,11 @@ public partial class CombiningOperatorTests
             null,
             result =>
             {
-                completionResult = result;
+                IgnoredResult.Of(completed.TrySetResult(result));
                 return default;
             });
-        await AsyncTestHelpers.WaitForConditionAsync(() => completionResult is not null, TimeSpan.FromSeconds(CompletionTimeoutSeconds));
-        await Assert.That(completionResult).IsNotNull();
-        await Assert.That(completionResult!.Value.IsFailure).IsTrue();
+        var completionResult = await completed.Task;
+        await Assert.That(completionResult.IsFailure).IsTrue();
     }
 
     /// <summary>Tests that MergeEnumerable cancellation during inner subscription is handled.</summary>
@@ -515,10 +520,9 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeWithError_ThenErrorPropagated()
     {
-        const int CompletionTimeoutSeconds = 5;
         IObservableAsync<int>[] sources =
             [SignalAsync.Return(1), SignalAsync.Throw<int>(new InvalidOperationException("fail"))];
-        Result? completionResult = null;
+        TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         List<int> items = [];
         await using var sub = await sources.Merge().SubscribeAsync(
             (x, _) =>
@@ -529,12 +533,11 @@ public partial class CombiningOperatorTests
             null,
             result =>
             {
-                completionResult = result;
+                IgnoredResult.Of(completed.TrySetResult(result));
                 return default;
             });
-        await AsyncTestHelpers.WaitForConditionAsync(() => completionResult.HasValue, TimeSpan.FromSeconds(CompletionTimeoutSeconds));
-        await Assert.That(completionResult).IsNotNull();
-        await Assert.That(completionResult!.Value.IsFailure).IsTrue();
+        var completionResult = await completed.Task;
+        await Assert.That(completionResult.IsFailure).IsTrue();
     }
 
     /// <summary>Verifies that MergeEnumerable forwards errors from a source that throws during subscribe.</summary>
@@ -542,19 +545,17 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableSourceThrowsDuringSubscribe_ThenCompletesWithFailure()
     {
-        const int CompletionTimeoutSeconds = 5;
         var throwingSource = SignalAsync.Create<int>(static (_, _) =>
             ValueTask.FromException<IAsyncDisposable>(new InvalidOperationException(SubscribeBoomMessage)));
         IObservableAsync<int>[] sources = [throwingSource];
-        Result? completionResult = null;
+        TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var sub = await sources.Merge().SubscribeAsync(static (_, _) => default, null, result =>
         {
-            completionResult = result;
+            IgnoredResult.Of(completed.TrySetResult(result));
             return default;
         });
-        await AsyncTestHelpers.WaitForConditionAsync(() => completionResult.HasValue, TimeSpan.FromSeconds(CompletionTimeoutSeconds));
-        await Assert.That(completionResult).IsNotNull();
-        await Assert.That(completionResult!.Value.IsFailure).IsTrue();
+        var completionResult = await completed.Task;
+        await Assert.That(completionResult.IsFailure).IsTrue();
     }
 
     /// <summary>
@@ -565,7 +566,6 @@ public partial class CombiningOperatorTests
     [Test]
     public async Task WhenMergeEnumerableInnerSubscribeThrowsTaskCanceled_ThenHandledGracefully()
     {
-        const int SettleTimeoutSeconds = 2;
         var canceledSource = SignalAsync.Create<int>(static (_, _) =>
             ValueTask.FromException<IAsyncDisposable>(new TaskCanceledException("subscribe canceled")));
         List<int> items = [];
@@ -580,7 +580,6 @@ public partial class CombiningOperatorTests
 
         // The TaskCanceledException catch returns early without signaling completion,
         // so the sequence yields nothing (graceful early return).
-        await AsyncTestHelpers.WaitForConditionAsync(static () => true, TimeSpan.FromSeconds(SettleTimeoutSeconds));
         await Assert.That(items).IsEmpty();
     }
 

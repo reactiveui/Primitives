@@ -28,7 +28,7 @@ public static class SubscriptionSlots
         current.Dispose();
     }
 
-    /// <summary>Stores a subscription into an empty slot, disposing it instead if the slot is already released.</summary>
+    /// <summary>Stores a subscription into an empty slot, disposing it instead when the slot is occupied or released.</summary>
     /// <param name="slot">The target slot.</param>
     /// <param name="subscription">The subscription to store.</param>
     public static void Assign(ref IDisposable? slot, IDisposable subscription)

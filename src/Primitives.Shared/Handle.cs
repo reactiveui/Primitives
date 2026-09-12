@@ -27,8 +27,7 @@ internal static class Handle
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
-        Justification =
-            "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
+        Justification = "No argument carries the element type, so it can only come from an explicit type argument.")]
     internal static IObservable<TSource> CatchIgnore<TSource>(Exception ex) =>
         Signal.None<TSource>();
 }

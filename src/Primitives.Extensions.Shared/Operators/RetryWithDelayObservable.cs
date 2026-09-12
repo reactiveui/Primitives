@@ -16,10 +16,12 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <param name="source">The source observable.</param>
 /// <param name="retryCount">The maximum number of retries.</param>
 /// <param name="delaySelector">A function to select the delay for each retry attempt.</param>
+/// <param name="sequencer">The sequencer timing retry delays; <c>null</c> uses the default sequencer.</param>
 internal sealed class RetryWithDelayObservable<T>(
     IObservable<T> source,
     int retryCount,
-    Func<int, TimeSpan> delaySelector) : IObservable<T>
+    Func<int, TimeSpan> delaySelector,
+    ISequencer? sequencer = null) : IObservable<T>
 {
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
@@ -28,7 +30,7 @@ internal sealed class RetryWithDelayObservable<T>(
         InvalidOperationExceptionHelper.ThrowIfNull(delaySelector);
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        RetryWithDelaySink sink = new(observer, source, retryCount, delaySelector, Sequencer.Default);
+        RetryWithDelaySink sink = new(observer, source, retryCount, delaySelector, sequencer ?? Sequencer.Default);
         sink.Run();
         return sink;
     }

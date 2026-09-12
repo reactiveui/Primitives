@@ -5,11 +5,9 @@
 namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>
-/// Shared scaffolding for the arity-specific <c>CombineLatestN</c> subscription types. Each
-/// per-arity <c>SyncLatestCoordinator</c> derives from this class so the otherwise-identical
-/// <see cref="SyncLatestLifecycle{TResult}"/> wiring (gate / dispose CTS / external link),
-/// the values-lock, the source-subscribe loop, the error-resume forwarder, and
-/// <see cref="DisposeAsync"/> live here once instead of repeated 15× across <c>CombineLatest2..16</c>.
+/// Base class for the arity-specific <c>CombineLatestN</c> coordinators, owning the
+/// <see cref="SyncLatestLifecycle{TResult}"/> wiring, the values-lock, the source-subscribe loop,
+/// the error-resume forwarder and disposal.
 /// </summary>
 /// <typeparam name="TResult">The downstream element type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("SyncLatestCoordinatorBase: SourceCount = {Lifecycle.Subscriptions.Length}, HasDisposed = {Lifecycle.HasDisposed}")]
@@ -24,9 +22,7 @@ public abstract class SyncLatestCoordinatorBase<TResult> : IAsyncDisposable
     /// <summary>Gets the shared subscription lifecycle (gate / dispose CTS / external link / forwarders).</summary>
     internal SyncLatestLifecycle<TResult> Lifecycle { get; }
 
-    /// <summary>Gets the lock protecting per-arity latest-values caches. Internal so the shared
-    /// <see cref="SyncLatestIndexedWitness{TSource, TResult}"/> can lock on it without deriving
-    /// from this base.</summary>
+    /// <summary>Gets the lock guarding the derived coordinator's latest-value slots.</summary>
     internal Lock ValuesLock { get; } = new();
 
     /// <summary>Subscribes to every source observable via <see cref="SubscribeAtAsync"/>.</summary>
@@ -49,9 +45,9 @@ public abstract class SyncLatestCoordinatorBase<TResult> : IAsyncDisposable
         GC.SuppressFinalize(this);
     }
 
-    /// <summary>Relays an upstream error to the downstream observer; thin shim with the <c>(error, ct)</c> signature that <see cref="IObservableAsync{T}.SubscribeAsync"/> expects.</summary>
+    /// <summary>Relays an upstream error to the downstream observer.</summary>
     /// <param name="error">The error to forward.</param>
-    /// <param name="cancellationToken">Ignored — the lifecycle uses its own dispose token.</param>
+    /// <param name="cancellationToken">Ignored; the lifecycle uses its own dispose token.</param>
     /// <returns>A ValueTask representing the asynchronous forward.</returns>
     internal ValueTask RelaySourceErrorAsync(Exception error, CancellationToken cancellationToken)
     {
@@ -60,18 +56,14 @@ public abstract class SyncLatestCoordinatorBase<TResult> : IAsyncDisposable
     }
 
     /// <summary>
-    /// Reads the per-arity Optional slots, projects them through the selector when every source
-    /// has produced a value, and forwards the result downstream via the lifecycle. Invoked by
-    /// <see cref="SyncLatestIndexedWitness{TSource, TResult}"/> after a per-source OnNext has
-    /// landed under <see cref="ValuesLock"/>.
+    /// Projects the latest-value slots through the selector and forwards the result downstream, doing
+    /// nothing until every source has produced a value. Called after a per-source OnNext has landed
+    /// under <see cref="ValuesLock"/>.
     /// </summary>
     /// <returns>A ValueTask representing the asynchronous emit.</returns>
     internal abstract ValueTask EmitLatestAsync();
 
-    /// <summary>
-    /// Subscribes to a single source by 0-based index. Implemented per-arity by the derived
-    /// <c>SyncLatestCoordinator</c> with a typed switch dispatch over the bundled sources.
-    /// </summary>
+    /// <summary>Subscribes to a single source by 0-based index, dispatching to the derived coordinator's typed slot.</summary>
     /// <param name="index">0-based source index.</param>
     /// <param name="cancellationToken">A token to cancel the subscription.</param>
     /// <returns>The subscription disposable for the source at <paramref name="index"/>.</returns>

@@ -20,7 +20,7 @@ namespace ReactiveUI.Primitives.Extensions;
 [SuppressMessage(
     "Roslynator",
     "RCS1047:Non-asynchronous method name should not end with \'Async\'",
-    Justification = "Existing API")]
+    Justification = "The SubscribeAsync overloads are named for the asynchronous handler they invoke and return a subscription handle rather than a task.")]
 public static partial class ReactiveExtensions
 {
     /// <summary>Default match timeout for regex filters created from string patterns.</summary>
@@ -42,16 +42,16 @@ public static partial class ReactiveExtensions
     /// <param name="condition">Condition to evaluate.</param>
     extension(Func<bool> condition)
     {
-        /// <summary>While construct.</summary>
+        /// <summary>Runs the action inline, emitting <see cref="RxVoid.Default"/> after each iteration for as long as the condition holds.</summary>
         /// <param name="action">Action to execute.</param>
         /// <returns>Observable representing the loop.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<RxVoid> While(Action action) =>
             While(condition, action, null);
 
-        /// <summary>While construct.</summary>
+        /// <summary>Runs the action on the scheduler, emitting <see cref="RxVoid.Default"/> after each iteration for as long as the condition holds.</summary>
         /// <param name="action">Action to execute.</param>
-        /// <param name="scheduler">Scheduler.</param>
+        /// <param name="scheduler">Scheduler each iteration runs on; <c>null</c> runs inline.</param>
         /// <returns>Observable representing the loop.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<RxVoid> While(Action action, ISequencer? scheduler) =>
@@ -62,13 +62,13 @@ public static partial class ReactiveExtensions
     /// <param name="sources">The sources.</param>
     extension(IEnumerable<IObservable<bool>> sources)
     {
-        /// <summary>Latest values of each sequence are all false.</summary>
+        /// <summary>Combines the latest value of every source and reports whether they are all false.</summary>
         /// <returns>A sequence that emits true when all latest booleans are false.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<bool> CombineLatestValuesAreAllFalse() =>
             new BooleanReduceObservable(sources, false);
 
-        /// <summary>Latest values of each sequence are all true.</summary>
+        /// <summary>Combines the latest value of every source and reports whether they are all true.</summary>
         /// <returns>A sequence that emits true when all latest booleans are true.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<bool> CombineLatestValuesAreAllTrue() =>
@@ -415,7 +415,7 @@ public static partial class ReactiveExtensions
         [SuppressMessage(
             "Roslynator",
             "RCS1047:Non-asynchronous method name should not end with \'Async\'",
-            Justification = "This is an existing method")]
+            Justification = "The name describes the asynchronous handler this overload invokes; it returns a subscription handle rather than a task.")]
         public IDisposable SubscribeAsync(Func<T, ValueTask> onNext) =>
             new SubscribeAsyncObservable<T>(source, onNext, null, null);
 
@@ -429,7 +429,7 @@ public static partial class ReactiveExtensions
         [SuppressMessage(
             "Roslynator",
             "RCS1047:Non-asynchronous method name should not end with \'Async\'",
-            Justification = "This is an existing method")]
+            Justification = "The name describes the asynchronous handler this overload invokes; it returns a subscription handle rather than a task.")]
         public IDisposable SubscribeAsync(Func<T, ValueTask> onNext, Action onCompleted) =>
             new SubscribeAsyncObservable<T>(source, onNext, null, onCompleted);
 
@@ -443,7 +443,7 @@ public static partial class ReactiveExtensions
         [SuppressMessage(
             "Roslynator",
             "RCS1047:Non-asynchronous method name should not end with \'Async\'",
-            Justification = "This is an existing method")]
+            Justification = "The name describes the asynchronous handler this overload invokes; it returns a subscription handle rather than a task.")]
         public IDisposable SubscribeAsync(Func<T, ValueTask> onNext, Action<Exception> onError) =>
             new SubscribeAsyncObservable<T>(source, onNext, onError, null);
 
@@ -458,7 +458,7 @@ public static partial class ReactiveExtensions
         [SuppressMessage(
             "Roslynator",
             "RCS1047:Non-asynchronous method name should not end with \'Async\'",
-            Justification = "This is an existing method")]
+            Justification = "The name describes the asynchronous handler this overload invokes; it returns a subscription handle rather than a task.")]
         public IDisposable SubscribeAsync(
             Func<T, ValueTask> onNext,
             Action<Exception> onError,

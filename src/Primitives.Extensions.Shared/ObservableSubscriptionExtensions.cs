@@ -12,9 +12,8 @@ namespace ReactiveUI.Primitives.Extensions;
 #endif
 
 /// <summary>
-/// Provides extension methods for subscribing to and handling reactive sequences
-/// in a synchronous or blocking manner. These methods offer utility functions
-/// to retrieve emitted values, handle completion, and capture errors from observables.
+/// Provides extension methods that subscribe to a sequence and block the calling thread until it produces a
+/// value or terminates, returning the emitted value or the captured error.
 /// </summary>
 public static class ObservableSubscriptionExtensions
 {
@@ -240,8 +239,8 @@ public static class ObservableSubscriptionExtensions
     }
 
     /// <summary>
-    /// Subscribes to the specified <paramref name="source"/> observable using the provided <paramref name="scheduler"/>.
-    /// If a scheduler is specified, the subscription is scheduled; otherwise, the subscription occurs immediately.
+    /// Subscribes <paramref name="observer"/> to <paramref name="source"/> on <paramref name="scheduler"/>, or
+    /// inline when no scheduler is supplied.
     /// </summary>
     /// <typeparam name="T">The type of the elements in <paramref name="source"/>.</typeparam>
     /// <param name="source">The observable to subscribe to.</param>
@@ -360,9 +359,8 @@ public static class ObservableSubscriptionExtensions
             "Design",
             "SST2318:Members should not have identical bodies",
             Justification =
-                "This blocking witness treats completion and error identically: either terminal signal releases the "
-                + "gate. OnError and OnCompleted are distinct IObserver<T> channels that share this by design, not a "
-                + "copy that was meant to differ.")]
+                "Completion and error are distinct IObserver<T> channels that deliberately share one action: "
+                + "releasing the gate.")]
         public void OnCompleted() => done.Set();
     }
 

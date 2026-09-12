@@ -25,7 +25,7 @@ public sealed class RepeatSourceCoordinator<T> : IDisposable
     /// <summary>The active source subscription or queued resubscription.</summary>
     private readonly SingleReplaceableDisposable _active = new();
 
-    /// <summary>Guards synchronous completion while a subscription is still being assigned.</summary>
+    /// <summary>Guards completion raised synchronously while a subscription is being assigned.</summary>
     private readonly Lock _gate = new();
 
     /// <summary>The remaining number of finite subscriptions.</summary>

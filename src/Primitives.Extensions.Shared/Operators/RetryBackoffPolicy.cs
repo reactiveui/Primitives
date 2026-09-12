@@ -9,9 +9,8 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
 /// <summary>
-/// Bundled retry configuration for <see cref="RetryWithBackoffObservable{T}"/>: retry count,
-/// delay schedule, scheduler, and an optional error sink. A <see langword="readonly record struct"/>
-/// so it stays allocation-free and keeps the constructors that consume it to a short parameter list.
+/// Bundled retry configuration for <see cref="RetryWithBackoffObservable{T}"/>: retry count, delay schedule,
+/// scheduler, and an optional error sink.
 /// </summary>
 /// <param name="MaxRetries">Maximum number of retries.</param>
 /// <param name="InitialDelay">Delay before the first retry.</param>

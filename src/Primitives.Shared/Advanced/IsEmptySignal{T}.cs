@@ -48,11 +48,10 @@ public sealed class IsEmptySignal<T> : IRequireCurrentThread<bool>
             return EmptyDisposable.Instance;
         }
 
-        // The first value settles this operator, so it must be able to dispose the source as soon as one arrives.
-        // A current-thread source runs its work on the trampoline of whichever call enters it first; if that call is
-        // the source's own Subscribe, the source drains the trampoline before the sink is handed the subscription,
-        // and an endless source therefore never stops. Entering the trampoline here means the source only queues its
-        // first tick and returns, so the sink owns the subscription before that tick is delivered.
+        // The first value settles this operator, so the sink must own the subscription before any value arrives. A
+        // current-thread source drains the trampoline inside whichever call enters it first, so letting the source's
+        // own Subscribe enter it would deliver values before the sink holds the subscription, and an endless source
+        // would never stop. Entering the trampoline here leaves the source only able to queue its first tick.
         if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
         {
             return SubscribeCore(observer);

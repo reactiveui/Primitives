@@ -7,16 +7,11 @@ using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Provides async-native counterparts for high-value helper operators exposed by the synchronous reactive surface in
-/// this repository.
-/// </summary>
-/// <remarks>These members intentionally compose existing async operators from this namespace so parity is achieved via
-/// the library's own async primitives instead of by delegating to System.Reactive implementations.</remarks>
+/// <summary>Provides async-native counterparts for the helper operators on the synchronous reactive surface.</summary>
 [SuppressMessage(
     "StyleCop.CSharp.OrderingRules",
     "SA1201:ElementsShouldAppearInTheCorrectOrder",
-    Justification = "C# 14 extension methods")]
+    Justification = "Extension blocks group members by receiver rather than by element kind.")]
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Aggregation parity helper operators for a sequence of boolean observable source sequences.</summary>
@@ -175,7 +170,7 @@ public static partial class SignalAsyncExtensions
             return new DoOnSubscribeAsyncSignal<T>(source, action);
         }
 
-        /// <summary>Drops source values while the previous asynchronous action is still running.</summary>
+        /// <summary>Drops source values that arrive while the previous asynchronous action runs.</summary>
         /// <param name="asyncAction">The asynchronous action to execute for accepted values.</param>
         /// <returns>A sequence that emits only values that were accepted while the operator was idle.</returns>
         public IObservableAsync<T> DropIfBusy(Func<T, CancellationToken, ValueTask> asyncAction)

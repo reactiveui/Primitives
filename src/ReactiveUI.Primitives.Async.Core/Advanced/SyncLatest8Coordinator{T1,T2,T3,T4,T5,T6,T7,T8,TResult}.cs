@@ -143,10 +143,7 @@ public sealed class SyncLatest8Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, TResu
             _ => Sources.Source8.SubscribeAsync(new SyncLatestWitness<T8, TResult>(this, Source8Bit, value => Value8 = new(value)), cancellationToken)
         };
 
-    /// <summary>
-    /// Reads every source's latest value into a single snapshot. Returns <see langword="false"/>
-    /// until every source has produced at least one value.
-    /// </summary>
+    /// <summary>Reads every source's latest value into a single snapshot.</summary>
     /// <param name="values">When the method returns <see langword="true"/>, the snapshot.</param>
     /// <returns><see langword="true"/> when every source has produced a value; otherwise <see langword="false"/>.</returns>
     private bool TryReadValues(out (T1 V1, T2 V2, T3 V3, T4 V4, T5 V5, T6 V6, T7 V7, T8 V8) values)

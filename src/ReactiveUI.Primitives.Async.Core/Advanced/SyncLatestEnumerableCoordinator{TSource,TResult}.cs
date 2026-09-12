@@ -97,7 +97,7 @@ public sealed class SyncLatestEnumerableCoordinator<TSource, TResult> : IAsyncDi
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask DisposeAsync() => FinishAsync(null);
 
-    /// <summary>Handles OnNext from a source.</summary>
+    /// <summary>Records the source's latest value and emits the projected snapshot once every source has produced one.</summary>
     /// <param name="index">The source index.</param>
     /// <param name="indexValue">The value.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
@@ -143,7 +143,7 @@ public sealed class SyncLatestEnumerableCoordinator<TSource, TResult> : IAsyncDi
         }
     }
 
-    /// <summary>Handles OnErrorResume from a source.</summary>
+    /// <summary>Forwards a non-terminal source error downstream under the gate.</summary>
     /// <param name="error">The error.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A value task representing the operation.</returns>
@@ -160,7 +160,7 @@ public sealed class SyncLatestEnumerableCoordinator<TSource, TResult> : IAsyncDi
         }
     }
 
-    /// <summary>Handles OnCompleted from a source.</summary>
+    /// <summary>Completes the combined sequence when the source failed, completed without a value, or was the last to complete.</summary>
     /// <param name="index">The source index.</param>
     /// <param name="result">The result.</param>
     /// <returns>A value task representing the operation.</returns>
@@ -187,8 +187,8 @@ public sealed class SyncLatestEnumerableCoordinator<TSource, TResult> : IAsyncDi
         return shouldComplete ? FinishAsync(Result.Success) : default;
     }
 
-    /// <summary>Completes the subscription. The gate and dispose CTS are always released in the finally block.</summary>
-    /// <param name="result">The result.</param>
+    /// <summary>Completes the subscription once, disposing every source subscription, the gate and the dispose token.</summary>
+    /// <param name="result">The completion result, or <see langword="null"/> when disposing without signalling.</param>
     /// <returns>A value task representing the operation.</returns>
     internal async ValueTask FinishAsync(Result? result)
     {

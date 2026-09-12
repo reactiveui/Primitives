@@ -18,22 +18,22 @@ public class ScheduledSignal<T> : ISignal<T>
     /// <summary>Guards default-observer and subscription-count state.</summary>
     private readonly Lock _observerLock = new();
 
-    /// <summary>Stores the fallback observer for the signal implementation.</summary>
+    /// <summary>The observer that receives values while no other subscriber is active.</summary>
     private readonly IObserver<T>? _defaultObserver;
 
-    /// <summary>Stores the scheduler for the signal implementation.</summary>
+    /// <summary>The sequencer notifications are emitted on.</summary>
     private readonly ISequencer _scheduler;
 
-    /// <summary>Stores the underlying signal implementation.</summary>
+    /// <summary>The backing signal this instance wraps.</summary>
     private readonly ISignal<T> _subject;
 
-    /// <summary>Stores the active non-default observer count.</summary>
+    /// <summary>The number of active non-default observers.</summary>
     private int _observerRefCount;
 
-    /// <summary>Stores the active default-observer subscription.</summary>
+    /// <summary>The default observer's subscription, or null while other subscribers are attached.</summary>
     private IDisposable? _defaultObserverSub;
 
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>Whether this instance has been disposed.</summary>
     private bool _isDisposed;
 
     /// <summary>Initializes a new instance of the <see cref="ScheduledSignal{T}"/> class.</summary>
@@ -164,8 +164,8 @@ public class ScheduledSignal<T> : ISignal<T>
     }
 
     /// <summary>Subscribes the default observer through the configured scheduler.</summary>
-    /// <param name="observer">The observer value.</param>
-    /// <returns>The subscription value.</returns>
+    /// <param name="observer">The default observer.</param>
+    /// <returns>The subscription to dispose once another observer arrives.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private IDisposable SubscribeDefaultObserver(IObserver<T> observer) =>
         _subject.ObserveOn(_scheduler).Subscribe(observer);
@@ -180,7 +180,7 @@ public class ScheduledSignal<T> : ISignal<T>
     }
 
     /// <summary>Releases one observer while the observer lock is held.</summary>
-    /// <param name="defaultObserver">The default observer value.</param>
+    /// <param name="defaultObserver">The default observer to resubscribe once the last observer leaves, or null when there is none.</param>
     private void ReleaseObserverLocked(IObserver<T>? defaultObserver)
     {
         if (_observerRefCount > 0)
@@ -196,7 +196,7 @@ public class ScheduledSignal<T> : ISignal<T>
         _defaultObserverSub = SubscribeDefaultObserver(defaultObserver);
     }
 
-    /// <summary>Executes the ThrowIfDisposed operation.</summary>
+    /// <summary>Throws when this instance or its backing signal has been disposed.</summary>
     /// <exception cref="ObjectDisposedException">This instance or its backing signal has been disposed.</exception>
     private void ThrowIfDisposed()
     {

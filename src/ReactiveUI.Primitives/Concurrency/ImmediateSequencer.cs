@@ -35,7 +35,7 @@ public sealed class ImmediateSequencer : ISequencer
 
     /// <summary>Schedules an action to run immediately.</summary>
     /// <param name="action">Action to execute.</param>
-    /// <returns>An empty disposable because the action has already run.</returns>
+    /// <returns>An empty disposable; the action runs before this method returns.</returns>
     /// <exception cref="ArgumentExceptionHelper"><paramref name="action"/> is <see langword="null"/>.</exception>
     public IDisposable Schedule(Action action)
     {

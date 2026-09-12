@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives;
 /// <summary>Private helper types for boolean terminal parity operators.</summary>
 public static partial class LinqExtensions
 {
-    /// <summary>Predicate all operator implemented without delegate observer wrappers.</summary>
+    /// <summary>Emits whether every source value matches a predicate.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     /// <param name="source">The source observable.</param>
     /// <param name="predicate">The predicate.</param>
@@ -98,7 +98,7 @@ public static partial class LinqExtensions
         }
     }
 
-    /// <summary>Contains operator implemented without composing Any and comparer closures.</summary>
+    /// <summary>Emits whether the source produced a value equal to the one sought.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     /// <param name="source">The source observable.</param>
     /// <param name="value">The value to locate.</param>

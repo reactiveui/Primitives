@@ -145,12 +145,8 @@ internal sealed class ThrottleObservable<T>(
         }
 
         /// <summary>
-        /// Emits the buffered value if it is still current (i.e. no newer
-        /// <see cref="OnNext"/> arrived after this emission was scheduled).
-        /// Marked <c>[ExcludeFromCodeCoverage]</c> because the in-lock
-        /// race-loser branch (sink done, emission superseded, value already drained) is only
-        /// reachable when the scheduled callback fires concurrently with Dispose / OnCompleted,
-        /// which the single-threaded test harness cannot trigger.
+        /// Emits the buffered value when it is still current, meaning no newer <see cref="OnNext"/> arrived after
+        /// this emission was scheduled.
         /// </summary>
         /// <param name="id">The emission id this callback was scheduled for.</param>
         [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
@@ -159,6 +155,7 @@ internal sealed class ThrottleObservable<T>(
             T value;
             lock (_gate)
             {
+                // Race-only: reachable when this scheduled callback overlaps Dispose or a terminal notification.
                 if (_done || id != _emissionId || !_hasValue)
                 {
                     return;

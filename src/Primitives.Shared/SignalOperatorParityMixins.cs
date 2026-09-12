@@ -239,7 +239,7 @@ public static partial class LinqExtensions
             return new IgnoreValuesSignal<T>(source);
         }
 
-        /// <summary>Emits the supplied value if the source completes without values.</summary>
+        /// <summary>Emits <see langword="default"/> if the source completes without values.</summary>
         /// <returns>A sequence that emits <see langword="default"/> when the source is empty.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
         public IObservable<T> DefaultIfEmpty()
@@ -690,7 +690,7 @@ public static partial class LinqExtensions
                 : new TimeIntervalSignal<T>(source, scheduler);
         }
 
-        /// <summary>Combines latest values from both sources. Alias for latest-fusion vocabulary.</summary>
+        /// <summary>Combines the latest values from both sources into a projected result.</summary>
         /// <typeparam name="TRight">The right value type.</typeparam>
         /// <typeparam name="TResult">The result value type.</typeparam>
         /// <param name="right">The right sequence.</param>
@@ -760,7 +760,7 @@ public static partial class LinqExtensions
         }
     }
 
-    /// <summary>Task-compatibility helpers for migrations from System.Reactive.</summary>
+    /// <summary>Conversion operators that expose a task under the System.Reactive names.</summary>
     /// <typeparam name="T">The task result type.</typeparam>
     /// <param name="task">The task.</param>
     extension<T>(Task<T> task)
@@ -771,7 +771,7 @@ public static partial class LinqExtensions
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
             "Concurrency",
             "PSH1315:A blocking wait on an awaitable that may not be done",
-            Justification = "Synchronous read is limited to the already-completed task fast path.")]
+            Justification = "The read is guarded by a RanToCompletion check, so the task is done.")]
         public IObservable<T> ToObservable()
         {
             ArgumentExceptionHelper.ThrowIfNull(task);
@@ -791,13 +791,13 @@ public static partial class LinqExtensions
                 : new TaskInstanceSignal<T>(task);
         }
 
-        /// <summary>Identity helper that keeps source-compatible <c>FirstAsync().ToTask()</c> migrations compiling.</summary>
+        /// <summary>Returns the task unchanged, so a <c>FirstAsync().ToTask()</c> chain resolves.</summary>
         /// <returns>The supplied task.</returns>
         /// <exception cref="ArgumentNullException">The receiver task is <see langword="null"/>.</exception>
         public Task<T> ToTask() => task ?? throw new ArgumentNullException(nameof(task));
 
         /// <summary>Returns a task that mirrors the supplied task but transitions to the canceled state when
-        /// <paramref name="cancellationToken"/> is canceled first; keeps source-compatible <c>FirstAsync().ToTask(token)</c> migrations compiling.</summary>
+        /// <paramref name="cancellationToken"/> is canceled first.</summary>
         /// <param name="cancellationToken">The token used to cancel the returned task.</param>
         /// <returns>The supplied task, or a task that completes with the supplied task's outcome or cancels when <paramref name="cancellationToken"/> is canceled.</returns>
         /// <exception cref="ArgumentNullException">The receiver task is <see langword="null"/>.</exception>
@@ -816,7 +816,7 @@ public static partial class LinqExtensions
         }
     }
 
-    /// <summary>Stamps a value with the supplied scheduler's current time. A non-capturing selector reused by <c>Timestamp</c> via <c>MapWith</c>.</summary>
+    /// <summary>Stamps a value with the supplied scheduler's current time.</summary>
     /// <typeparam name="T">The value type.</typeparam>
     /// <param name="scheduler">The sequencer that supplies the timestamp.</param>
     /// <param name="value">The value to stamp.</param>
@@ -837,8 +837,8 @@ public static partial class LinqExtensions
         }
         catch (OperationCanceledException)
         {
-            // The wait was abandoned while the underlying task may still be running; observe any later
-            // fault so it cannot surface as an UnobservedTaskException on the finalizer thread.
+            // The wait is abandoned while the underlying task can keep running, so observe any later fault
+            // to keep it from surfacing as an UnobservedTaskException on the finalizer thread.
             _ = task.ContinueWith(
                 static abandoned => _ = abandoned.Exception,
                 CancellationToken.None,

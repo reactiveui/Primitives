@@ -10,37 +10,37 @@ namespace ReactiveUI.Primitives.Reactive.Advanced;
 namespace ReactiveUI.Primitives.Advanced;
 #endif
 
-/// <summary>Represents the CreateSignal class.</summary>
-/// <typeparam name="T">The T type.</typeparam>
+/// <summary>Creates a signal from a caller-supplied subscribe delegate.</summary>
+/// <typeparam name="T">The value type.</typeparam>
 internal sealed class CreateSignal<T> : IRequireCurrentThread<T>
 {
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The delegate invoked for each subscription.</summary>
     private readonly Func<IObserver<T>, IDisposable> _subscribe;
 
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>Whether subscription must be dispatched through the current-thread sequencer.</summary>
     private readonly bool _currentThreadRequired;
 
     /// <summary>Initializes a new instance of the <see cref="CreateSignal{T}"/> class.</summary>
-    /// <param name="subscribe">The subscribe value.</param>
+    /// <param name="subscribe">The delegate invoked for each subscription.</param>
     public CreateSignal(Func<IObserver<T>, IDisposable> subscribe) => _subscribe = subscribe;
 
     /// <summary>Initializes a new instance of the <see cref="CreateSignal{T}"/> class.</summary>
-    /// <param name="subscribe">The subscribe value.</param>
-    /// <param name="isRequiredSubscribeOnCurrentThread">The isRequiredSubscribeOnCurrentThread value.</param>
+    /// <param name="subscribe">The delegate invoked for each subscription.</param>
+    /// <param name="isRequiredSubscribeOnCurrentThread">Whether subscription must be dispatched through the current-thread sequencer.</param>
     public CreateSignal(Func<IObserver<T>, IDisposable> subscribe, bool isRequiredSubscribeOnCurrentThread)
     {
         _subscribe = subscribe;
         _currentThreadRequired = isRequiredSubscribeOnCurrentThread;
     }
 
-    /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
-    /// <returns>The result.</returns>
+    /// <summary>Reports whether subscription must be dispatched through the current-thread sequencer.</summary>
+    /// <returns><see langword="true"/> when current-thread dispatch is required.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() => _currentThreadRequired;
 
-    /// <summary>Executes the Subscribe operation.</summary>
-    /// <param name="observer">The observer value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Invokes the subscribe delegate with a sink wrapping the observer.</summary>
+    /// <param name="observer">The downstream observer.</param>
+    /// <returns>The disposable that releases the subscription.</returns>
     public IDisposable Subscribe(IObserver<T> observer)
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
@@ -55,10 +55,10 @@ internal sealed class CreateSignal<T> : IRequireCurrentThread<T>
         return sink;
     }
 
-    /// <summary>Executes the SubscribeCore operation.</summary>
-    /// <param name="observer">The observer value.</param>
-    /// <param name="cancel">The cancel value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Invokes the subscribe delegate with a sink that owns <paramref name="cancel"/>.</summary>
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="cancel">The outer subscription handle.</param>
+    /// <returns>The disposable returned by the subscribe delegate.</returns>
     private IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel)
     {
         CreateSink<T> sink = new(observer, cancel, false);

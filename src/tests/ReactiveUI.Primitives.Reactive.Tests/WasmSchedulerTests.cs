@@ -4,7 +4,6 @@
 
 using System.Reactive.Disposables;
 using ReactiveUI.Primitives.Reactive.Concurrency;
-using Timer = System.Threading.Timer;
 
 namespace ReactiveUI.Primitives.Reactive.Tests;
 
@@ -14,38 +13,26 @@ public sealed class WasmSchedulerTests
     /// <summary>State payload used to verify state threading.</summary>
     private const int StatePayload = 42;
 
-    /// <summary>Minimum periodic ticks a test observes before disposing.</summary>
-    private const int MinimumTicks = 2;
+    /// <summary>Periodic ticks a test drives before disposing; more than one, so threaded state is observable.</summary>
+    private const int PeriodicTickCount = 2;
 
-    /// <summary>Threads that enqueue concurrently in the single-flight drain test.</summary>
-    private const int ProducerCount = 4;
+    /// <summary>Items queued ahead of a single drain pass in the exactly-once dispatch test.</summary>
+    private const int BatchItemCount = 2000;
 
-    /// <summary>Items each producer enqueues in the single-flight drain test.</summary>
-    private const int ItemsPerProducer = 500;
+    /// <summary>Sentinel <see cref="Array.FindIndex{T}(T[], Predicate{T})"/> returns when no element matches.</summary>
+    private const int NoMatch = -1;
 
     /// <summary>Expected values produced by an immediate burst, used to verify FIFO order.</summary>
     private static readonly int[] ExpectedBurst = [1, 2, 3];
 
-    /// <summary>Longest a test waits for scheduled work before failing.</summary>
-    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(5);
-
     /// <summary>Due time of a work item that is expected to run after its delay elapses.</summary>
     private static readonly TimeSpan DelayedDueTime = TimeSpan.FromMilliseconds(50);
 
-    /// <summary>Due time of a work item that is disposed before it becomes due, so it must never run.</summary>
-    private static readonly TimeSpan CancellationDueTime = TimeSpan.FromMilliseconds(100);
-
-    /// <summary>How long a test waits past <see cref="CancellationDueTime"/> to prove a cancelled item did not run.</summary>
-    private static readonly TimeSpan CancellationObservationWindow = TimeSpan.FromMilliseconds(250);
-
-    /// <summary>Period between ticks of a periodic work item.</summary>
-    private static readonly TimeSpan TickPeriod = TimeSpan.FromMilliseconds(10);
-
-    /// <summary>How long a test waits after disposing a periodic item to prove no further ticks arrive.</summary>
-    private static readonly TimeSpan PostDisposeObservationWindow = TimeSpan.FromMilliseconds(100);
-
     /// <summary>A positive due time or period, so a null action is the only invalid argument under test.</summary>
     private static readonly TimeSpan ValidInterval = TimeSpan.FromMilliseconds(100);
+
+    /// <summary>A due time no test waits out, so the only run a delayed item sees is the one the test drives.</summary>
+    private static readonly TimeSpan UnreachableDueTime = TimeSpan.FromHours(1);
 
     /// <summary>A period no test waits out, so the only tick a periodic item sees is the one the test drives.</summary>
     private static readonly TimeSpan UnreachablePeriod = TimeSpan.FromHours(1);
@@ -64,9 +51,9 @@ public sealed class WasmSchedulerTests
         var scheduler = WasmScheduler.Default;
 
         await Assert.That(() => scheduler.Schedule(0, null!)).ThrowsExactly<ArgumentNullException>();
-        await Assert.That(() => scheduler.Schedule(0, TimeSpan.FromMilliseconds(1), null!))
+        await Assert.That(() => scheduler.Schedule(0, ValidInterval, null!))
             .ThrowsExactly<ArgumentNullException>();
-        await Assert.That(() => scheduler.SchedulePeriodic(0, TimeSpan.FromMilliseconds(1), null!))
+        await Assert.That(() => scheduler.SchedulePeriodic(0, ValidInterval, null!))
             .ThrowsExactly<ArgumentNullException>();
     }
 
@@ -93,7 +80,7 @@ public sealed class WasmSchedulerTests
             return Disposable.Empty;
         });
 
-        await Assert.That(await executed.Task.WaitAsync(WaitTimeout)).IsEqualTo(StatePayload);
+        await Assert.That(await executed.Task).IsEqualTo(StatePayload);
     }
 
     /// <summary>Verifies a burst of immediate work executes in FIFO order.</summary>
@@ -119,49 +106,38 @@ public sealed class WasmSchedulerTests
             });
         }
 
-        _ = await done.Task.WaitAsync(WaitTimeout);
+        _ = await done.Task;
         await Assert.That(values).IsEquivalentTo(ExpectedBurst, EqualityComparer<int>.Default);
     }
 
-    /// <summary>Verifies a disposed immediate work item never runs while later work still does.</summary>
+    /// <summary>Verifies an item disposed while it waits in the ready queue is skipped while later work still runs.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task DisposedImmediateItemIsSkipped()
     {
-        // Park the single event-loop drain on a gate item so the dispose below is guaranteed to happen before the
-        // cancelled item is ever run. Without this the immediate drain races the synchronous Dispose on a
-        // multi-threaded runtime (it never can on single-threaded WebAssembly, which the type targets).
-        TaskCompletionSource gateEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        using ManualResetEventSlim release = new(false);
-        _ = WasmScheduler.Default.Schedule(0, (_, _) =>
-        {
-            _ = gateEntered.TrySetResult();
-            _ = release.Wait(WaitTimeout);
-            return Disposable.Empty;
-        });
-
-        await gateEntered.Task.WaitAsync(WaitTimeout);
-
-        TaskCompletionSource<bool> markerRan = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var scheduler = CreateIsolatedScheduler();
         var cancelledRan = false;
-
-        var cancelled = WasmScheduler.Default.Schedule(0, (_, _) =>
+        var markerRan = false;
+        WasmScheduler.StatefulWorkItem<int> cancelled = new(scheduler, 0, (_, _) =>
         {
             cancelledRan = true;
             return Disposable.Empty;
         });
-        cancelled.Dispose();
-        _ = WasmScheduler.Default.Schedule(0, (_, _) =>
+        WasmScheduler.StatefulWorkItem<int> marker = new(scheduler, 0, (_, _) =>
         {
-            _ = markerRan.TrySetResult(true);
+            markerRan = true;
             return Disposable.Empty;
         });
 
-        // Let the drain proceed: it runs the gate, then the (now disposed) cancelled item, then the marker.
-        release.Set();
+        // Queue both without arming a drain, so the dispose lands while a drain has reached neither item.
+        scheduler.QueueReady(cancelled);
+        scheduler.QueueReady(marker);
+        cancelled.Dispose();
 
-        _ = await markerRan.Task.WaitAsync(WaitTimeout);
+        scheduler.RunReadyBatch();
+
         await Assert.That(cancelledRan).IsFalse();
+        await Assert.That(markerRan).IsTrue();
     }
 
     /// <summary>Verifies delayed work executes and zero due time uses the immediate path.</summary>
@@ -183,25 +159,31 @@ public sealed class WasmSchedulerTests
             return Disposable.Empty;
         });
 
-        await Assert.That(await delayed.Task.WaitAsync(WaitTimeout)).IsTrue();
-        await Assert.That(await immediate.Task.WaitAsync(WaitTimeout)).IsTrue();
+        await Assert.That(await delayed.Task).IsTrue();
+        await Assert.That(await immediate.Task).IsTrue();
     }
 
-    /// <summary>Verifies disposing a delayed work item before it is due cancels it.</summary>
+    /// <summary>Verifies disposing a delayed work item before it is due cancels it, so a late callback is dropped.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
     public async Task DisposedDelayedItemDoesNotRun()
     {
         var ran = false;
+        var subscription = (WasmScheduler.StatefulWorkItem<int>)WasmScheduler.Default.Schedule(
+            0,
+            UnreachableDueTime,
+            (_, _) =>
+            {
+                ran = true;
+                return Disposable.Empty;
+            });
 
-        var subscription = WasmScheduler.Default.Schedule(0, CancellationDueTime, (_, _) =>
-        {
-            ran = true;
-            return Disposable.Empty;
-        });
         subscription.Dispose();
 
-        await Task.Delay(CancellationObservationWindow);
+        // The due time never elapses on its own, so this is the run a timer callback already in flight would deliver.
+        subscription.Run();
+
+        await Assert.That(subscription.IsDisposed).IsTrue();
         await Assert.That(ran).IsFalse();
     }
 
@@ -210,26 +192,28 @@ public sealed class WasmSchedulerTests
     [Test]
     public async Task SchedulePeriodicTicksAndStopsOnDispose()
     {
-        TaskCompletionSource<bool> reachedTwo = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var count = 0;
-
-        var subscription = WasmScheduler.Default.SchedulePeriodic(0, TickPeriod, state =>
-        {
-            count = state + 1;
-            if (count >= MinimumTicks)
+        var subscription = (WasmScheduler.PeriodicWorkItem<int>)WasmScheduler.Default.SchedulePeriodic(
+            0,
+            UnreachablePeriod,
+            state =>
             {
-                _ = reachedTwo.TrySetResult(true);
-            }
+                count = state + 1;
+                return count;
+            });
 
-            return count;
-        });
+        for (var tick = 0; tick < PeriodicTickCount; tick++)
+        {
+            subscription.Tick();
+        }
 
-        _ = await reachedTwo.Task.WaitAsync(WaitTimeout);
+        // The count only reaches the tick total if each tick received the state the previous one returned.
+        await Assert.That(count).IsEqualTo(PeriodicTickCount);
+
         subscription.Dispose();
-        var snapshot = Volatile.Read(ref count);
+        subscription.Tick();
 
-        await Task.Delay(PostDisposeObservationWindow);
-        await Assert.That(Volatile.Read(ref count)).IsEqualTo(snapshot);
+        await Assert.That(count).IsEqualTo(PeriodicTickCount);
     }
 
     /// <summary>Verifies a zero period is clamped instead of rejected and still ticks.</summary>
@@ -245,7 +229,7 @@ public sealed class WasmSchedulerTests
             return state;
         });
 
-        await Assert.That(await ticked.Task.WaitAsync(WaitTimeout)).IsTrue();
+        await Assert.That(await ticked.Task).IsTrue();
         subscription.Dispose();
     }
 
@@ -267,7 +251,7 @@ public sealed class WasmSchedulerTests
     public async Task DisposedDelayedItemDisposeIsIdempotent()
     {
         var subscription =
-            WasmScheduler.Default.Schedule(0, TimeSpan.FromMinutes(1), static (_, _) => Disposable.Empty);
+            WasmScheduler.Default.Schedule(0, UnreachableDueTime, static (_, _) => Disposable.Empty);
 
         subscription.Dispose();
 
@@ -279,7 +263,7 @@ public sealed class WasmSchedulerTests
     [Test]
     public async Task DisposedPeriodicItemDisposeIsIdempotent()
     {
-        var subscription = WasmScheduler.Default.SchedulePeriodic(0, TimeSpan.FromMinutes(1), static state => state);
+        var subscription = WasmScheduler.Default.SchedulePeriodic(0, UnreachablePeriod, static state => state);
 
         subscription.Dispose();
 
@@ -292,8 +276,7 @@ public sealed class WasmSchedulerTests
     public async Task SelfCancellingImmediateActionDisposesReturnedDisposable()
     {
         using var scheduler = CreateIsolatedScheduler();
-        TaskCompletionSource returnedDisposed = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        var returned = Disposable.Create(returnedDisposed, static source => source.TrySetResult());
+        BooleanDisposable returned = new();
 
         // Build the item and publish the handle it cancels through before anything can run it. Scheduling normally
         // arms the drain inside Schedule and only then returns the handle, so the action is free to run first and
@@ -310,10 +293,10 @@ public sealed class WasmSchedulerTests
             });
 
         subscription = item;
-        scheduler.Enqueue(item);
+        scheduler.QueueReady(item);
+        scheduler.RunReadyBatch();
 
-        await returnedDisposed.Task.WaitAsync(WaitTimeout);
-        await Assert.That(returnedDisposed.Task.IsCompletedSuccessfully).IsTrue();
+        await Assert.That(returned.IsDisposed).IsTrue();
     }
 
     /// <summary>Verifies that scheduling with a null action returns proper exception.</summary>
@@ -358,24 +341,24 @@ public sealed class WasmSchedulerTests
 
         await Assert.That(() => scheduler.Schedule(0, (_, _) =>
         {
-            _ = Interlocked.Increment(ref ran);
+            ran++;
             return Disposable.Empty;
         })).ThrowsExactly<ObjectDisposedException>();
 
-        await Assert.That(() => scheduler.Schedule(0, DelayedDueTime, (_, _) =>
+        await Assert.That(() => scheduler.Schedule(0, UnreachableDueTime, (_, _) =>
         {
-            _ = Interlocked.Increment(ref ran);
+            ran++;
             return Disposable.Empty;
         })).ThrowsExactly<ObjectDisposedException>();
 
-        await Assert.That(() => scheduler.SchedulePeriodic(0, TickPeriod, state =>
+        await Assert.That(() => scheduler.SchedulePeriodic(0, UnreachablePeriod, state =>
         {
-            _ = Interlocked.Increment(ref ran);
+            ran++;
             return state;
         })).ThrowsExactly<ObjectDisposedException>();
 
-        await Task.Delay(CancellationObservationWindow);
-        await Assert.That(Volatile.Read(ref ran)).IsEqualTo(0);
+        // Each overload threw before it built an item, so there is nothing left that could run the actions.
+        await Assert.That(ran).IsEqualTo(0);
     }
 
     /// <summary>
@@ -387,32 +370,23 @@ public sealed class WasmSchedulerTests
     public async Task DisposeCancelsWorkTheInFlightDrainHasNotReachedYet()
     {
         var scheduler = CreateIsolatedScheduler();
-        TaskCompletionSource gateEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        using ManualResetEventSlim release = new(false);
-
-        // Park the single drain inside the first item, so the second item is provably still queued when Dispose runs.
-        _ = scheduler.Schedule(0, (_, _) =>
-        {
-            _ = gateEntered.TrySetResult();
-            _ = release.Wait(WaitTimeout);
-            return Disposable.Empty;
-        });
-        await gateEntered.Task.WaitAsync(WaitTimeout);
-
         var queuedRan = 0;
-        var queued = scheduler.Schedule(0, (_, _) =>
+        WasmScheduler.StatefulWorkItem<int> queued = new(scheduler, 0, (_, _) =>
         {
-            _ = Interlocked.Increment(ref queuedRan);
+            queuedRan++;
             return Disposable.Empty;
         });
+
+        // Queue without arming a drain, so the item is provably still waiting when the disposal runs.
+        scheduler.QueueReady(queued);
 
         scheduler.Dispose();
 
-        // Let the parked drain resume: the item it never reached must have been cancelled by the disposal.
-        release.Set();
-        await Task.Delay(PostDisposeObservationWindow);
+        // The parked drain resuming: the item it never reached is gone from the queue the disposal released.
+        scheduler.RunReadyBatch();
 
-        await Assert.That(Volatile.Read(ref queuedRan)).IsEqualTo(0);
+        await Assert.That(queuedRan).IsEqualTo(0);
+        await Assert.That(queued.IsDisposed).IsTrue();
         await Assert.That(queued.Dispose).ThrowsNothing();
     }
 
@@ -432,27 +406,19 @@ public sealed class WasmSchedulerTests
             StatePayload,
             (_, _) =>
             {
-                _ = Interlocked.Increment(ref ran);
+                ran++;
                 return Disposable.Empty;
             });
 
         // Cancel before the delayed schedule reaches its AttachTimer call.
         item.Dispose();
 
-        var fired = 0;
-        await using Timer timer = new(
-            _ => Interlocked.Increment(ref fired),
-            null,
-            DelayedDueTime,
-            Timeout.InfiniteTimeSpan);
-
+        // Stands in for the one-shot timer, recording the release the item owes it.
+        BooleanDisposable timer = new();
         item.AttachTimer(timer);
 
-        // A timer still armed would have fired well inside this window; the released one never can.
-        await Task.Delay(CancellationObservationWindow);
-
-        await Assert.That(Volatile.Read(ref fired)).IsEqualTo(0);
-        await Assert.That(Volatile.Read(ref ran)).IsEqualTo(0);
+        await Assert.That(timer.IsDisposed).IsTrue();
+        await Assert.That(ran).IsEqualTo(0);
     }
 
     /// <summary>
@@ -470,7 +436,7 @@ public sealed class WasmSchedulerTests
             UnreachablePeriod,
             state =>
             {
-                _ = Interlocked.Increment(ref ticks);
+                ticks++;
                 return state;
             });
 
@@ -479,7 +445,7 @@ public sealed class WasmSchedulerTests
         // The period never elapses on its own, so this is the tick a callback already in flight would have delivered.
         item.Tick();
 
-        await Assert.That(Volatile.Read(ref ticks)).IsEqualTo(0);
+        await Assert.That(ticks).IsEqualTo(0);
     }
 
     /// <summary>
@@ -498,7 +464,7 @@ public sealed class WasmSchedulerTests
             StatePayload,
             (_, _) =>
             {
-                _ = Interlocked.Increment(ref ran);
+                ran++;
                 return Disposable.Empty;
             });
 
@@ -509,47 +475,36 @@ public sealed class WasmSchedulerTests
 
         await Assert.That(item.IsDisposed).IsTrue();
 
-        await Task.Delay(PostDisposeObservationWindow);
-        await Assert.That(Volatile.Read(ref ran)).IsEqualTo(0);
+        // A drain that arrives after the enqueue finds nothing to run, so the released item stays unrun.
+        scheduler.RunReadyBatch();
+
+        await Assert.That(ran).IsEqualTo(0);
     }
 
     /// <summary>
-    /// Verifies the single-flight drain latch dispatches every item exactly once when many threads enqueue at the same
-    /// time. Enqueues, drain posts and the running drain all interleave here, so a lost drain post would strand work
-    /// and a double-claimed latch would run an item twice.
+    /// Verifies a drain pass dispatches every queued item exactly once: an item the batch skips would be stranded,
+    /// and one it claims twice would run its action twice.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     [Test]
-    public async Task ConcurrentSchedulingDispatchesEveryItemExactlyOnce()
+    public async Task DrainDispatchesEveryQueuedItemExactlyOnce()
     {
         using var scheduler = CreateIsolatedScheduler();
-        var ran = 0;
-        using CountdownEvent completed = new(ProducerCount * ItemsPerProducer);
-        var producers = new Task[ProducerCount];
+        var dispatches = new int[BatchItemCount];
 
-        for (var producer = 0; producer < ProducerCount; producer++)
+        for (var index = 0; index < BatchItemCount; index++)
         {
-            producers[producer] = Task.Run(() =>
+            scheduler.QueueReady(new WasmScheduler.StatefulWorkItem<int>(scheduler, index, (_, state) =>
             {
-                for (var item = 0; item < ItemsPerProducer; item++)
-                {
-                    _ = scheduler.Schedule(0, (_, _) =>
-                    {
-                        _ = Interlocked.Increment(ref ran);
-                        _ = completed.Signal();
-                        return Disposable.Empty;
-                    });
-                }
-            });
+                dispatches[state]++;
+                return Disposable.Empty;
+            }));
         }
 
-        await Task.WhenAll(producers);
+        scheduler.RunReadyBatch();
 
-        await Assert.That(completed.Wait(WaitTimeout)).IsTrue();
-
-        // Settle, then prove the latch never let a second drain re-run an item it had already dispatched.
-        await Task.Delay(PostDisposeObservationWindow);
-        await Assert.That(Volatile.Read(ref ran)).IsEqualTo(ProducerCount * ItemsPerProducer);
+        // Every slot holding exactly one dispatch rules out both a skipped and a doubled item.
+        await Assert.That(Array.FindIndex(dispatches, static count => count != 1)).IsEqualTo(NoMatch);
     }
 
     /// <summary>

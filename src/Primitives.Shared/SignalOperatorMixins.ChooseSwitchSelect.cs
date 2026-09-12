@@ -10,10 +10,7 @@ namespace ReactiveUI.Primitives.Reactive;
 namespace ReactiveUI.Primitives;
 #endif
 
-/// <summary>
-/// Fused projection operators: <c>Choose</c> (filter + map in one sink), <c>SwitchMap</c> (map-to-inner +
-/// switch-to-latest in one sink) and <c>SwitchSelect</c> (the same, skipping null source values).
-/// </summary>
+/// <summary>Fused projection operators that combine filtering or switching with a projection in one sink.</summary>
 public static partial class LinqExtensions
 {
     /// <summary>Fused projection operators for an observable source sequence.</summary>

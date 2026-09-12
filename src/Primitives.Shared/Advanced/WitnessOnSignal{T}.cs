@@ -10,63 +10,60 @@ namespace ReactiveUI.Primitives.Reactive.Advanced;
 namespace ReactiveUI.Primitives.Advanced;
 #endif
 
-/// <summary>Represents the WitnessOnSignal class.</summary>
-/// <typeparam name="T">The T type.</typeparam>
-/// <param name="source">The source value.</param>
-/// <param name="scheduler">The scheduler value.</param>
+/// <summary>Re-dispatches source notifications onto a sequencer, preserving their order.</summary>
+/// <typeparam name="T">The value type.</typeparam>
+/// <param name="source">The source observable.</param>
+/// <param name="scheduler">The sequencer that dispatches the notifications.</param>
 internal sealed class WitnessOnSignal<T>(IObservable<T> source, ISequencer scheduler) : IRequireCurrentThread<T>
 {
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The source observable.</summary>
     private readonly IObservable<T> _source = source;
 
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The sequencer that dispatches the notifications.</summary>
     private readonly ISequencer _scheduler = scheduler;
 
-    /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
-    /// <returns>The result.</returns>
+    /// <summary>Reports that subscription is dispatched through the current-thread sequencer.</summary>
+    /// <returns>Always <see langword="true"/>.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() => true;
 
-    /// <summary>Executes the Subscribe operation.</summary>
-    /// <param name="observer">The observer value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Subscribes an observer through the current-thread sequencer.</summary>
+    /// <param name="observer">The downstream observer.</param>
+    /// <returns>The subscription.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IDisposable Subscribe(IObserver<T> observer) =>
         SignalSubscription.Subscribe(observer, true, SubscribeCore);
 
-    /// <summary>Executes the SubscribeCore operation.</summary>
-    /// <param name="observer">The observer value.</param>
-    /// <param name="cancel">The cancel value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Builds the dispatching sink and subscribes it to the source.</summary>
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="cancel">The subscription handle owned by the subscription helper.</param>
+    /// <returns>The source subscription together with the sink.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel) =>
         new WitnessOn(this, observer, cancel).Run();
 
-    /// <summary>Represents the WitnessOn class.</summary>
-    /// <param name="parent">The parent value.</param>
-    /// <param name="observer">The observer value.</param>
-    /// <param name="cancel">The cancel value.</param>
+    /// <summary>Queues source notifications and drains them on the sequencer.</summary>
+    /// <param name="parent">The owning signal.</param>
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="cancel">The subscription handle released on teardown.</param>
     private sealed class WitnessOn(WitnessOnSignal<T> parent, IObserver<T> observer, IDisposable cancel) : IObserver<T>, IWorkItem, IsDisposed
     {
-        /// <summary>Stores state for the signal implementation.</summary>
+        /// <summary>The owning signal.</summary>
         private readonly WitnessOnSignal<T> _parent = parent;
 
-        /// <summary>Stores the downstream observer.</summary>
+        /// <summary>The downstream observer.</summary>
         private readonly IObserver<T> _observer = observer;
 
         /// <summary>Synchronization gate guarding the queued actions and scheduling state.</summary>
         private readonly Lock _gate = new();
 
-        /// <summary>
-        /// Queued notifications awaiting dispatch on the scheduler. Stored as a value type so
-        /// queueing a notification does not allocate a <see cref="Spark{T}"/> per OnNext.
-        /// </summary>
+        /// <summary>Notifications awaiting dispatch on the sequencer.</summary>
         private readonly Queue<Notification> _actions = new();
 
         /// <summary>Upstream subscription disposed on teardown.</summary>
         private IDisposable? _cancel = cancel;
 
-        /// <summary>Stores state for the signal implementation.</summary>
+        /// <summary>Whether the sink has been torn down.</summary>
         private bool _isDisposed;
 
         /// <summary>Tracks whether a drain has been scheduled.</summary>
@@ -84,8 +81,8 @@ internal sealed class WitnessOnSignal<T>(IObservable<T> source, ISequencer sched
             }
         }
 
-        /// <summary>Executes the Run operation.</summary>
-        /// <returns>The result.</returns>
+        /// <summary>Subscribes to the source.</summary>
+        /// <returns>The source subscription together with this sink.</returns>
         public MultipleDisposable Run()
         {
             _isDisposed = false;
@@ -95,17 +92,17 @@ internal sealed class WitnessOnSignal<T>(IObservable<T> source, ISequencer sched
             return new(sourceDisposable, this);
         }
 
-        /// <summary>Executes the OnNext operation.</summary>
-        /// <param name="value">The value.</param>
+        /// <summary>Queues a value for dispatch.</summary>
+        /// <param name="value">The value to queue.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnNext(T value) => QueueAction(Notification.OnNext(value));
 
-        /// <summary>Executes the OnError operation.</summary>
-        /// <param name="error">The error value.</param>
+        /// <summary>Queues an error for dispatch.</summary>
+        /// <param name="error">The error to queue.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnError(Exception error) => QueueAction(Notification.OnError(error));
 
-        /// <summary>Executes the OnCompleted operation.</summary>
+        /// <summary>Queues completion for dispatch.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnCompleted() => QueueAction(Notification.OnCompleted());
 
@@ -143,7 +140,7 @@ internal sealed class WitnessOnSignal<T>(IObservable<T> source, ISequencer sched
             }
         }
 
-        /// <summary>Executes the Dispose operation.</summary>
+        /// <summary>Clears the queue and releases the upstream subscription, once.</summary>
         public void Dispose()
         {
             IDisposable? cancel;
@@ -163,8 +160,8 @@ internal sealed class WitnessOnSignal<T>(IObservable<T> source, ISequencer sched
             cancel?.Dispose();
         }
 
-        /// <summary>Executes the QueueAction operation.</summary>
-        /// <param name="data">The data value.</param>
+        /// <summary>Queues a notification and schedules a drain when one is not pending.</summary>
+        /// <param name="data">The notification to queue.</param>
         private void QueueAction(in Notification data)
         {
             lock (_gate)
@@ -186,8 +183,8 @@ internal sealed class WitnessOnSignal<T>(IObservable<T> source, ISequencer sched
             _parent._scheduler.Schedule(this);
         }
 
-        /// <summary>Executes the Dispatch operation.</summary>
-        /// <param name="action">The action value.</param>
+        /// <summary>Forwards one notification to the downstream observer.</summary>
+        /// <param name="action">The notification to forward.</param>
         private void Dispatch(in Notification action)
         {
             switch (action.Kind)

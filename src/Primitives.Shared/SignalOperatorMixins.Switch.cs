@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives;
 /// <summary>The Switch operator: subscribes to the most recent inner sequence and drops the previous one.</summary>
 public static partial class LinqExtensions
 {
-    /// <summary>Dedicated signal for <c>SwitchTo</c>; runs the coordinator without a Create closure.</summary>
+    /// <summary>Dedicated signal for <c>SwitchTo</c> that hands each subscription to a coordinator.</summary>
     /// <typeparam name="T">The value type.</typeparam>
     private sealed class SwitchSignal<T> : IObservable<T>
     {

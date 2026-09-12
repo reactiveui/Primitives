@@ -8,9 +8,6 @@ namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 /// on the sink that only fire when the upstream pushes events past its own completion.</summary>
 public class SynchronizeAsyncObservableTests
 {
-    /// <summary>Settle delay to confirm nothing fires.</summary>
-    private const int SettleDelayMilliseconds = 50;
-
     /// <summary>Verifies that <c>OnNext</c>, <c>OnError</c> and a duplicate <c>OnCompleted</c>
     /// arriving after the source has already completed are silently dropped.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -27,7 +24,6 @@ public class SynchronizeAsyncObservableTests
         source.Observer.OnNext(1);
         source.Observer.OnError(new InvalidOperationException("late"));
         source.Observer.OnCompleted();
-        await Task.Delay(SettleDelayMilliseconds);
         await Assert.That(completedCount).IsEqualTo(1);
         await Assert.That(values).IsEmpty();
         await Assert.That(caught).IsNull();
@@ -66,7 +62,6 @@ public class SynchronizeAsyncObservableTests
             processed++;
         });
         source.Observer.OnNext(1);
-        await Task.Delay(SettleDelayMilliseconds);
         await Assert.That(processed).IsEqualTo(1);
     }
 }

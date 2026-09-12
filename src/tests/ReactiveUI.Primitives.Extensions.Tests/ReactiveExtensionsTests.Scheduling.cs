@@ -5,7 +5,6 @@
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using ReactiveUI.Primitives.Async.Tests;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Disposables;
 
@@ -467,10 +466,15 @@ public partial class ReactiveExtensionsTests
     {
         const int TickPeriodMilliseconds = 50;
         List<DateTime> results = [];
+        TaskCompletionSource firstTick = new();
         using var sub = ReactiveExtensions.SyncTimer(TimeSpan.FromMilliseconds(TickPeriodMilliseconds))
             .Take(SampleValue2)
-            .Subscribe(results.Add);
-        await AsyncTestHelpers.WaitForConditionAsync(() => results.Count >= 1, WaitTimeout);
+            .Subscribe(tick =>
+            {
+                results.Add(tick);
+                _ = firstTick.TrySetResult();
+            });
+        await firstTick.Task;
         await Assert.That(results).Count().IsGreaterThanOrEqualTo(1);
     }
 
@@ -484,7 +488,7 @@ public partial class ReactiveExtensionsTests
         using var sub = ReactiveExtensions.Start(() => executed = true, null).Subscribe(
             static _ => { },
             completed.SetResult);
-        await completed.Task.WaitAsync(LongWaitTimeout);
+        await completed.Task;
         await Assert.That(executed).IsTrue();
     }
 
@@ -497,7 +501,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(result).IsEqualTo(SampleValue42);
     }
 
-    /// <summary>Tests ScheduleSafe with TimeSpan and null scheduler uses Thread.Sleep path.</summary>
+    /// <summary>Tests ScheduleSafe with a TimeSpan and a null scheduler takes the inline blocking path.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenScheduleSafeWithTimeSpanAndNullScheduler_ThenSleepsAndExecutes()
@@ -679,7 +683,7 @@ public partial class ReactiveExtensionsTests
         using var sub = stream.Using<MemoryStream>(_ => executed = true, null).Subscribe(
             static _ => { },
             completed.SetResult);
-        await completed.Task.WaitAsync(WaitTimeout);
+        await completed.Task;
         await Assert.That(executed).IsTrue();
     }
 }

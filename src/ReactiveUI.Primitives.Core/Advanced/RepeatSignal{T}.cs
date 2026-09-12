@@ -7,27 +7,28 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Advanced;
 
-/// <summary>Represents the RepeatSignal class.</summary>
-/// <typeparam name="T">The T type.</typeparam>
-/// <param name="value">The value.</param>
-/// <param name="count">The count value.</param>
+/// <summary>Signal that emits one value a fixed number of times, synchronously inside <c>Subscribe</c>.</summary>
+/// <typeparam name="T">The value type.</typeparam>
+/// <param name="value">The value to emit.</param>
+/// <param name="count">The number of times to emit the value.</param>
 [System.Diagnostics.DebuggerDisplay("RepeatSignal: Value = {_value}, Count = {_count}")]
 public sealed class RepeatSignal<T>(T value, int count) : IRequireCurrentThread<T>, IInlineSignal<T>
 {
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The value to emit.</summary>
     private readonly T _value = value;
 
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The number of times to emit the value.</summary>
     private readonly int _count = count;
 
-    /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
-    /// <returns>The result.</returns>
+    /// <summary>Indicates whether subscription has to happen on the calling thread.</summary>
+    /// <returns>Always <see langword="false"/>.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() => false;
 
-    /// <summary>Executes the Subscribe operation.</summary>
-    /// <param name="observer">The observer value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Emits the value the configured number of times to <paramref name="observer"/>, then completes it.</summary>
+    /// <param name="observer">The observer to notify.</param>
+    /// <returns>An empty disposable; the signal has finished by the time this returns.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="observer"/> is <see langword="null"/>.</exception>
     public IDisposable Subscribe(IObserver<T> observer)
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
@@ -41,11 +42,12 @@ public sealed class RepeatSignal<T>(T value, int count) : IRequireCurrentThread<
         return EmptyDisposable.Instance;
     }
 
-    /// <summary>Executes the Subscribe operation.</summary>
-    /// <param name="onNext">The onNext value.</param>
-    /// <param name="onError">The onError value.</param>
-    /// <param name="onCompleted">The onCompleted value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Invokes <paramref name="onNext"/> with the value the configured number of times, then <paramref name="onCompleted"/>.</summary>
+    /// <param name="onNext">Invoked once per repetition.</param>
+    /// <param name="onError">Never invoked.</param>
+    /// <param name="onCompleted">Invoked after the last repetition.</param>
+    /// <returns>An empty disposable; the signal has finished by the time this returns.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="onNext"/> is <see langword="null"/>.</exception>
     public IDisposable Subscribe(Action<T> onNext, Action<Exception> onError, Action onCompleted)
     {
         ArgumentExceptionHelper.ThrowIfNull(onNext);

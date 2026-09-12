@@ -8,11 +8,7 @@ namespace ReactiveUI.Primitives.Reactive;
 namespace ReactiveUI.Primitives;
 #endif
 
-/// <summary>
-/// Dedicated cold signal/sink for <c>Buffer</c>. Each subscription gets its own lightweight sink
-/// (no broadcaster, no eager subscription); windows are buffered into a single array of the known
-/// window size and emitted directly, with only a partial trailing window copied to an exact size.
-/// </summary>
+/// <summary>Implementation types for the count-based buffering overloads.</summary>
 public static partial class LinqExtensions
 {
     /// <summary>Dedicated cold signal for <c>Buffer</c>.</summary>

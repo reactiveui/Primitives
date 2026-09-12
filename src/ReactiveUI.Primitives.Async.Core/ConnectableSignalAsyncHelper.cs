@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Async;
 /// <summary>Provides connectable-signal operations over flat state records.</summary>
 internal static class ConnectableSignalAsyncHelper
 {
-    /// <summary>Connects the state source once and returns a handle that can disconnect that connection.</summary>
+    /// <summary>Subscribes the state's signal to its source once, returning a handle that disconnects it.</summary>
     /// <typeparam name="T">The type of elements produced by the source sequence.</typeparam>
     /// <param name="state">The connectable signal state to operate on.</param>
     /// <param name="cancellationToken">A token that can cancel connection establishment.</param>
@@ -85,8 +85,7 @@ internal static class ConnectableSignalAsyncHelper
     [SuppressMessage(
         "Concurrency",
         "PSH1315:A blocking wait on an awaitable that may not be done",
-        Justification =
-            "IDisposable.Dispose is intrinsically synchronous; this method must tear down async connection state on the sync dispose path.")]
+        Justification = "The synchronous dispose contract leaves no way to await teardown of the async connection state.")]
     internal static void Dispose<T>(ConnectableSignalAsyncState<T> state)
     {
         if (!state.TryMarkDisposed())

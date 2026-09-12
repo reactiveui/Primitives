@@ -17,12 +17,6 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// Errors from any observable propagate to the downstream observer.
 /// </summary>
 /// <param name="sources">The list of one-shot observables to run in order.</param>
-/// <remarks>
-/// Replaces patterns like <c>sources.Concat().LastOrDefaultAsync()</c> with a single
-/// operator that subscribes sequentially. Uses an iterative loop with a sync-completion
-/// flag to avoid stack overflow when sources complete synchronously during
-/// <c>Subscribe</c>.
-/// </remarks>
 internal sealed class RunAllObservable(IReadOnlyList<IObservable<RxVoid>> sources) : IObservable<RxVoid>
 {
     /// <inheritdoc/>
@@ -43,10 +37,9 @@ internal sealed class RunAllObservable(IReadOnlyList<IObservable<RxVoid>> source
     }
 
     /// <summary>
-    /// Stateful observer that walks the source list sequentially. The sink subscribes itself
-    /// directly to each source — its own <see cref="IObserver{RxVoid}.OnCompleted"/> sets a
-    /// per-iteration flag the surrounding loop reads to decide whether to advance. This
-    /// replaces the previous probe-observer-per-iteration allocation pattern.
+    /// Stateful observer that walks the source list sequentially: the sink subscribes itself to each source, and its
+    /// own <see cref="IObserver{RxVoid}.OnCompleted"/> sets a per-iteration flag the surrounding loop reads to
+    /// decide whether to advance.
     /// </summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="sources">The source list to walk.</param>
@@ -66,10 +59,9 @@ internal sealed class RunAllObservable(IReadOnlyList<IObservable<RxVoid>> source
         /// <summary>Guards against re-entrant <see cref="RunNext"/> calls.</summary>
         private bool _looping;
 
-        /// <summary>Per-iteration latch (0 = pending, 1 = terminated). Set by <see cref="OnCompleted"/>
-        /// when a source terminates synchronously during <c>Subscribe</c>; read by the surrounding
-        /// loop in <see cref="RunNext"/>. Accessed via <see cref="Volatile"/> so it crosses the
-        /// method boundary safely without needing a separate probe-observer allocation per iteration.</summary>
+        /// <summary>Per-iteration latch (0 = pending, 1 = terminated), set by <see cref="OnCompleted"/> when a source
+        /// terminates synchronously during <c>Subscribe</c> and read by the surrounding loop in
+        /// <see cref="RunNext"/>.</summary>
         private int _iterationTerminated;
 
         /// <inheritdoc/>
@@ -146,12 +138,10 @@ internal sealed class RunAllObservable(IReadOnlyList<IObservable<RxVoid>> source
         }
 
         /// <summary>Emits the terminal <see cref="RxVoid"/> and completes once all sources have run.</summary>
-        /// <remarks>The already-done early-out is only reachable when a concurrent dispose latches between the
-        /// loop exit and this call; this small completion shell is excluded from coverage as race-only while the
-        /// trampoline loop in <see cref="RunNext"/> stays covered.</remarks>
         [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
         private void CompleteRun()
         {
+            // Race-only: a concurrent dispose can latch the done flag between the loop exit and this call.
             if (Interlocked.Exchange(ref _done, 1) != 0)
             {
                 return;

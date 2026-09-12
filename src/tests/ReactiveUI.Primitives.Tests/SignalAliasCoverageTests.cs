@@ -77,11 +77,11 @@ public class SignalAliasCoverageTests
         await Assert.That(observed).IsSameReferenceAs(expected);
 
         TaskCompletionSource<int> pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        List<int> pendingValues = [];
-        _ = pending.Task.ToObservable().Subscribe(pendingValues.Add);
+        AwaitableWitness<int> pendingWitness = new();
+        _ = pending.Task.ToObservable().Subscribe(pendingWitness);
         pending.SetResult(Two);
-        await TestPolling.SpinUntil(() => pendingValues.Count == One, TimeSpan.FromSeconds(One));
-        await Assert.That(pendingValues.SequenceEqual([Two])).IsTrue();
+        await pendingWitness.ValueCountReaching(One);
+        await Assert.That(pendingWitness.Values.SequenceEqual([Two])).IsTrue();
     }
 
     /// <summary>Verifies parity operators cover remaining public range and alias branches.</summary>

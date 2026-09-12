@@ -37,12 +37,12 @@ public sealed class TaskCountWitness<T> : IObserver<T>, IDisposable
     private int _stopped;
 
     /// <summary>Initializes a new instance of the <see cref="TaskCountWitness{T}"/> class.</summary>
-    /// <param name="cancellationToken">The token used to cancel the task and dispose the subscription.</param>
+    /// <param name="cancellationToken">The token that cancels the task and disposes the subscription.</param>
     public TaskCountWitness(CancellationToken cancellationToken) => _cancellationToken = cancellationToken;
 
     /// <summary>Initializes a new instance of the <see cref="TaskCountWitness{T}"/> class.</summary>
     /// <param name="predicate">The predicate.</param>
-    /// <param name="cancellationToken">The token used to cancel the task and dispose the subscription.</param>
+    /// <param name="cancellationToken">The token that cancels the task and disposes the subscription.</param>
     public TaskCountWitness(Func<T, bool> predicate, CancellationToken cancellationToken)
     {
         ArgumentExceptionHelper.ThrowIfNull(predicate);

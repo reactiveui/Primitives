@@ -15,14 +15,14 @@ public static partial class LinqExtensions
     /// <param name="disposable">The disposable.</param>
     extension(IDisposable disposable)
     {
-        /// <summary>Disposes the with.</summary>
-        /// <returns>A SingleDisposable.</returns>
+        /// <summary>Wraps the disposable so that disposing the wrapper disposes it exactly once.</summary>
+        /// <returns>A <see cref="SingleDisposable"/> that owns this disposable.</returns>
         public SingleDisposable DisposeWith() =>
             new(disposable);
 
-        /// <summary>Disposes the with.</summary>
-        /// <param name="action">The action.</param>
-        /// <returns>A SingleDisposable.</returns>
+        /// <summary>Wraps the disposable and runs an action just before it is disposed.</summary>
+        /// <param name="action">The action to run on disposal, or <see langword="null"/> to run nothing extra.</param>
+        /// <returns>A <see cref="SingleDisposable"/> that owns this disposable and first invokes <paramref name="action"/>.</returns>
         public SingleDisposable DisposeWith(Action? action) =>
             new(disposable, action);
     }
@@ -32,11 +32,11 @@ public static partial class LinqExtensions
     /// <param name="source">The source.</param>
     extension<TSource>(IObservable<TSource> source)
     {
-        /// <summary>Buffers the specified count.</summary>
-        /// <param name="count">The count of each buffer.</param>
-        /// <returns>An Signals sequence of buffers.</returns>
-        /// <exception cref="ArgumentExceptionHelper">source.</exception>
-        /// <exception cref="ArgumentOutOfRangeExceptionHelper">count.</exception>
+        /// <summary>Groups the source values into consecutive, non-overlapping buffers of a fixed size.</summary>
+        /// <param name="count">The number of values in each buffer.</param>
+        /// <returns>An observable sequence of buffers; the final buffer is shorter when the source ends mid-window.</returns>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentOutOfRangeExceptionHelper"><paramref name="count"/> is zero or negative.</exception>
         public IObservable<IList<TSource>> Buffer(int count)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -46,16 +46,12 @@ public static partial class LinqExtensions
             return new BufferCountSignal<TSource>(source, count, 0);
         }
 
-        /// <summary>Buffers the specified count then skips the specified count, then repeats.</summary>
-        /// <param name="count">Length of each buffer before being skipped.</param>
-        /// <param name="skip">Number of elements to skip between creation of consecutive buffers.</param>
-        /// <returns>An Signals sequence of buffers taking the count then skipping the skipped value, the sequecnce is then repeated.</returns>
-        /// <exception cref="ArgumentExceptionHelper">source.</exception>
-        /// <exception cref="ArgumentOutOfRangeExceptionHelper">
-        /// count
-        /// or
-        /// skip.
-        /// </exception>
+        /// <summary>Groups values into fixed-size buffers, opening a new buffer every <paramref name="skip"/> values.</summary>
+        /// <param name="count">The number of values in each buffer.</param>
+        /// <param name="skip">The number of values between the starts of consecutive buffers; a value below <paramref name="count"/> makes buffers overlap.</param>
+        /// <returns>An observable sequence of buffers, each opened <paramref name="skip"/> values after the one before it.</returns>
+        /// <exception cref="ArgumentExceptionHelper"><paramref name="source"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentOutOfRangeExceptionHelper"><paramref name="count"/> or <paramref name="skip"/> is zero or negative.</exception>
         public IObservable<IList<TSource>> Buffer(int count, int skip)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -74,9 +70,9 @@ public static partial class LinqExtensions
     extension<T>(T disposable)
         where T : IDisposable
     {
-        /// <summary>Disposes the IDisposable with the disposables instance.</summary>
-        /// <param name="disposables">The disposables.</param>
-        /// <returns>The original disposable.</returns>
+        /// <summary>Adds the disposable to a composite that will dispose it.</summary>
+        /// <param name="disposables">The composite taking ownership of the disposable.</param>
+        /// <returns>The same disposable, so the call can be chained onto its creation.</returns>
         public T DisposeWith(MultipleDisposable disposables)
         {
             ArgumentExceptionHelper.ThrowIfNull(disposables);

@@ -17,7 +17,7 @@ public static partial class LinqExtensions
     /// <summary>System.Reactive-named tuple-returning latest-value combination operators.</summary>
     /// <typeparam name="T">The element type of source 1.</typeparam>
     /// <param name="source">Source observable 1 whose latest value is combined.</param>
-    /// <remarks>Lower overload priority preserves existing selector calls that pass an untyped null selector.</remarks>
+    /// <remarks>Lower overload priority keeps a call that passes an untyped null binding to the selector overload.</remarks>
     extension<T>(IObservable<T> source)
     {
         /// <summary>Combines latest values from 2 observable sources into tuple values.</summary>

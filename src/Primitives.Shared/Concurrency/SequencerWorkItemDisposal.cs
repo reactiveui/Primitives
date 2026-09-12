@@ -15,10 +15,8 @@ internal static class SequencerWorkItemDisposal
     /// <param name="slot">The disposable slot shared with the work item's disposal.</param>
     /// <param name="disposable">The disposable returned by the scheduled action.</param>
     /// <remarks>
-    /// Disposal swaps a non-null sentinel into the slot, so a non-null exchange result means disposal already
-    /// owns (or will own) the slot and the freshly produced disposable must be released here. A null result
-    /// means this caller published first and disposal releases the slot later. This keeps the in-flight dispose
-    /// race correct with a single compare-exchange instead of a re-check loop.
+    /// Disposal swaps a non-null sentinel into the slot, so a non-null exchange result means disposal owns the
+    /// slot and this caller must release the disposable it produced.
     /// </remarks>
     internal static void Publish(ref IDisposable? slot, IDisposable disposable)
     {

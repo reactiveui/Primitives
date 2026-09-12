@@ -9,11 +9,6 @@ using ReactiveUI.Primitives.Async.Disposables;
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides a set of static methods for composing and merging asynchronous observable sequences.</summary>
-/// <remarks>The SignalAsync class offers extension methods that enable advanced composition patterns for
-/// asynchronous observables, such as merging multiple sequences into a single stream. These methods are designed to
-/// work with the SignalAsync{T} abstraction, supporting scenarios where asynchronous event streams need to be
-/// combined or coordinated. All methods are thread-safe and intended for use in asynchronous, reactive programming
-/// models.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Blend/Merge operators for an enumerable collection of observable source sequences.</summary>
@@ -26,10 +21,8 @@ public static partial class SignalAsyncExtensions
         /// source sequences as they arrive.
         /// </summary>
         /// <returns>An observable sequence that emits items from all input sequences as they are produced.</returns>
-        /// <remarks>The resulting observable sequence emits items from all source sequences in the order they
-        /// arrive, interleaving emissions if sources produce items concurrently. The merged sequence completes when all
-        /// source sequences have completed. If any source sequence signals an error, the merged sequence will propagate
-        /// that error and terminate.</remarks>
+        /// <remarks>Emissions interleave as the sources produce them; the result completes once every source has
+        /// completed, and an error from any source propagates and terminates it.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> Blend() =>
             new BlendEnumerableSignal<T>(sources);
@@ -55,9 +48,8 @@ public static partial class SignalAsyncExtensions
         /// inner sequences as they arrive.
         /// </summary>
         /// <returns>An asynchronous observable sequence that emits items from all inner observable sequences as they are produced.</returns>
-        /// <remarks>The resulting sequence emits items from all inner sequences concurrently as they become
-        /// available. The merged sequence completes when the source sequence and all inner sequences have completed. If any
-        /// inner sequence signals an error, the merged sequence will propagate that error and terminate.</remarks>
+        /// <remarks>Every inner sequence stays subscribed at once; the result completes only after the outer sequence
+        /// and all inner sequences have completed, and an error from any of them propagates and terminates it.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> Blend() =>
             new BlendSignalSourcesSignal<T>(source);
@@ -90,9 +82,8 @@ public static partial class SignalAsyncExtensions
         /// <summary>Combines the elements of two asynchronous observable sequences into a single sequence by merging their emissions.</summary>
         /// <param name="other">The second asynchronous observable sequence to merge with the first.</param>
         /// <returns>An SignalAsync{T} that emits the elements from both input sequences as they arrive.</returns>
-        /// <remarks>The resulting sequence emits items from both source sequences in the order they are produced.
-        /// The merged sequence completes when both input sequences have completed. If either source sequence signals an
-        /// error, the merged sequence will propagate that error and terminate.</remarks>
+        /// <remarks>The result completes once both sequences have completed; an error from either propagates and
+        /// terminates it.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> Blend(IObservableAsync<T> other) =>
             new BlendEnumerableSignal<T>([source, other]);
@@ -239,22 +230,16 @@ public static partial class SignalAsyncExtensions
                 _disposeCts);
         }
 
-        /// <summary>
-        /// Re-checks the disposed flag inside the serialization gate and forwards the value to
-        /// downstream if still alive. Extracted as an <see langword="internal"/> method so the
-        /// inside-gate after-dispose decision is directly unit-testable without racing the gate.
-        /// </summary>
+        /// <summary>Re-checks the disposed flag inside the serialization gate and forwards the value downstream if the
+        /// subscription is alive.</summary>
         /// <param name="value">The value to forward.</param>
         /// <returns>A task representing the asynchronous forward operation.</returns>
         internal ValueTask RelayNextIfActiveAsync(T value) => DisposalHelper.HasDisposed(_disposed)
             ? default
             : _observer.OnNextAsync(value, DisposedCancellationToken);
 
-        /// <summary>
-        /// Re-checks the disposed flag inside the serialization gate and forwards the error to
-        /// downstream if still alive. Extracted as an <see langword="internal"/> method for
-        /// direct unit testing.
-        /// </summary>
+        /// <summary>Re-checks the disposed flag inside the serialization gate and forwards the error downstream if the
+        /// subscription is alive.</summary>
         /// <param name="exception">The error to forward.</param>
         /// <returns>A task representing the asynchronous forward operation.</returns>
         internal ValueTask RelayErrorIfActiveAsync(Exception exception) => DisposalHelper.HasDisposed(_disposed)
@@ -445,15 +430,10 @@ public static partial class SignalAsyncExtensions
         /// <param name="parent">The parent bounded merge coordinator whose semaphore slot is released on disposal.</param>
         internal sealed class BlendBranchWitnessWithPermit(BoundedBlendCoordinator<T> parent) : BlendBranchWitness(parent)
         {
-            /// <summary>Tracks whether the semaphore slot has already been released for this witness.</summary>
-            /// <remarks>
-            /// <see cref="WitnessAsync{T}.DisposeAsync"/> can be invoked more than once for the same witness
-            /// (auto-dispose after <c>OnCompletedAsync</c>, then again from <c>CompositeDisposableAsync.Remove</c>
-            /// and from the parent's <c>FinishAsync</c> path). Without this guard, <see cref="SemaphoreSlim.Release()"/>
-            /// would be called multiple times per witness, exceeding <c>maxCount</c> and throwing
-            /// <see cref="SemaphoreFullException"/> — which interrupts the parent's completion chain and leaves
-            /// downstream witnesses waiting forever.
-            /// </remarks>
+            /// <summary>Guards the one-time release of this witness's semaphore slot.</summary>
+            /// <remarks><see cref="WitnessAsync{T}.DisposeAsync"/> can run several times for one witness, and a repeat
+            /// <see cref="SemaphoreSlim.Release()"/> would exceed the semaphore's count and throw
+            /// <see cref="SemaphoreFullException"/>, breaking the parent's completion chain.</remarks>
             private int _released;
 
             /// <inheritdoc/>
@@ -498,7 +478,7 @@ public static partial class SignalAsyncExtensions
             /// <summary>Cancellation source for disposal.</summary>
             private readonly CancellationTokenSource _cts = new();
 
-            /// <summary>A cached token from <see cref="_cts"/> used to link with per-emission tokens.</summary>
+            /// <summary>Token signalled when this subscription is disposed.</summary>
             private readonly CancellationToken _disposedCancellationToken;
 
             /// <summary>Serializes observer notifications to prevent concurrent calls.</summary>
@@ -508,7 +488,8 @@ public static partial class SignalAsyncExtensions
             private readonly TaskCompletionSource<bool> _subscriptionFinished =
                 new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-            /// <summary>Tracks reentrant calls to prevent deadlocks.</summary>
+            /// <summary>Marks the subscribing loop's own async flow so that a <see cref="FinishAsync"/> raised from
+            /// inside it does not wait on <see cref="_subscriptionFinished"/> and deadlock.</summary>
             private readonly AsyncLocal<bool> _reentrant = new();
 
             /// <summary>The downstream observer.</summary>
@@ -538,11 +519,8 @@ public static partial class SignalAsyncExtensions
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public ValueTask DisposeAsync() => FinishAsync(null);
 
-            /// <summary>
-            /// Routes an exception from a post-disposal completion result to the unhandled exception handler.
-            /// Called when <see cref="DisposalHelper.TrySetDisposed"/> returns true (already disposed)
-            /// and the completion result carries an exception.
-            /// </summary>
+            /// <summary>Routes the exception of a completion result that arrives after disposal to the unhandled
+            /// exception handler.</summary>
             /// <param name="result">The completion result, or null if disposing without signaling.</param>
             internal static void RoutePostDisposalException(Result? result)
             {
@@ -559,7 +537,7 @@ public static partial class SignalAsyncExtensions
             [SuppressMessage(
                 "Roslynator",
                 "RCS1047:Non-asynchronous method name should not end with \'Async\'",
-                Justification = "Method already named with Async")]
+                Justification = "Fire-and-forget launcher; the asynchronous work is the lambda it starts.")]
             internal void BeginSubscribing() => FireAndForgetHelper.Run(async () =>
             {
                 _reentrant.Value = true;
@@ -649,11 +627,8 @@ public static partial class SignalAsyncExtensions
                 }
             }
 
-            /// <summary>
-            /// Re-checks the disposed flag inside the serialization gate and forwards the value
-            /// to downstream if still alive. Extracted as an <see langword="internal"/> method for
-            /// direct unit testing of the inside-gate after-dispose decision.
-            /// </summary>
+            /// <summary>Re-checks the disposed flag inside the serialization gate and forwards the value downstream if
+            /// the subscription is alive.</summary>
             /// <param name="value">The value to forward.</param>
             /// <returns>A task representing the asynchronous forward operation.</returns>
             internal ValueTask RelayNextIfActiveAsync(T value) => DisposalHelper.HasDisposed(_disposed)
@@ -678,11 +653,8 @@ public static partial class SignalAsyncExtensions
                 }
             }
 
-            /// <summary>
-            /// Re-checks the disposed flag inside the serialization gate and forwards the error
-            /// to downstream if still alive. Extracted as an <see langword="internal"/> method
-            /// for direct unit testing of the inside-gate after-dispose decision.
-            /// </summary>
+            /// <summary>Re-checks the disposed flag inside the serialization gate and forwards the error downstream if
+            /// the subscription is alive.</summary>
             /// <param name="ex">The error to forward.</param>
             /// <returns>A task representing the asynchronous forward operation.</returns>
             internal ValueTask RelayErrorIfActiveAsync(Exception ex) => DisposalHelper.HasDisposed(_disposed)

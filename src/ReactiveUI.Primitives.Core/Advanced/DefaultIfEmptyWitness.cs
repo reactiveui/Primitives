@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Advanced;
 
-/// <summary>Observer for default-if-empty.</summary>
+/// <summary>Sink that forwards source values, emitting a single fallback value when the source completes empty.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
 /// <param name="observer">The downstream observer.</param>
 /// <param name="defaultValue">Value emitted for an empty source.</param>
@@ -62,7 +62,7 @@ public sealed class DefaultIfEmptyWitness<T>(IObserver<T> observer, T defaultVal
         }
     }
 
-    /// <summary>Assigns the upstream subscription, disposing it if one is already held.</summary>
+    /// <summary>Assigns the upstream subscription, disposing the incoming one when this sink holds a subscription or has been disposed.</summary>
     /// <param name="subscription">The upstream subscription.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetSubscription(IDisposable subscription) => SinkSubscription.Set(ref _subscription, subscription);

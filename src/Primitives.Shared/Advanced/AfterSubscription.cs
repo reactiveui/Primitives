@@ -16,7 +16,7 @@ public sealed class AfterSubscription : IDisposable
 {
     /// <summary>Initializes a new instance of the <see cref="AfterSubscription"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
-    /// <param name="scheduler">The scheduler used to emit ticks.</param>
+    /// <param name="scheduler">The scheduler that emits ticks.</param>
     /// <param name="dueTime">The delay before the first tick.</param>
     /// <param name="period">The period between subsequent ticks, or <see langword="null"/> for one-shot timers.</param>
     public AfterSubscription(IObserver<long> observer, ISequencer scheduler, TimeSpan dueTime, TimeSpan? period)
@@ -30,7 +30,7 @@ public sealed class AfterSubscription : IDisposable
     /// <summary>Gets the downstream observer.</summary>
     private IObserver<long> Observer { get; }
 
-    /// <summary>Gets the scheduler used to emit ticks.</summary>
+    /// <summary>Gets the scheduler that emits ticks.</summary>
     private ISequencer Scheduler { get; }
 
     /// <summary>Gets the delay before the first tick.</summary>

@@ -4,11 +4,7 @@
 
 namespace ReactiveUI.Primitives.Async;
 
-/// <summary>
-/// Predicate-driven stop signals backing the <c>TakeUntil(predicate)</c> overloads declared in
-/// <c>TakeUntil.cs</c>. Unlike the other take-until signals these have no second sequence, task or
-/// token to race against: the stop condition is evaluated inline on each source element.
-/// </summary>
+/// <summary>Provides the predicate-driven stop signals that evaluate their stop condition inline on each source element.</summary>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Async observable that emits items from the source until the specified predicate returns true.</summary>

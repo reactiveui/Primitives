@@ -17,7 +17,7 @@ internal sealed class ConnectableSignalAsyncState<T> : IDisposable
     [SuppressMessage(
         "Style",
         "SST1401:Field should be private",
-        Justification = "Gate fields are intentionally direct readonly state for helper access.")]
+        Justification = "The helper class that drives this state enters the gate directly.")]
     internal readonly AsyncSerialGate Gate = new();
 
     /// <summary>The monitor used to make synchronous disposal idempotent.</summary>
@@ -45,14 +45,11 @@ internal sealed class ConnectableSignalAsyncState<T> : IDisposable
     /// <summary>Gets or sets the active source subscription, if connected.</summary>
     internal SingleAssignmentDisposableAsync? Connection { get; set; }
 
-    /// <summary>Gets or sets a value indicating whether synchronous disposal has run.</summary>
+    /// <summary>Gets or sets a value indicating whether disposal has been claimed.</summary>
     internal bool IsDisposed { get; set; }
 
-    /// <summary>Gets the token canceled when the connectable signal is disposed. Captured while the source is
-    /// still alive because <see cref="Dispose"/> disposes that source, and reading
-    /// <see cref="CancellationTokenSource.Token"/> from a disposed source throws
-    /// <see cref="ObjectDisposedException"/>. Disposal always cancels before it disposes, so this token is
-    /// already cancelled by the time anyone can observe it post-disposal.</summary>
+    /// <summary>Gets the token cancelled when the connectable signal is disposed, captured at construction because
+    /// <see cref="Dispose"/> makes <see cref="CancellationTokenSource.Token"/> throw.</summary>
     internal CancellationToken DisposedCancellationToken { get; }
 
     /// <inheritdoc/>
@@ -62,7 +59,7 @@ internal sealed class ConnectableSignalAsyncState<T> : IDisposable
         DisposedCts.Dispose();
     }
 
-    /// <summary>Marks the state as disposed if disposal has not already started.</summary>
+    /// <summary>Claims disposal for the first caller to ask.</summary>
     /// <returns><see langword="true"/> when this call owns disposal; otherwise, <see langword="false"/>.</returns>
     internal bool TryMarkDisposed()
     {

@@ -12,7 +12,7 @@ public sealed class StartSubscription<TResult> : TaskSignalSubscription<TResult>
     /// <summary>Initializes a new instance of the <see cref="StartSubscription{TResult}"/> class.</summary>
     /// <param name="observer">The observer receiving the produced value.</param>
     /// <param name="function">The function to invoke.</param>
-    /// <param name="taskScheduler">The optional scheduler used to invoke the function.</param>
+    /// <param name="taskScheduler">The optional scheduler that invokes the function; <see langword="null"/> invokes it inline.</param>
     public StartSubscription(
         IObserverAsync<TResult> observer,
         Func<TResult> function,
@@ -28,7 +28,7 @@ public sealed class StartSubscription<TResult> : TaskSignalSubscription<TResult>
     /// <summary>Gets the function to invoke.</summary>
     private Func<TResult> Function { get; }
 
-    /// <summary>Gets the optional scheduler used to invoke the function.</summary>
+    /// <summary>Gets the optional scheduler that invokes the function.</summary>
     private TaskScheduler? TaskScheduler { get; }
 
     /// <inheritdoc/>

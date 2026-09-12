@@ -75,9 +75,6 @@ public partial class SignalOperatorMixinsTests
     /// <summary>The expected error type name from the expire-timeout branch.</summary>
     private static readonly string[] ExpectedTimeoutErrors = [nameof(TimeoutException)];
 
-    /// <summary>How long a disposed subscription is given to prove it forwards nothing after disposal.</summary>
-    private static readonly TimeSpan PostDisposalSettleDelay = TimeSpan.FromMilliseconds(50);
-
     /// <summary>The expected single true value emitted by the true signal.</summary>
     private static readonly bool[] ExpectedTrueValues = [true];
 
@@ -225,10 +222,10 @@ public partial class SignalOperatorMixinsTests
         _ = Assert.Throws<ArgumentNullException>(static () => ((IObservable<int>)null!).ToSignal());
 
         TaskCompletionSource<int> pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        RecordingWitness<int> pendingSignal = new();
+        AwaitableWitness<int> pendingSignal = new();
         using var pendingSubscription = pending.Task.ToSignal().Subscribe(pendingSignal);
         pending.SetResult(Three);
-        await TestPolling.SpinUntil(() => pendingSignal.Values.Count == 1, TimeSpan.FromSeconds(One));
+        await pendingSignal.ValueCountReaching(1);
         await Assert.That(pendingSignal.Values.SequenceEqual([Three])).IsTrue();
 
         RecordingWitness<int> emptySwitch = new();
@@ -519,25 +516,21 @@ public partial class SignalOperatorMixinsTests
         TaskCompletionSource<int> first = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource<int> second = new(TaskCreationOptions.RunContinuationsAsynchronously);
         Signal<Task<int>> source = new();
-        RecordingWitness<int> chained = new();
+        AwaitableWitness<int> chained = new();
 
         using var subscription = source.Chain().Subscribe(chained);
         source.OnNext(first.Task);
         source.OnNext(second.Task);
         source.OnCompleted();
 
+        // The later task finishes first; forwarding it out of turn would land Two ahead of One.
         second.SetResult(Two);
-        await Task.Yield();
-        await Assert.That(chained.Values.Count).IsEqualTo(0);
-
         first.SetResult(One);
-        await TestPolling.SpinUntil(
-            () => chained.Values.Count == Two && chained.Completed == One,
-            TimeSpan.FromSeconds(One));
+        await chained.Completion;
 
         await Assert.That(chained.Values.SequenceEqual(ExpectedOneTwo)).IsTrue();
         await Assert.That(chained.Errors.Count).IsEqualTo(0);
-        await Assert.That(chained.Completed).IsEqualTo(One);
+        await Assert.That(chained.Completions).IsEqualTo(One);
     }
 
     /// <summary>Verifies direct task-chain terminal and disposal paths.</summary>
@@ -590,7 +583,7 @@ public partial class SignalOperatorMixinsTests
             pending.SetResult(Five);
         }
 
-        await Task.Delay(PostDisposalSettleDelay);
+        await Task.Yield();
         await Assert.That(disposed.Values.Count).IsEqualTo(0);
         await Assert.That(disposed.Errors.Count).IsEqualTo(0);
         await Assert.That(disposed.Completed).IsEqualTo(0);

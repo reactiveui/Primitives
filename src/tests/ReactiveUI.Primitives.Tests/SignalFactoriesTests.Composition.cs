@@ -301,7 +301,7 @@ public partial class SignalFactoriesTests
             try
             {
                 yield return FirstValue;
-                await Task.Delay(Timeout.InfiniteTimeSpan, token);
+                await token.WhenCanceled();
                 yield return SecondValue;
             }
             finally
@@ -319,9 +319,9 @@ public partial class SignalFactoriesTests
             },
             static _ => { },
             static () => { });
-        await firstValueObserved.Task.WaitAsync(testToken).ConfigureAwait(false);
+        await firstValueObserved.Task.ConfigureAwait(false);
         subscription.Dispose();
-        await disposedSignal.Task.WaitAsync(testToken).ConfigureAwait(false);
+        await disposedSignal.Task.ConfigureAwait(false);
         await Assert.That(values.SequenceEqual(AsyncEnumerableBeforeDisposeExpected)).IsTrue();
         await Assert.That(disposed).IsTrue();
     }

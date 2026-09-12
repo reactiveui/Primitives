@@ -35,10 +35,7 @@ internal sealed class DebounceUntilObservable<T>(
         return new DisposableBag(subscription, sink);
     }
 
-    /// <summary>
-    /// Sink for the debounce-until observable. Composes <see cref="TimerSinkState{T}"/> for the
-    /// shared gate / timer / done-flag plumbing so this class only carries the OnNext logic.
-    /// </summary>
+    /// <summary>Sink that forwards a value inline when the condition holds and otherwise after the debounce window.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="debounce">The debounce duration.</param>
     /// <param name="condition">The condition.</param>

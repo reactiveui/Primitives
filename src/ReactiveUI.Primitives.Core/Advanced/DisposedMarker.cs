@@ -4,7 +4,7 @@
 
 namespace ReactiveUI.Primitives.Advanced;
 
-/// <summary>Disposable marker for disposed sinks.</summary>
+/// <summary>No-op disposable used as the sentinel value for a released subscription slot.</summary>
 public sealed class DisposedMarker : IDisposable
 {
     /// <inheritdoc/>

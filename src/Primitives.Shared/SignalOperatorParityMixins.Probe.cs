@@ -53,7 +53,7 @@ public static partial class LinqExtensions
         }
     }
 
-    /// <summary>Coordinates a sampled observable sequence without the anonymous signal wrapper.</summary>
+    /// <summary>Coordinates a sampled observable sequence and its tick timer.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     /// <param name="source">The source observable.</param>
     /// <param name="period">The sample period.</param>
@@ -73,18 +73,14 @@ public static partial class LinqExtensions
         /// <summary>The downstream observer.</summary>
         private readonly IObserver<T> _observer = observer;
 
-        /// <summary>
-        /// The synchronization gate. A reentrant monitor is used because emissions are serialized
-        /// while the gate is held, which a non-reentrant spin lock cannot do safely.
-        /// </summary>
+        /// <summary>The synchronization gate, reentrant because emissions are made while it is held.</summary>
         private readonly Lock _gate = new();
 
         /// <summary>The active source subscription.</summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
             "Usage",
             "CA2213:Disposable fields should be disposed",
-            Justification =
-                "Disposed via the thread-safe Interlocked.Exchange teardown in Dispose; CA2213 does not recognize disposal of a field through Interlocked.Exchange.")]
+            Justification = "Dispose tears this field down through Interlocked.Exchange.")]
         private IDisposable? _subscription;
 
         /// <summary>The active timer.</summary>
@@ -114,8 +110,8 @@ public static partial class LinqExtensions
             }
 
             // Latch the terminal state as well as the resources: a source that ignores the disposal of its
-            // subscription can keep pushing, and its completion or error must not reach an observer that has
-            // already unsubscribed. The gate is reentrant, so the terminal paths may reach this while holding it.
+            // subscription can keep pushing, and its completion or error must not reach an unsubscribed observer.
+            // The gate is reentrant, so a terminal path may reach this while holding it.
             lock (_gate)
             {
                 _done = true;

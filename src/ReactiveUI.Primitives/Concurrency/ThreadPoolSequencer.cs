@@ -29,17 +29,12 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
     private readonly Timer _timer;
 
     /// <summary>
-    /// Non-zero once <see cref="Dispose"/> has released the timer and the queue. Written under <see cref="_gate"/>
-    /// so every path that touches the timer is ordered against disposal, but read without it on the immediate path,
-    /// which never goes near the timer.
+    /// Non-zero once <see cref="Dispose"/> has released the timer and the queue; written under <see cref="_gate"/> so
+    /// timer paths are ordered against disposal, and read unlocked on the immediate path, which ignores the timer.
     /// </summary>
     private int _isDisposed;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ThreadPoolSequencer"/> class. Callers use <see cref="Instance"/>;
-    /// this is internal so a test can own an isolated sequencer it may dispose without shutting the shared singleton
-    /// down for every other test.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="ThreadPoolSequencer"/> class; callers use <see cref="Instance"/>.</summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Correctness",
         "SST2403:Do not let 'this' escape from a constructor",
@@ -95,8 +90,8 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
 
         lock (_gate)
         {
-            // Tested under the same gate disposal takes, so an item that makes it into the queue is one disposal is
-            // guaranteed to see and release. It can never be enqueued behind an already-released timer.
+            // Checked under the gate disposal takes, so an item that reaches the queue is one disposal will see and
+            // release; it can never land behind a released timer.
             ObjectDisposedExceptionHelper.ThrowIf(IsDisposed, this);
 
             _queue.Enqueue(new(item, dueTimestamp));
@@ -105,15 +100,15 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
     }
 
     /// <summary>
-    /// Releases the delay timer this sequencer owns and cancels the delayed work still queued behind it. Scheduling
-    /// through a disposed sequencer throws <see cref="ObjectDisposedException"/> rather than accepting work that
-    /// could never become due. Work the thread pool has already picked up runs to completion.
+    /// Releases the delay timer this sequencer owns and cancels the delayed work queued behind it. Scheduling through
+    /// a disposed sequencer throws <see cref="ObjectDisposedException"/> rather than accepting work that could never
+    /// become due. Work the thread pool has picked up runs to completion.
     /// </summary>
     public void Dispose()
     {
-        // Under the gate: every arm of the timer happens under it too, so the timer can never be re-armed after it
-        // is released here. Timer.Dispose does not wait for an in-flight callback, so a drain blocked on the gate
-        // cannot deadlock this — it simply observes the disposed flag once it gets in.
+        // Arming the timer takes this gate too, so it cannot be re-armed after the release below. Timer.Dispose does
+        // not wait for an in-flight callback, so a drain blocked on the gate observes the disposed flag rather than
+        // deadlocking here.
         lock (_gate)
         {
             if (IsDisposed)
@@ -127,7 +122,7 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
         }
     }
 
-    /// <summary>Executes a work item when it has not already been cancelled.</summary>
+    /// <summary>Executes the work item unless it has been cancelled.</summary>
     /// <param name="item">Work item to execute.</param>
     private static void ExecuteQueued(IWorkItem item)
     {
@@ -186,10 +181,7 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
         return false;
     }
 
-    /// <summary>
-    /// Cancels and drops every queued delayed item. The items are the handles their callers hold, so disposing them
-    /// releases the caller's work instead of stranding it in a queue nothing will ever drain again.
-    /// </summary>
+    /// <summary>Cancels and drops every queued delayed item, disposing each so its caller's handle is released.</summary>
     private void ReleaseQueuedNoLock()
     {
         while (_queue.TryDequeue(out var pending))
@@ -206,8 +198,8 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
     {
         if (IsDisposed)
         {
-            // Disposal released the timer and the queue under this same gate. A drain that is still unwinding on
-            // the timer's callback thread lands here, and must not re-arm a timer that no longer exists.
+            // Disposal released the timer and the queue under this same gate, so a drain unwinding on the timer's
+            // callback thread lands here and must not re-arm a released timer.
             return;
         }
 

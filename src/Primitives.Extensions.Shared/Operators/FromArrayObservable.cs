@@ -11,11 +11,8 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
 /// <summary>
-/// Factory operator that emits each element of an <see cref="IEnumerable{T}"/>
-/// to a single subscriber, then completes. The emission can optionally be
-/// marshalled through a scheduler. Replaces the
-/// <c>Observable.Create&lt;T&gt;(o =&gt; scheduler.ScheduleSafe(() =&gt; o.FastForEach(source)))</c>
-/// pattern with a dedicated <see cref="IObservable{T}"/> implementation.
+/// Factory operator that emits each element of an <see cref="IEnumerable{T}"/> to a single subscriber and then
+/// completes, optionally marshalling the emission through a scheduler.
 /// </summary>
 /// <typeparam name="T">The element type emitted to the downstream observer.</typeparam>
 /// <param name="source">The source enumerable whose elements are pumped on subscription.</param>

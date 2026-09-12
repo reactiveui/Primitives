@@ -80,12 +80,10 @@ public sealed class SwitchWitness<T> : IDisposable
             error => OnError(current, error),
             () => OnCompleted(current));
 
-        // Subscribing can push a value downstream synchronously, and a downstream handler is free to feed the
-        // outer source again. That re-enters OnSource, installs a newer generation, and only then returns here.
-        // Installing unconditionally at that point would replace the newer subscription with this stale one and
-        // dispose it, leaving a subscription whose notifications are all filtered out by version - the sequence
-        // would then never produce another value nor complete. Only the generation that is still current may
-        // occupy the slot; a superseded one disposes itself, outside the gate.
+        // Subscribing can push a value downstream synchronously, and that handler is free to feed the outer
+        // source again, re-entering OnSource and installing a newer generation before this call returns. Only
+        // the current generation may occupy the slot: installing a superseded subscription would dispose the
+        // newer one and leave a sequence whose notifications are all filtered out by version.
         var superseded = false;
         lock (_gate)
         {

@@ -251,16 +251,16 @@ public partial class SignalFactoriesTests
     [Test]
     public async Task FromAsyncWithAnUncancellableTokenStillCompletesWithItsResult()
     {
-        RecordingWitness<int> witness = new();
+        AwaitableWitness<int> witness = new();
 
         using var subscription = Signal
             .FromAsync(static _ => Task.FromResult(Seven), CancellationToken.None)
             .Subscribe(witness);
 
-        await TestPolling.SpinUntil(() => witness.Completed == 1, TimeSpan.FromSeconds(TimeoutSeconds));
+        await witness.Completion;
 
         await Assert.That(witness.Values.SequenceEqual(ExpectedSingleSeven)).IsTrue();
-        await Assert.That(witness.Completed).IsEqualTo(1);
+        await Assert.That(witness.Completions).IsEqualTo(1);
         await Assert.That(witness.Errors.Count).IsEqualTo(0);
     }
 

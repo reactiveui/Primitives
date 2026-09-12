@@ -9,27 +9,27 @@ namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 /// <summary>Edge-case coverage for <c>DropIfBusyObservable&lt;T&gt;</c>.</summary>
 public class DropIfBusyObservableTests
 {
-    /// <summary>Delay used to let fire-and-forget async continuations settle.</summary>
-    private const int SettleDelayMilliseconds = 50;
-
-    /// <summary>Guard timeout so a hung rendezvous fails this test rather than stalling the run.</summary>
-    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
-
     /// <summary>Verifies a handler completion after source completion does not emit the value.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenHandlerCompletesAfterSourceDone_ThenValueDropped()
     {
         Subject<int> subject = new();
-        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // The release gate completes its continuations inline, so the handler's tail runs here.
+        TaskCompletionSource release = new();
+        TaskCompletionSource handlerResumed = new();
         List<int> values = [];
         var completed = false;
-        using var sub = subject.DropIfBusy(async _ => await release.Task.ConfigureAwait(false))
-            .Subscribe(values.Add, () => completed = true);
+        using var sub = subject.DropIfBusy(async _ =>
+        {
+            await release.Task.ConfigureAwait(false);
+            handlerResumed.SetResult();
+        }).Subscribe(values.Add, () => completed = true);
         subject.OnNext(1);
         subject.OnCompleted();
         release.SetResult();
-        await Task.Delay(SettleDelayMilliseconds).ConfigureAwait(false);
+        await handlerResumed.Task;
         await Assert.That(values).IsEmpty();
         await Assert.That(completed).IsTrue();
     }
@@ -40,7 +40,9 @@ public class DropIfBusyObservableTests
     public async Task WhenHandlerThrowsAfterSourceDone_ThenErrorDropped()
     {
         Subject<int> subject = new();
-        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // The release gate completes its continuations inline, so the handler throws here.
+        TaskCompletionSource release = new();
         InvalidOperationException expected = new("late-handler");
         Exception? caught = null;
         var completed = false;
@@ -55,7 +57,6 @@ public class DropIfBusyObservableTests
         subject.OnNext(1);
         subject.OnCompleted();
         release.SetResult();
-        await Task.Delay(SettleDelayMilliseconds).ConfigureAwait(false);
         await Assert.That(caught).IsNull();
         await Assert.That(completed).IsTrue();
     }
@@ -81,8 +82,8 @@ public class DropIfBusyObservableTests
     public async Task WhenHandlerThrowsBeforeDone_ThenForwardsError()
     {
         Subject<int> subject = new();
-        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        TaskCompletionSource<Exception> error = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource release = new();
+        TaskCompletionSource<Exception> error = new();
         InvalidOperationException expected = new("handler");
         using var sub = subject.DropIfBusy(async _ =>
         {
@@ -93,7 +94,7 @@ public class DropIfBusyObservableTests
             ex => error.TrySetResult(ex));
         subject.OnNext(1);
         release.SetResult();
-        var caught = await error.Task.WaitAsync(GuardTimeout).ConfigureAwait(false);
+        var caught = await error.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 }

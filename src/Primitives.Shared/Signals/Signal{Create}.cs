@@ -12,17 +12,16 @@ using ReactiveUI.Primitives.Advanced;
 namespace ReactiveUI.Primitives.Signals;
 #endif
 
-/// <summary>Create Signals functionality.</summary>
+/// <summary>Factory methods that build signals from subscribe functions and deferred sources.</summary>
 public static partial class Signal
 {
     /// <summary>
-    /// Create anonymous Signals. Observer has exception durability.
-    /// This is recommended for make operator and event, generating a HotSignals.
+    /// Creates a signal that runs the subscribe function for each observer. A downstream <c>OnNext</c> that throws
+    /// leaves the subscription intact, which suits hot signals built over operators and events.
     /// </summary>
-    /// <typeparam name="T">The type.</typeparam>
-    /// <param name="subscribe">The subscribe.</param>
-    /// <returns>An Signals.</returns>
-    /// <exception cref="ArgumentExceptionHelper">subscribe.</exception>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="subscribe">Invoked for each observer; returns the disposable that releases the subscription.</param>
+    /// <returns>A signal backed by <paramref name="subscribe"/>.</returns>
     /// <exception cref="ArgumentExceptionHelper"><paramref name="subscribe" /> is <c>null</c>.</exception>
     public static IObservable<T> Create<T>(Func<IObserver<T>, IDisposable> subscribe)
     {
@@ -51,10 +50,7 @@ public static partial class Signal
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2318:Members should not have identical bodies",
-        Justification =
-            "A deliberate overload accepting a cancellable subscribe delegate. The body matches the non-cancellable "
-            + "overload because AsyncCreateSignal<T> exposes a constructor for each delegate shape; the two take "
-            + "different delegate types and cannot forward to one another.")]
+        Justification = "The overloads take different delegate types and cannot forward to one another.")]
     public static IObservable<T> Create<T>(Func<IObserver<T>, CancellationToken, Task<IDisposable>> subscribe)
     {
         ArgumentExceptionHelper.ThrowIfNull(subscribe);
@@ -63,14 +59,13 @@ public static partial class Signal
     }
 
     /// <summary>
-    /// Create anonymous Signals. Observer has exception durability.
-    /// This is recommended for make operator and event, generating a HotSignals.
+    /// Creates a signal that runs the subscribe function for each observer. A downstream <c>OnNext</c> that throws
+    /// leaves the subscription intact, which suits hot signals built over operators and events.
     /// </summary>
-    /// <typeparam name="T">The type.</typeparam>
-    /// <param name="subscribe">The subscribe.</param>
-    /// <param name="isRequiredSubscribeOnCurrentThread">if set to <c>true</c> [is required subscribe on current thread].</param>
-    /// <returns>An Signals.</returns>
-    /// <exception cref="ArgumentExceptionHelper">subscribe.</exception>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="subscribe">Invoked for each observer; returns the disposable that releases the subscription.</param>
+    /// <param name="isRequiredSubscribeOnCurrentThread">Whether subscription must be dispatched through the current-thread sequencer.</param>
+    /// <returns>A signal backed by <paramref name="subscribe"/>.</returns>
     /// <exception cref="ArgumentExceptionHelper"><paramref name="subscribe" /> is <c>null</c>.</exception>
     public static IObservable<T> Create<T>(
         Func<IObserver<T>, IDisposable> subscribe,
@@ -82,15 +77,14 @@ public static partial class Signal
     }
 
     /// <summary>
-    /// Create anonymous Signals. Observer has exception durability.
-    /// This is recommended for make operator and event, generating a HotSignals.
+    /// Creates a signal that passes the state to the subscribe function for each observer, so the function can be
+    /// static instead of capturing a closure.
     /// </summary>
-    /// <typeparam name="T">The type.</typeparam>
-    /// <typeparam name="TState">The type of the state.</typeparam>
-    /// <param name="state">The state.</param>
-    /// <param name="subscribe">The subscribe.</param>
-    /// <returns>An Signals.</returns>
-    /// <exception cref="ArgumentExceptionHelper">subscribe.</exception>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <typeparam name="TState">The type of the captured state.</typeparam>
+    /// <param name="state">The state passed to <paramref name="subscribe"/> on each subscription.</param>
+    /// <param name="subscribe">Invoked for each observer; returns the disposable that releases the subscription.</param>
+    /// <returns>A signal backed by <paramref name="subscribe"/>.</returns>
     /// <exception cref="ArgumentExceptionHelper"><paramref name="subscribe" /> is <c>null</c>.</exception>
     public static IObservable<T> CreateWithState<T, TState>(
         TState state,
@@ -102,16 +96,15 @@ public static partial class Signal
     }
 
     /// <summary>
-    /// Create anonymous Signals. Observer has exception durability.
-    /// This is recommended for make operator and event, generating a HotSignals.
+    /// Creates a signal that passes the state to the subscribe function for each observer, so the function can be
+    /// static instead of capturing a closure.
     /// </summary>
-    /// <typeparam name="T">The type.</typeparam>
-    /// <typeparam name="TState">The type of the state.</typeparam>
-    /// <param name="state">The state.</param>
-    /// <param name="subscribe">The subscribe.</param>
-    /// <param name="isRequiredSubscribeOnCurrentThread">if set to <c>true</c> [is required subscribe on current thread].</param>
-    /// <returns>An Signals.</returns>
-    /// <exception cref="ArgumentExceptionHelper">subscribe.</exception>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <typeparam name="TState">The type of the captured state.</typeparam>
+    /// <param name="state">The state passed to <paramref name="subscribe"/> on each subscription.</param>
+    /// <param name="subscribe">Invoked for each observer; returns the disposable that releases the subscription.</param>
+    /// <param name="isRequiredSubscribeOnCurrentThread">Whether subscription must be dispatched through the current-thread sequencer.</param>
+    /// <returns>A signal backed by <paramref name="subscribe"/>.</returns>
     /// <exception cref="ArgumentExceptionHelper"><paramref name="subscribe" /> is <c>null</c>.</exception>
     public static IObservable<T> CreateWithState<T, TState>(
         TState state,
@@ -124,13 +117,12 @@ public static partial class Signal
     }
 
     /// <summary>
-    /// Create anonymous Signals. Safe means auto detach when error raised in onNext pipeline.
-    /// This is recommended for making a ColdSignals.
+    /// Creates a signal that runs the subscribe function for each observer and releases the subscription when a
+    /// downstream <c>OnNext</c> throws, which suits cold signals.
     /// </summary>
-    /// <typeparam name="T">The type.</typeparam>
-    /// <param name="subscribe">The subscribe.</param>
-    /// <returns>An Signals.</returns>
-    /// <exception cref="ArgumentExceptionHelper">subscribe.</exception>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="subscribe">Invoked for each observer; returns the disposable that releases the subscription.</param>
+    /// <returns>A signal backed by <paramref name="subscribe"/>.</returns>
     /// <exception cref="ArgumentExceptionHelper"><paramref name="subscribe" /> is <c>null</c>.</exception>
     public static IObservable<T> CreateSafe<T>(Func<IObserver<T>, IDisposable> subscribe)
     {
@@ -140,14 +132,13 @@ public static partial class Signal
     }
 
     /// <summary>
-    /// Create anonymous Signals. Safe means auto detach when error raised in onNext pipeline.
-    /// This is recommended for making a ColdSignals.
+    /// Creates a signal that runs the subscribe function for each observer and releases the subscription when a
+    /// downstream <c>OnNext</c> throws, which suits cold signals.
     /// </summary>
-    /// <typeparam name="T">The type.</typeparam>
-    /// <param name="subscribe">The subscribe.</param>
-    /// <param name="isRequiredSubscribeOnCurrentThread">if set to <c>true</c> [is required subscribe on current thread].</param>
-    /// <returns>An Observable.</returns>
-    /// <exception cref="ArgumentExceptionHelper">subscribe.</exception>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="subscribe">Invoked for each observer; returns the disposable that releases the subscription.</param>
+    /// <param name="isRequiredSubscribeOnCurrentThread">Whether subscription must be dispatched through the current-thread sequencer.</param>
+    /// <returns>A signal backed by <paramref name="subscribe"/>.</returns>
     /// <exception cref="ArgumentExceptionHelper"><paramref name="subscribe" /> is <c>null</c>.</exception>
     public static IObservable<T> CreateSafe<T>(
         Func<IObserver<T>, IDisposable> subscribe,
@@ -159,9 +150,9 @@ public static partial class Signal
     }
 
     /// <summary>Lazily creates the source sequence for each subscription.</summary>
-    /// <typeparam name="T">The type.</typeparam>
-    /// <param name="observableFactory">The observable factory.</param>
-    /// <returns>An Observable.</returns>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="observableFactory">Invoked once per subscription to build the source.</param>
+    /// <returns>A signal that subscribes to the factory-produced source for each observer.</returns>
     public static IObservable<T> Lazy<T>(Func<IObservable<T>> observableFactory)
     {
         ArgumentExceptionHelper.ThrowIfNull(observableFactory);
@@ -189,10 +180,7 @@ public static partial class Signal
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2318:Members should not have identical bodies",
-        Justification =
-            "A deliberate overload accepting a cancellable factory delegate. The body matches the non-cancellable "
-            + "overload because AsyncDeferSignal<T> exposes a constructor for each delegate shape; the two take "
-            + "different delegate types and cannot forward to one another.")]
+        Justification = "The overloads take different delegate types and cannot forward to one another.")]
     public static IObservable<T> Defer<T>(Func<CancellationToken, Task<IObservable<T>>> observableFactory)
     {
         ArgumentExceptionHelper.ThrowIfNull(observableFactory);

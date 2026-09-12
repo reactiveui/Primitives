@@ -9,14 +9,12 @@ using ReactiveUI.Primitives.Async.Signals;
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>
-/// Represents an asynchronous observable sequence that can be connected to a data source, allowing control over when
-/// the subscription to the underlying resource is established.
+/// An asynchronous observable that multicasts a cold source through a signal, leaving the caller to decide when the
+/// source subscription is established.
 /// </summary>
 /// <typeparam name="T">The type of elements produced by the observable sequence.</typeparam>
-/// <remarks>A connectable observable enables explicit control over the connection to the data source, which can
-/// be useful for sharing a single subscription among multiple observers or for deferring the start of data emission
-/// until explicitly connected. Implementations may vary in how connections are managed and whether multiple connections
-/// are supported concurrently.</remarks>
+/// <remarks>Subscribing attaches the observer to the signal without touching the source, so observers that subscribe
+/// before <see cref="ConnectAsync"/> all share the one source subscription it creates.</remarks>
 [System.Diagnostics.DebuggerDisplay("ConnectableSignalAsync: State = {State}")]
 public sealed class ConnectableSignalAsync<T> : IObservableAsync<T>, IDisposable
 {
@@ -30,27 +28,22 @@ public sealed class ConnectableSignalAsync<T> : IObservableAsync<T>, IDisposable
     private ConnectableSignalAsyncState<T> State { get; }
 
     /// <summary>
-    /// Asynchronously establishes a connection to the target resource and returns a disposable handle for managing the
-    /// connection's lifetime.
+    /// Subscribes the signal to the source, or returns the live connection when one exists.
     /// </summary>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous connection operation.</param>
-    /// <returns>A value task that represents the asynchronous operation. The result contains an <see cref="IAsyncDisposable"/>
-    /// that should be disposed to close the connection.</returns>
-    /// <remarks>The returned <see cref="IAsyncDisposable"/> must be disposed when the connection is no longer
-    /// needed to ensure proper resource cleanup. Multiple calls to this method may result in multiple independent
-    /// connections, depending on the implementation.</remarks>
+    /// <returns>A handle whose disposal drops the source subscription, allowing a later call to reconnect.</returns>
+    /// <exception cref="OperationCanceledException">This instance has been disposed, or
+    /// <paramref name="cancellationToken"/> was cancelled.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask<IAsyncDisposable> ConnectAsync(CancellationToken cancellationToken) =>
         ConnectableSignalAsyncHelper.ConnectAsync(State, cancellationToken);
 
-    /// <summary>Releases all resources used by the current instance of the class.</summary>
-    /// <remarks>Call this method when you are finished using the object to release managed resources.</remarks>
+    /// <summary>Drops any live connection and blocks further ones.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [SuppressMessage(
         "Concurrency",
         "PSH1315:A blocking wait on an awaitable that may not be done",
-        Justification =
-            "IDisposable.Dispose is intrinsically synchronous; this method must tear down async connection state on the sync dispose path.")]
+        Justification = "The synchronous dispose contract leaves no way to await teardown of the async connection state.")]
     public void Dispose() => ConnectableSignalAsyncHelper.Dispose(State);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

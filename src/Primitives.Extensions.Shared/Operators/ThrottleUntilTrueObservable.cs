@@ -15,10 +15,12 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <param name="source">The source observable.</param>
 /// <param name="throttle">The throttle duration.</param>
 /// <param name="predicate">The predicate to determine if an element should be emitted immediately or throttled.</param>
+/// <param name="sequencer">The sequencer timing throttled emissions; <c>null</c> uses the default sequencer.</param>
 internal sealed class ThrottleUntilTrueObservable<T>(
     IObservable<T> source,
     TimeSpan throttle,
-    Func<T, bool> predicate) : IObservable<T>
+    Func<T, bool> predicate,
+    ISequencer? sequencer = null) : IObservable<T>
 {
     /// <summary>The source observable.</summary>
     private readonly IObservable<T> _source = InvalidOperationExceptionHelper.Check(source);
@@ -29,17 +31,20 @@ internal sealed class ThrottleUntilTrueObservable<T>(
     /// <summary>The predicate to determine if an element should be emitted immediately or throttled.</summary>
     private readonly Func<T, bool> _predicate = InvalidOperationExceptionHelper.Check(predicate);
 
+    /// <summary>The sequencer timing throttled emissions.</summary>
+    private readonly ISequencer _sequencer = sequencer ?? Sequencer.Default;
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<T> observer)
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        ThrottleUntilTrueSink sink = new(observer, _throttle, _predicate, Sequencer.Default);
+        ThrottleUntilTrueSink sink = new(observer, _throttle, _predicate, _sequencer);
         var subscription = _source.Subscribe(sink);
         return new DisposableBag(subscription, sink);
     }
 
-    /// <summary>Sinks the source observable and throttles elements until a predicate is true.</summary>
+    /// <summary>Sink that forwards a value inline when the predicate holds and otherwise after the throttle window.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="throttle">The throttle duration.</param>
     /// <param name="predicate">The predicate.</param>

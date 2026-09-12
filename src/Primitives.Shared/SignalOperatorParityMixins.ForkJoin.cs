@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives;
 /// <summary>The ForkJoin operator: pairs the final value of each source once both have completed.</summary>
 public static partial class LinqExtensions
 {
-    /// <summary>Dedicated signal for <c>ForkJoin</c>; runs the coordinator without a Create closure.</summary>
+    /// <summary>Dedicated signal for <c>ForkJoin</c> that pairs each source's final value.</summary>
     /// <typeparam name="TLeft">The left value type.</typeparam>
     /// <typeparam name="TRight">The right value type.</typeparam>
     /// <typeparam name="TResult">The result value type.</typeparam>

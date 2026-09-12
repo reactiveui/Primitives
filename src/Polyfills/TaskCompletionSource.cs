@@ -19,7 +19,7 @@ internal sealed class TaskCompletionSource
 
     /// <summary>Initializes a new instance of the <see cref="TaskCompletionSource"/> class.</summary>
     [SuppressMessage("Concurrency", "PSH1302", Justification =
-        "BCL-parity polyfill; must match the framework ctor's TaskCreationOptions.None default, not force async continuations.")]
+        "Matches the framework constructor's TaskCreationOptions.None default.")]
     public TaskCompletionSource() => _inner = new();
 
     /// <summary>Transitions the underlying task to the <see cref="TaskStatus.RanToCompletion"/> state.</summary>
@@ -47,9 +47,7 @@ internal sealed class TaskCompletionSource
         "Design",
         "SST2318:Members should not have identical bodies",
         Justification =
-            "Distinct BCL-parity surface members with different contracts and return types: SetCanceled is void and "
-            + "TrySetCanceled returns bool. They share the same backing call here but must track the framework surface "
-            + "independently, so they are deliberately kept as separate members rather than one forwarding to the other.")]
+            "SetCanceled returns void and TrySetCanceled returns bool; each tracks its own framework contract.")]
     internal bool TrySetCanceled() => _inner.TrySetCanceled();
 
     /// <summary>Attempts to transition the underlying task to the <see cref="TaskStatus.Canceled"/> state for the specified token.</summary>

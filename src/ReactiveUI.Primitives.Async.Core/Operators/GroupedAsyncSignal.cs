@@ -10,8 +10,6 @@ namespace ReactiveUI.Primitives.Async;
 /// <summary>Represents an asynchronous observable sequence that is grouped by a specified key.</summary>
 /// <typeparam name="TKey">The type of the key used to group elements in the observable sequence.</typeparam>
 /// <typeparam name="TValue">The type of the elements contained in the grouped observable sequence.</typeparam>
-/// <remarks>Each instance corresponds to a group within the parent observable, identified by its key. Observers
-/// can subscribe to receive elements belonging to the group associated with the specified key.</remarks>
 [System.Diagnostics.DebuggerDisplay("GroupedAsyncSignal: Key = {Key}")]
 public sealed class GroupedAsyncSignal<TKey, TValue> : IObservableAsync<TValue>
 {
@@ -27,7 +25,7 @@ public sealed class GroupedAsyncSignal<TKey, TValue> : IObservableAsync<TValue>
         CancellationToken parentDisposedToken) =>
         State = new(key, signalValues, disposables, parentDisposedToken);
 
-    /// <summary>Gets the key associated with the current object.</summary>
+    /// <summary>Gets the key shared by every element in this group.</summary>
     public TKey Key => State.Key;
 
     /// <summary>Gets the state shared by this grouped observable and its helper operations.</summary>

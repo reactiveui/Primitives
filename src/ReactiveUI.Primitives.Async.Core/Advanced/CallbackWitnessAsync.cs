@@ -4,7 +4,8 @@
 
 namespace ReactiveUI.Primitives.Async.Advanced;
 
-/// <summary>An witness that routes notifications through user-supplied asynchronous callbacks.</summary>
+/// <summary>A witness that routes notifications through caller-supplied asynchronous callbacks. A callback left
+/// unset reports resumable errors and terminal failures to the unhandled exception handler.</summary>
 /// <typeparam name="T">The type of the elements received by the witness.</typeparam>
 /// <param name="onNextAsync">The asynchronous function invoked for each element.</param>
 /// <param name="onErrorResumeAsync">An optional asynchronous function invoked when a resumable error occurs.</param>

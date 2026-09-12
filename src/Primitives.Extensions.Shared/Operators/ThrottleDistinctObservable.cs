@@ -27,18 +27,13 @@ internal sealed class ThrottleDistinctObservable<T>(
         InvalidOperationExceptionHelper.ThrowIfNull(scheduler);
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        // Implementation of .DistinctUntilChanged().Throttle(throttle, scheduler).DistinctUntilChanged()
-        // But fused into a single sink to avoid multiple operator allocations and observer chains.
+        // Equivalent to DistinctUntilChanged().Throttle(throttle, scheduler).DistinctUntilChanged(), fused into one sink.
         ThrottleDistinctSink sink = new(observer, throttle, scheduler);
         var subscription = source.Subscribe(sink);
         return new DisposableBag(subscription, sink);
     }
 
-    /// <summary>
-    /// Sink that implements the throttle distinct logic. Composes <see cref="TimerSinkState{T}"/>
-    /// for the shared gate / timer / done-flag plumbing so this class only carries the throttle
-    /// and distinct-value tracking.
-    /// </summary>
+    /// <summary>Sink that emits the latest value once the throttle window elapses, skipping it when it equals the last emitted value.</summary>
     /// <param name="downstream">The observer to forward elements to.</param>
     /// <param name="throttle">The throttle duration.</param>
     /// <param name="scheduler">The scheduler to use for timing.</param>
@@ -115,17 +110,14 @@ internal sealed class ThrottleDistinctObservable<T>(
             }
         }
 
-        /// <summary>Emits the last received value if it differs from the last emitted value.
-        /// Marked <c>[ExcludeFromCodeCoverage]</c> because the in-lock
-        /// race-loser branch (sink done or no buffered value) is only reachable when the
-        /// scheduled callback fires concurrently with Dispose / OnCompleted, which the
-        /// single-threaded test harness cannot trigger.</summary>
+        /// <summary>Emits the last received value when it differs from the last emitted value.</summary>
         [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
         private void Emit()
         {
             T? toEmit;
             lock (_gate)
             {
+                // Race-only: reachable when this scheduled callback overlaps Dispose or a terminal notification.
                 if (_state.Done || !_hasLastReceived)
                 {
                     return;

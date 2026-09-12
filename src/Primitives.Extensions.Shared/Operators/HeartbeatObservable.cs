@@ -34,7 +34,7 @@ internal sealed class HeartbeatObservable<T>(
         return sink;
     }
 
-    /// <summary>The sink for the heartbeat operator.</summary>
+    /// <summary>Sink that forwards upstream values and emits a heartbeat whenever the period elapses without one.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="heartbeatPeriod">The period between heartbeats.</param>
     /// <param name="scheduler">The scheduler to run the heartbeat timer on.</param>
@@ -49,7 +49,7 @@ internal sealed class HeartbeatObservable<T>(
         /// <summary>The subscription to the periodic heartbeat timer.</summary>
         private readonly MutableDisposable _timerSubscription = new();
 
-        /// <summary>Upstream subscription handle; set once via <see cref="AttachSourceSubscription"/> so the sink can tear it down in <see cref="Dispose"/> without needing a wrapper bag.</summary>
+        /// <summary>Upstream subscription handle, set once via <see cref="AttachSourceSubscription"/> and torn down in <see cref="Dispose"/>.</summary>
         private IDisposable? _sourceSubscription;
 
         /// <summary>Whether the sink has completed or been disposed.</summary>

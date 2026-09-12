@@ -7,9 +7,6 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for working with asynchronous observable sequences.</summary>
-/// <remarks>The SignalAsync class contains static methods that extend the functionality of asynchronous
-/// observables, enabling advanced composition and error handling scenarios. These methods are intended to be used with
-/// types that implement asynchronous push-based notification patterns.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Error-handling operators that convert source errors into failure completion results for an observable source sequence.</summary>
@@ -23,9 +20,8 @@ public static partial class SignalAsyncExtensions
         /// </summary>
         /// <returns>An observable sequence that emits the same elements as the source, but represents errors as failure results
         /// instead of throwing exceptions.</returns>
-        /// <remarks>This method enables error handling by transforming exceptions into failure notifications
-        /// within the sequence, rather than terminating the sequence with an error. Consumers can inspect the result to
-        /// determine whether an operation succeeded or failed.</remarks>
+        /// <remarks>The completion result carries the error, so an observer inspects that result to tell success from
+        /// failure.</remarks>
         public IObservableAsync<T> OnErrorResumeAsFailure()
         {
             ArgumentExceptionHelper.ThrowIfNull(source);

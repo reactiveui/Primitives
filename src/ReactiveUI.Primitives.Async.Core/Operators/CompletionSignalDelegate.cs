@@ -11,7 +11,5 @@ namespace ReactiveUI.Primitives.Async;
 /// <param name="notifyStop">An action to be invoked with a <see cref="Result"/> when the completion event occurs. This callback is called to
 /// notify the subscriber of the completion result.</param>
 /// <returns>An <see cref="IAsyncDisposable"/> that unsubscribes the notification when disposed asynchronously.</returns>
-/// <remarks>The returned <see cref="IAsyncDisposable"/> should be disposed to stop receiving completion
-/// notifications and to release any associated resources. The <paramref name="notifyStop"/> callback may be invoked on
-/// a background thread.</remarks>
+/// <remarks><paramref name="notifyStop"/> may be invoked on a background thread.</remarks>
 public delegate IAsyncDisposable CompletionSignalDelegate(Action<Result> notifyStop);

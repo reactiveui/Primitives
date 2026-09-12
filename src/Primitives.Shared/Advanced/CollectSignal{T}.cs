@@ -16,7 +16,7 @@ public sealed class CollectSignal<T> : IObservable<IList<T>>
     /// <summary>Initializes a new instance of the <see cref="CollectSignal{T}"/> class.</summary>
     /// <param name="source">The source observable.</param>
     /// <param name="timeSpan">The buffer window duration.</param>
-    /// <param name="sequencer">The sequencer used to schedule buffer flushes.</param>
+    /// <param name="sequencer">The sequencer that schedules buffer flushes.</param>
     /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="sequencer"/> is <see langword="null"/>.</exception>
     public CollectSignal(IObservable<T> source, TimeSpan timeSpan, ISequencer sequencer)
     {
@@ -31,7 +31,7 @@ public sealed class CollectSignal<T> : IObservable<IList<T>>
     /// <summary>Gets the buffer window duration.</summary>
     private TimeSpan TimeSpan { get; }
 
-    /// <summary>Gets the sequencer used to schedule buffer flushes.</summary>
+    /// <summary>Gets the sequencer that schedules buffer flushes.</summary>
     private ISequencer Sequencer { get; }
 
     /// <inheritdoc/>

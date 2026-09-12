@@ -182,10 +182,7 @@ public sealed class
             _ => Sources.Source11.SubscribeAsync(new SyncLatestWitness<T11, TResult>(this, Source11Bit, value => Value11 = new(value)), cancellationToken)
         };
 
-    /// <summary>
-    /// Reads every source's latest value into a single snapshot. Returns <see langword="false"/>
-    /// until every source has produced at least one value.
-    /// </summary>
+    /// <summary>Reads every source's latest value into a single snapshot.</summary>
     /// <param name="values">When the method returns <see langword="true"/>, the snapshot.</param>
     /// <returns><see langword="true"/> when every source has produced a value; otherwise <see langword="false"/>.</returns>
     [SuppressMessage(

@@ -3,24 +3,21 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
-using ReactiveUI.Primitives.Async.Tests;
 using ReactiveUI.Primitives.Concurrency;
+using ReactiveUI.Primitives.Extensions.Operators;
 
 namespace ReactiveUI.Primitives.Extensions.Tests;
 
 /// <summary>Tests for ReactiveExtensionsTests.</summary>
 public partial class ReactiveExtensionsTests
 {
-    /// <summary>Throttle/debounce window in milliseconds used by the real-time (non-virtual) throttle tests.</summary>
-    private const int ThrottleWindowMilliseconds = 100;
+    /// <summary>Throttle window in virtual ticks used by the real-time-free throttle tests.</summary>
+    private const int ThrottleWindowTicks = 100;
 
-    /// <summary>Longest a real-time test waits for a slow scheduled signal before failing.</summary>
-    private static readonly TimeSpan LongWaitTimeout = TimeSpan.FromSeconds(30);
+    /// <summary>Window used by the throttle tests that run on the default sequencer and await their emission.</summary>
+    private static readonly TimeSpan DefaultSequencerWindow = TimeSpan.FromMilliseconds(200);
 
-    /// <summary>Window used by the real-time throttle tests that poll for their result rather than advancing a clock.</summary>
-    private static readonly TimeSpan PolledThrottleWindow = TimeSpan.FromMilliseconds(200);
-
-    /// <summary>Debounce window used by the real-time <c>DebounceUntil</c> test.</summary>
+    /// <summary>Debounce window used by the default-sequencer <c>DebounceUntil</c> test.</summary>
     private static readonly TimeSpan DebounceWindow = TimeSpan.FromMilliseconds(500);
 
     /// <summary>Tests DebounceImmediate emits first immediately.</summary>
@@ -44,15 +41,14 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task ThrottleFirst_EmitsFirstImmediately_IgnoresSubsequentWithinWindow()
     {
+        VirtualClock scheduler = new();
         Subject<int> subject = new();
         List<int> results = [];
-
-        // Throttle window of 100 ms
-        _ = subject.ThrottleFirst(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds)).Subscribe(results.Add);
+        _ = subject.ThrottleFirst(TimeSpan.FromTicks(ThrottleWindowTicks), scheduler).Subscribe(results.Add);
         subject.OnNext(1); // Should be emitted immediately
         subject.OnNext(SampleValue2); // Should be ignored (within throttle window)
         subject.OnNext(SampleValue3); // Should be ignored (within throttle window)
-        await Task.Delay(ThrottleWaitMilliseconds); // Wait for throttle window to pass
+        scheduler.AdvanceBy(ThrottleWindowTicks + 1); // Move past the throttle window
         subject.OnNext(SampleValue4); // Should be emitted
 
         // Verify results
@@ -66,11 +62,11 @@ public partial class ReactiveExtensionsTests
     {
         Subject<int> subject = new();
         List<int> results = [];
-        TaskCompletionSource<object> release = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        TaskCompletionSource processed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<object> release = new();
+        TaskCompletionSource processed = new();
         _ = subject.DropIfBusy(async x =>
         {
-            await release.Task;
+            await release.Task.ConfigureAwait(false);
             results.Add(x);
             processed.SetResult();
         }).Subscribe();
@@ -78,7 +74,7 @@ public partial class ReactiveExtensionsTests
         subject.OnNext(SampleValue2); // Should drop
         subject.OnNext(SampleValue3); // Should drop
         release.SetResult(new()); // Complete the async action
-        await processed.Task.WaitAsync(WaitTimeout);
+        await processed.Task;
         await Assert.That(results).IsCollectionEqualTo([1]);
     }
 
@@ -210,22 +206,22 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenThrottleUntilTruePredicateFalse_ThenAppliesThrottle()
     {
+        VirtualClock scheduler = new();
         Subject<int> subject = new();
         List<int> results = [];
-        TaskCompletionSource<int> throttledArrived = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var sub = subject.ThrottleUntilTrue(TimeSpan.FromMilliseconds(ThrottleWindowMilliseconds), static x => x > PredicateThreshold)
-            .Subscribe(value =>
-        {
-            results.Add(value);
-            _ = value == 1 && throttledArrived.TrySetResult(value);
-        });
+        using var sub = new ThrottleUntilTrueObservable<int>(
+            subject,
+            TimeSpan.FromTicks(ThrottleWindowTicks),
+            static x => x > PredicateThreshold,
+            scheduler).Subscribe(results.Add);
 
         // Predicate true: immediate.
         subject.OnNext(SampleValue10);
 
-        // Predicate false: throttled — wait on the event instead of racing a fixed delay.
+        // Predicate false: held until the clock passes the throttle window.
         subject.OnNext(1);
-        await throttledArrived.Task.WaitAsync(WaitTimeout);
+        await Assert.That(results).IsCollectionEqualTo([SampleValue10]);
+        scheduler.AdvanceBy(ThrottleWindowTicks + 1);
         await Assert.That(results).Contains(SampleValue10);
         await Assert.That(results).Contains(1);
     }
@@ -237,11 +233,16 @@ public partial class ReactiveExtensionsTests
     {
         Subject<int> subject = new();
         List<int> results = [];
-        using var sub = subject.ThrottleDistinct(PolledThrottleWindow).Subscribe(results.Add);
+        TaskCompletionSource emitted = new();
+        using var sub = subject.ThrottleDistinct(DefaultSequencerWindow).Subscribe(value =>
+        {
+            results.Add(value);
+            _ = value == SampleValue2 && emitted.TrySetResult();
+        });
         subject.OnNext(1);
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
-        await AsyncTestHelpers.WaitForConditionAsync(() => results.Contains(SampleValue2), LongWaitTimeout);
+        await emitted.Task;
         await Assert.That(results).Contains(SampleValue2);
     }
 

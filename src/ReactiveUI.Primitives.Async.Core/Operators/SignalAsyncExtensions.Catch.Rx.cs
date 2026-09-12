@@ -40,10 +40,7 @@ public static partial class SignalAsyncExtensions
         /// <returns>An observable sequence that emits items from the source sequence, or from the handler-provided sequence if
         /// an exception is encountered.</returns>
         /// <exception cref="ArgumentNullException">Thrown if the source sequence or <paramref name="handler"/> is null.</exception>
-        /// <remarks>Use this method to recover from errors in the source sequence by switching to an
-        /// alternative observable sequence. The handler function is called with the exception, allowing custom error
-        /// recovery logic. If the handler itself throws an exception, the resulting sequence completes with that
-        /// exception.</remarks>
+        /// <remarks>If the handler throws, the resulting sequence completes with that exception.</remarks>
         public IObservableAsync<T> Catch(
             Func<Exception, IObservableAsync<T>> handler,
             Func<Exception, CancellationToken, ValueTask>? onErrorResume)

@@ -42,7 +42,7 @@ public sealed class SwitchToSignal<T>(IObservableAsync<IObservableAsync<T>> sour
         /// <summary>Disposable that holds the single outer subscription.</summary>
         private readonly SingleAssignmentDisposableAsync _outerDisposable = new();
 
-        /// <summary>Cancellation token source used to signal disposal of the subscription.</summary>
+        /// <summary>The cancellation token source that signals disposal of the subscription.</summary>
         private readonly CancellationTokenSource _disposeCts = new();
 
         /// <summary>Cached cancellation token from the dispose cancellation token source.</summary>
@@ -183,11 +183,7 @@ public sealed class SwitchToSignal<T>(IObservableAsync<IObservableAsync<T>> sour
             }
         }
 
-        /// <summary>
-        /// Links the original subscribe-time cancellation token into this subscription's dispose chain so
-        /// later per-emission methods can rely on <see cref="_disposeCancellationToken"/> instead of
-        /// allocating a per-emission linked CTS.
-        /// </summary>
+        /// <summary>Routes cancellation of the subscribe-time token into <see cref="_disposeCts"/>, so per-emission code needs no linked source.</summary>
         /// <param name="external">The subscribe-time token.</param>
         internal void LinkExternalCancellation(CancellationToken external)
         {

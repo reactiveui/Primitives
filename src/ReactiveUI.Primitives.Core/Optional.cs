@@ -7,22 +7,18 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives;
 
-/// <summary>Represents an optional value that may or may not be present.</summary>
+/// <summary>
+/// Represents an optional value, letting an API distinguish an absent value from a default one without using
+/// <see langword="null"/>. A <see langword="null"/> value is treated as absent.
+/// </summary>
 /// <typeparam name="T">The type of the value that may be contained by the optional.</typeparam>
-/// <remarks>Use this struct to indicate the presence or absence of a value without resorting to null references.
-/// When an instance has a value, the HasValue property is <see langword="true"/> and the Value property returns the
-/// contained value. If no value is present, HasValue is <see langword="false"/> and accessing Value throws an
-/// exception. This pattern is useful for APIs that need to distinguish between an explicit 'no value' state and a
-/// default value.</remarks>
 [System.Diagnostics.DebuggerDisplay("Optional: HasValue = {HasValue}, Value = {_value}")]
 public readonly record struct Optional<T>
 {
     /// <summary>The underlying value, or <see langword="default"/> when no value is present.</summary>
     private readonly T? _value;
 
-    /// <summary>Initializes a new instance of the <see cref="Optional{T}"/> struct.</summary>
-    /// <remarks>After using this constructor, the HasValue property is set to false, indicating that the
-    /// <see cref="Optional{T}"/>  instance does not contain a value.</remarks>
+    /// <summary>Initializes a new instance of the <see cref="Optional{T}"/> struct with no value.</summary>
     public Optional() => (_value, HasValue) = (default, false);
 
     /// <summary>Initializes a new instance of the <see cref="Optional{T}"/> struct.</summary>
@@ -36,8 +32,6 @@ public readonly record struct Optional<T>
         (_value, HasValue) = hasValue && value is not null ? (value, true) : (default, false);
 
     /// <summary>Gets an empty instance of the <see cref="Optional{T}"/> type that contains no value.</summary>
-    /// <remarks>Use this property to represent the absence of a value in a type-safe manner. The returned
-    /// instance has no value set and IsPresent is false.</remarks>
     public static Optional<T> Empty => new();
 
     /// <summary>Gets an empty optional value.</summary>
@@ -47,9 +41,7 @@ public readonly record struct Optional<T>
     public bool HasValue { get; }
 
     /// <summary>Gets the value contained in the optional object.</summary>
-    /// <remarks>Accessing this property when the optional object does not have a value will throw an
-    /// exception. Use the HasValue property to determine whether a value is present before accessing this
-    /// property.</remarks>
+    /// <exception cref="InvalidOperationException"><see cref="HasValue"/> is <see langword="false"/>.</exception>
     [NotNull]
     public T? Value => HasValue
         ? _value!
@@ -65,12 +57,12 @@ public readonly record struct Optional<T>
     /// <returns>The optional value.</returns>
     public static implicit operator Optional<T>([AllowNull] T value) => ToOptional(value);
 
-    /// <summary>Explicit cast from option to value.</summary>
-    /// <param name="value">The value.</param>
-    /// <returns>The optional value.</returns>
+    /// <summary>Explicit cast from the optional to the value.</summary>
+    /// <param name="value">The optional value.</param>
+    /// <returns>The contained value.</returns>
     public static explicit operator T?(in Optional<T> value) => FromOptional(value);
 
-    /// <summary>Creates the specified value.</summary>
+    /// <summary>Creates an optional value, treating a <see langword="null"/> value as absent.</summary>
     /// <param name="value">The value.</param>
     /// <returns>The optional value.</returns>
     public static Optional<T> Create([AllowNull] T value) => new(value);

@@ -7,9 +7,8 @@ using System.Diagnostics.CodeAnalysis;
 namespace ReactiveUI.Primitives.Internal;
 
 /// <summary>
-/// Polyfill for <c>ObjectDisposedException.ThrowIf</c> on target frameworks (net462-net481) that predate it.
-/// On net8.0 and later this type is not compiled; consuming projects alias the <c>ObjectDisposedExceptionHelper</c>
-/// identifier directly to <see cref="ObjectDisposedException"/> so the call sites bind to the BCL method.
+/// Polyfill for <c>ObjectDisposedException.ThrowIf</c> on net462-net481; net8.0 and later compile no copy of this
+/// type and alias the <c>ObjectDisposedExceptionHelper</c> identifier to <see cref="ObjectDisposedException"/> instead.
 /// </summary>
 [ExcludeFromCodeCoverage]
 internal static class ObjectDisposedExceptionHelper

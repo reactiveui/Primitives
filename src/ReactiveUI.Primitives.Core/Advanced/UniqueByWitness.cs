@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="TKey">The key type.</typeparam>
 /// <param name="observer">The downstream observer.</param>
 /// <param name="keySelector">The key projection.</param>
-/// <param name="comparer">The comparer used to compare adjacent keys.</param>
+/// <param name="comparer">The comparer applied to adjacent keys.</param>
 [System.Diagnostics.DebuggerDisplay("UniqueByWitness: HasLast = {_hasLast}, Last = {_last}")]
 public sealed class UniqueByWitness<T, TKey>(
     IObserver<T> observer,
@@ -24,7 +24,7 @@ public sealed class UniqueByWitness<T, TKey>(
     /// <summary>The key projection.</summary>
     private readonly Func<T, TKey> _keySelector = keySelector;
 
-    /// <summary>The comparer used to compare adjacent keys.</summary>
+    /// <summary>The comparer applied to adjacent keys.</summary>
     private readonly IEqualityComparer<TKey> _comparer = comparer;
 
     /// <summary>A value indicating whether a previous key has been observed.</summary>
@@ -66,7 +66,7 @@ public sealed class UniqueByWitness<T, TKey>(
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnCompleted() => SinkTerminal.Complete(_observer, this);
 
-    /// <summary>Assigns the upstream subscription, disposing it if one is already held.</summary>
+    /// <summary>Assigns the upstream subscription, disposing the incoming one when this sink holds a subscription or has been disposed.</summary>
     /// <param name="subscription">The upstream subscription.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetSubscription(IDisposable subscription) => SinkSubscription.Set(ref _subscription, subscription);

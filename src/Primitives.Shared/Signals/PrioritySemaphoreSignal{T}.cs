@@ -174,7 +174,7 @@ public sealed class PrioritySemaphoreSignal<T> : ISignal<T>
         _inner.Dispose();
     }
 
-    /// <summary>Queues a value when the signal is still accepting input.</summary>
+    /// <summary>Queues a value while the signal accepts input.</summary>
     /// <param name="value">The value to enqueue.</param>
     /// <returns><see langword="true"/> when the value was queued; otherwise, <see langword="false"/>.</returns>
     private bool Enqueue(T value)
@@ -192,12 +192,10 @@ public sealed class PrioritySemaphoreSignal<T> : ISignal<T>
         }
     }
 
-    /// <summary>Dequeue and forwards values while capacity is available.</summary>
+    /// <summary>Forwards queued values downstream while capacity is available.</summary>
     /// <remarks>
-    /// Only a single thread ever delivers downstream at a time. A caller that finds a drain
-    /// already in progress hands its work to the active owner and returns; the owner re-checks
-    /// for newly queued work under the gate before relinquishing ownership, so no wakeup is lost
-    /// and no two threads can deliver to the inner signal concurrently.
+    /// Only one thread delivers downstream at a time: a caller that finds a drain in progress leaves its work to the
+    /// owner, and the owner re-checks for queued work under the gate before relinquishing ownership, so no wakeup is lost.
     /// </remarks>
     private void YieldUntilEmptyOrBlocked()
     {
@@ -356,10 +354,7 @@ public sealed class PrioritySemaphoreSignal<T> : ISignal<T>
         }
     }
 
-    /// <summary>
-    /// A captured value or terminal notification to deliver outside the gate. A readonly struct: one is produced
-    /// per delivered value on the drain path, so it is passed by value instead of allocating per item.
-    /// </summary>
+    /// <summary>A value or terminal notification captured under the gate and delivered outside it.</summary>
     private readonly record struct DrainItem
     {
         /// <summary>An empty drain item used for failed capture paths.</summary>

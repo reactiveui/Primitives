@@ -132,10 +132,10 @@ public class TimeBasedOperatorTests
         const int SpacingDelayMillis = 75;
         const int SecondValue = 2;
         await signal.OnNextAsync(1, CancellationToken.None);
-        await firstReceived.Task.WaitAsync(WaitTimeout);
+        await firstReceived.Task;
         await Task.Delay(SpacingDelayMillis);
         await signal.OnNextAsync(SecondValue, CancellationToken.None);
-        await secondReceived.Task.WaitAsync(WaitTimeout);
+        await secondReceived.Task;
         await Assert.That(results).IsCollectionEqualTo([1, SecondValue]);
     }
 
@@ -357,7 +357,7 @@ public class TimeBasedOperatorTests
         await signal.OnNextAsync(1, CancellationToken.None);
         await signal.OnNextAsync(SecondValue, CancellationToken.None);
         await signal.OnNextAsync(LastValue, CancellationToken.None);
-        await resultReceived.Task.WaitAsync(WaitTimeout);
+        await resultReceived.Task;
         await signal.OnCompletedAsync(Result.Success);
         await Assert.That(results).Count().IsEqualTo(1);
         await Assert.That(results[0]).IsEqualTo(LastValue);
@@ -391,7 +391,7 @@ public class TimeBasedOperatorTests
         // Emit two values rapidly; first should be superseded
         await signal.OnNextAsync(FirstValue, CancellationToken.None);
         await signal.OnNextAsync(LastValue, CancellationToken.None);
-        await resultReceived.Task.WaitAsync(WaitTimeout);
+        await resultReceived.Task;
         await signal.OnCompletedAsync(Result.Success);
         await Assert.That(results).Count().IsEqualTo(1);
         await Assert.That(results[0]).IsEqualTo(LastValue);
@@ -450,7 +450,7 @@ public class TimeBasedOperatorTests
 
         // Immediately send an error before the throttle timer fires
         await signal.OnErrorResumeAsync(new InvalidOperationException(TestErrorMessage), CancellationToken.None);
-        await errorReceived.Task.WaitAsync(WaitTimeout);
+        await errorReceived.Task;
 
         // Error should be forwarded, and the pending value should NOT be emitted
         await Assert.That(errors).Count().IsEqualTo(1);
@@ -500,7 +500,7 @@ public class TimeBasedOperatorTests
             });
         InvalidOperationException testError = new(TestErrorMessage);
         await source.EmitError(testError);
-        await errorReceived.Task.WaitAsync(WaitTimeout);
+        await errorReceived.Task;
         await Assert.That(errors).Count().IsEqualTo(1);
         await Assert.That(errors[0]).IsTypeOf<InvalidOperationException>();
         await Assert.That(errors[0].Message).IsEqualTo(TestErrorMessage);
@@ -532,7 +532,7 @@ public class TimeBasedOperatorTests
         InvalidOperationException expectedError = new("resume error");
         await source.EmitError(expectedError);
         await source.Complete(Result.Success);
-        await completed.Task.WaitAsync(CompletionWaitTimeout);
+        await completed.Task;
         await Assert.That(errors).Count().IsEqualTo(1);
         await Assert.That(errors[0]).IsSameReferenceAs(expectedError);
     }
@@ -569,7 +569,7 @@ public class TimeBasedOperatorTests
         // Wait for the throttled value to arrive before completing
         await AsyncTestHelpers.WaitForConditionAsync(() => results.Count >= 1, CompletionWaitTimeout);
         await signal.OnCompletedAsync(Result.Success);
-        await completed.Task.WaitAsync(CompletionWaitTimeout);
+        await completed.Task;
 
         // Only the last value (2) should have been emitted
         await Assert.That(results).Contains(LastValue);
@@ -700,7 +700,7 @@ public class TimeBasedOperatorTests
             null,
             null,
             cts.Token);
-        await cancelled.Task.WaitAsync(CompletionWaitTimeout);
+        await cancelled.Task;
         await Assert.That(items.Count).IsGreaterThanOrEqualTo(MinItemCount);
     }
 
@@ -729,7 +729,7 @@ public class TimeBasedOperatorTests
                 null,
                 null,
                 cts.Token);
-        await cancelled.Task.WaitAsync(CompletionWaitTimeout);
+        await cancelled.Task;
         await Assert.That(items.Count).IsGreaterThanOrEqualTo(MinItemCount);
     }
 
@@ -772,7 +772,7 @@ public class TimeBasedOperatorTests
 
         await Assert.That(manualProvider.TimerCount).IsEqualTo(LastValue);
         manualProvider.FireAll();
-        await completed.Task.WaitAsync(CompletionWaitTimeout);
+        await completed.Task;
         await Assert.That(items).Contains(LastValue);
     }
 

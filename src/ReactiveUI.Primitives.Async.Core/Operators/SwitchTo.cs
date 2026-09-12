@@ -20,9 +20,6 @@ public static partial class SignalAsyncExtensions
         /// </summary>
         /// <returns>An observable sequence that emits items from the most recently emitted inner observable sequence. When a new
         /// inner sequence is emitted, the previous one is unsubscribed.</returns>
-        /// <remarks>This operator is commonly used to switch to a new data stream whenever a new inner
-        /// observable is produced, unsubscribing from the previous inner observable. Only items from the latest inner
-        /// observable are emitted to subscribers.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservableAsync<T> SwitchTo() => new SwitchToSignal<T>(source);
 

@@ -83,10 +83,7 @@ public sealed class SyncLatest3Coordinator<T1, T2, T3, TResult> : SyncLatestCoor
             _ => Sources.Source3.SubscribeAsync(new SyncLatestWitness<T3, TResult>(this, Source3Bit, value => Value3 = new(value)), cancellationToken)
         };
 
-    /// <summary>
-    /// Reads every source's latest value into a single snapshot. Returns <see langword="false"/>
-    /// until every source has produced at least one value.
-    /// </summary>
+    /// <summary>Reads every source's latest value into a single snapshot.</summary>
     /// <param name="values">When the method returns <see langword="true"/>, the snapshot.</param>
     /// <returns><see langword="true"/> when every source has produced a value; otherwise <see langword="false"/>.</returns>
     private bool TryReadValues(out (T1 V1, T2 V2, T3 V3) values)

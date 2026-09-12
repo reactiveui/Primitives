@@ -7,10 +7,8 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>
-/// Provides the Timer factory method for creating asynchronous observable sequences that produce
-/// a single value after a specified delay.
+/// Provides the clock-driven factory methods: a one-shot value after a delay, and periodic ticks.
 /// </summary>
-/// <remarks>Timer is useful for triggering one-shot deferred actions in observable pipelines.</remarks>
 public static partial class SignalAsync
 {
     /// <summary>Creates an observable sequence that produces a single value (0) after the specified delay, then completes.</summary>

@@ -110,7 +110,7 @@ public sealed class FromAsyncSubscription<T> : IDisposable
         return this;
     }
 
-    /// <summary>Forwards a task that has already reached a terminal state.</summary>
+    /// <summary>Forwards a task that has reached a terminal state.</summary>
     /// <param name="task">The task to observe.</param>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="lifetime">The subscription lifetime.</param>
@@ -120,7 +120,7 @@ public sealed class FromAsyncSubscription<T> : IDisposable
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Concurrency",
         "PSH1315:A blocking wait on an awaitable that may not be done",
-        Justification = "Synchronous read is limited to the already-completed task fast path.")]
+        Justification = "Synchronous read is limited to a task in a terminal state.")]
     private static bool TryCompleteSynchronously(
         Task<T> task,
         IObserver<T> observer,
@@ -145,7 +145,7 @@ public sealed class FromAsyncSubscription<T> : IDisposable
             : task.IsFaulted && FaultSynchronously(task, observer, lifetime, externalCancellation, linkedSource);
     }
 
-    /// <summary>Forwards an already-successful task result.</summary>
+    /// <summary>Forwards a successful task result.</summary>
     /// <param name="value">The task result.</param>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="lifetime">The subscription lifetime.</param>
@@ -171,7 +171,7 @@ public sealed class FromAsyncSubscription<T> : IDisposable
         return true;
     }
 
-    /// <summary>Forwards an already-canceled task result.</summary>
+    /// <summary>Forwards a canceled task result.</summary>
     /// <param name="task">The task to observe.</param>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="lifetime">The subscription lifetime.</param>
@@ -202,7 +202,7 @@ public sealed class FromAsyncSubscription<T> : IDisposable
         return true;
     }
 
-    /// <summary>Forwards an already-faulted task result.</summary>
+    /// <summary>Forwards a faulted task result.</summary>
     /// <param name="task">The task to observe.</param>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="lifetime">The subscription lifetime.</param>

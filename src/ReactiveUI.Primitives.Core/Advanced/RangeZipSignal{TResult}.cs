@@ -7,21 +7,21 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Advanced;
 
-/// <summary>Zips two synchronous integer ranges without coordinator queues.</summary>
+/// <summary>Signal that pairs two integer ranges position by position, synchronously inside <c>Subscribe</c>.</summary>
 /// <typeparam name="TResult">The result value type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("RangeZipSignal: Count = {_count}, LeftStart = {_leftStart}, RightStart = {_rightStart}")]
 public sealed class RangeZipSignal<TResult> : IRequireCurrentThread<TResult>, IInlineSignal<TResult>
 {
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The first value of the left range.</summary>
     private readonly int _leftStart;
 
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The first value of the right range.</summary>
     private readonly int _rightStart;
 
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The number of pairs emitted, the shorter of the two ranges.</summary>
     private readonly int _count;
 
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The projection applied to each pair.</summary>
     private readonly Func<int, int, TResult> _selector;
 
     /// <summary>Initializes a new instance of the <see cref="RangeZipSignal{TResult}"/> class.</summary>
@@ -36,14 +36,15 @@ public sealed class RangeZipSignal<TResult> : IRequireCurrentThread<TResult>, II
         _selector = selector;
     }
 
-    /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
-    /// <returns>The result.</returns>
+    /// <summary>Indicates whether subscription has to happen on the calling thread.</summary>
+    /// <returns>Always <see langword="false"/>.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() => false;
 
-    /// <summary>Executes the Subscribe operation.</summary>
-    /// <param name="observer">The observer value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Emits every projected pair to <paramref name="observer"/> and completes it before returning.</summary>
+    /// <param name="observer">The observer to notify.</param>
+    /// <returns>An empty disposable; both ranges are drained by the time this returns.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="observer"/> is <see langword="null"/>.</exception>
     public IDisposable Subscribe(IObserver<TResult> observer)
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
@@ -57,11 +58,12 @@ public sealed class RangeZipSignal<TResult> : IRequireCurrentThread<TResult>, II
         return EmptyDisposable.Instance;
     }
 
-    /// <summary>Executes the Subscribe operation.</summary>
-    /// <param name="onNext">The onNext value.</param>
-    /// <param name="onError">The onError value.</param>
-    /// <param name="onCompleted">The onCompleted value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Emits every projected pair to <paramref name="onNext"/>, then invokes <paramref name="onCompleted"/>.</summary>
+    /// <param name="onNext">Invoked for each projected pair.</param>
+    /// <param name="onError">Never invoked.</param>
+    /// <param name="onCompleted">Invoked after the last pair.</param>
+    /// <returns>An empty disposable; both ranges are drained by the time this returns.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="onNext"/> is <see langword="null"/>.</exception>
     public IDisposable Subscribe(Action<TResult> onNext, Action<Exception> onError, Action onCompleted)
     {
         ArgumentExceptionHelper.ThrowIfNull(onNext);

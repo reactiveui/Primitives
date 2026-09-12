@@ -11,16 +11,15 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
 /// <summary>
-/// Single-value scheduled observable. On subscription, schedules a callback on
-/// the supplied <see cref="ISequencer"/> that applies an optional
-/// <see cref="Action{T}"/> side-effect and/or an optional <see cref="Func{T,T}"/>
-/// transform to the captured value, calls <see cref="IObserver{T}.OnNext"/>
-/// once, then <see cref="IObserver{T}.OnCompleted"/>. Replaces the
-/// <c>Observable.Create&lt;T&gt;(o =&gt; scheduler.Schedule[Safe](due, () =&gt; o.OnNext(...)))</c>
-/// family of single-value <c>Schedule</c> overloads with one dedicated type
-/// that captures only the fields each overload actually uses.
+/// Single-value scheduled observable: on subscription, schedules a callback on the supplied
+/// <see cref="ISequencer"/> that applies an optional <see cref="Action{T}"/> side-effect and/or an optional
+/// <see cref="Func{T,T}"/> transform to the captured value and calls <see cref="IObserver{T}.OnNext"/> once.
 /// </summary>
 /// <typeparam name="T">The value type emitted to the downstream observer.</typeparam>
+/// <remarks>
+/// The sequence never completes on its own: no terminal notification is sent, so the subscriber ends it by
+/// disposing the subscription.
+/// </remarks>
 internal sealed class ScheduledValueObservable<T> : IObservable<T>
 {
     /// <summary>The value to emit.</summary>
@@ -121,13 +120,9 @@ internal sealed class ScheduledValueObservable<T> : IObservable<T>
         Func<T, T>? transform,
         Action<T>? action)
     {
-        /// <summary>Applies the optional side-effect and transform, then emits the value followed by completion to the captured observer.</summary>
+        /// <summary>Applies the optional side-effect and transform, then emits the value to the captured observer.</summary>
         public void Emit()
         {
-            // Preserves the original Observable.Create-based semantics: the
-            // scheduled callback only emits OnNext. The sequence completes
-            // when downstream subscribers dispose; we do not auto-call
-            // OnCompleted here.
             try
             {
                 action?.Invoke(value);

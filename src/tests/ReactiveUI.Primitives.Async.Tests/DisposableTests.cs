@@ -798,13 +798,13 @@ public class DisposableTests
         Assert.Throws<ArgumentNullException>(static () => ((IDisposable)null!).ToDisposableAsync());
 
     /// <summary>
-    /// Verifies that the CAS retry loop in SetDisposableAsync is exercised
-    /// when another thread mutates _current between the Volatile.Read and the
-    /// CompareExchange, forcing the loop to re-read and retry.
+    /// Verifies that concurrent SetDisposableAsync calls account for every disposable: each
+    /// replaced occupant is disposed as it leaves the slot and the final occupant is disposed
+    /// by the slot itself, whichever order the compare-exchanges land in.
     /// </summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenSerialCASRetryLoop_ThenAllDisposablesAccountedFor()
+    public async Task WhenSerialSetConcurrently_ThenAllDisposablesAccountedFor()
     {
         SingleReplaceableDisposableAsync serial = new();
         StrongBox<int> disposedCount = new();
@@ -815,16 +815,13 @@ public class DisposableTests
             return default;
         });
 
-        // Bounded contention: enough parallel sets to race on CAS, small enough to run
-        // deterministically on any CI runner. Previous 20x10 layout produced unbounded
-        // variance (observed: 3s → 15s → never completed) and could timeout the suite.
+        // Bounded contention: enough parallel sets to overlap on the CAS, few enough that the
+        // total disposal count stays small. The count below holds for every interleaving.
         const int Parallelism = 4;
         const int IterationsPerTask = 5;
         const int ExpectedDisposedCount = Parallelism * IterationsPerTask;
-        Barrier barrier = new(Parallelism);
         var tasks = Enumerable.Range(0, Parallelism).Select(_ => Task.Run(async () =>
         {
-            barrier.SignalAndWait();
             for (var i = 0; i < IterationsPerTask; i++)
             {
                 await serial.SetDisposableAsync(MakeDisposable());

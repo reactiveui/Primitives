@@ -14,7 +14,7 @@ namespace ReactiveUI.Primitives;
 /// <summary>FlatMap helper implementations.</summary>
 public static partial class LinqExtensions
 {
-    /// <summary>Chaining FlatMap signal that avoids the Map + Chain composition path.</summary>
+    /// <summary>FlatMap signal that subscribes the projected inner observables in source order.</summary>
     /// <typeparam name="TSource">The source value type.</typeparam>
     /// <typeparam name="TResult">The result value type.</typeparam>
     /// <param name="source">The source observable.</param>
@@ -119,7 +119,7 @@ public static partial class LinqExtensions
         /// <summary>Value indicating whether the active inner source is currently subscribing.</summary>
         private bool _subscribingInner;
 
-        /// <summary>Value indicating whether the active inner source completed while its subscribe call was still on the stack.</summary>
+        /// <summary>Value indicating whether the active inner source completed during its own subscribe call.</summary>
         private bool _completedInnerWhileSubscribing;
 
         /// <summary>Initializes a new instance of the <see cref="FlatMapCoordinator{TSource, TResult}"/> class.</summary>
@@ -129,8 +129,7 @@ public static partial class LinqExtensions
         [SuppressMessage(
             "Correctness",
             "SST2403:Do not let 'this' escape from a constructor",
-            Justification =
-                "The witnesses are this coordinator's own sinks, stored back into its fields, and nothing notifies them until Run subscribes.")]
+            Justification = "The witnesses are this coordinator's own fields and nothing notifies them until Run subscribes.")]
         internal FlatMapCoordinator(
             IObservable<TSource> source,
             Func<TSource, IObservable<TResult>> selector,
@@ -229,9 +228,9 @@ public static partial class LinqExtensions
         /// <param name="value">The inner value.</param>
         private void OnInnerNext(TResult value)
         {
-            // Hot path: only one inner is active at a time (sequential concat semantics), so the
-            // forward is already serialized. A lock-free volatile read of the disposed flag avoids
-            // a monitor acquire on every value; the lock releases elsewhere publish the write.
+            // Hot path: only one inner is active at a time (sequential concat semantics), so this forward is
+            // serialized without the gate. A volatile read of the disposed flag avoids a monitor acquire on
+            // every value; the lock releases elsewhere publish the write.
             if (Volatile.Read(ref _disposed))
             {
                 return;

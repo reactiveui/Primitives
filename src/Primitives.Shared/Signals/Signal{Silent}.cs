@@ -13,21 +13,20 @@ namespace ReactiveUI.Primitives.Signals;
 /// <summary>Provides static factory and operator methods for signals.</summary>
 public static partial class Signal
 {
-    /// <summary>Non-Terminating Signals. It's no returns, never finish.</summary>
-    /// <typeparam name="T">The type.</typeparam>
-    /// <returns>An Signals.</returns>
+    /// <summary>Creates a signal that emits nothing and never terminates.</summary>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <returns>A signal that produces no notifications.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Design",
         "SST2307:Generic method type parameters should be inferable from the parameters",
-        Justification =
-            "The type parameter defines the element type for this Rx-style factory and cannot be inferred from the arguments.")]
+        Justification = "The element type cannot be inferred from the arguments.")]
     public static IObservable<T> Silent<T>() => ImmutableNeverSignal<T>.Instance;
 
-    /// <summary>Non-Terminating Signals. It's no returns, never finish. witness is for type inference.</summary>
-    /// <typeparam name="T">The type.</typeparam>
-    /// <param name="witness">The witness.</param>
-    /// <returns>An Signals.</returns>
+    /// <summary>Creates a signal that emits nothing and never terminates.</summary>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="witness">An unobserved value whose type fixes <typeparamref name="T"/>.</param>
+    /// <returns>A signal that produces no notifications.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservable<T> Silent<T>(T witness) => ImmutableNeverSignal<T>.Instance;
 }

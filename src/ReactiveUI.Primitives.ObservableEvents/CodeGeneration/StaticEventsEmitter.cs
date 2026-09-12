@@ -21,8 +21,7 @@ internal static class StaticEventsEmitter
     /// <returns>The generated source.</returns>
     /// <remarks>
     /// A static event has no instance to hang an extension method off, so it is reached through a class named the
-    /// same in every namespace. The class is partial, so a consumer can add to it and so that two requested hosts
-    /// in one namespace do not fight over the declaration.
+    /// same in every namespace, left partial so a consumer can add to it.
     /// </remarks>
     internal static string Emit(StaticNamespaceModel model, ObservableProvider provider)
     {

@@ -34,7 +34,7 @@ internal static class WitnessLifetime
     /// <returns><see langword="true"/> when the sink has stopped.</returns>
     internal static bool IsStopped(ref int stopped) => Volatile.Read(ref stopped) != 0;
 
-    /// <summary>Assigns the upstream subscription and disposes it when the sink has already stopped.</summary>
+    /// <summary>Assigns the upstream subscription, disposing it when the sink has stopped.</summary>
     /// <param name="stopped">The stopped flag.</param>
     /// <param name="slot">The upstream subscription slot.</param>
     /// <param name="subscription">The upstream subscription.</param>
@@ -89,7 +89,7 @@ internal static class WitnessLifetime
         observer.OnError(terminalError);
     }
 
-    /// <summary>Assigns the cancellation resource or disposes it when the witness already stopped.</summary>
+    /// <summary>Assigns the cancellation resource, disposing it when the witness has stopped.</summary>
     /// <param name="cancelSlot">The slot that owns the cancellation resource.</param>
     /// <param name="stopped">The stopped flag.</param>
     /// <param name="cancel">The cancellation resource to assign.</param>
@@ -111,7 +111,7 @@ internal static class WitnessLifetime
         Interlocked.Exchange(ref cancelSlot, null)?.Dispose();
     }
 
-    /// <summary>Forwards a value when the witness is still active.</summary>
+    /// <summary>Forwards a value while the witness is active.</summary>
     /// <typeparam name="TOwner">The witness owner type.</typeparam>
     /// <typeparam name="T">The value type.</typeparam>
     /// <param name="stopped">The stopped flag.</param>

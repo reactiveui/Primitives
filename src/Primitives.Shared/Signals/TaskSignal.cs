@@ -13,41 +13,35 @@ namespace ReactiveUI.Primitives.Signals;
 /// <summary>Provides factory methods for creating task-backed signals.</summary>
 public static class TaskSignal
 {
-    /// <summary>Creates the specified source.</summary>
+    /// <summary>Creates a task-backed signal whose source the factory builds from the signal itself.</summary>
     /// <typeparam name="TResult">The type of the result.</typeparam>
-    /// <param name="observableFactory">The observable factory.</param>
-    /// <returns>
-    /// An AsyncObservable.
-    /// </returns>
-    /// <exception cref="ArgumentExceptionHelper">observableFactory.</exception>
+    /// <param name="observableFactory">Builds the source, receiving the signal it will belong to.</param>
+    /// <returns>A task-backed signal that notifies on the current thread and owns its own cancellation source.</returns>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="observableFactory"/> is <see langword="null"/>.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ITaskSignal<TResult> Create<TResult>(
         Func<ITaskSignal<TResult>, IObservable<TResult>> observableFactory) =>
         Instance(observableFactory, null, null);
 
-    /// <summary>Creates the specified source.</summary>
+    /// <summary>Creates a task-backed signal that notifies on the supplied sequencer.</summary>
     /// <typeparam name="TResult">The type of the result.</typeparam>
-    /// <param name="observableFactory">The observable factory.</param>
-    /// <param name="scheduler">The scheduler.</param>
-    /// <returns>
-    /// An AsyncObservable.
-    /// </returns>
-    /// <exception cref="ArgumentExceptionHelper">observableFactory.</exception>
+    /// <param name="observableFactory">Builds the source, receiving the signal it will belong to.</param>
+    /// <param name="scheduler">The sequencer notifications are delivered on, or <see langword="null"/> for the current thread.</param>
+    /// <returns>A task-backed signal that owns its own cancellation source.</returns>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="observableFactory"/> is <see langword="null"/>.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ITaskSignal<TResult> Create<TResult>(
         Func<ITaskSignal<TResult>, IObservable<TResult>> observableFactory,
         ISequencer? scheduler) =>
         Instance(observableFactory, scheduler, null);
 
-    /// <summary>Creates the specified source.</summary>
+    /// <summary>Creates a task-backed signal that notifies on the supplied sequencer and cancels through the supplied source.</summary>
     /// <typeparam name="TResult">The type of the result.</typeparam>
-    /// <param name="observableFactory">The observable factory.</param>
-    /// <param name="scheduler">The scheduler.</param>
-    /// <param name="cancellationTokenSource">The cancellation token source.</param>
-    /// <returns>
-    /// An AsyncObservable.
-    /// </returns>
-    /// <exception cref="ArgumentExceptionHelper">observableFactory.</exception>
+    /// <param name="observableFactory">Builds the source, receiving the signal it will belong to.</param>
+    /// <param name="scheduler">The sequencer notifications are delivered on, or <see langword="null"/> for the current thread.</param>
+    /// <param name="cancellationTokenSource">The cancellation source to observe, or <see langword="null"/> to own a new one.</param>
+    /// <returns>A task-backed signal.</returns>
+    /// <exception cref="ArgumentExceptionHelper"><paramref name="observableFactory"/> is <see langword="null"/>.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ITaskSignal<TResult> Create<TResult>(
         Func<ITaskSignal<TResult>, IObservable<TResult>> observableFactory,
@@ -55,12 +49,12 @@ public static class TaskSignal
         CancellationTokenSource? cancellationTokenSource) =>
         Instance(observableFactory, scheduler, cancellationTokenSource);
 
-    /// <summary>Executes the Instance operation.</summary>
-    /// <typeparam name="TResult">The TResult type.</typeparam>
-    /// <param name="observableFactory">The observableFactory value.</param>
-    /// <param name="scheduler">The scheduler value.</param>
-    /// <param name="cancellationTokenSource">The cancellationTokenSource value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Validates the factory and builds the signal the public overloads return.</summary>
+    /// <typeparam name="TResult">The result type.</typeparam>
+    /// <param name="observableFactory">Builds the source from the signal.</param>
+    /// <param name="scheduler">The sequencer notifications are delivered on.</param>
+    /// <param name="cancellationTokenSource">The cancellation source to observe.</param>
+    /// <returns>The built signal.</returns>
     private static TaskSignal<TResult> Instance<TResult>(
         Func<ITaskSignal<TResult>, IObservable<TResult>> observableFactory,
         ISequencer? scheduler,

@@ -10,12 +10,7 @@ namespace ReactiveUI.Primitives.Reactive;
 namespace ReactiveUI.Primitives;
 #endif
 
-/// <summary>
-/// Dedicated <see cref="IObservable{T}"/> implementations for the stateful single-source operators.
-/// Building through these instead of <c>Signal.CreateSafe(observer =&gt; ...)</c> removes the
-/// per-subscription closure, delegate, CreateSafe wrapper, and safe-guard sink, leaving only the
-/// signal object at chain-build time and the operator sink at subscribe time.
-/// </summary>
+/// <summary><see cref="IObservable{T}"/> implementations for the stateful single-source operators.</summary>
 public static partial class LinqExtensions
 {
     /// <summary>Dedicated signal for <c>Take</c>.</summary>
@@ -41,13 +36,9 @@ public static partial class LinqExtensions
                 return EmptyDisposable.Instance;
             }
 
-            // A current-thread source runs its work on the trampoline of whichever call enters it first.
-            // If that call is the source's own Subscribe, the source drains the trampoline before this
-            // operator can hand the upstream subscription to its sink, so an endless source (an interval
-            // timer, a repeating loop) never learns that the count was reached and the drain never ends.
-            // Entering the trampoline here instead means the source's Subscribe only queues its work and
-            // returns, the sink owns the upstream subscription before the first value is delivered, and
-            // reaching the count disposes the source and empties the queue.
+            // A current-thread source drains the trampoline inside whichever call enters it first. When that call
+            // is the source's own Subscribe, the sink does not hold the upstream subscription yet, so an endless
+            // source never learns the count was reached. Entering the trampoline here leaves Subscribe queueing only.
             if (!CurrentThreadRequirement.IsRequired(_source) || !CurrentThreadSequencer.IsScheduleRequired)
             {
                 return SubscribeCore(observer);
@@ -75,7 +66,7 @@ public static partial class LinqExtensions
         }
     }
 
-    /// <summary>Dedicated signal for <c>TakeUntil</c> that holds its sources without a per-subscription closure.</summary>
+    /// <summary>Dedicated signal for <c>TakeUntil</c>, holding both the source and the stop arm.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     /// <typeparam name="TOther">The cancellation value type.</typeparam>
     /// <param name="source">The source observable.</param>
@@ -93,11 +84,9 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            // Either arm can be a current-thread source, and whichever this operator subscribes first would run its
-            // work on the trampoline of that very call — draining it before the coordinator has been handed the
-            // subscription it needs in order to stop. An endless source therefore never learns the stop arm fired.
-            // Entering the trampoline here instead means both arms only queue their work and return, the coordinator
-            // owns both subscriptions before the first notification is delivered, and stopping disposes them.
+            // Either arm can be a current-thread source, and whichever is subscribed first drains the trampoline
+            // inside that call, before the coordinator holds the subscription it needs in order to stop. Entering
+            // the trampoline here leaves both arms queueing only, so the coordinator owns both subscriptions first.
             if ((!CurrentThreadRequirement.IsRequired(_source) && !CurrentThreadRequirement.IsRequired(_other))
                 || !CurrentThreadSequencer.IsScheduleRequired)
             {
@@ -115,7 +104,7 @@ public static partial class LinqExtensions
             return subscription;
         }
 
-        /// <summary>Subscribes the stop arm and, unless it has already fired, the source.</summary>
+        /// <summary>Subscribes the stop arm and, unless it has fired, the source.</summary>
         /// <param name="observer">The downstream observer.</param>
         /// <returns>The coordinator that owns both subscriptions.</returns>
         private TakeUntilCoordinator SubscribeCore(IObserver<T> observer)
@@ -325,7 +314,7 @@ public static partial class LinqExtensions
         }
 
         /// <summary>Creates the duplicate-tracking set, pre-sized when the source has a known element count.</summary>
-        /// <returns>The set used to track already-observed values.</returns>
+        /// <returns>The set that tracks the values seen so far.</returns>
         private HashSet<T> CreateSeen() =>
 #if NET8_0_OR_GREATER
             (_source is RangeSignal range ? range.Count : 0) switch
@@ -469,10 +458,9 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            // A current-thread source drains its trampoline inside its own Subscribe, so the sink would not own the
-            // upstream subscription until that drain ended — and on an endless source it never does, because the sink
-            // cannot dispose a subscription it has not been handed. Entering the trampoline here first means the
-            // source only queues its work, and the failing predicate can stop it.
+            // A current-thread source drains its trampoline inside its own Subscribe, so on an endless source the sink
+            // never receives the upstream subscription it would have to dispose. Entering the trampoline here leaves
+            // the source queueing only, so a failing predicate can stop it.
             if (!CurrentThreadRequirement.IsRequired(_source) || !CurrentThreadSequencer.IsScheduleRequired)
             {
                 return SubscribeCore(observer);

@@ -18,9 +18,6 @@ public class ConcurrentSignalBaseTests
     /// <summary>Value forwarded by the <c>OnNext</c> fan-out tests.</summary>
     private const int ForwardedValue = 42;
 
-    /// <summary>Delay in milliseconds used to force the slow-path branch.</summary>
-    private const int SlowPathDelayMilliseconds = 5;
-
     /// <summary>Verifies that <c>ForwardOnNextConcurrently</c> with an empty observer list returns immediately.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -251,13 +248,14 @@ public class ConcurrentSignalBaseTests
             return default;
         });
 
-    /// <summary>Creates an OnNext observer that delays before capturing — forces the slow path.</summary>
+    /// <summary>Creates an OnNext observer that suspends before capturing — forces the slow path.</summary>
     /// <param name="capture">The capture sink.</param>
     /// <returns>An observer whose <c>OnNextAsync</c> completes asynchronously.</returns>
     private static CallbackWitnessAsync<int> MakeSlow(IntCapture capture) =>
-        new(async (x, ct) =>
+        new(async (x, _) =>
         {
-            await Task.Delay(SlowPathDelayMilliseconds, ct).ConfigureAwait(false);
+            // Yielding guarantees the returned ValueTask is incomplete when the fan-out inspects it.
+            await Task.Yield();
             capture.Value = x;
         });
 
@@ -271,13 +269,13 @@ public class ConcurrentSignalBaseTests
             return default;
         };
 
-    /// <summary>OnErrorResume handler that delays before recording — forces the slow path.</summary>
+    /// <summary>OnErrorResume handler that suspends before recording — forces the slow path.</summary>
     /// <param name="capture">The capture sink.</param>
     /// <returns>An OnErrorResume delegate.</returns>
     private static Func<Exception, CancellationToken, ValueTask> MakeErrorSlow(ErrorCapture capture) =>
-        async (ex, ct) =>
+        async (ex, _) =>
         {
-            await Task.Delay(SlowPathDelayMilliseconds, ct).ConfigureAwait(false);
+            await Task.Yield();
             capture.Error = ex;
         };
 
@@ -291,13 +289,13 @@ public class ConcurrentSignalBaseTests
             return default;
         };
 
-    /// <summary>OnCompleted handler that delays before recording — forces the slow path.</summary>
+    /// <summary>OnCompleted handler that suspends before recording — forces the slow path.</summary>
     /// <param name="capture">The capture sink.</param>
     /// <returns>An OnCompleted delegate.</returns>
     private static Func<Result, ValueTask> MakeCompletedSlow(ResultCapture capture) =>
         async r =>
         {
-            await Task.Delay(SlowPathDelayMilliseconds, CancellationToken.None).ConfigureAwait(false);
+            await Task.Yield();
             capture.Result = r;
         };
 

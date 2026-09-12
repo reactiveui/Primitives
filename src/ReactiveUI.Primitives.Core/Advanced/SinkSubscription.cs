@@ -7,17 +7,16 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>
-/// Shared single-upstream-subscription management for sink observers. Operating on a caller-owned
-/// <see cref="IDisposable"/> field through a <see langword="ref"/> parameter lets each sink implement
-/// <see cref="IObserver{T}"/> directly — with no shared base class, and therefore no virtual-dispatch
-/// overhead on the hot notification path — while still sharing the assign-once / dispose-once teardown.
+/// Assign-once, dispose-once management of a sink's single upstream subscription. Each helper takes the
+/// caller-owned <see cref="IDisposable"/> field by <see langword="ref"/>, so a sink can implement
+/// <see cref="IObserver{T}"/> directly without deriving from a shared base class.
 /// </summary>
 public static class SinkSubscription
 {
     /// <summary>Sentinel stored once a sink is disposed so any late subscription is torn down immediately.</summary>
     private static readonly IDisposable DisposedSentinel = new DisposedMarker();
 
-    /// <summary>Assigns the upstream subscription, disposing it immediately if the sink already holds one or has been disposed.</summary>
+    /// <summary>Assigns the upstream subscription, disposing the incoming value when the field holds a subscription or the sink has been disposed.</summary>
     /// <param name="subscription">The caller-owned subscription field.</param>
     /// <param name="value">The upstream subscription to assign.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

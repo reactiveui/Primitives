@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Advanced;
 
-/// <summary>Observer for append.</summary>
+/// <summary>Sink that forwards source values and emits one trailing value before completing.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
 /// <param name="observer">The downstream observer.</param>
 /// <param name="value">The appended value.</param>
@@ -44,7 +44,7 @@ public sealed class AppendWitness<T>(IObserver<T> observer, T value) : IObserver
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnCompleted() => SinkTerminal.Complete(_observer, _value, this);
 
-    /// <summary>Assigns the upstream subscription, disposing it if one is already held.</summary>
+    /// <summary>Assigns the upstream subscription, disposing the incoming one when this sink holds a subscription or has been disposed.</summary>
     /// <param name="subscription">The upstream subscription.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetSubscription(IDisposable subscription) => SinkSubscription.Set(ref _subscription, subscription);

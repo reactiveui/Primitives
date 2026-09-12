@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 [System.Diagnostics.DebuggerDisplay("TaskResultCompletionSource: IsCompleted = {_taskSource.Task.IsCompleted}")]
 public sealed class TaskResultCompletionSource<T>(CancellationToken cancellationToken)
 {
-    /// <summary>The task completion source used to publish the terminal result.</summary>
+    /// <summary>The task completion source that publishes the terminal result.</summary>
     private readonly TaskCompletionSource<T> _taskSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     /// <summary>The cancellation token that cancels the terminal wait.</summary>

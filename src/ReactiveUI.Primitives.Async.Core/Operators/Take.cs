@@ -7,10 +7,6 @@ using ReactiveUI.Primitives.Async.Disposables;
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for working with asynchronous observable sequences.</summary>
-/// <remarks>The SignalAsync class contains static extension methods that enable advanced operations on
-/// asynchronous observables, such as filtering, transformation, and sequence control. These methods are intended to be
-/// used with the SignalAsync{T} type to facilitate reactive programming patterns in asynchronous
-/// scenarios.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Element-limiting operators for an observable source sequence.</summary>
@@ -24,9 +20,7 @@ public static partial class SignalAsyncExtensions
         /// sequence. If <paramref name="count"/> is zero, the resulting sequence completes immediately without emitting
         /// any elements.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="count"/> is less than zero.</exception>
-        /// <remarks>If the source sequence contains fewer elements than <paramref name="count"/>, all
-        /// available elements are emitted and the sequence completes. This method does not modify the source sequence;
-        /// it returns a new sequence with the specified behavior.</remarks>
+        /// <remarks>A source with fewer elements than <paramref name="count"/> emits all of them and completes.</remarks>
         public IObservableAsync<T> Take(int count)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -50,10 +44,10 @@ public static partial class SignalAsyncExtensions
         }
     }
 
-    /// <summary>Single-observer-layer <c>Take(count)</c>. Forwards values until the budget is exhausted, then signals completion downstream.</summary>
+    /// <summary>Forwards values until the count is exhausted, then signals completion downstream.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
-    /// <param name="count">The maximum number of values to forward (must be &gt; 0; the zero case uses <see cref="TakeZeroSignal{T}"/>).</param>
+    /// <param name="count">The maximum number of values to forward, always greater than zero.</param>
     internal sealed class TakeSignal<T>(IObservableAsync<T> source, int count) : IObservableAsync<T>
     {
         /// <inheritdoc/>

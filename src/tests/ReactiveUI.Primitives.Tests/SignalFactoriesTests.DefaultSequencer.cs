@@ -12,9 +12,6 @@ namespace ReactiveUI.Primitives.Tests;
 /// </summary>
 public partial class SignalFactoriesTests
 {
-    /// <summary>The time allowed for a default-sequencer factory to produce its notification.</summary>
-    private static readonly TimeSpan DefaultSequencerTimeout = TimeSpan.FromSeconds(5);
-
     /// <summary>The timeout used by the expiry factory test.</summary>
     private static readonly TimeSpan ShortExpiry = TimeSpan.FromMilliseconds(20);
 
@@ -57,11 +54,11 @@ public partial class SignalFactoriesTests
     [Test]
     public async Task ExpireWithoutASequencerFailsASilentSequence()
     {
-        List<Exception> errors = [];
-        using var subscription = Signal.Expire(Signal.Silent<int>(), ShortExpiry)
-            .Subscribe(static _ => { }, errors.Add);
-        await TestPolling.SpinUntil(() => errors.Count == 1, DefaultSequencerTimeout);
-        await Assert.That(errors[0]).IsTypeOf<TimeoutException>();
+        AwaitableWitness<int> witness = new();
+        using var subscription = Signal.Expire(Signal.Silent<int>(), ShortExpiry).Subscribe(witness);
+        var error = await witness.FirstError;
+        await Assert.That(error).IsTypeOf<TimeoutException>();
+        await Assert.That(witness.Errors.Count).IsEqualTo(1);
     }
 
     /// <summary>Verifies the sequencer-free <c>Start</c> factories run their work and emit its outcome.</summary>
@@ -69,21 +66,21 @@ public partial class SignalFactoriesTests
     [Test]
     public async Task StartWithoutASequencerRunsTheWorkOnTheDefaultSequencer()
     {
-        List<int> functionValues = [];
-        using var functionSubscription = Signal.Start(static () => Two).Subscribe(functionValues.Add);
-        await TestPolling.SpinUntil(() => functionValues.Count == 1, DefaultSequencerTimeout);
-        await Assert.That(functionValues.SequenceEqual([Two])).IsTrue();
+        AwaitableWitness<int> functionWitness = new();
+        using var functionSubscription = Signal.Start(static () => Two).Subscribe(functionWitness);
+        await functionWitness.ValueCountReaching(1);
+        await Assert.That(functionWitness.Values.SequenceEqual([Two])).IsTrue();
         var actionRuns = 0;
-        List<RxVoid> actionValues = [];
+        AwaitableWitness<RxVoid> actionWitness = new();
 
         // A void method group is what selects Start(Action); a lambda over 'actionRuns++' is a
         // Func<int> and would bind to the generic Start<T> overload instead.
         void RunAction() => actionRuns++;
 
-        using var actionSubscription = Signal.Start(RunAction).Subscribe(actionValues.Add);
-        await TestPolling.SpinUntil(() => actionValues.Count == 1, DefaultSequencerTimeout);
+        using var actionSubscription = Signal.Start(RunAction).Subscribe(actionWitness);
+        await actionWitness.ValueCountReaching(1);
         await Assert.That(actionRuns).IsEqualTo(1);
-        await Assert.That(actionValues[0]).IsEqualTo(RxVoid.Default);
+        await Assert.That(actionWitness.Values[0]).IsEqualTo(RxVoid.Default);
     }
 
     /// <summary>Verifies the sequencer-free <c>Every</c> factory ticks on the default sequencer.</summary>
@@ -91,12 +88,13 @@ public partial class SignalFactoriesTests
     [Test]
     public async Task EveryWithoutASequencerTicksOnTheDefaultSequencer()
     {
-        List<long> ticks = [];
-        using (Signal.Every(ShortExpiry).Subscribe(ticks.Add))
+        AwaitableWitness<long> witness = new();
+        using (Signal.Every(ShortExpiry).Subscribe(witness))
         {
-            await TestPolling.SpinUntil(() => ticks.Count >= Two, DefaultSequencerTimeout);
+            await witness.ValueCountReaching(Two);
         }
 
+        var ticks = witness.Values;
         await Assert.That(ticks[1]).IsGreaterThan(ticks[0]);
     }
 }

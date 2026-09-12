@@ -9,16 +9,13 @@ namespace ReactiveUI.Primitives.Advanced;
 #endif
 
 /// <summary>
-/// Shared subscription-time scheduling for advanced signals. A cold signal that must observe the
-/// current-thread sequencer cannot simply subscribe inline: when the current-thread sequencer is already
-/// draining work, the subscription has to be queued behind it so the emissions arrive in trampoline order.
-/// The two shapes below capture that dance once so each signal keeps only its own <c>Run</c> body.
+/// Subscription-time scheduling shared by advanced signals: a signal that observes the current-thread
+/// sequencer has to queue behind it while it is draining work, so emissions arrive in trampoline order.
 /// </summary>
 internal static class SubscriptionScheduling
 {
     /// <summary>
-    /// Subscribes immediately when the current-thread sequencer is idle, otherwise queues the subscription
-    /// on it and hands back a placeholder that is filled in once the subscription actually runs.
+    /// Subscribes inline when the current-thread sequencer is idle, otherwise queues the subscription on it.
     /// </summary>
     /// <typeparam name="TState">The type of the state passed to the subscribe callback.</typeparam>
     /// <param name="state">The state carried to <paramref name="subscribe"/>.</param>
@@ -44,13 +41,13 @@ internal static class SubscriptionScheduling
 
     /// <summary>
     /// Runs <paramref name="run"/> on <paramref name="sequencer"/>: inline for the immediate sequencer, and
-    /// queued behind the current-thread sequencer when that one is the target and is already draining work.
+    /// queued behind the current-thread sequencer when that one is the target and is draining work.
     /// </summary>
     /// <typeparam name="TState">The type of the state passed to the scheduled work.</typeparam>
     /// <param name="sequencer">The sequencer that runs the work.</param>
     /// <param name="state">The state carried to <paramref name="run"/>.</param>
     /// <param name="run">The work to run, which emits to the downstream observer.</param>
-    /// <returns>The disposable used to cancel the scheduled work (best effort).</returns>
+    /// <returns>A disposable that cancels the scheduled work, best effort.</returns>
     internal static IDisposable RunOn<TState>(ISequencer sequencer, TState state, Action<TState> run)
     {
         if (sequencer == Sequencer.Immediate)

@@ -7,9 +7,8 @@ using System.Diagnostics.CodeAnalysis;
 namespace ReactiveUI.Primitives.Async.Helpers;
 
 /// <summary>
-/// Provides a helper for executing async actions as fire-and-forget with exception swallowing.
-/// Used for async void callbacks (e.g. cancellation token registrations, signal handlers)
-/// where exceptions cannot propagate to a caller.
+/// Runs asynchronous work from a synchronous callback — a cancellation-token registration, a signal handler — where
+/// there is no caller to observe a task, reporting failures to <see cref="UnhandledExceptionHandler"/>.
 /// </summary>
 [ExcludeFromCodeCoverage]
 public static class FireAndForgetHelper
@@ -19,9 +18,7 @@ public static class FireAndForgetHelper
     [SuppressMessage(
         "Concurrency",
         "SST1905:Do not use async void",
-        Justification =
-            "Intentional fire-and-forget helper. There is no caller to hand a Task back to; failures are routed to the "
-            + "global handler instead. Returning Task would defeat the fire-and-forget contract this helper exists to provide.")]
+        Justification = "There is no caller to hand a Task back to, so failures go to the global handler instead.")]
     [SuppressMessage(
         "ReSharper",
         "AsyncVoidMethod",

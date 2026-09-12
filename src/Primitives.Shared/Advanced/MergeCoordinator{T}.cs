@@ -85,8 +85,8 @@ public sealed class MergeCoordinator<T> : IDisposable
         }
 
         // A source is free to signal completion more than once. Latch per inner so a repeat cannot decrement
-        // the active count a second time - that would drop the count on behalf of a sibling that is still
-        // running and complete the merge early, losing everything the sibling had left to produce.
+        // the active count on behalf of a running sibling, which would complete the merge early and drop
+        // everything that sibling had left to produce.
         var completed = 0;
         Subscriptions.Add(source.Subscribe(
             OnInnerNext,

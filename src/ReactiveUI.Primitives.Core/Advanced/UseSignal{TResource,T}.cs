@@ -7,21 +7,24 @@ using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Advanced;
 
-/// <summary>Resource-scoped signal.</summary>
-/// <typeparam name="TResource">Resource type.</typeparam>
-/// <typeparam name="T">Value type.</typeparam>
-/// <param name="resourceFactory">Resource factory.</param>
-/// <param name="signalFactory">Signal factory.</param>
+/// <summary>
+/// Signal that creates a resource for each subscription and disposes it once the inner signal terminates or
+/// the subscription is disposed. A fault from either factory is delivered to the observer as an error.
+/// </summary>
+/// <typeparam name="TResource">The resource type, disposed with the subscription.</typeparam>
+/// <typeparam name="T">The value type.</typeparam>
+/// <param name="resourceFactory">Creates the resource, once per subscription.</param>
+/// <param name="signalFactory">Creates the signal that consumes the resource.</param>
 [System.Diagnostics.DebuggerDisplay("UseSignal: ResourceFactory = {_resourceFactory}, SignalFactory = {_signalFactory}")]
 public sealed class UseSignal<TResource, T>(
     Func<TResource> resourceFactory,
     Func<TResource, IObservable<T>> signalFactory) : IObservable<T>
     where TResource : IDisposable
 {
-    /// <summary>Resource factory.</summary>
+    /// <summary>Creates the resource, once per subscription.</summary>
     private readonly Func<TResource> _resourceFactory = resourceFactory;
 
-    /// <summary>Signal factory.</summary>
+    /// <summary>Creates the signal that consumes the resource.</summary>
     private readonly Func<TResource, IObservable<T>> _signalFactory = signalFactory;
 
     /// <inheritdoc/>
@@ -74,7 +77,7 @@ public sealed class UseSignal<TResource, T>(
         /// <summary>Non-zero once stopped.</summary>
         private int _stopped;
 
-        /// <summary>Assigns the inner subscription.</summary>
+        /// <summary>Stores the inner subscription, disposing it when the sink has stopped or holds one.</summary>
         /// <param name="subscription">Inner subscription.</param>
         public void SetSubscription(IDisposable subscription)
         {
@@ -166,7 +169,7 @@ public sealed class UseSignal<TResource, T>(
             Release();
         }
 
-        /// <summary>Releases owned resources.</summary>
+        /// <summary>Detaches the observer, then disposes the inner subscription and the resource.</summary>
         private void Release()
         {
             _observer = EmptyWitness<T>.Instance;

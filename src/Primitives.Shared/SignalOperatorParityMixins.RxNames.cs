@@ -11,9 +11,8 @@ namespace ReactiveUI.Primitives;
 #endif
 
 /// <summary>
-/// System.Reactive / LINQ familiar names for the Primitives operator vocabulary. Each method builds the same sink as
-/// its Primitives-named counterpart directly, so the two names are interchangeable with identical behaviour and
-/// allocation profile. Both name sets are fully supported.
+/// System.Reactive and LINQ names for the Primitives operator vocabulary. Each one builds the same sink as its
+/// Primitives-named counterpart, so either name can be used interchangeably.
 /// </summary>
 public static partial class LinqExtensions
 {
@@ -129,8 +128,7 @@ public static partial class LinqExtensions
         /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="observer"/> is <see langword="null"/>.</exception>
         /// <remarks>
         /// System.Reactive declares an observer-taking <c>SubscribeSafe</c> in the <c>System</c> namespace, so the
-        /// two are ambiguous whenever both packages are in scope. The other <c>SubscribeSafe</c> shapes here have no
-        /// System.Reactive counterpart and stay callable under their own name.
+        /// two are ambiguous whenever both packages are in scope; the other overloads have no such counterpart.
         /// </remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IDisposable SubscribeSafePrimitives(IObserver<T> observer) => SubscribeSafeCore(source, observer);
@@ -268,9 +266,7 @@ public static partial class LinqExtensions
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
             "Modernization",
             "SST2000:Use ArgumentNullException.ThrowIfNull",
-            Justification =
-                "ThrowIfNull takes object, so passing the Lock gate triggers CS9216 (unintended monitor-based locking), "
-                + "which is an error under TreatWarningsAsErrors and cannot be suppressed by attribute.")]
+            Justification = "ThrowIfNull takes object, so passing the Lock gate is a CS9216 error.")]
         public IObservable<T> Synchronize(Lock gate)
         {
             if (gate is null)
@@ -968,8 +964,7 @@ public static partial class LinqExtensions
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
             "Design",
             "SST2307:Generic method type parameters should be inferable from the parameters",
-            Justification =
-                "The type parameter defines the element type for this Rx-style operator and cannot be inferred from the arguments.")]
+            Justification = "No argument carries the result type, so it can only come from an explicit type argument.")]
         public IObservable<TResult> OfType<TResult>()
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -984,8 +979,7 @@ public static partial class LinqExtensions
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
             "Design",
             "SST2307:Generic method type parameters should be inferable from the parameters",
-            Justification =
-                "The type parameter defines the element type for this Rx-style operator and cannot be inferred from the arguments.")]
+            Justification = "No argument carries the result type, so it can only come from an explicit type argument.")]
         public IObservable<TResult> Cast<TResult>()
         {
             ArgumentExceptionHelper.ThrowIfNull(source);

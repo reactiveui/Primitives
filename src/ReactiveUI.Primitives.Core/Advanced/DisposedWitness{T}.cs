@@ -4,7 +4,7 @@
 
 namespace ReactiveUI.Primitives.Advanced;
 
-/// <summary>Observer that rejects every notification because the subscription has already been disposed.</summary>
+/// <summary>Observer that throws <see cref="ObjectDisposedException"/> from every notification, standing in for a disposed subscription.</summary>
 /// <typeparam name="T">The observed value type.</typeparam>
 public sealed class DisposedWitness<T> : IObserver<T>
 {

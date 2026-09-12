@@ -12,12 +12,9 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
 /// <summary>
-/// Loops the supplied <see cref="Action"/> on the supplied
-/// <see cref="ISequencer"/> (or inline when no scheduler is provided), emitting
-/// <see cref="RxVoid.Default"/> after each iteration, for as long as
-/// <paramref name="condition"/> returns <c>true</c>. Replaces the legacy
-/// <c>Observable.While(condition, Observable.Start(action, scheduler))</c>
-/// pattern.
+/// Loops the supplied <see cref="Action"/> on the supplied <see cref="ISequencer"/>, or inline when no scheduler is
+/// provided, emitting <see cref="RxVoid.Default"/> after each iteration for as long as
+/// <paramref name="condition"/> returns <c>true</c>.
 /// </summary>
 /// <param name="condition">The loop predicate. Evaluated before each iteration.</param>
 /// <param name="action">The action to invoke per iteration.</param>

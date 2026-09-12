@@ -19,9 +19,6 @@ public partial class ReactiveExtensionsTests
     /// <summary>String literal "initial" used by multiple tests.</summary>
     private const string InitialValueLiteral = "initial";
 
-    /// <summary>Stabilization window for scheduler-driven assertions.</summary>
-    private const int SchedulerStabilizeMilliseconds = 100;
-
     /// <summary>Value at which the <c>TakeUntil</c>/<c>WaitUntil</c> predicates trip.</summary>
     private const int PredicateThreshold = 5;
 
@@ -42,7 +39,9 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task SyncronizeAsync_RunsWithAsyncTasksInSubscriptions()
     {
-        // Given, When
+        // Given, When. The six handlers can run concurrently, so the counters use Interlocked;
+        // awaiting WhenAll is what establishes that every handler ran, because each one bumps
+        // itterations in its finally before its task completes.
         var result = 0;
         var itterations = 0;
         Subject<bool> subject = new();
@@ -53,16 +52,8 @@ public partial class ReactiveExtensionsTests
         {
             try
             {
-                if (x.Value)
-                {
-                    await Task.Delay(LongDelayMilliseconds);
-                    _ = Interlocked.Increment(ref result);
-                }
-                else
-                {
-                    await Task.Delay(ShortDelayMilliseconds);
-                    _ = Interlocked.Decrement(ref result);
-                }
+                await Task.Yield();
+                _ = x.Value ? Interlocked.Increment(ref result) : Interlocked.Decrement(ref result);
             }
             finally
             {
@@ -78,13 +69,13 @@ public partial class ReactiveExtensionsTests
         subject.OnNext(true);
         subject.OnNext(false);
         await Task.WhenAll(tasks);
-        while (itterations < SampleValue6)
-        {
-            _ = Thread.Yield();
-        }
 
         // Then
-        await Assert.That(result).IsZero();
+        using (Assert.Multiple())
+        {
+            await Assert.That(Volatile.Read(ref result)).IsZero();
+            await Assert.That(Volatile.Read(ref itterations)).IsEqualTo(SampleValue6);
+        }
     }
 
     /// <summary>Tests OnNext with params.</summary>
@@ -490,9 +481,9 @@ public partial class ReactiveExtensionsTests
             });
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
-        await allReceived.Task.WaitAsync(WaitTimeout);
+        await allReceived.Task;
         subject.OnCompleted();
-        await completionSource.Task.WaitAsync(WaitTimeout);
+        await completionSource.Task;
         using (Assert.Multiple())
         {
             await Assert.That(results).IsCollectionEqualTo([1, SampleValue2]);
@@ -592,9 +583,10 @@ public partial class ReactiveExtensionsTests
             observer.OnError(failure);
             return EmptyDisposable.Instance;
         });
-        using var sub = source.OnErrorRetry<int, NotSupportedException>(caught.Add, 1, TimeSpan.Zero, Sequencer.Default)
+        VirtualClock scheduler = new();
+        using var sub = source.OnErrorRetry<int, NotSupportedException>(caught.Add, 1, TimeSpan.Zero, scheduler)
             .Subscribe(values.Add, static _ => { });
-        await Task.Delay(TimeSpan.FromMilliseconds(SchedulerStabilizeMilliseconds));
+        scheduler.AdvanceBy(1);
         await Assert.That(caught).IsEmpty();
         await Assert.That(values.Count).IsGreaterThanOrEqualTo(1);
     }
@@ -626,7 +618,7 @@ public partial class ReactiveExtensionsTests
         const int MaxRetries = 3;
         using var sub = source.RetryWithBackoff(MaxRetries, TimeSpan.FromMilliseconds(1))
             .Subscribe(values.Add, () => done.TrySetResult(values));
-        var captured = await done.Task.WaitAsync(WaitTimeout);
+        var captured = await done.Task;
         await Assert.That(captured).IsCollectionEqualTo([SuccessAttempt]);
     }
 
@@ -649,7 +641,7 @@ public partial class ReactiveExtensionsTests
         subject.OnNext(1);
         subject.OnNext(SampleValue2);
         subject.OnCompleted();
-        await completed.Task.WaitAsync(WaitTimeout);
+        await completed.Task;
         await Assert.That(results.Count).IsGreaterThanOrEqualTo(1);
         await Assert.That(results[^1]).IsCollectionEqualTo([1, SampleValue2]);
     }

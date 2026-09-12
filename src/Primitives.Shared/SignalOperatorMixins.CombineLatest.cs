@@ -25,8 +25,7 @@ public static partial class LinqExtensions
     /// <summary>Observable implementation for generated multi-source combine-latest overloads.</summary>
     /// <typeparam name="TResult">The projected result type.</typeparam>
     /// <param name="connect">
-    /// Creates one typed slot per source against a fresh coordinator and returns the projection that reads
-    /// them. Running per subscription is what keeps every latest value in a field of its own source's type.
+    /// Creates one typed slot per source against a fresh coordinator and returns the projection that reads them.
     /// </param>
     private sealed partial class CombineLatestSignal<TResult>(
         Func<CombineLatestCoordinator<TResult>, Func<TResult>> connect) : IObservable<TResult>
@@ -202,7 +201,7 @@ public static partial class LinqExtensions
         [SuppressMessage(
             "Maintainability",
             "SST1472:Signatures should not declare too many parameters",
-            Justification = "An arity-N combinator takes one observable per source; a parameter object would erase the element type each source contributes to the selector.")]
+            Justification = "An arity-N combinator takes one observable per source.")]
         internal static CombineLatestSignal<TResult> Create<T1, T2, T3, T4, T5, T6, T7>(
             IObservable<T1> source,
             IObservable<T2> source2,
@@ -255,7 +254,7 @@ public static partial class LinqExtensions
         [SuppressMessage(
             "Maintainability",
             "SST1472:Signatures should not declare too many parameters",
-            Justification = "An arity-N combinator takes one observable per source; a parameter object would erase the element type each source contributes to the selector.")]
+            Justification = "An arity-N combinator takes one observable per source.")]
         internal static CombineLatestSignal<TResult> Create<T1, T2, T3, T4, T5, T6, T7, T8>(
             IObservable<T1> source,
             IObservable<T2> source2,
@@ -313,7 +312,7 @@ public static partial class LinqExtensions
         [SuppressMessage(
             "Maintainability",
             "SST1472:Signatures should not declare too many parameters",
-            Justification = "An arity-N combinator takes one observable per source; a parameter object would erase the element type each source contributes to the selector.")]
+            Justification = "An arity-N combinator takes one observable per source.")]
         internal static CombineLatestSignal<TResult> Create<T1, T2, T3, T4, T5, T6, T7, T8, T9>(
             IObservable<T1> source,
             IObservable<T2> source2,
@@ -350,10 +349,7 @@ public static partial class LinqExtensions
             });
     }
 
-    /// <summary>
-    /// Holds the latest value of one source in a field of that source's own type, and observes the source
-    /// directly so a subscription costs one object per source rather than a closure and a delegate per callback.
-    /// </summary>
+    /// <summary>Holds the latest value of one source in a field of that source's own type and observes it directly.</summary>
     /// <typeparam name="TResult">The projected result type.</typeparam>
     /// <typeparam name="T">The source element type.</typeparam>
     /// <param name="coordinator">The coordinator that serializes this slot against its siblings.</param>
@@ -411,21 +407,20 @@ public static partial class LinqExtensions
 
         /// <summary>
         /// One flag per source twice over: the first half records whether a source has produced a value, the
-        /// second whether it has completed. A single array keeps both counters' state in one allocation and
-        /// stays correct for the collection overloads, whose source count has no upper bound.
+        /// second whether it has completed.
         /// </summary>
         private bool[] _flags = [];
 
         /// <summary>The projection over this subscription's slots.</summary>
         private Func<TResult> _project = null!;
 
-        /// <summary>The number of sources still waiting for their first value.</summary>
+        /// <summary>The number of sources yet to produce their first value.</summary>
         private int _missingValues;
 
         /// <summary>The number of sources that have not completed.</summary>
         private int _remainingCompletions;
 
-        /// <summary>Whether a terminal notification has already been forwarded.</summary>
+        /// <summary>Whether a terminal notification has been forwarded.</summary>
         private bool _completed;
 
         /// <summary>Initializes a new instance of the <see cref="CombineLatestCoordinator{TResult}"/> class.</summary>
@@ -450,12 +445,9 @@ public static partial class LinqExtensions
         /// <summary>Subscribes to every attached source and returns this coordinator as the subscription.</summary>
         /// <param name="project">The projection over the slots created by <see cref="Attach{T}"/>.</param>
         /// <returns>This coordinator.</returns>
-        /// <remarks>
-        /// The projection is installed before the first subscription, so a source that produces a value inside
-        /// its own subscribe call still finds somewhere to project into.
-        /// </remarks>
         internal CombineLatestCoordinator<TResult> Run(Func<TResult> project)
         {
+            // Installed before the first subscribe, so a source that emits inside its own Subscribe has a target.
             _project = project;
             _flags = new bool[_slots.Count * FlagsPerSource];
             _missingValues = _slots.Count;

@@ -32,7 +32,7 @@ internal sealed class DebounceImmediateObservable<T>(
         return new DisposableBag(subscription, sink);
     }
 
-    /// <summary>Sink for the debounce immediate observable.</summary>
+    /// <summary>Sink that forwards the first value inline and debounces every later value by the due time.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="dueTime">The debounce duration.</param>
     /// <param name="scheduler">The scheduler to use for timing.</param>

@@ -14,8 +14,8 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="TSource">The source element type.</typeparam>
 /// <typeparam name="TResult">The element type of the projected inner observables.</typeparam>
 /// <remarks>
-/// Fuses the projection into the switch: one object and one observer hop, where a projection followed by a
-/// separate switch costs two of each and an intermediate sequence of observables.
+/// The projection is fused into the switch, so it costs one object and one observer hop instead of the two of
+/// each, plus an intermediate sequence of observables, that a separate projection and switch cost.
 /// </remarks>
 [System.Diagnostics.DebuggerDisplay("SwitchMapSignal: Source = {_source}, SkipNullSources = {_skipNullSources}")]
 public sealed class SwitchMapSignal<TSource, TResult> : IObservable<TResult>

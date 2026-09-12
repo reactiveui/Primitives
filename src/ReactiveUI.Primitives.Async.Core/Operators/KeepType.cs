@@ -7,9 +7,6 @@ using System.Diagnostics.CodeAnalysis;
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for working with asynchronous observable sequences.</summary>
-/// <remarks>The SignalAsync class contains static methods that extend the functionality of asynchronous
-/// observables, enabling advanced filtering, transformation, and composition operations. These methods are intended to
-/// be used with types implementing asynchronous observable patterns, such as SignalAsync{T}.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Type-filtering operators for an observable source sequence.</summary>
@@ -23,13 +20,10 @@ public static partial class SignalAsyncExtensions
         /// </summary>
         /// <typeparam name="TResult">The reference type to filter and project elements to. Must be a class.</typeparam>
         /// <returns>An observable sequence containing only the elements of type TResult from the original sequence.</returns>
-        /// <remarks>Elements that are not of type TResult are ignored and not included in the resulting
-        /// sequence. This method is useful for working with observable sequences containing heterogeneous types,
-        /// allowing subscribers to focus on elements of a specific type.</remarks>
         [SuppressMessage(
             "Design",
             "SST2307:Generic method type parameters should be inferable from the parameters",
-            Justification = "Public extension API — caller specifies TResult explicitly: source.OfType<Derived>().")]
+            Justification = "The caller chooses TResult; no parameter carries it.")]
         public IObservableAsync<TResult> OfType<TResult>()
             where TResult : class
         {
@@ -49,7 +43,7 @@ public static partial class SignalAsyncExtensions
         [SuppressMessage(
             "Design",
             "SST2307:Generic method type parameters should be inferable from the parameters",
-            Justification = "Deliberate lack of type inference.")]
+            Justification = "The caller chooses TResult; no parameter carries it.")]
         public IObservableAsync<TResult> KeepType<TResult>()
             where TResult : class
         {

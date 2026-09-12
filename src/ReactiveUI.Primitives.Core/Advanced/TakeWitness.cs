@@ -26,7 +26,7 @@ public sealed class TakeWitness<T>(IObserver<T> observer, int count) : IObserver
     /// <summary>Non-zero after completion, error, or disposal.</summary>
     private int _stopped;
 
-    /// <summary>Sets the upstream subscription.</summary>
+    /// <summary>Assigns the upstream subscription so the sink can release it once the count is reached.</summary>
     /// <param name="subscription">Upstream subscription.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetSubscription(IDisposable subscription) => _subscription.Create(subscription);

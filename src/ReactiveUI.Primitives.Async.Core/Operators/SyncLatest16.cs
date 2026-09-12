@@ -56,8 +56,7 @@ public static partial class SignalAsyncExtensions
         [SuppressMessage(
             "Maintainability",
             "SST1472:Signatures should not declare too many parameters",
-            Justification =
-                "An arity-N combinator takes N distinctly-typed sources; a parameter object would need the same N type arguments.")]
+            Justification = "An arity-N combinator takes N distinctly-typed sources.")]
         public IObservableAsync<TResult> SyncLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult>(
             IObservableAsync<T2> src2,
             IObservableAsync<T3> src3,
@@ -136,8 +135,7 @@ public static partial class SignalAsyncExtensions
         [SuppressMessage(
             "Maintainability",
             "SST1472:Signatures should not declare too many parameters",
-            Justification =
-                "An arity-N combinator takes N distinctly-typed sources; a parameter object would need the same N type arguments.")]
+            Justification = "An arity-N combinator takes N distinctly-typed sources.")]
         public IObservableAsync<TResult> CombineLatest<T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult>(
             IObservableAsync<T2> src2,
             IObservableAsync<T3> src3,

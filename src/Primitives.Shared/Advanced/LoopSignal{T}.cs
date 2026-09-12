@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Reactive.Advanced;
 namespace ReactiveUI.Primitives.Advanced;
 #endif
 
-/// <summary>Represents an infinite repetition signal.</summary>
+/// <summary>Emits the same value endlessly until the subscription is disposed.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("LoopSignal: Value = {Value}")]
 public sealed class LoopSignal<T> : IRequireCurrentThread<T>
@@ -29,14 +29,14 @@ public sealed class LoopSignal<T> : IRequireCurrentThread<T>
     /// <summary>Gets the repeated value.</summary>
     internal T Value { get; }
 
-    /// <summary>Executes the IsRequiredSubscribeOnCurrentThread operation.</summary>
-    /// <returns>The result.</returns>
+    /// <summary>Reports that subscription runs on the current-thread sequencer.</summary>
+    /// <returns>Always <see langword="true"/>.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsRequiredSubscribeOnCurrentThread() => _currentThreadRequired;
 
-    /// <summary>Executes the Subscribe operation.</summary>
-    /// <param name="observer">The observer value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Subscribes the observer and starts the endless emission loop.</summary>
+    /// <param name="observer">The downstream observer.</param>
+    /// <returns>The disposable that stops the loop.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IDisposable Subscribe(IObserver<T> observer) =>
         SignalSubscription.Subscribe(observer, _currentThreadRequired, SubscribeCore);
@@ -47,16 +47,15 @@ public sealed class LoopSignal<T> : IRequireCurrentThread<T>
     private static bool IsDisposed(IDisposable disposable) =>
         disposable is IsDisposed state && state.IsDisposed;
 
-    /// <summary>Executes the SubscribeCore operation.</summary>
-    /// <param name="observer">The observer value.</param>
-    /// <param name="cancel">The cancel value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Schedules the recursive emission loop, which stops as soon as the handle is disposed.</summary>
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="cancel">The outer subscription handle.</param>
+    /// <returns>The disposable that cancels the scheduled loop.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Allocations",
         "PSH1011",
-        Justification =
-            "No state-taking recursive Schedule overload exists; needs new scheduling API or a rule exclusion.")]
+        Justification = "No state-taking recursive Schedule overload exists.")]
     private IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel) =>
         Sequencer.CurrentThread.Schedule(self =>
         {

@@ -10,9 +10,6 @@ using AsyncSignalFactory = ReactiveUI.Primitives.Async.Signals.Signal;
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for creating and manipulating asynchronous observable sequences.</summary>
-/// <remarks>The methods in this class enable advanced operations on asynchronous observables, such as grouping
-/// elements by key. These extensions are intended for use with types implementing asynchronous observation patterns,
-/// allowing developers to compose and transform streams of data in a reactive manner.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Grouping operators for an observable source sequence.</summary>
@@ -24,10 +21,9 @@ public static partial class SignalAsyncExtensions
         /// <typeparam name="TKey">The type of the key returned by the key selector function. Must be non-nullable.</typeparam>
         /// <param name="keySelector">A function to extract the key for each element in the source sequence.</param>
         /// <returns>An asynchronous observable sequence of grouped observables, each containing elements that share a common key.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="keySelector"/> is null.</exception>
-        /// <remarks>Each group in the resulting sequence corresponds to a unique key produced by the key
-        /// selector. The groups are emitted as soon as their first element is encountered in the source sequence. The
-        /// returned grouped observables can be subscribed to independently.</remarks>
+        /// <exception cref="ArgumentNullException"><paramref name="keySelector"/> is <see langword="null"/>.</exception>
+        /// <remarks>A group is emitted when its first element arrives, and each grouped observable can be subscribed
+        /// independently.</remarks>
         public IObservableAsync<GroupedAsyncSignal<TKey, TValue>> GroupBy<TKey>(Func<TValue, TKey> keySelector)
             where TKey : notnull
         {
@@ -50,11 +46,9 @@ public static partial class SignalAsyncExtensions
         /// within each group.</param>
         /// <returns>An asynchronous observable sequence containing grouped observables, each representing a collection of elements
         /// that share a common key.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="keySelector"/> is null.</exception>
-        /// <remarks>Each group in the resulting sequence is represented by a <see
-        /// cref="GroupedAsyncSignal{TKey, TValue}"/>, which exposes the group's key and an observable sequence of its
-        /// elements. The <paramref name="groupSignalSelector"/> parameter allows customization of the signal used for
-        /// each group, which can affect how elements are buffered or multicast within the group.</remarks>
+        /// <exception cref="ArgumentNullException"><paramref name="keySelector"/> is <see langword="null"/>.</exception>
+        /// <remarks>The signal returned by <paramref name="groupSignalSelector"/> decides how a group's elements are
+        /// buffered or multicast to its subscribers.</remarks>
         public IObservableAsync<GroupedAsyncSignal<TKey, TValue>> GroupBy<TKey>(
             Func<TValue, TKey> keySelector,
             Func<TKey, ISignalAsync<TValue>> groupSignalSelector)
@@ -136,7 +130,6 @@ public static partial class SignalAsyncExtensions
                     signal = parent._groupSignalSelector(key);
                     _signalsByKey.Add(key, signal);
 
-                    // We use the cancellationToken passed from the source subscription.
                     await observer.OnNextAsync(
                         new(
                             key,

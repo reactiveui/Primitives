@@ -125,7 +125,7 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
 
         // The timer roots itself while armed through the callback's target (the work item), which stores the
         // timer; the item's Dispose cancels and releases it.
-        item.AttachTimer(new(static s => ((IReadyWorkItem)s!).Run(), item, dt, Timeout.InfiniteTimeSpan));
+        item.AttachTimer(new Timer(static s => ((IReadyWorkItem)s!).Run(), item, dt, Timeout.InfiniteTimeSpan));
         return item;
     }
 
@@ -181,8 +181,7 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
     /// <param name="item">Work item to execute on the next event-loop turn.</param>
     internal void Enqueue(IReadyWorkItem item)
     {
-        _ready.Enqueue(item);
-        _ = Interlocked.Increment(ref _readyCount);
+        QueueReady(item);
         PostDrain();
 
         // A disposal that raced the enqueue above may have drained the queue before this item joined it. Re-check
@@ -194,6 +193,32 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
         }
 
         ReleaseReady();
+    }
+
+    /// <summary>
+    /// Adds a work item to the ready queue without arming a drain. Internal rather than private so a test can order an
+    /// enqueue, a disposal and a drain as explicit steps instead of racing them across threads.
+    /// </summary>
+    /// <param name="item">Work item to add to the ready queue.</param>
+    internal void QueueReady(IReadyWorkItem item)
+    {
+        _ready.Enqueue(item);
+        _ = Interlocked.Increment(ref _readyCount);
+    }
+
+    /// <summary>
+    /// Runs one batch: every item the ready count promised, stopping early if a concurrent drain took one first.
+    /// Internal rather than private so a test can run a drain pass at the point in a sequence it chooses.
+    /// </summary>
+    internal void RunReadyBatch()
+    {
+        for (var remaining = Volatile.Read(ref _readyCount);
+             remaining > 0 && _ready.TryDequeue(out var item);
+             remaining--)
+        {
+            _ = Interlocked.Decrement(ref _readyCount);
+            item.Run();
+        }
     }
 
     /// <summary>
@@ -291,18 +316,6 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
         PostDrain();
     }
 
-    /// <summary>Runs one batch: every item the ready count promised, stopping early if a concurrent drain took one first.</summary>
-    private void RunReadyBatch()
-    {
-        for (var remaining = Volatile.Read(ref _readyCount);
-             remaining > 0 && _ready.TryDequeue(out var item);
-             remaining--)
-        {
-            _ = Interlocked.Decrement(ref _readyCount);
-            item.Run();
-        }
-    }
-
     /// <summary>
     /// A cancellable scheduled work item carrying closure-free state and the scheduler passed back to the action;
     /// also the target that roots a delayed one-shot timer. The run/cancel handshake lives in the shared
@@ -312,8 +325,12 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
     /// <typeparam name="TState">The scheduled state type.</typeparam>
     internal sealed class StatefulWorkItem<TState> : DispatchWorkItemBase<TState>, IReadyWorkItem
     {
-        /// <summary>Timer driving a delayed item; <see langword="null"/> for immediate work.</summary>
-        private Timer? _timer;
+        /// <summary>
+        /// Release handle for the one-shot timer driving a delayed item; <see langword="null"/> for immediate work.
+        /// Typed as the cancellation the item actually performs rather than the timer itself, so a test can hand it a
+        /// recording handle and observe the release directly.
+        /// </summary>
+        private IDisposable? _timer;
 
         /// <summary>Initializes a new instance of the <see cref="StatefulWorkItem{TState}"/> class.</summary>
         /// <param name="scheduler">The scheduler passed back to the scheduled action.</param>
@@ -340,7 +357,7 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
 
         /// <summary>Stores the one-shot timer so the caller's disposable cancels and releases it.</summary>
         /// <param name="timer">The armed timer.</param>
-        internal void AttachTimer(Timer timer)
+        internal void AttachTimer(IDisposable timer)
         {
             Volatile.Write(ref _timer, timer);
             if (!IsDisposed)

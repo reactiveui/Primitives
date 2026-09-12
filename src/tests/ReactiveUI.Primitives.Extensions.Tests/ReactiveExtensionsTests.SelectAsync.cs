@@ -21,7 +21,7 @@ public partial class ReactiveExtensionsTests
                 results.Add,
                 () => tcs.TrySetResult(true));
 
-        await tcs.Task.WaitAsync(WaitTimeout);
+        await tcs.Task;
 
         await Assert.That(results).IsCollectionEqualTo([SampleValue2, SampleValue4, SampleValue6]);
     }
@@ -40,7 +40,7 @@ public partial class ReactiveExtensionsTests
                 results.Add,
                 () => tcs.TrySetResult(true));
 
-        await tcs.Task.WaitAsync(WaitTimeout);
+        await tcs.Task;
 
         await Assert.That(results).IsCollectionEqualTo([SampleValue2, SampleValue4, SampleValue6]);
     }
@@ -59,7 +59,7 @@ public partial class ReactiveExtensionsTests
                 results.Add,
                 () => tcs.TrySetResult(true));
 
-        await tcs.Task.WaitAsync(WaitTimeout);
+        await tcs.Task;
 
         await Assert.That(results).IsCollectionEqualTo([SampleValue2, SampleValue4, SampleValue6]);
     }
@@ -69,20 +69,19 @@ public partial class ReactiveExtensionsTests
     [Test]
     public async Task WhenSelectLatestAsync_ThenEmitsLatestResult()
     {
-        const int AsyncDelayMs = 10;
         var source = ExpectedSequence123.ToObservable();
         List<int> results = [];
         TaskCompletionSource<bool> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         _ = source.SelectLatestAsync(static async x =>
         {
-            await Task.Delay(AsyncDelayMs);
+            await Task.Yield();
             return x * SampleValue2;
         }).Subscribe(
             results.Add,
             () => tcs.TrySetResult(true));
 
-        await tcs.Task.WaitAsync(WaitTimeout);
+        await tcs.Task;
 
         // Switch means only the latest survives; with sources 1,2,3 and selector x*2, expect [6].
         await Assert.That(results).IsNotEmpty();
@@ -101,12 +100,12 @@ public partial class ReactiveExtensionsTests
         _ = source.SelectAsyncConcurrent(
             static async x =>
             {
-                await Task.Delay(1);
+                await Task.Yield();
                 return x * SampleValue2;
             },
             MaxConcurrency).Subscribe(results.Add, () => tcs.TrySetResult(true));
 
-        await tcs.Task.WaitAsync(WaitTimeout);
+        await tcs.Task;
 
         results.Sort();
         await Assert.That(results).IsCollectionEqualTo([SampleValue2, SampleValue4, SampleValue6]);

@@ -22,18 +22,15 @@ public sealed class ObserverAsyncDisposeTests
     /// </summary>
     private const int DisposeRaceAttempts = 256;
 
-    /// <summary>Maximum time a reentrant dispose may take before it is treated as a deadlock.</summary>
-    private static readonly TimeSpan DeadlockTimeout = TimeSpan.FromSeconds(5);
-
     /// <summary>Verifies the reentrant dispose path lets an observer dispose itself from within its own in-flight
     /// notification without deadlocking, even after the notification continuation has hopped to a different thread.</summary>
-    /// <returns>A task that completes when disposal finishes; faults on timeout if a self-join deadlock occurs.</returns>
+    /// <returns>A task that completes when disposal finishes; a self-join deadlock leaves it pending.</returns>
     [Test]
     public async Task WhenDisposedReentrantlyFromOwnNotificationAfterThreadHop_ThenDoesNotDeadlock()
     {
         SelfDisposingObserver observer = new();
 
-        await observer.OnNextAsync(1, CancellationToken.None).AsTask().WaitAsync(DeadlockTimeout);
+        await observer.OnNextAsync(1, CancellationToken.None);
 
         await Assert.That(observer.HasDisposed).IsTrue();
     }
@@ -51,7 +48,7 @@ public sealed class ObserverAsyncDisposeTests
             return DisposableAsync.Empty;
         });
 
-        var value = await source.FirstAsync().AsTask().WaitAsync(DeadlockTimeout);
+        var value = await source.FirstAsync();
 
         await Assert.That(value).IsEqualTo(EmittedValue);
     }
@@ -81,19 +78,19 @@ public sealed class ObserverAsyncDisposeTests
     /// <summary>Verifies that disposing an observer from one thread while a notification is still in flight on
     /// another never hangs, including when that notification's call count drops to zero inside the disposer's
     /// publish-then-recheck window — the case the disposer must self-signal to avoid waiting forever.</summary>
-    /// <returns>A task that completes when every attempt has disposed; faults on timeout if a wait deadlocks.</returns>
+    /// <returns>A task that completes when every attempt has disposed; a deadlocked wait leaves it pending.</returns>
     [Test]
     public async Task WhenDisposedFromAnotherThreadAsNotificationExits_ThenDoesNotDeadlock()
     {
         for (var attempt = 0; attempt < DisposeRaceAttempts; attempt++)
         {
-            SpinningObserver observer = new();
+            ParkedNotificationObserver observer = new();
             var notification = Task.Run(async () =>
                 await observer.OnNextAsync(EmittedValue, CancellationToken.None));
 
-            await observer.Entered.WaitAsync(DeadlockTimeout);
-            await observer.DisposeAsync().AsTask().WaitAsync(DeadlockTimeout);
-            await notification.WaitAsync(DeadlockTimeout);
+            await observer.Entered;
+            await observer.DisposeAsync();
+            await notification;
 
             await Assert.That(observer.HasDisposed).IsTrue();
         }
@@ -121,33 +118,24 @@ public sealed class ObserverAsyncDisposeTests
         protected override ValueTask OnCompletedAsyncCore(Result result) => default;
     }
 
-    /// <summary>Observer whose notification stays in flight, spinning, until disposal releases it — so the call
-    /// exits within nanoseconds of the disposer starting, rather than parking and exiting long afterwards.</summary>
-    private sealed class SpinningObserver : WitnessAsync<int>
+    /// <summary>Observer whose notification stays in flight until disposal releases it, so the call exits while the
+    /// disposer is inside its publish-then-recheck window rather than long before or long after it.</summary>
+    private sealed class ParkedNotificationObserver : WitnessAsync<int>
     {
-        /// <summary>Upper bound on the spin the in-flight notification performs while waiting to be released.</summary>
-        private const int MaxReleaseSpins = 10_000_000;
-
         /// <summary>Completes once the notification has been entered and the in-flight call count is non-zero.</summary>
         private readonly TaskCompletionSource _entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        /// <summary>Non-zero once disposal has released the spinning notification.</summary>
-        private int _released;
+        /// <summary>Completes when disposal releases the parked notification.</summary>
+        private readonly TaskCompletionSource _released = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         /// <summary>Gets a task that completes once the notification is in flight.</summary>
         internal Task Entered => _entered.Task;
 
         /// <inheritdoc/>
-        protected override ValueTask OnNextAsyncCore(int value, CancellationToken cancellationToken)
+        protected override async ValueTask OnNextAsyncCore(int value, CancellationToken cancellationToken)
         {
             IgnoredResult.Of(_entered.TrySetResult());
-
-            for (var spin = 0; spin < MaxReleaseSpins && Volatile.Read(ref _released) == 0; spin++)
-            {
-                Thread.SpinWait(1);
-            }
-
-            return default;
+            await _released.Task.ConfigureAwait(false);
         }
 
         /// <inheritdoc/>
@@ -160,7 +148,8 @@ public sealed class ObserverAsyncDisposeTests
         /// <inheritdoc/>
         protected override ValueTask DisposeAsyncCore()
         {
-            Volatile.Write(ref _released, 1);
+            // Release before the base waits on in-flight calls: the notification exits as the gate is published.
+            IgnoredResult.Of(_released.TrySetResult());
             return base.DisposeAsyncCore();
         }
     }

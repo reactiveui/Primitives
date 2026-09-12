@@ -7,11 +7,7 @@ namespace ReactiveUI.Primitives.Async;
 /// <summary>Fused operator observables backing the parity-helper extension methods in <see cref="SignalAsyncExtensions"/>.</summary>
 public static partial class SignalAsyncExtensions
 {
-    /// <summary>
-    /// Fuses <c>Return(initial).Concat(source.Scan(initial, accumulator))</c> into a single layer.
-    /// The seed is emitted on subscribe and tracked as the initial accumulator; each upstream
-    /// emission updates the accumulator and forwards the new value.
-    /// </summary>
+    /// <summary>Emits the initial accumulator on subscribe, then folds each source value into it and forwards the result.</summary>
     /// <typeparam name="TSource">The upstream element type.</typeparam>
     /// <typeparam name="TAccumulate">The accumulator type.</typeparam>
     /// <param name="source">The upstream observable.</param>
@@ -43,7 +39,7 @@ public static partial class SignalAsyncExtensions
 
         /// <summary>Per-subscription accumulator observer.</summary>
         /// <param name="downstream">The downstream observer.</param>
-        /// <param name="seed">The seed accumulator value already emitted during subscription.</param>
+        /// <param name="seed">The seed accumulator value emitted during subscription.</param>
         /// <param name="accumulator">The synchronous accumulator.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
         internal sealed class ScanWithInitialWitness(
@@ -104,7 +100,7 @@ public static partial class SignalAsyncExtensions
 
         /// <summary>Per-subscription async accumulator observer.</summary>
         /// <param name="downstream">The downstream observer.</param>
-        /// <param name="seed">The seed accumulator value already emitted during subscription.</param>
+        /// <param name="seed">The seed accumulator value emitted during subscription.</param>
         /// <param name="accumulator">The asynchronous accumulator.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
         internal sealed class ScanWithInitialAsyncWitness(
@@ -151,16 +147,12 @@ public static partial class SignalAsyncExtensions
         }
     }
 
-    /// <summary>
-    /// Fuses <c>DistinctUntilChanged().Throttle(window).DistinctUntilChanged()</c> into a single
-    /// observer that tracks upstream-distinct, debounce-timer supersession, and downstream-distinct
-    /// state. Supersession follows the same id-based pattern used by <c>ThrottleSignal</c>: a
-    /// superseded delay still runs but its result is discarded.
-    /// </summary>
+    /// <summary>Drops upstream duplicates, debounces each value, and suppresses duplicates again before forwarding.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     /// <param name="dueTime">The debounce window.</param>
-    /// <param name="timeProvider">The time provider used for the debounce timer.</param>
+    /// <param name="timeProvider">The time provider for the debounce timer.</param>
+    /// <remarks>A superseded delay is not cancelled: it runs to completion and its result is dropped by the id check.</remarks>
     internal sealed class ThrottleDistinctSignal<T>(
         IObservableAsync<T> source,
         TimeSpan dueTime,
@@ -212,18 +204,14 @@ public static partial class SignalAsyncExtensions
             /// <summary>Set to <see langword="true"/> after the first value has been forwarded downstream.</summary>
             private bool _hasEmitted;
 
-            /// <summary>Monotonically increasing identifier used to detect supersession.</summary>
+            /// <summary>Monotonically increasing identifier stamped on each pending delay; a mismatch marks it superseded.</summary>
             private long _id;
 
-            /// <summary>Post-delay decision: latches the emission if the id is still current and
-            /// the value differs from the most-recently-emitted one. Extracted as an
-            /// <see langword="internal"/> method so the decision is unit-testable directly
-            /// without racing the delay timer in tests.</summary>
+            /// <summary>Claims the emission when the stamped id is current and the value differs from the last forwarded one.</summary>
             /// <param name="value">The candidate value.</param>
             /// <param name="id">The id stamped when this delay was started.</param>
-            /// <returns><see langword="true"/> if the caller should forward the value
-            /// downstream; <see langword="false"/> if the emission was superseded or is a
-            /// duplicate of the most-recently-forwarded value.</returns>
+            /// <returns><see langword="true"/> when the caller should forward the value; <see langword="false"/> when it
+            /// was superseded or duplicates the last forwarded value.</returns>
             internal bool TryClaimEmission(T value, long id)
             {
                 lock (_gate)
@@ -297,11 +285,7 @@ public static partial class SignalAsyncExtensions
                 return base.DisposeAsyncCore();
             }
 
-            /// <summary>Waits the debounce window, then forwards the value if
-            /// <see cref="TryClaimEmission"/> approves it. The single catch routes everything
-            /// through <see cref="UnhandledExceptionHandler.ReportUnhandledException"/>, which
-            /// already filters out <see cref="OperationCanceledException"/> internally —
-            /// so a separate OCE-only catch would just duplicate the same silent-drop behavior.</summary>
+            /// <summary>Waits the debounce window, then forwards the value when <see cref="TryClaimEmission"/> approves it.</summary>
             /// <param name="value">The candidate value.</param>
             /// <param name="id">The id stamped when this delay was started.</param>
             /// <param name="cancellationToken">The cancellation token.</param>
@@ -321,17 +305,14 @@ public static partial class SignalAsyncExtensions
                 }
                 catch (Exception e)
                 {
+                    // ReportUnhandledException drops cancellation itself, so no separate catch for it.
                     UnhandledExceptionHandler.ReportUnhandledException(e);
                 }
             }
         }
     }
 
-    /// <summary>
-    /// Fuses the <c>DropIfBusy</c> closure-based pipeline into a single observer layer.
-    /// Synchronously-completing async actions and downstream emissions take a zero-state-machine
-    /// fast path; only when the inner action genuinely suspends does the slow path run.
-    /// </summary>
+    /// <summary>Runs the action for one value at a time and drops the values that arrive while it is running.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     /// <param name="asyncAction">The async side-effect invoked for accepted values.</param>
@@ -356,7 +337,7 @@ public static partial class SignalAsyncExtensions
             return sink;
         }
 
-        /// <summary>Per-subscription witness that drops upstream emissions while a prior action is still pending.</summary>
+        /// <summary>Per-subscription witness that drops upstream emissions while a prior action is pending.</summary>
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="asyncAction">The async side-effect invoked for accepted values.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token, linked into the dispose chain.</param>
@@ -445,18 +426,14 @@ public static partial class SignalAsyncExtensions
         }
     }
 
-    /// <summary>
-    /// Fuses <c>Select(condition ? Return(value) : Return(value).Delay(...)).Switch()</c> into a
-    /// single observer layer. Bypass-true values flow through with zero allocation; bypass-false
-    /// values schedule a fire-and-forget delay with id-based supersession (the same pattern
-    /// <see cref="ThrottleDistinctSignal{T}"/> uses) so the previous pending delay is
-    /// effectively cancelled on every new upstream value.
-    /// </summary>
+    /// <summary>Forwards a value at once when the condition holds, otherwise after the debounce window elapses.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     /// <param name="debounce">The debounce window applied to bypass-false values.</param>
     /// <param name="condition">When <see langword="true"/> the value bypasses the delay and is forwarded immediately.</param>
-    /// <param name="timeProvider">The time provider used for the debounce timer.</param>
+    /// <param name="timeProvider">The time provider for the debounce timer.</param>
+    /// <remarks>Each new upstream value supersedes a pending delay, which is not cancelled: it runs to completion and its
+    /// result is dropped by the id check.</remarks>
     internal sealed class DebounceUntilSignal<T>(
         IObservableAsync<T> source,
         TimeSpan debounce,
@@ -496,16 +473,13 @@ public static partial class SignalAsyncExtensions
             /// <summary>Synchronization gate protecting the id counter.</summary>
             private readonly Lock _gate = new();
 
-            /// <summary>Monotonically increasing identifier used to detect supersession of pending delays.</summary>
+            /// <summary>Monotonically increasing identifier stamped on each pending delay; a newer value supersedes the old id.</summary>
             private long _id;
 
-            /// <summary>Post-delay supersession check. Extracted as an <see langword="internal"/>
-            /// method so tests can verify the supersession decision directly without racing the
-            /// delay timer.</summary>
+            /// <summary>Reports whether the stamped id is the current one, so no newer value has superseded this delay.</summary>
             /// <param name="id">The id stamped when this delay was started.</param>
-            /// <returns><see langword="true"/> if the caller should forward the value
-            /// downstream; <see langword="false"/> if the emission was superseded by a newer
-            /// upstream value.</returns>
+            /// <returns><see langword="true"/> when the caller should forward the value; <see langword="false"/> when a
+            /// newer upstream value superseded it.</returns>
             internal bool IsCurrentEmission(long id)
             {
                 lock (_gate)
@@ -571,11 +545,7 @@ public static partial class SignalAsyncExtensions
                 return base.DisposeAsyncCore();
             }
 
-            /// <summary>Waits the debounce window, then forwards the value if
-            /// <see cref="IsCurrentEmission"/> confirms the emission was not superseded.
-            /// The single catch routes everything through
-            /// <see cref="UnhandledExceptionHandler.ReportUnhandledException"/>, which already
-            /// filters out <see cref="OperationCanceledException"/> internally.</summary>
+            /// <summary>Waits the debounce window, then forwards the value when <see cref="IsCurrentEmission"/> confirms it.</summary>
             /// <param name="value">The candidate value.</param>
             /// <param name="id">The id stamped when this delay was started.</param>
             /// <param name="cancellationToken">The cancellation token.</param>
@@ -595,19 +565,14 @@ public static partial class SignalAsyncExtensions
                 }
                 catch (Exception e)
                 {
+                    // ReportUnhandledException drops cancellation itself, so no separate catch for it.
                     UnhandledExceptionHandler.ReportUnhandledException(e);
                 }
             }
         }
     }
 
-    /// <summary>
-    /// Fuses <c>source.SelectMany(values =&gt; values.ToAsyncSignal())</c> into a single
-    /// observer that iterates the inner enumerable inline and forwards each element. Avoids the
-    /// <c>SelectMany</c>+<c>ToAsyncSignal</c> per-emission machinery; arrays and
-    /// <see cref="IReadOnlyList{T}"/> snapshots are walked with an indexed <c>for</c> loop to
-    /// dodge the enumerator-box allocation entirely.
-    /// </summary>
+    /// <summary>Forwards every element of each enumerable the source emits, walking arrays and lists by index.</summary>
     /// <typeparam name="T">The flattened element type.</typeparam>
     /// <param name="source">The upstream observable of <see cref="IEnumerable{T}"/> snapshots.</param>
     internal sealed class ForEachEnumerableSignal<T>(IObservableAsync<IEnumerable<T>> source) : IObservableAsync<T>

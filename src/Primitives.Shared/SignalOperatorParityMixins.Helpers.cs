@@ -46,7 +46,7 @@ public static partial class LinqExtensions
         return EmptyDisposable.Instance;
     }
 
-    /// <summary>Prepends a single value without composing through concat and return signals.</summary>
+    /// <summary>Emits one value, then the source sequence.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     /// <param name="source">The source observable.</param>
     /// <param name="value">The prepended value.</param>
@@ -85,7 +85,7 @@ public static partial class LinqExtensions
         internal T GetValue() => _value;
     }
 
-    /// <summary>Prepends an enumerable without composing through concat and enumerable signals.</summary>
+    /// <summary>Emits the values of an enumerable, then the source sequence.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     /// <param name="source">The source observable.</param>
     /// <param name="values">Values emitted before source subscription.</param>
@@ -205,7 +205,7 @@ public static partial class LinqExtensions
         }
     }
 
-    /// <summary>Range timestamp projection with no intermediate map observer.</summary>
+    /// <summary>Projects a range's values into timestamped moments.</summary>
     /// <typeparam name="T">The range value type.</typeparam>
     /// <param name="range">The range source.</param>
     /// <param name="sequencer">The sequencer used to read timestamps.</param>
@@ -258,7 +258,7 @@ public static partial class LinqExtensions
             }
         }
 
-        /// <summary>Emits timestamped range values to an observer without allocating a delegate wrapper.</summary>
+        /// <summary>Emits timestamped range values straight to an observer.</summary>
         /// <param name="observer">The downstream observer.</param>
         private void Emit(IObserver<Moment<T>> observer)
         {
@@ -280,7 +280,7 @@ public static partial class LinqExtensions
         }
     }
 
-    /// <summary>Range time-interval projection with no intermediate safe signal closure.</summary>
+    /// <summary>Projects a range's values into interval-tagged values.</summary>
     /// <typeparam name="T">The range value type.</typeparam>
     /// <param name="range">The range source.</param>
     /// <param name="sequencer">The sequencer used to read timestamps.</param>
@@ -336,7 +336,7 @@ public static partial class LinqExtensions
             }
         }
 
-        /// <summary>Emits interval-tagged range values to an observer without allocating a delegate wrapper.</summary>
+        /// <summary>Emits interval-tagged range values straight to an observer.</summary>
         /// <param name="observer">The downstream observer.</param>
         private void Emit(IObserver<TimeInterval<T>> observer)
         {
@@ -361,7 +361,7 @@ public static partial class LinqExtensions
         }
     }
 
-    /// <summary>Range delay projection with no safe-signal wrapper allocation.</summary>
+    /// <summary>Emits a whole range as one batch scheduled after the due time.</summary>
     /// <typeparam name="T">The range value type.</typeparam>
     /// <param name="range">The range source.</param>
     /// <param name="dueTime">The normalized due time.</param>
@@ -531,7 +531,7 @@ public static partial class LinqExtensions
             Dispose();
         }
 
-        /// <summary>Emits the value still waiting inside the quiet window, then forwards completion.</summary>
+        /// <summary>Emits any value waiting inside the quiet window, then forwards completion.</summary>
         private void OnCompleted()
         {
             lock (_gate)
@@ -543,9 +543,9 @@ public static partial class LinqExtensions
 
                 _done = true;
 
-                // The quiet window is cut short by completion rather than cancelled by it: the value it was
-                // holding is delivered first, matching the sibling EmitIfQuiet operator. A value the timer has
-                // already delivered cleared _hasLatest under this same gate, so it cannot be emitted twice.
+                // Completion cuts the quiet window short rather than cancelling it, so a value the window was
+                // holding is delivered first. A value the timer delivered cleared _hasLatest under this same
+                // gate, so it cannot be emitted twice.
                 if (_hasLatest)
                 {
                     _hasLatest = false;

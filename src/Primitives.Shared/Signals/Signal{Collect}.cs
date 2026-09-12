@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.Reactive.Signals;
 namespace ReactiveUI.Primitives.Signals;
 #endif
 
-/// <summary>Create Signals functionality.</summary>
+/// <summary>Time-windowed buffering support for the signal factory surface.</summary>
 public static partial class Signal
 {
     /// <summary>Coordinates time-windowed buffering for a single subscription.</summary>
@@ -38,7 +38,7 @@ public static partial class Signal
         /// <summary>The values collected for the current window.</summary>
         private readonly List<TSource> _values = [];
 
-        /// <summary>Whether a flush has already been scheduled for the current window.</summary>
+        /// <summary>Whether a flush is scheduled for the current window.</summary>
         private bool _flushScheduled;
 
         /// <summary>Whether the source has terminated.</summary>
@@ -89,7 +89,7 @@ public static partial class Signal
             _observer.OnCompleted();
         }
 
-        /// <summary>Flushes the current window if it still has buffered values.</summary>
+        /// <summary>Emits the current window when it holds buffered values.</summary>
         private void Flush()
         {
             var batch = TakeScheduledBatch();

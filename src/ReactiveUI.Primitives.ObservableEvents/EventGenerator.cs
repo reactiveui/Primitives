@@ -13,17 +13,11 @@ namespace ReactiveUI.Primitives.ObservableEvents;
 
 /// <summary>Generates observable wrappers for the event-bearing types a consumer asks for.</summary>
 /// <remarks>
-/// <para>
-/// Two things ask for generation. An <c>Events()</c> call names its receiver, which is what makes the API
-/// discoverable from the call site; an assembly attribute names a static host, which has no receiver to call
-/// through. Both converge on the same extraction and the same emitter.
-/// </para>
-/// <para>
-/// Everything that leaves a semantic transform is a model of strings that compares by value, and every output is
-/// keyed on the smallest model that decides it: one wrapper per host, one file per namespace of static events, one
-/// file of activation overloads. An edit to one host's events therefore re-emits that host's file and nothing else,
-/// and an edit anywhere else re-emits nothing at all.
-/// </para>
+/// Generation is requested either by an <c>Events()</c> call, whose receiver names the host, or by an assembly
+/// attribute naming a static host; both converge on the same extraction and the same emitters. Everything leaving a
+/// semantic transform is a model of strings that compares by value, and every output is keyed on the smallest model
+/// that decides it - one wrapper per host, one file per namespace of static events, one file of activation
+/// overloads - so an edit to one host's events re-emits that host's file alone.
 /// </remarks>
 [Generator(LanguageNames.CSharp)]
 public sealed class EventGenerator : IIncrementalGenerator
@@ -33,9 +27,8 @@ public sealed class EventGenerator : IIncrementalGenerator
     {
         RegisterActivationOutput(in context);
 
-        // Which observable library is referenced decides every type name in the generated source, but nothing about
-        // which events exist. Resolving it here, into a value the pipeline can compare, keeps the far more
-        // expensive extraction from re-running when only the reference set moves.
+        // Which observable library is referenced decides every type name in the generated source but nothing about
+        // which events exist, so resolving it separately keeps extraction from re-running when references move.
         var provider = context.CompilationProvider
             .Select(static (compilation, _) => ProviderResolver.Resolve(compilation))
             .WithTrackingName(GeneratorStepNames.Provider);
@@ -67,12 +60,10 @@ public sealed class EventGenerator : IIncrementalGenerator
     /// <summary>Registers the activation API a consumer writes against.</summary>
     /// <param name="context">The generator initialization context.</param>
     /// <remarks>
-    /// Deliberately an ordinary source output rather than post-initialization output, even though it depends on
-    /// nothing and could be produced before anything is scanned. Post-initialization source is added to the
-    /// compilation the pipeline then runs against, which makes that compilation new on every single run and throws
-    /// away every semantic result cached against the previous one - so a driver that has already generated
-    /// re-binds every call site from scratch, whether or not anything changed. One inert post-initialization file
-    /// is enough to cost that, so this generator emits none.
+    /// An ordinary source output rather than post-initialization output: post-initialization source is added to the
+    /// compilation the pipeline then runs against, making that compilation new on every run and discarding every
+    /// semantic result cached against the one it replaces. One inert post-initialization file costs that, so this
+    /// generator registers none.
     /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void RegisterActivationOutput(in IncrementalGeneratorInitializationContext context) =>

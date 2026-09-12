@@ -51,9 +51,9 @@ public static partial class SignalExtensions
             return new RecoverSignal<TSource, TException>(source, handler);
         }
 
-        /// <summary>Finallies the specified finally action.</summary>
-        /// <param name="finallyAction">The finally action.</param>
-        /// <returns>An observable sequence containing elements from consecutive source sequences until a source sequence terminates successfully.</returns>
+        /// <summary>Invokes an action when the subscription is torn down, whether the source terminated or the subscription was disposed.</summary>
+        /// <param name="finallyAction">The action to invoke on teardown.</param>
+        /// <returns>An observable sequence that forwards the source and invokes <paramref name="finallyAction"/> on teardown.</returns>
         public IObservable<TSource> OnCleanup(Action finallyAction)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);

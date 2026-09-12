@@ -13,47 +13,47 @@ namespace ReactiveUI.Primitives.Signals;
 /// <summary>Provides static factory and operator methods for signals.</summary>
 public static partial class Signal
 {
-    /// <summary>Emit a single value on the specified scheduler.</summary>
-    /// <typeparam name="T">The type.</typeparam>
-    /// <param name="value">The value.</param>
-    /// <param name="scheduler">The scheduler.</param>
-    /// <returns>An Signals.</returns>
+    /// <summary>Creates a signal that emits a single value on the supplied scheduler and completes.</summary>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="value">The value to emit.</param>
+    /// <param name="scheduler">The scheduler the value is emitted on.</param>
+    /// <returns>A signal that emits <paramref name="value"/> and completes.</returns>
     public static IObservable<T> Emit<T>(T value, ISequencer scheduler) => scheduler == Sequencer.Immediate
         ? new ImmediateReturnSignal<T>(value)
         : new ReturnSignal<T>(value, scheduler);
 
-    /// <summary>Emit a single value immediately.</summary>
-    /// <typeparam name="T">The type.</typeparam>
-    /// <param name="value">The value.</param>
-    /// <returns>An Signals.</returns>
+    /// <summary>Creates a signal that emits a single value to each subscriber and completes, without scheduling.</summary>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="value">The value to emit.</param>
+    /// <returns>A signal that emits <paramref name="value"/> and completes.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservable<T> Emit<T>(T value) =>
         new ImmediateReturnSignal<T>(value);
 
-    /// <summary>Emit a single RxVoid value immediately, optimized for no allocation.</summary>
-    /// <param name="value">The value.</param>
-    /// <returns>An Signals.</returns>
+    /// <summary>Returns the shared signal that emits the unit value and completes, without allocating.</summary>
+    /// <param name="value">The unit value to emit.</param>
+    /// <returns>A signal that emits <see cref="RxVoid.Default"/> and completes.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservable<RxVoid> Emit(RxVoid value) =>
         ImmutableReturnRxVoidSignal.Instance;
 
-    /// <summary>Emit a single Boolean value immediately, optimized for no allocation.</summary>
-    /// <param name="value">if set to <c>true</c> [value].</param>
-    /// <returns>An Signals.</returns>
+    /// <summary>Returns one of the two shared Boolean signals that emit the value and complete, without allocating.</summary>
+    /// <param name="value">The value to emit.</param>
+    /// <returns>A signal that emits <paramref name="value"/> and completes.</returns>
     public static IObservable<bool> Emit(bool value) =>
         value
             ? ImmutableReturnTrueSignal.Instance
             : ImmutableReturnFalseSignal.Instance;
 
-    /// <summary>Emit a single Int32 value immediately, optimized for cached values.</summary>
-    /// <param name="value">The value.</param>
-    /// <returns>An Signals.</returns>
+    /// <summary>Creates a signal that emits a single 32-bit integer and completes, without scheduling.</summary>
+    /// <param name="value">The value to emit.</param>
+    /// <returns>A signal that emits <paramref name="value"/> and completes.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservable<int> Emit(int value) =>
         new ImmediateReturnSignal<int>(value);
 
-    /// <summary>Same as Signals.Emit(RxVoid.Default); but no allocate memory.</summary>
-    /// <returns>An Signals.</returns>
+    /// <summary>Returns the shared signal that emits the unit value and completes, without allocating.</summary>
+    /// <returns>A signal that emits <see cref="RxVoid.Default"/> and completes.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IObservable<RxVoid> EmitRxVoid() =>
         ImmutableReturnRxVoidSignal.Instance;

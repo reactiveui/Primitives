@@ -7,9 +7,6 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides Aggregate (fold/reduce) extension methods for asynchronous observable sequences.</summary>
-/// <remarks>Aggregate applies an accumulator function over each element of the observable sequence
-/// and returns the final accumulated value when the sequence completes. This is equivalent to a fold
-/// or reduce operation.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Aggregate (fold/reduce) operators for an observable source sequence.</summary>
@@ -41,7 +38,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="seed">The initial accumulator value.</param>
         /// <param name="accumulator">An asynchronous accumulator function to invoke on each element. Receives the
         /// current accumulated value, the current element, and a cancellation token.</param>
-        /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
+        /// <param name="cancellationToken">The token that cancels the operation.</param>
         /// <returns>A task representing the asynchronous operation, containing the final accumulated value.</returns>
         /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="accumulator"/> is null.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -75,7 +72,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="seed">The initial accumulator value.</param>
         /// <param name="accumulator">An accumulator function to invoke on each element. Receives the current
         /// accumulated value and the current element.</param>
-        /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
+        /// <param name="cancellationToken">The token that cancels the operation.</param>
         /// <returns>A task representing the asynchronous operation, containing the final accumulated value.</returns>
         /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="accumulator"/> is null.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -113,7 +110,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="seed">The initial accumulator value.</param>
         /// <param name="accumulator">An accumulator function to invoke on each element.</param>
         /// <param name="resultSelector">A function to transform the final accumulated value into the result value.</param>
-        /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
+        /// <param name="cancellationToken">The token that cancels the operation.</param>
         /// <returns>A task representing the asynchronous operation, containing the transformed result.</returns>
         /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="accumulator"/> or
         /// <paramref name="resultSelector"/> is null.</exception>
@@ -149,7 +146,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="seed">The initial accumulator value.</param>
         /// <param name="accumulator">An asynchronous accumulator function to invoke on each element. Receives the
         /// current accumulated value, the current element, and a cancellation token.</param>
-        /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
+        /// <param name="cancellationToken">The token that cancels the operation.</param>
         /// <returns>A task representing the asynchronous operation, containing the final accumulated value.</returns>
         /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="accumulator"/> is null.</exception>
         public async ValueTask<TAcc> ReduceAsync<TAcc>(
@@ -190,7 +187,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="seed">The initial accumulator value.</param>
         /// <param name="accumulator">An accumulator function to invoke on each element. Receives the current
         /// accumulated value and the current element.</param>
-        /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
+        /// <param name="cancellationToken">The token that cancels the operation.</param>
         /// <returns>A task representing the asynchronous operation, containing the final accumulated value.</returns>
         /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="accumulator"/> is null.</exception>
         public async ValueTask<TAcc> ReduceAsync<TAcc>(
@@ -235,7 +232,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="seed">The initial accumulator value.</param>
         /// <param name="accumulator">An accumulator function to invoke on each element.</param>
         /// <param name="resultSelector">A function to transform the final accumulated value into the result value.</param>
-        /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
+        /// <param name="cancellationToken">The token that cancels the operation.</param>
         /// <returns>A task representing the asynchronous operation, containing the transformed result.</returns>
         /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="accumulator"/> or
         /// <paramref name="resultSelector"/> is null.</exception>

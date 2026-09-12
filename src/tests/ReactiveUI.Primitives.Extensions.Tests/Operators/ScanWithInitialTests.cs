@@ -10,18 +10,6 @@ namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 [System.Diagnostics.DebuggerDisplay("ScanWithInitialTests: {nameof(ScanWithInitialTests),nq}")]
 public partial class ScanWithInitialTests
 {
-    /// <summary>Spin iterations used to widen the interleaving window in contention tests.</summary>
-    private const int InterleavingSpinIterations = 100;
-
-#if NET9_0_OR_GREATER
-
-    /// <summary>Synchronization gate used by tests.</summary>
-    private readonly Lock _gate = new();
-#else
-    /// <summary>Synchronization gate used by tests.</summary>
-    private readonly object _gate = new();
-#endif
-
     /// <summary>Tests that <see cref = "ScanWithInitialObservable{TSource, TAccumulate}"/> emits the initial value immediately upon subscription.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -96,60 +84,48 @@ public partial class ScanWithInitialTests
         await Assert.That(errors).IsCollectionEqualTo([exception]);
     }
 
-    /// <summary>Tests that <see cref = "ScanWithInitialObservable{TSource, TAccumulate}"/> is thread-safe.</summary>
+    /// <summary>Tests that a terminal notification raised from inside an emission completes the
+    /// sink exactly once and stops accumulating, which is the interleaving the sink's gate and
+    /// <c>_done</c> latch exist to serialize.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    [SuppressMessage(
-        "Concurrency",
-        "PSH1315:A blocking wait on an awaitable that may not be done",
-        Justification = "Test is synchronous.")]
-    public async Task Observable_IsThreadSafe()
+    public async Task OnCompletedDuringEmission_CompletesOnceAndStopsAccumulating()
     {
         // Arrange
         Subject<int> source = new();
         const int Initial = 0;
-        Func<int, int, int> accumulator = static (acc, x) =>
-        {
-            Thread.SpinWait(InterleavingSpinIterations);
-            return acc + x;
-        };
+        const int EmissionsBeforeCompletion = 3;
+        const int EmissionCount = 100;
+        Func<int, int, int> accumulator = static (acc, x) => acc + x;
         ScanWithInitialObservable<int, int> observable = new(source, Initial, accumulator);
         List<int> results = [];
         var completedCount = 0;
-        const int ContendedEmissionCount = 100;
-        const int CompletionDelayMilliseconds = 50;
 
         // Act
         using (observable.Subscribe(
                    x =>
                    {
-                       lock (_gate)
+                       results.Add(x);
+                       if (results.Count == EmissionsBeforeCompletion)
                        {
-                           results.Add(x);
+                           // Re-enter the sink with the terminal notification from inside its own emission.
+                           source.OnCompleted();
                        }
                    },
                    static _ => { },
-                   () => Interlocked.Increment(ref completedCount)))
+                   () => completedCount++))
         {
-            var t1 = Task.Run(() =>
+            for (var i = 0; i < EmissionCount; i++)
             {
-                for (var i = 0; i < ContendedEmissionCount; i++)
-                {
-                    source.OnNext(i);
-                }
-            });
-            var t2 = Task.Run(async () =>
-            {
-                await Task.Delay(CompletionDelayMilliseconds);
-                source.OnCompleted();
-            });
-            await Task.WhenAll(t1, t2);
+                source.OnNext(i);
+            }
         }
 
         // Assert
-        // We can't easily assert the exact sequence due to the non-thread-safe Subject,
-        // but we can assert that it didn't crash and the state remains consistent.
-        // The lock in ScanWithInitialSink ensures that OnNext doesn't race with OnCompleted internally.
-        await Assert.That(completedCount).IsEqualTo(1);
+        using (Assert.Multiple())
+        {
+            await Assert.That(completedCount).IsEqualTo(1);
+            await Assert.That(results).Count().IsEqualTo(EmissionsBeforeCompletion);
+        }
     }
 }

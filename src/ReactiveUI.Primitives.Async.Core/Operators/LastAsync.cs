@@ -7,9 +7,6 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides a set of extension methods for working with asynchronous observable sequences.</summary>
-/// <remarks>The methods in this class enable querying and manipulation of asynchronous observables, such as
-/// retrieving the last element of a sequence. These extensions are designed to support asynchronous and reactive
-/// programming patterns.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Last-element operators for an observable source sequence.</summary>
@@ -22,6 +19,7 @@ public static partial class SignalAsyncExtensions
         /// predicate returns <see langword="true"/>.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains the last element that matches
         /// the predicate.</returns>
+        /// <exception cref="InvalidOperationException">The sequence completes without a matching element.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T> LastAsync(Func<T, bool> predicate) =>
             source.LastAsync(predicate, CancellationToken.None);
@@ -32,6 +30,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains the last element that matches
         /// the predicate.</returns>
+        /// <exception cref="InvalidOperationException">The sequence completes without a matching element.</exception>
         public async ValueTask<T> LastAsync(Func<T, bool> predicate, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -44,9 +43,7 @@ public static partial class SignalAsyncExtensions
         /// <summary>Asynchronously returns the last element of the sequence.</summary>
         /// <returns>A task that represents the asynchronous operation. The task result contains the last element of the
         /// sequence.</returns>
-        /// <remarks>If the sequence is empty, the behavior depends on the implementation and may result
-        /// in an exception being thrown. The operation is performed asynchronously and may not complete
-        /// immediately.</remarks>
+        /// <exception cref="InvalidOperationException">The sequence completes without producing an element.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T> LastAsync() =>
             source.LastAsync(CancellationToken.None);
@@ -55,9 +52,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains the last element of the
         /// sequence.</returns>
-        /// <remarks>If the sequence is empty, the behavior depends on the implementation and may result
-        /// in an exception being thrown. The operation is performed asynchronously and may not complete
-        /// immediately.</remarks>
+        /// <exception cref="InvalidOperationException">The sequence completes without producing an element.</exception>
         public async ValueTask<T> LastAsync(CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();

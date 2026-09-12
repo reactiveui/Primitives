@@ -35,10 +35,7 @@ internal sealed class BufferUntilIdleObservable<T>(
         return new DisposableBag(subscription, sink);
     }
 
-    /// <summary>
-    /// Sink that manages the buffer and idle timer. Composes <see cref="TimerSinkState{T}"/> for
-    /// the shared gate / timer / done-flag plumbing so this class only carries the buffer logic.
-    /// </summary>
+    /// <summary>Sink that accumulates elements and emits the buffer once the idle timer elapses.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="idleTime">The idle time period.</param>
     /// <param name="scheduler">The scheduler.</param>

@@ -8,17 +8,9 @@ namespace ReactiveUI.Primitives.ObservableEvents.CodeGeneration;
 
 /// <summary>A fluent builder for generated source, backed by thread-local pooled character buffers.</summary>
 /// <remarks>
-/// <para>
-/// Emission builds a great many short fragments - a payload type here, a handler parameter list there - and one
-/// large file per target. Accumulating into a pooled <c>char[]</c> lets the same buffers carry every fragment and
-/// every file in a pass, so the steady state is a handful of arrays rather than a builder and its grown chunk
-/// chain per fragment.
-/// </para>
-/// <para>
 /// The free list is thread-local rather than a shared pool: source-output callbacks run concurrently, fragment
-/// builders nest inside file builders, and nothing here outlives the call that rented it. Returning is what buys
-/// the reuse; forgetting to costs reuse, never correctness.
-/// </para>
+/// builders nest inside file builders, and nothing here outlives the call that rented it. Returning a buffer is what
+/// buys the reuse; forgetting to costs reuse, never correctness.
 /// </remarks>
 internal sealed class PooledStringBuilder
 {
@@ -97,8 +89,8 @@ internal sealed class PooledStringBuilder
     /// <param name="value">The value to append; the only callers pass a name length, so it is never negative.</param>
     /// <returns>This builder, for chaining.</returns>
     /// <remarks>
-    /// Formats digits straight into the buffer. These appends sit in the per-event loop that builds the mangled
-    /// static property names, where going through <c>ToString</c> would allocate a string per name segment.
+    /// Formats digits straight into the buffer; these appends sit in the per-event loop that builds the mangled
+    /// static property names, where <c>ToString</c> would allocate a string per name segment.
     /// </remarks>
     internal PooledStringBuilder Append(int value)
     {
@@ -122,7 +114,6 @@ internal sealed class PooledStringBuilder
     /// <summary>Appends another builder's content, then returns that builder's buffer to the pool.</summary>
     /// <param name="other">The fragment builder to drain; it must not be appended to afterwards.</param>
     /// <returns>This builder, for chaining.</returns>
-    /// <remarks>Copies buffer to buffer, so a nested fragment joins its file without materializing a string.</remarks>
     internal PooledStringBuilder Append(PooledStringBuilder other)
     {
         if (other._position != 0)

@@ -5,8 +5,6 @@
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides Retry extension methods for asynchronous observable sequences.</summary>
-/// <remarks>Retry re-subscribes to the source sequence upon failure, enabling automatic recovery
-/// from transient errors. An optional retry count limits the number of re-subscription attempts.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Retry operators for an observable source sequence.</summary>

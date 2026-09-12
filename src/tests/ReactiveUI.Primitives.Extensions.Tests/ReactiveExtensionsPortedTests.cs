@@ -234,7 +234,6 @@ public sealed class ReactiveExtensionsPortedTests
         const int SequentialMultiplier = 2;
         const int ConcurrentMultiplier = 3;
         const int MaxConcurrency = 2;
-        const int DelayMilliseconds = 50;
         const int SequentialResult = 4;
         const int ConcurrentResult = 6;
         Subject<int> source = new();
@@ -245,8 +244,8 @@ public sealed class ReactiveExtensionsPortedTests
         using var conSub = source
             .SelectAsyncConcurrent(static x => Task.FromResult(x * ConcurrentMultiplier), MaxConcurrency)
             .Subscribe(concurrent.Add);
+        // Both selectors return an already-completed task, so their projections land inside OnNext.
         source.OnNext(InputValue);
-        await Task.Delay(DelayMilliseconds);
         List<RxVoid> runAll = [];
         using var runAllSub = new[] { Observable.Return(RxVoid.Default), Observable.Return(RxVoid.Default) }.RunAll()
             .Subscribe(runAll.Add);

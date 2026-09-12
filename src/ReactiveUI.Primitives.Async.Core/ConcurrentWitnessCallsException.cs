@@ -12,13 +12,13 @@ namespace ReactiveUI.Primitives.Async;
 /// The exception that is thrown when multiple concurrent calls are made to observer methods that do not support
 /// concurrent execution.
 /// </summary>
-/// <remarks>This exception indicates that a call to OnNextAsync, OnErrorResumeAsync, or OnCompletedAsync was
-/// attempted while a previous call to one of these methods is still pending. ObserverAsync{T} does not allow concurrent
-/// invocations of these methods; callers should ensure that each call completes before initiating another.</remarks>
+/// <remarks><see cref="WitnessAsync{T}"/> serializes <c>OnNextAsync</c>, <c>OnErrorResumeAsync</c> and
+/// <c>OnCompletedAsync</c>; this exception reports one of those calls arriving while another is in flight. Await each
+/// call to completion before starting the next.</remarks>
 [Serializable]
 public class ConcurrentWitnessCallsException : Exception
 {
-    /// <summary>The default error message describing the concurrent observer call violation.</summary>
+    /// <summary>The message used when no caller-supplied message is given.</summary>
     private const string DefaultMessage =
         $"Concurrent calls of {nameof(WitnessAsync<>)}.OnNextAsync, {nameof(WitnessAsync<>)}.OnErrorResumeAsync,"
         + $" {nameof(WitnessAsync<>)}.OnCompletedAsync are not allowed. There is already a call pending";

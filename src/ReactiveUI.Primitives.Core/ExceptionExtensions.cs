@@ -4,7 +4,7 @@
 
 namespace ReactiveUI.Primitives;
 
-/// <summary>Exception helper methods.</summary>
+/// <summary>Extension methods for rethrowing exceptions.</summary>
 public static class ExceptionExtensions
 {
     /// <summary>Throwing operators for an exception.</summary>

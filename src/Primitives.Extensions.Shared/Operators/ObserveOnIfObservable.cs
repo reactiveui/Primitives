@@ -46,7 +46,7 @@ internal sealed class ObserveOnIfObservable<T>(
         return new DisposableBag(sourceSub, conditionSub, sink);
     }
 
-    /// <summary>Sinks the source observable and conditionally observes on different schedulers.</summary>
+    /// <summary>Sink that forwards each value on whichever scheduler the latest condition value selects.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="trueScheduler">The scheduler to use when condition is true.</param>
     /// <param name="falseScheduler">The scheduler to use when condition is false.</param>

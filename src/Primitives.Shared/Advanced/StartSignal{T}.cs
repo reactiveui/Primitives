@@ -15,7 +15,7 @@ public sealed class StartSignal<T> : IRequireCurrentThread<T>
 {
     /// <summary>Initializes a new instance of the <see cref="StartSignal{T}"/> class.</summary>
     /// <param name="function">The function to run.</param>
-    /// <param name="scheduler">The scheduler used to run the function.</param>
+    /// <param name="scheduler">The sequencer that runs the function.</param>
     public StartSignal(Func<T> function, ISequencer scheduler)
     {
         Function = function;
@@ -25,7 +25,7 @@ public sealed class StartSignal<T> : IRequireCurrentThread<T>
     /// <summary>Gets the function to run.</summary>
     private Func<T> Function { get; }
 
-    /// <summary>Gets the scheduler used to run the function.</summary>
+    /// <summary>Gets the sequencer that runs the function.</summary>
     private ISequencer Scheduler { get; }
 
     /// <inheritdoc/>

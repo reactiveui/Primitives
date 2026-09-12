@@ -10,9 +10,9 @@ using ReactiveUI.Primitives.Concurrency;
 namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>
-/// Coalescing engine shared by UI-thread sequencers: it batches dispatcher posts and shares delayed scheduling.
-/// A sealed sequencer holds one inline and injects its platform <c>post</c> (and optionally <c>scheduleDelayed</c>)
-/// delegates plus the cached drain callback; immediate work is queued and drained one batch per post.
+/// Coalescing engine shared by UI-thread sequencers. A sequencer holds one inline and supplies its platform
+/// <c>post</c> delegate, an optional <c>scheduleDelayed</c> delegate and a cached drain callback; immediate work is
+/// queued and drained one batch per post.
 /// </summary>
 [SuppressMessage(
     "Performance",
@@ -82,7 +82,7 @@ public record struct DispatchSequencerState
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static TimeSpan DelayUntil(long dueTimestamp) => Sequencer.TimeUntil(dueTimestamp);
 
-    /// <summary>Executes the work item on the current (dispatcher) thread unless it has already been cancelled.</summary>
+    /// <summary>Executes the work item on the current (dispatcher) thread unless it has been cancelled.</summary>
     /// <param name="item">The work item to execute.</param>
     public static void RunIfActive(IWorkItem item)
     {
@@ -188,15 +188,10 @@ public record struct DispatchSequencerState
         }
     }
 
-    /// <summary>
-    /// Cancels and drops every ready work item. The items are the handles their callers hold, so disposing them
-    /// releases the caller's work instead of stranding it in a queue nothing will ever drain again.
-    /// </summary>
+    /// <summary>Cancels and drops every ready work item, disposing each so its caller's handle is released.</summary>
     /// <remarks>
-    /// Internal rather than public because only a sequencer that can retire its own dispatcher needs it: the platform
-    /// dispatchers (WPF, WinForms, WinUI, MAUI, Blazor) outlive the sequencer that posts to them and keep draining, so
-    /// they never release a queue. <see cref="WasmSequencer"/> owns the timer that is its dispatcher, and once that is
-    /// disposed nothing can drain the queue again — so it, alone, hands the queued work back.
+    /// Only <see cref="WasmSequencer"/> calls this: it owns the timer that is its dispatcher, so disposal leaves
+    /// nothing able to drain the queue, whereas the platform dispatchers outlive the sequencer and keep draining.
     /// </remarks>
     internal void ReleaseQueued()
     {
@@ -210,8 +205,7 @@ public record struct DispatchSequencerState
         }
     }
 
-    // The only trigger for this path is the real shared thread-pool timer coming due, so no deterministic test can
-    // reach it without waiting on a live OS timer; that timer race is exactly what flaked, so exclude it from coverage.
+    // Only the live shared thread-pool timer coming due reaches this path, so coverage excludes it.
     /// <summary>Parks delayed work on the shared thread-pool timer, which marshals it back to the dispatcher when due.</summary>
     /// <param name="item">Work item to execute once due.</param>
     /// <param name="dueTimestamp">Absolute monotonic timestamp at which to execute the item.</param>
@@ -220,8 +214,7 @@ public record struct DispatchSequencerState
     private readonly void ScheduleOnSharedTimer(IWorkItem item, long dueTimestamp) =>
         ThreadPoolSequencer.Instance.Schedule(new MarshalOnDueWorkItem(_owner, item), dueTimestamp);
 
-    // Constructed only by ScheduleOnSharedTimer and run only by the shared thread-pool timer, so it shares that
-    // path's lack of a deterministic trigger; exclude it from coverage.
+    // Constructed and run only by the shared thread-pool timer path, so coverage excludes it too.
     /// <summary>Work item used by the shared timer path to marshal delayed work back to the dispatcher.</summary>
     /// <param name="owner">Owning dispatch sequencer.</param>
     /// <param name="item">Work item to marshal.</param>

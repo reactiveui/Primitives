@@ -13,19 +13,19 @@ namespace ReactiveUI.Primitives.Signals;
 /// <summary>Provides static factory and operator methods for signals.</summary>
 public static partial class Signal
 {
-    /// <summary>Executes the RunAsync operation.</summary>
-    /// <typeparam name="TSource">The TSource type.</typeparam>
-    /// <param name="source">The source value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Subscribes to the source and returns an awaiter for its final value.</summary>
+    /// <typeparam name="TSource">The source value type.</typeparam>
+    /// <param name="source">The source sequence, subscribed immediately.</param>
+    /// <returns>An awaiter that completes with the final source value.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IAwaitSignal<TSource> RunAsync<TSource>(IObservable<TSource> source) =>
         RunAsync(source, CancellationToken.None);
 
-    /// <summary>Executes the RunAsync operation.</summary>
-    /// <typeparam name="TSource">The TSource type.</typeparam>
-    /// <param name="source">The source value.</param>
-    /// <param name="cancellationToken">The cancellationToken value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Subscribes to the source and returns an awaiter for its final value, cancelled through the token.</summary>
+    /// <typeparam name="TSource">The source value type.</typeparam>
+    /// <param name="source">The source sequence, subscribed immediately.</param>
+    /// <param name="cancellationToken">The token that disposes the subscription and faults the awaiter.</param>
+    /// <returns>An awaiter that completes with the final source value, or faults with <see cref="OperationCanceledException"/>.</returns>
     public static IAwaitSignal<TSource> RunAsync<TSource>(
         IObservable<TSource> source,
         CancellationToken cancellationToken)
@@ -101,22 +101,22 @@ public static partial class Signal
         return completion.Attach(subscription, cancellationToken);
     }
 
-    /// <summary>Executes the Cancel operation.</summary>
-    /// <typeparam name="T">The T type.</typeparam>
-    /// <param name="subject">The subject value.</param>
-    /// <param name="cancellationToken">The cancellationToken value.</param>
-    /// <returns>The result.</returns>
+    /// <summary>Faults the awaiter with an <see cref="OperationCanceledException"/> carrying the token.</summary>
+    /// <typeparam name="T">The awaited value type.</typeparam>
+    /// <param name="subject">The awaiter to fault.</param>
+    /// <param name="cancellationToken">The token reported by the exception.</param>
+    /// <returns>The same awaiter.</returns>
     internal static IAwaitSignal<T> Cancel<T>(IAwaitSignal<T> subject, CancellationToken cancellationToken)
     {
         subject.OnError(new OperationCanceledException(cancellationToken));
         return subject;
     }
 
-    /// <summary>Executes the RegisterCancelation operation.</summary>
-    /// <typeparam name="T">The T type.</typeparam>
-    /// <param name="subject">The subject value.</param>
-    /// <param name="subscription">The subscription value.</param>
-    /// <param name="token">The token value.</param>
+    /// <summary>Cancels the awaiter and disposes the subscription when the token fires, releasing the registration once the awaiter terminates.</summary>
+    /// <typeparam name="T">The awaited value type.</typeparam>
+    /// <param name="subject">The awaiter to cancel.</param>
+    /// <param name="subscription">The subscription disposed on cancellation.</param>
+    /// <param name="token">The token watched for cancellation.</param>
     internal static void RegisterCancelation<T>(
         IAwaitSignal<T> subject,
         IDisposable subscription,

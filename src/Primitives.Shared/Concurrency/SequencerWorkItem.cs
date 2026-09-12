@@ -29,7 +29,7 @@ internal sealed class SequencerWorkItem<TSequencer, TState>(TSequencer sequencer
     /// <summary>Disposable returned by the scheduled action after it starts.</summary>
     private IDisposable? _disposable;
 
-    /// <summary>Tracks cancellation.</summary>
+    /// <summary>Non-zero once the work item has been cancelled.</summary>
     private int _isDisposed;
 
     /// <summary>Cancels the work item.</summary>

@@ -7,11 +7,7 @@ namespace ReactiveUI.Primitives.Async;
 /// <summary>Fused filter / projection observables that back the parity-helper extension methods in <see cref="SignalAsyncExtensions"/>.</summary>
 public static partial class SignalAsyncExtensions
 {
-    /// <summary>
-    /// Fuses the previous <c>Create&lt;(T, T)&gt;</c> + closure-based <c>Pairwise</c> implementation
-    /// into a single <see cref="WitnessAsync{T}"/> layer; per-subscription state is held in fields
-    /// instead of a captured closure, eliminating the per-emission async-lambda state-machine box.
-    /// </summary>
+    /// <summary>Emits each adjacent pair of source values, holding the prior value in a field rather than a closure.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The upstream observable.</param>
     internal sealed class PairwiseSignal<T>(IObservableAsync<T> source) : IObservableAsync<(T Previous, T Current)>
@@ -40,7 +36,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<(T Previous, T Current)> downstream,
             CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
         {
-            /// <summary>The previously-seen value; valid only when <see cref="_hasPrevious"/> is set.</summary>
+            /// <summary>The last value seen; valid only when <see cref="_hasPrevious"/> is set.</summary>
             private T? _previous;
 
             /// <summary>Latches to <see langword="true"/> after the first upstream emission.</summary>
@@ -71,12 +67,7 @@ public static partial class SignalAsyncExtensions
         }
     }
 
-    /// <summary>
-    /// Combined skip-then-cast observable that fuses the previous
-    /// <c>SkipWhile(value is null).Select(value!)</c> composition into a single
-    /// <see cref="WitnessAsync{T}"/> layer. Once a non-null value has been seen the gate latches
-    /// off and the operator becomes a transparent null-stripping forwarder.
-    /// </summary>
+    /// <summary>Skips values until the first non-null one arrives, then forwards every later value as non-nullable.</summary>
     /// <typeparam name="T">The non-nullable element type seen downstream.</typeparam>
     /// <param name="source">The nullable source observable.</param>
     internal sealed class SkipWhileNullSignal<T>(IObservableAsync<T?> source) : IObservableAsync<T>
@@ -135,12 +126,7 @@ public static partial class SignalAsyncExtensions
         }
     }
 
-    /// <summary>
-    /// Combined filter-and-cast observable that fuses the previous <c>Where(value is not null).Select(value!)</c>
-    /// composition into a single <see cref="WitnessAsync{T}"/> layer. Halves the per-emission observer-chain
-    /// cost (one TryEnter / Exit, one set of chain-aware-cancellation wiring) for what is fundamentally a
-    /// null-stripping projection over a single source.
-    /// </summary>
+    /// <summary>Forwards the non-null source values as non-nullable through a single observer layer.</summary>
     /// <typeparam name="T">The non-nullable element type seen downstream.</typeparam>
     /// <param name="source">The nullable source observable.</param>
     internal sealed class WhereIsNotNullSignal<T>(IObservableAsync<T?> source) : IObservableAsync<T>
@@ -188,13 +174,7 @@ public static partial class SignalAsyncExtensions
         }
     }
 
-    /// <summary>
-    /// Combined seed-and-distinct observable that fuses the previous
-    /// <c>StartWith(seed).DistinctUntilChanged()</c> composition into a single
-    /// <see cref="WitnessAsync{T}"/> layer. The seed is emitted on subscribe and tracked as the
-    /// initial "last value"; source emissions that compare equal under
-    /// <see cref="EqualityComparer{T}"/> are swallowed.
-    /// </summary>
+    /// <summary>Emits the seed on subscribe, then forwards only the source values that differ from the last emission.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The source observable.</param>
     /// <param name="defaultValue">The seed value emitted on subscribe.</param>
@@ -221,14 +201,14 @@ public static partial class SignalAsyncExtensions
 
         /// <summary>Per-subscription observer that swallows values equal to the most-recently-forwarded one.</summary>
         /// <param name="downstream">The downstream observer.</param>
-        /// <param name="seed">The seed value already emitted during subscription; treated as the initial "last forwarded value".</param>
+        /// <param name="seed">The seed value emitted during subscription, which becomes the initial last-forwarded value.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token, linked into the dispose chain.</param>
         internal sealed class LatestOrDefaultWitness(
             IObserverAsync<T> downstream,
             T seed,
             CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
         {
-            /// <summary>Equality comparer used for the distinct check; matches DistinctUntilChanged's default.</summary>
+            /// <summary>The equality comparer for the distinct check.</summary>
             private static readonly EqualityComparer<T> Comparer = EqualityComparer<T>.Default;
 
             /// <summary>The most-recently-forwarded value; seeded by the constructor.</summary>
@@ -256,13 +236,7 @@ public static partial class SignalAsyncExtensions
         }
     }
 
-    /// <summary>
-    /// Combined filter-and-take-one observable that fuses the previous
-    /// <c>Where(predicate).Take(1)</c> composition into a single <see cref="WitnessAsync{T}"/>
-    /// layer. The first emission matching the predicate is forwarded, completion is signalled
-    /// downstream, and the source subscription is disposed via the base observer's
-    /// dispose-cascade.
-    /// </summary>
+    /// <summary>Forwards the first value matching the predicate, then completes and tears down the source subscription.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The source observable.</param>
     /// <param name="predicate">The predicate matched against each value.</param>

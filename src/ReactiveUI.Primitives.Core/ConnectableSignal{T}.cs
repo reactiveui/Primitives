@@ -43,7 +43,7 @@ public sealed class ConnectableSignal<T> : IObservable<T>
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     private string DebuggerDisplay => ToString() ?? string.Empty;
 
-    /// <summary>Subscribes the hub to the source if it is not already connected.</summary>
+    /// <summary>Subscribes the hub to the source, returning the live handle when a connection is open.</summary>
     /// <returns>A handle that disconnects the source subscription.</returns>
     public IDisposable Connect()
     {
@@ -54,9 +54,7 @@ public sealed class ConnectableSignal<T> : IObservable<T>
                 return Scope.Empty;
             }
 
-            // Allocate the connection only on the first connect. A dedicated disposable type
-            // avoids the closure (and extra anonymous-disposable wrapper) that Scope.Create
-            // would allocate.
+            // A dedicated disposable type for the handle, so connecting captures no closure.
             if (_connection?.Value is { } activeConnection)
             {
                 return activeConnection;

@@ -58,7 +58,7 @@ public sealed class TimeIntervalWitness<T> : IObserver<T>, IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnCompleted() => SinkTerminal.Complete(_observer, this);
 
-    /// <summary>Assigns the upstream subscription, disposing it if one is already held.</summary>
+    /// <summary>Assigns the upstream subscription, disposing the incoming one when the slot is occupied.</summary>
     /// <param name="subscription">The upstream subscription.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetSubscription(IDisposable subscription) => SinkSubscription.Set(ref _subscription, subscription);

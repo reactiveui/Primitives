@@ -54,16 +54,15 @@ public static partial class LinqExtensions
     /// </returns>
     /// <exception cref="ArgumentNullException"><paramref name="sources"/> or one of its elements is <see langword="null"/>.</exception>
     /// <remarks>
-    /// Ranked below the tuple overloads, which are themselves ranked below the selector overloads. Two to
-    /// sixteen same-typed sources listed inline keep binding to the tuple overload that names each of them;
-    /// this one takes over past that arity, and whenever the sources arrive as an array.
+    /// Ranked below the tuple overloads, so two to sixteen same-typed sources listed inline bind to the tuple
+    /// overload instead; this one takes over past that arity and whenever the sources arrive as an array.
     /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [OverloadResolutionPriority(-2)]
     public static IObservable<IList<T>> CombineLatest<T>(params IObservable<T>[] sources) =>
         CombineLatestOf(CombineLatestSources(sources));
 
-    /// <summary>Builds the list-valued combine-latest signal for already-validated sources.</summary>
+    /// <summary>Builds the list-valued combine-latest signal from validated sources.</summary>
     /// <typeparam name="T">The element type shared by every source.</typeparam>
     /// <param name="sources">The validated source array.</param>
     /// <returns>The combine-latest signal.</returns>

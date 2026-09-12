@@ -8,8 +8,6 @@ using ReactiveUI.Primitives.Async.Disposables;
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides Zip extension methods for asynchronous observable sequences.</summary>
-/// <remarks>Zip combines elements from two observable sequences pair-wise. The nth element from
-/// each source is paired together. The resulting sequence completes when either source completes.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Pair/Zip operators for a first observable source sequence.</summary>
@@ -25,6 +23,8 @@ public static partial class SignalAsyncExtensions
         /// <returns>An observable sequence whose elements are the result of pair-wise combining the source
         /// elements using the result selector.</returns>
         /// <exception cref="ArgumentExceptionHelper">Thrown if any argument is null.</exception>
+        /// <remarks>The nth element of one source is paired with the nth element of the other, so an element waits until
+        /// its partner arrives. The result completes when either source completes with no pending pair.</remarks>
         public IObservableAsync<TResult> Pair<T2, TResult>(
             IObservableAsync<T2> second,
             Func<T1, T2, TResult> resultSelector)
@@ -37,20 +37,13 @@ public static partial class SignalAsyncExtensions
         }
     }
 
-    /// <summary>
-    /// Represents an observable sequence that combines the latest values from two asynchronous observable sequences
-    /// into a single result sequence using a specified selector function.
-    /// </summary>
+    /// <summary>Pairs elements of two sources in arrival order and projects each pair through a selector.</summary>
     /// <typeparam name="T1">The type of the elements in the first source sequence.</typeparam>
     /// <typeparam name="T2">The type of the elements in the second source sequence.</typeparam>
     /// <typeparam name="TResult">The type of the elements in the resulting sequence produced by the selector function.</typeparam>
     /// <param name="first">The first asynchronous observable sequence to combine.</param>
     /// <param name="second">The second asynchronous observable sequence to combine.</param>
     /// <param name="resultSelector">A function that specifies how to combine elements from the first and second sequences into a result element.</param>
-    /// <remarks>The resulting sequence produces a value each time both source sequences have produced an
-    /// element, pairing elements in the order they are received. The sequence completes when either source sequence
-    /// completes and there are no more pairs to combine. If either source sequence signals an error, the resulting
-    /// sequence will propagate that error.</remarks>
     internal sealed class ZipSignal<T1, T2, TResult>(
         IObservableAsync<T1> first,
         IObservableAsync<T2> second,
@@ -80,7 +73,7 @@ public static partial class SignalAsyncExtensions
 
         /// <summary>Shared state that coordinates pair-wise combination of elements from both source sequences.</summary>
         /// <param name="observer">The downstream observer to forward combined results to.</param>
-        /// <param name="resultSelector">The function used to combine paired elements.</param>
+        /// <param name="resultSelector">The function that combines paired elements.</param>
         internal sealed class ZipState(
             IObserverAsync<TResult> observer,
             Func<T1, T2, TResult> resultSelector) : IAsyncDisposable
@@ -251,11 +244,7 @@ public static partial class SignalAsyncExtensions
             internal ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
                 observer.OnErrorResumeAsync(error, cancellationToken);
 
-            /// <summary>
-            /// Links the original subscribe-time cancellation token into this state's dispose chain so
-            /// later per-emission methods can rely on <see cref="_disposeCts"/> instead of allocating
-            /// a per-emission linked CTS.
-            /// </summary>
+            /// <summary>Routes cancellation of the subscribe-time token into <see cref="_disposeCts"/>, so per-emission code needs no linked source.</summary>
             /// <param name="external">The subscribe-time token.</param>
             internal void LinkExternalCancellation(CancellationToken external)
             {

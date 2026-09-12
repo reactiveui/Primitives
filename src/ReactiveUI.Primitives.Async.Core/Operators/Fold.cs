@@ -8,10 +8,6 @@ namespace ReactiveUI.Primitives.Async;
 /// Provides extension methods for asynchronous observable sequences, enabling functional operations such as scanning
 /// and accumulation over streamed data.
 /// </summary>
-/// <remarks>The methods in this class allow developers to perform stateful transformations and aggregations on
-/// asynchronous observables. These operations are useful for scenarios where intermediate results or running totals are
-/// needed as items are received. All methods are designed to work with asynchronous patterns and support cancellation
-/// via tokens.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Fold/Scan (running accumulation) operators for an observable source sequence.</summary>
@@ -28,7 +24,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="accumulator">An asynchronous accumulator function to be invoked on each element. Receives the current accumulator value,
         /// the current element, and a cancellation token.</param>
         /// <returns>An observable sequence containing the accumulated values produced after each element is processed.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="accumulator"/> is null.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="accumulator"/> is <see langword="null"/>.</exception>
         public IObservableAsync<TAcc> Fold<TAcc>(
             TAcc seed,
             Func<TAcc, T, CancellationToken, ValueTask<TAcc>> accumulator)
@@ -44,7 +40,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="accumulator">An accumulator function to be invoked on each element. Receives the current accumulator value and the
         /// current element.</param>
         /// <returns>An observable sequence containing the accumulated values produced after each element is processed.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="accumulator"/> is null.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="accumulator"/> is <see langword="null"/>.</exception>
         public IObservableAsync<TAcc> Fold<TAcc>(TAcc seed, Func<TAcc, T, TAcc> accumulator)
         {
             ArgumentExceptionHelper.ThrowIfNull(accumulator);
@@ -54,9 +50,8 @@ public static partial class SignalAsyncExtensions
     }
 
     /// <summary>
-    /// Async-accumulator variant of <see cref="Fold{T,TAcc}(IObservableAsync{T},TAcc,Func{TAcc,T,CancellationToken,ValueTask{TAcc}})"/>.
-    /// Allocates one observable wrapper and one sealed observer per subscription — no per-emission closure or
-    /// state-machine box from the previous <c>Create&lt;TAcc&gt;((observer, token) =&gt; ...)</c> pattern.
+    /// Async-accumulator variant of <see cref="Fold{T,TAcc}(IObservableAsync{T},TAcc,Func{TAcc,T,CancellationToken,ValueTask{TAcc}})"/>,
+    /// allocating one observer per subscription and nothing per emission.
     /// </summary>
     /// <typeparam name="T">The element type of the source sequence.</typeparam>
     /// <typeparam name="TAcc">The accumulator type.</typeparam>
@@ -136,9 +131,8 @@ public static partial class SignalAsyncExtensions
     }
 
     /// <summary>
-    /// Synchronous-accumulator variant of <see cref="Fold{T,TAcc}(IObservableAsync{T},TAcc,Func{TAcc,T,TAcc})"/>. Same
-    /// allocation profile as <see cref="FoldAsyncSignal{T,TAcc}"/> but the per-emission <c>OnNextAsyncCore</c> is
-    /// sync-completed when the downstream completes synchronously.
+    /// Synchronous-accumulator variant of <see cref="Fold{T,TAcc}(IObservableAsync{T},TAcc,Func{TAcc,T,TAcc})"/>, whose
+    /// per-emission path completes synchronously whenever the downstream does.
     /// </summary>
     /// <typeparam name="T">The element type of the source sequence.</typeparam>
     /// <typeparam name="TAcc">The accumulator type.</typeparam>

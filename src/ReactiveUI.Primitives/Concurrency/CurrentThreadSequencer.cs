@@ -36,7 +36,7 @@ public sealed class CurrentThreadSequencer : ISequencer
     /// <summary>Gets the singleton instance of the current thread scheduler.</summary>
     public static CurrentThreadSequencer Instance => StaticInstance.Value;
 
-    /// <summary>Gets a value indicating whether gets a value that indicates whether the caller must call a Schedule method.</summary>
+    /// <summary>Gets a value indicating whether the caller must schedule work instead of running it inline, true when the current thread is outside any scheduled call.</summary>
     [EditorBrowsable(EditorBrowsableState.Advanced)]
     public static bool IsScheduleRequired => !_running;
 
@@ -53,7 +53,7 @@ public sealed class CurrentThreadSequencer : ISequencer
 
     /// <summary>Schedules an action to be executed on the current-thread trampoline.</summary>
     /// <param name="action">Action to execute.</param>
-    /// <returns>The disposable object used to cancel queued work, or an empty disposable when the action has already run.</returns>
+    /// <returns>The disposable object used to cancel queued work, or an empty disposable when the action ran inline.</returns>
     /// <exception cref="ArgumentExceptionHelper"><paramref name="action"/> is <see langword="null"/>.</exception>
     public IDisposable Schedule(Action action)
     {
@@ -105,7 +105,7 @@ public sealed class CurrentThreadSequencer : ISequencer
 
         SequencerQueue<long>? queue;
 
-        // There is no timed task and no task is currently running
+        // Nothing is running on this thread, so the item runs inline rather than through the trampoline.
         if (!_running)
         {
             SetRunning(true);
@@ -116,7 +116,6 @@ public sealed class CurrentThreadSequencer : ISequencer
                 Thread.Sleep(dueTime);
             }
 
-            // execute directly without queueing
             try
             {
                 if (!Sequencer.IsCancelled(item))
@@ -131,10 +130,8 @@ public sealed class CurrentThreadSequencer : ISequencer
                 throw;
             }
 
-            // did recursive tasks arrive?
+            // Work the item scheduled recursively runs on the same trampoline before returning.
             queue = GetQueue();
-
-            // yes, run those in the queue as well
             if (queue is not null)
             {
                 try
@@ -157,14 +154,13 @@ public sealed class CurrentThreadSequencer : ISequencer
 
         queue = GetQueue();
 
-        // if there is a task running or there is a queue
+        // Work is running on this thread, so the item joins the trampoline queue, created on first use.
         if (queue is null)
         {
             queue = new(InitialQueueCapacity);
             SetQueue(queue);
         }
 
-        // queue up more work
         ScheduledItem<long> si = new(dueTimestamp, Comparer<long>.Default, _ =>
         {
             if (!Sequencer.IsCancelled(item))

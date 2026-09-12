@@ -26,8 +26,6 @@ public static class DisposableAsyncSlot
     /// <param name="slot">Reference to the caller-owned <see cref="IAsyncDisposable"/> field.</param>
     /// <param name="value">The new value to store, or <see langword="null"/> to clear the slot.</param>
     /// <returns>A <see cref="ValueTask"/> that completes once the previous occupant (if any) has been disposed.</returns>
-    /// <remarks>The compare-exchange retry (the loop back-edge) is only taken when a concurrent writer
-    /// wins the race, so it is unreachable by single-threaded tests; excluded from coverage accordingly.</remarks>
     [DebuggerStepThrough]
     [ExcludeFromCodeCoverage]
     public static ValueTask SwapAsync(ref IAsyncDisposable? slot, IAsyncDisposable? value)
@@ -50,14 +48,14 @@ public static class DisposableAsyncSlot
         }
     }
 
-    /// <summary>Atomically assigns <paramref name="value"/> to the slot exactly once. If the slot has
-    /// already been disposed, <paramref name="value"/> is disposed immediately. If the slot already
-    /// holds a non-null, non-disposed value, throws <see cref="InvalidOperationException"/>.
-    /// Equivalent to <see cref="SingleAssignmentDisposableAsync.SetDisposableAsync(IAsyncDisposable?)"/>.</summary>
+    /// <summary>Atomically fills an empty slot with <paramref name="value"/>. A closed slot disposes
+    /// <paramref name="value"/> instead. Equivalent to
+    /// <see cref="SingleAssignmentDisposableAsync.SetDisposableAsync(IAsyncDisposable?)"/>.</summary>
     /// <param name="slot">Reference to the caller-owned <see cref="IAsyncDisposable"/> field.</param>
     /// <param name="value">The value to assign, or <see langword="null"/>.</param>
-    /// <returns>A <see cref="ValueTask"/> that completes once <paramref name="value"/> has been disposed
-    /// (if the slot was already disposed); otherwise a completed task.</returns>
+    /// <returns>A <see cref="ValueTask"/> that completes once <paramref name="value"/> has been disposed when the slot
+    /// was closed; otherwise a completed task.</returns>
+    /// <exception cref="InvalidOperationException">The slot holds a live occupant.</exception>
     [DebuggerStepThrough]
     public static ValueTask AssignAsync(ref IAsyncDisposable? slot, IAsyncDisposable? value)
     {
@@ -92,7 +90,7 @@ public static class DisposableAsyncSlot
     public static bool IsDisposed(IAsyncDisposable? slot) =>
         ReferenceEquals(slot, DisposedSentinel);
 
-    /// <summary>Creates an exception indicating that a single-assignment slot already has a value.</summary>
+    /// <summary>Creates the exception for a second assignment into a single-assignment slot.</summary>
     /// <returns>The invalid-operation exception to throw from the assignment path.</returns>
     internal static InvalidOperationException CreateAlreadyAssignedException() =>
         new("Disposable is already assigned.");

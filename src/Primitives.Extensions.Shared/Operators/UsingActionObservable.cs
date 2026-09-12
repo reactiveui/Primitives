@@ -11,11 +11,8 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
 /// <summary>
-/// Resource-bound factory observable that runs an optional
-/// <see cref="Action{T}"/> against a captured <see cref="IDisposable"/>
-/// resource, emits <see cref="RxVoid.Default"/>, completes, and finally disposes
-/// the resource. Replaces the legacy
-/// <c>Observable.Using(() =&gt; obj, id =&gt; Observable.Start(...))</c> pattern.
+/// Resource-bound factory observable that runs an optional <see cref="Action{T}"/> against a captured
+/// <see cref="IDisposable"/> resource, emits <see cref="RxVoid.Default"/>, completes, and disposes the resource.
 /// </summary>
 /// <typeparam name="T">The disposable resource type.</typeparam>
 /// <param name="resource">The resource to use during the operation and dispose at the end.</param>
@@ -55,7 +52,7 @@ internal sealed class UsingActionObservable<T>(
         "Design",
         "SST1429:Handle, rethrow, or narrow this catch; an empty catch of the base exception hides failures",
         Justification =
-            "A secondary dispose failure during error handling is intentionally swallowed so the primary exception sent to the observer wins; this assembly has no unhandled-exception sink.")]
+            "A secondary dispose failure is swallowed so the primary exception reaching the observer wins.")]
     private static void Run(IObserver<RxVoid> observer, T resource, Action<T>? action)
     {
         try

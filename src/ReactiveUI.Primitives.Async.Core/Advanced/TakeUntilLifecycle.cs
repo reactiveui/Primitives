@@ -5,12 +5,9 @@
 namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>
-/// Shared subscription lifecycle for the TakeUntil family of operators (CancellationToken / Task /
-/// raw-signal / async-observable / async-predicate variants). Each per-trigger Subscription
-/// composes one instance of this class (has-a, not is-a) and forwards forward-on-next / -error /
-/// -completed plus external-cancellation linking into it, so the previously-duplicated
-/// infrastructure (gate, dispose CTS, external-link registration, gated observer fan-out) lives
-/// in one place.
+/// Subscription lifecycle for the TakeUntil family of operators (CancellationToken, Task,
+/// raw-signal, async-observable and async-predicate triggers): owns the serialization gate, the
+/// dispose cancellation source, the external-link registration and the gated observer fan-out.
 /// </summary>
 /// <typeparam name="T">The downstream element type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("TakeUntilLifecycle: Observer = {_observer}, DisposeRequested = {DisposeToken.IsCancellationRequested}")]
@@ -40,9 +37,8 @@ public sealed class TakeUntilLifecycle<T> : IAsyncDisposable
     public CancellationToken DisposeToken { get; }
 
     /// <summary>
-    /// Links the original subscribe-time cancellation token into this subscription's dispose chain so
-    /// per-emission methods can use <see cref="DisposeToken"/> directly instead of allocating a
-    /// per-emission linked CTS.
+    /// Links the subscribe-time cancellation token into this subscription's dispose chain, so
+    /// <see cref="DisposeToken"/> alone covers both and no per-emission linked source is needed.
     /// </summary>
     /// <param name="external">The subscribe-time token.</param>
     public void LinkExternalCancellation(CancellationToken external)
@@ -97,12 +93,9 @@ public sealed class TakeUntilLifecycle<T> : IAsyncDisposable
     }
 
     /// <summary>
-    /// Tears down the shared subscription state: cancels the dispose CTS, releases the external-link
-    /// registration, disposes the gate. The owning Subscription is responsible for disposing its
-    /// per-operator handles (source subscription, token callback, etc.) BEFORE or AFTER calling this
-    /// — the order is operator-specific. The release of unmanaged-style primitives is wrapped in
-    /// try/finally so a misbehaving downstream can't leak the gate's SemaphoreSlim or the CTS wait
-    /// handles.
+    /// Cancels the dispose token, releases the external-link registration and disposes the gate. The
+    /// owning subscription disposes its own per-operator handles (source subscription, token
+    /// callback) separately, in whichever order that operator requires.
     /// </summary>
     /// <returns>A ValueTask representing the asynchronous teardown.</returns>
     public async ValueTask DisposeAsync()

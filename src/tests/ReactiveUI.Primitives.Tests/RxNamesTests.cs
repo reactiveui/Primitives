@@ -60,8 +60,8 @@ public partial class RxNamesTests
     /// <summary>The amount the virtual clock is advanced, comfortably past <see cref = "DueTicks"/>.</summary>
     private const long AdvanceTicks = 5;
 
-    /// <summary>The timeout in seconds used while waiting for ThreadPool-scheduled coverage branches.</summary>
-    private const int PollTimeoutSeconds = 2;
+    /// <summary>How far in the past the absolute due time of the default-scheduler operators is placed.</summary>
+    private const int ElapsedDueSeconds = 2;
 
     /// <summary>Source values 1..5.</summary>
     private static readonly int[] _oneToFive = [1, 2, 3, 4, 5];
@@ -439,62 +439,59 @@ public partial class RxNamesTests
     [Test]
     public async Task AbsoluteTimeOperatorsUseDefaultScheduler()
     {
-        var dueTime = ThreadPoolSequencer.Instance.Now.AddSeconds(-PollTimeoutSeconds);
-        List<int> delayedScalar = [];
-        List<int> delayedRange = [];
-        List<int> delayedSubscriptionScalar = [];
-        List<int> delayedSubscriptionRange = [];
-        List<int> delayedExplicitRange = [];
-        List<int> delayedSubscriptionExplicitRange = [];
-        Exception? timeout = null;
-        Exception? explicitTimeout = null;
+        var dueTime = ThreadPoolSequencer.Instance.Now.AddSeconds(-ElapsedDueSeconds);
+        AwaitableWitness<int> delayedScalar = new();
+        AwaitableWitness<int> delayedRange = new();
+        AwaitableWitness<int> delayedSubscriptionScalar = new();
+        AwaitableWitness<int> delayedSubscriptionRange = new();
+        AwaitableWitness<int> delayedExplicitRange = new();
+        AwaitableWitness<int> delayedSubscriptionExplicitRange = new();
+        AwaitableWitness<int> timeout = new();
+        AwaitableWitness<int> explicitTimeout = new();
         const ISequencer? defaultScheduler = null;
 
         using var delayScalarSubscription = Signal.Emit(One)
             .Delay(dueTime)
-            .Subscribe(delayedScalar.Add);
+            .Subscribe(delayedScalar);
         using var delayRangeSubscription = Signal.Sequence(Two, Two)
             .Delay(dueTime)
-            .Subscribe(delayedRange.Add);
+            .Subscribe(delayedRange);
         using var delayExplicitRangeSubscription = Signal.Sequence(Two, Two)
             .Delay(dueTime, defaultScheduler)
-            .Subscribe(delayedExplicitRange.Add);
+            .Subscribe(delayedExplicitRange);
         using var subscriptionScalarSubscription = Signal.Emit(One)
             .DelaySubscription(dueTime)
-            .Subscribe(delayedSubscriptionScalar.Add);
+            .Subscribe(delayedSubscriptionScalar);
         using var subscriptionRangeSubscription = Signal.Sequence(Two, Two)
             .DelaySubscription(dueTime)
-            .Subscribe(delayedSubscriptionRange.Add);
+            .Subscribe(delayedSubscriptionRange);
         using var subscriptionExplicitRangeSubscription = Signal.Sequence(Two, Two)
             .DelaySubscription(dueTime, defaultScheduler)
-            .Subscribe(delayedSubscriptionExplicitRange.Add);
+            .Subscribe(delayedSubscriptionExplicitRange);
         using var timeoutSubscription = Signal.Silent<int>()
             .Timeout(dueTime)
-            .Subscribe(static _ => { }, captured => timeout = captured);
+            .Subscribe(timeout);
         using var explicitTimeoutSubscription = Signal.Silent<int>()
             .Timeout(dueTime, defaultScheduler)
-            .Subscribe(static _ => { }, captured => explicitTimeout = captured);
+            .Subscribe(explicitTimeout);
 
-        await TestPolling.SpinUntil(
-            () =>
-                delayedScalar.Count == One
-                && delayedRange.Count == Two
-                && delayedExplicitRange.Count == Two
-                && delayedSubscriptionScalar.Count == One
-                && delayedSubscriptionRange.Count == Two
-                && delayedSubscriptionExplicitRange.Count == Two
-                && timeout is not null
-                && explicitTimeout is not null,
-            TimeSpan.FromSeconds(PollTimeoutSeconds));
+        await delayedScalar.ValueCountReaching(One);
+        await delayedRange.ValueCountReaching(Two);
+        await delayedExplicitRange.ValueCountReaching(Two);
+        await delayedSubscriptionScalar.ValueCountReaching(One);
+        await delayedSubscriptionRange.ValueCountReaching(Two);
+        await delayedSubscriptionExplicitRange.ValueCountReaching(Two);
+        var timedOut = await timeout.FirstError;
+        var explicitlyTimedOut = await explicitTimeout.FirstError;
 
-        await Assert.That(delayedScalar.SequenceEqual([One])).IsTrue();
-        await Assert.That(delayedRange.SequenceEqual([Two, Three])).IsTrue();
-        await Assert.That(delayedExplicitRange.SequenceEqual([Two, Three])).IsTrue();
-        await Assert.That(delayedSubscriptionScalar.SequenceEqual([One])).IsTrue();
-        await Assert.That(delayedSubscriptionRange.SequenceEqual([Two, Three])).IsTrue();
-        await Assert.That(delayedSubscriptionExplicitRange.SequenceEqual([Two, Three])).IsTrue();
-        await Assert.That(timeout).IsTypeOf<TimeoutException>();
-        await Assert.That(explicitTimeout).IsTypeOf<TimeoutException>();
+        await Assert.That(delayedScalar.Values.SequenceEqual([One])).IsTrue();
+        await Assert.That(delayedRange.Values.SequenceEqual([Two, Three])).IsTrue();
+        await Assert.That(delayedExplicitRange.Values.SequenceEqual([Two, Three])).IsTrue();
+        await Assert.That(delayedSubscriptionScalar.Values.SequenceEqual([One])).IsTrue();
+        await Assert.That(delayedSubscriptionRange.Values.SequenceEqual([Two, Three])).IsTrue();
+        await Assert.That(delayedSubscriptionExplicitRange.Values.SequenceEqual([Two, Three])).IsTrue();
+        await Assert.That(timedOut).IsTypeOf<TimeoutException>();
+        await Assert.That(explicitlyTimedOut).IsTypeOf<TimeoutException>();
     }
 
     /// <summary>Verifies the binary <c>Concat</c>/<c>Chain</c> overload concatenates two sequences identically.</summary>

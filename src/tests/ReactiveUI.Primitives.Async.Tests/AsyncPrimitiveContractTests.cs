@@ -389,21 +389,19 @@ public sealed class AsyncPrimitiveContractTests
     /// <returns>The completed task result.</returns>
     private static async Task<T> DrainUntilComplete<T>(Task<T> task, QueuedSequencer sequencer)
     {
-        const int MaxIterations = 1_000;
-        const int PollDelayMilliseconds = 1;
-        const int TimeoutSeconds = 5;
-        for (var i = 0; i < MaxIterations; i++)
+        while (true)
         {
+            // Capture the arrival signal before draining so work queued during the drain is not missed.
+            var queued = sequencer.WorkArrived;
             sequencer.DrainAll();
+
             if (task.IsCompleted)
             {
                 return await task.ConfigureAwait(false);
             }
 
-            await Task.Delay(PollDelayMilliseconds).ConfigureAwait(false);
+            _ = await Task.WhenAny(task, queued).ConfigureAwait(false);
         }
-
-        return await task.WaitAsync(TimeSpan.FromSeconds(TimeoutSeconds)).ConfigureAwait(false);
     }
 
     /// <summary>Reads a short async enumerable sequence for factory alias coverage.</summary>
@@ -527,6 +525,9 @@ public sealed class AsyncPrimitiveContractTests
         /// <summary>The queue of scheduled work items awaiting drain.</summary>
         private readonly ConcurrentQueue<IWorkItem> _items = new();
 
+        /// <summary>Signals the arrival of a work item; replaced with a fresh source on every arrival.</summary>
+        private TaskCompletionSource _arrival = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
         /// <inheritdoc/>
         public DateTimeOffset Now => FixedNow;
 
@@ -536,11 +537,17 @@ public sealed class AsyncPrimitiveContractTests
         /// <summary>Gets the number of scheduled work items.</summary>
         public int ScheduleCount { get; private set; }
 
+        /// <summary>Gets a task that completes when the next work item is scheduled.</summary>
+        public Task WorkArrived => Volatile.Read(ref _arrival).Task;
+
         /// <inheritdoc/>
         public void Schedule(IWorkItem item)
         {
             ScheduleCount++;
             _items.Enqueue(item);
+            IgnoredResult.Of(
+                Interlocked.Exchange(ref _arrival, new(TaskCreationOptions.RunContinuationsAsynchronously))
+                    .TrySetResult());
         }
 
         /// <inheritdoc/>

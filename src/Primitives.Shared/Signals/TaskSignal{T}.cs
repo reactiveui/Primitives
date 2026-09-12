@@ -11,60 +11,47 @@ namespace ReactiveUI.Primitives.Signals;
 #endif
 
 /// <summary>A task-backed signal of values.</summary>
-/// <typeparam name="T">The object that provides notification information.</typeparam>
+/// <typeparam name="T">The value type.</typeparam>
 internal sealed class TaskSignal<T> : ITaskSignal<T>
 {
-    /// <summary>Stores state for the signal implementation.</summary>
+    /// <summary>The sequencer subscriptions are observed on.</summary>
     private readonly ISequencer _sequencer;
 
-    /// <summary>Executes the new operation.</summary>
-    /// <returns>The result.</returns>
+    /// <summary>The subscriptions and cancellation registrations released on disposal.</summary>
     private readonly MultipleDisposable _cleanUp = [];
 
     /// <summary>Initializes a new instance of the <see cref="TaskSignal{T}" /> class.</summary>
     /// <param name="sequencer">The sequencer.</param>
-    /// <param name="cancellationTokenSource">The cancellation token source.</param>
-    /// <remarks>
-    /// Private, so the factory can only ever see a signal that is already built. See <see cref="Create"/>.
-    /// </remarks>
+    /// <param name="cancellationTokenSource">The cancellation token source, or <see langword="null"/> to own a new one.</param>
     private TaskSignal(ISequencer? sequencer, CancellationTokenSource? cancellationTokenSource)
     {
         CancellationTokenSource = cancellationTokenSource ?? new();
         _sequencer = sequencer ?? CurrentThreadSequencer.Instance;
     }
 
-    /// <summary>Gets or sets the source.</summary>
-    /// <value>
-    /// The source.
-    /// </value>
+    /// <summary>Gets or sets the sequence subscribers are forwarded to.</summary>
     public IObservable<T>? Source { get; set; }
 
-    /// <summary>Gets the cancellation token source.</summary>
-    /// <value>
-    /// The cancellation token source.
-    /// </value>
+    /// <summary>Gets the cancellation source that cancels the backing task.</summary>
     public CancellationTokenSource? CancellationTokenSource { get; }
 
-    /// <summary>Gets a value indicating whether this instance is cancellation requested.</summary>
-    /// <value>
-    ///   <c>true</c> if this instance is cancellation requested; otherwise, <c>false</c>.
-    /// </value>
+    /// <summary>Gets a value indicating whether cancellation has been requested.</summary>
     public bool IsCancellationRequested => CancellationTokenSource?.IsCancellationRequested == true;
 
-    /// <summary>Gets a value indicating whether gets a value that indicates whether the object is disposed.</summary>
+    /// <summary>Gets a value indicating whether the signal has been disposed.</summary>
     public bool IsDisposed => _cleanUp.IsDisposed;
 
-    /// <summary>Gets the operation canceled.</summary>
-    /// <param name="observer">The observer.</param>
+    /// <summary>Pushes an <see cref="OperationCanceledException"/> to the observer when cancellation is requested.</summary>
+    /// <param name="observer">The observer notified on cancellation.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void GetOperationCanceled(IObserver<Exception> observer) =>
         CancellationTokenSource?.Token
             .UnsafeRegister(static o => ((IObserver<Exception>)o!).OnNext(new OperationCanceledException()), observer)
             .DisposeWith(_cleanUp);
 
-    /// <summary>Subscribes the specified observer.</summary>
-    /// <param name="observer">The observer.</param>
-    /// <returns>A Disposable.</returns>
+    /// <summary>Subscribes the observer to the source, observing on the sequencer unless it is the immediate one.</summary>
+    /// <param name="observer">The observer to subscribe.</param>
+    /// <returns>A disposable that ends the subscription.</returns>
     public IDisposable Subscribe(IObserver<T> observer)
     {
         var subscription = ReferenceEquals(_sequencer, Sequencer.Immediate)
@@ -74,19 +61,18 @@ internal sealed class TaskSignal<T> : ITaskSignal<T>
         return subscription.DisposeWith(_cleanUp);
     }
 
-    /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
+    /// <summary>Cancels the backing task and releases the subscriptions.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Dispose() => Dispose(true);
 
     /// <summary>Creates a task-backed signal whose source the supplied factory builds.</summary>
-    /// <param name="observableFactory">The observable factory.</param>
-    /// <param name="sequencer">The sequencer.</param>
-    /// <param name="cancellationTokenSource">The cancellation token source.</param>
+    /// <param name="observableFactory">Builds the source, receiving the signal it will belong to.</param>
+    /// <param name="sequencer">The sequencer subscriptions are observed on.</param>
+    /// <param name="cancellationTokenSource">The cancellation source to observe.</param>
     /// <returns>The created signal.</returns>
     /// <remarks>
-    /// The factory is handed the signal, so the signal has to be whole before it runs. A factory is
-    /// caller-supplied code that may subscribe to, dispose, or stash the signal the moment it receives
-    /// it; from a constructor it would be doing that to an object the runtime had not finished building.
+    /// The factory receives the signal and may subscribe to, dispose, or store it the moment it is called, so
+    /// construction finishes before the factory runs rather than calling it from the constructor.
     /// </remarks>
     internal static TaskSignal<T> Create(
         Func<ITaskSignal<T>, IObservable<T>> observableFactory,
@@ -100,8 +86,8 @@ internal sealed class TaskSignal<T> : ITaskSignal<T>
         return signal;
     }
 
-    /// <summary>Releases unmanaged and - optionally - managed resources.</summary>
-    /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
+    /// <summary>Cancels the token source and releases the subscriptions when disposing.</summary>
+    /// <param name="disposing"><c>true</c> to release managed resources; otherwise, <c>false</c>.</param>
     private void Dispose(bool disposing)
     {
         if (_cleanUp.IsDisposed || !disposing)

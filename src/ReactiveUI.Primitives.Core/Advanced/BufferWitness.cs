@@ -47,7 +47,6 @@ public sealed class BufferWitness<T>(IObserver<IList<T>> observer, int count, in
         var buffer = _buffer;
         if (idx == 0)
         {
-            // Window starts: allocate exactly one array of the known window size.
             buffer = new T[_count];
             _buffer = buffer;
         }
@@ -65,13 +64,12 @@ public sealed class BufferWitness<T>(IObserver<IList<T>> observer, int count, in
             return;
         }
 
-        // The window is full: hand the buffer over and reset to the skip *before* the hand-off. The
-        // observer may throw, and it must never be able to leave this sink holding an index into a
-        // buffer it has already released — the next value would index into null.
+        // Reset to the skip *before* the hand-off: the observer may throw, and the sink must never be left
+        // holding an index into a buffer it has released, because the next value would index into null.
         _buffer = null;
         _index = 0 - _skip;
 
-        // The window is full, so the array is exactly the right size; emit it directly.
+        // A full window is exactly the right size, so it needs no trimming.
         Emit(buffer!);
     }
 
@@ -114,7 +112,7 @@ public sealed class BufferWitness<T>(IObserver<IList<T>> observer, int count, in
         }
     }
 
-    /// <summary>Assigns the upstream subscription, disposing it if one is already held.</summary>
+    /// <summary>Assigns the upstream subscription, disposing the incoming one when this sink holds a subscription or has been disposed.</summary>
     /// <param name="subscription">The upstream subscription.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetSubscription(IDisposable subscription) => SinkSubscription.Set(ref _subscription, subscription);
@@ -122,8 +120,8 @@ public sealed class BufferWitness<T>(IObserver<IList<T>> observer, int count, in
     /// <inheritdoc/>
     public void Dispose()
     {
-        // Latching here is what makes the sink terminal on every teardown path, including the one taken
-        // when the downstream observer throws out of Emit: a source that ignores disposal is then a no-op.
+        // Latching here makes the sink terminal on every teardown path, including disposal from Emit when
+        // the downstream observer throws, so a source that ignores disposal cannot push another value in.
         Volatile.Write(ref _done, 1);
         SinkSubscription.Dispose(ref _subscription);
     }

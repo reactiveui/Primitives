@@ -57,9 +57,8 @@ internal static class SourceFileWriter
     /// <param name="provider">The observable implementation to write against.</param>
     /// <param name="indent">The indentation the property sits at.</param>
     /// <remarks>
-    /// The handler is a local function rather than a lambda so a delegate returning <c>Task</c> or
-    /// <c>ValueTask</c> can satisfy its own signature; the subscription is torn down through the provider's own
-    /// disposable factory, so the wrapper never holds the handler alive past the subscription.
+    /// The handler is emitted as a local function rather than a lambda so a delegate returning <c>Task</c> or
+    /// <c>ValueTask</c> can satisfy its own signature.
     /// </remarks>
     internal static void AppendEventProperty(
         PooledStringBuilder builder,

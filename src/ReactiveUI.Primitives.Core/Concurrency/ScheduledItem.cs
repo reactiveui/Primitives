@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Concurrency;
 
 /// <summary>Provides the base implementation for a scheduled unit of work that is ordered by an absolute due time.</summary>
 /// <typeparam name="TAbsolute">
-/// The type used to represent absolute time. The type must be comparable so scheduled items can be ordered.
+/// The absolute-time representation, which must be comparable so scheduled items can be ordered.
 /// </typeparam>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, IComparable<ScheduledItem<TAbsolute>>,
@@ -30,11 +30,10 @@ public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICompa
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ScheduledItem{TAbsolute}"/> class with the due time, comparer,
-    /// and invocation callback. The callback supplies the work performed by <see cref="Invoke"/> and replaces what a
-    /// derived <c>InvokeCore</c> override used to provide.
+    /// and the callback that supplies the work performed by <see cref="Invoke"/>.
     /// </summary>
     /// <param name="dueTime">The absolute time at which this item is due to run.</param>
-    /// <param name="comparer">The comparer used to order due-time values.</param>
+    /// <param name="comparer">The comparer that orders due-time values.</param>
     /// <param name="invokeCore">
     /// The work performed when the item runs. It receives this scheduled item (so callers can deregister it) and
     /// returns a disposable that cancels any work that outlives the invocation.
@@ -55,8 +54,8 @@ public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICompa
 
     /// <summary>Gets a value indicating whether this work item has been canceled or disposed.</summary>
     /// <remarks>
-    /// Once this property becomes <see langword="true"/>, calls to <see cref="Invoke"/> will not start new work.
-    /// If the work has already started and returned a disposable resource, that resource is disposed.
+    /// Once this is <see langword="true"/>, <see cref="Invoke"/> starts no new work, and a disposable returned by
+    /// work that has begun is disposed as soon as it is available.
     /// </remarks>
     public bool IsDisposed => Volatile.Read(ref _isDisposed) != 0;
 
@@ -72,10 +71,6 @@ public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICompa
     /// <see langword="true"/> when <paramref name="left"/> and <paramref name="right"/> do not refer to the same
     /// object; otherwise, <see langword="false"/>.
     /// </returns>
-    /// <remarks>
-    /// Equality operators use reference equality. They do not compare <see cref="DueTime"/> values and are therefore
-    /// intentionally different from the ordering behavior used by <see cref="CompareTo(ScheduledItem{TAbsolute}?)"/>.
-    /// </remarks>
     public static bool operator !=(ScheduledItem<TAbsolute>? left, ScheduledItem<TAbsolute>? right) =>
         !ReferenceEquals(left, right);
 
@@ -86,9 +81,6 @@ public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICompa
     /// <see langword="true"/> when <paramref name="left"/> is ordered before <paramref name="right"/> by due time;
     /// otherwise, <see langword="false"/>.
     /// </returns>
-    /// <remarks>
-    /// This operator uses the same due-time ordering as <see cref="CompareTo(ScheduledItem{TAbsolute}?)"/>.
-    /// </remarks>
     public static bool operator <(ScheduledItem<TAbsolute> left, ScheduledItem<TAbsolute> right) =>
         Comparer<ScheduledItem<TAbsolute>>.Default.Compare(left, right) < 0;
 
@@ -99,9 +91,6 @@ public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICompa
     /// <see langword="true"/> when <paramref name="left"/> is ordered before or equal to <paramref name="right"/> by
     /// due time; otherwise, <see langword="false"/>.
     /// </returns>
-    /// <remarks>
-    /// This operator uses the same due-time ordering as <see cref="CompareTo(ScheduledItem{TAbsolute}?)"/>.
-    /// </remarks>
     public static bool operator <=(ScheduledItem<TAbsolute> left, ScheduledItem<TAbsolute> right) =>
         Comparer<ScheduledItem<TAbsolute>>.Default.Compare(left, right) <= 0;
 
@@ -112,10 +101,6 @@ public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICompa
     /// <see langword="true"/> when <paramref name="left"/> and <paramref name="right"/> refer to the same object;
     /// otherwise, <see langword="false"/>.
     /// </returns>
-    /// <remarks>
-    /// Equality operators use reference equality. They do not compare <see cref="DueTime"/> values and are therefore
-    /// intentionally different from the ordering behavior used by <see cref="CompareTo(ScheduledItem{TAbsolute}?)"/>.
-    /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool operator ==(ScheduledItem<TAbsolute>? left, ScheduledItem<TAbsolute>? right) =>
         ReferenceEquals(left, right);
@@ -127,9 +112,6 @@ public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICompa
     /// <see langword="true"/> when <paramref name="left"/> is ordered after <paramref name="right"/> by due time;
     /// otherwise, <see langword="false"/>.
     /// </returns>
-    /// <remarks>
-    /// This operator uses the same due-time ordering as <see cref="CompareTo(ScheduledItem{TAbsolute}?)"/>.
-    /// </remarks>
     public static bool operator >(ScheduledItem<TAbsolute> left, ScheduledItem<TAbsolute> right) =>
         Comparer<ScheduledItem<TAbsolute>>.Default.Compare(left, right) > 0;
 
@@ -140,17 +122,13 @@ public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICompa
     /// <see langword="true"/> when <paramref name="left"/> is ordered after or equal to <paramref name="right"/> by
     /// due time; otherwise, <see langword="false"/>.
     /// </returns>
-    /// <remarks>
-    /// This operator uses the same due-time ordering as <see cref="CompareTo(ScheduledItem{TAbsolute}?)"/>.
-    /// </remarks>
     public static bool operator >=(ScheduledItem<TAbsolute> left, ScheduledItem<TAbsolute> right) =>
         Comparer<ScheduledItem<TAbsolute>>.Default.Compare(left, right) >= 0;
 
-    /// <summary>Cancels this scheduled work item.</summary>
-    /// <remarks>
-    /// Canceling prevents work that has not started from running. If the work has already started and the invocation
-    /// callback returned a disposable resource, that resource is disposed as soon as it is available.
-    /// </remarks>
+    /// <summary>
+    /// Cancels this scheduled work item: work that has not started does not run, and a disposable returned by work
+    /// that has begun is disposed as soon as it is available.
+    /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Cancel() => Dispose();
 
@@ -162,11 +140,10 @@ public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICompa
     /// greater than <see langword="null"/>.
     /// </returns>
     /// <remarks>
-    /// This comparison controls scheduling order. It does not imply object equality; <see cref="Equals(object?)"/> and
-    /// the equality operators use reference identity.
+    /// Ordering is by due time and says nothing about equality: <see cref="Equals(object?)"/> and the equality
+    /// operators compare reference identity instead.
     /// </remarks>
     public int CompareTo(ScheduledItem<TAbsolute>? other) =>
-        // MSDN: By definition, any object compares greater than null, and two null references compare equal to each other.
         other is null ? 1 : _comparer.Compare(DueTime, other.DueTime);
 
     /// <summary>Compares this scheduled item with another object by due time.</summary>
@@ -210,10 +187,6 @@ public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICompa
     /// <see langword="true"/> when <paramref name="obj"/> is the same object instance; otherwise,
     /// <see langword="false"/>.
     /// </returns>
-    /// <remarks>
-    /// Equality is based on reference identity, not on <see cref="DueTime"/>. Use
-    /// <see cref="CompareTo(ScheduledItem{TAbsolute}?)"/> to compare scheduling order.
-    /// </remarks>
     public override bool Equals(object? obj) => ReferenceEquals(this, obj);
 
     /// <summary>Returns a hash code based on this scheduled item's object identity.</summary>
@@ -222,9 +195,8 @@ public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICompa
 
     /// <summary>Runs this scheduled work item if it has not been canceled.</summary>
     /// <remarks>
-    /// The implementation calls the invocation callback once and stores the disposable it returns. If cancellation
-    /// happens before, during, or immediately after invocation, the returned disposable is disposed to propagate
-    /// cancellation to any work created by the invocation.
+    /// The callback runs once and the disposable it returns is stored. Cancellation before, during, or immediately
+    /// after the call disposes that disposable, so cancellation reaches work the callback created.
     /// </remarks>
     public void Invoke()
     {

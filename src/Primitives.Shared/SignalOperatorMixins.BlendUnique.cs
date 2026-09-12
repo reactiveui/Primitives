@@ -12,14 +12,13 @@ namespace ReactiveUI.Primitives;
 
 /// <summary>
 /// Fused <c>Blend</c> + <c>Unique</c> operator: concurrently merges a fixed set of sources and forwards a value
-/// only when it differs from the previously forwarded one. Folding the merge and distinct-until-changed into a
-/// single sink avoids the extra subscription hop and allocation of <c>sources.Blend().Unique()</c>.
+/// only when it differs from the last forwarded one, through one sink instead of two.
 /// </summary>
 public static partial class LinqExtensions
 {
     /// <summary>
-    /// Concurrently merges the supplied sources and forwards only values that differ from the previously
-    /// forwarded value, using the default equality comparer. Errors are forwarded from the first failing source;
+    /// Concurrently merges the supplied sources and forwards only values that differ from the last forwarded
+    /// value, using the default equality comparer. Errors are forwarded from the first failing source;
     /// completion is signalled once every source has completed.
     /// </summary>
     /// <typeparam name="T">The element type.</typeparam>
@@ -30,8 +29,8 @@ public static partial class LinqExtensions
         BlendUnique(sources, null);
 
     /// <summary>
-    /// Concurrently merges the supplied sources and forwards only values that differ from the previously
-    /// forwarded value, using the supplied comparer (or the default when <see langword="null"/>).
+    /// Concurrently merges the supplied sources and forwards only values that differ from the last forwarded
+    /// value, using the supplied comparer (or the default when <see langword="null"/>).
     /// </summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="sources">The sources to merge.</param>
@@ -134,7 +133,7 @@ public static partial class LinqExtensions
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose() => _pocket.Dispose();
 
-        /// <summary>Forwards a value when it differs from the previously forwarded one.</summary>
+        /// <summary>Forwards a value when it differs from the last forwarded one.</summary>
         /// <param name="value">The merged value.</param>
         private void Forward(T value)
         {

@@ -7,11 +7,9 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>
-/// Shared subscription lifecycle for the arity-specific <c>CombineLatestN</c> operators (2..16) and
-/// the enumerable variant. Each per-arity <c>SyncLatestCoordinator</c> composes one instance of
-/// this class (has-a, not is-a) and forwards lifecycle / error / gating work into it, so the
-/// previously-duplicated infrastructure (gate, dispose CTS, external-link registration, observer
-/// fan-out, completion-bitmask handling) lives in one place.
+/// Subscription lifecycle for the <c>CombineLatestN</c> operators (2..16) and the enumerable
+/// variant: owns the serialization gate, the dispose cancellation source, the external-link
+/// registration, the gated observer fan-out and the completion bitmask.
 /// </summary>
 /// <typeparam name="TResult">The downstream element type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("SyncLatestLifecycle: SourceCount = {Subscriptions.Length}, HasDisposed = {HasDisposed}")]
@@ -62,9 +60,8 @@ public sealed class SyncLatestLifecycle<TResult> : IAsyncDisposable
     public bool HasDisposed => DisposalHelper.HasDisposed(_disposed);
 
     /// <summary>
-    /// Links the original subscribe-time cancellation token into this subscription's dispose chain so
-    /// per-emission methods can use <see cref="DisposeToken"/> directly instead of allocating a
-    /// per-emission linked CTS.
+    /// Links the subscribe-time cancellation token into this subscription's dispose chain, so
+    /// <see cref="DisposeToken"/> alone covers both and no per-emission linked source is needed.
     /// </summary>
     /// <param name="external">The subscribe-time token.</param>
     public void LinkExternalCancellation(CancellationToken external)
@@ -177,9 +174,8 @@ public sealed class SyncLatestLifecycle<TResult> : IAsyncDisposable
         }
         finally
         {
-            // Always release the unmanaged-style primitives even if upstream DisposeAsync or
-            // OnCompletedAsync throws — otherwise a misbehaving downstream leaks the gate's
-            // SemaphoreSlim and the dispose CTS's wait handles.
+            // A throwing upstream DisposeAsync or OnCompletedAsync must not leak the gate's
+            // SemaphoreSlim or the dispose CTS's wait handles.
 #if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
             await _externalLinkRegistration.DisposeAsync().ConfigureAwait(false);
 #else

@@ -11,9 +11,9 @@ namespace ReactiveUI.Primitives.Advanced;
 #endif
 
 /// <summary>
-/// Dedicated cold signal for <c>Recover</c>/<c>Resume</c> (catch a typed error and switch to a
-/// handler-selected sequence). Replaces the witness-framework subject with a lightweight sink that
-/// holds its source and fallback subscriptions in two interlocked slots, with no composite disposable.
+/// Cold signal that mirrors the source and, on an error of type <typeparamref name="TException"/>, switches to
+/// the sequence the handler selects for it. Any other error, and an error thrown by the handler itself, is
+/// forwarded downstream unchanged.
 /// </summary>
 /// <typeparam name="T">The value type.</typeparam>
 /// <typeparam name="TException">The handled exception type.</typeparam>

@@ -7,10 +7,9 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>
-/// Observer that serializes notifications behind a gate so downstream operators always observe the
-/// single-threaded <c>OnNext*</c> then <c>OnError</c>|<c>OnCompleted</c> grammar they depend on, even when the
-/// upstream source delivers concurrently. Stateful sinks (counting, distinct, buffering) rely on that
-/// grammar; placing one of these ahead of them is the supported way to consume a non-conformant source.
+/// Observer that serializes notifications behind a gate, so downstream operators observe the single-threaded
+/// <c>OnNext*</c> then <c>OnError</c>|<c>OnCompleted</c> grammar even when the upstream source delivers
+/// concurrently. Place one ahead of a stateful sink to consume a source that does not honour that grammar.
 /// </summary>
 /// <typeparam name="T">The value type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("SynchronizeWitness: Observer = {_observer}, Subscription = {_subscription}")]
@@ -68,7 +67,7 @@ public sealed class SynchronizeWitness<T> : IObserver<T>, IDisposable
         }
     }
 
-    /// <summary>Assigns the upstream subscription, disposing it if one is already held.</summary>
+    /// <summary>Assigns the upstream subscription, disposing the incoming one when this sink holds a subscription or has been disposed.</summary>
     /// <param name="subscription">The upstream subscription.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetSubscription(IDisposable subscription) => SinkSubscription.Set(ref _subscription, subscription);

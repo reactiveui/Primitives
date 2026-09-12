@@ -17,17 +17,11 @@ public class SelectAsyncConcurrentObservableTests
     /// <summary>Synthetic error message attached to source errors.</summary>
     private const string SourceErrorMessage = "source error";
 
-    /// <summary>Settle delay in milliseconds used to let an awaited continuation attempt delivery.</summary>
-    private const int SettleDelayMilliseconds = 50;
-
     /// <summary>Max concurrency used for two-in-flight tests.</summary>
     private const int MaxConcurrencyTwo = 2;
 
     /// <summary>Max concurrency used for four-in-flight tests.</summary>
     private const int MaxConcurrencyFour = 4;
-
-    /// <summary>Guard timeout so a hung rendezvous fails this test rather than stalling the run.</summary>
-    private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
 
     /// <summary>Verifies that <c>SelectAsyncConcurrent</c> forwards selector exceptions.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -36,14 +30,14 @@ public class SelectAsyncConcurrentObservableTests
     {
         const int TriggerValue = 1;
         Subject<int> subject = new();
-        TaskCompletionSource<Exception> faulted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<Exception> faulted = new();
         InvalidOperationException expected = new(SelectorErrorMessage);
         using var sub = subject.SelectAsyncConcurrent(_ => Task.FromException<int>(expected), MaxConcurrencyTwo)
             .Subscribe(
                 static _ => { },
                 ex => faulted.TrySetResult(ex));
         subject.OnNext(TriggerValue);
-        var caught = await faulted.Task.WaitAsync(GuardTimeout);
+        var caught = await faulted.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -69,21 +63,25 @@ public class SelectAsyncConcurrentObservableTests
     {
         const int TriggerValue = 1;
         Subject<int> subject = new();
-        TaskCompletionSource<bool> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // The gate completes its continuations inline, so releasing it runs the selector's tail here.
+        TaskCompletionSource<bool> gate = new();
+        TaskCompletionSource<bool> selectorResumed = new();
         List<int> results = [];
         var completed = false;
         var sub = subject.SelectAsyncConcurrent(
             async x =>
             {
                 await gate.Task.ConfigureAwait(false);
+                _ = selectorResumed.TrySetResult(true);
                 return x;
             },
             MaxConcurrencyTwo).Subscribe(results.Add, () => completed = true);
         subject.OnNext(TriggerValue);
         subject.OnCompleted();
         sub.Dispose();
-        _ = gate.TrySetResult(true);
-        await Task.Delay(SettleDelayMilliseconds).ConfigureAwait(false);
+        gate.SetResult(true);
+        await selectorResumed.Task;
         await Assert.That(results).IsEmpty();
         await Assert.That(completed).IsFalse();
     }
@@ -96,9 +94,9 @@ public class SelectAsyncConcurrentObservableTests
         const int First = 1;
         const int Second = 2;
         Subject<int> subject = new();
-        TaskCompletionSource<bool> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<bool> gate = new();
         List<int> results = [];
-        TaskCompletionSource<bool> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<bool> completed = new();
         using var sub = subject.SelectAsyncConcurrent(
             async x =>
             {
@@ -110,11 +108,11 @@ public class SelectAsyncConcurrentObservableTests
         subject.OnNext(Second);
         subject.OnCompleted();
 
-        // The selector is gated; nothing should have emitted yet.
-        await Task.Delay(SettleDelayMilliseconds).ConfigureAwait(false);
+        // Both selectors are parked on the gate, so nothing can have emitted or completed.
         await Assert.That(completed.Task.IsCompleted).IsFalse();
-        _ = gate.TrySetResult(true);
-        var done = await completed.Task.WaitAsync(GuardTimeout);
+        await Assert.That(results).IsEmpty();
+        gate.SetResult(true);
+        var done = await completed.Task;
         await Assert.That(done).IsTrue();
 
         // Downstream OnNext from this operator is serialized inside the sink's lock, so the
@@ -140,7 +138,6 @@ public class SelectAsyncConcurrentObservableTests
         source.Observer.OnNext(1);
         source.Observer.OnError(new InvalidOperationException("late"));
         source.Observer.OnCompleted();
-        await Task.Delay(SettleDelayMilliseconds);
         await Assert.That(completedCount).IsEqualTo(1);
         await Assert.That(values).IsEmpty();
         await Assert.That(caught).IsNull();

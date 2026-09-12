@@ -7,18 +7,13 @@ using System.Runtime.ExceptionServices;
 
 namespace ReactiveUI.Primitives;
 
-/// <summary>Represents the outcome of an operation, indicating success or failure and providing error details when applicable.</summary>
-/// <remarks>The <see cref="Result"/> struct is used to encapsulate the result of an operation, including whether
-/// it succeeded and, if not, the exception that caused the failure. Use the <see cref="Success"/> property for
-/// successful results and <see cref="Failure(Exception)"/> to create failed results. The <see cref="IsSuccess"/> and
-/// <see cref="IsFailure"/> properties allow callers to check the operation's status before accessing error information
-/// or propagating exceptions. This struct is immutable and thread-safe.</remarks>
+/// <summary>Represents the outcome of an operation, indicating success or failure and carrying the failure exception.</summary>
 [System.Diagnostics.DebuggerDisplay("Result: IsSuccess = {IsSuccess}, Exception = {Exception}")]
 public readonly record struct Result
 {
-    /// <summary>Initializes a new instance of the <see cref="Result"/> struct. Initializes a new instance of the Result class with the specified exception.</summary>
-    /// <param name="exception">The exception that represents the error condition for this result. Cannot be null.</param>
-    /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="exception"/> is null.</exception>
+    /// <summary>Initializes a new instance of the <see cref="Result"/> struct representing a failure.</summary>
+    /// <param name="exception">The exception that caused the failure.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="exception"/> is <see langword="null"/>.</exception>
     public Result(Exception exception)
     {
         ArgumentExceptionHelper.ThrowIfNull(exception);
@@ -33,24 +28,22 @@ public readonly record struct Result
     public Exception? Exception { get; }
 
     /// <summary>Gets a value indicating whether the operation completed successfully without an exception.</summary>
-    /// <remarks>If <see langword="false"/>, the <c>Exception</c> property is guaranteed to be non-null,
-    /// providing details about the failure.</remarks>
+    /// <remarks>When <see langword="false"/>, <see cref="Exception"/> is non-null.</remarks>
     [MemberNotNullWhen(false, nameof(Exception))]
     public bool IsSuccess => Exception is null;
 
     /// <summary>Gets a value indicating whether the operation has failed.</summary>
-    /// <remarks>When <see langword="true"/>, the <c>Exception</c> property is guaranteed to be non-null. Use
-    /// this property to check for failure before accessing error details.</remarks>
+    /// <remarks>When <see langword="true"/>, <see cref="Exception"/> is non-null.</remarks>
     [MemberNotNullWhen(true, nameof(Exception))]
     public bool IsFailure => Exception is not null;
 
     /// <summary>Creates a failed result that encapsulates the specified exception.</summary>
-    /// <param name="exception">The exception that describes the failure. Cannot be null.</param>
-    /// <returns>A result representing a failure, containing the provided exception.</returns>
+    /// <param name="exception">The exception that describes the failure.</param>
+    /// <returns>A result representing a failure, containing the supplied exception.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="exception"/> is <see langword="null"/>.</exception>
     public static Result Failure(Exception exception) => new(exception);
 
-    /// <summary>Throws the associated exception if the result represents a failure.</summary>
-    /// <remarks>Excluded from coverage: the unreachable sequence point after <see cref="ExceptionDispatchInfo"/> rethrow cannot be credited by cobertura.</remarks>
+    /// <summary>Rethrows the failure exception, preserving its original stack trace; a no-op on success.</summary>
     [ExcludeFromCodeCoverage]
     public void TryThrow()
     {
@@ -66,7 +59,5 @@ public readonly record struct Result
     /// <summary>Returns a string that represents the result status of the operation.</summary>
     /// <returns>A string indicating "Success" if the operation was successful; otherwise, a string in the format
     /// "Failure{exception message}" containing the associated exception message.</returns>
-    /// <remarks>This method provides a concise textual representation of the operation's outcome, which can
-    /// be useful for logging or debugging purposes.</remarks>
     public override string ToString() => IsSuccess ? "Success" : $"Failure{{{Exception.Message}}}";
 }

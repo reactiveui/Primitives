@@ -20,12 +20,12 @@ public sealed class AfterSignal : IRequireCurrentThread<long>
     /// <summary>The recurring period after the first tick, when this is a periodic timer.</summary>
     private readonly TimeSpan? _period;
 
-    /// <summary>The sequencer used to schedule the tick.</summary>
+    /// <summary>The sequencer that schedules the tick.</summary>
     private readonly ISequencer _scheduler;
 
     /// <summary>Initializes a new instance of the <see cref="AfterSignal"/> class.</summary>
     /// <param name="dueTime">The delay before the single tick.</param>
-    /// <param name="scheduler">The sequencer used to schedule the tick.</param>
+    /// <param name="scheduler">The sequencer that schedules the tick.</param>
     public AfterSignal(TimeSpan dueTime, ISequencer scheduler)
     {
         _dueTime = dueTime;
@@ -35,7 +35,7 @@ public sealed class AfterSignal : IRequireCurrentThread<long>
     /// <summary>Initializes a new instance of the <see cref="AfterSignal"/> class.</summary>
     /// <param name="dueTime">The delay before the first tick.</param>
     /// <param name="period">The period between subsequent ticks.</param>
-    /// <param name="scheduler">The sequencer used to schedule ticks.</param>
+    /// <param name="scheduler">The sequencer that schedules ticks.</param>
     public AfterSignal(TimeSpan dueTime, TimeSpan period, ISequencer scheduler)
     {
         ArgumentOutOfRangeExceptionHelper.ThrowIfLessThan(period, TimeSpan.Zero);

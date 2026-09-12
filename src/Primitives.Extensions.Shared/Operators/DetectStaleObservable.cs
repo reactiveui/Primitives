@@ -34,10 +34,7 @@ internal sealed class DetectStaleObservable<T>(
         return sink;
     }
 
-    /// <summary>
-    /// Sink that manages staleness detection. Composes <see cref="TimerSinkState{T}"/> for the
-    /// shared gate / timer / done-flag plumbing so this class only carries the OnNext / schedule logic.
-    /// </summary>
+    /// <summary>Sink that re-arms the staleness timer on each upstream value and emits a stale marker when the window elapses.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="stalenessPeriod">The staleness period.</param>
     /// <param name="scheduler">The scheduler.</param>
@@ -52,7 +49,7 @@ internal sealed class DetectStaleObservable<T>(
         /// <summary>Shared timer / done-flag plumbing.</summary>
         private readonly TimerSinkState<Stale<T>> _state = new(downstream);
 
-        /// <summary>Upstream subscription handle, set once via <see cref="AttachSourceSubscription"/> so the sink can tear it down on dispose without a wrapper bag.</summary>
+        /// <summary>Upstream subscription handle, set once via <see cref="AttachSourceSubscription"/> and disposed with the sink.</summary>
         private IDisposable? _sourceSubscription;
 
         /// <summary>Records the upstream subscription for disposal.</summary>
@@ -119,9 +116,7 @@ internal sealed class DetectStaleObservable<T>(
             Interlocked.Exchange(ref _sourceSubscription, null)?.Dispose();
         }
 
-        /// <summary>Schedules the staleness notification. Uses the state-carrying scheduler
-        /// overload with a static lambda so no per-reschedule closure capturing <c>this</c> is
-        /// allocated (the timer re-arms on every upstream emission).</summary>
+        /// <summary>Arms the staleness timer, which re-arms on every upstream emission without allocating a per-arm closure.</summary>
         private void ScheduleStale() =>
             _state.Timer.Disposable =
                 scheduler.Schedule(this, stalenessPeriod, static (_, self) => self.OnStaleTimer());

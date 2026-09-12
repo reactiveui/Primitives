@@ -5,17 +5,15 @@
 namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>
-/// Shared observer used by both <c>SingleAsync</c> and <c>SingleOrDefaultAsync</c>. The two operator
-/// surfaces previously held near-identical observer classes; the only behavioural difference is
-/// whether an empty sequence throws or returns a caller-supplied default. That difference is now a
-/// single flag on this type, so the OnNext / OnErrorResume / OnCompleted bodies live in one place.
+/// Observer that resolves the one element of the source sequence matching a predicate, faulting the
+/// result with an <see cref="InvalidOperationException"/> as soon as a second match arrives.
 /// </summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="predicate">An optional predicate to filter elements; <c>null</c> matches all elements.</param>
 /// <param name="requireExactlyOne">
-/// When <c>true</c> (the <c>SingleAsync</c> shape), an empty sequence completes the result task with
-/// an <see cref="InvalidOperationException"/>. When <c>false</c> (the <c>SingleOrDefaultAsync</c>
-/// shape), an empty sequence resolves the result task with <paramref name="defaultValue"/>.
+/// When <c>true</c>, an empty sequence faults the result task with an
+/// <see cref="InvalidOperationException"/>; when <c>false</c>, it resolves the result task with
+/// <paramref name="defaultValue"/>.
 /// </param>
 /// <param name="defaultValue">The value to return on empty when <paramref name="requireExactlyOne"/> is <c>false</c>.</param>
 /// <param name="cancellationToken">A cancellation token for the operation.</param>

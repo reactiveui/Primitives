@@ -9,10 +9,10 @@ namespace ReactiveUI.Primitives.ObservableEvents.CodeGeneration;
 
 /// <summary>Builds the wrapper class and generated file names, from the identity of the host they belong to.</summary>
 /// <remarks>
-/// A readable name alone is not enough to key generated output on. Sanitizing punctuation out of a fully qualified
-/// name maps distinct hosts onto the same identifier - <c>Samples.A_B.C</c> and <c>Samples.A.B_C</c> both flatten to
-/// <c>Samples_A_B_C</c> - so a hash of the unflattened identity is appended to keep them apart, while the readable
-/// half is kept so a generated file is still recognisable in a build log.
+/// Sanitizing punctuation out of a fully qualified name maps distinct hosts onto the same identifier -
+/// <c>Samples.A_B.C</c> and <c>Samples.A.B_C</c> both flatten to <c>Samples_A_B_C</c> - so a hash of the unflattened
+/// identity is appended to keep them apart, while the readable half keeps a generated file recognisable in a build
+/// log.
 /// </remarks>
 internal static class GeneratedNames
 {
@@ -77,8 +77,8 @@ internal static class GeneratedNames
         var start = 0;
         var end = identity.Length;
 
-        // Leading and trailing punctuation would sanitize to underscores that carry no information, and a
-        // generated name reads better without them; the hash still separates identities that differ only there.
+        // Leading and trailing punctuation would sanitize to uninformative underscores; the hash still separates
+        // identities that differ only there.
         while (start < end && !char.IsLetterOrDigit(identity[start]))
         {
             start++;

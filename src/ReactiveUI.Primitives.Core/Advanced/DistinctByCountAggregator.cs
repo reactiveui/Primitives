@@ -14,7 +14,7 @@ public readonly record struct
     /// <summary>The selector that projects each value to its distinctness key.</summary>
     private readonly Func<T, TKey> _keySelector;
 
-    /// <summary>The set of keys that have already been observed.</summary>
+    /// <summary>The set of keys observed so far.</summary>
     private readonly HashSet<TKey> _seen;
 
     /// <summary>Initializes a new instance of the <see cref="DistinctByCountAggregator{T,TKey}"/> struct.</summary>
@@ -27,7 +27,7 @@ public readonly record struct
 
     /// <summary>Initializes a new instance of the <see cref="DistinctByCountAggregator{T,TKey}"/> struct.</summary>
     /// <param name="keySelector">The key selector.</param>
-    /// <param name="seen">The set of keys that have already been observed.</param>
+    /// <param name="seen">The set of keys observed so far.</param>
     /// <param name="result">The current accumulated count.</param>
     private DistinctByCountAggregator(Func<T, TKey> keySelector, HashSet<TKey> seen, int result)
     {

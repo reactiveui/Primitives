@@ -5,10 +5,6 @@
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides a set of static methods for creating and composing asynchronous observable sequences.</summary>
-/// <remarks>The SignalAsync class offers extension methods that enable functional-style operations, such as
-/// filtering for distinct elements, on asynchronous observable sequences. These methods are designed to work with the
-/// SignalAsync{T} type, allowing developers to build complex, asynchronous event processing pipelines in a
-/// composable manner.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Distinctness operators for an observable source sequence.</summary>
@@ -21,8 +17,8 @@ public static partial class SignalAsyncExtensions
         /// comparer for the element type.
         /// </summary>
         /// <returns>An observable sequence that contains distinct elements from the source sequence.</returns>
-        /// <remarks>Elements are considered distinct based on the default equality comparer for type T.
-        /// The order of elements is preserved.</remarks>
+        /// <remarks>Only the first occurrence of each element reaches observers, in source order; the set of seen
+        /// elements lives for the whole subscription.</remarks>
         public IObservableAsync<T> Distinct()
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -38,8 +34,8 @@ public static partial class SignalAsyncExtensions
         /// used.</param>
         /// <returns>An observable sequence that emits each distinct element from the source sequence, in the order in which they
         /// are received.</returns>
-        /// <remarks>Only the first occurrence of each element, as determined by the specified equality
-        /// comparer, is emitted to observers. Subsequent duplicate elements are ignored.</remarks>
+        /// <remarks>Only the first occurrence of each element, as judged by <paramref name="equalityComparer"/>,
+        /// reaches observers.</remarks>
         public IObservableAsync<T> Distinct(IEqualityComparer<T> equalityComparer)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -56,8 +52,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="keySelector">A function to extract the key for each element. Cannot be null.</param>
         /// <returns>An observable sequence that contains only the first occurrence of each distinct key as determined by the key
         /// selector.</returns>
-        /// <remarks>Elements are considered distinct based on the value returned by the key selector and
-        /// the default equality comparer for the key type.</remarks>
+        /// <remarks>Keys are compared with the default equality comparer for <typeparamref name="TKey"/>.</remarks>
         public IObservableAsync<T> DistinctBy<TKey>(Func<T, TKey> keySelector)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -75,10 +70,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="equalityComparer">An equality comparer to compare keys for equality. Cannot be null.</param>
         /// <returns>An observable sequence that contains only the first occurrence of each distinct key as determined by the
         /// specified key selector and equality comparer.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="keySelector"/> or <paramref name="equalityComparer"/> is null.</exception>
-        /// <remarks>Elements are considered distinct based on the value returned by the <paramref
-        /// name="keySelector"/> function and compared using the provided <paramref name="equalityComparer"/>. Only the
-        /// first occurrence of each key is included in the resulting sequence.</remarks>
+        /// <exception cref="ArgumentNullException"><paramref name="keySelector"/> or <paramref name="equalityComparer"/> is <see langword="null"/>.</exception>
         public IObservableAsync<T> DistinctBy<TKey>(
             Func<T, TKey> keySelector,
             IEqualityComparer<TKey> equalityComparer)
@@ -123,7 +115,7 @@ public static partial class SignalAsyncExtensions
             IEqualityComparer<T> comparer,
             CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
         {
-            /// <summary>Set of previously-forwarded values; <see cref="HashSet{T}.Add"/> returns <see langword="false"/> for duplicates.</summary>
+            /// <summary>The values forwarded so far; <see cref="HashSet{T}.Add"/> returns <see langword="false"/> for a duplicate.</summary>
             private readonly HashSet<T> _seen = [with(comparer)];
 
             /// <inheritdoc/>
@@ -179,7 +171,7 @@ public static partial class SignalAsyncExtensions
             IEqualityComparer<TKey> comparer,
             CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
         {
-            /// <summary>Set of previously-seen keys.</summary>
+            /// <summary>The keys seen so far.</summary>
             private readonly HashSet<TKey> _seen = [with(comparer)];
 
             /// <inheritdoc/>

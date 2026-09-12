@@ -7,9 +7,6 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides a set of extension methods for working with asynchronous observable sequences.</summary>
-/// <remarks>The SignalAsync class contains static extension methods that operate on instances of
-/// SignalAsync{T}. These methods enable querying and manipulation of asynchronous observable sequences in a manner
-/// similar to LINQ, supporting scenarios such as retrieving single elements or default values asynchronously.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Single-or-default operators for an observable source sequence.</summary>
@@ -28,9 +25,6 @@ public static partial class SignalAsyncExtensions
         /// <returns>A value task that represents the asynchronous operation. The result contains the single element that matches
         /// the predicate, the specified default value if no such element is found, or throws an exception if more than
         /// one matching element exists.</returns>
-        /// <remarks>If more than one element satisfies the condition, an exception is thrown. If no
-        /// elements satisfy the condition, the specified default value is returned. The operation observes the provided
-        /// cancellation token.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T?> SingleOrDefaultAsync(
             Func<T, bool> predicate,
@@ -45,13 +39,10 @@ public static partial class SignalAsyncExtensions
         /// returns <see langword="true"/>.</param>
         /// <param name="defaultValue">The value to return if no element in the sequence satisfies the condition specified by <paramref
         /// name="predicate"/>.</param>
-        /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
+        /// <param name="cancellationToken">The token that cancels the operation.</param>
         /// <returns>A value task that represents the asynchronous operation. The result contains the single element that matches
         /// the predicate, the specified default value if no such element is found, or throws an exception if more than
         /// one matching element exists.</returns>
-        /// <remarks>If more than one element satisfies the condition, an exception is thrown. If no
-        /// elements satisfy the condition, the specified default value is returned. The operation observes the provided
-        /// cancellation token.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T?> SingleOrDefaultAsync(
             Func<T, bool> predicate,
@@ -73,7 +64,7 @@ public static partial class SignalAsyncExtensions
         /// Asynchronously returns the only element of a sequence, or a default value if the sequence is empty; this
         /// operation throws an exception if more than one element is found.
         /// </summary>
-        /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
+        /// <param name="cancellationToken">The token that cancels the operation.</param>
         /// <returns>A value task that represents the asynchronous operation. The task result contains the single element of the
         /// sequence, or the default value of <typeparamref name="T"/> if the sequence is empty.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -88,9 +79,6 @@ public static partial class SignalAsyncExtensions
         /// <returns>A task that represents the asynchronous operation. The task result contains the single element of the
         /// sequence, the specified default value if the sequence is empty, or throws if more than one element is
         /// present.</returns>
-        /// <remarks>Use this method when you expect the sequence to contain zero or one element. If the
-        /// sequence contains more than one element, an exception is thrown. If the sequence is empty, the specified
-        /// default value is returned.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T?> SingleOrDefaultAsync(T? defaultValue) =>
             source.SingleOrDefaultAsync(defaultValue, CancellationToken.None);
@@ -100,13 +88,10 @@ public static partial class SignalAsyncExtensions
         /// empty. Throws an exception if the sequence contains more than one element.
         /// </summary>
         /// <param name="defaultValue">The value to return if the sequence contains no elements.</param>
-        /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
+        /// <param name="cancellationToken">The token that cancels the operation.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains the single element of the
         /// sequence, the specified default value if the sequence is empty, or throws if more than one element is
         /// present.</returns>
-        /// <remarks>Use this method when you expect the sequence to contain zero or one element. If the
-        /// sequence contains more than one element, an exception is thrown. If the sequence is empty, the specified
-        /// default value is returned.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T?> SingleOrDefaultAsync(T? defaultValue, CancellationToken cancellationToken) =>
             SingleOrDefaultCoreAsync(source, null, defaultValue, cancellationToken);

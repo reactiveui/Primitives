@@ -2,7 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks.Sources;
@@ -11,18 +10,13 @@ using ReactiveUI.Primitives.Internal;
 namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>
-/// Poolable <see cref="IValueTaskSource"/> used by <c>DelayAsync</c> for the non-System
-/// <see cref="TimeProvider"/> code path. Replaces the per-call
-/// <see cref="TaskCompletionSource{TResult}"/> + <see cref="Task{TResult}"/> +
-/// <see cref="CancellationTokenRegistration"/> allocation chain with a rented-then-returned
-/// instance. The wrapped <see cref="ManualResetValueTaskSourceCore{TResult}"/> is the standard
-/// poolable async-primitive shape from <c>System.Threading.Tasks.Sources</c>.
+/// Poolable <see cref="IValueTaskSource"/> backing <c>DelayAsync</c> for non-System
+/// <see cref="TimeProvider"/> instances, so a delay costs no per-call allocation.
 /// </summary>
 /// <remarks>
-/// <para>Completion is claimed by whichever of the timer callback or the cancellation registration
-/// fires first, using an <see cref="Interlocked.CompareExchange(ref int, int, int)"/> on a state
-/// flag. The loser is a no-op. After the caller awaits the returned <see cref="ValueTask"/>, the
-/// instance is reset and pushed back to the pool inside <see cref="GetResult(short)"/>.</para>
+/// Whichever of the timer callback and the cancellation registration fires first claims completion
+/// through an <see cref="Interlocked.CompareExchange(ref int, int, int)"/> on a state flag; the
+/// loser is a no-op.
 /// </remarks>
 [System.Diagnostics.DebuggerDisplay("PooledDelaySource: Completed = {_completed}, Timer = {_timer}")]
 public sealed class PooledDelaySource : IValueTaskSource
@@ -34,12 +28,9 @@ public sealed class PooledDelaySource : IValueTaskSource
     private const int StateClaimed = 1;
 
     /// <summary>
-    /// Per-thread cached instance. A thread-static slot has zero per-rent / per-return allocation
-    /// (a <see cref="ConcurrentStack{T}.Push(T)"/> allocates a <c>Node</c> wrapper, which
-    /// dominated allocation in the first cut of this pool). Single-slot caching is sufficient
-    /// because the operators that consume <c>DelayAsync</c> serialise their per-instance work
-    /// behind a gate, so a single thread holds at most one in-flight delay per operator at a time.
-    /// Concurrent delays from different threads each get their own cached slot.
+    /// Per-thread cached instance; one slot per thread suffices because the operators that consume
+    /// <c>DelayAsync</c> serialise their work behind a gate, so a thread holds at most one
+    /// in-flight delay per operator.
     /// </summary>
     [ThreadStatic]
     private static PooledDelaySource? _threadCached;
@@ -93,9 +84,8 @@ public sealed class PooledDelaySource : IValueTaskSource
             return new(this, _core.Version);
         }
 
-        // CreateTimer may invoke the callback synchronously (the immediate-fire pattern used by
-        // some test / benchmark providers); in that case _completed flips to Claimed before this
-        // call returns.
+        // CreateTimer may invoke the callback synchronously, flipping _completed to Claimed before
+        // this call returns.
         _timer = timeProvider.CreateTimer(
             static state => ((PooledDelaySource)state!).OnTimerFired(),
             this,
@@ -104,7 +94,7 @@ public sealed class PooledDelaySource : IValueTaskSource
 
         if (Volatile.Read(ref _completed) == StateClaimed)
         {
-            // Sync-fire fast path: no cancellation registration needed; the source is already done.
+            // Sync-fire fast path: the source is complete, so no cancellation registration is needed.
             return new(this, _core.Version);
         }
 
@@ -144,12 +134,7 @@ public sealed class PooledDelaySource : IValueTaskSource
         }
     }
 
-    /// <summary>
-    /// Callback invoked when the timer's dueTime elapses. The race-loser branch (where
-    /// <c>OnCancelled</c> claimed the state first) cannot be deterministically triggered in
-    /// unit tests because the timer and cancellation must fire concurrently — the underlying
-    /// claim logic is covered by direct tests against <see cref="ConcurrencyRaceHelpers.TryClaim"/>.
-    /// </summary>
+    /// <summary>Completes the delay successfully when the timer's dueTime elapses, unless cancellation claimed it first.</summary>
     [ExcludeFromCodeCoverage]
     private void OnTimerFired()
     {
@@ -161,7 +146,7 @@ public sealed class PooledDelaySource : IValueTaskSource
         _core.SetResult(true);
     }
 
-    /// <summary>Callback invoked when the caller's cancellation token transitions to cancelled. Same race-only loser branch as <see cref="OnTimerFired"/>.</summary>
+    /// <summary>Faults the delay with <see cref="OperationCanceledException"/> when the caller's token fires, unless the timer claimed it first.</summary>
     /// <param name="cancellationToken">The cancellation token that fired.</param>
     [ExcludeFromCodeCoverage]
     private void OnCancelled(CancellationToken cancellationToken)
@@ -184,8 +169,7 @@ public sealed class PooledDelaySource : IValueTaskSource
         _completed = StateOpen;
         _core.Reset();
 
-        // Only one instance cached per thread; drop the rest for the GC. Capacity-of-one is the
-        // sweet spot for these operators — they hold at most one in-flight delay per gate.
+        // One instance cached per thread; any extra instances are dropped for the GC.
         _threadCached ??= this;
     }
 }

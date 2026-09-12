@@ -7,9 +7,6 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for working with asynchronous observable sequences.</summary>
-/// <remarks>The SignalAsync class contains utility methods that enable consumers to process items emitted by
-/// asynchronous observables in a convenient and idiomatic way. These methods are designed to simplify common patterns
-/// when interacting with IAsyncObservable or similar asynchronous push-based data sources.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Asynchronous per-element iteration operators for an observable source sequence.</summary>
@@ -22,9 +19,9 @@ public static partial class SignalAsyncExtensions
         /// token, and returns a ValueTask that completes when processing is finished.</param>
         /// <returns>A ValueTask that represents the asynchronous operation. The task completes when all elements have been
         /// processed or the operation is canceled.</returns>
-        /// <remarks>If the sequence completes or is canceled, the method returns when all in-flight
-        /// actions have finished. Exceptions thrown by the action or during enumeration will propagate to the returned
-        /// task.</remarks>
+        /// <exception cref="ArgumentNullException"><paramref name="onNextAsync"/> is <see langword="null"/>.</exception>
+        /// <remarks>The returned task completes once the sequence terminates and the last invocation has finished; an
+        /// exception from <paramref name="onNextAsync"/> or from the sequence surfaces on it.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask ForEachAsync(Func<T, CancellationToken, ValueTask> onNextAsync) =>
             source.ForEachAsync(onNextAsync, CancellationToken.None);
@@ -36,9 +33,9 @@ public static partial class SignalAsyncExtensions
         /// signaled.</param>
         /// <returns>A ValueTask that represents the asynchronous operation. The task completes when all elements have been
         /// processed or the operation is canceled.</returns>
-        /// <remarks>If the sequence completes or is canceled, the method returns when all in-flight
-        /// actions have finished. Exceptions thrown by the action or during enumeration will propagate to the returned
-        /// task.</remarks>
+        /// <exception cref="ArgumentNullException"><paramref name="onNextAsync"/> is <see langword="null"/>.</exception>
+        /// <remarks>The returned task completes once the sequence terminates and the last invocation has finished; an
+        /// exception from <paramref name="onNextAsync"/> or from the sequence surfaces on it.</remarks>
         public async ValueTask ForEachAsync(
             Func<T, CancellationToken, ValueTask> onNextAsync,
             CancellationToken cancellationToken)
@@ -55,7 +52,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="onNext">The action to invoke for each element in the sequence. Cannot be null.</param>
         /// <returns>A task that represents the asynchronous iteration operation. The task completes when the sequence has been
         /// fully processed or the operation is canceled.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="onNext"/> is null.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="onNext"/> is <see langword="null"/>.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask ForEachAsync(Action<T> onNext) =>
             source.ForEachAsync(onNext, CancellationToken.None);
@@ -65,7 +62,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the iteration.</param>
         /// <returns>A task that represents the asynchronous iteration operation. The task completes when the sequence has been
         /// fully processed or the operation is canceled.</returns>
-        /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="onNext"/> is null.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="onNext"/> is <see langword="null"/>.</exception>
         public async ValueTask ForEachAsync(Action<T> onNext, CancellationToken cancellationToken)
         {
             ArgumentExceptionHelper.ThrowIfNull(onNext);

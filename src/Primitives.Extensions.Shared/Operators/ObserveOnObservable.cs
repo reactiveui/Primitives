@@ -11,12 +11,9 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
 /// <summary>
-/// Marshals every source notification onto the supplied <see cref="ISequencer"/>, preserving order.
-/// Replaces the <c>System.Reactive.Linq.Observable.ObserveOn</c> delegation behind the sync
-/// <c>ObserveOnSafe</c> / <c>ObserveOnIf</c> helpers with our own queue-and-single-drain marshaller:
-/// notifications are enqueued and a single drain pass is scheduled per burst (rather than one
-/// scheduled action per item). The shared queue / gate / drain machinery lives in
-/// <see cref="ScheduledDrainState{T}"/>; this sink only carries the forward-everything drain handling.
+/// Marshals every source notification onto the supplied <see cref="ISequencer"/>, preserving order: notifications
+/// are enqueued in <see cref="ScheduledDrainState{T}"/> and one drain pass is scheduled per burst rather than one
+/// scheduled action per item.
 /// </summary>
 /// <typeparam name="T">The element type of the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>

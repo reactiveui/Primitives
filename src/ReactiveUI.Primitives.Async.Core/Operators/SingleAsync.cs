@@ -10,10 +10,6 @@ namespace ReactiveUI.Primitives.Async;
 /// Provides extension methods for asynchronous observable sequences, enabling operations such as retrieving a single
 /// element that matches a specified condition.
 /// </summary>
-/// <remarks>The methods in this class support querying and consuming asynchronous observables in a manner similar
-/// to LINQ, but adapted for asynchronous and reactive scenarios. These extensions are intended for use with types
-/// implementing the SignalAsync pattern, allowing developers to perform operations such as filtering and retrieving
-/// elements in an asynchronous context.</remarks>
 public static partial class SignalAsyncExtensions
 {
     /// <summary>Single-element operators for an observable source sequence.</summary>
@@ -29,9 +25,7 @@ public static partial class SignalAsyncExtensions
         /// returns <see langword="true"/>.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains the single element that matches
         /// the predicate.</returns>
-        /// <remarks>If no element satisfies the condition, or if more than one element satisfies the
-        /// condition, an exception is thrown. Use this method when exactly one element is expected to match the
-        /// predicate.</remarks>
+        /// <remarks>Both no match and more than one match throw.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T> SingleAsync(Func<T, bool> predicate) =>
             source.SingleAsync(predicate, CancellationToken.None);
@@ -42,12 +36,10 @@ public static partial class SignalAsyncExtensions
         /// </summary>
         /// <param name="predicate">A function to test each element for a condition. The method returns the element for which this predicate
         /// returns <see langword="true"/>.</param>
-        /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
+        /// <param name="cancellationToken">The token that cancels the operation.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains the single element that matches
         /// the predicate.</returns>
-        /// <remarks>If no element satisfies the condition, or if more than one element satisfies the
-        /// condition, an exception is thrown. Use this method when exactly one element is expected to match the
-        /// predicate.</remarks>
+        /// <remarks>Both no match and more than one match throw.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T> SingleAsync(Func<T, bool> predicate, CancellationToken cancellationToken) =>
             SingleCoreAsync(source, predicate, cancellationToken);
@@ -58,8 +50,7 @@ public static partial class SignalAsyncExtensions
         /// </summary>
         /// <returns>A task that represents the asynchronous operation. The task result contains the single element of the
         /// sequence.</returns>
-        /// <remarks>Use this method when you expect the sequence to contain exactly one element. If the
-        /// sequence is empty or contains more than one element, an exception is thrown.</remarks>
+        /// <remarks>Both an empty sequence and a sequence of more than one element throw.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T> SingleAsync() =>
             source.SingleAsync(CancellationToken.None);
@@ -68,11 +59,10 @@ public static partial class SignalAsyncExtensions
         /// Asynchronously returns the single element of the sequence, and throws an exception if the sequence does not
         /// contain exactly one element.
         /// </summary>
-        /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
+        /// <param name="cancellationToken">The token that cancels the operation.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains the single element of the
         /// sequence.</returns>
-        /// <remarks>Use this method when you expect the sequence to contain exactly one element. If the
-        /// sequence is empty or contains more than one element, an exception is thrown.</remarks>
+        /// <remarks>Both an empty sequence and a sequence of more than one element throw.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<T> SingleAsync(CancellationToken cancellationToken) =>
             SingleCoreAsync(source, null, cancellationToken);

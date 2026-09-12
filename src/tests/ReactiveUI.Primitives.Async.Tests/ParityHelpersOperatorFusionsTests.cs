@@ -285,7 +285,7 @@ public class ParityHelpersOperatorFusionsTests
         InvalidOperationException expected = new("partition-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
-        await Task.WhenAll(evenTcs.Task, oddTcs.Task).WaitAsync(WaitTimeout);
+        await Task.WhenAll(evenTcs.Task, oddTcs.Task);
         await Assert.That(evenError).IsSameReferenceAs(expected);
         await Assert.That(oddError).IsSameReferenceAs(expected);
     }
@@ -319,7 +319,7 @@ public class ParityHelpersOperatorFusionsTests
                 return default;
             });
 
-        await lateCompleted.Task.WaitAsync(WaitTimeout);
+        await lateCompleted.Task;
         await Assert.That(lateValues).IsEmpty();
     }
 
@@ -375,7 +375,7 @@ public class ParityHelpersOperatorFusionsTests
         InvalidOperationException expected = new("scan-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
         await Assert.That(values).IsCollectionEqualTo([ScanSeed]);
     }
@@ -403,7 +403,7 @@ public class ParityHelpersOperatorFusionsTests
         InvalidOperationException expected = new("throttle-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -430,7 +430,7 @@ public class ParityHelpersOperatorFusionsTests
         InvalidOperationException expected = new("debounce-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -457,7 +457,7 @@ public class ParityHelpersOperatorFusionsTests
         InvalidOperationException expected = new("foreach-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -484,7 +484,7 @@ public class ParityHelpersOperatorFusionsTests
         InvalidOperationException expected = new("dropifbusy-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -509,7 +509,7 @@ public class ParityHelpersOperatorFusionsTests
             });
 
         await signal.OnNextAsync(One, CancellationToken.None);
-        await emittedTcs.Task.WaitAsync(WaitTimeout);
+        await emittedTcs.Task;
 
         // After the slow path resets _isBusy, a second emission must also flow through.
         TaskCompletionSource secondTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -522,7 +522,7 @@ public class ParityHelpersOperatorFusionsTests
             });
 
         await signal.OnNextAsync(Two, CancellationToken.None);
-        await secondTcs.Task.WaitAsync(WaitTimeout);
+        await secondTcs.Task;
 
         await Assert.That(values).Contains(One);
     }
@@ -550,7 +550,7 @@ public class ParityHelpersOperatorFusionsTests
         InvalidOperationException expected = new("scan-async-error");
         await signal.OnErrorResumeAsync(expected, CancellationToken.None);
 
-        await errorTcs.Task.WaitAsync(WaitTimeout);
+        await errorTcs.Task;
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
@@ -665,8 +665,7 @@ public class ParityHelpersOperatorFusionsTests
         await signal.OnNextAsync(One, CancellationToken.None);
         await signal.OnNextAsync(Two, CancellationToken.None);
 
-        await emitted.Task.WaitAsync(WaitTimeout);
-        await Task.Delay(ThrottleWindowMilliseconds);
+        await emitted.Task;
 
         await Assert.That(values).IsCollectionEqualTo([Two]);
     }

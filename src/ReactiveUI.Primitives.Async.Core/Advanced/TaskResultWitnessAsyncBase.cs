@@ -10,11 +10,11 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// <summary>Base class for witnesses that produce a single task-based result value when the observed sequence completes.</summary>
 /// <typeparam name="T">The type of elements received from the observable sequence.</typeparam>
 /// <typeparam name="TTaskValue">The type of the result value produced by this witness.</typeparam>
-/// <param name="cancellationToken">A cancellation token used to cancel the waiting operation.</param>
+/// <param name="cancellationToken">A token that cancels the wait for the result value.</param>
 [System.Diagnostics.DebuggerDisplay("TaskResultWitnessAsyncBase: Completion = {_completion}")]
 public abstract class TaskResultWitnessAsyncBase<T, TTaskValue>(CancellationToken cancellationToken) : WitnessAsync<T>
 {
-    /// <summary>The completion helper used to produce and cancel the observer's single result value.</summary>
+    /// <summary>The completion helper that produces and cancels the observer's single result value.</summary>
     private readonly TaskResultCompletionSource<TTaskValue> _completion = new(cancellationToken);
 
     /// <summary>Asynchronously waits for the observer to produce its result value.</summary>
