@@ -460,7 +460,10 @@ Conflict resolution retained the current Core APIs, SQLite registration, impleme
 - Failed startup requires cleanup before retry. Cleanup failures stop automatic progress and permit an explicit retry.
   Shared failures are observed even if every waiting caller cancels. Root made callback-result application and selection
   of the next transition atomic to prevent an overlapping startup request from waiting indefinitely.
-- Root verified 337 TUnit tests on each modern target with 100% runtime line and branch coverage: 1600 lines on net8,
+- Root verified 338 TUnit tests on each modern target with 100% runtime line and branch coverage: 1600 lines on net8,
   1585 on net9/net10, 1584 on net11 and 722 branches throughout. All eight library targets build without warnings or
   errors. A deliberate stop-intent mutation failed the cancellation regression; restoring the implementation passed.
 - This remains an internal component. Concrete context, engine and stream lifecycle integration remain subsequent work.
+- A further concurrency regression exercises 64 clients immediately requesting startup again across 64 resource
+  lifetimes. Restoring the old gap between callback completion and next-transition selection caused an executable
+  timeout. The corrected implementation passes this regression and the full four-target suite with unchanged coverage.
