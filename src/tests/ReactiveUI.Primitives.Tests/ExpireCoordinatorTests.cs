@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Signals;
@@ -30,10 +32,7 @@ public sealed class ExpireCoordinatorTests
     private static readonly int[] ExpectedActiveValues = [0, 1, 2, 3, 4];
 
     /// <summary>Timeout used while waiting for background work in this test.</summary>
-    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(5);
-
-    /// <summary>How long the superseded timeout is given to reach the observer before the invariant is checked.</summary>
-    private static readonly TimeSpan RaceSettleDelay = TimeSpan.FromMilliseconds(50);
+    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(30);
 
     /// <summary>Verifies the timeout re-arms on each value so an active source never expires.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
@@ -174,29 +173,46 @@ public sealed class ExpireCoordinatorTests
     [Test]
     public async Task TimeoutDoesNotEnterObserverWhileOnNextIsInFlight()
     {
-        VirtualClock clock = new(DateTimeOffset.UnixEpoch);
+        QueuedSequencer sequencer = new();
         Signal<int> source = new();
-        BlockingObserver observer = new();
-        using var subscription = source.Expire(TimeSpan.FromTicks(One), clock).Subscribe(observer);
+        using var observer = new BlockingObserver();
+        using var subscription = source.Expire(TimeSpan.FromTicks(One), sequencer).Subscribe(observer);
 
-        // Dedicated threads rather than the pool: the observer parks its caller inside OnNext until this
-        // test releases it, so on the pool that notification holds a worker while the timeout waits behind
-        // it in the queue. A saturated pool then starves the very interleaving under test.
         var onNextFinished = RunOnDedicatedThread(() => source.OnNext(One));
-        await observer.OnNextEntered.Task.WaitAsync(WaitTimeout).ConfigureAwait(false);
+        Task? timeoutFinished = null;
+        try
+        {
+            await observer.OnNextEntered.Task.WaitAsync(WaitTimeout).ConfigureAwait(false);
 
-        var timeoutFinished = RunOnDedicatedThread(() => clock.AdvanceBy(TimeSpan.FromTicks(One)));
-        await Task.Delay(RaceSettleDelay).ConfigureAwait(false);
+            // Queue the initial timeout for a dedicated worker while OnNext owns the coordinator gate. The assertion
+            // below is only about observer serialization: it must not report an error while the value callback is
+            // still active. Releasing OnNext lets the source re-arm its replacement timer and dispose this timer.
+            timeoutFinished = RunOnDedicatedThread(sequencer.ExecuteNext);
+            await sequencer.TimeoutExecutionStarted.Task.WaitAsync(WaitTimeout).ConfigureAwait(false);
 
+            await Assert.That(observer.ErrorEnteredDuringOnNext).IsFalse();
+        }
+        finally
+        {
+            observer.ReleaseOnNext.Set();
+            if (timeoutFinished is not null)
+            {
+                await Task.WhenAll(onNextFinished, timeoutFinished).WaitAsync(WaitTimeout).ConfigureAwait(false);
+            }
+            else
+            {
+                await onNextFinished.WaitAsync(WaitTimeout).ConfigureAwait(false);
+            }
+        }
+
+        // The initial timer attempt must not terminate the sequence after the value wins the race. Executing the
+        // replacement proves that the successful value re-armed the inactivity timeout.
         await Assert.That(observer.ErrorEnteredDuringOnNext).IsFalse();
-
-        observer.ReleaseOnNext.Set();
-        await onNextFinished.WaitAsync(WaitTimeout).ConfigureAwait(false);
-        await timeoutFinished.WaitAsync(WaitTimeout).ConfigureAwait(false);
-
-        // Timeout may be observed after OnNext exits depending on scheduler timing.
-        // The invariant required here is that OnError never re-enters while OnNext is active.
-        await Assert.That(observer.Errors).IsLessThanOrEqualTo(One);
+        await Assert.That(observer.Errors).IsEqualTo(0);
+        await Assert.That(observer.Values).IsEqualTo(One);
+        sequencer.ExecuteNext();
+        await Assert.That(observer.Errors).IsEqualTo(One);
+        await Assert.That(observer.TimeoutErrors).IsEqualTo(One);
         await Assert.That(observer.Values).IsEqualTo(One);
     }
 
@@ -265,14 +281,7 @@ public sealed class ExpireCoordinatorTests
     }
 
     /// <summary>Observer that blocks source value handling so timeout serialization can be observed.</summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "Design",
-        "SST2315:A type that owns a disposable should be disposable",
-        Justification =
-            "Test double that owns a ManualResetEventSlim used to gate OnNext so the test can observe timeout "
-            + "serialization. Its lifetime is the test's; the test process owns and releases it, so it is deliberately "
-            + "not IDisposable.")]
-    private sealed class BlockingObserver : IObserver<int>
+    private sealed class BlockingObserver : IObserver<int>, IDisposable
     {
         /// <summary>Non-zero while <see cref="OnNext"/> is active. Written by the notifying thread and read by
         /// the timeout thread, so the two must not race on a plain field.</summary>
@@ -288,6 +297,9 @@ public sealed class ExpireCoordinatorTests
         /// <summary>The number of forwarded errors.</summary>
         private int _errors;
 
+        /// <summary>The number of forwarded timeout errors.</summary>
+        private int _timeoutErrors;
+
         /// <summary>Gets the task completed when <see cref="OnNext"/> is entered.</summary>
         public TaskCompletionSource OnNextEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -300,8 +312,15 @@ public sealed class ExpireCoordinatorTests
         /// <summary>Gets the number of forwarded errors.</summary>
         public int Errors => Volatile.Read(ref _errors);
 
+        /// <summary>Gets the number of forwarded timeout errors.</summary>
+        public int TimeoutErrors => Volatile.Read(ref _timeoutErrors);
+
         /// <summary>Gets a value indicating whether an error entered while <see cref="OnNext"/> was active.</summary>
         public bool ErrorEnteredDuringOnNext => Volatile.Read(ref _errorEnteredDuringOnNext) != 0;
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Dispose() => ReleaseOnNext.Dispose();
 
         /// <inheritdoc/>
         public void OnCompleted()
@@ -316,6 +335,11 @@ public sealed class ExpireCoordinatorTests
                 Volatile.Write(ref _errorEnteredDuringOnNext, 1);
             }
 
+            if (error is TimeoutException)
+            {
+                _ = Interlocked.Increment(ref _timeoutErrors);
+            }
+
             _ = Interlocked.Increment(ref _errors);
         }
 
@@ -324,9 +348,75 @@ public sealed class ExpireCoordinatorTests
         {
             _ = Interlocked.Increment(ref _values);
             Volatile.Write(ref _isInOnNext, 1);
-            OnNextEntered.SetResult();
-            _ = ReleaseOnNext.Wait(WaitTimeout);
-            Volatile.Write(ref _isInOnNext, 0);
+            _ = OnNextEntered.TrySetResult();
+            try
+            {
+                if (!ReleaseOnNext.Wait(WaitTimeout))
+                {
+                    throw new TimeoutException("The test did not release the in-flight OnNext callback.");
+                }
+            }
+            finally
+            {
+                Volatile.Write(ref _isInOnNext, 0);
+            }
+        }
+    }
+
+    /// <summary>Sequencer that queues work until this test explicitly executes it.</summary>
+    private sealed class QueuedSequencer : ISequencer
+    {
+        /// <summary>Scheduled work waiting for the test to execute it.</summary>
+        private readonly ConcurrentQueue<(IWorkItem Item, long DueTimestamp)> _items = new();
+
+        /// <summary>The current monotonic timestamp, updated before a queued item is invoked.</summary>
+        private long _timestamp;
+
+        /// <summary>Gets the task completed when a worker dequeues a queued timeout for execution.</summary>
+        public TaskCompletionSource TimeoutExecutionStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        /// <inheritdoc/>
+        public DateTimeOffset Now => DateTimeOffset.UnixEpoch + Sequencer.ToTimeSpanDelta(Timestamp);
+
+        /// <inheritdoc/>
+        public long Timestamp => Volatile.Read(ref _timestamp);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Schedule(IWorkItem item) => _items.Enqueue((item, Timestamp));
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Schedule(IWorkItem item, long dueTimestamp) => _items.Enqueue((item, dueTimestamp));
+
+        /// <summary>Executes the next queued work item.</summary>
+        /// <exception cref="InvalidOperationException">No timer was queued when execution was requested.</exception>
+        public void ExecuteNext()
+        {
+            if (!_items.TryDequeue(out var scheduled))
+            {
+                throw new InvalidOperationException("No queued timeout was available to execute.");
+            }
+
+            AdvanceTo(scheduled.DueTimestamp);
+            _ = TimeoutExecutionStarted.TrySetResult();
+            scheduled.Item.Execute();
+        }
+
+        /// <summary>Advances the clock to a scheduled due timestamp without moving it backwards.</summary>
+        /// <param name="dueTimestamp">The timestamp of the work about to execute.</param>
+        private void AdvanceTo(long dueTimestamp)
+        {
+            long currentTimestamp;
+            do
+            {
+                currentTimestamp = Timestamp;
+                if (currentTimestamp >= dueTimestamp)
+                {
+                    return;
+                }
+            }
+            while (Interlocked.CompareExchange(ref _timestamp, dueTimestamp, currentTimestamp) != currentTimestamp);
         }
     }
 }
