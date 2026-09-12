@@ -110,6 +110,27 @@ public enum ExactlyOnceExpiryBehavior
     StopAndReport = 0,
     FallbackToAtLeastOnce = 1,
 }
+public enum FaultCategory
+{
+    Configuration = 0,
+    Storage = 1,
+    Serialization = 2,
+    Transport = 3,
+    Authentication = 4,
+    Authorization = 5,
+    Protocol = 6,
+    Capacity = 7,
+    Conflict = 8,
+    Observer = 9,
+    InternalInvariant = 10,
+}
+public enum FaultSeverity
+{
+    Information = 0,
+    Warning = 1,
+    Error = 2,
+    Critical = 3,
+}
 public interface IConflictResolver
 {
     System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.ConflictResolutionResult> ResolveAsync(ReactiveUI.Primitives.OccasionallyConnected.ConflictContext context, System.Threading.CancellationToken cancellationToken) { }
@@ -350,12 +371,16 @@ public record ObserverInputOptions : System.IEquatable<ReactiveUI.Primitives.Occ
 public record OccasionallyConnectedFault : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedFault>
 {
     public OccasionallyConnectedFault(string Code, string Message, System.DateTimeOffset OccurredAtUtc, ReactiveUI.Primitives.OccasionallyConnected.StreamId? StreamId, ReactiveUI.Primitives.OccasionallyConnected.OperationId? OperationId, System.Exception? Exception) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.FaultCategory Category { get; init; }
     public string Code { get; init; }
     public System.Exception? Exception { get; init; }
+    public bool IsTransient { get; init; }
     public string Message { get; init; }
     public System.DateTimeOffset OccurredAtUtc { get; init; }
     public ReactiveUI.Primitives.OccasionallyConnected.OperationId? OperationId { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.FaultSeverity Severity { get; init; }
     public ReactiveUI.Primitives.OccasionallyConnected.StreamId? StreamId { get; init; }
+    public void Validate() { }
 }
 [System.Diagnostics.DebuggerDisplay("AutoStart={AutoStart}; Streams={MaxConcurrentStreams}; Priority={MinimumPriority}..{MaximumPriority}")]
 public record OccasionallyConnectedOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedOptions>

@@ -180,7 +180,7 @@ Linux and macOS across the four modern frameworks. Full-solution CI builds remai
 - GREEN: 257 Core TUnit tests passed on each modern framework (1,028 executions). Mtpunittestmcp confirmed 772/772 lines
   and 274/274 branches on each target. All eight Core library targets build with zero warnings and errors.
 - These contracts do not implement durable storage, network synchronization or server effects; their implementations and
-  capability conformance tests remain subsequent stages. The diagnostic fault model will be completed with its emitter.
+  capability conformance tests remain subsequent stages. Diagnostic classification and emission are separate slices.
 
 ### Stage 2d: capability negotiation
 
@@ -220,6 +220,19 @@ Linux and macOS across the four modern frameworks. Full-solution CI builds remai
   targets build with zero warnings/errors. The unchanged Core package retains its independently verified 100% gate.
 - Integration with the stream lane, source bridges and bounded engine diagnostic emitter remains subsequent work.
 
-The implemented identity, configuration, policy, serialization, admission, protocol, negotiation and observer stages are verified. Adapter conformance,
+### Stage 2f: typed diagnostic classification
+
+- Completed the fault model with category, severity and transient-status fields. Categories distinguish configuration,
+  storage, serialization, transport, authentication, authorization, protocol, capacity, conflict, observer and invariant faults.
+  Severity ranges from information through critical. Normal offline state alone is not a fault.
+- Existing constructor calls remain valid and default to a non-transient internal-invariant error; emitters set explicit
+  classification through immutable init properties. Optional stream/operation identities and local exceptions are retained.
+- Added validation for stable nonblank codes, non-null messages, defined classifications and non-default optional identities.
+  This is structural validation; diagnostic queue bounds, privacy filtering, metrics and emission remain runtime work.
+- Seven executable negative cases failed before classification/identity validation was implemented. All 268 Core TUnit
+  tests then passed on each modern framework (1,072 executions). Mtpunittestmcp confirmed 794/794 lines and 290/290
+  branches on each target; all eight Core library targets build with zero warnings and errors.
+
+The implemented identity, configuration, policy, serialization, admission, protocol, negotiation, observer and fault-model stages are verified. Adapter conformance,
 remaining facade contracts and integrated runtime/durability stages are still incomplete. Passing option validation alone does not establish a
 delivery guarantee or establish that a custom policy preserves durable work; the runtime must enforce both.
