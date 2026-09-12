@@ -21,8 +21,11 @@ internal static class SqliteStoreSchema
     /// <summary>The local commit schema version with remote inbox rows.</summary>
     internal const int RemoteApplySchemaVersion = 3;
 
+    /// <summary>The local commit schema version with outbox lease rows.</summary>
+    internal const int LeaseSchemaVersion = 4;
+
     /// <summary>The local commit schema version.</summary>
-    internal const int LocalCommitSchemaVersion = 4;
+    internal const int LocalCommitSchemaVersion = 5;
 
     /// <summary>The metadata key for the schema version.</summary>
     internal const string SchemaVersionKey = "schema_version";
@@ -50,6 +53,9 @@ internal static class SqliteStoreSchema
 
     /// <summary>The outbox leases table name.</summary>
     internal const string OutboxLeasesTableName = "oc_outbox_leases";
+
+    /// <summary>The outbox operation states table name.</summary>
+    internal const string OutboxOperationStatesTableName = "oc_outbox_operation_states";
 
     /// <summary>The invalid schema exception message.</summary>
     private const string InvalidSchemaMessage = "The SQLite identity schema is invalid.";
@@ -179,6 +185,28 @@ internal static class SqliteStoreSchema
                 ON DELETE CASCADE);
         """;
 
+    /// <summary>The SQL definition for the outbox operation states table.</summary>
+    private const string OutboxOperationStatesTableSql = """
+        CREATE TABLE oc_outbox_operation_states (
+            store_identity TEXT NOT NULL,
+            operation_id TEXT NOT NULL,
+            operation_state INTEGER NOT NULL,
+            attempt_count INTEGER NOT NULL,
+            changed_at_utc TEXT NOT NULL,
+            reason_code TEXT NULL,
+            retry_started_utc TEXT NULL,
+            retry_due_utc TEXT NULL,
+            retry_previous_delay_ticks INTEGER NULL,
+            retry_transient_attempt_count INTEGER NULL,
+            retry_authentication_state INTEGER NULL,
+            retry_credentials_version TEXT NULL,
+            PRIMARY KEY (store_identity, operation_id),
+            FOREIGN KEY (store_identity, operation_id)
+                REFERENCES oc_outbox (store_identity, operation_id)
+                ON UPDATE CASCADE
+                ON DELETE CASCADE);
+        """;
+
     /// <summary>Creates schema version one.</summary>
     /// <param name="connection">The open connection.</param>
     /// <param name="transaction">The current transaction.</param>
@@ -203,6 +231,7 @@ internal static class SqliteStoreSchema
         CreateLegacyLocalCommitTables(connection, transaction);
         CreateInboxTable(connection, transaction);
         CreateOutboxLeasesTable(connection, transaction);
+        CreateOutboxOperationStatesTable(connection, transaction);
         InsertMetadata(connection, transaction, SchemaVersionKey, LocalCommitSchemaVersion.ToString(CultureInfo.InvariantCulture));
     }
 
@@ -216,7 +245,9 @@ internal static class SqliteStoreSchema
         CreateLegacyLocalCommitTables(connection, transaction);
         CreateInboxTable(connection, transaction);
         CreateOutboxLeasesTable(connection, transaction);
+        CreateOutboxOperationStatesTable(connection, transaction);
         BackfillStreamsFromIdentities(connection, transaction);
+        BackfillOperationStates(connection, transaction);
         UpdateMetadata(connection, transaction, SchemaVersionKey, LocalCommitSchemaVersion.ToString(CultureInfo.InvariantCulture));
         SetLocalCommitUserVersion(connection, transaction);
     }
@@ -230,11 +261,13 @@ internal static class SqliteStoreSchema
         ValidateLegacyLocalCommitSchema(connection, transaction);
         CreateInboxTable(connection, transaction);
         CreateOutboxLeasesTable(connection, transaction);
+        CreateOutboxOperationStatesTable(connection, transaction);
+        BackfillOperationStates(connection, transaction);
         UpdateMetadata(connection, transaction, SchemaVersionKey, LocalCommitSchemaVersion.ToString(CultureInfo.InvariantCulture));
         SetLocalCommitUserVersion(connection, transaction);
     }
 
-    /// <summary>Migrates an exact schema version three database to schema version four.</summary>
+    /// <summary>Migrates an exact schema version three database to schema version five.</summary>
     /// <param name="connection">The open connection.</param>
     /// <param name="transaction">The current transaction.</param>
     /// <exception cref="InvalidOperationException">The SQLite schema state is invalid.</exception>
@@ -242,6 +275,21 @@ internal static class SqliteStoreSchema
     {
         ValidateRemoteApplySchema(connection, transaction);
         CreateOutboxLeasesTable(connection, transaction);
+        CreateOutboxOperationStatesTable(connection, transaction);
+        BackfillOperationStates(connection, transaction);
+        UpdateMetadata(connection, transaction, SchemaVersionKey, LocalCommitSchemaVersion.ToString(CultureInfo.InvariantCulture));
+        SetLocalCommitUserVersion(connection, transaction);
+    }
+
+    /// <summary>Migrates an exact schema version four database to schema version five.</summary>
+    /// <param name="connection">The open connection.</param>
+    /// <param name="transaction">The current transaction.</param>
+    /// <exception cref="InvalidOperationException">The SQLite schema state is invalid.</exception>
+    internal static void MigrateLeaseSchemaToCurrent(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        ValidateLeaseSchema(connection, transaction);
+        CreateOutboxOperationStatesTable(connection, transaction);
+        BackfillOperationStates(connection, transaction);
         UpdateMetadata(connection, transaction, SchemaVersionKey, LocalCommitSchemaVersion.ToString(CultureInfo.InvariantCulture));
         SetLocalCommitUserVersion(connection, transaction);
     }
@@ -268,6 +316,12 @@ internal static class SqliteStoreSchema
         if (userVersion == RemoteApplySchemaVersion)
         {
             ValidateRemoteApplySchema(connection, transaction);
+            return;
+        }
+
+        if (userVersion == LeaseSchemaVersion)
+        {
+            ValidateLeaseSchema(connection, transaction);
             return;
         }
 
@@ -310,6 +364,32 @@ internal static class SqliteStoreSchema
         ValidateTableDefinition(connection, transaction, StreamsTableName, StreamsTableSql);
         ValidateTableDefinition(connection, transaction, SnapshotsTableName, SnapshotsTableSql);
         ValidateTableDefinition(connection, transaction, OutboxTableName, OutboxTableSql);
+        ValidateTableDefinition(connection, transaction, OutboxMetadataTableName, OutboxMetadataTableSql);
+        ValidateTableDefinition(connection, transaction, InboxTableName, InboxTableSql);
+    }
+
+    /// <summary>Validates an exact schema version four database.</summary>
+    /// <param name="connection">The open connection.</param>
+    /// <param name="transaction">The current transaction.</param>
+    /// <exception cref="InvalidOperationException">The SQLite schema state is invalid.</exception>
+    internal static void ValidateLeaseSchema(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        ValidateUserTableNames(
+            connection,
+            transaction,
+            [InboxTableName, MetadataTableName, OutboxTableName, OutboxLeasesTableName, OutboxMetadataTableName, SnapshotsTableName, StreamsTableName, SubscriptionIdentitiesTableName]);
+        ValidateTableDefinition(connection, transaction, MetadataTableName, MetadataTableSql);
+        var schemaVersion = SelectMetadata(connection, transaction, SchemaVersionKey);
+        if (schemaVersion != LeaseSchemaVersion.ToString(CultureInfo.InvariantCulture))
+        {
+            throw new InvalidOperationException(UnsupportedMetadataSchemaVersionMessage);
+        }
+
+        ValidateTableDefinition(connection, transaction, SubscriptionIdentitiesTableName, SubscriptionIdentitiesTableSql);
+        ValidateTableDefinition(connection, transaction, StreamsTableName, StreamsTableSql);
+        ValidateTableDefinition(connection, transaction, SnapshotsTableName, SnapshotsTableSql);
+        ValidateTableDefinition(connection, transaction, OutboxTableName, OutboxTableSql);
+        ValidateTableDefinition(connection, transaction, OutboxLeasesTableName, OutboxLeasesTableSql);
         ValidateTableDefinition(connection, transaction, OutboxMetadataTableName, OutboxMetadataTableSql);
         ValidateTableDefinition(connection, transaction, InboxTableName, InboxTableSql);
     }
@@ -364,7 +444,17 @@ internal static class SqliteStoreSchema
         ValidateUserTableNames(
             connection,
             transaction,
-            [InboxTableName, MetadataTableName, OutboxTableName, OutboxLeasesTableName, OutboxMetadataTableName, SnapshotsTableName, StreamsTableName, SubscriptionIdentitiesTableName]);
+            [
+                InboxTableName,
+                MetadataTableName,
+                OutboxTableName,
+                OutboxLeasesTableName,
+                OutboxMetadataTableName,
+                OutboxOperationStatesTableName,
+                SnapshotsTableName,
+                StreamsTableName,
+                SubscriptionIdentitiesTableName,
+            ]);
         ValidateTableDefinition(connection, transaction, MetadataTableName, MetadataTableSql);
         var schemaVersion = SelectMetadata(connection, transaction, SchemaVersionKey);
         if (schemaVersion != LocalCommitSchemaVersion.ToString(CultureInfo.InvariantCulture))
@@ -378,6 +468,7 @@ internal static class SqliteStoreSchema
         ValidateTableDefinition(connection, transaction, OutboxTableName, OutboxTableSql);
         ValidateTableDefinition(connection, transaction, OutboxLeasesTableName, OutboxLeasesTableSql);
         ValidateTableDefinition(connection, transaction, OutboxMetadataTableName, OutboxMetadataTableSql);
+        ValidateTableDefinition(connection, transaction, OutboxOperationStatesTableName, OutboxOperationStatesTableSql);
         ValidateTableDefinition(connection, transaction, InboxTableName, InboxTableSql);
     }
 
@@ -578,7 +669,7 @@ internal static class SqliteStoreSchema
     {
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
-        command.CommandText = "PRAGMA user_version = 4;";
+        command.CommandText = "PRAGMA user_version = 5;";
         _ = command.ExecuteNonQuery();
     }
 
@@ -670,6 +761,17 @@ internal static class SqliteStoreSchema
         _ = command.ExecuteNonQuery();
     }
 
+    /// <summary>Creates the outbox operation states table.</summary>
+    /// <param name="connection">The open connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void CreateOutboxOperationStatesTable(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = OutboxOperationStatesTableSql;
+        _ = command.ExecuteNonQuery();
+    }
+
     /// <summary>Backfills stream rows from existing subscription identities.</summary>
     /// <param name="connection">The open connection.</param>
     /// <param name="transaction">The transaction.</param>
@@ -682,6 +784,22 @@ internal static class SqliteStoreSchema
                 (store_identity, stream_id, subscription_id, next_client_sequence, server_cursor)
             SELECT store_identity, stream_id, subscription_id, 1, NULL
             FROM oc_subscription_identities;
+            """;
+        _ = command.ExecuteNonQuery();
+    }
+
+    /// <summary>Backfills lifecycle state for historical outbox rows.</summary>
+    /// <param name="connection">The open connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void BackfillOperationStates(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            INSERT OR IGNORE INTO oc_outbox_operation_states
+                (store_identity, operation_id, operation_state, attempt_count, changed_at_utc)
+            SELECT store_identity, operation_id, 1, 0, committed_at_utc
+            FROM oc_outbox;
             """;
         _ = command.ExecuteNonQuery();
     }

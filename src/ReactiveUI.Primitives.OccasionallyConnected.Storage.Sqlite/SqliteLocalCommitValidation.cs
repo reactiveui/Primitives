@@ -181,6 +181,62 @@ internal static class SqliteLocalCommitValidation
         throw new ArgumentException("Lease id must be non-empty.", nameof(leaseId));
     }
 
+    /// <summary>Validates attempt barrier input.</summary>
+    /// <param name="leaseId">The lease identifier.</param>
+    /// <param name="operationId">The operation identifier.</param>
+    /// <param name="nextAttempt">The next attempt number.</param>
+    /// <exception cref="ArgumentException">The supplied value is invalid.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The attempt number is not positive.</exception>
+    internal static void ValidateAttemptBarrierInput(Guid leaseId, OperationId operationId, int nextAttempt)
+    {
+        ValidateLeaseId(leaseId);
+        ValidateOperationId(operationId, nameof(operationId));
+        if (nextAttempt > 0)
+        {
+            return;
+        }
+
+        throw new ArgumentOutOfRangeException(nameof(nextAttempt), nextAttempt, "Attempt number must be positive.");
+    }
+
+    /// <summary>Validates sync result application input.</summary>
+    /// <param name="leaseId">The lease identifier.</param>
+    /// <param name="result">The sync result.</param>
+    /// <exception cref="ArgumentException">The lease identifier is invalid.</exception>
+    /// <exception cref="ArgumentNullException">The result is null.</exception>
+    internal static void ValidateSyncResultInput(Guid leaseId, RemoteSyncResult result)
+    {
+        ValidateLeaseId(leaseId);
+        ArgumentExceptionHelper.ThrowIfNull(result);
+    }
+
+    /// <summary>Validates retry state persistence input.</summary>
+    /// <param name="operationId">The operation identifier.</param>
+    /// <param name="retryState">The retry state.</param>
+    /// <exception cref="ArgumentException">The supplied value is invalid.</exception>
+    /// <exception cref="ArgumentNullException">The retry state is null.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">A numeric value is outside the supported range.</exception>
+    internal static void ValidateRetryStateInput(OperationId operationId, RetryState retryState)
+    {
+        ValidateOperationId(operationId, nameof(operationId));
+        ArgumentExceptionHelper.ThrowIfNull(retryState);
+        if (retryState.TransientAttemptCount < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(retryState), retryState.TransientAttemptCount, "Retry attempt count must not be negative.");
+        }
+
+        if (retryState.PreviousDelay is { } delay && delay < TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(retryState), delay, "Retry delay must not be negative.");
+        }
+
+        _ = retryState.AuthenticationState switch
+        {
+            RetryAuthenticationState.None or RetryAuthenticationState.RenewalRetryUsed => true,
+            _ => throw new ArgumentException("Retry authentication state must be a defined value.", nameof(retryState)),
+        };
+    }
+
     /// <summary>Validates snapshot mutation input.</summary>
     /// <param name="snapshotMutation">The snapshot mutation.</param>
     /// <exception cref="ArgumentException">The supplied value is invalid.</exception>

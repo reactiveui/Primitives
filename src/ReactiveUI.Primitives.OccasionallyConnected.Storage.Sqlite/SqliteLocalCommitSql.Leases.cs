@@ -29,6 +29,18 @@ internal static partial class SqliteLocalCommitSql
     /// <summary>The lease expiry column index.</summary>
     private const int LeaseExpiryIndex = 5;
 
+    /// <summary>The lease operation state column index.</summary>
+    private const int LeaseOperationStateIndex = 6;
+
+    /// <summary>The lease operation attempt column index.</summary>
+    private const int LeaseAttemptIndex = 7;
+
+    /// <summary>The lease delivery guarantee column index.</summary>
+    private const int LeaseDeliveryGuaranteeIndex = 8;
+
+    /// <summary>The lease retry due UTC column index.</summary>
+    private const int LeaseRetryDueUtcIndex = 9;
+
     /// <summary>The invalid lease expiry message.</summary>
     private const string InvalidLeaseExpiryMessage = "The SQLite outbox lease expiry is invalid.";
 
@@ -317,12 +329,17 @@ internal static partial class SqliteLocalCommitSql
         command.Transaction = transaction;
         command.CommandText = """
             SELECT outbox.operation_id, outbox.stream_id, outbox.client_sequence, length(outbox.payload),
-                   lease.lease_id, lease.lease_expires_at_utc
+                   lease.lease_id, lease.lease_expires_at_utc, state.operation_state,
+                   state.attempt_count, outbox.policy_delivery_guarantee, state.retry_due_utc
             FROM oc_outbox AS outbox
+            LEFT JOIN oc_outbox_operation_states AS state
+                ON state.store_identity = outbox.store_identity
+                AND state.operation_id = outbox.operation_id
             LEFT JOIN oc_outbox_leases AS lease
                 ON lease.store_identity = outbox.store_identity
                 AND lease.operation_id = outbox.operation_id
             WHERE outbox.store_identity = $storeIdentity AND outbox.stream_id = $streamId
+                AND (state.operation_state IS NULL OR state.operation_state NOT IN (4, 5, 6))
             ORDER BY outbox.client_sequence ASC
             LIMIT $maximumOperations;
             """;
@@ -336,7 +353,7 @@ internal static partial class SqliteLocalCommitSql
         {
             cancellationToken.ThrowIfCancellationRequested();
             var row = ReadLeaseCandidateRow(reader, nowUtc);
-            if (row.HasActiveLease || row.PayloadBytes > request.MaximumBytes - payloadBytes)
+            if (!row.IsEligibleNow || row.HasActiveLease || row.PayloadBytes > request.MaximumBytes - payloadBytes)
             {
                 return selected;
             }
@@ -369,17 +386,26 @@ internal static partial class SqliteLocalCommitSql
         command.Transaction = transaction;
         command.CommandText = """
             SELECT outbox.operation_id, outbox.stream_id, outbox.client_sequence, length(outbox.payload),
-                   lease.lease_id, lease.lease_expires_at_utc
+                   lease.lease_id, lease.lease_expires_at_utc, state.operation_state,
+                   state.attempt_count, outbox.policy_delivery_guarantee, state.retry_due_utc
             FROM oc_outbox AS outbox
+            LEFT JOIN oc_outbox_operation_states AS state
+                ON state.store_identity = outbox.store_identity
+                AND state.operation_id = outbox.operation_id
             LEFT JOIN oc_outbox_leases AS lease
                 ON lease.store_identity = outbox.store_identity
                 AND lease.operation_id = outbox.operation_id
             WHERE outbox.store_identity = $storeIdentity
+                AND (state.operation_state IS NULL OR state.operation_state NOT IN (4, 5, 6))
                 AND outbox.client_sequence = (
                     SELECT MIN(head.client_sequence)
                     FROM oc_outbox AS head
+                    LEFT JOIN oc_outbox_operation_states AS head_state
+                        ON head_state.store_identity = head.store_identity
+                        AND head_state.operation_id = head.operation_id
                     WHERE head.store_identity = outbox.store_identity
-                        AND head.stream_id = outbox.stream_id)
+                        AND head.stream_id = outbox.stream_id
+                        AND (head_state.operation_state IS NULL OR head_state.operation_state NOT IN (4, 5, 6)))
             ORDER BY outbox.stream_id ASC;
             """;
         _ = command.Parameters.AddWithValue(StoreIdentityParameter, storeIdentity);
@@ -388,7 +414,7 @@ internal static partial class SqliteLocalCommitSql
         {
             cancellationToken.ThrowIfCancellationRequested();
             var row = ReadLeaseCandidateRow(reader, nowUtc);
-            if (!row.HasActiveLease && row.PayloadBytes <= request.MaximumBytes)
+            if (row.IsEligibleNow && !row.HasActiveLease && row.PayloadBytes <= request.MaximumBytes)
             {
                 return row;
             }
@@ -408,6 +434,10 @@ internal static partial class SqliteLocalCommitSql
         var streamId = new StreamId(ReadString(reader, LeaseStreamIdIndex, "The SQLite operation stream is invalid."));
         var clientSequence = ReadPositiveLong(reader, LeaseClientSequenceIndex, InvalidOperationSequenceMessage);
         var payloadBytes = ReadNonNegativeLong(reader, LeasePayloadBytesIndex, "The SQLite operation payload length is invalid.");
+        var state = ReadOperationState(reader, LeaseOperationStateIndex);
+        var attempt = ReadNonNegativeInt(reader, LeaseAttemptIndex, InvalidAttemptCountMessage);
+        var deliveryGuarantee = ReadDeliveryGuarantee(reader, LeaseDeliveryGuaranteeIndex);
+        var retryDueUtc = ReadNullableDateTimeOffset(reader, LeaseRetryDueUtcIndex, "The SQLite retry due timestamp is invalid.");
         var hasActiveLease = false;
         if (!reader.IsDBNull(LeaseIdIndex))
         {
@@ -415,7 +445,18 @@ internal static partial class SqliteLocalCommitSql
             hasActiveLease = ReadDateTimeOffset(reader, LeaseExpiryIndex, InvalidLeaseExpiryMessage) > nowUtc;
         }
 
-        return new(operationId, streamId, clientSequence, payloadBytes, hasActiveLease);
+        var isBlockedByAtMostOnceAmbiguity = state == SyncOperationState.Ambiguous
+            && deliveryGuarantee == DeliveryGuarantee.AtMostOnce;
+        var isBlockedByAtMostOnceAttempt = deliveryGuarantee == DeliveryGuarantee.AtMostOnce && attempt > 0;
+        var isBlockedByUnresolvedState = state is SyncOperationState.Conflict or SyncOperationState.GuaranteeExpired;
+        var isBlockedByRetryDue = retryDueUtc.HasValue && retryDueUtc.GetValueOrDefault() > nowUtc;
+        return new(
+            operationId,
+            streamId,
+            clientSequence,
+            payloadBytes,
+            hasActiveLease,
+            !isBlockedByAtMostOnceAmbiguity && !isBlockedByAtMostOnceAttempt && !isBlockedByUnresolvedState && !isBlockedByRetryDue);
     }
 
     /// <summary>Reads a persisted lease identifier.</summary>
@@ -437,10 +478,12 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="ClientSequence">The client sequence.</param>
     /// <param name="PayloadBytes">The payload byte count.</param>
     /// <param name="HasActiveLease">Whether an active lease currently owns the operation.</param>
+    /// <param name="IsEligibleNow">Whether retry and delivery state permit leasing the operation now.</param>
     private readonly record struct LeaseCandidateRow(
         OperationId OperationId,
         StreamId StreamId,
         long ClientSequence,
         long PayloadBytes,
-        bool HasActiveLease);
+        bool HasActiveLease,
+        bool IsEligibleNow);
 }

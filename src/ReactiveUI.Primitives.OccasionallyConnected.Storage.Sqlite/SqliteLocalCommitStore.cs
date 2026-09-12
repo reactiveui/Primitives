@@ -15,6 +15,9 @@ internal sealed class SqliteLocalCommitStore : IDisposable
     /// <summary>The first valid client sequence.</summary>
     private const long FirstClientSequence = 1;
 
+    /// <summary>The expired lease exception message.</summary>
+    private const string ExpiredLeaseMessage = "The SQLite outbox lease is expired.";
+
     /// <summary>The SQLite database path.</summary>
     private readonly string _databasePath;
 
@@ -107,6 +110,10 @@ internal sealed class SqliteLocalCommitStore : IDisposable
             else if (userVersion == SqliteStoreSchema.RemoteApplySchemaVersion)
             {
                 SqliteStoreSchema.MigrateRemoteApplyToCurrent(connection, transaction);
+            }
+            else if (userVersion == SqliteStoreSchema.LeaseSchemaVersion)
+            {
+                SqliteStoreSchema.MigrateLeaseSchemaToCurrent(connection, transaction);
             }
             else
             {
@@ -204,6 +211,7 @@ internal sealed class SqliteLocalCommitStore : IDisposable
             var nextRevision = snapshotMutation.ExpectedRevision + 1;
             SqliteLocalCommitSql.InsertOutboxOperation(connection, transaction, storeIdentity, operation, nextRevision, fingerprint, committedAtUtc);
             SqliteLocalCommitSql.InsertOperationMetadata(connection, transaction, storeIdentity, operation);
+            SqliteLocalCommitSql.InsertInitialOperationState(connection, transaction, storeIdentity, operation, committedAtUtc);
             SqliteLocalCommitSql.UpsertSnapshot(connection, transaction, storeIdentity, snapshotMutation, nextRevision, stream.ServerCursor, committedAtUtc);
             SqliteLocalCommitSql.UpdateNextClientSequence(connection, transaction, storeIdentity, operation.StreamId, operation.ClientSequence + 1);
             cancellationToken.ThrowIfCancellationRequested();
@@ -338,7 +346,7 @@ internal sealed class SqliteLocalCommitStore : IDisposable
             var currentExpiry = SqliteLocalCommitSql.ValidateLeaseMembership(connection, transaction, storeIdentity, leaseId);
             if (currentExpiry <= nowUtc)
             {
-                throw new InvalidOperationException("The SQLite outbox lease is expired.");
+                throw new InvalidOperationException(ExpiredLeaseMessage);
             }
 
             var expiresAtUtc = CheckedAdd(currentExpiry, extension);
@@ -480,6 +488,144 @@ internal sealed class SqliteLocalCommitStore : IDisposable
         }
     }
 
+    /// <summary>Gets the latest durable status recorded for an operation.</summary>
+    /// <param name="operationId">The operation identifier.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The operation status, if one is recorded.</returns>
+    internal SyncOperationStatus? GetOperationStatus(OperationId operationId, CancellationToken cancellationToken)
+    {
+        SqliteLocalCommitValidation.ValidateOperationId(operationId, nameof(operationId));
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (_gate)
+        {
+            ThrowIfDisposed();
+            var storeIdentity = GetInitializedStoreIdentity();
+            cancellationToken.ThrowIfCancellationRequested();
+            using var connection = SqliteLocalCommitConnection.OpenConnection(_databasePath);
+            SqliteLocalCommitConnection.ConfigureLockPolling(connection);
+            SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+            using var transaction = connection.BeginTransaction(IsolationLevel.Serializable, deferred: true);
+            var status = SqliteLocalCommitSql.ReadOperationStatus(connection, transaction, storeIdentity, operationId);
+            cancellationToken.ThrowIfCancellationRequested();
+            transaction.Commit();
+            return status;
+        }
+    }
+
+    /// <summary>Gets the durable retry state recorded for an operation.</summary>
+    /// <param name="operationId">The operation identifier.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The retry state, if one is recorded.</returns>
+    internal RetryState? GetRetryState(OperationId operationId, CancellationToken cancellationToken)
+    {
+        SqliteLocalCommitValidation.ValidateOperationId(operationId, nameof(operationId));
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (_gate)
+        {
+            ThrowIfDisposed();
+            var storeIdentity = GetInitializedStoreIdentity();
+            cancellationToken.ThrowIfCancellationRequested();
+            using var connection = SqliteLocalCommitConnection.OpenConnection(_databasePath);
+            SqliteLocalCommitConnection.ConfigureLockPolling(connection);
+            SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+            using var transaction = connection.BeginTransaction(IsolationLevel.Serializable, deferred: true);
+            var retryState = SqliteLocalCommitSql.ReadRetryState(connection, transaction, storeIdentity, operationId);
+            cancellationToken.ThrowIfCancellationRequested();
+            transaction.Commit();
+            return retryState;
+        }
+    }
+
+    /// <summary>Records the durable attempt barrier before remote I/O.</summary>
+    /// <param name="leaseId">The owning lease identifier.</param>
+    /// <param name="operationId">The operation identifier.</param>
+    /// <param name="nextAttempt">The attempt about to be sent.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The barrier decision.</returns>
+    /// <exception cref="ArgumentException">The lease or operation identifier is invalid.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The attempt number is not positive.</exception>
+    /// <exception cref="InvalidOperationException">The store has not been initialized or the lease is not current.</exception>
+    /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
+    /// <exception cref="OperationCanceledException">The operation is canceled before the transaction commits.</exception>
+    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    internal AttemptBarrierResult TryBeginRemoteAttempt(
+        Guid leaseId,
+        OperationId operationId,
+        int nextAttempt,
+        CancellationToken cancellationToken)
+    {
+        SqliteLocalCommitValidation.ValidateAttemptBarrierInput(leaseId, operationId, nextAttempt);
+        cancellationToken.ThrowIfCancellationRequested();
+        var storeIdentity = GetInitializedStoreIdentityForOperation();
+        using var connection = SqliteLocalCommitConnection.OpenConnection(_databasePath);
+        SqliteLocalCommitConnection.ConfigureLockPolling(connection);
+        SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+        using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
+        var nowUtc = _timeProvider.GetUtcNow();
+        var leaseExpiry = SqliteLocalCommitSql.ValidateLeaseMembership(connection, transaction, storeIdentity, leaseId);
+        if (leaseExpiry <= nowUtc)
+        {
+            throw new InvalidOperationException(ExpiredLeaseMessage);
+        }
+
+        var decision = SqliteLocalCommitSql.TryBeginRemoteAttempt(
+            connection,
+            transaction,
+            storeIdentity,
+            leaseId,
+            operationId,
+            nextAttempt,
+            nowUtc);
+        cancellationToken.ThrowIfCancellationRequested();
+        transaction.Commit();
+        return decision;
+    }
+
+    /// <summary>Applies remote synchronization results to the currently leased batch.</summary>
+    /// <param name="leaseId">The owning lease identifier.</param>
+    /// <param name="result">The remote result.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A completed value task.</returns>
+    /// <exception cref="ArgumentException">The lease identifier is invalid.</exception>
+    /// <exception cref="ArgumentNullException">The result is null.</exception>
+    /// <exception cref="InvalidOperationException">The store has not been initialized or the lease is not current.</exception>
+    /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
+    /// <exception cref="OperationCanceledException">The operation is canceled before the transaction commits.</exception>
+    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    /// <exception cref="SyncBatchValidationException">The result does not exactly match the leased batch.</exception>
+    internal ValueTask ApplySyncResultAsync(Guid leaseId, RemoteSyncResult result, CancellationToken cancellationToken)
+    {
+        ApplySyncResult(leaseId, result, cancellationToken);
+        return default;
+    }
+
+    /// <summary>Saves durable retry state for an operation.</summary>
+    /// <param name="operationId">The operation identifier.</param>
+    /// <param name="retryState">The retry state.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A completed value task.</returns>
+    internal ValueTask SaveRetryStateAsync(OperationId operationId, RetryState retryState, CancellationToken cancellationToken)
+    {
+        SqliteLocalCommitValidation.ValidateRetryStateInput(operationId, retryState);
+        cancellationToken.ThrowIfCancellationRequested();
+        var nowUtc = _timeProvider.GetUtcNow();
+        lock (_gate)
+        {
+            ThrowIfDisposed();
+            var storeIdentity = GetInitializedStoreIdentity();
+            cancellationToken.ThrowIfCancellationRequested();
+            using var connection = SqliteLocalCommitConnection.OpenConnection(_databasePath);
+            SqliteLocalCommitConnection.ConfigureLockPolling(connection);
+            SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+            using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
+            SqliteLocalCommitSql.SaveRetryState(connection, transaction, storeIdentity, operationId, retryState, nowUtc);
+            cancellationToken.ThrowIfCancellationRequested();
+            transaction.Commit();
+        }
+
+        return default;
+    }
+
     /// <summary>Adds a duration to a UTC timestamp and rejects overflow.</summary>
     /// <param name="timestamp">The timestamp.</param>
     /// <param name="duration">The duration.</param>
@@ -497,6 +643,41 @@ internal sealed class SqliteLocalCommitStore : IDisposable
         }
     }
 
+    /// <summary>Applies remote synchronization results to the currently leased batch.</summary>
+    /// <param name="leaseId">The owning lease identifier.</param>
+    /// <param name="result">The remote result.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <exception cref="ArgumentException">The lease identifier is invalid.</exception>
+    /// <exception cref="ArgumentNullException">The result is null.</exception>
+    /// <exception cref="InvalidOperationException">The store has not been initialized or the lease is not current.</exception>
+    /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
+    /// <exception cref="OperationCanceledException">The operation is canceled before the transaction commits.</exception>
+    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    /// <exception cref="SyncBatchValidationException">The result does not exactly match the leased batch.</exception>
+    private void ApplySyncResult(Guid leaseId, RemoteSyncResult result, CancellationToken cancellationToken)
+    {
+        SqliteLocalCommitValidation.ValidateSyncResultInput(leaseId, result);
+        cancellationToken.ThrowIfCancellationRequested();
+        var storeIdentity = GetInitializedStoreIdentityForOperation();
+        using var connection = SqliteLocalCommitConnection.OpenConnection(_databasePath);
+        SqliteLocalCommitConnection.ConfigureLockPolling(connection);
+        SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+        using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
+        var nowUtc = _timeProvider.GetUtcNow();
+        var leaseExpiry = SqliteLocalCommitSql.ValidateLeaseMembership(connection, transaction, storeIdentity, leaseId);
+        if (leaseExpiry <= nowUtc)
+        {
+            throw new InvalidOperationException(ExpiredLeaseMessage);
+        }
+
+        var operations = SqliteLocalCommitSql.ReadLeasedOperations(connection, transaction, storeIdentity, leaseId);
+        SyncBatchValidator.Validate(new(leaseId, operations), result);
+        SqliteLocalCommitSql.ApplySyncResult(connection, transaction, storeIdentity, result, nowUtc);
+        SqliteLocalCommitSql.ReleaseLease(connection, transaction, storeIdentity, leaseId);
+        cancellationToken.ThrowIfCancellationRequested();
+        transaction.Commit();
+    }
+
     /// <summary>Throws when initialization tries to switch this instance to a different durable partition.</summary>
     /// <param name="storeIdentity">The requested store identity.</param>
     /// <exception cref="InvalidOperationException">This instance has already been initialized for another store identity.</exception>
@@ -508,6 +689,19 @@ internal sealed class SqliteLocalCommitStore : IDisposable
         }
 
         throw new InvalidOperationException("The SQLite local commit store has already been initialized for another store identity.");
+    }
+
+    /// <summary>Gets the initialized store identity after validating this instance is available.</summary>
+    /// <returns>The store identity.</returns>
+    /// <exception cref="InvalidOperationException">This instance has not been initialized.</exception>
+    /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
+    private string GetInitializedStoreIdentityForOperation()
+    {
+        lock (_gate)
+        {
+            ThrowIfDisposed();
+            return GetInitializedStoreIdentity();
+        }
     }
 
     /// <summary>Gets the initialized store identity.</summary>

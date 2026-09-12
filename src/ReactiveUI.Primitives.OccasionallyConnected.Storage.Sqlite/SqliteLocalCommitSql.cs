@@ -557,50 +557,76 @@ internal static partial class SqliteLocalCommitSql
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = """
-            SELECT operation_id, client_sequence, timestamp_utc, base_version, operation_type,
-                   payload_contract_id, payload_schema_version, payload_content_type, payload, payload_hash,
-                   policy_delivery_guarantee, policy_durability, policy_priority, policy_conflict
-            FROM oc_outbox
-            WHERE store_identity = $storeIdentity AND stream_id = $streamId
-            ORDER BY client_sequence ASC;
+            SELECT outbox.operation_id, outbox.client_sequence, outbox.timestamp_utc, outbox.base_version, outbox.operation_type,
+                   outbox.payload_contract_id, outbox.payload_schema_version, outbox.payload_content_type, outbox.payload, outbox.payload_hash,
+                   outbox.policy_delivery_guarantee, outbox.policy_durability, outbox.policy_priority, outbox.policy_conflict,
+                   state.operation_state
+            FROM oc_outbox AS outbox
+            LEFT JOIN oc_outbox_operation_states AS state
+                ON state.store_identity = outbox.store_identity
+                AND state.operation_id = outbox.operation_id
+            WHERE outbox.store_identity = $storeIdentity
+                AND outbox.stream_id = $streamId
+                AND (state.operation_state IS NULL OR state.operation_state NOT IN (4, 5, 6))
+            ORDER BY outbox.client_sequence ASC;
             """;
         AddStreamParameters(command, storeIdentity, streamId);
         using var reader = command.ExecuteReader();
         var operations = new List<SyncOperation>();
         while (reader.Read())
         {
-            const int OperationIdIndex = 0;
-            const int ClientSequenceIndex = 1;
-            const int TimestampIndex = 2;
-            const int BaseVersionIndex = 3;
-            const int TypeIndex = 4;
-            const int PayloadContractIndex = 5;
-            const int PayloadSchemaIndex = 6;
-            const int PayloadContentTypeIndex = 7;
-            const int PayloadIndex = 8;
-            const int PayloadHashIndex = 9;
-            const int DeliveryIndex = 10;
-            const int DurabilityIndex = 11;
-            const int PriorityIndex = 12;
-            const int ConflictIndex = 13;
-            var operationId = ReadOperationId(reader, OperationIdIndex);
-            var operation = new SyncOperation
-            {
-                OperationId = operationId,
-                StreamId = streamId,
-                ClientSequence = ReadPositiveLong(reader, ClientSequenceIndex, InvalidOperationSequenceMessage),
-                TimestampUtc = ReadDateTimeOffset(reader, TimestampIndex, "The SQLite operation timestamp is invalid."),
-                BaseVersion = ReadNullableString(reader, BaseVersionIndex),
-                Type = ReadOperationType(reader, TypeIndex),
-                Payload = ReadPayload(reader, PayloadContractIndex, PayloadSchemaIndex, PayloadContentTypeIndex, PayloadIndex, PayloadHashIndex),
-                Policy = ReadPolicy(reader, DeliveryIndex, DurabilityIndex, PriorityIndex, ConflictIndex),
-                Metadata = ReadMetadata(connection, transaction, storeIdentity, operationId),
-            };
-            SqliteLocalCommitValidation.ValidateCommitInput(operation, new(streamId, operation.Payload, FormatVersion: 1, ExpectedRevision: 0));
-            operations.Add(operation);
+            const int OperationStateIndex = 14;
+            _ = ReadOperationState(reader, OperationStateIndex);
+            operations.Add(ReadPendingOperation(connection, transaction, storeIdentity, streamId, reader));
         }
 
         return operations;
+    }
+
+    /// <summary>Reads one pending operation row.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="storeIdentity">The store identity.</param>
+    /// <param name="streamId">The stream id.</param>
+    /// <param name="reader">The row reader.</param>
+    /// <returns>The pending operation.</returns>
+    /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
+    internal static SyncOperation ReadPendingOperation(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string storeIdentity,
+        StreamId streamId,
+        SqliteDataReader reader)
+    {
+        const int OperationIdIndex = 0;
+        const int ClientSequenceIndex = 1;
+        const int TimestampIndex = 2;
+        const int BaseVersionIndex = 3;
+        const int TypeIndex = 4;
+        const int PayloadContractIndex = 5;
+        const int PayloadSchemaIndex = 6;
+        const int PayloadContentTypeIndex = 7;
+        const int PayloadIndex = 8;
+        const int PayloadHashIndex = 9;
+        const int DeliveryIndex = 10;
+        const int DurabilityIndex = 11;
+        const int PriorityIndex = 12;
+        const int ConflictIndex = 13;
+        var operationId = ReadOperationId(reader, OperationIdIndex);
+        var operation = new SyncOperation
+        {
+            OperationId = operationId,
+            StreamId = streamId,
+            ClientSequence = ReadPositiveLong(reader, ClientSequenceIndex, InvalidOperationSequenceMessage),
+            TimestampUtc = ReadDateTimeOffset(reader, TimestampIndex, "The SQLite operation timestamp is invalid."),
+            BaseVersion = ReadNullableString(reader, BaseVersionIndex),
+            Type = ReadOperationType(reader, TypeIndex),
+            Payload = ReadPayload(reader, PayloadContractIndex, PayloadSchemaIndex, PayloadContentTypeIndex, PayloadIndex, PayloadHashIndex),
+            Policy = ReadPolicy(reader, DeliveryIndex, DurabilityIndex, PriorityIndex, ConflictIndex),
+            Metadata = ReadMetadata(connection, transaction, storeIdentity, operationId),
+        };
+        SqliteLocalCommitValidation.ValidateCommitInput(operation, new(streamId, operation.Payload, FormatVersion: 1, ExpectedRevision: 0));
+        return operation;
     }
 
     /// <summary>Reads operation metadata.</summary>
