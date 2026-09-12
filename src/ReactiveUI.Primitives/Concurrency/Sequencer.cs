@@ -72,10 +72,18 @@ public static partial class Sequencer
             return TimeSpan.Zero;
         }
 
-        var ticks = timestampDelta * (double)TimeSpan.TicksPerSecond / System.Diagnostics.Stopwatch.Frequency;
-        return ticks >= TimeSpan.MaxValue.Ticks
-            ? TimeSpan.MaxValue
-            : TimeSpan.FromTicks(Math.Max(1, (long)Math.Ceiling(ticks)));
+        var frequency = System.Diagnostics.Stopwatch.Frequency;
+        var seconds = timestampDelta / frequency;
+        if (seconds >= TimeSpan.MaxValue.Ticks / TimeSpan.TicksPerSecond)
+        {
+            return TimeSpan.MaxValue;
+        }
+
+        // Integer arithmetic: scaling through double rounds a representable duration up to the next tick.
+        var remainder = timestampDelta % frequency;
+        var ticks = (seconds * TimeSpan.TicksPerSecond)
+                    + ((remainder * TimeSpan.TicksPerSecond) + frequency - 1) / frequency;
+        return TimeSpan.FromTicks(Math.Max(1, ticks));
     }
 
     /// <summary>Converts a relative duration to monotonic timestamp ticks.</summary>
@@ -89,7 +97,17 @@ public static partial class Sequencer
             return 0;
         }
 
-        var ticks = normalized.TotalSeconds * System.Diagnostics.Stopwatch.Frequency;
-        return ticks >= long.MaxValue ? long.MaxValue : Math.Max(1, (long)Math.Ceiling(ticks));
+        var frequency = System.Diagnostics.Stopwatch.Frequency;
+        var seconds = normalized.Ticks / TimeSpan.TicksPerSecond;
+        if (seconds >= long.MaxValue / frequency)
+        {
+            return long.MaxValue;
+        }
+
+        // Integer arithmetic: scaling through double rounds a representable duration up to the next unit.
+        var remainder = normalized.Ticks % TimeSpan.TicksPerSecond;
+        var delta = (seconds * frequency)
+                    + ((remainder * frequency) + TimeSpan.TicksPerSecond - 1) / TimeSpan.TicksPerSecond;
+        return Math.Max(1, delta);
     }
 }

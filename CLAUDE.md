@@ -134,12 +134,11 @@ dotnet test "tests/ReactiveUI.Primitives.Async.Tests/ReactiveUI.Primitives.Async
   --treenode-filter "/*/*/*/Async"
 ```
 
-### API Approval Notes
+### Public API Checks
 
-- API approval baselines live under `src/tests/**/ApiApprovalTests.*.verified.txt`
-- New TFMs usually require corresponding new `DotNet11_0.verified.txt` files
-- If approval tests fail with `.received.txt` output, inspect the generated snapshot and promote it intentionally if the
-  API change is expected
+- `PublicApiSharp.Analyzers` checks each package's `src/<Project>/PublicAPI/<tfm>/PublicAPI.txt` baseline.
+- New target frameworks require a corresponding baseline directory.
+- For an intentional API change, review the affected signatures and update the corresponding framework baselines.
 
 ---
 
