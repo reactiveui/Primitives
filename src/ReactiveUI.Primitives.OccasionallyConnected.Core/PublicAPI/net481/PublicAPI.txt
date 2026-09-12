@@ -674,10 +674,15 @@ public record RemoteEventBatch : System.IEquatable<ReactiveUI.Primitives.Occasio
 {
     public RemoteEventBatch(System.Guid batchId, ReactiveUI.Primitives.OccasionallyConnected.StreamId streamId, string? previousCursor, string nextCursor, System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.RemoteEvent> events) { }
     public System.Guid BatchId { get; }
+    public System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.RemoteOperationCompletion> CompletedOperations { get; init; }
     public System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.RemoteEvent> Events { get; }
     public string NextCursor { get; }
     public string? PreviousCursor { get; }
     public ReactiveUI.Primitives.OccasionallyConnected.StreamId StreamId { get; }
+}
+public static class RemoteEventBatchValidator
+{
+    public static void Validate(ReactiveUI.Primitives.OccasionallyConnected.RemoteEventBatch batch, int maximumEvents, int maximumCompletedOperations) { }
 }
 [System.Diagnostics.DebuggerDisplay("{ClientId,nq} {OperationId,nq}")]
 public record RemoteEventOrigin : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.RemoteEventOrigin>
@@ -697,6 +702,13 @@ public record RemoteMessage<T> : System.IEquatable<ReactiveUI.Primitives.Occasio
     public T Value { get; init; }
 }
 
+[System.Diagnostics.DebuggerDisplay("{Origin,nq}")]
+public record RemoteOperationCompletion : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.RemoteOperationCompletion>
+{
+    public RemoteOperationCompletion(ReactiveUI.Primitives.OccasionallyConnected.RemoteEventOrigin origin, System.Collections.Generic.IReadOnlyList<System.Guid> eventIds) { }
+    public System.Collections.Generic.IReadOnlyList<System.Guid> EventIds { get; }
+    public ReactiveUI.Primitives.OccasionallyConnected.RemoteEventOrigin Origin { get; }
+}
 [System.Diagnostics.DebuggerDisplay("{StreamId.Value,nq}; Durable={Durable,nq}; Guarantee={DeliveryGuarantee,nq}")]
 public record RemotePublishOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.RemotePublishOptions>
 {

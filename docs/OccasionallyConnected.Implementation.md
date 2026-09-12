@@ -726,3 +726,19 @@ Conflict resolution retained the current Core APIs, SQLite registration, impleme
   100% matching package line and branch coverage: Core 891 lines/328 branches; runtime 2644/2608/2608/2607 lines and
   1258 branches; SQLite 2820/2804/2804/2805 lines and 697 branches. All eight affected library targets build with
   zero warnings and errors. These component checks do not establish complete client reconciliation or synchronization.
+
+### Stage 3: complete remote operation groups
+
+- Added copied operation-completion declarations to remote batches without changing their existing constructor.
+  Each declaration names an exact client operation and all of its event IDs; an empty declaration represents an
+  accepted operation with no emitted events. These records do not authenticate the server or order opaque cursors.
+- The validator bounds events, completions and total declared IDs before allocating lookup structures. It rejects
+  duplicate origins/events, missing or foreign IDs, mixed streams, and partially declared operation effects.
+  Legacy events without an origin are allowed but cannot establish local operation inclusion.
+- Root took over after the agent made no source changes. An executed regression failed against the initial validator
+  because a two-event operation could declare only its first event complete. The corrected implementation passes
+  this case, exact limits, ordinal/canonical-Unicode identity separation, null boundaries and owned-collection tests.
+- All 369 Core TUnit tests pass in Release on net8/net9/net10/net11. MTP confirms 100% matching line and branch coverage
+  (935 lines, 372 branches) on each target. All eight Core library targets build with zero warnings and errors.
+- Store inclusion, receive paging and committer integration remain required; the DTO and validator do not implement
+  reconciliation or authenticate a completion declaration by themselves.
