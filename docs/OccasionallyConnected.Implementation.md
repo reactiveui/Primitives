@@ -393,4 +393,19 @@ delivery guarantee or establish that a custom policy preserves durable work; the
 
 OccasionallyConnected is now the sole local feature branch. All 61 prior CP_* branch heads were checked for ancestry and merged where necessary, then their local branch refs were deleted. Detached worktrees preserve all tracked and untracked drafts unchanged; none were deleted. The SQLite remote draft remains pending independent review and completion. No push or PR is permitted until the complete feature is implemented and verified; the eventual publication is one final PR.
 
-Conflict resolution retained the current Core APIs, SQLite registration, implementation ledger and newer dependency pins. It retained coverage collector18.11.2 and the TUnit cancellation-token CI repair. Old reconciliation branches contributed history without removing newer feature work. Full solution Release validation is running; no completion claim yet.
+Conflict resolution retained the current Core APIs, SQLite registration, implementation ledger and newer dependency pins. It retained coverage collector18.11.2 and the TUnit cancellation-token CI repair. Old reconciliation branches contributed history without removing newer feature work. The consolidated solution at 4f2873e passed its full Release build with zero warnings and errors. Core319, runtime298 and SQLite82 tests passed on each modern target with matching 100% line and branch coverage. Existing Primitives tests also passed on all four targets.
+
+### Stage 4c: SQLite atomic remote apply component
+
+- Schema version three adds a partitioned inbox and migrates exact version-one and version-two stores transactionally.
+  A frozen historical version-two SQL fixture verifies migration independently of current schema construction.
+- Applying selected remote events commits inbox identifiers, the projected snapshot and the original batch cursor in
+  one transaction. Revision/cursor mismatches and duplicate races reject the entire transaction. Remote application
+  preserves local client sequences and original receipts for previously committed local operations.
+- Inbox lookups query only candidate identifiers. Retention timestamps record local application time, including events
+  received long after their server commit time. Root added an executable regression for this timestamp distinction.
+- Root verified 97 TUnit tests on each net8-net11 target with 100% line and branch coverage: 1067 lines on net8,
+  1059 on other targets and 290 branches on every target. All eight library targets build without warnings or errors.
+  Tests include reopen, historical migration, mixed cursors, rollback, corruption, cancellation and partition isolation.
+- This remains an internal component. Leases, retry barriers, retention, encryption, the public asynchronous adapter
+  and process-crash conformance remain incomplete. No full adapter capability is advertised.
