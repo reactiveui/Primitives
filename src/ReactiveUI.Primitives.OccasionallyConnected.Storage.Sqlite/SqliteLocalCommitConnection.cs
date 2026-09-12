@@ -109,6 +109,7 @@ internal static class SqliteLocalCommitConnection
             }
             catch (SqliteException exception) when (IsBusyOrLocked(exception))
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 if (GetElapsedSince(startTimestamp) >= WriterTotalTimeout)
                 {
                     throw new TimeoutException("Timed out waiting for the SQLite writer lock.", exception);

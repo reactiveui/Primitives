@@ -60,7 +60,7 @@ internal sealed class SqliteLocalCommitStore : IDisposable
         }
     }
 
-    /// <summary>Initializes schema version three explicitly.</summary>
+    /// <summary>Initializes schema version four explicitly.</summary>
     /// <param name="initialization">The initialization requirements.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <exception cref="ArgumentNullException">The initialization requirements are null.</exception>
@@ -103,6 +103,10 @@ internal sealed class SqliteLocalCommitStore : IDisposable
             else if (userVersion == SqliteStoreSchema.LegacyLocalCommitSchemaVersion)
             {
                 SqliteStoreSchema.MigrateLegacyLocalCommitToCurrent(connection, transaction);
+            }
+            else if (userVersion == SqliteStoreSchema.RemoteApplySchemaVersion)
+            {
+                SqliteStoreSchema.MigrateRemoteApplyToCurrent(connection, transaction);
             }
             else
             {
@@ -266,6 +270,117 @@ internal sealed class SqliteLocalCommitStore : IDisposable
         }
     }
 
+    /// <summary>Leases at most one pending operation batch for upload.</summary>
+    /// <param name="request">The lease request.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The leased batch, or null when no pending operation fits.</returns>
+    /// <exception cref="ArgumentException">The lease request is invalid.</exception>
+    /// <exception cref="InvalidOperationException">The store has not been initialized or the durable lease state is invalid.</exception>
+    /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
+    /// <exception cref="OperationCanceledException">The operation is canceled before the transaction commits.</exception>
+    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    internal LeasedOperationBatch? LeasePendingOperationBatch(OutboxLeaseRequest request, CancellationToken cancellationToken)
+    {
+        SqliteLocalCommitValidation.ValidateLeaseRequest(request);
+        cancellationToken.ThrowIfCancellationRequested();
+        var leaseId = Guid.NewGuid();
+        var nowUtc = _timeProvider.GetUtcNow();
+        var expiresAtUtc = CheckedAdd(nowUtc, request.LeaseDuration);
+        lock (_gate)
+        {
+            ThrowIfDisposed();
+            var storeIdentity = GetInitializedStoreIdentity();
+            cancellationToken.ThrowIfCancellationRequested();
+            using var connection = SqliteLocalCommitConnection.OpenConnection(_databasePath);
+            SqliteLocalCommitConnection.ConfigureLockPolling(connection);
+            SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+            using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
+            var operations = SqliteLocalCommitSql.SelectLeaseableOperationIds(connection, transaction, storeIdentity, request, nowUtc, cancellationToken);
+            if (operations.Count == 0)
+            {
+                transaction.Commit();
+                return null;
+            }
+
+            SqliteLocalCommitSql.ReclaimSelectedLeaseRows(connection, transaction, storeIdentity, operations);
+            SqliteLocalCommitSql.InsertLeaseMembership(connection, transaction, storeIdentity, leaseId, expiresAtUtc, operations);
+            var leasedOperations = SqliteLocalCommitSql.ReadLeasedOperations(connection, transaction, storeIdentity, leaseId);
+            cancellationToken.ThrowIfCancellationRequested();
+            transaction.Commit();
+            return new(leaseId, expiresAtUtc, leasedOperations);
+        }
+    }
+
+    /// <summary>Extends an active outbox lease.</summary>
+    /// <param name="leaseId">The lease identifier.</param>
+    /// <param name="extension">The lease extension duration.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A completed value task.</returns>
+    /// <exception cref="ArgumentException">The lease identifier or extension is invalid.</exception>
+    /// <exception cref="InvalidOperationException">The store has not been initialized or the lease is not current.</exception>
+    /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
+    /// <exception cref="OperationCanceledException">The operation is canceled before the transaction commits.</exception>
+    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    internal ValueTask RenewLeaseAsync(Guid leaseId, TimeSpan extension, CancellationToken cancellationToken)
+    {
+        SqliteLocalCommitValidation.ValidateLeaseRenewalInput(leaseId, extension);
+        cancellationToken.ThrowIfCancellationRequested();
+        var nowUtc = _timeProvider.GetUtcNow();
+        lock (_gate)
+        {
+            ThrowIfDisposed();
+            var storeIdentity = GetInitializedStoreIdentity();
+            cancellationToken.ThrowIfCancellationRequested();
+            using var connection = SqliteLocalCommitConnection.OpenConnection(_databasePath);
+            SqliteLocalCommitConnection.ConfigureLockPolling(connection);
+            SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+            using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
+            var currentExpiry = SqliteLocalCommitSql.ValidateLeaseMembership(connection, transaction, storeIdentity, leaseId);
+            if (currentExpiry <= nowUtc)
+            {
+                throw new InvalidOperationException("The SQLite outbox lease is expired.");
+            }
+
+            var expiresAtUtc = CheckedAdd(currentExpiry, extension);
+            SqliteLocalCommitSql.RenewLease(connection, transaction, storeIdentity, leaseId, expiresAtUtc);
+            cancellationToken.ThrowIfCancellationRequested();
+            transaction.Commit();
+        }
+
+        return default;
+    }
+
+    /// <summary>Releases an outbox lease.</summary>
+    /// <param name="leaseId">The lease identifier.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A completed value task.</returns>
+    /// <exception cref="ArgumentException">The lease identifier is invalid.</exception>
+    /// <exception cref="InvalidOperationException">The store has not been initialized or the lease membership is incomplete.</exception>
+    /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
+    /// <exception cref="OperationCanceledException">The operation is canceled before the transaction commits.</exception>
+    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    internal ValueTask ReleaseLeaseAsync(Guid leaseId, CancellationToken cancellationToken)
+    {
+        SqliteLocalCommitValidation.ValidateLeaseId(leaseId);
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (_gate)
+        {
+            ThrowIfDisposed();
+            var storeIdentity = GetInitializedStoreIdentity();
+            cancellationToken.ThrowIfCancellationRequested();
+            using var connection = SqliteLocalCommitConnection.OpenConnection(_databasePath);
+            SqliteLocalCommitConnection.ConfigureLockPolling(connection);
+            SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+            using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
+            _ = SqliteLocalCommitSql.ValidateLeaseMembership(connection, transaction, storeIdentity, leaseId);
+            SqliteLocalCommitSql.ReleaseLease(connection, transaction, storeIdentity, leaseId);
+            cancellationToken.ThrowIfCancellationRequested();
+            transaction.Commit();
+        }
+
+        return default;
+    }
+
     /// <summary>Returns remote event identifiers that are not in the durable inbox for the stream.</summary>
     /// <param name="streamId">The stream identifier.</param>
     /// <param name="eventIds">The candidate remote event identifiers.</param>
@@ -362,6 +477,23 @@ internal sealed class SqliteLocalCommitStore : IDisposable
             cancellationToken.ThrowIfCancellationRequested();
             transaction.Commit();
             return new(batch.NextCursor, batch.Events.Count, 0, nextRevision);
+        }
+    }
+
+    /// <summary>Adds a duration to a UTC timestamp and rejects overflow.</summary>
+    /// <param name="timestamp">The timestamp.</param>
+    /// <param name="duration">The duration.</param>
+    /// <returns>The summed timestamp.</returns>
+    /// <exception cref="ArgumentException">The resulting timestamp is outside the supported range.</exception>
+    private static DateTimeOffset CheckedAdd(DateTimeOffset timestamp, TimeSpan duration)
+    {
+        try
+        {
+            return timestamp.Add(duration);
+        }
+        catch (ArgumentOutOfRangeException exception)
+        {
+            throw new ArgumentException("The SQLite outbox lease expiry is outside the supported timestamp range.", nameof(duration), exception);
         }
     }
 

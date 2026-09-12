@@ -30,6 +30,17 @@ public sealed partial class SqliteLocalCommitStoreTests
         return store;
     }
 
+    /// <summary>Creates an initialized local commit store for a specific clock.</summary>
+    /// <param name="path">The SQLite database path.</param>
+    /// <param name="timeProvider">The clock used by the store.</param>
+    /// <returns>The initialized store.</returns>
+    private static SqliteLocalCommitStore CreateInitializedStore(string path, TimeProvider timeProvider)
+    {
+        var store = new SqliteLocalCommitStore(path, timeProvider);
+        store.Initialize(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
+        return store;
+    }
+
     /// <summary>Creates a representative operation.</summary>
     /// <param name="clientSequence">The client sequence.</param>
     /// <returns>The operation.</returns>
@@ -520,7 +531,7 @@ public sealed partial class SqliteLocalCommitStoreTests
     {
         using var connection = OpenRawConnection(path);
         using var command = connection.CreateCommand();
-        command.CommandText = "PRAGMA user_version = 4;";
+        command.CommandText = "PRAGMA user_version = 5;";
         _ = command.ExecuteNonQuery();
     }
 
