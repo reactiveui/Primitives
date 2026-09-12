@@ -30,6 +30,9 @@ internal sealed class SqliteLocalCommitStore : IDisposable
     /// <summary>The initialized durable store identity partition.</summary>
     private string? _storeIdentity;
 
+    /// <summary>The initialized client identity binding.</summary>
+    private string? _clientId;
+
     /// <summary>A value indicating whether this instance has been disposed.</summary>
     private bool _disposed;
 
@@ -77,6 +80,7 @@ internal sealed class SqliteLocalCommitStore : IDisposable
     {
         ArgumentExceptionHelper.ThrowIfNull(initialization);
         SqliteLocalCommitValidation.ValidateInitialization(initialization);
+        var clientId = SqliteClientIdentityBinding.ValidateClientId(initialization.ClientId, nameof(initialization));
         if (initialization.RequireAuthenticatedEncryptionAtRest)
         {
             throw new NotSupportedException("SQLite authenticated encryption at rest has not been configured for this store.");
@@ -87,6 +91,7 @@ internal sealed class SqliteLocalCommitStore : IDisposable
         {
             ThrowIfDisposed();
             ThrowIfStoreIdentityConflicts(initialization.StoreIdentity);
+            ThrowIfClientIdentityConflicts(clientId);
             cancellationToken.ThrowIfCancellationRequested();
             _ = Directory.CreateDirectory(SqliteIdentityStoreData.GetDirectoryForCreate(_databasePath));
             using var connection = SqliteLocalCommitConnection.OpenConnection(_databasePath);
@@ -125,8 +130,11 @@ internal sealed class SqliteLocalCommitStore : IDisposable
             }
 
             cancellationToken.ThrowIfCancellationRequested();
+            clientId = SqliteClientIdentityBinding.BindOrValidate(connection, transaction, initialization.StoreIdentity, clientId);
+            cancellationToken.ThrowIfCancellationRequested();
             transaction.Commit();
             _storeIdentity = initialization.StoreIdentity;
+            _clientId = clientId;
         }
     }
 
@@ -759,6 +767,19 @@ internal sealed class SqliteLocalCommitStore : IDisposable
         }
 
         throw new InvalidOperationException("The SQLite local commit store has already been initialized for another store identity.");
+    }
+
+    /// <summary>Throws when initialization tries to switch this instance to a different client identity binding.</summary>
+    /// <param name="clientId">The requested client identity.</param>
+    /// <exception cref="InvalidOperationException">This instance has already been initialized for another client identity.</exception>
+    private void ThrowIfClientIdentityConflicts(string? clientId)
+    {
+        if (_clientId is null || (clientId is not null && string.Equals(_clientId, clientId, StringComparison.Ordinal)))
+        {
+            return;
+        }
+
+        throw new InvalidOperationException("The SQLite local commit store has already been initialized for another client identity.");
     }
 
     /// <summary>Gets the initialized store identity after validating this instance is available.</summary>

@@ -31,4 +31,7 @@ public enum LocalStoreCapabilities
 
     /// <summary>The store persists acknowledged local operation and snapshot commits across process restarts.</summary>
     DurableLocalCommit = 1 << 6,
+
+    /// <summary>The store binds initialized local partitions to a client identity.</summary>
+    ClientIdentityBinding = 1 << 7,
 }
