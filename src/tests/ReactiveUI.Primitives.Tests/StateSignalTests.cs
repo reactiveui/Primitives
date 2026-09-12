@@ -234,10 +234,10 @@ public class StateSignalTests
         await Assert.That(source.Value).IsEqualTo(UpdatedStateValue);
     }
 
+#if NET9_0_OR_GREATER
     /// <summary>Invokes the getter used by the debugger without reflection.</summary>
     /// <param name="signal">The instance to display.</param>
     /// <returns>The debugger display text.</returns>
-#if NET9_0_OR_GREATER
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static string GetDebuggerDisplay(StateSignal<int> signal) => DebuggerAccessor<int>.Read(signal);
 
@@ -252,6 +252,9 @@ public class StateSignalTests
         internal static extern string Read(StateSignal<T> signal);
     }
 #else
+    /// <summary>Invokes the getter used by the debugger without reflection.</summary>
+    /// <param name="signal">The instance to display.</param>
+    /// <returns>The debugger display text.</returns>
     [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "get_DebuggerDisplay")]
     private static extern string GetDebuggerDisplay(StateSignal<int> signal);
 #endif

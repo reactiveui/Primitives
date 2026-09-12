@@ -38,10 +38,10 @@ public class ReadOnlyStateTests
         await Assert.That(state.Value).IsEqualTo(1);
     }
 
+#if NET9_0_OR_GREATER
     /// <summary>Invokes the getter used by the debugger without reflection.</summary>
     /// <param name="state">The instance to display.</param>
     /// <returns>The debugger display text.</returns>
-#if NET9_0_OR_GREATER
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static string GetDebuggerDisplay(ReadOnlyState<int> state) => DebuggerAccessor<int>.Read(state);
 
@@ -56,6 +56,9 @@ public class ReadOnlyStateTests
         internal static extern string Read(ReadOnlyState<T> state);
     }
 #else
+    /// <summary>Invokes the getter used by the debugger without reflection.</summary>
+    /// <param name="state">The instance to display.</param>
+    /// <returns>The debugger display text.</returns>
     [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "get_DebuggerDisplay")]
     private static extern string GetDebuggerDisplay(ReadOnlyState<int> state);
 #endif

@@ -265,10 +265,10 @@ public class BehaviorSignalTests
         await Assert.That(values.SequenceEqual([0, 1])).IsTrue();
     }
 
+#if NET9_0_OR_GREATER
     /// <summary>Invokes the getter used by the debugger without reflection.</summary>
     /// <param name="signal">The instance to display.</param>
     /// <returns>The debugger display text.</returns>
-#if NET9_0_OR_GREATER
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static string? GetDebuggerDisplay(BehaviorSignal<int> signal) => DebuggerAccessor<int>.Read(signal);
 
@@ -283,6 +283,9 @@ public class BehaviorSignalTests
         internal static extern string? Read(BehaviorSignal<T> signal);
     }
 #else
+    /// <summary>Invokes the getter used by the debugger without reflection.</summary>
+    /// <param name="signal">The instance to display.</param>
+    /// <returns>The debugger display text.</returns>
     [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "get_DebuggerDisplay")]
     private static extern string? GetDebuggerDisplay(BehaviorSignal<int> signal);
 #endif

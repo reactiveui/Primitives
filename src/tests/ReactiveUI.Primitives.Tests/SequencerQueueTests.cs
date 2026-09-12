@@ -20,10 +20,10 @@ public sealed class SequencerQueueTests
         await Assert.That(ReadDebuggerDisplay(queue)).IsEqualTo(queue.ToString());
     }
 
+#if NET9_0_OR_GREATER
     /// <summary>Reads the property evaluated by the debugger.</summary>
     /// <param name="queue">The scheduled queue.</param>
     /// <returns>The debugger representation.</returns>
-#if NET9_0_OR_GREATER
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static string ReadDebuggerDisplay(SequencerQueue<int> queue) => DebuggerAccessor<int>.Read(queue);
 
@@ -39,6 +39,9 @@ public sealed class SequencerQueueTests
         internal static extern string Read(SequencerQueue<T> queue);
     }
 #else
+    /// <summary>Reads the property evaluated by the debugger.</summary>
+    /// <param name="queue">The scheduled queue.</param>
+    /// <returns>The debugger representation.</returns>
     [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "get_DebuggerDisplay")]
     private static extern string ReadDebuggerDisplay(SequencerQueue<int> queue);
 #endif
