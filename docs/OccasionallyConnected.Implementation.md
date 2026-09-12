@@ -644,3 +644,15 @@ Conflict resolution retained the current Core APIs, SQLite registration, impleme
 - All 220 SQLite TUnit tests pass on net8/net9/net10/net11 in Release, with MTP-confirmed 100% matching package line and
   branch coverage (2564/2548/2548/2549 lines and 623 branches). All eight library targets build without warnings or errors.
 - Encryption, durable capacity enforcement, the complete crash-point matrix and engine integration remain work.
+
+### Stage 6a: bounded HTTP retry hints
+
+- Added the HTTP transport project and an internal Retry-After parser for a single bounded header value. It accepts
+  platform-representable delay-seconds and HTTP dates against a caller-sampled instant; past dates produce zero.
+  Invalid, multiple, oversized and out-of-range values remain absent hints. The raw limit is 128 characters and
+  delay-seconds use the platform parser's Int32 range; this helper does not schedule or classify retries.
+- Root removed redundant parsing and strengthened tests with valid values exactly at and beyond the length boundary,
+  newline injection, multiple date values and equivalent observed instants with different offsets.
+- All 18 HTTP TUnit tests pass in Release on net8/net9/net10/net11. MTP confirms 100% matching package line and branch
+  coverage (11 lines and 12 branches). All eight library targets build without warnings or errors.
+- The authenticated HTTP adapter, bounded response decoding and receive protocol remain subsequent work.
