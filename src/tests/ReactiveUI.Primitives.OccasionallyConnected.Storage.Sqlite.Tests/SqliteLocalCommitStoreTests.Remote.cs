@@ -205,6 +205,35 @@ public sealed partial class SqliteLocalCommitStoreTests
         await Assert.That(result.NextCursor).IsEqualTo(FirstRemoteCursor);
     }
 
+    /// <summary>Verifies SQLite-specific remote apply validation guards reject invalid DTO shapes directly.</summary>
+    /// <returns>A task that represents the asynchronous test.</returns>
+    [Test]
+    public async Task WhenRemoteApplyInputIsValidatedDirectly_ThenSqliteGuardsFailClosed()
+    {
+        var otherStream = ReopenedStream;
+        var eventId = Guid.NewGuid();
+        Action emptyBatchId = static () => SqliteLocalCommitValidation.ValidateRemoteApplyInput(
+            new(Guid.Empty, Stream, null, FirstRemoteCursor, []),
+            CreateSnapshotMutation(expectedRevision: 0));
+        Action emptyEventId = static () => SqliteLocalCommitValidation.ValidateRemoteApplyInput(
+            CreateRemoteBatch(null, FirstRemoteCursor, [CreateRemoteEvent(Guid.Empty, Stream, FirstRemoteCursor, null)]),
+            CreateSnapshotMutation(expectedRevision: 0));
+        Action duplicateEventId = () => SqliteLocalCommitValidation.ValidateRemoteApplyInput(
+            CreateRemoteBatch(
+                null,
+                FirstRemoteCursor,
+                [CreateRemoteEvent(eventId, Stream, FirstRemoteCursor, null), CreateRemoteEvent(eventId, Stream, FirstRemoteCursor, null)]),
+            CreateSnapshotMutation(expectedRevision: 0));
+        Action wrongEventStream = () => SqliteLocalCommitValidation.ValidateRemoteApplyInput(
+            CreateRemoteBatch(null, FirstRemoteCursor, [CreateRemoteEvent(Guid.NewGuid(), otherStream, FirstRemoteCursor, null)]),
+            CreateSnapshotMutation(expectedRevision: 0));
+
+        await Assert.That(emptyBatchId).ThrowsExactly<ArgumentException>();
+        await Assert.That(emptyEventId).ThrowsExactly<ArgumentException>();
+        await Assert.That(duplicateEventId).ThrowsExactly<ArgumentException>();
+        await Assert.That(wrongEventStream).ThrowsExactly<ArgumentException>();
+    }
+
     /// <summary>Verifies the cursor update compare-and-swap rejects stale expected cursors.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
     [Test]
@@ -227,10 +256,10 @@ public sealed partial class SqliteLocalCommitStoreTests
         await Assert.That(action).ThrowsExactly<InvalidOperationException>();
     }
 
-    /// <summary>Verifies an inbox race between lookup and apply rejects instead of committing a projected duplicate.</summary>
+    /// <summary>Verifies an inbox race between lookup and apply is reported as a duplicate while committing the cursor fence.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
     [Test]
-    public async Task WhenEventBecomesInboxedAfterLookup_ThenRemoteApplyRejectsWithoutSnapshotChange()
+    public async Task WhenEventBecomesInboxedAfterLookup_ThenRemoteApplyCountsDuplicateAndCommitsSnapshot()
     {
         using var database = TempDatabase.Create();
         using var store = CreateInitializedStore(database.Path);
@@ -239,16 +268,17 @@ public sealed partial class SqliteLocalCommitStoreTests
         var unapplied = store.GetUnappliedEventIds(Stream, [remoteEvent.EventId], CancellationToken.None);
         InsertInboxEvent(database.Path, remoteEvent);
 
-        var action = () => store.ApplyRemoteBatch(
+        var result = store.ApplyRemoteBatch(
             CreateRemoteBatch(null, FirstRemoteCursor, [remoteEvent]),
             new(Stream, CreatePayload("race-snapshot"), FormatVersion: 1, ExpectedRevision: 0),
             CancellationToken.None);
 
         await Assert.That(unapplied.Count).IsEqualTo(1);
-        await Assert.That(action).ThrowsExactly<InvalidOperationException>();
+        await Assert.That(result.AppliedCount).IsEqualTo(0);
+        await Assert.That(result.DuplicateCount).IsEqualTo(1);
         var recovery = store.RecoverStream(Stream, subscriptionId, CancellationToken.None);
-        await Assert.That(recovery.ServerCursor).IsNull();
-        await Assert.That(recovery.Snapshot).IsNull();
+        await Assert.That(recovery.ServerCursor).IsEqualTo(FirstRemoteCursor);
+        await Assert.That(recovery.Snapshot?.Revision).IsEqualTo(1);
     }
 
     /// <summary>Verifies a failure after inbox insertion rolls back inbox, snapshot, and cursor together.</summary>

@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests;
 public sealed partial class SqliteLocalCommitStoreTests
 {
     /// <summary>The current local commit schema version.</summary>
-    private const int SchemaVersion = 6;
+    private const int SchemaVersion = 7;
 
     /// <summary>The legacy local commit schema version without a remote inbox.</summary>
     private const int LegacyLocalCommitSchemaVersion = 2;
@@ -879,6 +879,41 @@ public sealed partial class SqliteLocalCommitStoreTests
         await Assert.That(recovery.NextClientSequence).IsEqualTo(1);
         await Assert.That(recovery.PendingOperations.Count).IsEqualTo(0);
         await Assert.That(recovery.Snapshot).IsNull();
+    }
+
+    /// <summary>Verifies historical schema dispatch migrates every supported local commit version.</summary>
+    /// <param name="schemaVersion">The historical schema version.</param>
+    /// <returns>A task that represents the asynchronous test.</returns>
+    [Test]
+    [Arguments(SqliteStoreSchema.IdentitySchemaVersion)]
+    [Arguments(SqliteStoreSchema.LegacyLocalCommitSchemaVersion)]
+    [Arguments(SqliteStoreSchema.RemoteApplySchemaVersion)]
+    [Arguments(SqliteStoreSchema.LeaseSchemaVersion)]
+    [Arguments(SqliteStoreSchema.PreAuthoritativeLocalCommitSchemaVersion)]
+    [Arguments(SqliteStoreSchema.AuthoritativeLocalCommitSchemaVersion)]
+    public async Task WhenHistoricalSchemaVersionInitializes_ThenStoreMigratesToCurrent(int schemaVersion)
+    {
+        using var database = TempDatabase.Create();
+        CreateHistoricalLocalCommitSchema(database.Path, schemaVersion);
+
+        using var store = CreateInitializedStore(database.Path);
+
+        await Assert.That(ReadUserVersion(database.Path)).IsEqualTo(SchemaVersion);
+    }
+
+    /// <summary>Verifies user tables without a schema version are not treated as a new empty database.</summary>
+    /// <returns>A task that represents the asynchronous test.</returns>
+    [Test]
+    public async Task WhenUnversionedDatabaseHasUserTables_ThenInitializeFailsClosed()
+    {
+        using var database = TempDatabase.Create();
+        CreateUnexpectedTable(database.Path);
+        using var store = new SqliteLocalCommitStore(database.Path);
+
+        Action initialize = () => store.Initialize(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
+
+        await Assert.That(initialize).ThrowsExactly<InvalidOperationException>();
+        await Assert.That(ReadUserVersion(database.Path)).IsEqualTo(0);
     }
 
     /// <summary>Verifies local schema drift and newer schemas are rejected without repair.</summary>

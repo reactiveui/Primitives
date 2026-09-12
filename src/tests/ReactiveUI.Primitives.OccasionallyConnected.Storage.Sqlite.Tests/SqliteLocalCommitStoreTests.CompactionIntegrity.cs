@@ -35,7 +35,7 @@ public sealed partial class SqliteLocalCommitStoreTests
         for (var sequence = 1; sequence <= CompactionHistoryLength; sequence++)
         {
             var operation = CommitOperation(store, Stream, sequence, TerminalCompactionPayloadText);
-            SetOperationStateAt(database.Path, operation.OperationId, SyncOperationState.Synchronized, CompactionNow.AddDays(EligibleTerminalAgeDays));
+            SetOperationStateAt(database.Path, operation.OperationId, SyncOperationState.Rejected, CompactionNow.AddDays(EligibleTerminalAgeDays));
         }
 
         var result = store.Compact(new(Stream, CompactionNow, 0), CompactionRetention, CancellationToken.None);

@@ -265,6 +265,40 @@ public sealed partial class SqliteLocalCommitStoreTests
         await Assert.That(recover).ThrowsExactly<InvalidOperationException>();
     }
 
+    /// <summary>Verifies schema version six accepted operations retain replay until receive inclusion is known.</summary>
+    /// <returns>A task that represents the asynchronous test.</returns>
+    [Test]
+    public async Task WhenSchemaSixMigrates_ThenAcceptedOperationsRecoverAsReplayVisibleUnknownInclusion()
+    {
+        using var database = TempDatabase.Create();
+        var operation = CreateOperation(FirstClientSequence);
+        var subscriptionId = SubscriptionId.New();
+        var snapshot = CreateSnapshotMutation(expectedRevision: 0) with
+        {
+            AuthoritativeState = CreatePayload(AuthoritativeInitialText),
+        };
+        await using (var connection = OpenRawConnection(database.Path))
+        await using (var transaction = connection.BeginTransaction())
+        {
+            SchemaSixFixture.Create(connection, transaction);
+            _ = SqliteClientIdentityBinding.BindOrValidate(connection, transaction, StoreIdentity, FirstBindingClientId);
+            InsertLegacyLocalCommitRows(connection, transaction, subscriptionId, operation, snapshot);
+            SqliteLocalCommitSql.InsertInitialOperationState(connection, transaction, StoreIdentity, operation, operation.TimestampUtc);
+            SetOperationState(connection, transaction, operation.OperationId, SyncOperationState.Synchronized);
+            transaction.Commit();
+        }
+
+        using var migrated = new SqliteLocalCommitStore(database.Path);
+        migrated.Initialize(new(StoreIdentity, SchemaVersion, false) { ClientId = FirstBindingClientId }, CancellationToken.None);
+        var recovery = migrated.RecoverStream(Stream, subscriptionId, CancellationToken.None);
+
+        await Assert.That(ReadUserVersion(database.Path)).IsEqualTo(SchemaVersion);
+        await Assert.That(recovery.PendingOperations.Count).IsEqualTo(0);
+        await Assert.That(recovery.ReplayOperations.Count).IsEqualTo(1);
+        await Assert.That(recovery.ReplayOperations[0].OperationId).IsEqualTo(operation.OperationId);
+        await Assert.That(PayloadText(recovery.Snapshot?.AuthoritativeState)).IsEqualTo(AuthoritativeInitialText);
+    }
+
     /// <summary>Verifies authoritative mutations with invalid canonical hashes are rejected before commit.</summary>
     /// <param name="payloadHash">The invalid canonical payload hash.</param>
     /// <returns>A task that represents the asynchronous test.</returns>

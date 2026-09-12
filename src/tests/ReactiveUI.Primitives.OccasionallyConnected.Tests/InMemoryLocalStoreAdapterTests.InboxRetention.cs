@@ -37,7 +37,7 @@ public sealed partial class InMemoryLocalStoreAdapterTests
         await Assert.That(protectedResult.RecordsRemoved).IsEqualTo(0);
         await Assert.That((await store.GetUnappliedEventIdsAsync(Stream, [firstEvent.EventId], CancellationToken.None)).Count).IsEqualTo(0);
         await Assert.That((await store.GetUnappliedEventIdsAsync(OtherStream, [secondEvent.EventId], CancellationToken.None)).Count).IsEqualTo(1);
-        await SetServerResultAsync(store, pending, OperationResultKind.Accepted);
+        await SetServerResultAsync(store, pending, OperationResultKind.Rejected);
         var settled = await store.CompactAsync(new(null, DateTimeOffset.MinValue, long.MaxValue), CancellationToken.None);
         await Assert.That(settled.RecordsRemoved).IsEqualTo(1);
     }

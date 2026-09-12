@@ -27,6 +27,7 @@ public sealed record RecoveredStream
         ServerCursor = serverCursor;
         Snapshot = snapshot;
         PendingOperations = CollectionCopy.List(pendingOperations);
+        ReplayOperations = PendingOperations;
         DeadLetters = CollectionCopy.List(deadLetters);
         NextClientSequence = nextClientSequence;
     }
@@ -42,6 +43,13 @@ public sealed record RecoveredStream
 
     /// <summary>Gets the recovered pending operations.</summary>
     public IReadOnlyList<SyncOperation> PendingOperations { get; }
+
+    /// <summary>Gets the recovered operations that should be replayed into local projection.</summary>
+    public IReadOnlyList<SyncOperation> ReplayOperations
+    {
+        get;
+        init => field = CollectionCopy.List(value);
+    }
 
     /// <summary>Gets the recovered dead-letter records.</summary>
     public IReadOnlyList<DeadLetterRecord> DeadLetters { get; }

@@ -15,6 +15,9 @@ internal sealed class SqliteLocalCommitStore : IDisposable
     /// <summary>The first valid client sequence.</summary>
     private const long FirstClientSequence = 1;
 
+    /// <summary>The maximum receive event and completion counts admitted by the durable SQLite store.</summary>
+    private const int MaximumReceiveBatchEntries = 128;
+
     /// <summary>The expired lease exception message.</summary>
     private const string ExpiredLeaseMessage = "The SQLite outbox lease is expired.";
 
@@ -100,34 +103,7 @@ internal sealed class SqliteLocalCommitStore : IDisposable
             SqliteConnectionSettings.ConfigureDurability(connection);
             using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
             var userVersion = SqliteLocalCommitConnection.GetUserVersion(connection, transaction);
-            if (userVersion == 0 && !SqliteLocalCommitConnection.HasUserTables(connection, transaction))
-            {
-                SqliteStoreSchema.CreateLocalCommitSchema(connection, transaction);
-            }
-            else if (userVersion == SqliteStoreSchema.IdentitySchemaVersion)
-            {
-                SqliteStoreSchema.MigrateIdentityToLocalCommit(connection, transaction);
-            }
-            else if (userVersion == SqliteStoreSchema.LegacyLocalCommitSchemaVersion)
-            {
-                SqliteStoreSchema.MigrateLegacyLocalCommitToCurrent(connection, transaction);
-            }
-            else if (userVersion == SqliteStoreSchema.RemoteApplySchemaVersion)
-            {
-                SqliteStoreSchema.MigrateRemoteApplyToCurrent(connection, transaction);
-            }
-            else if (userVersion == SqliteStoreSchema.LeaseSchemaVersion)
-            {
-                SqliteStoreSchema.MigrateLeaseSchemaToCurrent(connection, transaction);
-            }
-            else if (userVersion == SqliteStoreSchema.PreAuthoritativeLocalCommitSchemaVersion)
-            {
-                SqliteStoreSchema.MigratePreAuthoritativeLocalCommitToCurrent(connection, transaction);
-            }
-            else
-            {
-                SqliteStoreSchema.ValidateExistingSchemaForLocalCommit(connection, transaction, userVersion);
-            }
+            InitializeSchema(connection, transaction, userVersion);
 
             cancellationToken.ThrowIfCancellationRequested();
             clientId = SqliteClientIdentityBinding.BindOrValidate(connection, transaction, initialization.StoreIdentity, clientId);
@@ -267,7 +243,8 @@ internal sealed class SqliteLocalCommitStore : IDisposable
                 : new SqliteLocalStreamState(FirstClientSequence, null);
             var snapshot = SqliteLocalCommitSql.ReadSnapshot(connection, transaction, storeIdentity, streamId);
             var pending = SqliteLocalCommitSql.ReadPendingOperations(connection, transaction, storeIdentity, streamId);
-            if (!hasStream && (snapshot is not null || pending.Count != 0))
+            var replay = SqliteLocalCommitSql.ReadReplayOperations(connection, transaction, storeIdentity, streamId);
+            if (!hasStream && (snapshot is not null || pending.Count != 0 || replay.Count != 0))
             {
                 throw new InvalidOperationException("Committed data has no durable stream state.");
             }
@@ -277,17 +254,12 @@ internal sealed class SqliteLocalCommitStore : IDisposable
                 throw new InvalidOperationException("The snapshot cursor does not match the durable stream cursor.");
             }
 
-            foreach (var operation in pending)
-            {
-                if (operation.ClientSequence >= stream.NextClientSequence)
-                {
-                    throw new InvalidOperationException("A pending operation reaches or exceeds the next durable client sequence.");
-                }
-            }
+            ValidateRecoveredSequences(pending, replay, stream.NextClientSequence);
 
             cancellationToken.ThrowIfCancellationRequested();
             transaction.Commit();
-            return new(subscriptionId, stream.ServerCursor, snapshot, pending, [], stream.NextClientSequence);
+            var result = new RecoveredStream(subscriptionId, stream.ServerCursor, snapshot, pending, [], stream.NextClientSequence);
+            return result with { ReplayOperations = replay };
         }
     }
 
@@ -517,6 +489,7 @@ internal sealed class SqliteLocalCommitStore : IDisposable
         SnapshotMutation snapshotMutation,
         CancellationToken cancellationToken)
     {
+        RemoteEventBatchValidator.Validate(batch, MaximumReceiveBatchEntries, MaximumReceiveBatchEntries);
         SqliteLocalCommitValidation.ValidateRemoteApplyInput(batch, snapshotMutation);
         cancellationToken.ThrowIfCancellationRequested();
         var committedAtUtc = _timeProvider.GetUtcNow();
@@ -544,17 +517,28 @@ internal sealed class SqliteLocalCommitStore : IDisposable
             }
 
             var nextRevision = snapshotMutation.ExpectedRevision + 1;
+            var appliedCount = 0;
+            var duplicateCount = 0;
             for (var index = 0; index < batch.Events.Count; index++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                SqliteLocalCommitSql.InsertInboxEvent(connection, transaction, storeIdentity, batch.Events[index], committedAtUtc);
+                var remoteEvent = batch.Events[index];
+                if (SqliteLocalCommitSql.IsInboxEventApplied(connection, transaction, storeIdentity, batch.StreamId, remoteEvent.EventId))
+                {
+                    duplicateCount++;
+                    continue;
+                }
+
+                SqliteLocalCommitSql.InsertInboxEvent(connection, transaction, storeIdentity, remoteEvent, committedAtUtc);
+                appliedCount++;
             }
 
             SqliteLocalCommitSql.UpsertSnapshot(connection, transaction, storeIdentity, snapshotMutation, nextRevision, batch.NextCursor, committedAtUtc);
             SqliteLocalCommitSql.UpdateServerCursor(connection, transaction, storeIdentity, batch.StreamId, batch.PreviousCursor, batch.NextCursor);
+            SqliteLocalCommitSql.MarkReceiveInclusions(connection, transaction, storeIdentity, _clientId, batch, snapshotMutation);
             cancellationToken.ThrowIfCancellationRequested();
             transaction.Commit();
-            return new(batch.NextCursor, batch.Events.Count, 0, nextRevision);
+            return new(batch.NextCursor, appliedCount, duplicateCount, nextRevision);
         }
     }
 
@@ -737,6 +721,84 @@ internal sealed class SqliteLocalCommitStore : IDisposable
         SqliteLocalCommitSql.ReleaseLease(connection, transaction, storeIdentity, leaseId);
         cancellationToken.ThrowIfCancellationRequested();
         transaction.Commit();
+    }
+
+    /// <summary>Creates, migrates, or validates the local commit schema.</summary>
+    /// <param name="connection">The open connection.</param>
+    /// <param name="transaction">The active transaction.</param>
+    /// <param name="userVersion">The current user version.</param>
+    private static void InitializeSchema(SqliteConnection connection, SqliteTransaction transaction, long userVersion)
+    {
+        if (userVersion == 0 && !SqliteLocalCommitConnection.HasUserTables(connection, transaction))
+        {
+            SqliteStoreSchema.CreateLocalCommitSchema(connection, transaction);
+            return;
+        }
+
+        if (userVersion == SqliteStoreSchema.IdentitySchemaVersion)
+        {
+            SqliteStoreSchema.MigrateIdentityToLocalCommit(connection, transaction);
+            return;
+        }
+
+        if (userVersion == SqliteStoreSchema.LegacyLocalCommitSchemaVersion)
+        {
+            SqliteStoreSchema.MigrateLegacyLocalCommitToCurrent(connection, transaction);
+            return;
+        }
+
+        if (userVersion == SqliteStoreSchema.RemoteApplySchemaVersion)
+        {
+            SqliteStoreSchema.MigrateRemoteApplyToCurrent(connection, transaction);
+            return;
+        }
+
+        if (userVersion == SqliteStoreSchema.LeaseSchemaVersion)
+        {
+            SqliteStoreSchema.MigrateLeaseSchemaToCurrent(connection, transaction);
+            return;
+        }
+
+        if (userVersion == SqliteStoreSchema.PreAuthoritativeLocalCommitSchemaVersion)
+        {
+            SqliteStoreSchema.MigratePreAuthoritativeLocalCommitToCurrent(connection, transaction);
+            return;
+        }
+
+        if (userVersion == SqliteStoreSchema.AuthoritativeLocalCommitSchemaVersion)
+        {
+            SqliteStoreSchema.MigrateAuthoritativeLocalCommitToCurrent(connection, transaction);
+            return;
+        }
+
+        SqliteStoreSchema.ValidateExistingSchemaForLocalCommit(connection, transaction, userVersion);
+    }
+
+    /// <summary>Validates recovered operation sequence fences.</summary>
+    /// <param name="pending">The upload-pending operations.</param>
+    /// <param name="replay">The replay-visible operations.</param>
+    /// <param name="nextClientSequence">The next durable sequence.</param>
+    /// <exception cref="InvalidOperationException">Recovered sequence data is invalid.</exception>
+    private static void ValidateRecoveredSequences(
+        List<SyncOperation> pending,
+        List<SyncOperation> replay,
+        long nextClientSequence)
+    {
+        for (var index = 0; index < pending.Count; index++)
+        {
+            if (pending[index].ClientSequence >= nextClientSequence)
+            {
+                throw new InvalidOperationException("A pending operation reaches or exceeds the next durable client sequence.");
+            }
+        }
+
+        for (var index = 0; index < replay.Count; index++)
+        {
+            if (replay[index].ClientSequence >= nextClientSequence)
+            {
+                throw new InvalidOperationException("A replay operation reaches or exceeds the next durable client sequence.");
+            }
+        }
     }
 
     /// <summary>Adds a duration to a UTC timestamp and rejects overflow.</summary>

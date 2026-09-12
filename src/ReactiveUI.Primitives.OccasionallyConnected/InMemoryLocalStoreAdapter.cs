@@ -37,6 +37,9 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
     /// <summary>The inbox deduplication entries in this instance.</summary>
     private readonly Dictionary<InboxKey, DateTimeOffset> _inbox = [];
 
+    /// <summary>The local operations durably included by an authoritative receive batch.</summary>
+    private readonly HashSet<OperationId> _includedOperations = [];
+
     /// <summary>The time provider used for local timestamps.</summary>
     private readonly TimeProvider _timeProvider;
 
@@ -231,12 +234,14 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
             }
 
             List<SyncOperation> pending = [];
+            List<SyncOperation> replay = [];
             foreach (var pair in _operations)
             {
-                AddRecoveredOperation(streamId, pair.Value, pending);
+                AddRecoveredOperation(streamId, pair.Value, _includedOperations, pending, replay);
             }
 
-            pending.Sort(CompareOperationSequence);
+            pending.Sort(OperationSequenceComparison);
+            replay.Sort(OperationSequenceComparison);
             result = new(
                 stream.SubscriptionId,
                 stream.ServerCursor,
@@ -244,6 +249,7 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
                 pending,
                 [],
                 stream.NextClientSequence);
+            result = result with { ReplayOperations = replay };
         }
 
         return new(result);
@@ -375,6 +381,7 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
         SnapshotMutation snapshotMutation,
         CancellationToken cancellationToken)
     {
+        RemoteEventBatchValidator.Validate(batch, _maximumRecordCount, _maximumRecordCount);
         InMemoryLocalStoreAdapterValidation.ValidateRemoteApplyInput(batch, snapshotMutation);
         cancellationToken.ThrowIfCancellationRequested();
         RemoteApplyResult result;
@@ -384,7 +391,8 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
             ThrowIfReady(cancellationToken);
             var stream = GetStream(batch.StreamId);
             ValidateRemoteVersion(stream, batch, snapshotMutation);
-            EnsureRemoteEventsUnapplied(batch);
+            var newEventCount = CountNewRemoteEvents(batch);
+            var inclusionCapacity = GetReceiveInclusionCapacity(batch, snapshotMutation);
             var committedAtUtc = nowUtc;
             var nextRevision = checked(snapshotMutation.ExpectedRevision + 1);
             var nextAuthoritativeState = snapshotMutation.AuthoritativeState ?? stream.Snapshot?.AuthoritativeState;
@@ -398,17 +406,23 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
             var capacity = AddCapacity(
                 new(0, checked(StringBytes(batch.NextCursor) - StringBytes(stream.ServerCursor))),
                 CapacityDifference(LocalSnapshotCapacity(stream.Snapshot), LocalSnapshotCapacity(nextSnapshot)));
+            capacity = AddCapacity(capacity, inclusionCapacity);
             for (var index = 0; index < batch.Events.Count; index++)
             {
-                capacity = AddCapacity(capacity, InboxKeyCapacity(new(batch.StreamId, batch.Events[index].EventId)));
+                var key = new InboxKey(batch.StreamId, batch.Events[index].EventId);
+                if (!_inbox.ContainsKey(key))
+                {
+                    capacity = AddCapacity(capacity, InboxKeyCapacity(key));
+                }
             }
 
             EnsureCapacityFor(capacity);
             AddInboxEntries(batch, committedAtUtc);
+            MarkIncludedOperations(batch);
             ApplyCapacity(capacity);
             stream.Snapshot = nextSnapshot;
             stream.ServerCursor = batch.NextCursor;
-            result = new(batch.NextCursor, batch.Events.Count, DuplicateCount: 0, nextRevision);
+            result = new(batch.NextCursor, newEventCount, checked(batch.Events.Count - newEventCount), nextRevision);
         }
 
         return new(result);
@@ -598,6 +612,7 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
             _operations.Clear();
             _leases.Clear();
             _inbox.Clear();
+            _includedOperations.Clear();
             _encodedBytes = 0;
             _recordCount = 0;
             _storeIdentity = null;

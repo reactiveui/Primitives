@@ -38,6 +38,9 @@ internal sealed partial class InMemoryLocalStoreAdapter
     /// <summary>The strict UTF-8 encoding used for client identity validation.</summary>
     private static readonly Encoding StrictUtf8 = new UTF8Encoding(false, true);
 
+    /// <summary>The stable comparison used when ordering recovered operations by client sequence.</summary>
+    private static readonly Comparison<SyncOperation> OperationSequenceComparison = CompareOperationSequence;
+
     /// <summary>Compares operation records by client sequence.</summary>
     /// <param name="left">The first record.</param>
     /// <param name="right">The second record.</param>
@@ -155,6 +158,19 @@ internal sealed partial class InMemoryLocalStoreAdapter
     private static bool IsDefinitiveTerminal(SyncOperationState state) =>
         state is SyncOperationState.Synchronized or SyncOperationState.Rejected or SyncOperationState.DeadLettered;
 
+    /// <summary>Determines whether an operation should be returned in recovered pending operations.</summary>
+    /// <param name="record">The operation record.</param>
+    /// <returns>Whether the operation is pending-visible.</returns>
+    private static bool ShouldRecoverPendingOperation(OperationRecord record) =>
+        !IsDefinitiveTerminal(record.Status.State);
+
+    /// <summary>Determines whether an operation should be returned in recovered replay operations.</summary>
+    /// <param name="record">The operation record.</param>
+    /// <param name="included">Whether authoritative receive inclusion was recorded.</param>
+    /// <returns>Whether the operation is replay-visible.</returns>
+    private static bool ShouldRecoverReplayOperation(OperationRecord record, bool included) =>
+        !included && record.Status.State is not SyncOperationState.Rejected and not SyncOperationState.DeadLettered;
+
     /// <summary>Validates an optional client identity binding.</summary>
     /// <param name="clientId">The client identity.</param>
     /// <param name="parameterName">The parameter name.</param>
@@ -248,6 +264,11 @@ internal sealed partial class InMemoryLocalStoreAdapter
     /// <returns>The retained capacity.</returns>
     private static CapacityUsage InboxKeyCapacity(InboxKey key) =>
         new(1, checked(StreamIdBytes(key.StreamId) + GuidEncodedBytes + DateTimeOffsetEncodedBytes));
+
+    /// <summary>Returns the retained receive inclusion marker capacity.</summary>
+    /// <returns>The retained capacity.</returns>
+    private static CapacityUsage InclusionCapacity() =>
+        new(1, GuidEncodedBytes);
 
     /// <summary>Returns the retained lease capacity.</summary>
     /// <param name="lease">The lease record.</param>
@@ -472,23 +493,33 @@ internal sealed partial class InMemoryLocalStoreAdapter
     /// <summary>Adds one operation to recovery output.</summary>
     /// <param name="streamId">The requested stream identifier.</param>
     /// <param name="record">The operation record.</param>
+    /// <param name="includedOperations">The operations already included by an authoritative receive batch.</param>
     /// <param name="pending">The pending operation output.</param>
+    /// <param name="replay">The replay operation output.</param>
     private static void AddRecoveredOperation(
         StreamId streamId,
         OperationRecord record,
-        List<SyncOperation> pending)
+        HashSet<OperationId> includedOperations,
+        List<SyncOperation> pending,
+        List<SyncOperation> replay)
     {
         if (record.Operation.StreamId != streamId)
         {
             return;
         }
 
-        if (IsDefinitiveTerminal(record.Status.State))
+        var included = includedOperations.Contains(record.Operation.OperationId);
+        if (ShouldRecoverPendingOperation(record))
+        {
+            pending.Add(record.Operation);
+        }
+
+        if (!ShouldRecoverReplayOperation(record, included))
         {
             return;
         }
 
-        pending.Add(record.Operation);
+        replay.Add(record.Operation);
     }
 
     /// <summary>Creates retry state for a retryable outcome.</summary>
@@ -540,7 +571,96 @@ internal sealed partial class InMemoryLocalStoreAdapter
     {
         for (var index = 0; index < batch.Events.Count; index++)
         {
-            _inbox.Add(new(batch.StreamId, batch.Events[index].EventId), committedAtUtc);
+            var key = new InboxKey(batch.StreamId, batch.Events[index].EventId);
+#if NET8_0_OR_GREATER
+            _ = _inbox.TryAdd(key, committedAtUtc);
+#else
+            if (!_inbox.ContainsKey(key))
+            {
+                _inbox.Add(key, committedAtUtc);
+            }
+#endif
+        }
+    }
+
+    /// <summary>Counts events in a remote batch that are not already retained in the inbox.</summary>
+    /// <param name="batch">The batch.</param>
+    /// <returns>The number of new events.</returns>
+    private int CountNewRemoteEvents(RemoteEventBatch batch)
+    {
+        var count = 0;
+        for (var index = 0; index < batch.Events.Count; index++)
+        {
+            if (!_inbox.ContainsKey(new(batch.StreamId, batch.Events[index].EventId)))
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    /// <summary>Returns retained capacity for new authoritative receive inclusion markers.</summary>
+    /// <param name="batch">The batch.</param>
+    /// <param name="snapshotMutation">The snapshot mutation.</param>
+    /// <returns>The capacity usage.</returns>
+    /// <exception cref="InvalidOperationException">A matching completion is invalid for this stream or lacks authoritative state.</exception>
+    private CapacityUsage GetReceiveInclusionCapacity(RemoteEventBatch batch, SnapshotMutation snapshotMutation)
+    {
+        var capacity = default(CapacityUsage);
+        if (_clientId is null)
+        {
+            return capacity;
+        }
+
+        for (var index = 0; index < batch.CompletedOperations.Count; index++)
+        {
+            var origin = batch.CompletedOperations[index].Origin;
+            if (!string.Equals(origin.ClientId, _clientId, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (!_operations.TryGetValue(origin.OperationId, out var record))
+            {
+                continue;
+            }
+
+            if (record.Operation.StreamId != batch.StreamId)
+            {
+                throw new InvalidOperationException("A completed local operation belongs to another stream.");
+            }
+
+            if (snapshotMutation.AuthoritativeState is null)
+            {
+                throw new InvalidOperationException("Authoritative state is required to include a completed local operation.");
+            }
+
+            if (!_includedOperations.Contains(origin.OperationId))
+            {
+                capacity = AddCapacity(capacity, InclusionCapacity());
+            }
+        }
+
+        return capacity;
+    }
+
+    /// <summary>Marks authoritative local completions as included after validation and capacity reservation.</summary>
+    /// <param name="batch">The batch.</param>
+    private void MarkIncludedOperations(RemoteEventBatch batch)
+    {
+        if (_clientId is null)
+        {
+            return;
+        }
+
+        for (var index = 0; index < batch.CompletedOperations.Count; index++)
+        {
+            var origin = batch.CompletedOperations[index].Origin;
+            if (string.Equals(origin.ClientId, _clientId, StringComparison.Ordinal) && _operations.ContainsKey(origin.OperationId))
+            {
+                _ = _includedOperations.Add(origin.OperationId);
+            }
         }
     }
 
@@ -647,7 +767,7 @@ internal sealed partial class InMemoryLocalStoreAdapter
         HashSet<StreamId> protectedStreams = [];
         foreach (var pair in _operations)
         {
-            if (!IsDefinitiveTerminal(pair.Value.Status.State))
+            if (ShouldRecoverReplayOperation(pair.Value, _includedOperations.Contains(pair.Value.Operation.OperationId)))
             {
                 _ = protectedStreams.Add(pair.Value.Operation.StreamId);
             }
@@ -780,20 +900,6 @@ internal sealed partial class InMemoryLocalStoreAdapter
         return false;
     }
 
-    /// <summary>Throws when any remote event has already been applied.</summary>
-    /// <param name="batch">The remote batch.</param>
-    /// <exception cref="InvalidOperationException">An event has already been applied.</exception>
-    private void EnsureRemoteEventsUnapplied(RemoteEventBatch batch)
-    {
-        for (var index = 0; index < batch.Events.Count; index++)
-        {
-            if (_inbox.ContainsKey(new(batch.StreamId, batch.Events[index].EventId)))
-            {
-                throw new InvalidOperationException("The remote event has already been applied.");
-            }
-        }
-    }
-
     /// <summary>Leases at most one pending operation batch.</summary>
     /// <param name="request">The lease request.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
@@ -872,6 +978,11 @@ internal sealed partial class InMemoryLocalStoreAdapter
             _ = _operations.Remove(removable[index].Operation.OperationId);
             recordsRemoved++;
             var capacity = OperationRecordCapacity(removable[index]);
+            if (_includedOperations.Remove(removable[index].Operation.OperationId))
+            {
+                capacity = AddCapacity(capacity, InclusionCapacity());
+            }
+
             bytesReclaimed = checked(bytesReclaimed + capacity.EncodedBytes);
             ApplyCapacity(new(checked(-capacity.Records), checked(-capacity.EncodedBytes)));
         }
@@ -914,11 +1025,6 @@ internal sealed partial class InMemoryLocalStoreAdapter
         for (var index = 0; index < lease.OperationIds.Count; index++)
         {
             var record = _operations[lease.OperationIds[index]];
-            if (!record.LeaseId.HasValue)
-            {
-                continue;
-            }
-
             capacity = AddCapacity(
                 capacity,
                 CapacityDifference(
@@ -929,11 +1035,6 @@ internal sealed partial class InMemoryLocalStoreAdapter
         for (var index = 0; index < lease.OperationIds.Count; index++)
         {
             var record = _operations[lease.OperationIds[index]];
-            if (!record.LeaseId.HasValue)
-            {
-                continue;
-            }
-
             record.LeaseId = null;
             record.LeaseExpiresAtUtc = null;
         }

@@ -96,6 +96,22 @@ public sealed partial class SqliteLocalCommitStoreTests
             .ThrowsExactly<InvalidOperationException>();
     }
 
+    /// <summary>Verifies replay-visible operation sequence corruption is rejected separately from pending recovery.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task ReplaySequenceAtNextClientSequenceFailsRecovery()
+    {
+        using var database = TempDatabase.Create();
+        using var store = CreateInitializedStore(database.Path);
+        var subscription = store.GetOrCreateSubscriptionId(Stream, null, CancellationToken.None);
+        var operation = CommitOperation(store, Stream, 1, OperationPayloadText);
+        SetOperationState(database.Path, operation.OperationId, SyncOperationState.Synchronized);
+        SetStreamNextClientSequence(database.Path, operation.ClientSequence);
+
+        await Assert.That(() => store.RecoverStream(Stream, subscription, CancellationToken.None))
+            .ThrowsExactly<InvalidOperationException>();
+    }
+
     /// <summary>Installs a real SQLite trigger that ignores initial operation-state insertion.</summary>
     /// <param name="path">The database path.</param>
     private static void IgnoreInitialOperationStateInsert(string path)

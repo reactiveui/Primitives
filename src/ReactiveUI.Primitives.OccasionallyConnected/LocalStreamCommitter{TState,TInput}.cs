@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.OccasionallyConnected;
 /// <summary>Coordinates atomic local stream recovery and optimistic operation commits.</summary>
 /// <typeparam name="TState">The projected local state type.</typeparam>
 /// <typeparam name="TInput">The local input type.</typeparam>
-internal sealed class LocalStreamCommitter<TState, TInput>
+internal sealed partial class LocalStreamCommitter<TState, TInput>
 {
     /// <summary>The message used when an async operation overlaps another one.</summary>
     private const string BusyMessage = "A local stream transaction is already in progress.";
@@ -121,37 +121,12 @@ internal sealed class LocalStreamCommitter<TState, TInput>
             cancellationToken.ThrowIfCancellationRequested();
 
             var operation = CreateOperation(policy, observed.NextClientSequence, operationId, timestamp, payload);
-            var nextStateValue = _options.Dependencies.Projection.ApplyLocal(observed.State, decodedInput, operation);
+            var prepared = await PrepareProjectionStateAsync(observed, cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
-            var nextStatePayload = await _options.Dependencies.Serializer
-                .SerializeAsync(_options.Contracts.StateContractId, _options.Contracts.StateSchemaVersion, nextStateValue, cancellationToken)
-                .ConfigureAwait(false);
+            var nextStateValue = _options.Dependencies.Projection.ApplyLocal(prepared.State, decodedInput, operation);
             cancellationToken.ThrowIfCancellationRequested();
-
-            var mutation = new SnapshotMutation(
-                _options.StreamId,
-                nextStatePayload,
-                _options.Contracts.SnapshotFormatVersion,
-                observed.Revision);
-            var storeResult = await _options.Dependencies.Store
-                .CommitLocalOperationAsync(operation, mutation, cancellationToken)
+            return await CommitPreparedLocalAsync(operation, decodedInput, nextStateValue, prepared.Payload, observed, cancellationToken)
                 .ConfigureAwait(false);
-            ValidateStoreResult(storeResult, operation, observed.Revision);
-
-            var nextState = new LocalStreamCommitterState<TState>(
-                _options.StreamId,
-                observed.SubscriptionId,
-                nextStateValue,
-                storeResult.SnapshotRevision,
-                checked(operation.ClientSequence + 1),
-                observed.ServerCursor);
-            SwapCurrent(nextState);
-            var receipt = new PublishReceipt(
-                storeResult.OperationId,
-                storeResult.ClientSequence,
-                SyncOperationState.SavedLocally,
-                storeResult.CommittedAtUtc);
-            return new(receipt, operation, decodedInput, nextState);
         }
         finally
         {
@@ -174,6 +149,7 @@ internal sealed class LocalStreamCommitter<TState, TInput>
             cancellationToken.ThrowIfCancellationRequested();
             ThrowIfNotRecovered();
             var observed = Current;
+            ValidateCompleteRemoteBatch(batch);
             ValidateRemoteBatchHeader(batch);
             var allEventIds = GetRemoteEventIds(batch);
             var unappliedLookupResult = await _options.Dependencies.Store
@@ -184,10 +160,17 @@ internal sealed class LocalStreamCommitter<TState, TInput>
 
             var filteredEvents = FilterUnappliedEvents(batch.Events, unappliedEventIds);
             var duplicateCount = checked(batch.Events.Count - filteredEvents.Count);
-            return TryGetDuplicateReplayCursor(batch, observed.ServerCursor, filteredEvents, out var replayCursor)
-                ? CreateDuplicateRemoteResult(batch, observed, replayCursor, duplicateCount)
-                : await CommitFilteredRemoteBatchAsync(batch, observed, filteredEvents, duplicateCount, cancellationToken)
-                    .ConfigureAwait(false);
+            if (TryGetDuplicateReplayCursor(batch, observed.ServerCursor, filteredEvents, out var replayCursor))
+            {
+                if (batch.CompletedOperations.Count == 0)
+                {
+                    return CreateDuplicateRemoteResult(batch, observed, replayCursor, duplicateCount);
+                }
+
+                batch = new(batch.BatchId, batch.StreamId, replayCursor, replayCursor, batch.Events) { CompletedOperations = batch.CompletedOperations };
+            }
+
+            return await CommitFilteredRemoteBatchAsync(batch, observed, filteredEvents, duplicateCount, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
@@ -224,20 +207,12 @@ internal sealed class LocalStreamCommitter<TState, TInput>
     /// <summary>Creates the received remote event identifier list.</summary>
     /// <param name="batch">The remote batch.</param>
     /// <returns>The event identifiers.</returns>
-    /// <exception cref="InvalidOperationException">The batch contains duplicate event identifiers.</exception>
     private static List<Guid> GetRemoteEventIds(RemoteEventBatch batch)
     {
         List<Guid> eventIds = [with(capacity: batch.Events.Count)];
-        HashSet<Guid> seen = [];
         for (var index = 0; index < batch.Events.Count; index++)
         {
-            var eventId = batch.Events[index].EventId;
-            if (!seen.Add(eventId))
-            {
-                throw new InvalidOperationException("Remote batch contains duplicate event identifiers.");
-            }
-
-            eventIds.Add(eventId);
+            eventIds.Add(batch.Events[index].EventId);
         }
 
         return eventIds;
@@ -526,7 +501,7 @@ internal sealed class LocalStreamCommitter<TState, TInput>
                     typed,
                     recovered.Snapshot.Revision,
                     recovered.NextClientSequence,
-                    recovered.ServerCursor);
+                    recovered.ServerCursor) { MaterializedPayload = recovered.Snapshot.State, AuthoritativePayload = recovered.Snapshot.AuthoritativeState };
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -579,14 +554,28 @@ internal sealed class LocalStreamCommitter<TState, TInput>
             throw new InvalidOperationException("Recovered snapshot format is not supported.");
         }
 
-        if (snapshot.State is null)
+        ValidateStatePayload(snapshot.State);
+        if (snapshot.AuthoritativeState is not { } authoritativeState)
+        {
+            return;
+        }
+
+        ValidateStatePayload(authoritativeState);
+    }
+
+    /// <summary>Validates the configured state payload contract before deserialization.</summary>
+    /// <param name="payload">The state payload.</param>
+    /// <exception cref="InvalidOperationException">The payload is missing or uses another state contract.</exception>
+    private void ValidateStatePayload(PayloadEnvelope? payload)
+    {
+        if (payload is null)
         {
             throw new InvalidOperationException("Recovered snapshot state payload is missing.");
         }
 
-        var contractMatches = string.Equals(snapshot.State.ContractId, _options.Contracts.StateContractId, StringComparison.Ordinal)
-            && snapshot.State.SchemaVersion > 0
-            && snapshot.State.SchemaVersion <= _options.Contracts.StateSchemaVersion;
+        var contractMatches = string.Equals(payload.ContractId, _options.Contracts.StateContractId, StringComparison.Ordinal)
+            && payload.SchemaVersion > 0
+            && payload.SchemaVersion <= _options.Contracts.StateSchemaVersion;
         if (contractMatches)
         {
             return;
@@ -618,7 +607,7 @@ internal sealed class LocalStreamCommitter<TState, TInput>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The decoded inputs.</returns>
     private async ValueTask<IReadOnlyList<TInput>> DecodeRemoteInputsAsync(
-        IReadOnlyList<RemoteEvent> events,
+        List<RemoteEvent> events,
         CancellationToken cancellationToken)
     {
         List<TInput> decodedInputs = [with(capacity: events.Count)];
@@ -662,7 +651,7 @@ internal sealed class LocalStreamCommitter<TState, TInput>
     private async ValueTask<RemoteStreamCommitResult<TState, TInput>> CommitFilteredRemoteBatchAsync(
         RemoteEventBatch batch,
         LocalStreamCommitterState<TState> observed,
-        IReadOnlyList<RemoteEvent> filteredEvents,
+        List<RemoteEvent> filteredEvents,
         int duplicateCount,
         CancellationToken cancellationToken)
     {
@@ -670,15 +659,18 @@ internal sealed class LocalStreamCommitter<TState, TInput>
         ThrowIfRevisionOverflow(observed.Revision);
         var decodedInputs = await DecodeRemoteInputsAsync(filteredEvents, cancellationToken).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
-        var nextStateValue = ApplyRemoteProjection(observed.State, filteredEvents, decodedInputs);
+        var rebuilt = await RebuildRemoteStateAsync(batch, observed, filteredEvents, decodedInputs, cancellationToken).ConfigureAwait(false);
+        var nextStateValue = rebuilt.State;
         cancellationToken.ThrowIfCancellationRequested();
         var nextStatePayload = await _options.Dependencies.Serializer
             .SerializeAsync(_options.Contracts.StateContractId, _options.Contracts.StateSchemaVersion, nextStateValue, cancellationToken)
             .ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
+        ValidateStatePayload(nextStatePayload);
 
         var filteredBatch = new RemoteEventBatch(batch.BatchId, batch.StreamId, batch.PreviousCursor, batch.NextCursor, filteredEvents);
-        var storeResult = await ApplyRemoteStoreTransactionAsync(filteredBatch, nextStatePayload, observed.Revision, cancellationToken)
+        var mutation = new SnapshotMutation(_options.StreamId, nextStatePayload, _options.Contracts.SnapshotFormatVersion, observed.Revision) { AuthoritativeState = rebuilt.Authoritative };
+        var storeResult = await ApplyRemoteStoreTransactionAsync(batch, mutation, filteredEvents.Count, cancellationToken)
             .ConfigureAwait(false);
         var nextState = new LocalStreamCommitterState<TState>(
             _options.StreamId,
@@ -686,34 +678,29 @@ internal sealed class LocalStreamCommitter<TState, TInput>
             nextStateValue,
             storeResult.SnapshotRevision,
             observed.NextClientSequence,
-            storeResult.NextCursor);
+            storeResult.NextCursor) { MaterializedPayload = nextStatePayload, AuthoritativePayload = rebuilt.Authoritative };
         SwapCurrent(nextState);
         var receipt = storeResult with { DuplicateCount = duplicateCount };
         return new(receipt, filteredBatch, decodedInputs, nextState);
     }
 
-    /// <summary>Applies the filtered remote batch to the local store.</summary>
-    /// <param name="filteredBatch">The filtered remote batch.</param>
-    /// <param name="nextStatePayload">The serialized next state.</param>
-    /// <param name="expectedRevision">The expected prior revision.</param>
+    /// <summary>Applies the complete remote batch to the local store under its revision fence.</summary>
+    /// <param name="batch">The complete remote batch.</param>
+    /// <param name="mutation">The prepared snapshot mutation.</param>
+    /// <param name="appliedCount">The number of projected new events.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The remote apply receipt.</returns>
     /// <exception cref="InvalidOperationException">The store receipt violates the transaction contract.</exception>
     private async ValueTask<RemoteApplyResult> ApplyRemoteStoreTransactionAsync(
-        RemoteEventBatch filteredBatch,
-        PayloadEnvelope nextStatePayload,
-        long expectedRevision,
+        RemoteEventBatch batch,
+        SnapshotMutation mutation,
+        int appliedCount,
         CancellationToken cancellationToken)
     {
-        var mutation = new SnapshotMutation(
-            _options.StreamId,
-            nextStatePayload,
-            _options.Contracts.SnapshotFormatVersion,
-            expectedRevision);
         var storeResult = await _options.Dependencies.Store
-            .ApplyRemoteBatchAsync(filteredBatch, mutation, cancellationToken)
+            .ApplyRemoteBatchAsync(batch, mutation, cancellationToken)
             .ConfigureAwait(false);
-        ValidateRemoteStoreResult(storeResult, filteredBatch.NextCursor, filteredBatch.Events.Count, expectedRevision);
+        ValidateRemoteStoreResult(storeResult, batch.NextCursor, appliedCount, batch.Events.Count - appliedCount, mutation.ExpectedRevision);
         return storeResult;
     }
 
@@ -787,11 +774,6 @@ internal sealed class LocalStreamCommitter<TState, TInput>
     /// <exception cref="InvalidOperationException">The batch metadata is invalid.</exception>
     private void ValidateRemoteBatchHeader(RemoteEventBatch batch)
     {
-        if (batch.BatchId == Guid.Empty)
-        {
-            throw new InvalidOperationException("Remote batch identifier must be non-empty.");
-        }
-
         if (batch.StreamId != _options.StreamId)
         {
             throw new InvalidOperationException("Remote batch belongs to a different stream.");
@@ -811,23 +793,8 @@ internal sealed class LocalStreamCommitter<TState, TInput>
     /// <summary>Validates a remote event before inbox lookup.</summary>
     /// <param name="remoteEvent">The remote event.</param>
     /// <exception cref="InvalidOperationException">The remote event metadata is invalid.</exception>
-    private void ValidateRemoteEvent(RemoteEvent? remoteEvent)
+    private void ValidateRemoteEvent(RemoteEvent remoteEvent)
     {
-        if (remoteEvent is null)
-        {
-            throw new InvalidOperationException("Remote batch contains a missing event.");
-        }
-
-        if (remoteEvent.EventId == Guid.Empty)
-        {
-            throw new InvalidOperationException("Remote event identifier must be non-empty.");
-        }
-
-        if (remoteEvent.StreamId != _options.StreamId)
-        {
-            throw new InvalidOperationException("Remote event belongs to a different stream.");
-        }
-
         ValidateCursor(remoteEvent.ServerCursor, "Remote event cursor");
         if (remoteEvent.CausedByOperationId.HasValue && remoteEvent.CausedByOperationId.Value.Value == Guid.Empty)
         {
@@ -896,18 +863,20 @@ internal sealed class LocalStreamCommitter<TState, TInput>
     /// <param name="result">The remote apply result.</param>
     /// <param name="nextCursor">The expected cursor.</param>
     /// <param name="appliedCount">The expected applied count.</param>
+    /// <param name="duplicateCount">The expected duplicate count.</param>
     /// <param name="expectedRevision">The expected prior revision.</param>
     /// <exception cref="InvalidOperationException">The store result violates the transaction contract.</exception>
     private void ValidateRemoteStoreResult(
         RemoteApplyResult? result,
         string nextCursor,
         int appliedCount,
+        int duplicateCount,
         long expectedRevision)
     {
         if (result is not null
             && string.Equals(result.NextCursor, nextCursor, StringComparison.Ordinal)
             && result.AppliedCount == appliedCount
-            && result.DuplicateCount == 0
+            && result.DuplicateCount == duplicateCount
             && result.SnapshotRevision == expectedRevision + 1)
         {
             return;

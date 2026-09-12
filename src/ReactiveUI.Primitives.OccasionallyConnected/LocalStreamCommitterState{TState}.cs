@@ -18,4 +18,11 @@ internal sealed record LocalStreamCommitterState<TState>(
     TState State,
     long Revision,
     long NextClientSequence,
-    string? ServerCursor);
+    string? ServerCursor)
+{
+    /// <summary>Gets the immutable payload used to prepare isolated projection state.</summary>
+    internal PayloadEnvelope? MaterializedPayload { get; init; }
+
+    /// <summary>Gets the authoritative payload, or null when historical authoritative state is unknown.</summary>
+    internal PayloadEnvelope? AuthoritativePayload { get; init; }
+}

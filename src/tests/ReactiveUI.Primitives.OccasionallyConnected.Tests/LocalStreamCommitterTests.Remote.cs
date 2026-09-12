@@ -108,9 +108,7 @@ public sealed partial class LocalStreamCommitterTests
         await Assert.That(committer.Current.ServerCursor).IsEqualTo(NextRemoteCursor);
         await Assert.That(store.UnappliedLookupCallCount).IsEqualTo(1);
         await Assert.That(store.RemoteApplyCallCount).IsEqualTo(1);
-        await Assert.That(store.AppliedRemoteBatch?.Events.Count).IsEqualTo(FilteredRemoteEventCount);
-        await Assert.That(store.AppliedRemoteBatch?.Events[0]).IsSameReferenceAs(first);
-        await Assert.That(store.AppliedRemoteBatch?.Events[1]).IsSameReferenceAs(second);
+        await Assert.That(store.AppliedRemoteBatch).IsSameReferenceAs(batch);
         await Assert.That(store.AppliedRemoteSnapshot?.ExpectedRevision).IsEqualTo(0);
         await Assert.That(store.AppliedRemoteSnapshot?.State.ContractId).IsEqualTo(StateContract);
     }
@@ -158,7 +156,7 @@ public sealed partial class LocalStreamCommitterTests
         await Assert.That(result.State.Revision).IsEqualTo(RecoveredSnapshotRevision + 1);
         await Assert.That(committer.Current.ServerCursor).IsEqualTo(AdvancedRemoteCursor);
         await Assert.That(store.RemoteApplyCallCount).IsEqualTo(1);
-        await Assert.That(store.AppliedRemoteBatch?.Events.Count).IsEqualTo(0);
+        await Assert.That(store.AppliedRemoteBatch).IsSameReferenceAs(batch);
     }
 
     /// <summary>Verifies old duplicate replay can succeed even when no mutation revision can be created.</summary>
@@ -572,6 +570,7 @@ public sealed partial class LocalStreamCommitterTests
         var first = CreateRemoteEvent(FirstRemoteValue);
         var second = CreateRemoteEvent(SecondRemoteValue);
         var store = new ScriptedLocalStore { UnappliedEventIdsOverride = new SwitchingLookupResult(first.EventId, second.EventId) };
+        _ = store.MarkEventApplied(second.EventId);
         var committer = await CreateRecoveredCommitterAsync(store);
 
         var result = await committer.ApplyRemoteBatchAsync(CreateRemoteBatch(null, NextRemoteCursor, [first, second]), CancellationToken.None);

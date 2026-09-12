@@ -54,8 +54,8 @@ public sealed partial class SqliteLocalCommitStoreTests
         using var store = CreateInitializedStore(database.Path, clock);
         var first = CommitOperation(store, Stream, clientSequence: 1, "old");
         var second = CommitOperation(store, Stream, SecondClientSequence, "new");
-        SetOperationStateAt(database.Path, first.OperationId, SyncOperationState.Synchronized, CompactionNow.AddDays(EligibleTerminalAgeDays));
-        SetOperationStateAt(database.Path, second.OperationId, SyncOperationState.Synchronized, CompactionNow.AddDays(EligibleTerminalAgeDays));
+        SetOperationStateAt(database.Path, first.OperationId, SyncOperationState.Rejected, CompactionNow.AddDays(EligibleTerminalAgeDays));
+        SetOperationStateAt(database.Path, second.OperationId, SyncOperationState.Rejected, CompactionNow.AddDays(EligibleTerminalAgeDays));
         var firstBytes = ReadOutboxEncodedBytes(database.Path, first.OperationId);
 
         var result = store.Compact(
@@ -83,7 +83,7 @@ public sealed partial class SqliteLocalCommitStoreTests
         using var store = CreateInitializedStore(database.Path, clock);
         var terminal = CommitOperation(store, Stream, clientSequence: 1, TerminalCompactionPayloadText);
         var conflict = CommitOperation(store, Stream, SecondClientSequence, "conflict");
-        SetOperationStateAt(database.Path, terminal.OperationId, SyncOperationState.Synchronized, CompactionNow.AddDays(EligibleTerminalAgeDays));
+        SetOperationStateAt(database.Path, terminal.OperationId, SyncOperationState.Rejected, CompactionNow.AddDays(EligibleTerminalAgeDays));
         SetOperationStateAt(database.Path, conflict.OperationId, SyncOperationState.Conflict, CompactionNow.AddDays(EligibleTerminalAgeDays));
 
         var result = store.Compact(
@@ -107,9 +107,9 @@ public sealed partial class SqliteLocalCommitStoreTests
         var terminal = CommitOperation(store, Stream, clientSequence: 1, TerminalCompactionPayloadText);
         var deadLetter = CommitOperation(store, Stream, SecondClientSequence, "dead");
         var current = CommitOperation(store, Stream, ThirdClientSequence, CurrentCompactionPayloadText);
-        SetOperationStateAt(database.Path, terminal.OperationId, SyncOperationState.Synchronized, CompactionNow.AddDays(EligibleTerminalAgeDays));
+        SetOperationStateAt(database.Path, terminal.OperationId, SyncOperationState.Rejected, CompactionNow.AddDays(EligibleTerminalAgeDays));
         SetOperationStateAt(database.Path, deadLetter.OperationId, SyncOperationState.DeadLettered, CompactionNow.AddDays(RetainedDeadLetterAgeDays));
-        SetOperationStateAt(database.Path, current.OperationId, SyncOperationState.Synchronized, CompactionNow.AddDays(EligibleTerminalAgeDays));
+        SetOperationStateAt(database.Path, current.OperationId, SyncOperationState.Rejected, CompactionNow.AddDays(EligibleTerminalAgeDays));
 
         var result = store.Compact(
             new(Stream, CompactionNow.AddDays(-1), TargetBytes: 0),
@@ -131,7 +131,7 @@ public sealed partial class SqliteLocalCommitStoreTests
         var clock = new ManualTimeProvider(CompactionNow);
         using var store = CreateInitializedStore(database.Path, clock);
         var terminal = CommitOperation(store, Stream, clientSequence: 1, TerminalCompactionPayloadText);
-        SetOperationStateAt(database.Path, terminal.OperationId, SyncOperationState.Synchronized, CompactionNow.AddDays(ExpiredInboxAgeDays));
+        SetOperationStateAt(database.Path, terminal.OperationId, SyncOperationState.Rejected, CompactionNow.AddDays(ExpiredInboxAgeDays));
         var oldEvent = CreateRemoteEvent(FirstRemoteCursor);
         var retainedEvent = CreateRemoteEvent(SecondRemoteCursor);
         InsertInboxEvent(database.Path, oldEvent);
@@ -193,8 +193,8 @@ public sealed partial class SqliteLocalCommitStoreTests
         using var store = CreateInitializedStore(database.Path, clock);
         var old = CommitOperation(store, Stream, clientSequence: 1, "old");
         var current = CommitOperation(store, Stream, SecondClientSequence, CurrentCompactionPayloadText);
-        SetOperationStateAt(database.Path, old.OperationId, SyncOperationState.Synchronized, CompactionNow.AddDays(EligibleTerminalAgeDays));
-        SetOperationStateAt(database.Path, current.OperationId, SyncOperationState.Synchronized, CompactionNow.AddDays(EligibleTerminalAgeDays));
+        SetOperationStateAt(database.Path, old.OperationId, SyncOperationState.Rejected, CompactionNow.AddDays(EligibleTerminalAgeDays));
+        SetOperationStateAt(database.Path, current.OperationId, SyncOperationState.Rejected, CompactionNow.AddDays(EligibleTerminalAgeDays));
         var targetBytes = ReadOutboxEncodedBytes(database.Path, Stream);
 
         var result = store.Compact(
@@ -219,9 +219,9 @@ public sealed partial class SqliteLocalCommitStoreTests
         var first = CommitOperation(store, Stream, clientSequence: 1, "aa");
         var second = CommitOperation(store, Stream, SecondClientSequence, "bb");
         var current = CommitOperation(store, Stream, ThirdClientSequence, "cc");
-        SetOperationStateAt(database.Path, first.OperationId, SyncOperationState.Synchronized, CompactionNow.AddDays(EligibleTerminalAgeDays));
+        SetOperationStateAt(database.Path, first.OperationId, SyncOperationState.Rejected, CompactionNow.AddDays(EligibleTerminalAgeDays));
         SetOperationStateAt(database.Path, second.OperationId, SyncOperationState.Rejected, CompactionNow.AddDays(EligibleTerminalAgeDays));
-        SetOperationStateAt(database.Path, current.OperationId, SyncOperationState.Synchronized, CompactionNow.AddDays(EligibleTerminalAgeDays));
+        SetOperationStateAt(database.Path, current.OperationId, SyncOperationState.Rejected, CompactionNow.AddDays(EligibleTerminalAgeDays));
         var firstBytes = ReadOutboxEncodedBytes(database.Path, first.OperationId);
         var targetBytes = ReadOutboxEncodedBytes(database.Path, Stream) - firstBytes;
 
@@ -247,8 +247,8 @@ public sealed partial class SqliteLocalCommitStoreTests
         using var store = CreateInitializedStore(database.Path, clock);
         var first = CommitOperation(store, Stream, clientSequence: 1, "old");
         var current = CommitOperation(store, Stream, SecondClientSequence, CurrentCompactionPayloadText);
-        SetOperationStateAt(database.Path, first.OperationId, SyncOperationState.Synchronized, CompactionNow.AddDays(EligibleTerminalAgeDays));
-        SetOperationStateAt(database.Path, current.OperationId, SyncOperationState.Synchronized, CompactionNow.AddDays(EligibleTerminalAgeDays));
+        SetOperationStateAt(database.Path, first.OperationId, SyncOperationState.Rejected, CompactionNow.AddDays(EligibleTerminalAgeDays));
+        SetOperationStateAt(database.Path, current.OperationId, SyncOperationState.Rejected, CompactionNow.AddDays(EligibleTerminalAgeDays));
         CreateCompactionRollbackTrigger(database.Path);
 
         var action = () => store.Compact(
@@ -275,10 +275,10 @@ public sealed partial class SqliteLocalCommitStoreTests
         var alphaCurrent = CommitOperation(alpha, Stream, SecondClientSequence, "alpha-current");
         var betaOld = CommitOperation(beta, Stream, clientSequence: 1, "beta-old");
         var betaCurrent = CommitOperation(beta, Stream, SecondClientSequence, "beta-current");
-        SetOperationStateAt(database.Path, alphaOld.OperationId, SyncOperationState.Synchronized, CompactionNow.AddDays(EligibleTerminalAgeDays));
-        SetOperationStateAt(database.Path, alphaCurrent.OperationId, SyncOperationState.Synchronized, CompactionNow.AddDays(EligibleTerminalAgeDays));
-        SetOperationStateAt(database.Path, betaOld.OperationId, SyncOperationState.Synchronized, CompactionNow.AddDays(EligibleTerminalAgeDays));
-        SetOperationStateAt(database.Path, betaCurrent.OperationId, SyncOperationState.Synchronized, CompactionNow.AddDays(EligibleTerminalAgeDays));
+        SetOperationStateAt(database.Path, alphaOld.OperationId, SyncOperationState.Rejected, CompactionNow.AddDays(EligibleTerminalAgeDays));
+        SetOperationStateAt(database.Path, alphaCurrent.OperationId, SyncOperationState.Rejected, CompactionNow.AddDays(EligibleTerminalAgeDays));
+        SetOperationStateAt(database.Path, betaOld.OperationId, SyncOperationState.Rejected, CompactionNow.AddDays(EligibleTerminalAgeDays));
+        SetOperationStateAt(database.Path, betaCurrent.OperationId, SyncOperationState.Rejected, CompactionNow.AddDays(EligibleTerminalAgeDays));
 
         var result = alpha.Compact(
             new(Stream, CompactionNow.AddDays(-1), TargetBytes: 0),
@@ -305,10 +305,10 @@ public sealed partial class SqliteLocalCommitStoreTests
         var secondCurrent = CommitOperation(store, ReopenedStream, SecondClientSequence, "second-current");
         var remoteEvent = CreateRemoteEvent(Guid.NewGuid(), ReopenedStream, FirstRemoteCursor, null);
         InsertInboxEvent(database.Path, remoteEvent);
-        SetOperationStateAt(database.Path, firstOld.OperationId, SyncOperationState.Synchronized, CompactionNow.AddDays(EligibleTerminalAgeDays));
-        SetOperationStateAt(database.Path, firstCurrent.OperationId, SyncOperationState.Synchronized, CompactionNow.AddDays(EligibleTerminalAgeDays));
+        SetOperationStateAt(database.Path, firstOld.OperationId, SyncOperationState.Rejected, CompactionNow.AddDays(EligibleTerminalAgeDays));
+        SetOperationStateAt(database.Path, firstCurrent.OperationId, SyncOperationState.Rejected, CompactionNow.AddDays(EligibleTerminalAgeDays));
         SetOperationStateAt(database.Path, secondOld.OperationId, SyncOperationState.Rejected, CompactionNow.AddDays(EligibleTerminalAgeDays));
-        SetOperationStateAt(database.Path, secondCurrent.OperationId, SyncOperationState.Synchronized, CompactionNow.AddDays(EligibleTerminalAgeDays));
+        SetOperationStateAt(database.Path, secondCurrent.OperationId, SyncOperationState.Rejected, CompactionNow.AddDays(EligibleTerminalAgeDays));
         SetInboxCommittedAt(database.Path, remoteEvent.EventId, CompactionNow.AddDays(ExpiredInboxAgeDays));
         var expectedBytes = ReadOutboxEncodedBytes(database.Path, firstOld.OperationId) + ReadOutboxEncodedBytes(database.Path, secondOld.OperationId);
 
@@ -338,8 +338,8 @@ public sealed partial class SqliteLocalCommitStoreTests
         using var store = CreateInitializedStore(database.Path, clock);
         var old = CommitOperation(store, Stream, clientSequence: 1, "old");
         var current = CommitOperation(store, Stream, SecondClientSequence, CurrentCompactionPayloadText);
-        SetOperationStateAt(database.Path, old.OperationId, SyncOperationState.Synchronized, CompactionNow.AddDays(EligibleTerminalAgeDays));
-        SetOperationStateAt(database.Path, current.OperationId, SyncOperationState.Synchronized, CompactionNow.AddDays(EligibleTerminalAgeDays));
+        SetOperationStateAt(database.Path, old.OperationId, SyncOperationState.Rejected, CompactionNow.AddDays(EligibleTerminalAgeDays));
+        SetOperationStateAt(database.Path, current.OperationId, SyncOperationState.Rejected, CompactionNow.AddDays(EligibleTerminalAgeDays));
         CreateCompactionIgnoreOutboxDeleteTrigger(database.Path);
 
         var action = () => store.Compact(

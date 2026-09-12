@@ -386,7 +386,7 @@ public sealed partial class InMemoryLocalStoreAdapterTests
         var lease = RequireBatch(await LeaseSingleBatchAsync(store, new(Stream, 1, DefaultLeaseBytes, TimeSpan.FromMinutes(1))));
         await store.ApplySyncResultAsync(
             lease.LeaseId,
-            new(lease.LeaseId, [new(operation.OperationId, OperationResultKind.Accepted, null, ServerVersion)], null, null),
+            new(lease.LeaseId, [new(operation.OperationId, OperationResultKind.Rejected, null, ServerVersion)], null, null),
             CancellationToken.None);
         var remoteEvent = CreateRemoteEvent(RemoteCursor);
         _ = await store.ApplyRemoteBatchAsync(
@@ -415,7 +415,7 @@ public sealed partial class InMemoryLocalStoreAdapterTests
         var lease = RequireBatch(await LeaseSingleBatchAsync(store, new(Stream, 1, DefaultLeaseBytes, TimeSpan.FromMinutes(1))));
         await store.ApplySyncResultAsync(
             lease.LeaseId,
-            new(lease.LeaseId, [new(operation.OperationId, OperationResultKind.Accepted, null, ServerVersion)], null, null),
+            new(lease.LeaseId, [new(operation.OperationId, OperationResultKind.Rejected, null, ServerVersion)], null, null),
             CancellationToken.None);
         clock.Advance(TimeSpan.FromDays(CompactionAdvanceDays));
 
