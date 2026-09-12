@@ -41,6 +41,12 @@ public partial class SignalOperatorMixinsTests
     /// <summary>The long constant three.</summary>
     private const long ThreeLong = 3L;
 
+    /// <summary>The number of threads that rendezvous before the disposal race starts.</summary>
+    private const int RacingThreadCount = 2;
+
+    /// <summary>The completion guard for asynchronously scheduled enumeration on instrumented CI hosts.</summary>
+    private static readonly TimeSpan AsyncEnumerationCompletionTimeout = TimeSpan.FromSeconds(30);
+
     /// <summary>A fixed deterministic timestamp used in place of the current time.</summary>
     private static readonly DateTimeOffset FixedTimestamp = new(2024, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
@@ -462,11 +468,11 @@ public partial class SignalOperatorMixinsTests
         List<int> asyncValues = [];
         TaskCompletionSource<object?> asyncCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using CancellationTokenSource asyncToken = new();
-        _ = Signal.FromAsyncEnumerable(AsyncValues(Three), asyncToken.Token).Subscribe(
+        using var asyncSubscription = Signal.FromAsyncEnumerable(AsyncValues(Three), asyncToken.Token).Subscribe(
             asyncValues.Add,
             ex => asyncCompleted.TrySetException(ex),
             () => asyncCompleted.TrySetResult(null));
-        await asyncCompleted.Task.ConfigureAwait(false);
+        await asyncCompleted.Task.WaitAsync(AsyncEnumerationCompletionTimeout).ConfigureAwait(false);
         int[] expectedAsyncValues = [0, One, Two];
         await Assert.That(asyncValues.SequenceEqual(expectedAsyncValues)).IsTrue();
         var exact = await Signal.FromAsyncEnumerable(AsyncValues(Sixteen)).CollectArrayAsync().ConfigureAwait(false);
