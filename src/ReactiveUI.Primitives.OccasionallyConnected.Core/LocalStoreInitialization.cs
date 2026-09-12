@@ -6,7 +6,7 @@ namespace ReactiveUI.Primitives.OccasionallyConnected;
 
 /// <summary>Describes local store initialization requirements.</summary>
 /// <param name="StoreIdentity">The stable store identity.</param>
-/// <param name="RequiredSchemaVersion">The required schema version.</param>
+/// <param name="RequiredSchemaVersion">The minimum schema version the adapter must support.</param>
 /// <param name="RequireAuthenticatedEncryptionAtRest">Whether authenticated encryption at rest is required.</param>
 [System.Diagnostics.DebuggerDisplay("{StoreIdentity,nq}")]
 public sealed record LocalStoreInitialization(

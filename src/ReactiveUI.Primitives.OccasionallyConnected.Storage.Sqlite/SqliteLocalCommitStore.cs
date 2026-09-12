@@ -323,13 +323,12 @@ internal sealed class SqliteLocalCommitStore : IDisposable
     /// <param name="leaseId">The lease identifier.</param>
     /// <param name="extension">The lease extension duration.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>A completed value task.</returns>
     /// <exception cref="ArgumentException">The lease identifier or extension is invalid.</exception>
     /// <exception cref="InvalidOperationException">The store has not been initialized or the lease is not current.</exception>
     /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
     /// <exception cref="OperationCanceledException">The operation is canceled before the transaction commits.</exception>
     /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
-    internal ValueTask RenewLeaseAsync(Guid leaseId, TimeSpan extension, CancellationToken cancellationToken)
+    internal void RenewLease(Guid leaseId, TimeSpan extension, CancellationToken cancellationToken)
     {
         SqliteLocalCommitValidation.ValidateLeaseRenewalInput(leaseId, extension);
         cancellationToken.ThrowIfCancellationRequested();
@@ -354,20 +353,28 @@ internal sealed class SqliteLocalCommitStore : IDisposable
             cancellationToken.ThrowIfCancellationRequested();
             transaction.Commit();
         }
+    }
 
+    /// <summary>Extends an active outbox lease.</summary>
+    /// <param name="leaseId">The lease identifier.</param>
+    /// <param name="extension">The lease extension duration.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A completed value task.</returns>
+    internal ValueTask RenewLeaseAsync(Guid leaseId, TimeSpan extension, CancellationToken cancellationToken)
+    {
+        RenewLease(leaseId, extension, cancellationToken);
         return default;
     }
 
     /// <summary>Releases an outbox lease.</summary>
     /// <param name="leaseId">The lease identifier.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>A completed value task.</returns>
     /// <exception cref="ArgumentException">The lease identifier is invalid.</exception>
     /// <exception cref="InvalidOperationException">The store has not been initialized or the lease membership is incomplete.</exception>
     /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
     /// <exception cref="OperationCanceledException">The operation is canceled before the transaction commits.</exception>
     /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
-    internal ValueTask ReleaseLeaseAsync(Guid leaseId, CancellationToken cancellationToken)
+    internal void ReleaseLease(Guid leaseId, CancellationToken cancellationToken)
     {
         SqliteLocalCommitValidation.ValidateLeaseId(leaseId);
         cancellationToken.ThrowIfCancellationRequested();
@@ -385,7 +392,15 @@ internal sealed class SqliteLocalCommitStore : IDisposable
             cancellationToken.ThrowIfCancellationRequested();
             transaction.Commit();
         }
+    }
 
+    /// <summary>Releases an outbox lease.</summary>
+    /// <param name="leaseId">The lease identifier.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A completed value task.</returns>
+    internal ValueTask ReleaseLeaseAsync(Guid leaseId, CancellationToken cancellationToken)
+    {
+        ReleaseLease(leaseId, cancellationToken);
         return default;
     }
 
@@ -645,8 +660,7 @@ internal sealed class SqliteLocalCommitStore : IDisposable
     /// <param name="operationId">The operation identifier.</param>
     /// <param name="retryState">The retry state.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>A completed value task.</returns>
-    internal ValueTask SaveRetryStateAsync(OperationId operationId, RetryState retryState, CancellationToken cancellationToken)
+    internal void SaveRetryState(OperationId operationId, RetryState retryState, CancellationToken cancellationToken)
     {
         SqliteLocalCommitValidation.ValidateRetryStateInput(operationId, retryState);
         cancellationToken.ThrowIfCancellationRequested();
@@ -664,25 +678,17 @@ internal sealed class SqliteLocalCommitStore : IDisposable
             cancellationToken.ThrowIfCancellationRequested();
             transaction.Commit();
         }
-
-        return default;
     }
 
-    /// <summary>Adds a duration to a UTC timestamp and rejects overflow.</summary>
-    /// <param name="timestamp">The timestamp.</param>
-    /// <param name="duration">The duration.</param>
-    /// <returns>The summed timestamp.</returns>
-    /// <exception cref="ArgumentException">The resulting timestamp is outside the supported range.</exception>
-    private static DateTimeOffset CheckedAdd(DateTimeOffset timestamp, TimeSpan duration)
+    /// <summary>Saves durable retry state for an operation after a retryable decision or ambiguous attempt.</summary>
+    /// <param name="operationId">The operation identifier that owns the retry state.</param>
+    /// <param name="retryState">The retry state to save.</param>
+    /// <param name="cancellationToken">The token used to cancel retry state persistence.</param>
+    /// <returns>A task representing the operation.</returns>
+    internal ValueTask SaveRetryStateAsync(OperationId operationId, RetryState retryState, CancellationToken cancellationToken)
     {
-        try
-        {
-            return timestamp.Add(duration);
-        }
-        catch (ArgumentOutOfRangeException exception)
-        {
-            throw new ArgumentException("The SQLite outbox lease expiry is outside the supported timestamp range.", nameof(duration), exception);
-        }
+        SaveRetryState(operationId, retryState, cancellationToken);
+        return default;
     }
 
     /// <summary>Applies remote synchronization results to the currently leased batch.</summary>
@@ -696,7 +702,7 @@ internal sealed class SqliteLocalCommitStore : IDisposable
     /// <exception cref="OperationCanceledException">The operation is canceled before the transaction commits.</exception>
     /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
     /// <exception cref="SyncBatchValidationException">The result does not exactly match the leased batch.</exception>
-    private void ApplySyncResult(Guid leaseId, RemoteSyncResult result, CancellationToken cancellationToken)
+    internal void ApplySyncResult(Guid leaseId, RemoteSyncResult result, CancellationToken cancellationToken)
     {
         SqliteLocalCommitValidation.ValidateSyncResultInput(leaseId, result);
         cancellationToken.ThrowIfCancellationRequested();
@@ -718,6 +724,23 @@ internal sealed class SqliteLocalCommitStore : IDisposable
         SqliteLocalCommitSql.ReleaseLease(connection, transaction, storeIdentity, leaseId);
         cancellationToken.ThrowIfCancellationRequested();
         transaction.Commit();
+    }
+
+    /// <summary>Adds a duration to a UTC timestamp and rejects overflow.</summary>
+    /// <param name="timestamp">The timestamp.</param>
+    /// <param name="duration">The duration.</param>
+    /// <returns>The summed timestamp.</returns>
+    /// <exception cref="ArgumentException">The resulting timestamp is outside the supported range.</exception>
+    private static DateTimeOffset CheckedAdd(DateTimeOffset timestamp, TimeSpan duration)
+    {
+        try
+        {
+            return timestamp.Add(duration);
+        }
+        catch (ArgumentOutOfRangeException exception)
+        {
+            throw new ArgumentException("The SQLite outbox lease expiry is outside the supported timestamp range.", nameof(duration), exception);
+        }
     }
 
     /// <summary>Throws when initialization tries to switch this instance to a different durable partition.</summary>
