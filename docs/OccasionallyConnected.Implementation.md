@@ -233,6 +233,20 @@ Linux and macOS across the four modern frameworks. Full-solution CI builds remai
   tests then passed on each modern framework (1,072 executions). Mtpunittestmcp confirmed 794/794 lines and 290/290
   branches on each target; all eight Core library targets build with zero warnings and errors.
 
-The implemented identity, configuration, policy, serialization, admission, protocol, negotiation, observer and fault-model stages are verified. Adapter conformance,
+### Stage 2g: typed stream definitions
+
+- Added immutable typed stream definitions with required stream identity, projection and input/state contract identifiers.
+  Input schema, state schema and snapshot format versions default to one and must remain positive.
+- Validates optional subscription, publication and observer-input settings together. Nested stream identities must match;
+  explicitly supplied subscription identities must agree. Custom-policy support and configured publication priority bounds
+  flow into nested validation. Wire contract identifiers are validated without normalization.
+- Root review expanded tests for durable subscription identity placement, isolated custom policies, null contracts,
+  invalid priority ranges and forbidden blocking observer bridges. Inverting the stream-identity comparison produced two
+  executable failures before restoration, confirming the tests detect cross-stream configuration errors.
+- GREEN: all 289 Core TUnit tests passed on each modern framework (1,156 executions). Mtpunittestmcp confirmed
+  846/846 lines and 314/314 branches on each target. All eight Core library targets build with zero warnings/errors.
+- Durable default subscription identity resolution and context caching/startup remain runtime integration work.
+
+The implemented identity, configuration, policy, serialization, admission, protocol, negotiation, observer, fault-model and stream-definition stages are verified. Adapter conformance,
 remaining facade contracts and integrated runtime/durability stages are still incomplete. Passing option validation alone does not establish a
 delivery guarantee or establish that a custom policy preserves durable work; the runtime must enforce both.

@@ -784,6 +784,26 @@ public enum StartPositionKind
     FromSequence = 2,
     FromCursor = 3,
 }
+[System.Diagnostics.DebuggerDisplay("{StreamId.Value,nq}; Subscription={SubscriptionId,nq}")]
+public record StreamDefinition<TState, TInput> : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.StreamDefinition<TState, TInput>>
+{
+    public ReactiveUI.Primitives.OccasionallyConnected.ObserverInputOptions? Input { get; init; }
+    public required string InputContractId { get; init; }
+    public int InputSchemaVersion { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.ILocalProjection<TState, TInput> Projection { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.RemotePublishOptions? Publish { get; init; }
+    public int SnapshotFormatVersion { get; init; }
+    public required string StateContractId { get; init; }
+    public int StateSchemaVersion { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.StreamId StreamId { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.RemoteSubscriptionOptions? Subscription { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.SubscriptionId? SubscriptionId { get; init; }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public void Validate() { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public void Validate(bool supportsCustomPolicy) { }
+    public void Validate(bool supportsCustomPolicy, int minimumPriority, int maximumPriority) { }
+}
 [System.Diagnostics.DebuggerDisplay("{Value,nq}")]
 public readonly record struct StreamId : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.StreamId>
 {
