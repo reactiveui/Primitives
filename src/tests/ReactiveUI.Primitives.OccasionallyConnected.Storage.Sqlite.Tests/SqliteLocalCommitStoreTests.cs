@@ -326,15 +326,26 @@ public sealed partial class SqliteLocalCommitStoreTests
         await using var blocker = OpenRawConnection(database.Path);
         await using var transaction = blocker.BeginTransaction();
         InsertBlockingIdentity(blocker, transaction);
-        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var blockedCommit = Task.Run(() =>
-        {
-            started.SetResult();
-            return store.CommitLocalOperation(CreateOperation(clientSequence: 1), CreateSnapshotMutation(expectedRevision: 0), cancellation.Token);
-        });
+        using var started = new ManualResetEventSlim();
+        var blockedCommit = Task.Factory.StartNew(
+            static state =>
+            {
+                if (state is not WriterWaitContext context)
+                {
+                    throw new InvalidOperationException("The writer task state is missing.");
+                }
 
-        await started.Task;
-        await Task.Delay(TimeSpan.FromMilliseconds(ManagedBusyRetryDelayMilliseconds));
+                context.Started.Set();
+                return context.Store.CommitLocalOperation(CreateOperation(clientSequence: 1), CreateSnapshotMutation(expectedRevision: 0), context.Token);
+            },
+            new WriterWaitContext(started, store, cancellation.Token),
+            CancellationToken.None,
+            TaskCreationOptions.LongRunning,
+            TaskScheduler.Default);
+
+        started.Wait();
+        using var writerWait = new ManualResetEventSlim();
+        _ = writerWait.Wait(TimeSpan.FromMilliseconds(ManagedBusyRetryDelayMilliseconds));
         await cancellation.CancelAsync();
 
         await Assert.That(async () => await blockedCommit).ThrowsExactly<OperationCanceledException>();
@@ -938,4 +949,10 @@ public sealed partial class SqliteLocalCommitStoreTests
         await Assert.That(malformedDate).ThrowsExactly<InvalidOperationException>();
         await Assert.That(SqliteLocalCommitSql.ReadBytes(reader, BytesColumnIndex, "bytes").Length).IsEqualTo(1);
     }
+
+    /// <summary>The owned state passed to the dedicated writer task.</summary>
+    /// <param name="Started">Signals that the writer task has started.</param>
+    /// <param name="Store">The store attempting to acquire the writer lock.</param>
+    /// <param name="Token">The cancellation token observed by the writer.</param>
+    private sealed record WriterWaitContext(ManualResetEventSlim Started, SqliteLocalCommitStore Store, CancellationToken Token);
 }
