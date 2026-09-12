@@ -280,6 +280,18 @@ Linux and macOS across the four modern frameworks. Full-solution CI builds remai
 - This defines the adapter contract. Persistent mapping implementations, concurrent store conformance and engine startup
   integration remain subsequent work; forwarding tests do not establish durable storage behavior.
 
+### Stage 3c: typed capacity failures
+
+- Added `QueueCapacityExceededException` for rejection before persistence. An explicit `CanFitWhenEmpty` hint distinguishes
+  an operation that might fit after draining from one that cannot fit the configured empty queue. Standard exception
+  constructors default to no automatic wait; the hint does not guarantee future admission.
+- Preserves messages and wrapped causes, rejects null messages, and includes the standard exception constructors required
+  by repository analyzers. Root review added the wrapped null-message regression and checked standard constructor messages.
+- Inverting the capacity hint produced three executable TUnit failures before restoration. All 296 Core tests pass on
+  each modern framework; Mtpunittestmcp confirms 856/856 lines and 318/318 branches on every target.
+  All eight Core library targets build with zero warnings and errors.
+- Queue/store use of this failure and the bounded wait-for-capacity path remain subsequent integration work.
+
 The implemented identity, configuration, policy, serialization, admission, protocol, negotiation, observer, fault-model, stream-definition and local-commit stages are verified. Adapter conformance,
 remaining facade contracts and integrated runtime/durability stages are still incomplete. Passing option validation alone does not establish a
 delivery guarantee or establish that a custom policy preserves durable work; the runtime must enforce both.

@@ -502,6 +502,15 @@ public enum PayloadSchemaFailureReason
     SerializationFailed = 11,
     UpcasterFailed = 12,
 }
+[System.Diagnostics.DebuggerDisplay("{Message,nq}; CanFitWhenEmpty={CanFitWhenEmpty}")]
+public sealed class QueueCapacityExceededException : System.InvalidOperationException
+{
+    public QueueCapacityExceededException() { }
+    public QueueCapacityExceededException(string message) { }
+    public QueueCapacityExceededException(string message, bool canFitWhenEmpty) { }
+    public QueueCapacityExceededException(string message, System.Exception innerException) { }
+    public bool CanFitWhenEmpty { get; }
+}
 [System.Diagnostics.DebuggerDisplay("{OperationCount,nq} operations")]
 public record PendingSyncSummary : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.PendingSyncSummary>
 {
