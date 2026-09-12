@@ -391,7 +391,7 @@ delivery guarantee or establish that a custom policy preserves durable work; the
 
 ## Local consolidation — 2026-09-12
 
-OccasionallyConnected is now the sole local feature branch. All 61 prior CP_* branch heads were checked for ancestry and merged where necessary, then their local branch refs were deleted. Detached worktrees preserve all tracked and untracked drafts unchanged; none were deleted. The SQLite remote draft remains pending independent review and completion. No push or PR is permitted until the complete feature is implemented and verified; the eventual publication is one final PR.
+OccasionallyConnected is now the sole local feature branch. All 61 prior CP_* branch heads were checked for ancestry and merged where necessary, then their local branch refs were deleted. Detached worktrees preserve tracked and untracked drafts; none were deleted. The SQLite remote draft subsequently completed independent review as stage 4c. No push or PR is permitted until the complete feature is implemented and verified; the eventual publication is one final PR.
 
 Conflict resolution retained the current Core APIs, SQLite registration, implementation ledger and newer dependency pins. It retained coverage collector18.11.2 and the TUnit cancellation-token CI repair. Old reconciliation branches contributed history without removing newer feature work. The consolidated solution at 4f2873e passed its full Release build with zero warnings and errors. Core319, runtime298 and SQLite82 tests passed on each modern target with matching 100% line and branch coverage. Existing Primitives tests also passed on all four targets.
 
@@ -409,3 +409,29 @@ Conflict resolution retained the current Core APIs, SQLite registration, impleme
   Tests include reopen, historical migration, mixed cursors, rollback, corruption, cancellation and partition isolation.
 - This remains an internal component. Leases, retry barriers, retention, encryption, the public asynchronous adapter
   and process-crash conformance remain incomplete. No full adapter capability is advertised.
+
+### Stage 3i: persisted status and synchronization waiting
+
+- Added the engine's persisted operation-status lookup contract and explicit cancellation overload. Root verified
+  exact operation-ID forwarding with an executable mutation regression. All 321 Core tests pass on each modern
+  target with 874/874 lines and 318/318 branches covered; all eight library targets build without warnings or errors.
+- Added public synchronization waits with system or injected clocks. Subscription precedes persisted lookup, covering
+  completion during lookup and recovery of an already persisted result. Conflicts remain pending; terminal failures,
+  timeouts, cancellation and exhausted status sources finish the wait and release its subscription.
+- Timeout does not wait for an adapter cancellation callback or stop durable synchronization. A pending lookup may
+  finish independently, with errors observed. Executable regressions exposed premature completion and a timeout
+  blocked by an adapter callback before the implementation was corrected.
+- Root verified all 321 runtime tests on each modern target with 100% line and branch coverage: 1444 lines on net8,
+  1432 on net9/net10, 1425 on net11, and 624 branches throughout. All eight library targets build without warnings
+  or errors. Concrete engine integration remains subsequent work.
+
+### Stage 4d: bounded synchronous SQLite worker
+
+- Added an internal FIFO worker with one dedicated execution thread and immediate admission limits covering the
+  active command plus queued commands and caller-declared retained bytes. Queued cancellation releases capacity;
+  cancellation after a committed receipt does not replace that receipt.
+- Concurrent disposal callers share completion while queued work is drained and the active command finishes.
+  Root removed a test-only production callback and verified an executable capacity-boundary regression.
+- All 105 SQLite tests pass on each modern target, with 1249 lines on net8, 1241 on other targets, and 324 branches
+  fully covered. All eight library targets build without warnings or errors. Wiring the worker into the public
+  asynchronous adapter remains subsequent work.
