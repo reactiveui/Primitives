@@ -201,6 +201,25 @@ Linux and macOS across the four modern frameworks. Full-solution CI builds remai
 - Adapter conformance, authenticated handshakes, context startup integration and runtime guarantee-expiry enforcement
   remain subsequent work. Negotiation validates declared capabilities; it does not itself implement those guarantees.
 
-The implemented identity, configuration, policy, serialization, admission, protocol and negotiation stages are verified. Adapter conformance,
+### Stage 2e: isolated observer notifications
+
+- Added an internal dispatcher with independent subscription queues bounded by item count and estimated bytes. The owning
+  stream lane supplies publication order; each subscription drains serially on an asynchronous scheduler outside queue locks.
+- Latest-state overflow can coalesce to the newest state. Event overflow always disconnects with a typed overflow error,
+  even when the subscription permits state coalescing. Accepted data precedes completion/error notification.
+- Disposal clears queued data and pending terminal notifications. A callback already claimed by a drain may start or return
+  after disposal; queued notifications are not claimed afterward. Observer failures disconnect only the affected subscriber.
+- Scheduler rejection clears the affected subscription immediately and returns a typed result without invoking observers,
+  diagnostic reporters or trace listeners on the publisher stack. Reporter failures set a fixed-size health flag and cannot
+  escape through a secondary diagnostic callback. Thread-pool queue rejection is handled explicitly.
+- Agent RED regressions exposed disposal-after-terminal, event coalescing and throwing diagnostic listener failures.
+  Root review removed a nullable suppression and ineffective exception observation code; an executable health-flag regression
+  failed before the flag was implemented. Tests were reorganized under the production types they exercise.
+- GREEN: all 226 runtime TUnit tests passed on each modern framework (904 executions). Mtpunittestmcp confirmed 966/966
+  lines on net8, 955/955 on net9/net10 and 954/954 on net11, with 434/434 branches on every target. All eight runtime library
+  targets build with zero warnings/errors. The unchanged Core package retains its independently verified 100% gate.
+- Integration with the stream lane, source bridges and bounded engine diagnostic emitter remains subsequent work.
+
+The implemented identity, configuration, policy, serialization, admission, protocol, negotiation and observer stages are verified. Adapter conformance,
 remaining facade contracts and integrated runtime/durability stages are still incomplete. Passing option validation alone does not establish a
 delivery guarantee or establish that a custom policy preserves durable work; the runtime must enforce both.
