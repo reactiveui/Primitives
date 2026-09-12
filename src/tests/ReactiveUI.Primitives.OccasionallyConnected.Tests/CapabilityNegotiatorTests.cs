@@ -27,7 +27,7 @@ public sealed class CapabilityNegotiatorTests
     /// <summary>All currently defined local capabilities.</summary>
     private const LocalStoreCapabilities StoreFeatures = LocalStoreCapabilities.AtomicLocalCommit
         | LocalStoreCapabilities.AtomicRemoteApply | LocalStoreCapabilities.DurableInbox | LocalStoreCapabilities.LeasedOutbox
-        | LocalStoreCapabilities.MultiProcessCoordination | LocalStoreCapabilities.AuthenticatedEncryptionAtRest;
+        | LocalStoreCapabilities.MultiProcessCoordination | LocalStoreCapabilities.AuthenticatedEncryptionAtRest | LocalStoreCapabilities.DurableLocalCommit;
 
     /// <summary>Verifies the exactly-once window is bounded by actual client retention.</summary>
     /// <returns>A task representing the assertions.</returns>
@@ -41,6 +41,26 @@ public sealed class CapabilityNegotiatorTests
         await Assert.That(actual.MaximumBatchBytes).IsEqualTo(PeerBytes);
     }
 
+    /// <summary>Verifies atomic ephemeral storage cannot satisfy durable publishing.</summary>
+    /// <returns>A task representing the assertions.</returns>
+    [Test]
+    public async Task InMemoryStoreRejectsDurablePublishing()
+    {
+        await using var store = new InMemoryLocalStoreAdapter();
+        var request = CreateRequest() with
+        {
+            Policy = OperationPolicy.Default,
+            StoreCapabilities = store.Capabilities,
+            PeerOffer = CreateRequest().PeerOffer with { ClientInboxRetentionRequired = null },
+        };
+        await Assert.That(() => CapabilityNegotiator.Negotiate(request)).Throws<InvalidOperationException>();
+
+        request = request with { Policy = request.Policy with { Durability = OperationDurability.Volatile } };
+        var negotiated = CapabilityNegotiator.Negotiate(request);
+        await Assert.That(negotiated.EffectiveExactlyOnceWindow).IsNull();
+        await Assert.That(negotiated.Features).IsEqualTo(RemoteFeatures);
+    }
+
     /// <summary>Verifies each local exactly-once prerequisite is mandatory.</summary>
     /// <param name="missing">The missing capability.</param>
     /// <returns>A task representing the assertions.</returns>
@@ -48,6 +68,7 @@ public sealed class CapabilityNegotiatorTests
     [Arguments(LocalStoreCapabilities.AtomicLocalCommit)]
     [Arguments(LocalStoreCapabilities.AtomicRemoteApply)]
     [Arguments(LocalStoreCapabilities.DurableInbox)]
+    [Arguments(LocalStoreCapabilities.DurableLocalCommit)]
     public async Task ExactlyOnceRejectsMissingStoreCapability(LocalStoreCapabilities missing)
     {
         var request = CreateRequest() with { StoreCapabilities = StoreFeatures & ~missing };

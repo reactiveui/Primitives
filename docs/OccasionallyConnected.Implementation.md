@@ -538,3 +538,13 @@ Conflict resolution retained the current Core APIs, SQLite registration, impleme
 - Root first reproduced the full-store regression with no expired entries reclaimed, then implemented receipt-time
   retention. All 393 runtime TUnit tests pass on each modern target with 100% line and branch coverage: 2365 lines on
   net8, 2335 on net9/net10, 2334 on net11 and 1102 branches throughout. All eight library targets build cleanly.
+### Stage 3m: explicit durable local commit negotiation
+
+- Added a store capability distinguishing persisted local receipts and snapshots from atomic in-memory updates.
+  Durable publishing now requires both atomicity and durable local commits; exactly-once retains its additional inbox
+  and remote apply requirements. The in-memory reference continues to advertise only its process-local capabilities.
+- Root reproduced negotiation incorrectly accepting the in-memory store with the default durable policy. The regression
+  now rejects that configuration and still permits volatile publishing against the same store.
+- All 395 runtime TUnit tests pass on each modern target with MTP-confirmed 100% line and branch coverage: 2365 lines on
+  net8, 2335 on net9/net10, 2334 on net11 and 1102 branches throughout. All eight library targets build without warnings
+  or errors. Core API baselines include the new capability on every target.
