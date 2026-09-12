@@ -16,7 +16,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private const int MinimumRequiredSchemaVersion = 1;
 
     /// <summary>The current SQLite local commit schema version.</summary>
-    private const int SchemaVersion = 5;
+    private const int SchemaVersion = 6;
 
     /// <summary>An unsupported future local store schema version.</summary>
     private const int FutureRequiredSchemaVersion = SchemaVersion + 1;
@@ -102,6 +102,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
         await Assert.That((adapter.Capabilities & LocalStoreCapabilities.AtomicRemoteApply) != 0).IsTrue();
         await Assert.That((adapter.Capabilities & LocalStoreCapabilities.DurableInbox) != 0).IsTrue();
         await Assert.That((adapter.Capabilities & LocalStoreCapabilities.LeasedOutbox) != 0).IsTrue();
+        await Assert.That((adapter.Capabilities & LocalStoreCapabilities.ClientIdentityBinding) != 0).IsTrue();
         await Assert.That((adapter.Capabilities & LocalStoreCapabilities.MultiProcessCoordination) != 0).IsFalse();
         await Assert.That((adapter.Capabilities & LocalStoreCapabilities.AuthenticatedEncryptionAtRest) != 0).IsFalse();
         await Assert.That(invalidCount).ThrowsExactly<ArgumentOutOfRangeException>();
@@ -301,6 +302,34 @@ public sealed partial class SqliteLocalStoreAdapterTests
         Func<Task<LocalCommitResult>> action = () => adapter.CommitLocalOperationAsync(
             operation,
             CreateSnapshotMutation(expectedRevision: 0),
+            CancellationToken.None).AsTask();
+
+        var exception = await Assert.ThrowsExactlyAsync<QueueCapacityExceededException>(action);
+        var recovery = await adapter.RecoverStreamAsync(Stream, subscriptionId, CancellationToken.None);
+
+        await Assert.That(exception?.CanFitWhenEmpty).IsFalse();
+        await Assert.That(recovery.PendingOperations.Count).IsEqualTo(0);
+        await Assert.That(recovery.Snapshot).IsNull();
+    }
+
+    /// <summary>Verifies authoritative snapshot bytes count toward commit admission before SQLite mutation.</summary>
+    /// <returns>A task that represents the asynchronous test.</returns>
+    [Test]
+    public async Task WhenAuthoritativeCommitInputExceedsWorkerBytes_ThenAdmissionRejectsBeforeSQLiteMutation()
+    {
+        using var database = TempDatabase.Create();
+        SqliteLocalStoreAdapterOptions options = new() { WorkerCapacity = TwoWorkerCommands, WorkerCapacityBytes = TinyWorkerBytes };
+        await using var adapter = new SqliteLocalStoreAdapter(database.Path, options);
+        await adapter.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
+        var subscriptionId = await adapter.GetOrCreateSubscriptionIdAsync(Stream, null, CancellationToken.None);
+        var snapshot = CreateSnapshotMutation(expectedRevision: 0) with
+        {
+            AuthoritativeState = CreatePayload(new('a', OversizedPayloadLength)),
+        };
+
+        Func<Task<LocalCommitResult>> action = () => adapter.CommitLocalOperationAsync(
+            CreateOperation(FirstClientSequence),
+            snapshot,
             CancellationToken.None).AsTask();
 
         var exception = await Assert.ThrowsExactlyAsync<QueueCapacityExceededException>(action);

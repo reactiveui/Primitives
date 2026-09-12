@@ -29,6 +29,15 @@ internal sealed partial class InMemoryLocalStoreAdapter
     /// <summary>The encoded byte count for a duration value.</summary>
     private const int TimeSpanEncodedBytes = 8;
 
+    /// <summary>The maximum client identity length in UTF-16 code units.</summary>
+    private const int MaximumClientIdLength = 256;
+
+    /// <summary>The retained metadata key used to represent a client identity binding.</summary>
+    private const string ClientIdentityBindingMetadataKey = "rxui.localstore.client_id";
+
+    /// <summary>The strict UTF-8 encoding used for client identity validation.</summary>
+    private static readonly Encoding StrictUtf8 = new UTF8Encoding(false, true);
+
     /// <summary>Compares operation records by client sequence.</summary>
     /// <param name="left">The first record.</param>
     /// <param name="right">The second record.</param>
@@ -146,6 +155,57 @@ internal sealed partial class InMemoryLocalStoreAdapter
     private static bool IsDefinitiveTerminal(SyncOperationState state) =>
         state is SyncOperationState.Synchronized or SyncOperationState.Rejected or SyncOperationState.DeadLettered;
 
+    /// <summary>Validates an optional client identity binding.</summary>
+    /// <param name="clientId">The client identity.</param>
+    /// <param name="parameterName">The parameter name.</param>
+    /// <returns>The validated client identity.</returns>
+    /// <exception cref="ArgumentException">The client identity is blank, malformed, or too long.</exception>
+    private static string? ValidateClientId(string? clientId, string parameterName)
+    {
+        if (clientId is null)
+        {
+            return null;
+        }
+
+        if (clientId.Length > MaximumClientIdLength)
+        {
+            throw new ArgumentException("ClientId must be at most 256 UTF-16 code units.", parameterName);
+        }
+
+#if NET8_0_OR_GREATER
+        ArgumentException.ThrowIfNullOrWhiteSpace(clientId, parameterName);
+#else
+        ThrowIfBlankClientId(clientId, parameterName);
+#endif
+
+        try
+        {
+            _ = StrictUtf8.GetByteCount(clientId);
+        }
+        catch (EncoderFallbackException exception)
+        {
+            throw new ArgumentException("ClientId must be well-formed Unicode.", parameterName, exception);
+        }
+
+        return clientId;
+    }
+
+#if !NET8_0_OR_GREATER
+    /// <summary>Throws when a client identity is blank on target frameworks without built-in argument validation.</summary>
+    /// <param name="clientId">The client identity.</param>
+    /// <param name="parameterName">The parameter name.</param>
+    /// <exception cref="ArgumentException">The client identity is blank.</exception>
+    private static void ThrowIfBlankClientId(string clientId, string parameterName)
+    {
+        if (!string.IsNullOrWhiteSpace(clientId))
+        {
+            return;
+        }
+
+        throw new ArgumentException("ClientId must not be blank.", parameterName);
+    }
+#endif
+
     /// <summary>Determines whether a stream head must wait for ownership or a retry decision.</summary>
     /// <param name="record">The operation record.</param>
     /// <param name="nowUtc">The sampled current timestamp.</param>
@@ -210,6 +270,7 @@ internal sealed partial class InMemoryLocalStoreAdapter
                     + Int32EncodedBytes
                     + StringBytes(snapshot.ServerCursor)
                     + PayloadCapacityBytes(snapshot.State)
+                    + OptionalPayloadCapacityBytes(snapshot.AuthoritativeState)
                     + Int64EncodedBytes
                     + DateTimeOffsetEncodedBytes));
 
@@ -270,6 +331,13 @@ internal sealed partial class InMemoryLocalStoreAdapter
     private static long PayloadCapacityBytes(PayloadEnvelope payload) =>
         checked(StringBytes(payload.ContractId) + Int32EncodedBytes + StringBytes(payload.ContentType) + Int32EncodedBytes + payload.PayloadLength + StringBytes(payload.PayloadHash));
 
+    /// <summary>Returns the retained optional payload envelope byte count.</summary>
+    /// <param name="payload">The optional payload.</param>
+    /// <returns>The encoded byte count.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static long OptionalPayloadCapacityBytes(PayloadEnvelope? payload) =>
+        payload is null ? 0 : PayloadCapacityBytes(payload);
+
     /// <summary>Returns the retained retry state capacity.</summary>
     /// <param name="retryState">The retry state.</param>
     /// <returns>The retained capacity.</returns>
@@ -295,6 +363,12 @@ internal sealed partial class InMemoryLocalStoreAdapter
         AddCapacity(
             new(1, checked(StreamIdBytes(streamId) + GuidEncodedBytes + Int64EncodedBytes + StringBytes(stream.ServerCursor))),
             LocalSnapshotCapacity(stream.Snapshot));
+
+    /// <summary>Returns the retained client identity binding capacity.</summary>
+    /// <param name="clientId">The client identity.</param>
+    /// <returns>The retained capacity.</returns>
+    private static CapacityUsage ClientIdentityBindingCapacity(string clientId) =>
+        new(1, checked(StringBytes(ClientIdentityBindingMetadataKey) + StringBytes(clientId)));
 
     /// <summary>Returns the encoded byte count for a stream identifier.</summary>
     /// <param name="streamId">The stream identifier.</param>
@@ -350,7 +424,12 @@ internal sealed partial class InMemoryLocalStoreAdapter
     /// <param name="snapshotMutation">The snapshot mutation.</param>
     /// <returns>The encoded byte count.</returns>
     private static long SnapshotMutationCapacityBytes(SnapshotMutation snapshotMutation) =>
-        checked(StreamIdBytes(snapshotMutation.StreamId) + PayloadCapacityBytes(snapshotMutation.State) + Int32EncodedBytes + Int64EncodedBytes);
+        checked(
+            StreamIdBytes(snapshotMutation.StreamId)
+            + PayloadCapacityBytes(snapshotMutation.State)
+            + OptionalPayloadCapacityBytes(snapshotMutation.AuthoritativeState)
+            + Int32EncodedBytes
+            + Int64EncodedBytes);
 
     /// <summary>Returns the encoded byte count for an operation status.</summary>
     /// <param name="status">The operation status.</param>
@@ -652,6 +731,53 @@ internal sealed partial class InMemoryLocalStoreAdapter
 
         var canFitWhenEmpty = delta.Records <= _maximumRecordCount && delta.EncodedBytes <= _maximumEncodedBytes;
         throw new QueueCapacityExceededException("The in-memory local store capacity would be exceeded.", canFitWhenEmpty);
+    }
+
+    /// <summary>Validates or establishes the client identity binding for an initialized in-memory partition.</summary>
+    /// <param name="clientId">The requested client identity.</param>
+    /// <exception cref="InvalidOperationException">The requested binding conflicts with existing state.</exception>
+    private void ValidateClientBinding(string? clientId)
+    {
+        if (_clientId is not null)
+        {
+            if (clientId is not null && string.Equals(_clientId, clientId, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            throw new InvalidOperationException("The in-memory local store partition is bound to another client identity.");
+        }
+
+        if (clientId is null)
+        {
+            return;
+        }
+
+        if (HasMutablePartitionState())
+        {
+            throw new InvalidOperationException("An existing unbound in-memory local store partition has state and cannot be assigned to a client identity.");
+        }
+
+        var capacity = ClientIdentityBindingCapacity(clientId);
+        EnsureCapacityFor(capacity);
+        _clientId = clientId;
+        ApplyCapacity(capacity);
+    }
+
+    /// <summary>Determines whether an unbound in-memory partition contains state beyond empty subscription mappings.</summary>
+    /// <returns>Whether the partition contains mutable state.</returns>
+    /// <remarks>Every local or remote commit creates a snapshot atomically. Compaction always retains that snapshot.</remarks>
+    private bool HasMutablePartitionState()
+    {
+        foreach (var pair in _streams)
+        {
+            if (pair.Value.Snapshot is not null)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>Throws when any remote event has already been applied.</summary>

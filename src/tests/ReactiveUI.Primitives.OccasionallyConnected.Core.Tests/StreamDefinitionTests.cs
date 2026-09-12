@@ -69,7 +69,7 @@ public sealed class StreamDefinitionTests
     [Test]
     public async Task NullProjectionThrows()
     {
-        var definition = CreateValidDefinition() with { Projection = null! };
+        var definition = CreateDefinitionWithoutProperty(nameof(StreamDefinition<,>.Projection));
         Action action = definition.Validate;
 
         await Assert.That(action).ThrowsExactly<InvalidOperationException>();
@@ -176,8 +176,8 @@ public sealed class StreamDefinitionTests
     [Test]
     public async Task NullContractIdsThrow()
     {
-        var inputMissing = CreateValidDefinition() with { InputContractId = null! };
-        var stateMissing = CreateValidDefinition() with { StateContractId = null! };
+        var inputMissing = CreateDefinitionWithoutProperty(nameof(StreamDefinition<,>.InputContractId));
+        var stateMissing = CreateDefinitionWithoutProperty(nameof(StreamDefinition<,>.StateContractId));
         await Assert.That(inputMissing.Validate).ThrowsExactly<InvalidOperationException>();
         await Assert.That(stateMissing.Validate).ThrowsExactly<InvalidOperationException>();
     }
@@ -233,6 +233,19 @@ public sealed class StreamDefinitionTests
     {
         var definition = CreateValidDefinition();
         await Assert.That(() => definition.Validate(false, 1, 0)).ThrowsExactly<InvalidOperationException>();
+    }
+
+    /// <summary>Creates a definition with a missing required property for runtime validation.</summary>
+    /// <param name="propertyName">The property to omit.</param>
+    /// <returns>The malformed definition.</returns>
+    /// <exception cref="InvalidOperationException">The expected property is unavailable.</exception>
+    private static StreamDefinition<int, string> CreateDefinitionWithoutProperty(string propertyName)
+    {
+        var definition = CreateValidDefinition();
+        var property = typeof(StreamDefinition<int, string>).GetProperty(propertyName)
+            ?? throw new InvalidOperationException("The stream definition property is unavailable.");
+        property.SetValue(definition, null);
+        return definition;
     }
 
     /// <summary>Creates a valid stream definition for testing.</summary>

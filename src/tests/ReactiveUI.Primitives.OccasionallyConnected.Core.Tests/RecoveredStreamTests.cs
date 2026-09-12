@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reflection;
 using ReactiveUI.Primitives.OccasionallyConnected;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
@@ -62,8 +63,14 @@ public sealed class RecoveredStreamTests
     /// <summary>Verifies null pending operations are rejected.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task ConstructorRejectsNullPendingOperations() =>
-        await Assert.That(static () => new RecoveredStream(SubscriptionId.New(), null, null, null!, [], 1)).ThrowsExactly<ArgumentNullException>();
+    public async Task ConstructorRejectsNullPendingOperations()
+    {
+        var constructor = typeof(RecoveredStream).GetConstructors().Single();
+        var exception = await Assert.That(() => constructor.Invoke([SubscriptionId.New(), null, null, null, Array.Empty<DeadLetterRecord>(), 1L]))
+            .ThrowsExactly<TargetInvocationException>();
+
+        await Assert.That(exception?.InnerException).IsTypeOf<ArgumentNullException>();
+    }
 
     /// <summary>Creates a representative synchronization operation.</summary>
     /// <returns>A synchronization operation.</returns>

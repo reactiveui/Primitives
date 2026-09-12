@@ -693,3 +693,52 @@ Conflict resolution retained the current Core APIs, SQLite registration, impleme
 - All 431 runtime TUnit tests pass in Release on net8/net9/net10/net11, with MTP-confirmed 100% matching package line
   and branch coverage (2553/2517/2517/2516 lines and 1192 branches). All eight library targets build without warnings
   or errors. Volatile publishing and full engine integration remain subsequent work.
+
+### Stage 3: bounded FIFO batch selection
+
+- Added a pure internal planner for the next ordered batch prefix. It applies the smaller local and negotiated count
+  and byte ceilings, includes caller-supplied encoded envelope costs, and uses subtraction to avoid overflow.
+- Partial batches wait for the caller-sampled monotonic dwell deadline. Full batches and prefixes blocked by the next
+  item's size flush immediately. An oversized head is reported without skipping it. Only a bounded prefix is inspected;
+  transport encoding, queue ownership, timers and in-flight coordination remain engine/transport responsibilities.
+- Root completed the draft after the initial agent stopped on analyzer errors. Five executed tests failed against the
+  compiling stub, then passed after implementation. Root added limit, sequence-gap and maximum-integer tests.
+- All 454 runtime TUnit tests pass in Release on net8/net9/net10/net11 with MTP-confirmed 100% matching package line
+  and branch coverage (2587/2551/2551/2550 lines and 1220 branches). All eight library targets build without warnings
+  or errors. The planner is ready for engine integration; it does not claim an implemented upload pipeline.
+
+### Stage 4: authoritative snapshots and client identity binding
+
+- Local snapshots now retain separate authoritative and optimistic payloads under the same revision and cursor.
+  An omitted authoritative mutation preserves the existing value; a recovered null remains unknown. Original duplicate
+  operation intent includes authoritative mutation presence and content, independently of the current snapshot.
+- SQLite schema six adds transactional sidecars and migrates historical schemas without inventing authoritative state.
+  Tests use an independent schema-five fixture and verify pending operations, inbox entries and leases survive migration.
+  A rejected first client binding on historical pending work rolls back the migration before a legacy reopen succeeds.
+- Both stores support ordinal client identity binding. A first binding requires a pristine partition; reopening an
+  existing binding with another client or without its identity fails. Empty subscription mappings remain compatible.
+  Root added an executed failing regression for malformed SQLite binding values before fixing their interpretation.
+- Logical admission includes authoritative payloads and client identities. Root verified an executed failing public
+  SQLite regression for a large Unicode event origin, then integrated its byte-accounting fix.
+- Root independently reviewed and corrected the implementation, retained existing compaction timestamp validation,
+  and removed remaining null-forgiving fixtures using public reflection or typed delegates without suppressions.
+- Release TUnit suites pass on net8/net9/net10/net11: Core 335, runtime 466, SQLite 244 tests per target. MTP confirms
+  100% matching package line and branch coverage: Core 891 lines/328 branches; runtime 2644/2608/2608/2607 lines and
+  1258 branches; SQLite 2820/2804/2804/2805 lines and 697 branches. All eight affected library targets build with
+  zero warnings and errors. These component checks do not establish complete client reconciliation or synchronization.
+
+### Stage 3: complete remote operation groups
+
+- Added copied operation-completion declarations to remote batches without changing their existing constructor.
+  Each declaration names an exact client operation and all of its event IDs; an empty declaration represents an
+  accepted operation with no emitted events. These records do not authenticate the server or order opaque cursors.
+- The validator bounds events, completions and total declared IDs before allocating lookup structures. It rejects
+  duplicate origins/events, missing or foreign IDs, mixed streams, and partially declared operation effects.
+  Legacy events without an origin are allowed but cannot establish local operation inclusion.
+- Root took over after the agent made no source changes. An executed regression failed against the initial validator
+  because a two-event operation could declare only its first event complete. The corrected implementation passes
+  this case, exact limits, ordinal/canonical-Unicode identity separation, null boundaries and owned-collection tests.
+- All 369 Core TUnit tests pass in Release on net8/net9/net10/net11. MTP confirms 100% matching line and branch coverage
+  (935 lines, 372 branches) on each target. All eight Core library targets build with zero warnings and errors.
+- Store inclusion, receive paging and committer integration remain required; the DTO and validator do not implement
+  reconciliation or authenticate a completion declaration by themselves.

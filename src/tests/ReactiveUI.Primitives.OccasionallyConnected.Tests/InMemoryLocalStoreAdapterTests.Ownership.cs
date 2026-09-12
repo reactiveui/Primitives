@@ -7,6 +7,15 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
 /// <summary>Verifies schema and lease ownership boundaries.</summary>
 public sealed partial class InMemoryLocalStoreAdapterTests
 {
+    /// <summary>The primary client identity used for partition binding.</summary>
+    private const string ClientId = "client-a";
+
+    /// <summary>The secondary client identity used for partition binding conflicts.</summary>
+    private const string OtherClientId = "client-b";
+
+    /// <summary>The first invalid client identity length above the UTF-16 limit.</summary>
+    private const int ClientIdLengthAboveLimit = 257;
+
     /// <summary>Verifies ending enumeration leaves the durable lease available to its caller.</summary>
     /// <returns>The asynchronous test.</returns>
     [Test]
@@ -77,6 +86,152 @@ public sealed partial class InMemoryLocalStoreAdapterTests
         await Assert.That((await store.TryBeginRemoteAttemptAsync(lease.LeaseId, operation.OperationId, 1, CancellationToken.None)).MaySend).IsFalse();
         await Assert.That((await store.GetOperationStatusAsync(other.OperationId, CancellationToken.None))?.Attempt).IsEqualTo(0);
         await Assert.That(await store.GetRetryStateAsync(OperationId.New(), CancellationToken.None)).IsNull();
+    }
+
+    /// <summary>Verifies a bound in-memory partition accepts only the same ordinal client identity.</summary>
+    /// <returns>The asynchronous test.</returns>
+    [Test]
+    public async Task BoundClientIdentityAcceptsSameClientAndRejectsNullOrDifferentClient()
+    {
+        await using var store = new InMemoryLocalStoreAdapter();
+        await store.InitializeAsync(new(StoreIdentity, SchemaVersion, false) { ClientId = ClientId }, CancellationToken.None);
+        var subscription = await store.GetOrCreateSubscriptionIdAsync(Stream, null, CancellationToken.None);
+
+        await store.InitializeAsync(new(StoreIdentity, SchemaVersion, false) { ClientId = ClientId }, CancellationToken.None);
+        Func<Task> nullClient = async () => await store.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
+        Func<Task> differentClient = async () => await store.InitializeAsync(new(StoreIdentity, SchemaVersion, false) { ClientId = OtherClientId }, CancellationToken.None);
+
+        await Assert.That((store.Capabilities & LocalStoreCapabilities.ClientIdentityBinding) != 0).IsTrue();
+        await Assert.That(nullClient).ThrowsExactly<InvalidOperationException>();
+        await Assert.That(differentClient).ThrowsExactly<InvalidOperationException>();
+        await Assert.That(await store.GetOrCreateSubscriptionIdAsync(Stream, null, CancellationToken.None)).IsEqualTo(subscription);
+    }
+
+    /// <summary>Verifies unbound pending work cannot be reassigned to a first client identity.</summary>
+    /// <returns>The asynchronous test.</returns>
+    [Test]
+    public async Task ExistingUnboundPendingWorkRejectsFirstClientBindingAndPreservesState()
+    {
+        await using var store = new InMemoryLocalStoreAdapter();
+        await store.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
+        var subscription = await store.GetOrCreateSubscriptionIdAsync(Stream, null, CancellationToken.None);
+        var operation = await CommitOperationAsync(store, Stream, FirstClientSequence, OperationPayloadText);
+
+        Func<Task> bind = async () => await store.InitializeAsync(new(StoreIdentity, SchemaVersion, false) { ClientId = ClientId }, CancellationToken.None);
+
+        await Assert.That(bind).ThrowsExactly<InvalidOperationException>();
+        var recovery = await store.RecoverStreamAsync(Stream, subscription, CancellationToken.None);
+        await Assert.That(recovery.PendingOperations.Count).IsEqualTo(1);
+        await Assert.That(recovery.PendingOperations[0].OperationId).IsEqualTo(operation.OperationId);
+    }
+
+    /// <summary>Verifies empty subscription mappings alone do not prevent first client binding.</summary>
+    /// <returns>The asynchronous test.</returns>
+    [Test]
+    public async Task EmptySubscriptionMappingsRemainPristineForFirstClientBinding()
+    {
+        await using var store = new InMemoryLocalStoreAdapter();
+        await store.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
+        var subscription = await store.GetOrCreateSubscriptionIdAsync(Stream, null, CancellationToken.None);
+
+        await store.InitializeAsync(new(StoreIdentity, SchemaVersion, false) { ClientId = ClientId }, CancellationToken.None);
+
+        await Assert.That(await store.GetOrCreateSubscriptionIdAsync(Stream, null, CancellationToken.None)).IsEqualTo(subscription);
+    }
+
+    /// <summary>Verifies compaction cannot make existing local state eligible for reassignment.</summary>
+    /// <returns>The asynchronous test.</returns>
+    [Test]
+    public async Task CompactedUnboundStateRejectsFirstClientBinding()
+    {
+        var clock = new ManualTimeProvider(DateTimeOffset.UnixEpoch);
+        await using var store = await CreateInitializedStoreAsync(clock);
+        var operation = await CommitOperationAsync(store, Stream, FirstClientSequence, OperationPayloadText);
+        await SetServerResultAsync(store, operation, OperationResultKind.Accepted);
+        clock.Advance(TimeSpan.FromDays(CompactionAdvanceDays));
+        var compacted = await store.CompactAsync(new(Stream, clock.GetUtcNow(), 0), CancellationToken.None);
+        await Assert.That(compacted.RecordsRemoved).IsEqualTo(1);
+        Func<Task> bind = () => store.InitializeAsync(new(StoreIdentity, SchemaVersion, false) { ClientId = ClientId }, CancellationToken.None).AsTask();
+        await Assert.That(bind).ThrowsExactly<InvalidOperationException>();
+        var subscription = await store.GetOrCreateSubscriptionIdAsync(Stream, null, CancellationToken.None);
+        var recovery = await store.RecoverStreamAsync(Stream, subscription, CancellationToken.None);
+        await Assert.That(recovery.NextClientSequence).IsEqualTo(SecondClientSequence);
+        await Assert.That(recovery.Snapshot).IsNotNull();
+    }
+
+    /// <summary>Verifies a receive-only checkpoint is retained as prior client history.</summary>
+    /// <returns>The asynchronous test.</returns>
+    [Test]
+    public async Task ReceiveOnlyCheckpointRejectsFirstClientBinding()
+    {
+        await using var store = await CreateInitializedStoreAsync();
+        var subscription = await store.GetOrCreateSubscriptionIdAsync(Stream, null, CancellationToken.None);
+        _ = await store.ApplyRemoteBatchAsync(CreateRemoteBatch(null, RemoteCursor, []), CreateSnapshotMutation(expectedRevision: 0), CancellationToken.None);
+        Func<Task> bind = () => store.InitializeAsync(new(StoreIdentity, SchemaVersion, false) { ClientId = ClientId }, CancellationToken.None).AsTask();
+        await Assert.That(bind).ThrowsExactly<InvalidOperationException>();
+        var recovery = await store.RecoverStreamAsync(Stream, subscription, CancellationToken.None);
+        await Assert.That(recovery.ServerCursor).IsEqualTo(RemoteCursor);
+        await Assert.That(recovery.NextClientSequence).IsEqualTo(FirstClientSequence);
+    }
+
+    /// <summary>Verifies malformed and oversized client identities fail before the store is initialized.</summary>
+    /// <returns>The asynchronous test.</returns>
+    [Test]
+    public async Task InvalidClientIdentityDoesNotInitializeStore()
+    {
+        await using var malformed = new InMemoryLocalStoreAdapter();
+        await using var oversized = new InMemoryLocalStoreAdapter();
+
+        Func<Task> malformedClient = async () => await malformed.InitializeAsync(new(StoreIdentity, SchemaVersion, false) { ClientId = new('\uD800', 1) }, CancellationToken.None);
+        Func<Task> oversizedClient = async () => await oversized.InitializeAsync(new(StoreIdentity, SchemaVersion, false) { ClientId = new('a', ClientIdLengthAboveLimit) }, CancellationToken.None);
+
+        await Assert.That(malformedClient).ThrowsExactly<ArgumentException>();
+        await Assert.That(oversizedClient).ThrowsExactly<ArgumentException>();
+        await malformed.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
+        await oversized.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
+    }
+
+    /// <summary>Verifies client identity binding capacity is checked before mutating in-memory binding state.</summary>
+    /// <returns>The asynchronous test.</returns>
+    [Test]
+    public async Task ClientIdentityBindingCapacityRejectsBeforeMutation()
+    {
+        await using var store = new InMemoryLocalStoreAdapter(maximumRecordCount: 1, maximumEncodedBytes: 1);
+        await store.InitializeAsync(new("a", SchemaVersion, false), CancellationToken.None);
+
+        Func<Task> bind = async () => await store.InitializeAsync(new("a", SchemaVersion, false) { ClientId = "b" }, CancellationToken.None);
+
+        await Assert.That(bind).ThrowsExactly<QueueCapacityExceededException>();
+        await store.InitializeAsync(new("a", SchemaVersion, false), CancellationToken.None);
+    }
+
+    /// <summary>Verifies ordinal client identity comparison does not normalize equivalent-looking Unicode.</summary>
+    /// <returns>The asynchronous test.</returns>
+    [Test]
+    public async Task ClientIdentityBindingUsesOrdinalTextWithoutNormalization()
+    {
+        await using var store = new InMemoryLocalStoreAdapter();
+        await store.InitializeAsync(new(StoreIdentity, SchemaVersion, false) { ClientId = "caf\u00E9" }, CancellationToken.None);
+
+        Func<Task> decomposed = async () => await store.InitializeAsync(new(StoreIdentity, SchemaVersion, false) { ClientId = "cafe\u0301" }, CancellationToken.None);
+
+        await Assert.That(decomposed).ThrowsExactly<InvalidOperationException>();
+    }
+
+    /// <summary>Verifies cancellation before first binding leaves an unbound pristine partition bindable later.</summary>
+    /// <returns>The asynchronous test.</returns>
+    [Test]
+    public async Task CanceledClientIdentityBindingDoesNotMutatePartition()
+    {
+        await using var store = new InMemoryLocalStoreAdapter();
+        await store.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
+        using var cancellation = new CancellationTokenSource();
+        await cancellation.CancelAsync();
+
+        Func<Task> canceled = async () => await store.InitializeAsync(new(StoreIdentity, SchemaVersion, false) { ClientId = ClientId }, cancellation.Token);
+
+        await Assert.That(canceled).ThrowsExactly<OperationCanceledException>();
+        await store.InitializeAsync(new(StoreIdentity, SchemaVersion, false) { ClientId = OtherClientId }, CancellationToken.None);
     }
 
     /// <summary>Verifies renewal extends the original deadline and expiry invalidates ownership.</summary>

@@ -65,7 +65,8 @@ internal sealed class SqliteLocalStoreAdapterSizing
     internal long InitializationBytes(LocalStoreInitialization initialization)
     {
         ArgumentExceptionHelper.ThrowIfNull(initialization);
-        return Add(ObjectHeaderBytes, Add(StringBytes(initialization.StoreIdentity), IntBytes + NullableMarkerBytes));
+        var bytes = Add(ObjectHeaderBytes, Add(StringBytes(initialization.StoreIdentity), IntBytes + NullableMarkerBytes));
+        return Add(bytes, StringBytes(initialization.ClientId));
     }
 
     /// <summary>Computes retained input bytes for subscription lookup.</summary>
@@ -193,6 +194,7 @@ internal sealed class SqliteLocalStoreAdapterSizing
     {
         var bytes = Add(ObjectHeaderBytes, StreamIdBytes(snapshotMutation.StreamId));
         bytes = Add(bytes, PayloadBytes(snapshotMutation.State));
+        bytes = Add(bytes, snapshotMutation.AuthoritativeState is null ? NullableMarkerBytes : PayloadBytes(snapshotMutation.AuthoritativeState));
         return Add(bytes, IntBytes + LongBytes);
     }
 
@@ -207,6 +209,7 @@ internal sealed class SqliteLocalStoreAdapterSizing
         bytes = Add(bytes, StringBytes(remoteEvent.ServerCursor));
         bytes = Add(bytes, DateTimeOffsetBytes);
         bytes = Add(bytes, remoteEvent.CausedByOperationId.HasValue ? GuidBytes : NullableMarkerBytes);
+        bytes = Add(bytes, remoteEvent.Origin is null ? NullableMarkerBytes : Add(ObjectHeaderBytes, Add(StringBytes(remoteEvent.Origin.ClientId), GuidBytes)));
         bytes = Add(bytes, PayloadBytes(remoteEvent.Payload));
         return Add(bytes, DictionaryBytes(remoteEvent.Metadata));
     }

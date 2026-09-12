@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 
@@ -50,7 +51,10 @@ public sealed partial class JsonPayloadSerializerTests
     public async Task MissingHashMetadataIsRejectedAsSchemaFailure()
     {
         var serializer = CreateSerializer();
-        var envelope = new PayloadEnvelope(ReadingContract, ReadingV2Version, JsonContentType, CreateV2Payload(), string.Empty) with { PayloadHash = null! };
+        var envelope = new PayloadEnvelope(ReadingContract, ReadingV2Version, JsonContentType, CreateV2Payload(), string.Empty) with { };
+        var payloadHash = typeof(PayloadEnvelope).GetProperty(nameof(PayloadEnvelope.PayloadHash));
+        ArgumentNullException.ThrowIfNull(payloadHash);
+        payloadHash.SetValue(envelope, null);
         var exception = await Assert.ThrowsExactlyAsync<PayloadSchemaException>(() => serializer.DeserializeAsync(envelope, typeof(ReadingV2)).AsTask());
         await Assert.That(exception?.Reason).IsEqualTo(PayloadSchemaFailureReason.PayloadHashMismatch);
     }

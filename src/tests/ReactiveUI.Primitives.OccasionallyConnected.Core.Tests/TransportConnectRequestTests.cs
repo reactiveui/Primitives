@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reflection;
 using ReactiveUI.Primitives.OccasionallyConnected;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
@@ -23,8 +24,13 @@ public sealed class TransportConnectRequestTests
     /// <summary>Verifies null guarantees are rejected.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task ConstructorRejectsNullRequiredGuarantees() =>
-        await Assert.That(static () => new TransportConnectRequest(CreateRange(), new("client-1"), null!)).ThrowsExactly<ArgumentNullException>();
+    public async Task ConstructorRejectsNullRequiredGuarantees()
+    {
+        var constructor = typeof(TransportConnectRequest).GetConstructors().Single();
+        var exception = await Assert.That(() => constructor.Invoke([CreateRange(), new ClientIdentity("client-1"), null])).ThrowsExactly<TargetInvocationException>();
+
+        await Assert.That(exception?.InnerException).IsTypeOf<ArgumentNullException>();
+    }
 
     /// <summary>Creates a representative protocol version range.</summary>
     /// <returns>A protocol version range.</returns>

@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reflection;
 using ReactiveUI.Primitives.OccasionallyConnected;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
@@ -441,7 +442,9 @@ public sealed class RetryPolicyTests
     public async Task NullStateIsRejected()
     {
         var policy = new RetryPolicy();
-        await Assert.That(() => policy.GetDecision(new(RetryFailureKind.AuthorizationDenied), null!))
+        var getDecision = typeof(RetryPolicy).GetMethod(nameof(RetryPolicy.GetDecision));
+        ArgumentNullException.ThrowIfNull(getDecision);
+        await Assert.That(() => getDecision.Invoke(policy, BindingFlags.DoNotWrapExceptions, null, [new RetryFailure(RetryFailureKind.AuthorizationDenied), null], null))
             .ThrowsExactly<ArgumentNullException>();
     }
 

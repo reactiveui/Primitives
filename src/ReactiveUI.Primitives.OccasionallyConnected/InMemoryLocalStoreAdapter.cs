@@ -52,6 +52,9 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
     /// <summary>The initialized store identity.</summary>
     private string? _storeIdentity;
 
+    /// <summary>The initialized client identity binding.</summary>
+    private string? _clientId;
+
     /// <summary>The retained operation and snapshot payload bytes.</summary>
     private long _encodedBytes;
 
@@ -112,6 +115,7 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
     public LocalStoreCapabilities Capabilities { get; } =
         LocalStoreCapabilities.AtomicLocalCommit
         | LocalStoreCapabilities.AtomicRemoteApply
+        | LocalStoreCapabilities.ClientIdentityBinding
         | LocalStoreCapabilities.LeasedOutbox;
 
     /// <inheritdoc/>
@@ -119,6 +123,7 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
     {
         ArgumentExceptionHelper.ThrowIfNull(initialization);
         InMemoryLocalStoreAdapterValidation.ValidateStoreIdentity(initialization.StoreIdentity, nameof(initialization));
+        var clientId = ValidateClientId(initialization.ClientId, nameof(initialization));
         if (initialization.RequiredSchemaVersion <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(initialization), initialization.RequiredSchemaVersion, "Required schema version must be positive.");
@@ -146,8 +151,19 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
 
             if (_storeIdentity is null)
             {
-                EnsureCapacityFor(StoreIdentityCapacity(initialization.StoreIdentity));
-                ApplyCapacity(StoreIdentityCapacity(initialization.StoreIdentity));
+                var capacity = StoreIdentityCapacity(initialization.StoreIdentity);
+                if (clientId is not null)
+                {
+                    capacity = AddCapacity(capacity, ClientIdentityBindingCapacity(clientId));
+                }
+
+                EnsureCapacityFor(capacity);
+                ApplyCapacity(capacity);
+                _clientId = clientId;
+            }
+            else
+            {
+                ValidateClientBinding(clientId);
             }
 
             _storeIdentity = initialization.StoreIdentity;
@@ -257,13 +273,14 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
                 var committedAtUtc = nowUtc;
                 var nextRevision = checked(snapshotMutation.ExpectedRevision + 1);
                 var nextClientSequence = checked(operation.ClientSequence + 1);
+                var nextAuthoritativeState = snapshotMutation.AuthoritativeState ?? stream.Snapshot?.AuthoritativeState;
                 var nextSnapshot = new LocalSnapshot(
                     operation.StreamId,
                     snapshotMutation.FormatVersion,
                     stream.ServerCursor,
                     snapshotMutation.State,
                     nextRevision,
-                    committedAtUtc);
+                    committedAtUtc) { AuthoritativeState = nextAuthoritativeState };
                 result = new(operation.OperationId, operation.ClientSequence, nextRevision, committedAtUtc);
                 var record = new OperationRecord(operation, snapshotMutation, result, CreateStatus(operation, SyncOperationState.SavedLocally, 0, committedAtUtc, null));
                 var capacity = AddCapacity(
@@ -370,7 +387,14 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
             EnsureRemoteEventsUnapplied(batch);
             var committedAtUtc = nowUtc;
             var nextRevision = checked(snapshotMutation.ExpectedRevision + 1);
-            var nextSnapshot = new LocalSnapshot(batch.StreamId, snapshotMutation.FormatVersion, batch.NextCursor, snapshotMutation.State, nextRevision, committedAtUtc);
+            var nextAuthoritativeState = snapshotMutation.AuthoritativeState ?? stream.Snapshot?.AuthoritativeState;
+            var nextSnapshot = new LocalSnapshot(
+                batch.StreamId,
+                snapshotMutation.FormatVersion,
+                batch.NextCursor,
+                snapshotMutation.State,
+                nextRevision,
+                committedAtUtc) { AuthoritativeState = nextAuthoritativeState };
             var capacity = AddCapacity(
                 new(0, checked(StringBytes(batch.NextCursor) - StringBytes(stream.ServerCursor))),
                 CapacityDifference(LocalSnapshotCapacity(stream.Snapshot), LocalSnapshotCapacity(nextSnapshot)));
@@ -577,6 +601,7 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
             _encodedBytes = 0;
             _recordCount = 0;
             _storeIdentity = null;
+            _clientId = null;
         }
 
         return default;

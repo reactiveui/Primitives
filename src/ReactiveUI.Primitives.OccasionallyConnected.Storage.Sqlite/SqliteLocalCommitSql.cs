@@ -226,6 +226,38 @@ internal static partial class SqliteLocalCommitSql
         _ = command.ExecuteNonQuery();
     }
 
+    /// <summary>Inserts the original authoritative mutation for an outbox operation.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="storeIdentity">The store identity.</param>
+    /// <param name="operationId">The operation id.</param>
+    /// <param name="authoritativeState">The optional authoritative state mutation.</param>
+    internal static void InsertOutboxAuthoritativeMutation(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string storeIdentity,
+        OperationId operationId,
+        PayloadEnvelope? authoritativeState)
+    {
+        if (authoritativeState is null)
+        {
+            return;
+        }
+
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            INSERT INTO oc_outbox_authoritative_mutations
+                (store_identity, operation_id, payload_contract_id, payload_schema_version, payload_content_type, payload, payload_hash)
+            VALUES
+                ($storeIdentity, $operationId, $payloadContractId, $payloadSchemaVersion, $payloadContentType, $payload, $payloadHash);
+            """;
+        _ = command.Parameters.AddWithValue(StoreIdentityParameter, storeIdentity);
+        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
+        AddPayloadParameters(command, authoritativeState);
+        _ = command.ExecuteNonQuery();
+    }
+
     /// <summary>Inserts operation metadata rows.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
@@ -295,6 +327,7 @@ internal static partial class SqliteLocalCommitSql
         _ = command.Parameters.AddWithValue("$revision", revision);
         _ = command.Parameters.AddWithValue("$savedAtUtc", FormatDateTimeOffset(savedAtUtc));
         _ = command.ExecuteNonQuery();
+        UpsertSnapshotAuthoritativeState(connection, transaction, storeIdentity, snapshotMutation);
     }
 
     /// <summary>Updates the stream next client sequence.</summary>
@@ -465,32 +498,36 @@ internal static partial class SqliteLocalCommitSql
             """;
         _ = command.Parameters.AddWithValue(StoreIdentityParameter, storeIdentity);
         _ = command.Parameters.AddWithValue(OperationIdParameter, operation.OperationId.Value.ToString("D"));
-        using var reader = command.ExecuteReader();
-        if (!reader.Read())
+        using (var reader = command.ExecuteReader())
         {
-            result = null;
-            return false;
+            if (!reader.Read())
+            {
+                result = null;
+                return false;
+            }
+
+            const int SequenceIndex = 0;
+            const int RevisionIndex = 1;
+            const int CommittedAtIndex = 2;
+            const int FingerprintIndex = 3;
+            var sequence = ReadPositiveLong(reader, SequenceIndex, InvalidOperationSequenceMessage);
+            var revision = ReadNonNegativeLong(reader, RevisionIndex, InvalidSnapshotRevisionMessage);
+            var committedAtUtc = ReadDateTimeOffset(reader, CommittedAtIndex, "The SQLite operation commit timestamp is invalid.");
+            var storedFingerprint = ReadBytes(reader, FingerprintIndex, "The SQLite commit fingerprint is invalid.");
+            if (sequence != operation.ClientSequence || revision != snapshotMutation.ExpectedRevision + 1)
+            {
+                throw new InvalidOperationException("The SQLite operation id has already been committed with different content.");
+            }
+
+            result = new(operation.OperationId, sequence, revision, committedAtUtc);
+            if (HasSameOriginalAuthoritativeMutation(connection, transaction, storeIdentity, operation.OperationId, snapshotMutation.AuthoritativeState)
+                && HasSameCommitFingerprint(storedFingerprint, fingerprint, operation, snapshotMutation))
+            {
+                return true;
+            }
         }
 
-        const int SequenceIndex = 0;
-        const int RevisionIndex = 1;
-        const int CommittedAtIndex = 2;
-        const int FingerprintIndex = 3;
-        var sequence = ReadPositiveLong(reader, SequenceIndex, InvalidOperationSequenceMessage);
-        var revision = ReadNonNegativeLong(reader, RevisionIndex, InvalidSnapshotRevisionMessage);
-        var storedFingerprint = ReadBytes(reader, FingerprintIndex, "The SQLite commit fingerprint is invalid.");
-        if (sequence != operation.ClientSequence || revision != snapshotMutation.ExpectedRevision + 1
-            || !SqliteCommitFingerprint.Matches(storedFingerprint, fingerprint))
-        {
-            throw new InvalidOperationException("The SQLite operation id has already been committed with different content.");
-        }
-
-        result = new(
-            operation.OperationId,
-            sequence,
-            revision,
-            ReadDateTimeOffset(reader, CommittedAtIndex, "The SQLite operation commit timestamp is invalid."));
-        return true;
+        throw new InvalidOperationException("The SQLite operation id has already been committed with different content.");
     }
 
     /// <summary>Reads a snapshot row.</summary>
@@ -515,28 +552,33 @@ internal static partial class SqliteLocalCommitSql
             WHERE store_identity = $storeIdentity AND stream_id = $streamId;
             """;
         AddStreamParameters(command, storeIdentity, streamId);
-        using var reader = command.ExecuteReader();
-        if (!reader.Read())
+        LocalSnapshot snapshot;
+        using (var reader = command.ExecuteReader())
         {
-            return null;
+            if (!reader.Read())
+            {
+                return null;
+            }
+
+            const int FormatVersionIndex = 0;
+            const int ServerCursorIndex = 1;
+            const int PayloadContractIndex = 2;
+            const int PayloadSchemaIndex = 3;
+            const int PayloadContentTypeIndex = 4;
+            const int PayloadIndex = 5;
+            const int PayloadHashIndex = 6;
+            const int RevisionIndex = 7;
+            const int SavedAtIndex = 8;
+            snapshot = new(
+                streamId,
+                ReadPositiveInt(reader, FormatVersionIndex, "The SQLite snapshot format version is invalid."),
+                ReadNullableString(reader, ServerCursorIndex),
+                ReadPayload(reader, PayloadContractIndex, PayloadSchemaIndex, PayloadContentTypeIndex, PayloadIndex, PayloadHashIndex),
+                ReadNonNegativeLong(reader, RevisionIndex, InvalidSnapshotRevisionMessage),
+                ReadDateTimeOffset(reader, SavedAtIndex, "The SQLite snapshot timestamp is invalid."));
         }
 
-        const int FormatVersionIndex = 0;
-        const int ServerCursorIndex = 1;
-        const int PayloadContractIndex = 2;
-        const int PayloadSchemaIndex = 3;
-        const int PayloadContentTypeIndex = 4;
-        const int PayloadIndex = 5;
-        const int PayloadHashIndex = 6;
-        const int RevisionIndex = 7;
-        const int SavedAtIndex = 8;
-        var snapshot = new LocalSnapshot(
-            streamId,
-            ReadPositiveInt(reader, FormatVersionIndex, "The SQLite snapshot format version is invalid."),
-            ReadNullableString(reader, ServerCursorIndex),
-            ReadPayload(reader, PayloadContractIndex, PayloadSchemaIndex, PayloadContentTypeIndex, PayloadIndex, PayloadHashIndex),
-            ReadNonNegativeLong(reader, RevisionIndex, InvalidSnapshotRevisionMessage),
-            ReadDateTimeOffset(reader, SavedAtIndex, "The SQLite snapshot timestamp is invalid."));
+        snapshot = snapshot with { AuthoritativeState = ReadSnapshotAuthoritativeState(connection, transaction, storeIdentity, streamId) };
         SqliteLocalCommitValidation.ValidatePayload(snapshot.State, nameof(snapshot));
         return snapshot;
     }

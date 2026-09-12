@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reflection;
 using ReactiveUI.Primitives.OccasionallyConnected;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
@@ -115,13 +116,16 @@ public sealed class StartPositionTests
 
     /// <summary>Verifies null and empty cursors are rejected.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
+    /// <exception cref="InvalidOperationException">The expected factory is unavailable.</exception>
     [Test]
     public async Task FromCursorRejectsMissingCursor()
     {
-        var nullAction = static () => StartPosition.FromCursor(null!);
+        var factory = typeof(StartPosition).GetMethod(nameof(StartPosition.FromCursor), [typeof(string)])
+            ?? throw new InvalidOperationException("The cursor factory is unavailable.");
         var emptyAction = static () => StartPosition.FromCursor(string.Empty);
 
-        await Assert.That(nullAction).ThrowsExactly<ArgumentNullException>();
+        var exception = await Assert.That(() => factory.Invoke(null, [null])).ThrowsExactly<TargetInvocationException>();
+        await Assert.That(exception?.InnerException).IsTypeOf<ArgumentNullException>();
         await Assert.That(emptyAction).ThrowsExactly<ArgumentException>();
     }
 

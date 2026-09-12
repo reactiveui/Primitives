@@ -22,6 +22,7 @@ public sealed class SqliteLocalStoreAdapter : ILocalStoreAdapter
         | LocalStoreCapabilities.DurableLocalCommit
         | LocalStoreCapabilities.AtomicRemoteApply
         | LocalStoreCapabilities.DurableInbox
+        | LocalStoreCapabilities.ClientIdentityBinding
         | LocalStoreCapabilities.LeasedOutbox;
 
     /// <summary>The synchronous SQLite implementation.</summary>
@@ -304,6 +305,7 @@ public sealed class SqliteLocalStoreAdapter : ILocalStoreAdapter
     private static LocalStoreInitialization CreateBackendInitialization(LocalStoreInitialization initialization)
     {
         ArgumentExceptionHelper.ThrowIfNull(initialization);
+        var clientId = SqliteClientIdentityBinding.ValidateClientId(initialization.ClientId, nameof(initialization));
         if (initialization.RequiredSchemaVersion <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(initialization), initialization.RequiredSchemaVersion, "Required schema version must be positive.");
@@ -314,7 +316,7 @@ public sealed class SqliteLocalStoreAdapter : ILocalStoreAdapter
             throw new NotSupportedException("The SQLite local store does not support the required schema version.");
         }
 
-        return initialization with { RequiredSchemaVersion = CurrentSchemaVersion };
+        return initialization with { RequiredSchemaVersion = CurrentSchemaVersion, ClientId = clientId };
     }
 
     /// <summary>Acquires the single-writer owner handle once for this adapter.</summary>

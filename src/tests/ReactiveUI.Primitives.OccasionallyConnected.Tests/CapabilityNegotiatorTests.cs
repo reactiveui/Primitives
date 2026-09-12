@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reflection;
 using ReactiveUI.Primitives.OccasionallyConnected;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
@@ -175,7 +176,7 @@ public sealed class CapabilityNegotiatorTests
     [Test]
     public async Task ServerWindowLimitsTheGuarantee()
     {
-        var request = CreateRequest();
+        var request = CreateRequest() with { };
         request = request with { PeerOffer = request.PeerOffer with { ServerIdempotencyRetention = TimeSpan.FromDays(1) } };
         var actual = CapabilityNegotiator.Negotiate(request);
         await Assert.That(actual.EffectiveExactlyOnceWindow).IsEqualTo(TimeSpan.FromDays(1));
@@ -304,15 +305,16 @@ public sealed class CapabilityNegotiatorTests
     public async Task RejectsMissingRequiredReference(string scenario)
     {
         var request = CreateRequest();
-        request = scenario switch
+        Delegate negotiate = scenario switch
         {
-            "request" => null!,
-            "options" => request with { Options = null! },
-            "policy" => request with { Policy = null! },
-            "offer" => request with { PeerOffer = null! },
-            _ => request with { PeerOffer = request.PeerOffer with { ProtocolVersion = null! } },
+            "request" => (Func<CapabilityNegotiationRequest, NegotiatedCapabilities>)CapabilityNegotiator.Negotiate,
+            "options" => (Func<OccasionallyConnectedOptions, NegotiatedCapabilities>)(value => CapabilityNegotiator.Negotiate(request with { Options = value })),
+            "policy" => (Func<OperationPolicy, NegotiatedCapabilities>)(value => CapabilityNegotiator.Negotiate(request with { Policy = value })),
+            "offer" => (Func<NegotiatedCapabilities, NegotiatedCapabilities>)(value => CapabilityNegotiator.Negotiate(request with { PeerOffer = value })),
+            _ => (Func<Version, NegotiatedCapabilities>)(value => CapabilityNegotiator.Negotiate(request with { PeerOffer = request.PeerOffer with { ProtocolVersion = value } })),
         };
-        await Assert.That(() => CapabilityNegotiator.Negotiate(request)).Throws<ArgumentNullException>();
+        var exception = Assert.ThrowsExactly<TargetInvocationException>(() => negotiate.DynamicInvoke([null]));
+        await Assert.That(exception.InnerException).IsTypeOf<ArgumentNullException>();
     }
 
     /// <summary>Creates a supported, authenticated exactly-once offer.</summary>

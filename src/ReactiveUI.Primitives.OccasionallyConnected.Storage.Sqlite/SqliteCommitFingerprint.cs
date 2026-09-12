@@ -27,6 +27,29 @@ internal static class SqliteCommitFingerprint
         writer.Write(snapshot.FormatVersion);
         writer.Write(snapshot.ExpectedRevision);
         WritePayload(writer, snapshot.State);
+        WriteOptionalPayload(writer, snapshot.AuthoritativeState);
+        writer.Flush();
+#if NET5_0_OR_GREATER
+        return SHA256.HashData(buffer.GetBuffer().AsSpan(0, (int)buffer.Length));
+#else
+        using var hash = SHA256.Create();
+        return hash.ComputeHash(buffer.GetBuffer(), 0, (int)buffer.Length);
+#endif
+    }
+
+    /// <summary>Computes the canonical operation and snapshot mutation fingerprint used before authoritative mutations existed.</summary>
+    /// <param name="operation">The validated operation.</param>
+    /// <param name="snapshot">The validated snapshot mutation.</param>
+    /// <returns>The legacy SHA-256 fingerprint.</returns>
+    internal static byte[] ComputeLegacy(SyncOperation operation, SnapshotMutation snapshot)
+    {
+        using var buffer = new MemoryStream();
+        using var writer = new BinaryWriter(buffer, CanonicalEncoding, leaveOpen: true);
+        WriteOperation(writer, operation);
+        writer.Write(snapshot.StreamId.Value);
+        writer.Write(snapshot.FormatVersion);
+        writer.Write(snapshot.ExpectedRevision);
+        WritePayload(writer, snapshot.State);
         writer.Flush();
 #if NET5_0_OR_GREATER
         return SHA256.HashData(buffer.GetBuffer().AsSpan(0, (int)buffer.Length));
@@ -88,5 +111,19 @@ internal static class SqliteCommitFingerprint
 #else
         writer.Write(payload.Payload.ToArray());
 #endif
+    }
+
+    /// <summary>Writes an optional payload with an explicit presence marker.</summary>
+    /// <param name="writer">The canonical writer.</param>
+    /// <param name="payload">The optional payload.</param>
+    private static void WriteOptionalPayload(BinaryWriter writer, PayloadEnvelope? payload)
+    {
+        writer.Write(payload is not null);
+        if (payload is null)
+        {
+            return;
+        }
+
+        WritePayload(writer, payload);
     }
 }

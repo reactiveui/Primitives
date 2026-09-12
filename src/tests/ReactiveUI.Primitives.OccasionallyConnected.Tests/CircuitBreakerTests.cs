@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reflection;
 using Microsoft.Extensions.Time.Testing;
 using ReactiveUI.Primitives.OccasionallyConnected;
 
@@ -217,9 +218,13 @@ public sealed class CircuitBreakerTests
     [Test]
     public async Task NullDependenciesAreRejected()
     {
-        await Assert.That(static () => new CircuitBreaker(null!)).ThrowsExactly<ArgumentNullException>();
-        await Assert.That(static () => new CircuitBreaker(Endpoint, null!, TimeProvider.System)).ThrowsExactly<ArgumentNullException>();
-        await Assert.That(static () => new CircuitBreaker(Endpoint, new(), null!)).ThrowsExactly<ArgumentNullException>();
+        var endpointConstructor = typeof(CircuitBreaker).GetConstructor([typeof(string)]);
+        ArgumentNullException.ThrowIfNull(endpointConstructor);
+        await Assert.That(() => endpointConstructor.Invoke(BindingFlags.DoNotWrapExceptions, null, [null], null)).ThrowsExactly<ArgumentNullException>();
+        var optionsConstructor = typeof(CircuitBreaker).GetConstructor([typeof(string), typeof(CircuitBreakerOptions), typeof(TimeProvider)]);
+        ArgumentNullException.ThrowIfNull(optionsConstructor);
+        await Assert.That(() => optionsConstructor.Invoke(BindingFlags.DoNotWrapExceptions, null, [Endpoint, null, TimeProvider.System], null)).ThrowsExactly<ArgumentNullException>();
+        await Assert.That(() => optionsConstructor.Invoke(BindingFlags.DoNotWrapExceptions, null, [Endpoint, new CircuitBreakerOptions(), null], null)).ThrowsExactly<ArgumentNullException>();
     }
 
     /// <summary>Verifies invalid configuration cannot create a breaker.</summary>
