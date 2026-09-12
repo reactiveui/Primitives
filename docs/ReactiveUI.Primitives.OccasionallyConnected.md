@@ -539,6 +539,10 @@ The adapter contract is intentionally transactional rather than CRUD-shaped. In 
 - `InitializeAsync` MUST acquire a process/store ownership lock or provide safe multi-process coordination. The default is one writer per store identity.
 - Store implementations MUST be crash-consistent and document durability settings such as SQLite synchronous mode or file `Flush(true)` behavior.
 
+The default SQLite store does not advertise `MultiProcessCoordination`. During `InitializeAsync`, it acquires an exclusive sidecar file handle at `<database>.rxui-owner` on the same single SQLite worker before opening or mutating SQLite. The handle is tied to the adapter lifetime and is released only after disposal has closed admission, active captures have drained, and queued SQLite work has stopped. If initialization fails after acquiring a new handle, the adapter releases that handle before reporting the failure; a failed reinitialization retains an existing owner. A process crash or kill releases the operating-system handle.
+
+SQLite ownership is based on the database path captured by `SqliteLocalStoreAdapter` construction after normal `Path.GetFullPath` lexical resolution. It coordinates adapters that use the same resolved local path string and does not lock byte ranges in the SQLite database file. Known unsafe path forms are rejected before acquisition: UNC paths, Windows network drives reported by the runtime, and existing reparse-point database files, ownership sidecars, or parent directories. Hard links, 8.3 short-name aliases, bind mounts, network-drive remappings that are not visible to the runtime, and filesystem clients that do not enforce the same exclusive sharing semantics remain unsupported SQLite storage deployments while the database is open. The default SQLite adapter keeps `MultiProcessCoordination` absent and enforces second-writer rejection for supported local database paths that resolve to the same sidecar path.
+
 ### 7.8 Transport contract
 
 ```csharp

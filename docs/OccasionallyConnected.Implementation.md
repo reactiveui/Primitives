@@ -629,3 +629,18 @@ Conflict resolution retained the current Core APIs, SQLite registration, impleme
 - All 42 Server TUnit tests pass in Release on net8/net9/net10/net11. MTP confirms 100% matching Server line and branch
   coverage (245 lines on net8, 244 on the other targets, 80 branches). All eight library targets build without warnings
   or errors. Journal integration and durable duplicate-response replay remain subsequent work.
+
+### Stage 4i: default SQLite writer ownership
+
+- The public adapter captures its full database path at construction and acquires an exclusive sidecar handle on its
+  worker before initialization. New-owner initialization failure releases the handle; failed reinitialization retains
+  an existing owner. Disposal drains admitted work and captures before releasing ownership.
+- Tests exercise competing adapters, a live competing child process, kill/reopen, failed backend initialization while
+  the failed adapter stays alive, and relative-path capture in an isolated child process. Known network and reparse paths
+  are rejected; unsupported aliasing deployments are documented without advertising multi-process coordination.
+- Root added a failing regression for redirected sidecars, then applied the same reparse validation to the sidecar.
+  Root also removed thread-pool continuation dependence from the existing writer-wait cancellation test after a loaded
+  run demonstrated its cancellation could arrive after the bounded timeout. Production timeout behavior is unchanged.
+- All 220 SQLite TUnit tests pass on net8/net9/net10/net11 in Release, with MTP-confirmed 100% matching package line and
+  branch coverage (2564/2548/2548/2549 lines and 623 branches). All eight library targets build without warnings or errors.
+- Encryption, durable capacity enforcement, the complete crash-point matrix and engine integration remain work.

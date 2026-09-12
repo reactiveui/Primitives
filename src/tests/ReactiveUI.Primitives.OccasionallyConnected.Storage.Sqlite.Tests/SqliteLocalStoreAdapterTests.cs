@@ -263,13 +263,16 @@ public sealed partial class SqliteLocalStoreAdapterTests
     public async Task WhenLocalOperationIsCommittedThroughAdapter_ThenReopenRecoversSnapshotAndOutbox()
     {
         using var database = TempDatabase.Create();
-        await using var adapter = CreateAdapter(database.Path);
-        await adapter.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
-        var subscriptionId = await adapter.GetOrCreateSubscriptionIdAsync(Stream, null, CancellationToken.None);
+        SubscriptionId subscriptionId;
         var operation = CreateOperation(FirstClientSequence);
         var snapshot = CreateSnapshotMutation(expectedRevision: 0);
-
-        var result = await adapter.CommitLocalOperationAsync(operation, snapshot, CancellationToken.None);
+        LocalCommitResult result;
+        await using (var adapter = CreateAdapter(database.Path))
+        {
+            await adapter.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);
+            subscriptionId = await adapter.GetOrCreateSubscriptionIdAsync(Stream, null, CancellationToken.None);
+            result = await adapter.CommitLocalOperationAsync(operation, snapshot, CancellationToken.None);
+        }
 
         await using var reopened = CreateAdapter(database.Path);
         await reopened.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None);

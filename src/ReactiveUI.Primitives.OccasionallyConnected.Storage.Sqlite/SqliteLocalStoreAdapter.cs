@@ -27,6 +27,9 @@ public sealed class SqliteLocalStoreAdapter : ILocalStoreAdapter
     /// <summary>The synchronous SQLite implementation.</summary>
     private readonly SqliteLocalCommitStore _store;
 
+    /// <summary>The database path used for single-writer ownership.</summary>
+    private readonly string _databasePath;
+
     /// <summary>The gate for input snapshots captured before worker admission.</summary>
     private readonly Lock _captureGate = new();
 
@@ -50,6 +53,9 @@ public sealed class SqliteLocalStoreAdapter : ILocalStoreAdapter
 
     /// <summary>The caller input snapshots currently held before or inside the SQLite worker.</summary>
     private int _capturedInputCount;
+
+    /// <summary>The process-owned single-writer ownership handle.</summary>
+    private SqliteSingleWriterOwnership? _ownership;
 
     /// <summary>A value indicating whether capture-stage admission is closed.</summary>
     private bool _captureAdmissionClosed;
@@ -80,7 +86,10 @@ public sealed class SqliteLocalStoreAdapter : ILocalStoreAdapter
         _sizing = new(options.WorkerCapacityBytes);
         _workerCapacityBytes = options.WorkerCapacityBytes;
         _workerCapacity = options.WorkerCapacity;
-        _store = new(databasePath, options.TimeProvider);
+        SqliteLocalCommitValidation.ThrowIfBlank(databasePath, nameof(databasePath), "The SQLite database path cannot be empty.");
+        SqliteLocalCommitValidation.ThrowIfUnsupportedPath(databasePath);
+        _databasePath = Path.GetFullPath(databasePath);
+        _store = new(_databasePath, options.TimeProvider);
         _worker = new(options.WorkerCapacity, options.WorkerCapacityBytes);
     }
 
@@ -94,7 +103,17 @@ public sealed class SqliteLocalStoreAdapter : ILocalStoreAdapter
         return new(ExecuteAsync(
             token =>
             {
-                _store.Initialize(backendInitialization, token);
+                var acquiredOwnership = EnsureOwnership();
+                try
+                {
+                    _store.Initialize(backendInitialization, token);
+                }
+                catch
+                {
+                    ReleaseOwnershipIfNew(acquiredOwnership);
+                    throw;
+                }
+
                 return true;
             },
             _sizing.InitializationBytes(initialization),
@@ -273,6 +292,7 @@ public sealed class SqliteLocalStoreAdapter : ILocalStoreAdapter
         await captureDrainTask.ConfigureAwait(false);
         await workerDrain.ConfigureAwait(false);
         _store.Dispose();
+        _ownership?.Dispose();
     }
 
     /// <summary>Maps public initialization requirements to the current SQLite backend schema.</summary>
@@ -295,6 +315,33 @@ public sealed class SqliteLocalStoreAdapter : ILocalStoreAdapter
         }
 
         return initialization with { RequiredSchemaVersion = CurrentSchemaVersion };
+    }
+
+    /// <summary>Acquires the single-writer owner handle once for this adapter.</summary>
+    /// <returns>The new owner when this call acquired it; otherwise, null.</returns>
+    private SqliteSingleWriterOwnership? EnsureOwnership()
+    {
+        if (_ownership is not null)
+        {
+            return null;
+        }
+
+        var ownership = SqliteSingleWriterOwnership.Acquire(_databasePath);
+        _ownership = ownership;
+        return ownership;
+    }
+
+    /// <summary>Releases ownership acquired by a failed initialization attempt.</summary>
+    /// <param name="acquiredOwnership">The owner acquired by the current call, if any.</param>
+    private void ReleaseOwnershipIfNew(SqliteSingleWriterOwnership? acquiredOwnership)
+    {
+        if (acquiredOwnership is null)
+        {
+            return;
+        }
+
+        _ownership = null;
+        acquiredOwnership.Dispose();
     }
 
     /// <summary>Reserves bounded capture-stage ownership before copying caller input.</summary>
