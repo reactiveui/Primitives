@@ -388,3 +388,9 @@ Linux and macOS across the four modern frameworks. Full-solution CI builds remai
 The implemented identity, configuration, policy, serialization, admission, protocol, negotiation, observer, fault-model, stream-definition and transaction-kernel stages are verified. Adapter conformance,
 remaining facade contracts and integrated runtime/durability stages are still incomplete. Passing option validation alone does not establish a
 delivery guarantee or establish that a custom policy preserves durable work; the runtime must enforce both.
+
+## Local consolidation — 2026-09-12
+
+OccasionallyConnected is now the sole local feature branch. All 61 prior CP_* branch heads were checked for ancestry and merged where necessary, then their local branch refs were deleted. Detached worktrees preserve all tracked and untracked drafts unchanged; none were deleted. The SQLite remote draft remains pending independent review and completion. No push or PR is permitted until the complete feature is implemented and verified; the eventual publication is one final PR.
+
+Conflict resolution retained the current Core APIs, SQLite registration, implementation ledger and newer dependency pins. It retained coverage collector18.11.2 and the TUnit cancellation-token CI repair. Old reconciliation branches contributed history without removing newer feature work. Full solution Release validation is running; no completion claim yet.
