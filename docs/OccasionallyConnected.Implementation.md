@@ -335,6 +335,16 @@ Linux and macOS across the four modern frameworks. Full-solution CI builds remai
 - This is the identity persistence component, not the complete local store adapter. Outbox/inbox transactions, leases,
   compaction, encryption, migrations beyond schema v1 and process-crash conformance remain subsequent work.
 
+### Stage 3f: typed remote facade contracts
+
+- Added decoded remote messages, subscription and publishing interfaces, and explicit no-cancellation/default-input
+  extension overloads. Publication follows the chosen durability policy; subscribers receive locally committed messages.
+- TUnit tests verify message metadata, subscription forwarding, exact argument/result identity, ordered delivery and
+  unwrapped failures. These contract fakes do not establish runtime durability or bounded admission conformance.
+- Root review added bridge failure and metadata assertions. Replacing omitted input options with a new instance produced
+  an executable failure before restoration. All 308 Core tests pass on each modern framework with 100% matching coverage
+  (866 lines and 318 branches per target). All eight Core library targets build without warnings or errors.
+- Concrete remote facades and their transaction, queue and lifecycle integration remain subsequent work.
 The implemented identity, configuration, policy, serialization, admission, protocol, negotiation, observer, fault-model, stream-definition and transaction-kernel stages are verified. Adapter conformance,
 remaining facade contracts and integrated runtime/durability stages are still incomplete. Passing option validation alone does not establish a
 delivery guarantee or establish that a custom policy preserves durable work; the runtime must enforce both.
