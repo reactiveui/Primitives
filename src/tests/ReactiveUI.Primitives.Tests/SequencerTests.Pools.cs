@@ -160,23 +160,54 @@ public partial class SequencerTests
         await Assert.That(context.PostCount).IsEqualTo(1);
     }
 
-    /// <summary>Verifies delayed work cancelled before its due time never reaches the synchronization context.</summary>
+    /// <summary>Verifies cancellation after enqueue prevents delayed work from reaching the dispatcher.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task SynchronizationContextSequencerDropsDelayedWorkCancelledBeforeItIsDue()
     {
         RecordingSynchronizationContext context = new();
-        SynchronizationContextSequencer sequencer = new(context);
+        ControlledDelaySequencer delay = new();
+        SynchronizationContextSequencer sequencer = new(context, delay);
         CancellableWorkItem item = new();
 
-        sequencer.Schedule(item, Sequencer.AddTimestamp(sequencer.Timestamp, CancelledDueTime));
-        item.Dispose();
+        sequencer.Schedule(item, long.MaxValue);
+        await Assert.That(delay.ScheduledTimestamp).IsEqualTo(long.MaxValue);
+        await Assert.That(delay.Pending).IsNotNull();
+        await Assert.That(context.PostCount).IsEqualTo(0);
 
-        await Task.Delay(CancelObservationWindow);
+        item.Dispose();
+        delay.ExecutePending();
 
         await Assert.That(item.ExecuteCount).IsEqualTo(0);
         await Assert.That(context.PostCount).IsEqualTo(0);
     }
+
+    /// <summary>Verifies pending delayed work reaches the dispatcher when it has not been cancelled.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task SynchronizationContextSequencerPostsPendingDelayedWork()
+    {
+        RecordingSynchronizationContext context = new();
+        ControlledDelaySequencer delay = new();
+        SynchronizationContextSequencer sequencer = new(context, delay);
+        CancellableWorkItem item = new();
+
+        sequencer.Schedule(item, long.MaxValue);
+        await Assert.That(context.PostCount).IsEqualTo(0);
+        await Assert.That(item.ExecuteCount).IsEqualTo(0);
+
+        delay.ExecutePending();
+
+        await Assert.That(context.PostCount).IsEqualTo(1);
+        await Assert.That(item.ExecuteCount).IsEqualTo(1);
+    }
+
+    /// <summary>Verifies the internal delayed scheduler dependency cannot be absent.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task SynchronizationContextSequencerRejectsMissingDelayScheduler() =>
+        await Assert.That(static () => new SynchronizationContextSequencer(new RecordingSynchronizationContext(), null!))
+            .ThrowsExactly<ArgumentNullException>();
 
     /// <summary>
     /// Verifies disposing a thread-pool sequencer twice releases its queued work exactly once and leaves the sequencer
@@ -247,6 +278,42 @@ public partial class SequencerTests
     /// </summary>
     /// <returns>The isolated sequencer.</returns>
     private static ThreadPoolSequencer CreateIsolatedThreadPoolSequencer() => new();
+
+    /// <summary>Holds a delayed item until the test explicitly dispatches it.</summary>
+    private sealed class ControlledDelaySequencer : ISequencer
+    {
+        /// <summary>Gets the pending delayed callback.</summary>
+        public IWorkItem? Pending { get; private set; }
+
+        /// <summary>Gets the timestamp forwarded by the dispatcher.</summary>
+        public long ScheduledTimestamp { get; private set; }
+
+        /// <inheritdoc/>
+        public DateTimeOffset Now => DateTimeOffset.UnixEpoch;
+
+        /// <inheritdoc/>
+        public long Timestamp => 0;
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Schedule(IWorkItem item) => item.Execute();
+
+        /// <inheritdoc/>
+        public void Schedule(IWorkItem item, long dueTimestamp)
+        {
+            Pending = item;
+            ScheduledTimestamp = dueTimestamp;
+        }
+
+        /// <summary>Executes the item after the test has cancelled or inspected pending work.</summary>
+        /// <exception cref="InvalidOperationException">No item is pending.</exception>
+        public void ExecutePending()
+        {
+            var pending = Pending ?? throw new InvalidOperationException("No delayed work was queued.");
+            Pending = null;
+            pending.Execute();
+        }
+    }
 
     /// <summary>Work item that counts how many times a sequencer released it.</summary>
     private sealed class DisposeCountingWorkItem : IWorkItem, IsDisposed

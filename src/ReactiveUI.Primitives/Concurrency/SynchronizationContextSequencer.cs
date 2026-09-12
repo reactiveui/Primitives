@@ -9,11 +9,26 @@ namespace ReactiveUI.Primitives.Concurrency;
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class SynchronizationContextSequencer : ISequencer
 {
+    /// <summary>Schedules delayed dispatch without owning the scheduler lifetime.</summary>
+    private readonly ISequencer _delaySequencer;
+
     /// <summary>Initializes a new instance of the <see cref="SynchronizationContextSequencer"/> class.</summary>
     /// <param name="context">The synchronization context used to schedule work.</param>
     /// <exception cref="ArgumentNullException"><paramref name="context"/> is <see langword="null"/>.</exception>
-    public SynchronizationContextSequencer(SynchronizationContext context) =>
+    public SynchronizationContextSequencer(SynchronizationContext context)
+        : this(context, ThreadPoolSequencer.Instance)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="SynchronizationContextSequencer"/> class.</summary>
+    /// <param name="context">The synchronization context used to schedule work.</param>
+    /// <param name="delaySequencer">The scheduler used to wait before posting delayed work.</param>
+    /// <exception cref="ArgumentNullException">Either dependency is <see langword="null"/>.</exception>
+    internal SynchronizationContextSequencer(SynchronizationContext context, ISequencer delaySequencer)
+    {
         Context = context ?? throw new ArgumentNullException(nameof(context));
+        _delaySequencer = delaySequencer ?? throw new ArgumentNullException(nameof(delaySequencer));
+    }
 
     /// <summary>Gets a sequencer for the current synchronization context.</summary>
     /// <exception cref="InvalidOperationException">There is no current synchronization context.</exception>
@@ -58,7 +73,7 @@ public sealed class SynchronizationContextSequencer : ISequencer
             return;
         }
 
-        ThreadPoolSequencer.Instance.Schedule(new DelayedPostWorkItem(this, item), dueTimestamp);
+        _delaySequencer.Schedule(new DelayedPostWorkItem(this, item), dueTimestamp);
     }
 
     /// <summary>Executes work when it has not already been cancelled.</summary>
