@@ -1,0 +1,36 @@
+namespace ReactiveUI.Primitives.OccasionallyConnected;
+
+[System.Diagnostics.DebuggerDisplay("{_endpoint,nq}; {_state,nq}")]
+public sealed class CircuitBreaker
+{
+    public CircuitBreaker(string endpoint) { }
+    public CircuitBreaker(string endpoint, ReactiveUI.Primitives.OccasionallyConnected.CircuitBreakerOptions options, System.TimeProvider timeProvider) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.CircuitBreakerSnapshot Snapshot { get; }
+    public void AbandonProbe() { }
+    public void RecordSuccess() { }
+    public void RecordTransientFailure() { }
+    public bool TryAcquire() { }
+}
+[System.Diagnostics.DebuggerDisplay("{Endpoint,nq}; {State,nq}; Failures={ConsecutiveTransientFailures,nq}")]
+public record CircuitBreakerSnapshot : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.CircuitBreakerSnapshot>
+{
+    public CircuitBreakerSnapshot(string Endpoint, ReactiveUI.Primitives.OccasionallyConnected.CircuitBreakerState State, int ConsecutiveTransientFailures, System.DateTimeOffset? RetryAfterUtc) { }
+    public int ConsecutiveTransientFailures { get; init; }
+    public string Endpoint { get; init; }
+    public System.DateTimeOffset? RetryAfterUtc { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.CircuitBreakerState State { get; init; }
+}
+public enum CircuitBreakerState
+{
+    Closed = 0,
+    Open = 1,
+    HalfOpen = 2,
+}
+[System.Diagnostics.DebuggerDisplay("MinimumDelay = {_options.MinimumDelay}, MaximumDelay = {_options.MaximumDelay}")]
+public sealed class RetryPolicy : ReactiveUI.Primitives.OccasionallyConnected.IRetryPolicy
+{
+    public RetryPolicy() { }
+    public RetryPolicy(ReactiveUI.Primitives.OccasionallyConnected.RetryOptions options) { }
+    public RetryPolicy(ReactiveUI.Primitives.OccasionallyConnected.RetryOptions options, System.TimeProvider timeProvider, ReactiveUI.Primitives.OccasionallyConnected.IRetryRandomSource randomSource) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.RetryDecision GetDecision(ReactiveUI.Primitives.OccasionallyConnected.RetryFailure failure, ReactiveUI.Primitives.OccasionallyConnected.RetryState state) { }
+}

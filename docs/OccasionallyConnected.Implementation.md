@@ -60,6 +60,57 @@ fit a snippet.
 The installed .NET 11 SDK's native `dotnet test` handshake returned exit 5 for this TUnit application. Building the
 test project and executing its DLL directly runs the same Microsoft.Testing.Platform/TUnit application successfully.
 The coverage workflow uses that invocation on Windows, Linux and macOS, with an explicit 100% line/branch gate.
-Cross-platform CI results remain pending until the PR runs; local validation was performed on Windows.
+PR [#192](https://github.com/reactiveui/Primitives/pull/192) passed all twelve feature coverage jobs on Windows,
+Linux and macOS across the four modern frameworks. Full-solution CI builds remain a separate check.
 
-Only stage 1a is verified. Options, remaining contracts and every runtime/durability stage are still incomplete.
+### Stage 1b: publishing, subscription and observer input options
+
+- Added operation/subscription identities and immutable options with structural validation.
+- Durable publishing rejects dropping policies; exactly-once publishing requires durability; synchronous observer
+  input rejects blocking backpressure. Custom policies require explicit registration support.
+- Priority validation accepts configured inclusive bounds, with a default of -10 through 10.
+- Agent tests preceded implementation; root review added independent custom-policy, durable-guarantee and
+  per-operation override cases. Disabling validation caused 29 tests to fail.
+- GREEN: 90 tests passed on each modern framework (360 executions).
+- Release coverage independently inspected through Mtpunittestmcp: 152/152 lines and 104/104 branches per framework.
+
+### Stage 1c: batching configuration
+
+- Added immutable count, encoded-byte, dwell-time and per-stream in-flight limits with positive-value validation.
+- Defaults match the design: 100 operations, 1 MiB, 50 ms and one in-flight batch per stream.
+- Executable RED: the compilable validation stub failed eight of the ten new tests.
+- GREEN: 100 tests passed on each modern framework (400 executions).
+- Release coverage independently inspected through Mtpunittestmcp: 165/165 lines and 112/112 branches per framework.
+- Runtime batching and enforcement of smaller negotiated server limits remain pending.
+
+### Stage 6a: standalone endpoint circuit breaker
+
+- Added the lean runtime project and a deterministic, thread-safe circuit breaker with an injected `TimeProvider`.
+- Five consecutive transient failures open an endpoint for 30 seconds by default. Only one concurrent caller gets
+  the half-open probe. A successful handshake resets the circuit; a failed or abandoned probe reopens it.
+- Late failures do not extend an already-open deadline. Failure counts and extreme UTC deadlines cannot overflow.
+- Root review expanded the worker's six-test handoff, removed unreachable state branches, and completed the gate.
+  Ignoring the configured threshold caused seven tests to fail.
+- GREEN: 106 Core tests plus 15 runtime tests passed per modern framework (484 executions).
+- Mtpunittestmcp confirmed Core coverage of 173/173 lines and 118/118 branches, and runtime coverage of 57/57 lines
+  and 20/20 branches, on each modern framework.
+- Engine integration, retry persistence and endpoint fault classification remain pending.
+
+### Stage 6b: standalone retry policy
+
+- Added persisted retry state and deterministic decorrelated jitter with injected time and randomness.
+- Server retry hints are lower bounds. Scheduling stops at the retry-age or calendar limit, rather than overflowing
+  a deadline or retrying immediately. A backwards clock cannot increase the configured remaining-age budget.
+- Authentication retries require an explicit renewed credential version and allow one immediate retry per version.
+  Permanent failures stop; invalid persisted state and negative server delays are rejected.
+- Root review added executable regression tests before fixing twelve failures in the initial handoff, including
+  overflow, missing renewal evidence, invalid state and retry-age boundaries.
+- GREEN: 120 Core tests plus 49 runtime tests passed per modern framework (676 executions).
+- Mtpunittestmcp confirmed Core coverage of 216/216 lines and 128/128 branches, and runtime coverage of 139/139 lines
+  and 72/72 branches, on each modern framework. All eight library targets build with zero warnings and errors.
+- The synchronization engine must persist decisions, respect stored due times after restart, and only invoke retry
+  for an operation whose delivery guarantee permits another attempt. That integration remains pending.
+
+Identities, local option validation and the standalone circuit and retry policies are verified. Adapter capability negotiation,
+remaining contracts and integrated runtime/durability stages are still incomplete. Passing option validation alone does not establish a
+delivery guarantee or establish that a custom policy preserves durable work; the runtime must enforce both.
