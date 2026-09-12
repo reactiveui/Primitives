@@ -104,7 +104,7 @@ public static partial class LinqExtensions
             Func<T, TKey> keySelector,
             IEqualityComparer<TKey>? comparer)
         {
-            HashSet<TKey> seen = comparer is null ? [] : new(comparer);
+            HashSet<TKey> seen = comparer is null ? [] : [with(comparer)];
             var typedSelector = (Func<int, TKey>)(object)keySelector;
             for (var i = 0; i < range.Count; i++)
             {

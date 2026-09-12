@@ -148,7 +148,7 @@ public static partial class SignalAsyncExtensions
         where TKey : notnull
     {
         /// <summary>The dictionary that accumulates key-value pairs from the source sequence.</summary>
-        private readonly Dictionary<TKey, TValue> _map = comparer is null ? new() : new(comparer);
+        private readonly Dictionary<TKey, TValue> _map = comparer is null ? [] : [with(comparer)];
 
         /// <inheritdoc/>
         protected override ValueTask OnNextAsyncCore(TSource value, CancellationToken cancellationToken)

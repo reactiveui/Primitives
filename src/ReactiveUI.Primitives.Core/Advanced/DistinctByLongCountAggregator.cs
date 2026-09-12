@@ -21,7 +21,7 @@ public readonly record struct
     /// <param name="keySelector">The key selector.</param>
     /// <param name="comparer">The key comparer, or <see langword="null"/> for the default comparer.</param>
     public DistinctByLongCountAggregator(Func<T, TKey> keySelector, IEqualityComparer<TKey>? comparer)
-        : this(keySelector, comparer is null ? [] : new(comparer), 0L)
+        : this(keySelector, comparer is null ? [] : [with(comparer)], 0L)
     {
     }
 

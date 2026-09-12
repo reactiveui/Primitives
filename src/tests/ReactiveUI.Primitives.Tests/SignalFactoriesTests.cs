@@ -527,7 +527,8 @@ public partial class SignalFactoriesTests
         chooseThen = false;
         _ = conditionalSource.Subscribe(conditional.Add);
 
-        Dictionary<string, IObservable<int>> cases = new(StringComparer.Ordinal) { ["one"] = Signal.Emit(One) };
+        Dictionary<string, IObservable<int>> cases = [with(StringComparer.Ordinal)];
+        cases["one"] = Signal.Emit(One);
         _ = Signal.Case(static () => "one", cases, Signal.Emit(Two)).Subscribe(selectedCase.Add);
         _ = Signal.Case(static () => "missing", cases, Signal.Emit(Two)).Subscribe(defaultCase.Add);
         _ = Signal.Using(

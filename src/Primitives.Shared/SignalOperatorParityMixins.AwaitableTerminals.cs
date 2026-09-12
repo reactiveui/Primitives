@@ -278,7 +278,7 @@ public static partial class LinqExtensions
 
             if (source is RangeSignal range && typeof(T) == typeof(int))
             {
-                List<int> integers = new(range.Count);
+                List<int> integers = [with(capacity: range.Count)];
                 for (var i = 0; i < range.Count; i++)
                 {
                     integers.Add(range.Start + i);
