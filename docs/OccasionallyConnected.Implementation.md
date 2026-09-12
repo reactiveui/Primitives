@@ -500,3 +500,16 @@ Conflict resolution retained the current Core APIs, SQLite registration, impleme
   1994 on net9-net11 and 505 branches throughout. All eight library targets build without warnings or errors.
 - Public adapter integration, compaction, encryption and crash conformance remain subsequent work. These synchronous
   internal operations require the bounded worker adapter to coordinate admission and drain operations during disposal.
+
+### Stage 4g: transactional SQLite compaction
+
+- Added internal compaction with bounded candidate batches in one SQLite write transaction. Terminal outbox and
+  dead-letter records use separate retention windows; unresolved stream history, active leases and the current snapshot
+  producer remain protected. Inbox retention uses local receipt timestamps and runs independently of the outbox budget.
+- The advisory byte target measures remaining encoded outbox payload and metadata bytes. Reclaimed bytes do not represent
+  SQLite file shrinkage. Inbox removal is counted in records and reports zero encoded outbox bytes.
+- Root rejected inbox starvation when an inbox-only store already met its byte target. A fresh agent reproduced the
+  failure before correcting it. Root reviewed the correction and added multi-batch restart and invalid-budget tests.
+- All 181 SQLite TUnit tests pass on each modern target with 100% line and branch coverage: 2241 lines on net8,
+  2226 on net9-net11 and 547 branches throughout. All eight library targets build without warnings or errors.
+- Public adapter and scheduler integration, encryption and process-crash conformance remain subsequent work.
