@@ -54,8 +54,32 @@ public sealed class RetryPolicyTests
     /// <summary>The persisted transient attempt count used by state tests.</summary>
     private const int PersistedTransientAttemptCount = 2;
 
+    /// <summary>The total age budget for an operation resumed after a delay.</summary>
+    private const int ResumedMaximumAgeSeconds = 2;
+
+    /// <summary>The age already consumed before a resumed operation fails again.</summary>
+    private const int ResumedElapsedSeconds = 1;
+
     /// <summary>The deterministic start timestamp used by retry tests.</summary>
     private static readonly DateTimeOffset StartUtc = new(2026, 9, 11, 12, 0, 0, TimeSpan.Zero);
+
+    /// <summary>Verifies a resumed operation cannot schedule a server retry beyond its remaining age budget.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task ResumedOperationStopsWhenServerDelayExceedsRemainingAge()
+    {
+        var options = RetryOptions.Default with { MaximumRetryAge = TimeSpan.FromSeconds(ResumedMaximumAgeSeconds) };
+        var clock = new FixedTimeProvider(StartUtc.AddSeconds(ResumedElapsedSeconds));
+        var policy = new RetryPolicy(options, clock, new SequenceRetryRandomSource(0));
+        var state = RetryState.Start(StartUtc);
+
+        var decision = policy.GetDecision(RetryFailure.Transient(TimeSpan.FromMilliseconds(SecondJitterDelayMilliseconds)), state);
+
+        await Assert.That(decision.Kind).IsEqualTo(RetryDecisionKind.Stop);
+        await Assert.That(decision.StopReason).IsEqualTo(RetryStopReason.RetryAgeExhausted);
+        await Assert.That(decision.DueUtc).IsNull();
+        await Assert.That(decision.NextState).IsSameReferenceAs(state);
+    }
 
     /// <summary>Verifies the first transient retry starts at the configured minimum delay.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
