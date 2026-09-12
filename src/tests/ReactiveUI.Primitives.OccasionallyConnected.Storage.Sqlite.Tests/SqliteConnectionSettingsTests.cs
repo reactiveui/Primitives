@@ -24,6 +24,18 @@ public sealed class SqliteConnectionSettingsTests
         await Assert.That(action).ThrowsExactly<InvalidOperationException>();
     }
 
+    /// <summary>Verifies WAL verification fails closed when SQLite returns an unexpected value.</summary>
+    /// <returns>A task that represents the asynchronous test.</returns>
+    [Test]
+    public async Task WhenWalJournalModeValueIsUnexpected_ThenVerificationFailsClosed()
+    {
+        Action wrongString = static () => SqliteConnectionSettings.VerifyWalJournalMode("delete");
+        Action wrongType = static () => SqliteConnectionSettings.VerifyWalJournalMode(1L);
+
+        await Assert.That(wrongString).ThrowsExactly<InvalidOperationException>();
+        await Assert.That(wrongType).ThrowsExactly<InvalidOperationException>();
+    }
+
     /// <summary>Verifies FULL synchronous verification fails closed when SQLite returns an unexpected value.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
     [Test]
@@ -31,6 +43,18 @@ public sealed class SqliteConnectionSettingsTests
     {
         Action wrongNumber = static () => SqliteConnectionSettings.VerifyFullSynchronous(1L);
         Action wrongType = static () => SqliteConnectionSettings.VerifyFullSynchronous("2");
+
+        await Assert.That(wrongNumber).ThrowsExactly<InvalidOperationException>();
+        await Assert.That(wrongType).ThrowsExactly<InvalidOperationException>();
+    }
+
+    /// <summary>Verifies foreign-key verification fails closed when SQLite returns an unexpected value.</summary>
+    /// <returns>A task that represents the asynchronous test.</returns>
+    [Test]
+    public async Task WhenForeignKeyValueIsUnexpected_ThenVerificationFailsClosed()
+    {
+        Action wrongNumber = static () => SqliteConnectionSettings.VerifyForeignKeys(0L);
+        Action wrongType = static () => SqliteConnectionSettings.VerifyForeignKeys("1");
 
         await Assert.That(wrongNumber).ThrowsExactly<InvalidOperationException>();
         await Assert.That(wrongType).ThrowsExactly<InvalidOperationException>();
