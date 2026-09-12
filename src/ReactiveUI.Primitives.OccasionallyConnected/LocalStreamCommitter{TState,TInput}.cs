@@ -227,7 +227,7 @@ internal sealed class LocalStreamCommitter<TState, TInput>
     /// <exception cref="InvalidOperationException">The batch contains duplicate event identifiers.</exception>
     private static List<Guid> GetRemoteEventIds(RemoteEventBatch batch)
     {
-        List<Guid> eventIds = new(batch.Events.Count);
+        List<Guid> eventIds = [with(capacity: batch.Events.Count)];
         HashSet<Guid> seen = [];
         for (var index = 0; index < batch.Events.Count; index++)
         {
@@ -252,7 +252,7 @@ internal sealed class LocalStreamCommitter<TState, TInput>
         List<Guid> unappliedEventIds)
     {
         HashSet<Guid> unapplied = new(unappliedEventIds);
-        List<RemoteEvent> filtered = new(unappliedEventIds.Count);
+        List<RemoteEvent> filtered = [with(capacity: unappliedEventIds.Count)];
         for (var index = 0; index < events.Count; index++)
         {
             var remoteEvent = events[index];
@@ -621,7 +621,7 @@ internal sealed class LocalStreamCommitter<TState, TInput>
         IReadOnlyList<RemoteEvent> events,
         CancellationToken cancellationToken)
     {
-        List<TInput> decodedInputs = new(events.Count);
+        List<TInput> decodedInputs = [with(capacity: events.Count)];
         foreach (var remoteEvent in events)
         {
             var decoded = await DecodeInputAsync(remoteEvent.Payload, cancellationToken).ConfigureAwait(false);
@@ -869,7 +869,7 @@ internal sealed class LocalStreamCommitter<TState, TInput>
 
         HashSet<Guid> candidates = new(candidateEventIds);
         HashSet<Guid> seen = [];
-        List<Guid> snapshot = new(unappliedEventIds.Count);
+        List<Guid> snapshot = [with(capacity: unappliedEventIds.Count)];
         for (var index = 0; index < unappliedEventIds.Count; index++)
         {
             var eventId = unappliedEventIds[index];
