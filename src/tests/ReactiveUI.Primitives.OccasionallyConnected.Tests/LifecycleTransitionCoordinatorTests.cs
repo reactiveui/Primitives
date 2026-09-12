@@ -13,11 +13,52 @@ public sealed class LifecycleTransitionCoordinatorTests
     /// <summary>The expected order entry count for a stop racing startup.</summary>
     private const int ThreeOrderEntries = 3;
 
+    /// <summary>The client count used to race startup completion with idempotent startup requests.</summary>
+    private const int ConcurrentClients = 64;
+
+    /// <summary>The number of independent resource lifetimes exercised by the startup race.</summary>
+    private const int StartupRaceRounds = 64;
+
     /// <summary>The startup failure message used by failure-path tests.</summary>
     private const string StartupFailedMessage = "startup failed";
 
     /// <summary>The guard used for released asynchronous transitions.</summary>
     private static readonly TimeSpan GuardTimeout = TimeSpan.FromSeconds(5);
+
+    /// <summary>Verifies clients can immediately request startup again after their shared startup completes.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task StartupCompletionAllowsImmediateIdempotentRequests()
+    {
+        for (var round = 0; round < StartupRaceRounds; round++)
+        {
+            var release = CreateSignal();
+            var starts = 0;
+            var coordinator = new LifecycleTransitionCoordinator(
+                () =>
+                {
+                    starts++;
+                    return new(release.Task);
+                },
+                static () => default);
+            var clients = new Task[ConcurrentClients];
+            for (var index = 0; index < clients.Length; index++)
+            {
+                clients[index] = StartTwiceAsync(coordinator);
+            }
+
+            release.SetResult();
+            await Task.WhenAll(clients).WaitAsync(GuardTimeout);
+            await Assert.That(starts).IsEqualTo(1);
+            await coordinator.DisposeAsync();
+        }
+
+        static async Task StartTwiceAsync(LifecycleTransitionCoordinator coordinator)
+        {
+            await coordinator.StartAsync(CancellationToken.None);
+            await coordinator.StartAsync(CancellationToken.None);
+        }
+    }
 
     /// <summary>Verifies concurrent startup requests share one callback.</summary>
     /// <returns>The assertion task.</returns>
