@@ -40,7 +40,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
         var originlessEvent = rejectedEvent with { Origin = null };
 
         Func<Task<RemoteApplyResult>> rejected = () => adapter.ApplyRemoteBatchAsync(
-            CreateRemoteBatch(null, RejectedOriginCursor, [rejectedEvent]),
+            CreateOriginBatch(RejectedOriginCursor, operationId, rejectedEvent),
             CreateSnapshotMutation(expectedRevision: 0),
             CancellationToken.None).AsTask();
 
@@ -74,7 +74,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
         var originEvent = CreateOriginEvent(AcceptedOriginCursor, operationId);
 
         var result = await adapter.ApplyRemoteBatchAsync(
-            CreateRemoteBatch(null, AcceptedOriginCursor, [originEvent]),
+            CreateOriginBatch(AcceptedOriginCursor, operationId, originEvent),
             CreateSnapshotMutation(expectedRevision: 0),
             CancellationToken.None);
         var recovery = await adapter.RecoverStreamAsync(Stream, subscriptionId, CancellationToken.None);
@@ -85,6 +85,17 @@ public sealed partial class SqliteLocalStoreAdapterTests
         await Assert.That(recovery.Snapshot?.Revision).IsEqualTo(result.SnapshotRevision);
         await Assert.That(unapplied.Count).IsEqualTo(0);
     }
+
+    /// <summary>Creates a remote batch with a complete origin declaration.</summary>
+    /// <param name="serverCursor">The server cursor assigned to the event.</param>
+    /// <param name="operationId">The operation that caused the event.</param>
+    /// <param name="remoteEvent">The origin-correlated event.</param>
+    /// <returns>The origin-correlated batch.</returns>
+    private static RemoteEventBatch CreateOriginBatch(string serverCursor, OperationId operationId, RemoteEvent remoteEvent) =>
+        CreateRemoteBatch(null, serverCursor, [remoteEvent]) with
+        {
+            CompletedOperations = [new(new(Utf8OriginClientId, operationId), [remoteEvent.EventId])],
+        };
 
     /// <summary>Creates a remote event with an authenticated origin correlation.</summary>
     /// <param name="serverCursor">The server cursor assigned to the event.</param>

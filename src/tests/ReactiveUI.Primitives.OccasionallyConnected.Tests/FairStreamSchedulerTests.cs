@@ -55,6 +55,9 @@ public sealed partial class FairStreamSchedulerTests
     /// <summary>Defines an invalid high priority.</summary>
     private const int InvalidHighPriority = 11;
 
+    /// <summary>Defines an invalid low priority.</summary>
+    private const int InvalidLowPriority = -1;
+
     /// <summary>Defines an invalid minimum priority for option validation.</summary>
     private const int InvalidPriorityMinimum = 1;
 
@@ -222,8 +225,12 @@ public sealed partial class FairStreamSchedulerTests
 
         await Assert.That(() => scheduler.Ready(stream, InvalidHighPriority, clock.GetUtcNow()))
             .ThrowsExactly<InvalidOperationException>();
+        await Assert.That(() => scheduler.Ready(stream, InvalidLowPriority, clock.GetUtcNow()))
+            .ThrowsExactly<InvalidOperationException>();
         scheduler.Ready(stream, NormalPriority, clock.GetUtcNow());
         await Assert.That(() => scheduler.Update(stream, InvalidHighPriority, clock.GetUtcNow()))
+            .ThrowsExactly<InvalidOperationException>();
+        await Assert.That(() => scheduler.Update(stream, InvalidLowPriority, clock.GetUtcNow()))
             .ThrowsExactly<InvalidOperationException>();
     }
 
@@ -450,6 +457,21 @@ public sealed partial class FairStreamSchedulerTests
 
         scheduler.Register(new(new(FirstStreamName), Weight: LightWeight));
         await Assert.That(() => scheduler.Register(new(new(SecondStreamName), Weight: LightWeight))).ThrowsExactly<InvalidOperationException>();
+    }
+
+    /// <summary>Verifies completing a registered stream without an inflight head fails closed.</summary>
+    /// <returns>A task representing the assertions.</returns>
+    [Test]
+    public async Task CompleteRejectsRegisteredStreamWithoutInflightHead()
+    {
+        var clock = new FakeTimeProvider();
+        var scheduler = CreateScheduler(clock);
+        var stream = new StreamId(StreamName);
+
+        scheduler.Register(new(stream, Weight: LightWeight));
+
+        await Assert.That(() => scheduler.Complete(new(stream))).ThrowsExactly<InvalidOperationException>();
+        await Assert.That(scheduler.RegisteredStreamCount).IsEqualTo(1);
     }
 
     /// <summary>Verifies operations against unknown streams fail without mutating scheduler state.</summary>

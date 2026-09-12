@@ -78,6 +78,54 @@ public sealed partial class SqliteStoreSchemaTests
         await Assert.That(action).ThrowsExactly<InvalidOperationException>();
     }
 
+    /// <summary>Verifies schema version six validates and migrates by adding receive inclusion sidecars.</summary>
+    /// <returns>A task that represents the asynchronous test.</returns>
+    [Test]
+    public async Task WhenAuthoritativeLocalCommitSchemaMigrates_ThenReceiveInclusionTableIsCreated()
+    {
+        using var database = TempDatabase.Create();
+        await using var connection = OpenRawConnection(database.Path);
+        await using var transaction = connection.BeginTransaction();
+        SchemaSixFixture.Create(connection, transaction);
+
+        _ = AssertNoThrow(() => SqliteStoreSchema.ValidateExistingSchemaForLocalCommit(
+            connection,
+            transaction,
+            SqliteStoreSchema.AuthoritativeLocalCommitSchemaVersion));
+        SqliteStoreSchema.MigrateAuthoritativeLocalCommitToCurrent(connection, transaction);
+
+        await Assert.That(SelectUserVersion(connection, transaction)).IsEqualTo(SqliteStoreSchema.LocalCommitSchemaVersion);
+        await Assert.That(SqliteStoreSchema.SelectMetadata(connection, transaction, SqliteStoreSchema.SchemaVersionKey))
+            .IsEqualTo(SqliteStoreSchema.LocalCommitSchemaVersion.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        await Assert.That(TableExists(connection, transaction, SqliteStoreSchema.OutboxReceiveInclusionsTableName)).IsTrue();
+        SqliteStoreSchema.ValidateLocalCommitSchema(connection, transaction);
+    }
+
+    /// <summary>Verifies schema version six validation rejects mismatched metadata.</summary>
+    /// <returns>A task that represents the asynchronous test.</returns>
+    [Test]
+    public async Task WhenAuthoritativeLocalCommitMetadataVersionDrifts_ThenValidationFailsClosed()
+    {
+        using var database = TempDatabase.Create();
+        await using var connection = OpenRawConnection(database.Path);
+        await using var transaction = connection.BeginTransaction();
+        SchemaSixFixture.Create(connection, transaction);
+        SetMetadataVersion(connection, transaction, SqliteStoreSchema.LocalCommitSchemaVersion);
+
+        Action action = () => SqliteStoreSchema.ValidateAuthoritativeLocalCommitSchema(connection, transaction);
+
+        await Assert.That(action).ThrowsExactly<InvalidOperationException>();
+    }
+
+    /// <summary>Executes an action and returns true when it does not throw.</summary>
+    /// <param name="action">The action.</param>
+    /// <returns>True when the action completes.</returns>
+    private static bool AssertNoThrow(Action action)
+    {
+        action();
+        return true;
+    }
+
     /// <summary>Sets the stored metadata schema version.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
@@ -123,6 +171,35 @@ public sealed partial class SqliteStoreSchemaTests
             END;
             """;
         _ = command.ExecuteNonQuery();
+    }
+
+    /// <summary>Selects the current SQLite user version.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <returns>The user version.</returns>
+    /// <exception cref="InvalidOperationException">SQLite returns an unexpected user version.</exception>
+    private static long SelectUserVersion(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "PRAGMA user_version;";
+        return command.ExecuteScalar() is long value
+            ? value
+            : throw new InvalidOperationException("SQLite user_version returned an unexpected value.");
+    }
+
+    /// <summary>Returns whether a user table exists.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="tableName">The table name.</param>
+    /// <returns>Whether the table exists.</returns>
+    private static bool TableExists(SqliteConnection connection, SqliteTransaction transaction, string tableName)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = $tableName;";
+        _ = command.Parameters.AddWithValue("$tableName", tableName);
+        return Convert.ToInt64(command.ExecuteScalar(), System.Globalization.CultureInfo.InvariantCulture) == 1;
     }
 
     /// <summary>Opens a raw SQLite connection with pooling disabled.</summary>

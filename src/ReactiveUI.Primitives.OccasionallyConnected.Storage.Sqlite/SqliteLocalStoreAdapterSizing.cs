@@ -139,6 +139,7 @@ internal sealed class SqliteLocalStoreAdapterSizing
         bytes = Add(bytes, StringBytes(batch.PreviousCursor));
         bytes = Add(bytes, StringBytes(batch.NextCursor));
         bytes = Add(bytes, CollectionBytes(batch.Events, RemoteEventBytes));
+        bytes = Add(bytes, CollectionBytes(batch.CompletedOperations, RemoteOperationCompletionBytes));
         return Add(bytes, SnapshotMutationBytes(snapshotMutation));
     }
 
@@ -212,6 +213,17 @@ internal sealed class SqliteLocalStoreAdapterSizing
         bytes = Add(bytes, remoteEvent.Origin is null ? NullableMarkerBytes : Add(ObjectHeaderBytes, Add(StringBytes(remoteEvent.Origin.ClientId), GuidBytes)));
         bytes = Add(bytes, PayloadBytes(remoteEvent.Payload));
         return Add(bytes, DictionaryBytes(remoteEvent.Metadata));
+    }
+
+    /// <summary>Computes retained input bytes for a remote operation completion.</summary>
+    /// <param name="completion">The completion declaration.</param>
+    /// <returns>The retained bytes.</returns>
+    private long RemoteOperationCompletionBytes(RemoteOperationCompletion completion)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(completion);
+        var bytes = Add(ObjectHeaderBytes, Add(StringBytes(completion.Origin.ClientId), GuidBytes));
+        bytes = Add(bytes, ObjectHeaderBytes + IntBytes);
+        return Add(bytes, GuidBytes * (long)completion.EventIds.Count);
     }
 
     /// <summary>Computes retained input bytes for an operation sync result.</summary>

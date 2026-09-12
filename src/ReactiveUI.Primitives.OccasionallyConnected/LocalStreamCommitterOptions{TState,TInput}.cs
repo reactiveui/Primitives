@@ -15,6 +15,9 @@ internal sealed record LocalStreamCommitterOptions<TState, TInput>
     /// <summary>Gets the logical subscription identifier supplied to recovery.</summary>
     public required SubscriptionId SubscriptionId { get; init; }
 
+    /// <summary>Gets the client identity already bound to the initialized store, or null for a legacy stream.</summary>
+    public string? ClientId { get; init; }
+
     /// <summary>Gets the payload and snapshot contracts.</summary>
     public required LocalStreamCommitterContracts Contracts { get; init; }
 

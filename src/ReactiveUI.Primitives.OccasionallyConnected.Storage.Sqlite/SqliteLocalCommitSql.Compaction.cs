@@ -29,6 +29,59 @@ internal static partial class SqliteLocalCommitSql
     /// <summary>The inbox committed-at column index for compaction rows.</summary>
     private const int CompactionInboxCommittedAtIndex = 1;
 
+    /// <summary>The SQL that selects outbox-backed compaction candidates.</summary>
+    private const string SelectOperationCompactionCandidatesSql = """
+        SELECT outbox.operation_id, state.changed_at_utc,
+               length(outbox.payload) + COALESCE((
+                   SELECT length(authoritative.payload)
+                   FROM oc_outbox_authoritative_mutations AS authoritative
+                   WHERE authoritative.store_identity = outbox.store_identity
+                       AND authoritative.operation_id = outbox.operation_id), 0) + COALESCE((
+                   SELECT SUM(length(CAST(metadata.key AS BLOB)) + length(CAST(metadata.value AS BLOB)))
+                   FROM oc_outbox_metadata AS metadata
+                   WHERE metadata.store_identity = outbox.store_identity
+                       AND metadata.operation_id = outbox.operation_id), 0)
+        FROM oc_outbox AS outbox
+        INNER JOIN oc_outbox_operation_states AS state
+            ON state.store_identity = outbox.store_identity
+            AND state.operation_id = outbox.operation_id
+        LEFT JOIN oc_outbox_receive_inclusions AS inclusion
+            ON inclusion.store_identity = outbox.store_identity
+            AND inclusion.operation_id = outbox.operation_id
+        WHERE outbox.store_identity = $storeIdentity
+            AND ($streamId IS NULL OR outbox.stream_id = $streamId)
+            AND (state.operation_state = $firstState
+                OR ($secondState IS NOT NULL AND state.operation_state = $secondState))
+            AND (state.operation_state <> 4 OR inclusion.operation_id IS NOT NULL)
+            AND state.changed_at_utc < $cutoffUtc
+            AND outbox.snapshot_revision < COALESCE((
+                SELECT snapshot.revision
+                FROM oc_snapshots AS snapshot
+                WHERE snapshot.store_identity = outbox.store_identity
+                    AND snapshot.stream_id = outbox.stream_id), 0)
+            AND NOT EXISTS (
+                SELECT 1
+                FROM oc_outbox_leases AS lease
+                WHERE lease.store_identity = outbox.store_identity
+                    AND lease.operation_id = outbox.operation_id)
+            AND NOT EXISTS (
+                SELECT 1
+                FROM oc_outbox AS unresolved
+                LEFT JOIN oc_outbox_operation_states AS unresolved_state
+                    ON unresolved_state.store_identity = unresolved.store_identity
+                    AND unresolved_state.operation_id = unresolved.operation_id
+                LEFT JOIN oc_outbox_receive_inclusions AS unresolved_inclusion
+                    ON unresolved_inclusion.store_identity = unresolved.store_identity
+                    AND unresolved_inclusion.operation_id = unresolved.operation_id
+                WHERE unresolved.store_identity = outbox.store_identity
+                    AND unresolved.stream_id = outbox.stream_id
+                    AND (unresolved_state.operation_id IS NULL
+                        OR unresolved_state.operation_state NOT IN (4, 5, 6)
+                        OR (unresolved_state.operation_state = 4 AND unresolved_inclusion.operation_id IS NULL)))
+        ORDER BY state.changed_at_utc ASC, outbox.stream_id ASC, outbox.client_sequence ASC
+        LIMIT $limit;
+        """;
+
     /// <summary>Compacts eligible SQLite local commit records in a single caller-owned transaction.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
@@ -209,49 +262,7 @@ internal static partial class SqliteLocalCommitSql
     {
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
-        command.CommandText = """
-            SELECT outbox.operation_id, state.changed_at_utc,
-                   length(outbox.payload) + COALESCE((
-                       SELECT length(authoritative.payload)
-                       FROM oc_outbox_authoritative_mutations AS authoritative
-                       WHERE authoritative.store_identity = outbox.store_identity
-                           AND authoritative.operation_id = outbox.operation_id), 0) + COALESCE((
-                       SELECT SUM(length(CAST(metadata.key AS BLOB)) + length(CAST(metadata.value AS BLOB)))
-                       FROM oc_outbox_metadata AS metadata
-                       WHERE metadata.store_identity = outbox.store_identity
-                           AND metadata.operation_id = outbox.operation_id), 0)
-            FROM oc_outbox AS outbox
-            INNER JOIN oc_outbox_operation_states AS state
-                ON state.store_identity = outbox.store_identity
-                AND state.operation_id = outbox.operation_id
-            WHERE outbox.store_identity = $storeIdentity
-                AND ($streamId IS NULL OR outbox.stream_id = $streamId)
-                AND (state.operation_state = $firstState
-                    OR ($secondState IS NOT NULL AND state.operation_state = $secondState))
-                AND state.changed_at_utc < $cutoffUtc
-                AND outbox.snapshot_revision < COALESCE((
-                    SELECT snapshot.revision
-                    FROM oc_snapshots AS snapshot
-                    WHERE snapshot.store_identity = outbox.store_identity
-                        AND snapshot.stream_id = outbox.stream_id), 0)
-                AND NOT EXISTS (
-                    SELECT 1
-                    FROM oc_outbox_leases AS lease
-                    WHERE lease.store_identity = outbox.store_identity
-                        AND lease.operation_id = outbox.operation_id)
-                AND NOT EXISTS (
-                    SELECT 1
-                    FROM oc_outbox AS unresolved
-                    LEFT JOIN oc_outbox_operation_states AS unresolved_state
-                        ON unresolved_state.store_identity = unresolved.store_identity
-                        AND unresolved_state.operation_id = unresolved.operation_id
-                    WHERE unresolved.store_identity = outbox.store_identity
-                        AND unresolved.stream_id = outbox.stream_id
-                        AND (unresolved_state.operation_id IS NULL
-                            OR unresolved_state.operation_state NOT IN (4, 5, 6)))
-            ORDER BY state.changed_at_utc ASC, outbox.stream_id ASC, outbox.client_sequence ASC
-            LIMIT $limit;
-            """;
+        command.CommandText = SelectOperationCompactionCandidatesSql;
         _ = command.Parameters.AddWithValue(StoreIdentityParameter, storeIdentity);
         _ = command.Parameters.AddWithValue("$firstState", (int)filter.FirstState);
         _ = command.Parameters.AddWithValue("$secondState", filter.SecondState.HasValue ? (int)filter.SecondState.GetValueOrDefault() : DBNull.Value);
@@ -308,10 +319,14 @@ internal static partial class SqliteLocalCommitSql
                     LEFT JOIN oc_outbox_operation_states AS unresolved_state
                         ON unresolved_state.store_identity = unresolved.store_identity
                         AND unresolved_state.operation_id = unresolved.operation_id
+                    LEFT JOIN oc_outbox_receive_inclusions AS unresolved_inclusion
+                        ON unresolved_inclusion.store_identity = unresolved.store_identity
+                        AND unresolved_inclusion.operation_id = unresolved.operation_id
                     WHERE unresolved.store_identity = inbox.store_identity
                         AND unresolved.stream_id = inbox.stream_id
                         AND (unresolved_state.operation_id IS NULL
-                            OR unresolved_state.operation_state NOT IN (4, 5, 6)))
+                            OR unresolved_state.operation_state NOT IN (4, 5, 6)
+                            OR (unresolved_state.operation_state = 4 AND unresolved_inclusion.operation_id IS NULL)))
             ORDER BY inbox.committed_at_utc ASC, inbox.stream_id ASC, inbox.event_id ASC
             LIMIT $limit;
             """;

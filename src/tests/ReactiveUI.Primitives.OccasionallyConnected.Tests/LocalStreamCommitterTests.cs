@@ -410,7 +410,14 @@ public sealed partial class LocalStreamCommitterTests
         ScriptedLocalStore store,
         ScriptedPayloadSerializer serializer,
         IOperationIdSource? operationIdSource = null) =>
-        new() { StreamId = Stream, SubscriptionId = Subscription, Contracts = CreateContracts(), Dependencies = CreateDependencies(store, serializer, operationIdSource) };
+        new()
+        {
+            StreamId = Stream,
+            SubscriptionId = Subscription,
+            ClientId = ReconciliationClientId,
+            Contracts = CreateContracts(),
+            Dependencies = CreateDependencies(store, serializer, operationIdSource),
+        };
 
     /// <summary>Creates committer contracts.</summary>
     /// <returns>The committer contracts.</returns>
@@ -599,6 +606,9 @@ public sealed partial class LocalStreamCommitterTests
         /// <summary>Gets or sets a value indicating whether state deserialization returns an input.</summary>
         public bool DeserializeStateAsInput { get; set; }
 
+        /// <summary>Gets or sets whether state serialization incorrectly uses the input contract.</summary>
+        public bool SerializeStateAsInputContract { get; set; }
+
         /// <summary>Gets the number of remote input payloads decoded.</summary>
         public int RemoteInputDeserializeCount { get; private set; }
 
@@ -618,7 +628,8 @@ public sealed partial class LocalStreamCommitterTests
             };
 
             var payload = System.Text.Encoding.UTF8.GetBytes(text);
-            var envelope = new PayloadEnvelope(contractId, schemaVersion, ContentType, payload, $"hash-{text}");
+            var storedContract = SerializeStateAsInputContract && value is ReadingState ? InputContract : contractId;
+            var envelope = new PayloadEnvelope(storedContract, schemaVersion, ContentType, payload, $"hash-{text}");
             if (MutateInputAfterSerialization && value is MutableReading mutable)
             {
                 mutable.Value = MutatedReadingValue;
@@ -810,7 +821,7 @@ public sealed partial class LocalStreamCommitterTests
                 Recovery.ServerCursor,
                 snapshotMutation.State,
                 snapshotMutation.ExpectedRevision + 1,
-                CommittedUtc);
+                CommittedUtc) { AuthoritativeState = SelectAuthoritativePayload(snapshotMutation) };
             Recovery = new(Subscription, Recovery.ServerCursor, snapshot, pending, Recovery.DeadLetters, operation.ClientSequence + 1);
             _ = CancelAfterSuccessfulCommit?.CancelAsync();
             return ReturnNullCommitResult
@@ -895,6 +906,7 @@ public sealed partial class LocalStreamCommitterTests
 
             AppliedRemoteBatch = batch;
             AppliedRemoteSnapshot = snapshotMutation;
+            var previousEventCount = _appliedEventIds.Count;
             for (var index = 0; index < batch.Events.Count; index++)
             {
                 _ = _appliedEventIds.Add(batch.Events[index].EventId);
@@ -906,10 +918,10 @@ public sealed partial class LocalStreamCommitterTests
                 batch.NextCursor,
                 snapshotMutation.State,
                 snapshotMutation.ExpectedRevision + 1,
-                CommittedUtc);
+                CommittedUtc) { AuthoritativeState = SelectAuthoritativePayload(snapshotMutation) };
             Recovery = new(Subscription, batch.NextCursor, snapshot, Recovery.PendingOperations, Recovery.DeadLetters, Recovery.NextClientSequence);
             _ = CancelAfterSuccessfulRemoteApply?.CancelAsync();
-            return await CreateRemoteReceiptAsync(batch, snapshotMutation.ExpectedRevision);
+            return await CreateRemoteReceiptAsync(batch, snapshotMutation.ExpectedRevision, _appliedEventIds.Count - previousEventCount);
         }
 
         /// <inheritdoc/>
@@ -953,18 +965,25 @@ public sealed partial class LocalStreamCommitterTests
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
+        /// <summary>Selects a replacement or preserved authoritative payload.</summary>
+        /// <param name="mutation">The snapshot mutation.</param>
+        /// <returns>The next authoritative payload.</returns>
+        private PayloadEnvelope? SelectAuthoritativePayload(SnapshotMutation mutation) =>
+            mutation.AuthoritativeState ?? Recovery.Snapshot?.AuthoritativeState;
+
         /// <summary>Creates the configurable remote receipt after persistence.</summary>
         /// <param name="batch">The persisted batch.</param>
         /// <param name="expectedRevision">The preceding revision.</param>
+        /// <param name="appliedCount">The number of new inbox entries.</param>
         /// <returns>The configured adapter receipt.</returns>
-        private async ValueTask<RemoteApplyResult> CreateRemoteReceiptAsync(RemoteEventBatch batch, long expectedRevision)
+        private async ValueTask<RemoteApplyResult> CreateRemoteReceiptAsync(RemoteEventBatch batch, long expectedRevision, int appliedCount)
         {
             var receipt = ReturnNullRemoteApplyResult
                 ? await default(ValueTask<RemoteApplyResult>)
                 : new RemoteApplyResult(
                     batch.NextCursor,
-                    batch.Events.Count,
-                    DuplicateCount: 0,
+                    appliedCount,
+                    batch.Events.Count - appliedCount,
                     expectedRevision + 1 + RemoteReceiptRevisionOffset);
             return TransformRemoteReceipt is null ? receipt : TransformRemoteReceipt(receipt);
         }

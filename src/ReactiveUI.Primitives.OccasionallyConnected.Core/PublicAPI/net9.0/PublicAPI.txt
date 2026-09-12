@@ -634,6 +634,7 @@ public record RecoveredStream : System.IEquatable<ReactiveUI.Primitives.Occasion
     public System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.DeadLetterRecord> DeadLetters { get; }
     public long NextClientSequence { get; }
     public System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.SyncOperation> PendingOperations { get; }
+    public System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.SyncOperation> ReplayOperations { get; init; }
     public string? ServerCursor { get; }
     public ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshot? Snapshot { get; }
     public ReactiveUI.Primitives.OccasionallyConnected.SubscriptionId SubscriptionId { get; }

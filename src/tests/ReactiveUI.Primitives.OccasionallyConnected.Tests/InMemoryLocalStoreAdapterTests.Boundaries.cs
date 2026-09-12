@@ -116,17 +116,19 @@ public sealed partial class InMemoryLocalStoreAdapterTests
         await Assert.That((await store.GetUnappliedEventIdsAsync(Stream, [remote.Events[0].EventId], CancellationToken.None)).Count).IsEqualTo(1);
     }
 
-    /// <summary>Verifies duplicate receive events are rejected even when the cursor chain is valid.</summary>
+    /// <summary>Verifies duplicate receive events are counted even when the cursor chain is valid.</summary>
     /// <returns>The asynchronous test.</returns>
     [Test]
-    public async Task PreviouslyAppliedEventCannotBeCommittedAgain()
+    public async Task PreviouslyAppliedEventIsCountedAsDuplicate()
     {
         await using var store = await CreateInitializedStoreAsync();
         _ = await store.GetOrCreateSubscriptionIdAsync(Stream, null, CancellationToken.None);
         var remoteEvent = CreateRemoteEvent(RemoteCursor);
         _ = await store.ApplyRemoteBatchAsync(CreateRemoteBatch(null, RemoteCursor, [remoteEvent]), CreateSnapshotMutation(0), CancellationToken.None);
-        Func<Task> duplicate = async () => _ = await store.ApplyRemoteBatchAsync(CreateRemoteBatch(RemoteCursor, "cursor-2", [remoteEvent]), CreateSnapshotMutation(1), CancellationToken.None);
-        await Assert.That(duplicate).ThrowsExactly<InvalidOperationException>();
+        var duplicate = await store.ApplyRemoteBatchAsync(CreateRemoteBatch(RemoteCursor, SecondRemoteCursor, [remoteEvent]), CreateSnapshotMutation(1), CancellationToken.None);
+
+        await Assert.That(duplicate.AppliedCount).IsEqualTo(0);
+        await Assert.That(duplicate.DuplicateCount).IsEqualTo(1);
         await Assert.That((await store.GetUnappliedEventIdsAsync(Stream, [remoteEvent.EventId], CancellationToken.None)).Count).IsEqualTo(0);
     }
 }

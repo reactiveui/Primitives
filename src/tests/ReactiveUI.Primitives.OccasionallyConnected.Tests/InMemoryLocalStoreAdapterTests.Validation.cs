@@ -76,6 +76,35 @@ public sealed partial class InMemoryLocalStoreAdapterTests
         await Assert.That(negativeByteCount).ThrowsExactly<ArgumentOutOfRangeException>();
     }
 
+    /// <summary>Verifies runtime remote apply validation covers header and event identity short-circuit branches.</summary>
+    /// <returns>The asynchronous test.</returns>
+    [Test]
+    public async Task RemoteApplyValidationRejectsWhitespaceCursorAndEmptyEventIdentity()
+    {
+        var payload = CreatePayload(RemotePayloadText);
+        var now = DateTimeOffset.UnixEpoch;
+        var validEvent = CreateRemoteEvent(RemoteCursor);
+        var emptyEvent = new RemoteEvent(Guid.Empty, Stream, RemoteCursor, now, null, payload, new Dictionary<string, string>());
+        var duplicateEvent = new RemoteEvent(
+            validEvent.EventId,
+            validEvent.StreamId,
+            "cursor-2",
+            validEvent.CommittedAtUtc,
+            validEvent.CausedByOperationId,
+            validEvent.Payload,
+            validEvent.Metadata);
+        var whitespaceCursor = new RemoteEventBatch(Guid.NewGuid(), Stream, null, " ", []);
+        var emptyEventBatch = CreateRemoteBatch(null, RemoteCursor, [emptyEvent]);
+        var duplicateEventBatch = CreateRemoteBatch(null, RemoteCursor, [validEvent, duplicateEvent]);
+
+        await Assert.That(() => InMemoryLocalStoreAdapterValidation.ValidateRemoteApplyInput(whitespaceCursor, CreateSnapshotMutation(0)))
+            .ThrowsExactly<ArgumentException>();
+        await Assert.That(() => InMemoryLocalStoreAdapterValidation.ValidateRemoteApplyInput(emptyEventBatch, CreateSnapshotMutation(0)))
+            .ThrowsExactly<ArgumentException>();
+        await Assert.That(() => InMemoryLocalStoreAdapterValidation.ValidateRemoteApplyInput(duplicateEventBatch, CreateSnapshotMutation(0)))
+            .ThrowsExactly<ArgumentException>();
+    }
+
     /// <summary>Verifies malformed stream and subscription identifiers are rejected before state changes.</summary>
     /// <returns>The asynchronous test.</returns>
     [Test]

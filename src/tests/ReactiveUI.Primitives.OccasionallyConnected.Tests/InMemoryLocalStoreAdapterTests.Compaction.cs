@@ -15,7 +15,7 @@ public sealed partial class InMemoryLocalStoreAdapterTests
         var clock = new ManualTimeProvider(DateTimeOffset.UnixEpoch);
         await using var store = await CreateInitializedStoreAsync(clock);
         var first = await CommitOperationAsync(store, Stream, 1, "first");
-        await SetServerResultAsync(store, first, OperationResultKind.Accepted);
+        await SetServerResultAsync(store, first, OperationResultKind.Rejected);
         clock.Advance(TimeSpan.FromTicks(1));
         var second = await CommitOperationAsync(store, Stream, SecondClientSequence, "second");
         await SetServerResultAsync(store, second, OperationResultKind.Rejected);
@@ -34,7 +34,7 @@ public sealed partial class InMemoryLocalStoreAdapterTests
         var clock = new ManualTimeProvider(DateTimeOffset.UnixEpoch);
         await using var store = await CreateInitializedStoreAsync(clock);
         var operation = await CommitOperationAsync(store, Stream, 1, "local");
-        await SetServerResultAsync(store, operation, OperationResultKind.Accepted);
+        await SetServerResultAsync(store, operation, OperationResultKind.Rejected);
         clock.Advance(TimeSpan.FromDays(CompactionAdvanceDays));
         var result = await store.CompactAsync(new(Stream, clock.GetUtcNow(), long.MaxValue), CancellationToken.None);
         await Assert.That(result.RecordsRemoved).IsEqualTo(0);
@@ -70,7 +70,7 @@ public sealed partial class InMemoryLocalStoreAdapterTests
         var clock = new ManualTimeProvider(DateTimeOffset.UnixEpoch);
         await using var store = await CreateInitializedStoreAsync(clock);
         var operation = await CommitOperationAsync(store, Stream, 1, "local");
-        await SetServerResultAsync(store, operation, OperationResultKind.Accepted);
+        await SetServerResultAsync(store, operation, OperationResultKind.Rejected);
         var subscription = await store.GetOrCreateSubscriptionIdAsync(Stream, null, CancellationToken.None);
         var before = await store.RecoverStreamAsync(Stream, subscription, CancellationToken.None);
         clock.Advance(TimeSpan.FromDays(CompactionAdvanceDays));

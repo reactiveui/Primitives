@@ -54,10 +54,31 @@ public sealed class RecoveredStreamTests
         await Assert.That(result.NextClientSequence).IsEqualTo(NextClientSequence);
         await Assert.That(result.PendingOperations).Count().IsEqualTo(CopiedCount);
         await Assert.That(result.PendingOperations[0]).IsSameReferenceAs(operation);
+        await Assert.That(result.ReplayOperations).Count().IsEqualTo(CopiedCount);
+        await Assert.That(result.ReplayOperations[0]).IsSameReferenceAs(operation);
         await Assert.That(result.DeadLetters).Count().IsEqualTo(CopiedCount);
         await Assert.That(result.DeadLetters[0]).IsEqualTo(deadLetter);
         await Assert.That(((ICollection<SyncOperation>)result.PendingOperations).IsReadOnly).IsTrue();
+        await Assert.That(((ICollection<SyncOperation>)result.ReplayOperations).IsReadOnly).IsTrue();
         await Assert.That(((ICollection<DeadLetterRecord>)result.DeadLetters).IsReadOnly).IsTrue();
+    }
+
+    /// <summary>Verifies replay operations use init-only copy semantics independent from pending operations.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ReplayOperationsCanBeInitializedIndependentlyAndCopiesCollections()
+    {
+        var pending = CreateOperation();
+        var replay = CreateOperation();
+        var replayOperations = new List<SyncOperation> { replay };
+        var result = new RecoveredStream(SubscriptionId.New(), ServerCursor, CreateSnapshot(), [pending], [], NextClientSequence) { ReplayOperations = replayOperations };
+
+        replayOperations.Add(CreateOperation());
+
+        await Assert.That(result.PendingOperations).Count().IsEqualTo(CopiedCount);
+        await Assert.That(result.PendingOperations[0]).IsSameReferenceAs(pending);
+        await Assert.That(result.ReplayOperations).Count().IsEqualTo(CopiedCount);
+        await Assert.That(result.ReplayOperations[0]).IsSameReferenceAs(replay);
     }
 
     /// <summary>Verifies null pending operations are rejected.</summary>

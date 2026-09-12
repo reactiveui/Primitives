@@ -147,7 +147,7 @@ public sealed partial class InMemoryLocalStoreAdapterTests
         var clock = new ManualTimeProvider(DateTimeOffset.UnixEpoch);
         await using var store = await CreateInitializedStoreAsync(clock);
         var operation = await CommitOperationAsync(store, Stream, FirstClientSequence, OperationPayloadText);
-        await SetServerResultAsync(store, operation, OperationResultKind.Accepted);
+        await SetServerResultAsync(store, operation, OperationResultKind.Rejected);
         clock.Advance(TimeSpan.FromDays(CompactionAdvanceDays));
         var compacted = await store.CompactAsync(new(Stream, clock.GetUtcNow(), 0), CancellationToken.None);
         await Assert.That(compacted.RecordsRemoved).IsEqualTo(1);

@@ -48,6 +48,12 @@ public interface ILocalStoreAdapter : IAsyncDisposable
     /// <param name="subscriptionId">The durable subscription identifier.</param>
     /// <param name="cancellationToken">The token used to cancel recovery.</param>
     /// <returns>The recovered stream state.</returns>
+    /// <remarks>
+    /// <see cref="RecoveredStream.PendingOperations"/> contains operations whose upload result is still unresolved and
+    /// must continue lease correlation. <see cref="RecoveredStream.ReplayOperations"/> contains operations that must be
+    /// replayed into the local projection during recovery. An accepted upload result removes an operation from pending;
+    /// an authoritative receive completion from the same initialized client removes it from replay.
+    /// </remarks>
     ValueTask<RecoveredStream> RecoverStreamAsync(StreamId streamId, SubscriptionId subscriptionId, CancellationToken cancellationToken);
 
     /// <summary>Atomically commits a local operation and optimistic snapshot mutation.</summary>
@@ -104,10 +110,13 @@ public interface ILocalStoreAdapter : IAsyncDisposable
     /// <param name="cancellationToken">The token used to cancel result application.</param>
     /// <returns>The remote apply result.</returns>
     /// <remarks>
-    /// The batch contains events selected by <see cref="GetUnappliedEventIdsAsync(StreamId, IReadOnlyList{Guid}, CancellationToken)"/>.
-    /// Applying the events, recording inbox identifiers, advancing the cursor, and replacing the snapshot are one store
-    /// transaction. Stores must reject a mismatched <see cref="SnapshotMutation.ExpectedRevision"/> atomically with no
-    /// inbox, cursor, or snapshot effects.
+    /// The batch may contain both new and previously applied remote events. Stores deduplicate inbox identifiers inside
+    /// the same transaction, report new and duplicate counts in the returned <see cref="RemoteApplyResult"/>, advance the
+    /// server cursor, and replace the snapshot only when the cursor and <see cref="SnapshotMutation.ExpectedRevision"/>
+    /// fence match durable state. Completion declarations are bounded before lookup allocation. A completion whose
+    /// origin is the initialized local client may remove the matching local operation from recovery replay only when the
+    /// batch carries an authoritative snapshot mutation; stores must reject a mismatched revision or cursor atomically
+    /// with no inbox, cursor, snapshot, or completion-inclusion effects.
     /// </remarks>
     ValueTask<RemoteApplyResult> ApplyRemoteBatchAsync(
         RemoteEventBatch batch,

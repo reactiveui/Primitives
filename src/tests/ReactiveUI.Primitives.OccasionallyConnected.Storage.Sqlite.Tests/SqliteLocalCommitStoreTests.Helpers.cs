@@ -180,6 +180,30 @@ public sealed partial class SqliteLocalCommitStoreTests
         SqliteLocalCommitSql.UpdateNextClientSequence(connection, transaction, StoreIdentity, Stream, operation.ClientSequence + 1);
     }
 
+    /// <summary>Sets the persisted lifecycle state for a historical fixture operation.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="operationId">The operation identifier.</param>
+    /// <param name="state">The lifecycle state.</param>
+    private static void SetOperationState(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        OperationId operationId,
+        SyncOperationState state)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            UPDATE oc_outbox_operation_states
+            SET operation_state = $operationState
+            WHERE store_identity = $storeIdentity AND operation_id = $operationId;
+            """;
+        _ = command.Parameters.AddWithValue("$operationState", (int)state);
+        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
+        _ = command.Parameters.AddWithValue("$operationId", operationId.Value.ToString("D"));
+        _ = command.ExecuteNonQuery();
+    }
+
     /// <summary>Creates a trigger that aborts commits after outbox insertion.</summary>
     /// <param name="path">The database path.</param>
     private static void CreateRollbackTrigger(string path)
@@ -525,13 +549,68 @@ public sealed partial class SqliteLocalCommitStoreTests
         _ = command.ExecuteNonQuery();
     }
 
+    /// <summary>Creates one supported historical local commit schema.</summary>
+    /// <param name="path">The database path.</param>
+    /// <param name="schemaVersion">The schema version.</param>
+    /// <exception cref="ArgumentOutOfRangeException">The schema version is not a supported historical version.</exception>
+    private static void CreateHistoricalLocalCommitSchema(string path, int schemaVersion)
+    {
+        using var connection = OpenRawConnection(path);
+        using var transaction = connection.BeginTransaction();
+        switch (schemaVersion)
+        {
+            case SqliteStoreSchema.IdentitySchemaVersion:
+            {
+                SqliteStoreSchema.CreateIdentitySchema(connection, transaction);
+                break;
+            }
+
+            case SqliteStoreSchema.LegacyLocalCommitSchemaVersion:
+            {
+                SqliteStoreSchemaTests.CreateLegacyLocalCommitSchema(connection, transaction);
+                break;
+            }
+
+            case SqliteStoreSchema.RemoteApplySchemaVersion:
+            {
+                SqliteStoreSchemaTests.CreateRemoteApplySchema(connection, transaction);
+                break;
+            }
+
+            case SqliteStoreSchema.LeaseSchemaVersion:
+            {
+                SqliteStoreSchemaTests.CreateLeaseSchema(connection, transaction);
+                break;
+            }
+
+            case SqliteStoreSchema.PreAuthoritativeLocalCommitSchemaVersion:
+            {
+                CreatePreAuthoritativeLocalCommitSchema(connection, transaction);
+                break;
+            }
+
+            case SqliteStoreSchema.AuthoritativeLocalCommitSchemaVersion:
+            {
+                SchemaSixFixture.Create(connection, transaction);
+                break;
+            }
+
+            default:
+            {
+                throw new ArgumentOutOfRangeException(nameof(schemaVersion), schemaVersion, "The schema version is not supported by this fixture.");
+            }
+        }
+
+        transaction.Commit();
+    }
+
     /// <summary>Sets the user version to a newer unsupported schema value.</summary>
     /// <param name="path">The database path.</param>
     private static void SetUserVersionToNewer(string path)
     {
         using var connection = OpenRawConnection(path);
         using var command = connection.CreateCommand();
-        command.CommandText = "PRAGMA user_version = 7;";
+        command.CommandText = "PRAGMA user_version = 8;";
         _ = command.ExecuteNonQuery();
     }
 

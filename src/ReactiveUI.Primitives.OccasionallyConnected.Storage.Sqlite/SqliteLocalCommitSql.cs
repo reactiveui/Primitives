@@ -434,6 +434,111 @@ internal static partial class SqliteLocalCommitSql
         }
     }
 
+    /// <summary>Marks local operations completed by an authoritative receive batch.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="storeIdentity">The store identity.</param>
+    /// <param name="clientId">The initialized client identity.</param>
+    /// <param name="batch">The remote batch.</param>
+    /// <param name="snapshotMutation">The snapshot mutation.</param>
+    /// <exception cref="InvalidOperationException">A matching completion targets another stream or lacks authoritative state.</exception>
+    internal static void MarkReceiveInclusions(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string storeIdentity,
+        string? clientId,
+        RemoteEventBatch batch,
+        SnapshotMutation snapshotMutation)
+    {
+        if (clientId is null)
+        {
+            return;
+        }
+
+        for (var index = 0; index < batch.CompletedOperations.Count; index++)
+        {
+            var origin = batch.CompletedOperations[index].Origin;
+            if (!string.Equals(origin.ClientId, clientId, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (!TryReadOperationStreamId(connection, transaction, storeIdentity, origin.OperationId, out var streamId))
+            {
+                continue;
+            }
+
+            if (streamId != batch.StreamId)
+            {
+                throw new InvalidOperationException("A completed local operation belongs to another stream.");
+            }
+
+            if (snapshotMutation.AuthoritativeState is null)
+            {
+                throw new InvalidOperationException("Authoritative state is required to include a completed local operation.");
+            }
+
+            InsertReceiveInclusion(connection, transaction, storeIdentity, origin.OperationId);
+        }
+    }
+
+    /// <summary>Reads the stream for a local operation when present.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="storeIdentity">The store identity.</param>
+    /// <param name="operationId">The operation id.</param>
+    /// <param name="streamId">The operation stream id.</param>
+    /// <returns>Whether the operation exists.</returns>
+    internal static bool TryReadOperationStreamId(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string storeIdentity,
+        OperationId operationId,
+        out StreamId streamId)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            SELECT stream_id
+            FROM oc_outbox
+            WHERE store_identity = $storeIdentity AND operation_id = $operationId;
+            """;
+        _ = command.Parameters.AddWithValue(StoreIdentityParameter, storeIdentity);
+        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
+        if (command.ExecuteScalar() is string value)
+        {
+            streamId = new(value);
+            return true;
+        }
+
+        streamId = default;
+        return false;
+    }
+
+    /// <summary>Inserts a receive inclusion marker.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="storeIdentity">The store identity.</param>
+    /// <param name="operationId">The operation id.</param>
+    internal static void InsertReceiveInclusion(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string storeIdentity,
+        OperationId operationId)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            INSERT OR IGNORE INTO oc_outbox_receive_inclusions
+                (store_identity, operation_id)
+            VALUES
+                ($storeIdentity, $operationId);
+            """;
+        _ = command.Parameters.AddWithValue(StoreIdentityParameter, storeIdentity);
+        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
+        _ = command.ExecuteNonQuery();
+    }
+
     /// <summary>Updates the stream server cursor using the expected previous cursor.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
@@ -610,6 +715,52 @@ internal static partial class SqliteLocalCommitSql
             WHERE outbox.store_identity = $storeIdentity
                 AND outbox.stream_id = $streamId
                 AND (state.operation_state IS NULL OR state.operation_state NOT IN (4, 5, 6))
+            ORDER BY outbox.client_sequence ASC;
+            """;
+        AddStreamParameters(command, storeIdentity, streamId);
+        using var reader = command.ExecuteReader();
+        var operations = new List<SyncOperation>();
+        while (reader.Read())
+        {
+            const int OperationStateIndex = 14;
+            _ = ReadOperationState(reader, OperationStateIndex);
+            operations.Add(ReadPendingOperation(connection, transaction, storeIdentity, streamId, reader));
+        }
+
+        return operations;
+    }
+
+    /// <summary>Reads operations that still need local replay in client sequence order.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="storeIdentity">The store identity.</param>
+    /// <param name="streamId">The stream id.</param>
+    /// <returns>The replay operations.</returns>
+    /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
+    internal static List<SyncOperation> ReadReplayOperations(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string storeIdentity,
+        StreamId streamId)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            SELECT outbox.operation_id, outbox.client_sequence, outbox.timestamp_utc, outbox.base_version, outbox.operation_type,
+                   outbox.payload_contract_id, outbox.payload_schema_version, outbox.payload_content_type, outbox.payload, outbox.payload_hash,
+                   outbox.policy_delivery_guarantee, outbox.policy_durability, outbox.policy_priority, outbox.policy_conflict,
+                   state.operation_state
+            FROM oc_outbox AS outbox
+            LEFT JOIN oc_outbox_operation_states AS state
+                ON state.store_identity = outbox.store_identity
+                AND state.operation_id = outbox.operation_id
+            LEFT JOIN oc_outbox_receive_inclusions AS inclusion
+                ON inclusion.store_identity = outbox.store_identity
+                AND inclusion.operation_id = outbox.operation_id
+            WHERE outbox.store_identity = $storeIdentity
+                AND outbox.stream_id = $streamId
+                AND inclusion.operation_id IS NULL
+                AND (state.operation_state IS NULL OR state.operation_state NOT IN (5, 6))
             ORDER BY outbox.client_sequence ASC;
             """;
         AddStreamParameters(command, storeIdentity, streamId);
