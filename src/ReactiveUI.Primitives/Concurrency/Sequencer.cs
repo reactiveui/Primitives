@@ -80,9 +80,8 @@ public static partial class Sequencer
         }
 
         // Integer arithmetic: scaling through double rounds a representable duration up to the next tick.
-        var remainder = timestampDelta % frequency;
         var ticks = (seconds * TimeSpan.TicksPerSecond)
-                    + ((remainder * TimeSpan.TicksPerSecond) + frequency - 1) / frequency;
+                    + ((((timestampDelta % frequency) * TimeSpan.TicksPerSecond) + frequency - 1) / frequency);
         return TimeSpan.FromTicks(Math.Max(1, ticks));
     }
 
@@ -105,9 +104,9 @@ public static partial class Sequencer
         }
 
         // Integer arithmetic: scaling through double rounds a representable duration up to the next unit.
-        var remainder = normalized.Ticks % TimeSpan.TicksPerSecond;
         var delta = (seconds * frequency)
-                    + ((remainder * frequency) + TimeSpan.TicksPerSecond - 1) / TimeSpan.TicksPerSecond;
+                    + ((((normalized.Ticks % TimeSpan.TicksPerSecond) * frequency) + TimeSpan.TicksPerSecond - 1)
+                       / TimeSpan.TicksPerSecond);
         return Math.Max(1, delta);
     }
 }
