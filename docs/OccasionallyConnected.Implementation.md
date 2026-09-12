@@ -1,7 +1,7 @@
 # OccasionallyConnected implementation
 
 The normative feature specification is [ReactiveUI.Primitives.OccasionallyConnected.md](ReactiveUI.Primitives.OccasionallyConnected.md).
-Implementation PRs target `OccasionallyConnected`. The feature is incomplete until all v1 gates below pass.
+Implementation remains on the local `OccasionallyConnected` feature branch. Nothing is pushed until all v1 work is complete and verified; publication will use one final PR.
 
 ## Delivery stages
 
@@ -20,7 +20,7 @@ Implementation PRs target `OccasionallyConnected`. The feature is incomplete unt
 | 11 | Exactly-once effect | Capability negotiation, retention expiry and explicit downgrade |
 | 12 | DI and release verification | Options validation, samples, packaging, API, trim/AOT, security, soak and performance |
 
-Each stage may use multiple small PRs. Tests precede behavior changes and use TUnit assertions exclusively.
+Stages are integrated through reviewed local commits. Tests precede behavior changes and use TUnit assertions exclusively.
 Every stage requires zero build/analyzer warnings and 100% line and branch coverage for its new executable code;
 the user-required coverage gate supersedes the lower percentages in specification section 17.4.
 No suppression or coverage exclusion is added to meet these gates. Coverage totals alone do not establish the
@@ -467,3 +467,20 @@ Conflict resolution retained the current Core APIs, SQLite registration, impleme
 - A further concurrency regression exercises 64 clients immediately requesting startup again across 64 resource
   lifetimes. Restoring the old gap between callback completion and next-transition selection caused an executable
   timeout. The corrected implementation passes this regression and the full four-target suite with unchanged coverage.
+
+### Stage 8a: bounded authenticated nonce registry
+
+- Added the Server package and its tests to the solution. Its internal registry scopes nonce fingerprints by authenticated
+  tenant and client, rejects changed request bytes or timestamps, and admits identical retries without allocating another
+  retained record. Canonical request size, key lengths, record count and encoded key/hash/timestamp bytes are bounded.
+- Retention lasts through both the configured minimum interval and the full freshness interval of a future timestamp.
+  Inclusive expiry boundaries, clock rollback and timestamp overflow preserve replay protection. Expired records reclaim
+  capacity; unexpired entries are never evicted to admit another nonce. Application clocks run outside the registry lock.
+- Root reproduced premature reuse after freshness expiry but before configured retention ended, then added the retention
+  parameter and corrected expiry calculation. A separate mutation placing the clock callback inside the lock failed a
+  cross-thread regression. Tests also cover exact byte reclamation, concurrency, scope isolation and caller buffer changes.
+- All 23 server TUnit tests pass on each modern target with 100% line and branch coverage: 111 lines on net8, 110 on
+  net9-net11 and 54 branches throughout. All eight library targets build without warnings or errors.
+- This registry is process-local and stores fingerprints rather than protocol responses. The complete server still needs
+  authorization, transactional effect/idempotency storage, response replay and restart protection before any corresponding
+  capability can be advertised. The retained byte counter measures encoded records, not exact managed heap consumption.
