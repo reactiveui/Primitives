@@ -21,32 +21,57 @@ internal static class SqliteConnectionSettings
         _ = command.ExecuteNonQuery();
     }
 
+    /// <summary>Applies per-connection settings required before operational transactions.</summary>
+    /// <param name="connection">The open connection.</param>
+    /// <exception cref="InvalidOperationException">SQLite did not accept the required operational settings.</exception>
+    internal static void ConfigureOperationalConnection(SqliteConnection connection)
+    {
+        using (var foreignKeysCommand = connection.CreateCommand())
+        {
+            foreignKeysCommand.CommandText = "PRAGMA foreign_keys = ON;";
+            _ = foreignKeysCommand.ExecuteNonQuery();
+        }
+
+        using (var synchronousCommand = connection.CreateCommand())
+        {
+            synchronousCommand.CommandText = "PRAGMA synchronous = FULL;";
+            _ = synchronousCommand.ExecuteNonQuery();
+        }
+
+        using (var verifyForeignKeysCommand = connection.CreateCommand())
+        {
+            verifyForeignKeysCommand.CommandText = "PRAGMA foreign_keys;";
+            VerifyForeignKeys(verifyForeignKeysCommand.ExecuteScalar());
+        }
+
+        using var verifySynchronousCommand = connection.CreateCommand();
+        verifySynchronousCommand.CommandText = "PRAGMA synchronous;";
+        VerifyFullSynchronous(verifySynchronousCommand.ExecuteScalar());
+    }
+
     /// <summary>Applies durability pragmas after schema validation.</summary>
     /// <param name="connection">The open connection.</param>
     /// <exception cref="InvalidOperationException">SQLite did not accept the required durability settings.</exception>
     internal static void ConfigureDurability(SqliteConnection connection)
     {
-        using (var command = connection.CreateCommand())
+        ConfigureOperationalConnection(connection);
+
+        using var command = connection.CreateCommand();
+        command.CommandText = "PRAGMA journal_mode = WAL;";
+        VerifyWalJournalMode(command.ExecuteScalar());
+    }
+
+    /// <summary>Verifies SQLite enabled foreign key enforcement for the current connection.</summary>
+    /// <param name="value">The returned PRAGMA value.</param>
+    /// <exception cref="InvalidOperationException">Foreign key enforcement was not accepted.</exception>
+    internal static void VerifyForeignKeys(object? value)
+    {
+        if (value is long enabled && enabled == 1)
         {
-            command.CommandText = "PRAGMA foreign_keys = ON;";
-            _ = command.ExecuteNonQuery();
+            return;
         }
 
-        using (var command = connection.CreateCommand())
-        {
-            command.CommandText = "PRAGMA journal_mode = WAL;";
-            VerifyWalJournalMode(command.ExecuteScalar());
-        }
-
-        using (var command = connection.CreateCommand())
-        {
-            command.CommandText = "PRAGMA synchronous = FULL;";
-            _ = command.ExecuteNonQuery();
-        }
-
-        using var verifyCommand = connection.CreateCommand();
-        verifyCommand.CommandText = "PRAGMA synchronous;";
-        VerifyFullSynchronous(verifyCommand.ExecuteScalar());
+        throw new InvalidOperationException("SQLite did not enable foreign key enforcement.");
     }
 
     /// <summary>Verifies SQLite accepted WAL journaling.</summary>

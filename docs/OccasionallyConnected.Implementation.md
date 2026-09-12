@@ -366,6 +366,25 @@ Linux and macOS across the four modern frameworks. Full-solution CI builds remai
   library targets build with zero warnings and errors. These interface tests do not establish concrete context behavior.
 - Context ownership, compatible stream caching and integrated startup/shutdown remain subsequent implementation work.
 
+### Stage 4b: SQLite atomic local commit component
+
+- Added an internal SQLite transaction component that commits the outbox operation, optimistic snapshot and next client
+  sequence together. Exact repeated operation IDs return the original receipt; changed intent is rejected using a
+  canonical fingerprint that remains valid after later snapshots replace the original state.
+- Shared schema validation supports transactional identity-v1 migration to local-commit-v2. Recovery checks snapshot
+  cursors, pending sequences and subscription identities, and fails closed on inconsistent persisted data. Counter
+  overflow is rejected before writes. Store partitions scope operation IDs and all related rows.
+- Writer waits are finite and cancellation-aware. Ownership is checked before persistent durability settings change,
+  and every operational connection applies foreign-key enforcement and FULL synchronous writes. Application clocks run
+  outside the storage gate. Required encryption still fails before plaintext creation.
+- Real SQLite tests cover reopening, competing writers, trigger-induced rollback, migration, corruption and duplicate
+  intent. Six executable regressions exposed missing recovery/overflow checks before root fixes. Root replaced a
+  helper-only settings assertion with SQL probes from actual write connections; forcing unsafe settings failed the test.
+- All 82 tests pass on each modern framework. Mtpunittestmcp confirms 898/898 lines on net8 and 892/892 on net9-net11,
+  with 244/244 branches on every target. All eight library targets build with zero warnings and errors.
+- This remains an internal local commit component. Remote inbox transactions, leases, retention, encryption, the bounded
+  asynchronous adapter worker and process-crash conformance are still pending; no complete adapter capability is advertised.
+
 The implemented identity, configuration, policy, serialization, admission, protocol, negotiation, observer, fault-model, stream-definition and transaction-kernel stages are verified. Adapter conformance,
 remaining facade contracts and integrated runtime/durability stages are still incomplete. Passing option validation alone does not establish a
 delivery guarantee or establish that a custom policy preserves durable work; the runtime must enforce both.
