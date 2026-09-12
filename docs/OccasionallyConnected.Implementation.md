@@ -513,3 +513,19 @@ Conflict resolution retained the current Core APIs, SQLite registration, impleme
 - All 181 SQLite TUnit tests pass on each modern target with 100% line and branch coverage: 2241 lines on net8,
   2226 on net9-net11 and 547 branches throughout. All eight library targets build without warnings or errors.
 - Public adapter and scheduler integration, encryption and process-crash conformance remain subsequent work.
+### Stage 3k: bounded in-memory store reference
+
+- Added an internal process-local store with atomic snapshot/intent and inbox/cursor updates, canonical duplicate receipts,
+  contiguous stream leases, retry due times, status lookup and an at-most-once attempt barrier. Upload acknowledgements
+  leave receive cursors unchanged. Application clock callbacks execute outside the store gate.
+- Admission counts retained records and deterministic encoded data, including identities, metadata, payloads, snapshots,
+  inbox keys, leases and retry/status records. Capacity changes are checked before mutation and released on compaction.
+  These counters do not measure exact managed heap consumption.
+- Root reproduced and corrected false durability advertising, cursor advancement on upload acknowledgements, ignored
+  retention, clock callbacks under the gate, retry violations, incorrect compaction targets, and unsupported schemas/types.
+  Further tests exercise malformed input, immutable duplicate intent, lease ownership/renewal and stream-scoped recovery.
+- All 391 runtime TUnit tests pass on each modern target with 100% line and branch coverage: 2342 lines on net8,
+  2312 on net9/net10, 2311 on net11 and 1086 branches throughout. All eight library targets build without warnings or errors.
+- The adapter is internal and ephemeral. Its inbox is capacity-bounded but does not yet prune by age. Engine transitions
+  for dead letters and expired guarantees, explicit reconciliation, public construction and integration remain tracked work.
+  Terminal compaction preserves snapshots and unresolved stream history; this component makes no restart durability claim.
