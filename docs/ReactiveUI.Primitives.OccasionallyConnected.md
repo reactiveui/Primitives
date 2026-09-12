@@ -775,8 +775,8 @@ public interface IOccasionallyConnectedContext : IAsyncDisposable
     IOccasionallyConnectedStream<TState, TInput> GetOrCreateStream<TState, TInput>(
         StreamDefinition<TState, TInput> definition);
 
-    ValueTask StartAsync(CancellationToken cancellationToken = default);
-    ValueTask StopAsync(CancellationToken cancellationToken = default);
+    ValueTask StartAsync(CancellationToken cancellationToken);
+    ValueTask StopAsync(CancellationToken cancellationToken);
 }
 
 public sealed record StreamDefinition<TState, TInput>
@@ -793,6 +793,8 @@ public sealed record StreamDefinition<TState, TInput>
 ```
 
 Calling `GetOrCreateStream` repeatedly with the same stream ID and compatible definition returns the same stream instance. An incompatible definition MUST throw a configuration exception before any network work begins.
+
+Parameterless `StartAsync()` and `StopAsync()` extension overloads forward `CancellationToken.None` and preserve the underlying asynchronous operation.
 
 ### 7.11 Extension methods
 
