@@ -79,8 +79,8 @@ public sealed class OccasionallyConnectedFaultTests
         {
             "empty-code" => fault with { Code = string.Empty },
             "whitespace-code" => fault with { Code = " " },
-            "null-code" => fault with { Code = null! },
-            "null-message" => fault with { Message = null! },
+            "null-code" => WithoutProperty(fault, nameof(OccasionallyConnectedFault.Code)),
+            "null-message" => WithoutProperty(fault, nameof(OccasionallyConnectedFault.Message)),
             "category" => fault with { Category = (FaultCategory)(-1) },
             "category-high" => fault with { Category = (FaultCategory)int.MaxValue },
             "severity" => fault with { Severity = (FaultSeverity)(-1) },
@@ -89,5 +89,19 @@ public sealed class OccasionallyConnectedFaultTests
             _ => fault with { OperationId = default(OperationId) },
         };
         await Assert.That(fault.Validate).Throws<InvalidOperationException>();
+    }
+
+    /// <summary>Creates a malformed diagnostic record with a missing required property.</summary>
+    /// <param name="fault">The valid diagnostic record.</param>
+    /// <param name="propertyName">The property to omit.</param>
+    /// <returns>The malformed record.</returns>
+    /// <exception cref="InvalidOperationException">The expected property is unavailable.</exception>
+    private static OccasionallyConnectedFault WithoutProperty(OccasionallyConnectedFault fault, string propertyName)
+    {
+        var copy = fault with { };
+        var property = typeof(OccasionallyConnectedFault).GetProperty(propertyName)
+            ?? throw new InvalidOperationException("The diagnostic property is unavailable.");
+        property.SetValue(copy, null);
+        return copy;
     }
 }

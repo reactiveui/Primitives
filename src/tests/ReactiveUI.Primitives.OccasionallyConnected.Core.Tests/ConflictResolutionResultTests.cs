@@ -2,11 +2,16 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reflection;
+
 namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
 
 /// <summary>Tests for <see cref="ConflictResolutionResult"/>.</summary>
 public sealed class ConflictResolutionResultTests
 {
+    /// <summary>The number of mandatory collection arguments.</summary>
+    private const int CollectionArgumentCount = 4;
+
     /// <summary>Verifies application-owned lists cannot change a prepared canonical decision.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
@@ -51,9 +56,14 @@ public sealed class ConflictResolutionResultTests
     [Test]
     public async Task ConstructorRejectsMissingDecisionCollections()
     {
-        await Assert.That(static () => new ConflictResolutionResult(null!, [], [], [], "v1")).ThrowsExactly<ArgumentNullException>();
-        await Assert.That(static () => new ConflictResolutionResult([], null!, [], [], "v1")).ThrowsExactly<ArgumentNullException>();
-        await Assert.That(static () => new ConflictResolutionResult([], [], null!, [], "v1")).ThrowsExactly<ArgumentNullException>();
-        await Assert.That(static () => new ConflictResolutionResult([], [], [], null!, "v1")).ThrowsExactly<ArgumentNullException>();
+        var constructor = typeof(ConflictResolutionResult).GetConstructors().Single();
+        for (var index = 0; index < CollectionArgumentCount; index++)
+        {
+            object?[] arguments = [Array.Empty<OperationId>(), Array.Empty<RejectedOperation>(), Array.Empty<ResolvedConflict>(), Array.Empty<RemoteEvent>(), "v1"];
+            arguments[index] = null;
+            var exception = await Assert.That(() => constructor.Invoke(arguments)).ThrowsExactly<TargetInvocationException>();
+
+            await Assert.That(exception?.InnerException).IsTypeOf<ArgumentNullException>();
+        }
     }
 }
