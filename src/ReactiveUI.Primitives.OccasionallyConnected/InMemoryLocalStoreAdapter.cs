@@ -319,23 +319,34 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
         IReadOnlyList<Guid> eventIds,
         CancellationToken cancellationToken)
     {
-        InMemoryLocalStoreAdapterValidation.ValidateInboxLookupInput(streamId, eventIds);
+        ArgumentExceptionHelper.ThrowIfNull(eventIds);
         cancellationToken.ThrowIfCancellationRequested();
+        var count = eventIds.Count;
+        var reservation = ReserveInboxLookup(count, cancellationToken);
         IReadOnlyList<Guid> result;
-        lock (_gate)
+        try
         {
-            ThrowIfReady(cancellationToken);
-            List<Guid> unapplied = [];
-            for (var index = 0; index < eventIds.Count; index++)
+            var candidates = CaptureInboxCandidates(eventIds, count, cancellationToken);
+            InMemoryLocalStoreAdapterValidation.ValidateInboxLookupInput(streamId, candidates);
+            lock (_gate)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (!_inbox.ContainsKey(new(streamId, eventIds[index])))
+                ThrowIfReady(cancellationToken);
+                List<Guid> unapplied = [with(capacity: count)];
+                for (var index = 0; index < candidates.Length; index++)
                 {
-                    unapplied.Add(eventIds[index]);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (!_inbox.ContainsKey(new(streamId, candidates[index])))
+                    {
+                        unapplied.Add(candidates[index]);
+                    }
                 }
-            }
 
-            result = new ReadOnlyCollection<Guid>(unapplied);
+                result = new ReadOnlyCollection<Guid>(unapplied);
+            }
+        }
+        finally
+        {
+            ReleaseInboxLookup(reservation);
         }
 
         return new(result);
