@@ -548,3 +548,15 @@ Conflict resolution retained the current Core APIs, SQLite registration, impleme
 - All 395 runtime TUnit tests pass on each modern target with MTP-confirmed 100% line and branch coverage: 2365 lines on
   net8, 2335 on net9/net10, 2334 on net11 and 1102 branches throughout. All eight library targets build without warnings
   or errors. Core API baselines include the new capability on every target.
+### Stage 3n: bounded owned inbox lookup inputs
+
+- Inbox lookups capture caller candidates once before evaluating inbox membership. Caller list callbacks execute outside
+  the store gate; lookups retain an atomic view of inbox membership using the owned snapshot under the gate.
+- A separate transient query budget uses the configured record and encoded-byte limits to reserve candidate and result
+  buffers before allocation. Concurrent captures share this budget; cancellation, validation and caller exceptions release
+  reservations. Returned results transfer to callers. The counters measure logical encoded data, not managed heap bytes.
+- Root first reproduced incorrect identifiers from repeated caller reads and indexing before oversized-input rejection.
+  Additional tests block a real caller indexer while querying independent store state, exhaust count and byte capacity
+  concurrently, and verify cancellation/error reclamation, empty input and invalid counts.
+- All 401 runtime TUnit tests pass on each modern target with MTP-confirmed 100% line and branch coverage: 2392 lines on
+  net8, 2361 on net9/net10, 2360 on net11 and 1112 branches throughout. All eight library targets build cleanly.
