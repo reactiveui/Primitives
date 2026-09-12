@@ -247,6 +247,25 @@ Linux and macOS across the four modern frameworks. Full-solution CI builds remai
   846/846 lines and 314/314 branches on each target. All eight Core library targets build with zero warnings/errors.
 - Durable default subscription identity resolution and context caching/startup remain runtime integration work.
 
-The implemented identity, configuration, policy, serialization, admission, protocol, negotiation, observer, fault-model and stream-definition stages are verified. Adapter conformance,
+### Stage 3a: atomic local commit kernel
+
+- Added an internal per-stream transaction kernel that requires successful recovery and rejects overlapping asynchronous
+  calls immediately. It holds no state lock across serialization, projection or store calls; a later bounded lane will own it.
+- Serializes and decodes input before projection so mutable caller input cannot diverge from the persisted operation.
+  Commits the operation, next sequence and optimistic snapshot through the atomic store contract with an expected revision.
+  Visible state advances only after a valid receipt; cancellation after durable commit still returns that receipt.
+- Recovery validates identity, cursor, counters and snapshot contract/format, and permits older payload schemas through
+  the serializer's upcast path. Pending operations already represented in the snapshot are not projected a second time.
+  Failed recovery clears readiness; malformed or null commit receipts poison the kernel against further use.
+- Executable agent regressions exposed missing snapshot payload validation and stale readiness after failed recovery.
+  Root review replaced unfinished timed concurrency tests with explicitly released/awaited gates and added commit/restart
+  and stale-writer recovery tests using an adapter test double that enforces sequence/revision checks.
+- GREEN: all 263 runtime TUnit tests pass on each modern framework (1,052 executions). Mtpunittestmcp confirms
+  1208/1208 lines on net8 and 1196/1196 on net9/net10/net11, with 510/510 branches on each. All eight runtime
+  library targets build with zero warnings/errors. The unchanged Core package retains its independent 100% gate.
+- This stage implements the transaction orchestration kernel. Concrete durable-store conformance, bounded ordered admission,
+  context lifecycle, remote apply and notification integration remain subsequent work.
+
+The implemented identity, configuration, policy, serialization, admission, protocol, negotiation, observer, fault-model, stream-definition and local-commit stages are verified. Adapter conformance,
 remaining facade contracts and integrated runtime/durability stages are still incomplete. Passing option validation alone does not establish a
 delivery guarantee or establish that a custom policy preserves durable work; the runtime must enforce both.
