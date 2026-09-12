@@ -10,10 +10,7 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
-/// <summary>
-/// Runs the action once per subscription, inline or on <paramref name="scheduler"/>, then emits
-/// <see cref="RxVoid.Default"/> and completes. An exception from the action is forwarded as an error instead.
-/// </summary>
+/// <summary>Runs the action once per subscription, then emits <see cref="RxVoid.Default"/> and completes.</summary>
 /// <param name="action">The action to run.</param>
 /// <param name="scheduler">An optional scheduler; <c>null</c> runs the action synchronously inline.</param>
 internal sealed class StartActionObservable(Action action, ISequencer? scheduler) : IObservable<RxVoid>

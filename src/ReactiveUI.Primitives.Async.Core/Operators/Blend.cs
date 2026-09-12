@@ -191,11 +191,7 @@ public static partial class SignalAsyncExtensions
             await _outerDisposable.SetDisposableAsync(outerSubscription).ConfigureAwait(false);
         }
 
-        /// <summary>
-        /// Links the original subscribe-time cancellation token into this subscription's dispose chain so
-        /// later per-emission methods can rely on <see cref="DisposedCancellationToken"/> instead of
-        /// allocating a per-emission linked CTS.
-        /// </summary>
+        /// <summary>Links the subscribe-time token into this subscription's dispose chain, surfacing it as <see cref="DisposedCancellationToken"/>.</summary>
         /// <param name="external">The subscribe-time token.</param>
         internal void LinkExternalCancellation(CancellationToken external)
         {
@@ -559,11 +555,7 @@ public static partial class SignalAsyncExtensions
                 }
             });
 
-            /// <summary>
-            /// Links the original subscribe-time cancellation token into this subscription's dispose chain so
-            /// later per-emission methods can rely on <see cref="_disposedCancellationToken"/> instead of
-            /// allocating a per-emission linked CTS.
-            /// </summary>
+            /// <summary>Links the subscribe-time token into this subscription's dispose chain, surfacing it as <see cref="_disposedCancellationToken"/>.</summary>
             /// <param name="external">The subscribe-time token.</param>
             internal void LinkExternalCancellation(CancellationToken external)
             {

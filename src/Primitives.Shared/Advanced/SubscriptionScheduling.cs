@@ -34,10 +34,7 @@ internal static class SubscriptionScheduling
         return subscription;
     }
 
-    /// <summary>
-    /// Runs <paramref name="run"/> on <paramref name="sequencer"/>: inline for the immediate sequencer, and
-    /// queued behind the current-thread sequencer when that one is the target and is draining work.
-    /// </summary>
+    /// <summary>Runs <paramref name="run"/> inline on the immediate sequencer, otherwise schedules it on <paramref name="sequencer"/>.</summary>
     /// <typeparam name="TState">The type of the state passed to the scheduled work.</typeparam>
     /// <param name="sequencer">The sequencer that runs the work.</param>
     /// <param name="state">The state carried to <paramref name="run"/>.</param>

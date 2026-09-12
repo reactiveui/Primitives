@@ -11,11 +11,7 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
-/// <summary>
-/// Re-subscribes the source after an error, waiting the policy's initial delay scaled by its backoff factor for each
-/// attempt and capped by its maximum, then forwards the error once the retry budget is spent. Every error reaches the
-/// policy's callback, and values forwarded before a retry are not retracted.
-/// </summary>
+/// <summary>Re-subscribes after an error using the policy's backoff delays, forwarding the error once its budget is spent.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="policy">The retry / backoff configuration.</param>

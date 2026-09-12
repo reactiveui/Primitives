@@ -10,10 +10,7 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
-/// <summary>
-/// Emits the first source value inline, then holds each later value for <paramref name="dueTime"/> and emits only the
-/// most recent one. A terminal notification flushes a pending value before it is forwarded.
-/// </summary>
+/// <summary>Emits the first value inline, then the most recent value after <paramref name="dueTime"/> of quiet.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="dueTime">The debounce duration.</param>

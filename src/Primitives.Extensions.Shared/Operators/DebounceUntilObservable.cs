@@ -10,11 +10,7 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
-/// <summary>
-/// Forwards a value inline when <paramref name="condition"/> holds for it, cancelling any pending emission, and
-/// otherwise emits it once <paramref name="debounce"/> elapses with no newer value. An error or completion drops a
-/// pending value.
-/// </summary>
+/// <summary>Emits a value inline when <paramref name="condition"/> holds for it, otherwise after <paramref name="debounce"/> of quiet.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="debounce">The debounce duration.</param>

@@ -11,12 +11,7 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
-/// <summary>
-/// Delivers notifications on <paramref name="scheduler"/> and keeps emissions at least
-/// <paramref name="minimumUpdatePeriod"/> apart: a value arriving inside that window is deferred to the end of it and a
-/// newer value takes the deferred one's place. Completion waits for a deferred value to land, while an error is
-/// forwarded at once and discards it.
-/// </summary>
+/// <summary>Keeps emissions at least <paramref name="minimumUpdatePeriod"/> apart on <paramref name="scheduler"/>; completion waits for a deferred value, an error discards it.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="minimumUpdatePeriod">The minimum period between emissions.</param>

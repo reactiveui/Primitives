@@ -11,12 +11,7 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
-/// <summary>
-/// Schedules each source value onto <paramref name="trueScheduler"/> or <paramref name="falseScheduler"/> according to
-/// the latest value from <paramref name="condition"/>, using the false scheduler until the condition first emits. Error
-/// and completion are forwarded on the producer's thread, so a terminal notification can overtake scheduled values, and
-/// the condition's own error or completion is ignored.
-/// </summary>
+/// <summary>Schedules values per the latest <paramref name="condition"/> value; terminal notifications bypass scheduling.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="condition">The reactive condition observable.</param>

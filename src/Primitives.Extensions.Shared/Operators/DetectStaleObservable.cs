@@ -11,11 +11,7 @@ namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 namespace ReactiveUI.Primitives.Extensions.Operators;
 #endif
 
-/// <summary>
-/// Wraps each source value as an update and emits a staleness marker when <paramref name="stalenessPeriod"/> passes
-/// without one, measured from subscription. The window re-arms on every value, so a single quiet stretch yields one
-/// marker.
-/// </summary>
+/// <summary>Wraps each value as an update and emits one staleness marker per quiet stretch of <paramref name="stalenessPeriod"/>.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="stalenessPeriod">The period after which the sequence is considered stale.</param>

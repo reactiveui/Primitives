@@ -18,9 +18,7 @@ public abstract class TaskSignalSubscription<T>(IObserverAsync<T> observer) : IA
     /// <summary>The cancellation token source that cancels the subscription's job on disposal.</summary>
     private readonly CancellationTokenSource _cts = new();
 
-    /// <summary>Flows through the job's notification chain across thread hops, so a reentrant
-    /// <see cref="DisposeAsync"/> issued from inside the job skips the self-join on <see cref="_tcs"/>
-    /// that would otherwise deadlock.</summary>
+    /// <summary>Set while the job runs, so a reentrant <see cref="DisposeAsync"/> from inside it skips the self-join.</summary>
     private readonly AsyncLocal<bool> _executing = new();
 
     /// <summary>Set on the first disposal so later calls are no-ops.</summary>

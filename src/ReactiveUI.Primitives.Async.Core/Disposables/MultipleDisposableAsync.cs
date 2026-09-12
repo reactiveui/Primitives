@@ -30,10 +30,7 @@ public sealed class MultipleDisposableAsync : IAsyncDisposable
     /// <summary>The synchronization gate protecting all mutable state in this collection.</summary>
     private readonly Lock _gate = new();
 
-    /// <summary>
-    /// Backing array, <see langword="null"/> until something is added. A removal zeroes its slot rather than shifting
-    /// elements, so <see cref="_length"/> is the high-water mark and <see cref="_count"/> the non-null slots.
-    /// </summary>
+    /// <summary>Backing array; a removal zeroes its slot, so <see cref="_length"/> is the high-water mark and <see cref="_count"/> the non-null slots.</summary>
     private IAsyncDisposable?[]? _items;
 
     /// <summary>High-water mark of used slots in <see cref="_items"/>. Includes slots zeroed by Remove.</summary>
