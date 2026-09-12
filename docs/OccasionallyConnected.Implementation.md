@@ -435,3 +435,19 @@ Conflict resolution retained the current Core APIs, SQLite registration, impleme
 - All 105 SQLite tests pass on each modern target, with 1249 lines on net8, 1241 on other targets, and 324 branches
   fully covered. All eight library targets build without warnings or errors. Wiring the worker into the public
   asynchronous adapter remains subsequent work.
+
+### Stage 4e: durable SQLite outbox leases
+
+- Schema version four persists lease identifiers, expiry and original batch membership, with transactional migrations
+  from all earlier schemas. A frozen version-three fixture verifies historical compatibility.
+- Synchronous acquisition selects one contiguous stream prefix within operation and payload-byte limits before reading
+  payloads. Active or oversized heads cannot be bypassed within a stream. Unfiltered selection scans stream heads with
+  constant retained memory and cancellation checks. Reclaim touches only selected expired rows.
+- Renewal and release validate complete membership; stale owners cannot act on surviving subsets after partial reclaim.
+  Root reproduced an early-renewal defect and changed renewal to extend the existing expiry. Corrupted identifiers,
+  inconsistent expiry, rejected SQL writes and invalid migrations fail without partial mutation.
+- Root verified 130 TUnit tests on each modern target with 100% SQLite line and branch coverage: 1558 lines on net8,
+  1547 on net9-net11 and 380 branches throughout. All eight library targets build without warnings or errors.
+- The byte limit covers stored payload bytes, not metadata or transport framing. The public adapter, current ownership
+  checks at the upload attempt barrier, retry/status transitions, retention, encryption and crash conformance remain
+  subsequent work; this component alone does not establish a complete delivery guarantee.
