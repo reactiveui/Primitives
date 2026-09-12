@@ -292,6 +292,15 @@ Linux and macOS across the four modern frameworks. Full-solution CI builds remai
   All eight Core library targets build with zero warnings and errors.
 - Queue/store use of this failure and the bounded wait-for-capacity path remain subsequent integration work.
 
+### Stage 3d: server hub convenience overloads
+
+- Added the no-cancellation overloads for applying operations and subscribing to remote batches. Both forward the exact
+  supplied arguments with `CancellationToken.None`, preserving results, enumerable identity and unwrapped failures.
+- Four TUnit tests exercise forwarding, ordered nonempty enumeration and failures during invocation or enumeration.
+  Root mutation testing substituted a copied client identity and observed a failing reference assertion before restoration.
+- All 300 Core tests pass on each modern framework. Mtpunittestmcp confirms 858/858 lines and 318/318 branches on each
+  target. All eight Core library targets build with zero warnings and errors. These overloads add no server implementation.
+
 The implemented identity, configuration, policy, serialization, admission, protocol, negotiation, observer, fault-model, stream-definition and local-commit stages are verified. Adapter conformance,
 remaining facade contracts and integrated runtime/durability stages are still incomplete. Passing option validation alone does not establish a
 delivery guarantee or establish that a custom policy preserves durable work; the runtime must enforce both.
