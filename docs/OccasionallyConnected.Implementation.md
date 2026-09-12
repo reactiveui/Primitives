@@ -560,3 +560,17 @@ Conflict resolution retained the current Core APIs, SQLite registration, impleme
   concurrently, and verify cancellation/error reclamation, empty input and invalid counts.
 - All 401 runtime TUnit tests pass on each modern target with MTP-confirmed 100% line and branch coverage: 2392 lines on
   net8, 2361 on net9/net10, 2360 on net11 and 1112 branches throughout. All eight library targets build cleanly.
+### Stage 3o: bounded fair stream scheduling
+
+- Added an internal scheduler with one pending head per stream, per-operation priority, stream weight and bounded aging.
+  Smooth weighted credit survives successive heads, while pending updates preserve waiting age. Due or inflight heads
+  cannot be bypassed within their stream. Equal scores use current head priority and then registration order.
+- Admission bounds stream count and logical metadata bytes, including actual UTF-8 stream identifiers. Completion and
+  removal reclaim capacity. Fresh acquisition objects enforce ownership; stale or forged tokens cannot release a head.
+  Clock callbacks execute outside the scheduler lock, and concurrent acquisition never returns the same head twice.
+- Root reviewed the algorithm and corrected earlier fixed-priority, caller-declared sizing and token-identity proposals.
+  Additional tests use a blocked application clock and concurrent scheduler reads, and verify forged-token rejection.
+- All 427 runtime TUnit tests pass on each modern target with MTP-confirmed 100% line and branch coverage: 2552 lines on
+  net8, 2516 on net9/net10, 2515 on net11 and 1190 branches throughout. All eight library targets build cleanly.
+- This component schedules bounded metadata only. Concrete engine integration, transport dispatch and end-to-end fairness
+  remain subsequent work; encoded metadata counters do not measure exact managed heap consumption.
