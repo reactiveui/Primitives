@@ -14,6 +14,102 @@ public sealed class SignalAsyncExtensionsTests
     /// <summary>The second distinct value in an ordered sequence.</summary>
     private const int SecondValue = 2;
 
+    /// <summary>Minimum and maximum reductions include values beyond vector boundaries.</summary>
+    /// <param name="sourceCount">The number of latest values to reduce.</param>
+    /// <returns>The test operation.</returns>
+    [Test]
+    [Arguments(3)]
+    [Arguments(8)]
+    [Arguments(17)]
+    [Arguments(65)]
+    public async Task GetMinMax_IntegerInputs_FindExtremesAcrossVectorBoundaries(int sourceCount)
+    {
+        var sources = new IObservableAsync<int>[sourceCount - 1];
+        for (var i = 0; i < sources.Length; i++)
+        {
+            sources[i] = SignalAsync.Return(i);
+        }
+
+        sources[^1] = SignalAsync.Return(int.MaxValue);
+        var first = SignalAsync.Return(int.MinValue);
+
+        await Assert.That(await first.GetMin(sources).FirstAsync()).IsEqualTo(int.MinValue);
+        await Assert.That(await first.GetMax(sources).FirstAsync()).IsEqualTo(int.MaxValue);
+    }
+
+    /// <summary>Each update reduces the current values after all sources have emitted.</summary>
+    /// <param name="cancellationToken">Cancels the test's signal notifications.</param>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task GetMinMax_Updates_UseCurrentValues(CancellationToken cancellationToken)
+    {
+        const int InitialMinimum = 3;
+        const int MiddleValue = 6;
+        const int InitialMaximum = 9;
+        const int UpdatedMaximum = 12;
+        await using var first = Signal.Create<int>();
+        await using var second = Signal.Create<int>();
+        await using var third = Signal.Create<int>();
+        List<int> minima = [];
+        List<int> maxima = [];
+        await using var minimum = await first.Values.GetMin(second.Values, third.Values).SubscribeAsync(minima.Add, cancellationToken);
+        await using var maximum = await first.Values.GetMax(second.Values, third.Values).SubscribeAsync(maxima.Add, cancellationToken);
+
+        await first.OnNextAsync(InitialMinimum, cancellationToken);
+        await second.OnNextAsync(MiddleValue, cancellationToken);
+        await Assert.That(minima).IsEmpty();
+        await Assert.That(maxima).IsEmpty();
+
+        await third.OnNextAsync(InitialMaximum, cancellationToken);
+        await first.OnNextAsync(UpdatedMaximum, cancellationToken);
+        await third.OnNextAsync(1, cancellationToken);
+
+        await Assert.That(minima).IsCollectionEqualTo([InitialMinimum, MiddleValue, 1]);
+        await Assert.That(maxima).IsCollectionEqualTo([InitialMaximum, UpdatedMaximum, UpdatedMaximum]);
+    }
+
+    /// <summary>Floating-point reductions retain the default comparer's NaN ordering.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task GetMinMax_FloatingPointInputs_PreserveNaNOrdering()
+    {
+        var source = SignalAsync.Return(double.NaN);
+        IObservableAsync<double>[] others = [SignalAsync.Return((double)SecondValue), SignalAsync.Return(1D)];
+
+        await Assert.That(double.IsNaN(await source.GetMin(others).FirstAsync())).IsTrue();
+        await Assert.That(await source.GetMax(others).FirstAsync()).IsEqualTo((double)SecondValue);
+    }
+
+    /// <summary>Equal floating-point values retain the first value's zero sign.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task GetMinMax_EqualZeroValues_PreserveFirstSign()
+    {
+        const double NegativeZero = -0D;
+        var source = SignalAsync.Return(NegativeZero);
+        var second = SignalAsync.Return(0D);
+
+        var minimum = await source.GetMin(second).FirstAsync();
+        var maximum = await source.GetMax(second).FirstAsync();
+
+        await Assert.That(BitConverter.DoubleToInt64Bits(minimum)).IsEqualTo(long.MinValue);
+        await Assert.That(BitConverter.DoubleToInt64Bits(maximum)).IsEqualTo(long.MinValue);
+    }
+
+    /// <summary>Non-numeric values continue to use their default comparison contract.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task GetMinMax_DateInputs_UseDefaultComparer()
+    {
+        var earliest = DateTime.UnixEpoch;
+        var latest = earliest.AddDays(1);
+        var source = SignalAsync.Return(latest);
+        var second = SignalAsync.Return(earliest);
+
+        await Assert.That(await source.GetMin(second).FirstAsync()).IsEqualTo(earliest);
+        await Assert.That(await source.GetMax(second).FirstAsync()).IsEqualTo(latest);
+    }
+
     /// <summary>Chaining an enumerable preserves source order.</summary>
     /// <returns>The test operation.</returns>
     [Test]
