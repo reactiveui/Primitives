@@ -683,3 +683,13 @@ Conflict resolution retained the current Core APIs, SQLite registration, impleme
   83 Server tests on net8/net9/net10/net11. MTP confirms 100% matching line and branch coverage: Core 891 lines and
   328 branches; Server 752/748/748/748 lines and 306 branches. All eight library targets build without warnings or errors.
 - Client reconciliation and durable origin transport/persistence remain subsequent work.
+
+### Stage 3: durable commit capability enforcement
+
+- The local committer now requires both atomic local commit and durable local commit capabilities before accepting a
+  durable operation. A real in-memory adapter regression failed before this fix because it returned a durable receipt.
+- Tests verify rejection leaves the pending queue, snapshot, sequence and visible state unchanged, and exercise each
+  incomplete capability combination before a store mutation can run.
+- All 431 runtime TUnit tests pass in Release on net8/net9/net10/net11, with MTP-confirmed 100% matching package line
+  and branch coverage (2553/2517/2517/2516 lines and 1192 branches). All eight library targets build without warnings
+  or errors. Volatile publishing and full engine integration remain subsequent work.

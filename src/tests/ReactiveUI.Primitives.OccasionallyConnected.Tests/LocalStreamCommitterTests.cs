@@ -662,8 +662,9 @@ public sealed partial class LocalStreamCommitterTests
         private readonly HashSet<Guid> _appliedEventIds = [];
 
         /// <inheritdoc/>
-        public LocalStoreCapabilities Capabilities { get; } =
+        public LocalStoreCapabilities Capabilities { get; init; } =
             LocalStoreCapabilities.AtomicLocalCommit
+            | LocalStoreCapabilities.DurableLocalCommit
             | LocalStoreCapabilities.AtomicRemoteApply
             | LocalStoreCapabilities.DurableInbox
             | LocalStoreCapabilities.LeasedOutbox;
