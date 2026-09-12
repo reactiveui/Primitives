@@ -140,7 +140,7 @@ public sealed partial class LocalStreamCommitterTests
         var exception = await Assert.ThrowsExactlyAsync<InvalidOperationException>(
             () => committer.RecoverAsync(CancellationToken.None).AsTask());
 
-        await Assert.That(exception!.Message).Contains("snapshot");
+        await Assert.That(exception?.Message).Contains("snapshot");
     }
 
     /// <summary>Verifies a cross-stream snapshot fails closed.</summary>
@@ -206,7 +206,7 @@ public sealed partial class LocalStreamCommitterTests
         var exception = await Assert.ThrowsExactlyAsync<InvalidOperationException>(
             () => committer.RecoverAsync(CancellationToken.None).AsTask());
 
-        await Assert.That(exception!.Message).Contains("no stream state");
+        await Assert.That(exception?.Message).Contains("no stream state");
     }
 
     /// <summary>Verifies a recovered subscription mismatch fails closed.</summary>
@@ -221,7 +221,7 @@ public sealed partial class LocalStreamCommitterTests
         var exception = await Assert.ThrowsExactlyAsync<InvalidOperationException>(
             () => committer.RecoverAsync(CancellationToken.None).AsTask());
 
-        await Assert.That(exception!.Message).Contains("subscription");
+        await Assert.That(exception?.Message).Contains("subscription");
     }
 
     /// <summary>Verifies a snapshot missing its state payload fails clearly before it can become current.</summary>
@@ -242,7 +242,7 @@ public sealed partial class LocalStreamCommitterTests
         var exception = await Assert.ThrowsExactlyAsync<InvalidOperationException>(
             () => committer.RecoverAsync(CancellationToken.None).AsTask());
 
-        await Assert.That(exception!.Message).Contains("payload");
+        await Assert.That(exception?.Message).Contains("payload");
         await Assert.That(committer.Current.State.Sum).IsEqualTo(InitialSum);
     }
 
@@ -258,7 +258,7 @@ public sealed partial class LocalStreamCommitterTests
         var exception = await Assert.ThrowsExactlyAsync<InvalidOperationException>(
             () => committer.RecoverAsync(CancellationToken.None).AsTask());
 
-        await Assert.That(exception!.Message).Contains("format");
+        await Assert.That(exception?.Message).Contains("format");
     }
 
     /// <summary>Verifies cancellation during recovered snapshot decode is preserved.</summary>
@@ -275,7 +275,7 @@ public sealed partial class LocalStreamCommitterTests
         var exception = await Assert.ThrowsExactlyAsync<OperationCanceledException>(
             () => committer.RecoverAsync(source.Token).AsTask());
 
-        await Assert.That(exception!.CancellationToken).IsEqualTo(source.Token);
+        await Assert.That(exception?.CancellationToken).IsEqualTo(source.Token);
     }
 
     /// <summary>Verifies recovered snapshots that decode to the wrong type fail closed.</summary>
@@ -291,7 +291,7 @@ public sealed partial class LocalStreamCommitterTests
         var exception = await Assert.ThrowsExactlyAsync<InvalidOperationException>(
             () => committer.RecoverAsync(CancellationToken.None).AsTask());
 
-        await Assert.That(exception!.Message).Contains("wrong state type");
+        await Assert.That(exception?.Message).Contains("wrong state type");
     }
 
     /// <summary>Verifies a failed recovery after success blocks stale commits until a later successful recovery.</summary>
@@ -317,7 +317,7 @@ public sealed partial class LocalStreamCommitterTests
         var commitException = await Assert.ThrowsExactlyAsync<InvalidOperationException>(
             () => committer.CommitAsync(new MutableReading { Value = FirstReadingValue }, OperationPolicy.Default, CancellationToken.None).AsTask());
 
-        await Assert.That(commitException!.Message).Contains("RecoverAsync");
+        await Assert.That(commitException?.Message).Contains("RecoverAsync");
         await Assert.That(store.CommitCallCount).IsEqualTo(InitialCommitCallCount);
 
         store.Recovery = CreateRecoveredStream(recoveredSnapshot, [], RecoveredNextSequence);
@@ -409,7 +409,7 @@ public sealed partial class LocalStreamCommitterTests
             var exception = await Assert.ThrowsExactlyAsync<InvalidOperationException>(
                 () => committer.CommitAsync(new MutableReading { Value = 1 }, OperationPolicy.Default, CancellationToken.None).AsTask());
 
-            await Assert.That(exception!.Message).Contains("already in progress");
+            await Assert.That(exception?.Message).Contains("already in progress");
             await Assert.That(first.IsCompleted).IsFalse();
         }
         finally

@@ -78,7 +78,7 @@ public sealed partial class JsonPayloadSerializerTests
         var exception = await Assert.ThrowsExactlyAsync<PayloadSchemaException>(
             () => serializer.DeserializeAsync(envelope, typeof(ReadingV2)).AsTask());
 
-        await Assert.That(exception!.Reason).IsEqualTo(PayloadSchemaFailureReason.PayloadHashMismatch);
+        await Assert.That(exception?.Reason).IsEqualTo(PayloadSchemaFailureReason.PayloadHashMismatch);
     }
 
     /// <summary>Verifies deserialization rejects contracts that are not allowlisted.</summary>
@@ -92,7 +92,7 @@ public sealed partial class JsonPayloadSerializerTests
         var exception = await Assert.ThrowsExactlyAsync<PayloadSchemaException>(
             () => serializer.DeserializeAsync(envelope, typeof(ReadingV2)).AsTask());
 
-        await Assert.That(exception!.Reason).IsEqualTo(PayloadSchemaFailureReason.UnknownContract);
+        await Assert.That(exception?.Reason).IsEqualTo(PayloadSchemaFailureReason.UnknownContract);
     }
 
     /// <summary>Verifies deserialization rejects target types outside the registered allowlist.</summary>
@@ -106,7 +106,7 @@ public sealed partial class JsonPayloadSerializerTests
         var exception = await Assert.ThrowsExactlyAsync<PayloadSchemaException>(
             () => serializer.DeserializeAsync(envelope, typeof(JsonPayloadSerializerTests)).AsTask());
 
-        await Assert.That(exception!.Reason).IsEqualTo(PayloadSchemaFailureReason.TypeNotAllowed);
+        await Assert.That(exception?.Reason).IsEqualTo(PayloadSchemaFailureReason.TypeNotAllowed);
     }
 
     /// <summary>Verifies deserialization rejects unsupported content types.</summary>
@@ -120,7 +120,7 @@ public sealed partial class JsonPayloadSerializerTests
         var exception = await Assert.ThrowsExactlyAsync<PayloadSchemaException>(
             () => serializer.DeserializeAsync(envelope, typeof(ReadingV2)).AsTask());
 
-        await Assert.That(exception!.Reason).IsEqualTo(PayloadSchemaFailureReason.ContentTypeMismatch);
+        await Assert.That(exception?.Reason).IsEqualTo(PayloadSchemaFailureReason.ContentTypeMismatch);
     }
 
     /// <summary>Verifies deserialization rejects nonpositive schema versions.</summary>
@@ -135,7 +135,7 @@ public sealed partial class JsonPayloadSerializerTests
         var exception = await Assert.ThrowsExactlyAsync<PayloadSchemaException>(
             () => serializer.DeserializeAsync(envelope, typeof(ReadingV2)).AsTask());
 
-        await Assert.That(exception!.Reason).IsEqualTo(PayloadSchemaFailureReason.InvalidSchemaVersion);
+        await Assert.That(exception?.Reason).IsEqualTo(PayloadSchemaFailureReason.InvalidSchemaVersion);
     }
 
     /// <summary>Verifies deserialization rejects payloads that exceed the configured byte limit before hashing.</summary>
@@ -151,7 +151,7 @@ public sealed partial class JsonPayloadSerializerTests
         var exception = await Assert.ThrowsExactlyAsync<PayloadSchemaException>(
             () => serializer.DeserializeAsync(envelope, typeof(ReadingV2)).AsTask());
 
-        await Assert.That(exception!.Reason).IsEqualTo(PayloadSchemaFailureReason.PayloadTooLarge);
+        await Assert.That(exception?.Reason).IsEqualTo(PayloadSchemaFailureReason.PayloadTooLarge);
     }
 
     /// <summary>Verifies invalid JSON produces a stable deserialization failure.</summary>
@@ -166,7 +166,7 @@ public sealed partial class JsonPayloadSerializerTests
         var exception = await Assert.ThrowsExactlyAsync<PayloadSchemaException>(
             () => serializer.DeserializeAsync(envelope, typeof(ReadingV2)).AsTask());
 
-        await Assert.That(exception!.Reason).IsEqualTo(PayloadSchemaFailureReason.DeserializationFailed);
+        await Assert.That(exception?.Reason).IsEqualTo(PayloadSchemaFailureReason.DeserializationFailed);
     }
 
     /// <summary>Verifies JSON null produces a stable deserialization failure.</summary>
@@ -181,7 +181,7 @@ public sealed partial class JsonPayloadSerializerTests
         var exception = await Assert.ThrowsExactlyAsync<PayloadSchemaException>(
             () => serializer.DeserializeAsync(envelope, typeof(ReadingV2)).AsTask());
 
-        await Assert.That(exception!.Reason).IsEqualTo(PayloadSchemaFailureReason.DeserializationFailed);
+        await Assert.That(exception?.Reason).IsEqualTo(PayloadSchemaFailureReason.DeserializationFailed);
     }
 
     /// <summary>Verifies deserialization applies each contiguous upcaster before reading the requested type.</summary>
@@ -218,6 +218,7 @@ public sealed partial class JsonPayloadSerializerTests
 
     /// <summary>Verifies payload bytes are copied on construction and when read from an envelope.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
+    /// <exception cref="InvalidOperationException">The payload cannot be mutated through its backing array in this test.</exception>
     [Test]
     public async Task DeserializeAsyncUsesOwnedPayloadBytes()
     {
@@ -227,10 +228,12 @@ public sealed partial class JsonPayloadSerializerTests
         var envelope = new PayloadEnvelope(ReadingContract, ReadingV2Version, JsonContentType, payload, hash);
         payload[PayloadMutationOffset] = (byte)'x';
 
-        if (MemoryMarshal.TryGetArray(envelope.Payload, out var segment))
+        if (!MemoryMarshal.TryGetArray(envelope.Payload, out var segment) || segment.Array is not { } ownedBytes)
         {
-            segment.Array![segment.Offset + PayloadMutationOffset] = (byte)'x';
+            throw new InvalidOperationException("The test requires an array-backed payload to attempt mutation.");
         }
+
+        ownedBytes[segment.Offset + PayloadMutationOffset] = (byte)'x';
 
         var result = await serializer.DeserializeAsync(envelope, typeof(ReadingV2));
 
@@ -251,7 +254,7 @@ public sealed partial class JsonPayloadSerializerTests
         var exception = await Assert.ThrowsExactlyAsync<PayloadSchemaException>(
             () => serializer.DeserializeAsync(envelope, typeof(ReadingV1)).AsTask());
 
-        await Assert.That(exception!.Reason).IsEqualTo(PayloadSchemaFailureReason.UnknownContract);
+        await Assert.That(exception?.Reason).IsEqualTo(PayloadSchemaFailureReason.UnknownContract);
     }
 
     /// <summary>Verifies serialization enforces the byte limit while JSON is written.</summary>
@@ -265,7 +268,7 @@ public sealed partial class JsonPayloadSerializerTests
         var exception = await Assert.ThrowsExactlyAsync<PayloadSchemaException>(
             () => serializer.SerializeAsync(ReadingContract, ReadingV2Version, new ReadingV2(ReadingId, ReadingValue, ReadingKind.Temperature)).AsTask());
 
-        await Assert.That(exception!.Reason).IsEqualTo(PayloadSchemaFailureReason.PayloadTooLarge);
+        await Assert.That(exception?.Reason).IsEqualTo(PayloadSchemaFailureReason.PayloadTooLarge);
     }
 
     /// <summary>Verifies serialization maps JSON writer failures to a stable reason.</summary>
@@ -279,7 +282,7 @@ public sealed partial class JsonPayloadSerializerTests
         var exception = await Assert.ThrowsExactlyAsync<PayloadSchemaException>(
             () => serializer.SerializeAsync(ReadingContract, ReadingV1Version, new UnserializablePayload()).AsTask());
 
-        await Assert.That(exception!.Reason).IsEqualTo(PayloadSchemaFailureReason.SerializationFailed);
+        await Assert.That(exception?.Reason).IsEqualTo(PayloadSchemaFailureReason.SerializationFailed);
     }
 
     /// <summary>Verifies failing upcasters produce stable schema failures.</summary>
@@ -293,8 +296,8 @@ public sealed partial class JsonPayloadSerializerTests
         var exception = await Assert.ThrowsExactlyAsync<PayloadSchemaException>(
             () => serializer.DeserializeAsync(envelope, typeof(ReadingV2)).AsTask());
 
-        await Assert.That(exception!.Reason).IsEqualTo(PayloadSchemaFailureReason.UpcasterFailed);
-        await Assert.That(exception.InnerException).IsTypeOf<InvalidOperationException>();
+        await Assert.That(exception?.Reason).IsEqualTo(PayloadSchemaFailureReason.UpcasterFailed);
+        await Assert.That(exception?.InnerException).IsTypeOf<InvalidOperationException>();
     }
 
     /// <summary>Verifies null upcaster results produce stable schema failures.</summary>
@@ -308,7 +311,7 @@ public sealed partial class JsonPayloadSerializerTests
         var exception = await Assert.ThrowsExactlyAsync<PayloadSchemaException>(
             () => serializer.DeserializeAsync(envelope, typeof(ReadingV2)).AsTask());
 
-        await Assert.That(exception!.Reason).IsEqualTo(PayloadSchemaFailureReason.UpcasterFailed);
+        await Assert.That(exception?.Reason).IsEqualTo(PayloadSchemaFailureReason.UpcasterFailed);
     }
 
     /// <summary>Verifies schema exceptions from upcasters are preserved.</summary>
@@ -322,7 +325,7 @@ public sealed partial class JsonPayloadSerializerTests
         var exception = await Assert.ThrowsExactlyAsync<PayloadSchemaException>(
             () => serializer.DeserializeAsync(envelope, typeof(ReadingV2)).AsTask());
 
-        await Assert.That(exception!.Reason).IsEqualTo(PayloadSchemaFailureReason.TypeNotAllowed);
+        await Assert.That(exception?.Reason).IsEqualTo(PayloadSchemaFailureReason.TypeNotAllowed);
     }
 
     /// <summary>Verifies upcasters cannot change the payload contract identifier.</summary>
@@ -336,7 +339,7 @@ public sealed partial class JsonPayloadSerializerTests
         var exception = await Assert.ThrowsExactlyAsync<PayloadSchemaException>(
             () => serializer.DeserializeAsync(envelope, typeof(ReadingV2)).AsTask());
 
-        await Assert.That(exception!.Reason).IsEqualTo(PayloadSchemaFailureReason.UpcasterContractMismatch);
+        await Assert.That(exception?.Reason).IsEqualTo(PayloadSchemaFailureReason.UpcasterContractMismatch);
     }
 
     /// <summary>Verifies cancellation from an upcaster is preserved.</summary>
@@ -352,7 +355,7 @@ public sealed partial class JsonPayloadSerializerTests
         var exception = await Assert.ThrowsExactlyAsync<OperationCanceledException>(
             () => serializer.DeserializeAsync(envelope, typeof(ReadingV2), source.Token).AsTask());
 
-        await Assert.That(exception!.CancellationToken).IsEqualTo(source.Token);
+        await Assert.That(exception?.CancellationToken).IsEqualTo(source.Token);
     }
 
     /// <summary>Verifies cancellation thrown during upcasting is preserved.</summary>
@@ -367,7 +370,7 @@ public sealed partial class JsonPayloadSerializerTests
         var exception = await Assert.ThrowsExactlyAsync<OperationCanceledException>(
             () => serializer.DeserializeAsync(envelope, typeof(ReadingV2), source.Token).AsTask());
 
-        await Assert.That(exception!.CancellationToken).IsEqualTo(source.Token);
+        await Assert.That(exception?.CancellationToken).IsEqualTo(source.Token);
     }
 
     /// <summary>Verifies cancellation is observed before serialization work begins.</summary>
@@ -382,7 +385,7 @@ public sealed partial class JsonPayloadSerializerTests
         var exception = await Assert.ThrowsExactlyAsync<OperationCanceledException>(
             () => serializer.SerializeAsync(ReadingContract, ReadingV2Version, new ReadingV2(ReadingId, ReadingValue, ReadingKind.Temperature), source.Token).AsTask());
 
-        await Assert.That(exception!.CancellationToken).IsEqualTo(source.Token);
+        await Assert.That(exception?.CancellationToken).IsEqualTo(source.Token);
     }
 
     /// <summary>Creates a serializer configured with reading schemas.</summary>
@@ -433,7 +436,8 @@ public sealed partial class JsonPayloadSerializerTests
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<PayloadEnvelope> UpcastAsync(PayloadEnvelope source, CancellationToken cancellationToken)
         {
-            var reading = JsonSerializer.Deserialize(source.Payload.Span, PayloadJsonContext.Default.ReadingV1)!;
+            var reading = JsonSerializer.Deserialize(source.Payload.Span, PayloadJsonContext.Default.ReadingV1)
+                ?? throw new InvalidOperationException("The test requires a version-one reading.");
             var targetBytes = JsonSerializer.SerializeToUtf8Bytes(new(reading.Id, reading.Celsius, ReadingKind.Temperature), PayloadJsonContext.Default.ReadingV2);
             var targetHash = JsonPayloadSerializer.ComputePayloadHash(targetBytes);
             return ValueTask.FromResult(source with
@@ -461,7 +465,8 @@ public sealed partial class JsonPayloadSerializerTests
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<PayloadEnvelope> UpcastAsync(PayloadEnvelope source, CancellationToken cancellationToken)
         {
-            var reading = JsonSerializer.Deserialize(source.Payload.Span, PayloadJsonContext.Default.ReadingV2)!;
+            var reading = JsonSerializer.Deserialize(source.Payload.Span, PayloadJsonContext.Default.ReadingV2)
+                ?? throw new InvalidOperationException("The test requires a version-two reading.");
             var targetBytes = JsonSerializer.SerializeToUtf8Bytes(new(reading.Id, reading.Value, reading.Kind.ToString()), PayloadJsonContext.Default.ReadingV3);
             return ValueTask.FromResult(source with
             {

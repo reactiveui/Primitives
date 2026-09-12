@@ -22,7 +22,7 @@ public sealed partial class JsonPayloadSerializerTests
         var serializer = CreateSerializer(new CancellationReturningUpcaster(cancellation));
         var envelope = CreateV1Envelope();
         var exception = await Assert.ThrowsExactlyAsync<OperationCanceledException>(() => serializer.DeserializeAsync(envelope, typeof(ReadingV2), cancellation.Token).AsTask());
-        await Assert.That(exception!.CancellationToken).IsEqualTo(cancellation.Token);
+        await Assert.That(exception?.CancellationToken).IsEqualTo(cancellation.Token);
     }
 
     /// <summary>Verifies escaping and large values still fit their exact encoded byte limit.</summary>
@@ -52,7 +52,7 @@ public sealed partial class JsonPayloadSerializerTests
         var serializer = CreateSerializer();
         var envelope = new PayloadEnvelope(ReadingContract, ReadingV2Version, JsonContentType, CreateV2Payload(), string.Empty) with { PayloadHash = null! };
         var exception = await Assert.ThrowsExactlyAsync<PayloadSchemaException>(() => serializer.DeserializeAsync(envelope, typeof(ReadingV2)).AsTask());
-        await Assert.That(exception!.Reason).IsEqualTo(PayloadSchemaFailureReason.PayloadHashMismatch);
+        await Assert.That(exception?.Reason).IsEqualTo(PayloadSchemaFailureReason.PayloadHashMismatch);
     }
 
     /// <summary>Verifies a well-formed hash belonging to different bytes cannot pass integrity validation.</summary>
@@ -63,7 +63,7 @@ public sealed partial class JsonPayloadSerializerTests
         var serializer = CreateSerializer();
         var envelope = new PayloadEnvelope(ReadingContract, ReadingV2Version, JsonContentType, CreateV2Payload(), JsonPayloadSerializer.ComputePayloadHash("different payload"u8));
         var exception = await Assert.ThrowsExactlyAsync<PayloadSchemaException>(() => serializer.DeserializeAsync(envelope, typeof(ReadingV2)).AsTask());
-        await Assert.That(exception!.Reason).IsEqualTo(PayloadSchemaFailureReason.PayloadHashMismatch);
+        await Assert.That(exception?.Reason).IsEqualTo(PayloadSchemaFailureReason.PayloadHashMismatch);
     }
 
     /// <summary>Verifies a small document fits an exact byte limit despite the JSON writer's larger scratch request.</summary>
@@ -89,7 +89,7 @@ public sealed partial class JsonPayloadSerializerTests
         var serializer = new JsonPayloadSerializer(registry, Encoding.UTF8.GetByteCount(SerializedReadingV2Json) - 1);
         var value = new ReadingV2(ReadingId, ReadingValue, ReadingKind.Temperature);
         var exception = await Assert.ThrowsExactlyAsync<PayloadSchemaException>(() => serializer.SerializeAsync(ReadingContract, ReadingV2Version, value).AsTask());
-        await Assert.That(exception!.Reason).IsEqualTo(PayloadSchemaFailureReason.PayloadTooLarge);
+        await Assert.That(exception?.Reason).IsEqualTo(PayloadSchemaFailureReason.PayloadTooLarge);
     }
 
     /// <summary>Returns valid converted bytes after cancellation has been requested.</summary>

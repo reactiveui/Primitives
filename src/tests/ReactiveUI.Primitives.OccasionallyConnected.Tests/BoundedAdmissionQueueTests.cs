@@ -415,7 +415,7 @@ public sealed partial class BoundedAdmissionQueueTests
             new BoundedAdmissionQueueOptions(TwoItems, TwoBytes, OneBlockedProducer),
             (snapshot, incoming) =>
             {
-                if (!queue!.TryDequeue(out var ignoredItem))
+                if (queue is null || !queue.TryDequeue(out var ignoredItem))
                 {
                     throw new InvalidOperationException("The custom policy expected a queued item.");
                 }
@@ -541,7 +541,10 @@ public sealed partial class BoundedAdmissionQueueTests
             static state =>
 #endif
             {
-                var context = (LateCancellationContext)state!;
+                if (state is not LateCancellationContext context)
+                {
+                    throw new InvalidOperationException("The cancellation callback received an invalid test context.");
+                }
 
                 if (!context.Queue.TryDequeue(out var item))
                 {

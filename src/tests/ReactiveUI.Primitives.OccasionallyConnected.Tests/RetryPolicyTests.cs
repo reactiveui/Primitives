@@ -111,8 +111,8 @@ public sealed class RetryPolicyTests
 
         await Assert.That(decision.Kind).IsEqualTo(RetryDecisionKind.Retry);
         await Assert.That(decision.Delay).IsNotNull();
-        await Assert.That(decision.Delay!.Value).IsGreaterThanOrEqualTo(TimeSpan.FromMilliseconds(DefaultMinimumDelayMilliseconds));
-        await Assert.That(decision.Delay.Value).IsLessThanOrEqualTo(TimeSpan.FromMilliseconds(SecondJitterDelayMilliseconds));
+        await Assert.That(decision.Delay.GetValueOrDefault()).IsGreaterThanOrEqualTo(TimeSpan.FromMilliseconds(DefaultMinimumDelayMilliseconds));
+        await Assert.That(decision.Delay.GetValueOrDefault()).IsLessThanOrEqualTo(TimeSpan.FromMilliseconds(SecondJitterDelayMilliseconds));
         await Assert.That(decision.DueUtc).IsNotNull();
     }
 
