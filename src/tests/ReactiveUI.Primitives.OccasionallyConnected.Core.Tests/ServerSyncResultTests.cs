@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reflection;
 using ReactiveUI.Primitives.OccasionallyConnected;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
@@ -26,7 +27,10 @@ public sealed class ServerSyncResultTests
     public async Task ConstructorRejectsNullProducedEvents()
     {
         RemoteSyncResult syncResult = new(Guid.NewGuid(), [], null, null);
-        await Assert.That(() => new ServerSyncResult(syncResult, null!)).ThrowsExactly<ArgumentNullException>();
+        var constructor = typeof(ServerSyncResult).GetConstructors().Single();
+        var exception = await Assert.That(() => constructor.Invoke([syncResult, null])).ThrowsExactly<TargetInvocationException>();
+
+        await Assert.That(exception?.InnerException).IsTypeOf<ArgumentNullException>();
     }
 
     /// <summary>Creates a representative remote event.</summary>

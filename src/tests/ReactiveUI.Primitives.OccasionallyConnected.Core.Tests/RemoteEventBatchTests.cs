@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reflection;
 using ReactiveUI.Primitives.OccasionallyConnected;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
@@ -26,9 +27,14 @@ public sealed class RemoteEventBatchTests
     /// <summary>Verifies null events are rejected.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task ConstructorRejectsNullEvents() =>
-        await Assert.That(static () => new RemoteEventBatch(Guid.NewGuid(), new(StreamName), null, "cursor-1", null!))
-            .ThrowsExactly<ArgumentNullException>();
+    public async Task ConstructorRejectsNullEvents()
+    {
+        var constructor = typeof(RemoteEventBatch).GetConstructors().Single();
+        var exception = await Assert.That(() => constructor.Invoke([Guid.NewGuid(), new StreamId(StreamName), null, "cursor-1", null]))
+            .ThrowsExactly<TargetInvocationException>();
+
+        await Assert.That(exception?.InnerException).IsTypeOf<ArgumentNullException>();
+    }
 
     /// <summary>Creates a representative remote event.</summary>
     /// <returns>A remote event.</returns>

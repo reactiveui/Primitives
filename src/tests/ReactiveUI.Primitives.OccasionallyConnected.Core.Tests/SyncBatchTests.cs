@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reflection;
 using ReactiveUI.Primitives.OccasionallyConnected;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
@@ -22,9 +23,17 @@ public sealed class SyncBatchTests
 
     /// <summary>Verifies null operations are rejected.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
+    /// <exception cref="InvalidOperationException">The expected public constructor is unavailable.</exception>
     [Test]
-    public async Task ConstructorRejectsNullOperations() =>
-        await Assert.That(static () => new SyncBatch(Guid.NewGuid(), null!)).ThrowsExactly<ArgumentNullException>();
+    public async Task ConstructorRejectsNullOperations()
+    {
+        var constructor = typeof(SyncBatch).GetConstructor([typeof(Guid), typeof(IReadOnlyList<SyncOperation>)])
+            ?? throw new InvalidOperationException("The synchronization batch constructor is unavailable.");
+        var exception = await Assert.That(() => constructor.Invoke([Guid.NewGuid(), null])).ThrowsExactly<TargetInvocationException>();
+
+        await Assert.That(exception?.InnerException).IsTypeOf<ArgumentNullException>();
+        await Assert.That((exception?.InnerException as ArgumentNullException)?.ParamName).IsEqualTo("source");
+    }
 
     /// <summary>Creates a representative synchronization operation.</summary>
     /// <returns>A synchronization operation.</returns>

@@ -749,12 +749,14 @@ internal sealed class LocalStreamCommitter<TState, TInput>
     {
         ArgumentExceptionHelper.ThrowIfNull(policy);
         policy.Validate(_options.MinimumPriority, _options.MaximumPriority);
-        if (policy.Durability == OperationDurability.Durable)
+        const LocalStoreCapabilities RequiredCapabilities = LocalStoreCapabilities.AtomicLocalCommit | LocalStoreCapabilities.DurableLocalCommit;
+        if (policy.Durability == OperationDurability.Durable
+            && (_options.Dependencies.Store.Capabilities & RequiredCapabilities) == RequiredCapabilities)
         {
             return;
         }
 
-        throw new InvalidOperationException("Local stream commits require durable operation policy.");
+        throw new InvalidOperationException("Local stream commits require a durable operation policy and an atomic, durable local store.");
     }
 
     /// <summary>Validates the store result before making state visible.</summary>

@@ -322,12 +322,18 @@ internal static class ServerCommitJournalGuard
     /// <exception cref="InvalidOperationException">The event cause does not match.</exception>
     private static void ValidateEventCause(ServerLedgerEntry entry, RemoteEvent remoteEvent)
     {
-        if (!remoteEvent.CausedByOperationId.HasValue || remoteEvent.CausedByOperationId.Value == entry.OperationKey.OperationId)
+        if (remoteEvent.CausedByOperationId.HasValue && remoteEvent.CausedByOperationId.Value != entry.OperationKey.OperationId)
+        {
+            throw new InvalidOperationException("A remote event cause must match its operation key.");
+        }
+
+        var origin = remoteEvent.Origin;
+        if (origin is null || StringComparer.Ordinal.Equals(origin.ClientId, entry.OperationKey.ClientId))
         {
             return;
         }
 
-        throw new InvalidOperationException("A remote event cause must match its operation key.");
+        throw new InvalidOperationException("A remote event origin client must match its operation key.");
     }
 
     /// <summary>Validates an optional new state.</summary>

@@ -662,6 +662,7 @@ public record RemoteEvent : System.IEquatable<ReactiveUI.Primitives.Occasionally
     public System.DateTimeOffset CommittedAtUtc { get; }
     public System.Guid EventId { get; }
     public System.Collections.Generic.IReadOnlyDictionary<string, string> Metadata { get; }
+    public ReactiveUI.Primitives.OccasionallyConnected.RemoteEventOrigin? Origin { get; init; }
     public ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope Payload { get; }
     public string ServerCursor { get; }
     public ReactiveUI.Primitives.OccasionallyConnected.StreamId StreamId { get; }
@@ -675,6 +676,13 @@ public record RemoteEventBatch : System.IEquatable<ReactiveUI.Primitives.Occasio
     public string NextCursor { get; }
     public string? PreviousCursor { get; }
     public ReactiveUI.Primitives.OccasionallyConnected.StreamId StreamId { get; }
+}
+[System.Diagnostics.DebuggerDisplay("{ClientId,nq} {OperationId,nq}")]
+public record RemoteEventOrigin : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.RemoteEventOrigin>
+{
+    public RemoteEventOrigin(string clientId, ReactiveUI.Primitives.OccasionallyConnected.OperationId operationId) { }
+    public string ClientId { get; }
+    public ReactiveUI.Primitives.OccasionallyConnected.OperationId OperationId { get; }
 }
 [System.Diagnostics.DebuggerDisplay("{EventId,nq} {StreamId,nq}")]
 public record RemoteMessage<T> : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.RemoteMessage<T>>

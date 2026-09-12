@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reflection;
+
 namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
 
 /// <summary>Tests for <see cref="QueueCapacityExceededException"/>.</summary>
@@ -39,24 +41,30 @@ public sealed class QueueCapacityExceededExceptionTests
 
     /// <summary>Verifies a null failure message is rejected.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
+    /// <exception cref="InvalidOperationException">The expected constructor is unavailable.</exception>
     [Test]
     public async Task NullMessageIsRejected()
     {
-        var exception = await Assert.That(
-                static () => new QueueCapacityExceededException(null!, canFitWhenEmpty: true))
-            .ThrowsExactly<ArgumentNullException>();
-        await Assert.That(exception?.ParamName).IsEqualTo("message");
+        var constructor = typeof(QueueCapacityExceededException).GetConstructor([typeof(string), typeof(bool)])
+            ?? throw new InvalidOperationException("The queue exception constructor is unavailable.");
+        var exception = await Assert.That(() => constructor.Invoke([null, true])).ThrowsExactly<TargetInvocationException>();
+
+        await Assert.That(exception?.InnerException).IsTypeOf<ArgumentNullException>();
+        await Assert.That((exception?.InnerException as ArgumentNullException)?.ParamName).IsEqualTo("message");
     }
 
     /// <summary>Verifies wrapping an underlying failure does not accept a null message.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
+    /// <exception cref="InvalidOperationException">The expected constructor is unavailable.</exception>
     [Test]
     public async Task WrappedFailureRejectsNullMessage()
     {
-        var exception = await Assert.That(
-                static () => new QueueCapacityExceededException(null!, new InvalidOperationException("storage")))
-            .ThrowsExactly<ArgumentNullException>();
-        await Assert.That(exception?.ParamName).IsEqualTo("message");
+        var constructor = typeof(QueueCapacityExceededException).GetConstructor([typeof(string), typeof(Exception)])
+            ?? throw new InvalidOperationException("The queue exception constructor is unavailable.");
+        var exception = await Assert.That(() => constructor.Invoke([null, new InvalidOperationException("storage")])).ThrowsExactly<TargetInvocationException>();
+
+        await Assert.That(exception?.InnerException).IsTypeOf<ArgumentNullException>();
+        await Assert.That((exception?.InnerException as ArgumentNullException)?.ParamName).IsEqualTo("message");
     }
 
     /// <summary>Verifies the standard exception constructors preserve the inherited exception state.</summary>

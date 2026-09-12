@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reflection;
 using ReactiveUI.Primitives.OccasionallyConnected;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
@@ -57,8 +58,8 @@ public sealed class SyncBatchValidatorTests
         [
             operation with { StreamId = default },
             operation with { ClientSequence = 0 },
-            operation with { Payload = null! },
-            operation with { Policy = null! },
+            WithoutProperty(operation, nameof(SyncOperation.Payload)),
+            WithoutProperty(operation, nameof(SyncOperation.Policy)),
         ];
 
         foreach (var candidate in malformed)
@@ -152,7 +153,7 @@ public sealed class SyncBatchValidatorTests
 
         var exception = await Assert.That(action).ThrowsExactly<SyncBatchValidationException>();
         await Assert.That(exception).IsNotNull();
-        await Assert.That(exception!.Error).IsEqualTo(SyncBatchValidationError.MismatchingBatchId);
+        await Assert.That(exception?.Error).IsEqualTo(SyncBatchValidationError.MismatchingBatchId);
     }
 
     /// <summary>Verifies duplicate operation results are rejected.</summary>
@@ -175,7 +176,7 @@ public sealed class SyncBatchValidatorTests
 
         var exception = await Assert.That(action).ThrowsExactly<SyncBatchValidationException>();
         await Assert.That(exception).IsNotNull();
-        await Assert.That(exception!.Error).IsEqualTo(SyncBatchValidationError.DuplicateOperationResult);
+        await Assert.That(exception?.Error).IsEqualTo(SyncBatchValidationError.DuplicateOperationResult);
     }
 
     /// <summary>Verifies missing operation results are rejected.</summary>
@@ -196,7 +197,7 @@ public sealed class SyncBatchValidatorTests
 
         var exception = await Assert.That(action).ThrowsExactly<SyncBatchValidationException>();
         await Assert.That(exception).IsNotNull();
-        await Assert.That(exception!.Error).IsEqualTo(SyncBatchValidationError.OmittedOperationResult);
+        await Assert.That(exception?.Error).IsEqualTo(SyncBatchValidationError.OmittedOperationResult);
     }
 
     /// <summary>Verifies unknown operation results are rejected.</summary>
@@ -218,7 +219,7 @@ public sealed class SyncBatchValidatorTests
 
         var exception = await Assert.That(action).ThrowsExactly<SyncBatchValidationException>();
         await Assert.That(exception).IsNotNull();
-        await Assert.That(exception!.Error).IsEqualTo(SyncBatchValidationError.UnknownOperationResult);
+        await Assert.That(exception?.Error).IsEqualTo(SyncBatchValidationError.UnknownOperationResult);
     }
 
     /// <summary>Verifies malformed operation results are rejected.</summary>
@@ -237,25 +238,32 @@ public sealed class SyncBatchValidatorTests
 
         var exception = await Assert.That(action).ThrowsExactly<SyncBatchValidationException>();
         await Assert.That(exception).IsNotNull();
-        await Assert.That(exception!.Error).IsEqualTo(SyncBatchValidationError.MalformedOperationResult);
+        await Assert.That(exception?.Error).IsEqualTo(SyncBatchValidationError.MalformedOperationResult);
     }
 
     /// <summary>Verifies malformed batches are rejected before result application.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
+    /// <exception cref="InvalidOperationException">The expected validator method is unavailable.</exception>
     [Test]
     public async Task ValidateRejectsMalformedBatches()
     {
         var validResult = new RemoteSyncResult(Guid.NewGuid(), [], null, null);
         var emptyBatch = new SyncBatch(validResult.BatchId, []);
         var defaultOperation = CreateBatch(default(OperationId));
-        var nullOperation = new SyncBatch(Guid.NewGuid(), [null!]);
+        var nullOperation = new SyncBatch(Guid.NewGuid(), new SyncOperation[1]);
         var duplicateOperation = CreateBatch(OperationId.New());
         duplicateOperation = new(
             duplicateOperation.BatchId,
             [duplicateOperation.Operations[0], duplicateOperation.Operations[0]]);
 
-        await AssertValidationError(() => SyncBatchValidator.Validate(null!, validResult), SyncBatchValidationError.MalformedBatch);
-        await AssertValidationError(() => SyncBatchValidator.Validate(emptyBatch, null!), SyncBatchValidationError.MalformedBatch);
+        var validator = typeof(SyncBatchValidator).GetMethod(nameof(SyncBatchValidator.Validate), [typeof(SyncBatch), typeof(RemoteSyncResult)])
+            ?? throw new InvalidOperationException("The batch validator method is unavailable.");
+        await AssertValidationError(
+            () => validator.Invoke(null, BindingFlags.DoNotWrapExceptions, null, [null, validResult], null),
+            SyncBatchValidationError.MalformedBatch);
+        await AssertValidationError(
+            () => validator.Invoke(null, BindingFlags.DoNotWrapExceptions, null, [emptyBatch, null], null),
+            SyncBatchValidationError.MalformedBatch);
         await AssertValidationError(() => SyncBatchValidator.Validate(emptyBatch, validResult), SyncBatchValidationError.MalformedBatch);
         await AssertValidationError(() => SyncBatchValidator.Validate(defaultOperation, new(defaultOperation.BatchId, [], null, null)), SyncBatchValidationError.MalformedBatch);
         await AssertValidationError(() => SyncBatchValidator.Validate(nullOperation, new(nullOperation.BatchId, [], null, null)), SyncBatchValidationError.MalformedBatch);
@@ -343,7 +351,7 @@ public sealed class SyncBatchValidatorTests
     public async Task ValidateRejectsNullOperationResult()
     {
         var batch = CreateBatch(OperationId.New());
-        var result = new RemoteSyncResult(batch.BatchId, [null!], null, null);
+        var result = new RemoteSyncResult(batch.BatchId, new OperationSyncResult[1], null, null);
 
         await AssertValidationError(
             () => SyncBatchValidator.Validate(batch, result),
@@ -395,6 +403,20 @@ public sealed class SyncBatchValidatorTests
         return new(batch.BatchId, operations, "cursor-1", null);
     }
 
+    /// <summary>Creates an operation with a missing required property for runtime validation.</summary>
+    /// <param name="operation">The valid operation.</param>
+    /// <param name="propertyName">The property to omit.</param>
+    /// <returns>The malformed operation.</returns>
+    /// <exception cref="InvalidOperationException">The expected property is unavailable.</exception>
+    private static SyncOperation WithoutProperty(SyncOperation operation, string propertyName)
+    {
+        var copy = operation with { };
+        var property = typeof(SyncOperation).GetProperty(propertyName)
+            ?? throw new InvalidOperationException("The operation property is unavailable.");
+        property.SetValue(copy, null);
+        return copy;
+    }
+
     /// <summary>Asserts a validation error.</summary>
     /// <param name="action">The validation action.</param>
     /// <param name="error">The expected validation error.</param>
@@ -404,6 +426,6 @@ public sealed class SyncBatchValidatorTests
         var exception = await Assert.That(action).ThrowsExactly<SyncBatchValidationException>();
 
         await Assert.That(exception).IsNotNull();
-        await Assert.That(exception!.Error).IsEqualTo(error);
+        await Assert.That(exception?.Error).IsEqualTo(error);
     }
 }

@@ -51,6 +51,24 @@ public sealed record RemoteEvent
     /// <summary>Gets the optional client operation that caused the event.</summary>
     public OperationId? CausedByOperationId { get; }
 
+    /// <summary>
+    /// Gets the optional origin correlation. Origin data does not itself authenticate a caller; trusted server code populates it from authenticated context,
+    /// and clients validate the transport that carries it.
+    /// </summary>
+    public RemoteEventOrigin? Origin
+    {
+        get;
+        init
+        {
+            if (value is not null && (!CausedByOperationId.HasValue || value.OperationId != CausedByOperationId.Value))
+            {
+                throw new InvalidOperationException("A remote event origin must match its causing operation.");
+            }
+
+            field = value;
+        }
+    }
+
     /// <summary>Gets the serialized event payload.</summary>
     public PayloadEnvelope Payload { get; }
 

@@ -181,6 +181,19 @@ public sealed class ServerCommitJournalGuardTests
             .IsEqualTo(ServerCommitStatus.Committed);
     }
 
+    /// <summary>Verifies origin client identity must match the authenticated ledger operation client.</summary>
+    /// <returns>The asynchronous assertion operation.</returns>
+    [Test]
+    public async Task ValidatePlanRejectsCrossClientOriginWithoutMutation()
+    {
+        var key = OperationKey(1);
+        var journal = CreateJournal();
+        var remoteEvent = Event(key, Cursor) with { Origin = new("other-client", key.OperationId) };
+
+        await Assert.That(() => journal.TryCommit(new(StreamKey(), 0, null, null, [Entry(key, events: [remoteEvent])]))).ThrowsExactly<InvalidOperationException>();
+        await Assert.That(journal.StreamCount).IsEqualTo(0);
+    }
+
     /// <summary>Creates a configured journal.</summary>
     /// <param name="maximumOperationCaptureCount">The operation capture count.</param>
     /// <param name="maximumEntryEventCount">The entry event count.</param>

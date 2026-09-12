@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reflection;
+
 namespace ReactiveUI.Primitives.OccasionallyConnected.Core.Tests;
 
 /// <summary>Tests failure classification and retry hints.</summary>
@@ -42,10 +44,15 @@ public sealed class RetryFailureTests
 
     /// <summary>Verifies missing renewal versions are rejected.</summary>
     /// <returns>The assertion task.</returns>
+    /// <exception cref="InvalidOperationException">The expected factory is unavailable.</exception>
     [Test]
     public async Task MissingRenewalVersionIsRejected()
     {
-        await Assert.That(static () => RetryFailure.AuthenticationTokenRenewed(null!)).ThrowsExactly<ArgumentNullException>();
+        var factory = typeof(RetryFailure).GetMethod(nameof(RetryFailure.AuthenticationTokenRenewed), [typeof(string)])
+            ?? throw new InvalidOperationException("The renewal failure factory is unavailable.");
+        var exception = await Assert.That(() => factory.Invoke(null, [null])).ThrowsExactly<TargetInvocationException>();
+
+        await Assert.That(exception?.InnerException).IsTypeOf<ArgumentNullException>();
         await Assert.That(static () => RetryFailure.AuthenticationTokenRenewed(string.Empty)).ThrowsExactly<ArgumentException>();
     }
 }
