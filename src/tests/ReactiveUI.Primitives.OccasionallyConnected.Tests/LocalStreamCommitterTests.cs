@@ -541,8 +541,8 @@ public sealed partial class LocalStreamCommitterTests
     /// <param name="sum">The sum of committed readings.</param>
     private sealed class ReadingState(int sum)
     {
-        /// <summary>Gets the sum of committed readings.</summary>
-        public int Sum { get; } = sum;
+        /// <summary>Gets or sets the sum of committed readings.</summary>
+        public int Sum { get; set; } = sum;
     }
 
     /// <summary>Produces deterministic operation identifiers.</summary>
