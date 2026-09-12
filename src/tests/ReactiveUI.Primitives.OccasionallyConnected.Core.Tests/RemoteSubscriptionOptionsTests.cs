@@ -64,10 +64,14 @@ public sealed class RemoteSubscriptionOptionsTests
 
     /// <summary>Verifies a missing start position is rejected.</summary>
     /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="InvalidOperationException">The expected start position property is unavailable.</exception>
     [Test]
     public async Task NullStartPositionThrows()
     {
-        var options = new RemoteSubscriptionOptions { StreamId = ValidStreamId, StartPosition = null! };
+        var options = new RemoteSubscriptionOptions { StreamId = ValidStreamId };
+        var property = typeof(RemoteSubscriptionOptions).GetProperty(nameof(RemoteSubscriptionOptions.StartPosition))
+            ?? throw new InvalidOperationException("The start position property is unavailable.");
+        property.SetValue(options, null);
 
         Action action = options.Validate;
 

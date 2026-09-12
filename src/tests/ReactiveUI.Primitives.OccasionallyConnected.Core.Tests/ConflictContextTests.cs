@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reflection;
+
 namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
 
 /// <summary>Tests for <see cref="ConflictContext"/>.</summary>
@@ -45,6 +47,9 @@ public sealed class ConflictContextTests
     {
         var state = new ServerState(new(CounterName), "v1", new(CounterName, 1, "application/json", ReadOnlyMemory<byte>.Empty, "hash"));
 
-        await Assert.That(() => new ConflictContext(state, null!, new("device"))).ThrowsExactly<ArgumentNullException>();
+        var constructor = typeof(ConflictContext).GetConstructors().Single();
+        var exception = await Assert.That(() => constructor.Invoke([state, null, new ClientIdentity("device")])).ThrowsExactly<TargetInvocationException>();
+
+        await Assert.That(exception?.InnerException).IsTypeOf<ArgumentNullException>();
     }
 }

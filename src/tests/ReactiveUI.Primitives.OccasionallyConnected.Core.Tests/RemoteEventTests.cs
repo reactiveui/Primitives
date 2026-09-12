@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reflection;
 using ReactiveUI.Primitives.OccasionallyConnected;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
@@ -47,16 +48,11 @@ public sealed class RemoteEventTests
     [Test]
     public async Task ConstructorRejectsNullMetadata()
     {
-        var action = static () => new RemoteEvent(
-            Guid.NewGuid(),
-            new(StreamName),
-            Cursor,
-            DateTimeOffset.UnixEpoch,
-            null,
-            CreatePayload(),
-            null!);
+        var constructor = typeof(RemoteEvent).GetConstructors().Single();
+        var exception = await Assert.That(() => constructor.Invoke([Guid.NewGuid(), new StreamId(StreamName), Cursor, DateTimeOffset.UnixEpoch, null, CreatePayload(), null]))
+            .ThrowsExactly<TargetInvocationException>();
 
-        await Assert.That(action).ThrowsExactly<ArgumentNullException>();
+        await Assert.That(exception?.InnerException).IsTypeOf<ArgumentNullException>();
     }
 
     /// <summary>Verifies matching origin data can be added without changing legacy construction.</summary>

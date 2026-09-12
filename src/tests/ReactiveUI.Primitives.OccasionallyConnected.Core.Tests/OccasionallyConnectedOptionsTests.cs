@@ -112,33 +112,30 @@ public sealed class OccasionallyConnectedOptionsTests
 
     /// <summary>Verifies every mandatory nested options record must be supplied.</summary>
     /// <returns>A task that represents the asynchronous assertion work.</returns>
+    /// <exception cref="InvalidOperationException">An expected options property is unavailable.</exception>
     [Test]
     public async Task NullNestedOptionsAreRejected()
     {
-        await AssertNestedNullFailure(
-            OccasionallyConnectedOptions.Default with { Outbox = null! },
-            nameof(OccasionallyConnectedOptions.Outbox));
-        await AssertNestedNullFailure(
-            OccasionallyConnectedOptions.Default with { Inbox = null! },
-            nameof(OccasionallyConnectedOptions.Inbox));
-        await AssertNestedNullFailure(
-            OccasionallyConnectedOptions.Default with { Batching = null! },
-            nameof(OccasionallyConnectedOptions.Batching));
-        await AssertNestedNullFailure(
-            OccasionallyConnectedOptions.Default with { Retry = null! },
-            nameof(OccasionallyConnectedOptions.Retry));
-        await AssertNestedNullFailure(
-            OccasionallyConnectedOptions.Default with { CircuitBreaker = null! },
-            nameof(OccasionallyConnectedOptions.CircuitBreaker));
-        await AssertNestedNullFailure(
-            OccasionallyConnectedOptions.Default with { Retention = null! },
-            nameof(OccasionallyConnectedOptions.Retention));
-        await AssertNestedNullFailure(
-            OccasionallyConnectedOptions.Default with { Security = null! },
-            nameof(OccasionallyConnectedOptions.Security));
-        await AssertNestedNullFailure(
-            OccasionallyConnectedOptions.Default with { Diagnostics = null! },
-            nameof(OccasionallyConnectedOptions.Diagnostics));
+        string[] propertyNames =
+        [
+            nameof(OccasionallyConnectedOptions.Outbox),
+            nameof(OccasionallyConnectedOptions.Inbox),
+            nameof(OccasionallyConnectedOptions.Batching),
+            nameof(OccasionallyConnectedOptions.Retry),
+            nameof(OccasionallyConnectedOptions.CircuitBreaker),
+            nameof(OccasionallyConnectedOptions.Retention),
+            nameof(OccasionallyConnectedOptions.Security),
+            nameof(OccasionallyConnectedOptions.Diagnostics),
+        ];
+        foreach (var propertyName in propertyNames)
+        {
+            var options = OccasionallyConnectedOptions.Default with { };
+            var property = typeof(OccasionallyConnectedOptions).GetProperty(propertyName)
+                ?? throw new InvalidOperationException("The required options property is unavailable.");
+            property.SetValue(options, null);
+
+            await AssertNestedNullFailure(options, propertyName);
+        }
     }
 
     /// <summary>Verifies parent validation delegates to existing nested validators.</summary>
