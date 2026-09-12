@@ -12,6 +12,15 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 /// <summary>Executes SQLite statements for local commit and recovery rows.</summary>
 internal static class SqliteLocalCommitSql
 {
+    /// <summary>The SQLite primary-key constraint extended error code.</summary>
+    private const int SqliteConstraintPrimaryKey = 1555;
+
+    /// <summary>The SQLite unique constraint extended error code.</summary>
+    private const int SqliteConstraintUnique = 2067;
+
+    /// <summary>The remote event identifier SQL parameter.</summary>
+    private const string EventIdParameter = "$eventId";
+
     /// <summary>The operation identifier SQL parameter.</summary>
     private const string OperationIdParameter = "$operationId";
 
@@ -298,6 +307,115 @@ internal static class SqliteLocalCommitSql
         throw new InvalidOperationException("The SQLite stream row is missing.");
     }
 
+    /// <summary>Returns whether a candidate remote event identifier is already applied for a stream.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="storeIdentity">The store identity.</param>
+    /// <param name="streamId">The stream id.</param>
+    /// <param name="eventId">The candidate remote event identifier.</param>
+    /// <returns>Whether the event identifier is already present.</returns>
+    /// <exception cref="InvalidOperationException">Stored inbox data is invalid.</exception>
+    internal static bool IsInboxEventApplied(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string storeIdentity,
+        StreamId streamId,
+        Guid eventId)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            SELECT server_cursor, committed_at_utc
+            FROM oc_inbox
+            WHERE store_identity = $storeIdentity AND stream_id = $streamId AND event_id = $eventId;
+            """;
+        AddStreamParameters(command, storeIdentity, streamId);
+        _ = command.Parameters.AddWithValue(EventIdParameter, eventId.ToString("D"));
+        using var reader = command.ExecuteReader();
+        if (!reader.Read())
+        {
+            return false;
+        }
+
+        const int ServerCursorIndex = 0;
+        const int CommittedAtIndex = 1;
+        _ = ReadString(reader, ServerCursorIndex, "The SQLite remote event cursor is invalid.");
+        _ = ReadDateTimeOffset(reader, CommittedAtIndex, "The SQLite remote event timestamp is invalid.");
+        return true;
+    }
+
+    /// <summary>Inserts one remote inbox event identifier.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="storeIdentity">The store identity.</param>
+    /// <param name="remoteEvent">The remote event.</param>
+    /// <param name="appliedAtUtc">The local application timestamp used for inbox retention.</param>
+    /// <exception cref="InvalidOperationException">The event was already in the durable inbox.</exception>
+    internal static void InsertInboxEvent(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string storeIdentity,
+        RemoteEvent remoteEvent,
+        DateTimeOffset appliedAtUtc)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            INSERT INTO oc_inbox
+                (store_identity, stream_id, event_id, server_cursor, committed_at_utc)
+            VALUES
+                ($storeIdentity, $streamId, $eventId, $serverCursor, $committedAtUtc);
+            """;
+        AddStreamParameters(command, storeIdentity, remoteEvent.StreamId);
+        _ = command.Parameters.AddWithValue(EventIdParameter, remoteEvent.EventId.ToString("D"));
+        _ = command.Parameters.AddWithValue("$serverCursor", remoteEvent.ServerCursor);
+        _ = command.Parameters.AddWithValue("$committedAtUtc", FormatDateTimeOffset(appliedAtUtc));
+        try
+        {
+            _ = command.ExecuteNonQuery();
+        }
+        catch (SqliteException exception) when (IsInboxDuplicateConstraint(exception))
+        {
+            throw new InvalidOperationException("The remote event has already been applied.", exception);
+        }
+    }
+
+    /// <summary>Updates the stream server cursor using the expected previous cursor.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="storeIdentity">The store identity.</param>
+    /// <param name="streamId">The stream id.</param>
+    /// <param name="expectedCursor">The expected current server cursor.</param>
+    /// <param name="nextCursor">The next server cursor.</param>
+    /// <exception cref="InvalidOperationException">The stream row is missing or the cursor is stale.</exception>
+    internal static void UpdateServerCursor(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string storeIdentity,
+        StreamId streamId,
+        string? expectedCursor,
+        string nextCursor)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            UPDATE oc_streams
+            SET server_cursor = $nextCursor
+            WHERE store_identity = $storeIdentity
+                AND stream_id = $streamId
+                AND ((server_cursor IS NULL AND $expectedCursor IS NULL) OR server_cursor = $expectedCursor);
+            """;
+        AddStreamParameters(command, storeIdentity, streamId);
+        _ = command.Parameters.AddWithValue("$expectedCursor", (object?)expectedCursor ?? DBNull.Value);
+        _ = command.Parameters.AddWithValue("$nextCursor", nextCursor);
+        if (command.ExecuteNonQuery() == 1)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException("The SQLite stream cursor does not match the expected cursor.");
+    }
+
     /// <summary>Returns the original receipt when a repeated operation has identical commit intent.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
@@ -566,13 +684,25 @@ internal static class SqliteLocalCommitSql
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
     internal static OperationId ReadOperationId(SqliteDataReader reader, int index)
     {
-        var text = ReadString(reader, index, "The SQLite operation id is invalid.");
+        var value = ReadGuid(reader, index, "The SQLite operation id is invalid.");
+        return new(value);
+    }
+
+    /// <summary>Reads a non-empty GUID column.</summary>
+    /// <param name="reader">The reader.</param>
+    /// <param name="index">The column index.</param>
+    /// <param name="message">The failure message.</param>
+    /// <returns>The GUID value.</returns>
+    /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
+    internal static Guid ReadGuid(SqliteDataReader reader, int index, string message)
+    {
+        var text = ReadString(reader, index, message);
         if (Guid.TryParse(text, out var value) && value != Guid.Empty)
         {
-            return new(value);
+            return value;
         }
 
-        throw new InvalidOperationException("The SQLite operation id is invalid.");
+        throw new InvalidOperationException(message);
     }
 
     /// <summary>Adds stream parameters.</summary>
@@ -763,4 +893,12 @@ internal static class SqliteLocalCommitSql
     /// <returns>The formatted value.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static string FormatDateTimeOffset(DateTimeOffset value) => value.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture);
+
+    /// <summary>Returns whether a SQLite exception identifies a duplicate inbox key.</summary>
+    /// <param name="exception">The SQLite exception.</param>
+    /// <returns>Whether the exception is a duplicate key constraint.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool IsInboxDuplicateConstraint(SqliteException exception) =>
+        exception.SqliteExtendedErrorCode == SqliteConstraintPrimaryKey
+        || exception.SqliteExtendedErrorCode == SqliteConstraintUnique;
 }

@@ -76,6 +76,61 @@ internal static class SqliteLocalCommitValidation
         throw new ArgumentException("SubscriptionId must be non-empty.", nameof(subscriptionId));
     }
 
+    /// <summary>Validates remote inbox lookup input.</summary>
+    /// <param name="streamId">The stream identifier.</param>
+    /// <param name="eventIds">The remote event identifiers.</param>
+    /// <exception cref="ArgumentException">The supplied value is invalid.</exception>
+    /// <exception cref="ArgumentNullException">A required value is null.</exception>
+    internal static void ValidateInboxLookupInput(StreamId streamId, IReadOnlyList<Guid> eventIds)
+    {
+        ValidateStreamId(streamId, nameof(streamId));
+        ArgumentExceptionHelper.ThrowIfNull(eventIds);
+        for (var index = 0; index < eventIds.Count; index++)
+        {
+            if (eventIds[index] == Guid.Empty)
+            {
+                throw new ArgumentException("Remote event identifiers must be non-empty.", nameof(eventIds));
+            }
+        }
+    }
+
+    /// <summary>Validates remote apply input.</summary>
+    /// <param name="batch">The remote event batch.</param>
+    /// <param name="snapshotMutation">The snapshot mutation.</param>
+    /// <exception cref="ArgumentException">The supplied value is invalid.</exception>
+    /// <exception cref="ArgumentNullException">A required value is null.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">A numeric value is outside the supported range.</exception>
+    /// <exception cref="InvalidOperationException">The supplied value is not supported by the SQLite local commit schema.</exception>
+    internal static void ValidateRemoteApplyInput(RemoteEventBatch batch, SnapshotMutation snapshotMutation)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(batch);
+        ArgumentExceptionHelper.ThrowIfNull(snapshotMutation);
+        if (batch.BatchId == Guid.Empty)
+        {
+            throw new ArgumentException("Remote batch id must be non-empty.", nameof(batch));
+        }
+
+        ValidateStreamId(batch.StreamId, nameof(batch));
+        ValidateStreamId(snapshotMutation.StreamId, nameof(snapshotMutation));
+        if (batch.PreviousCursor is not null)
+        {
+            ThrowIfBlank(batch.PreviousCursor, nameof(batch), "Remote batch previous cursor must be non-empty when supplied.");
+        }
+
+        if (batch.StreamId != snapshotMutation.StreamId)
+        {
+            throw new ArgumentException("The remote batch and snapshot mutation must target the same stream.", nameof(snapshotMutation));
+        }
+
+        ThrowIfBlank(batch.NextCursor, nameof(batch), "Remote batch next cursor must be non-empty.");
+        ValidateSnapshotMutation(snapshotMutation);
+        HashSet<Guid> seen = [];
+        for (var index = 0; index < batch.Events.Count; index++)
+        {
+            ValidateRemoteEvent(batch, batch.Events[index], seen);
+        }
+    }
+
     /// <summary>Validates snapshot mutation input.</summary>
     /// <param name="snapshotMutation">The snapshot mutation.</param>
     /// <exception cref="ArgumentException">The supplied value is invalid.</exception>
@@ -211,5 +266,39 @@ internal static class SqliteLocalCommitValidation
         }
 
         throw new ArgumentException(message, parameterName);
+    }
+
+    /// <summary>Validates one remote event.</summary>
+    /// <param name="batch">The owning batch.</param>
+    /// <param name="remoteEvent">The event to validate.</param>
+    /// <param name="seen">The set of event identifiers already seen in this batch.</param>
+    /// <exception cref="ArgumentException">The remote event is invalid.</exception>
+    /// <exception cref="ArgumentNullException">The remote event is null.</exception>
+    private static void ValidateRemoteEvent(RemoteEventBatch batch, RemoteEvent remoteEvent, HashSet<Guid> seen)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(remoteEvent);
+        if (remoteEvent.EventId == Guid.Empty)
+        {
+            throw new ArgumentException("Remote event identifiers must be non-empty.", nameof(batch));
+        }
+
+        if (!seen.Add(remoteEvent.EventId))
+        {
+            throw new ArgumentException("Remote event identifiers must be unique within a batch.", nameof(batch));
+        }
+
+        if (remoteEvent.StreamId != batch.StreamId)
+        {
+            throw new ArgumentException("Remote events must target the batch stream.", nameof(batch));
+        }
+
+        ThrowIfBlank(remoteEvent.ServerCursor, nameof(batch), "Remote event cursors must be non-empty.");
+        if (remoteEvent.CausedByOperationId.HasValue && remoteEvent.CausedByOperationId.Value.Value == Guid.Empty)
+        {
+            throw new ArgumentException("Remote event causal operation identifiers must be non-empty.", nameof(batch));
+        }
+
+        ValidatePayload(remoteEvent.Payload, nameof(batch));
+        ValidateMetadata(remoteEvent.Metadata);
     }
 }

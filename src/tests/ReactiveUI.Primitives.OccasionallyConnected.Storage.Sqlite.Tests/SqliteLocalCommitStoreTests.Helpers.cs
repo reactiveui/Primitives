@@ -141,6 +141,34 @@ public sealed partial class SqliteLocalCommitStoreTests
         _ = command.ExecuteNonQuery();
     }
 
+    /// <summary>Inserts schema version two local commit rows for migration tests.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="subscriptionId">The subscription identifier.</param>
+    /// <param name="operation">The committed operation.</param>
+    /// <param name="snapshot">The committed snapshot mutation.</param>
+    private static void InsertLegacyLocalCommitRows(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        SubscriptionId subscriptionId,
+        SyncOperation operation,
+        SnapshotMutation snapshot)
+    {
+        SqliteSubscriptionIdentitySql.InsertSubscriptionIdentityIfMissing(connection, transaction, StoreIdentity, Stream, subscriptionId);
+        SqliteLocalCommitSql.EnsureStreamRow(connection, transaction, StoreIdentity, Stream, subscriptionId);
+        SqliteLocalCommitSql.InsertOutboxOperation(
+            connection,
+            transaction,
+            StoreIdentity,
+            operation,
+            snapshot.ExpectedRevision + 1,
+            SqliteCommitFingerprint.Compute(operation, snapshot),
+            operation.TimestampUtc);
+        SqliteLocalCommitSql.InsertOperationMetadata(connection, transaction, StoreIdentity, operation);
+        SqliteLocalCommitSql.UpsertSnapshot(connection, transaction, StoreIdentity, snapshot, snapshot.ExpectedRevision + 1, null, operation.TimestampUtc);
+        SqliteLocalCommitSql.UpdateNextClientSequence(connection, transaction, StoreIdentity, Stream, operation.ClientSequence + 1);
+    }
+
     /// <summary>Creates a trigger that aborts commits after outbox insertion.</summary>
     /// <param name="path">The database path.</param>
     private static void CreateRollbackTrigger(string path)
@@ -154,6 +182,73 @@ public sealed partial class SqliteLocalCommitStoreTests
                 SELECT RAISE(ABORT, 'rollback outbox insert');
             END;
             """;
+        _ = command.ExecuteNonQuery();
+    }
+
+    /// <summary>Creates a trigger that aborts remote apply after inbox insertion.</summary>
+    /// <param name="path">The database path.</param>
+    private static void CreateRemoteApplyRollbackTrigger(string path)
+    {
+        using var connection = OpenRawConnection(path);
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            CREATE TRIGGER oc_inbox_commit_abort
+            AFTER INSERT ON oc_inbox
+            BEGIN
+                SELECT RAISE(ABORT, 'rollback inbox insert');
+            END;
+            """;
+        _ = command.ExecuteNonQuery();
+    }
+
+    /// <summary>Drops the remote apply rollback trigger.</summary>
+    /// <param name="path">The database path.</param>
+    private static void DropRemoteApplyRollbackTrigger(string path)
+    {
+        using var connection = OpenRawConnection(path);
+        using var command = connection.CreateCommand();
+        command.CommandText = "DROP TRIGGER oc_inbox_commit_abort;";
+        _ = command.ExecuteNonQuery();
+    }
+
+    /// <summary>Inserts a remote inbox event directly.</summary>
+    /// <param name="path">The database path.</param>
+    /// <param name="remoteEvent">The remote event.</param>
+    private static void InsertInboxEvent(string path, RemoteEvent remoteEvent)
+    {
+        using var connection = OpenRawConnection(path);
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            INSERT INTO oc_inbox
+                (store_identity, stream_id, event_id, server_cursor, committed_at_utc)
+            VALUES
+                ($storeIdentity, $streamId, $eventId, $serverCursor, $committedAtUtc);
+            """;
+        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
+        _ = command.Parameters.AddWithValue(StreamIdParameter, remoteEvent.StreamId.Value);
+        _ = command.Parameters.AddWithValue("$eventId", remoteEvent.EventId.ToString("D"));
+        _ = command.Parameters.AddWithValue(ServerCursorParameter, remoteEvent.ServerCursor);
+        _ = command.Parameters.AddWithValue("$committedAtUtc", SqliteLocalCommitSql.FormatDateTimeOffset(remoteEvent.CommittedAtUtc));
+        _ = command.ExecuteNonQuery();
+    }
+
+    /// <summary>Inserts a malformed remote inbox event directly.</summary>
+    /// <param name="path">The database path.</param>
+    /// <param name="eventId">The remote event identifier.</param>
+    private static void InsertMalformedInboxEvent(string path, Guid eventId)
+    {
+        using var connection = OpenRawConnection(path);
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            INSERT INTO oc_inbox
+                (store_identity, stream_id, event_id, server_cursor, committed_at_utc)
+            VALUES
+                ($storeIdentity, $streamId, $eventId, $serverCursor, 'not-a-date');
+            """;
+        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
+        _ = command.Parameters.AddWithValue(StreamIdParameter, Stream.Value);
+        _ = command.Parameters.AddWithValue("$eventId", eventId.ToString("D"));
+        _ = command.Parameters.AddWithValue(ServerCursorParameter, FirstRemoteCursor);
         _ = command.ExecuteNonQuery();
     }
 
@@ -241,7 +336,7 @@ public sealed partial class SqliteLocalCommitStoreTests
             SET server_cursor = $serverCursor
             WHERE store_identity = $storeIdentity AND stream_id = $streamId;
             """;
-        _ = command.Parameters.AddWithValue("$serverCursor", serverCursor);
+        _ = command.Parameters.AddWithValue(ServerCursorParameter, serverCursor);
         _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
         _ = command.Parameters.AddWithValue(StreamIdParameter, Stream.Value);
         _ = command.ExecuteNonQuery();
@@ -425,7 +520,7 @@ public sealed partial class SqliteLocalCommitStoreTests
     {
         using var connection = OpenRawConnection(path);
         using var command = connection.CreateCommand();
-        command.CommandText = "PRAGMA user_version = 3;";
+        command.CommandText = "PRAGMA user_version = 4;";
         _ = command.ExecuteNonQuery();
     }
 
