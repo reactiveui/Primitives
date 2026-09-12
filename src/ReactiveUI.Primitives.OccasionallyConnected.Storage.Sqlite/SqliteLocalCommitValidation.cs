@@ -2,6 +2,9 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
+using System.Text;
 using ReactiveUI.Primitives.OccasionallyConnected;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
@@ -9,6 +12,12 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 /// <summary>Validates SQLite local commit store input.</summary>
 internal static class SqliteLocalCommitValidation
 {
+    /// <summary>The SHA-256 payload hash prefix used by canonical JSON envelopes.</summary>
+    private const string Sha256PayloadHashPrefix = "sha256-";
+
+    /// <summary>The length of a canonical SHA-256 payload hash.</summary>
+    private const int Sha256PayloadHashLength = 51;
+
     /// <summary>Validates initialization input.</summary>
     /// <param name="initialization">The initialization requirements.</param>
     /// <exception cref="ArgumentException">The supplied value is invalid.</exception>
@@ -283,6 +292,37 @@ internal static class SqliteLocalCommitValidation
         }
 
         ValidatePayload(snapshotMutation.State, nameof(snapshotMutation));
+        if (snapshotMutation.AuthoritativeState is null)
+        {
+            return;
+        }
+
+        ValidateAuthoritativePayload(snapshotMutation.AuthoritativeState, nameof(snapshotMutation));
+    }
+
+    /// <summary>Validates an authoritative payload envelope before writing or after reading.</summary>
+    /// <param name="payload">The payload.</param>
+    /// <param name="parameterName">The parameter name.</param>
+    /// <exception cref="ArgumentException">The supplied value is invalid.</exception>
+    /// <exception cref="InvalidOperationException">The supplied value is not supported by the SQLite local commit schema.</exception>
+    /// <exception cref="ArgumentNullException">A required value is null.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">A numeric value is outside the supported range.</exception>
+    internal static void ValidateAuthoritativePayload(PayloadEnvelope payload, string parameterName)
+    {
+        ValidatePayload(payload, parameterName);
+        if (!payload.PayloadHash.StartsWith(Sha256PayloadHashPrefix, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var computedHash = ComputePayloadHash(payload.Payload);
+        if (payload.PayloadHash.Length == Sha256PayloadHashLength
+            && PayloadHashEquals(payload.PayloadHash, computedHash))
+        {
+            return;
+        }
+
+        throw new InvalidOperationException("The SQLite authoritative payload hash does not match the payload bytes.");
     }
 
     /// <summary>Validates a payload envelope before writing or after reading.</summary>
@@ -395,6 +435,32 @@ internal static class SqliteLocalCommitValidation
 
         throw new ArgumentException(message, parameterName);
     }
+
+    /// <summary>Computes a canonical SHA-256 payload hash.</summary>
+    /// <param name="payload">The payload bytes.</param>
+    /// <returns>The formatted SHA-256 payload hash.</returns>
+    private static string ComputePayloadHash(ReadOnlyMemory<byte> payload)
+    {
+#if NET5_0_OR_GREATER
+        var hash = SHA256.HashData(payload.Span);
+#else
+        using var sha256 = SHA256.Create();
+        var hash = sha256.ComputeHash(payload.ToArray());
+#endif
+        return Sha256PayloadHashPrefix + Convert.ToBase64String(hash);
+    }
+
+    /// <summary>Determines whether two payload hashes match.</summary>
+    /// <param name="left">The first hash.</param>
+    /// <param name="right">The second hash.</param>
+    /// <returns>Whether the hashes match.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool PayloadHashEquals(string left, string right) =>
+#if NET5_0_OR_GREATER
+        CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(left), Encoding.UTF8.GetBytes(right));
+#else
+        string.Equals(left, right, StringComparison.Ordinal);
+#endif
 
     /// <summary>Throws when a duration is not positive.</summary>
     /// <param name="value">The duration.</param>

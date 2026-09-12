@@ -408,6 +408,7 @@ public record LocalCommitResult : System.IEquatable<ReactiveUI.Primitives.Occasi
 public record LocalSnapshot : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshot>
 {
     public LocalSnapshot(ReactiveUI.Primitives.OccasionallyConnected.StreamId streamId, int formatVersion, string? serverCursor, ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope state, System.DateTimeOffset savedAtUtc) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope? AuthoritativeState { get; init; }
     public LocalSnapshot(ReactiveUI.Primitives.OccasionallyConnected.StreamId StreamId, int FormatVersion, string? ServerCursor, ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope State, long Revision, System.DateTimeOffset SavedAtUtc) { }
     public int FormatVersion { get; init; }
     public long Revision { get; init; }
@@ -878,6 +879,7 @@ public record ServerSyncResult : System.IEquatable<ReactiveUI.Primitives.Occasio
 public record SnapshotMutation : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.SnapshotMutation>
 {
     public SnapshotMutation(ReactiveUI.Primitives.OccasionallyConnected.StreamId streamId, ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope state, int formatVersion) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope? AuthoritativeState { get; init; }
     public SnapshotMutation(ReactiveUI.Primitives.OccasionallyConnected.StreamId StreamId, ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope State, int FormatVersion, long ExpectedRevision) { }
     public long ExpectedRevision { get; init; }
     public int FormatVersion { get; init; }

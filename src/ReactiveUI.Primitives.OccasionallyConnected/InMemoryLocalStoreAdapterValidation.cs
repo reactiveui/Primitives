@@ -240,7 +240,8 @@ internal static class InMemoryLocalStoreAdapterValidation
         left.StreamId == right.StreamId
         && left.FormatVersion == right.FormatVersion
         && left.ExpectedRevision == right.ExpectedRevision
-        && PayloadEquals(left.State, right.State);
+        && PayloadEquals(left.State, right.State)
+        && OptionalPayloadEquals(left.AuthoritativeState, right.AuthoritativeState);
 
     /// <summary>Determines whether two payload envelopes contain the same canonical content.</summary>
     /// <param name="left">The first payload.</param>
@@ -253,6 +254,13 @@ internal static class InMemoryLocalStoreAdapterValidation
         && left.PayloadLength == right.PayloadLength
         && HashEquals(left.PayloadHash, right.PayloadHash)
         && left.Payload.Span.SequenceEqual(right.Payload.Span);
+
+    /// <summary>Determines whether two optional payload envelopes contain the same canonical content.</summary>
+    /// <param name="left">The first optional payload.</param>
+    /// <param name="right">The second optional payload.</param>
+    /// <returns>Whether the payloads match.</returns>
+    private static bool OptionalPayloadEquals(PayloadEnvelope? left, PayloadEnvelope? right) =>
+        left is null ? right is null : right is not null && PayloadEquals(left, right);
 
     /// <summary>Determines whether two payload hashes match.</summary>
     /// <param name="left">The first hash.</param>
@@ -355,6 +363,11 @@ internal static class InMemoryLocalStoreAdapterValidation
         ArgumentExceptionHelper.ThrowIfNull(snapshotMutation);
         ValidateStreamId(snapshotMutation.StreamId, nameof(snapshotMutation));
         ValidatePayload(snapshotMutation.State, nameof(snapshotMutation));
+        if (snapshotMutation.AuthoritativeState is { } authoritativeState)
+        {
+            ValidatePayload(authoritativeState, nameof(snapshotMutation));
+        }
+
         _ = snapshotMutation.FormatVersion <= 0
             ? throw new ArgumentOutOfRangeException(nameof(snapshotMutation), snapshotMutation.FormatVersion, "Snapshot format version must be positive.")
             : true;

@@ -22,5 +22,11 @@ public sealed class LocalSnapshotTests
             DateTimeOffset.UnixEpoch);
 
         await Assert.That(snapshot.Revision).IsEqualTo(0);
+        await Assert.That(snapshot.AuthoritativeState).IsNull();
+        var confirmed = new PayloadEnvelope("reading", 1, "application/json", new byte[] { 1 }, "confirmed");
+        var updated = snapshot with { AuthoritativeState = confirmed };
+        await Assert.That(updated.AuthoritativeState).IsSameReferenceAs(confirmed);
+        await Assert.That(updated.State).IsSameReferenceAs(snapshot.State);
+        await Assert.That(snapshot.AuthoritativeState).IsNull();
     }
 }

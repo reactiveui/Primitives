@@ -257,13 +257,14 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
                 var committedAtUtc = nowUtc;
                 var nextRevision = checked(snapshotMutation.ExpectedRevision + 1);
                 var nextClientSequence = checked(operation.ClientSequence + 1);
+                var nextAuthoritativeState = snapshotMutation.AuthoritativeState ?? stream.Snapshot?.AuthoritativeState;
                 var nextSnapshot = new LocalSnapshot(
                     operation.StreamId,
                     snapshotMutation.FormatVersion,
                     stream.ServerCursor,
                     snapshotMutation.State,
                     nextRevision,
-                    committedAtUtc);
+                    committedAtUtc) { AuthoritativeState = nextAuthoritativeState };
                 result = new(operation.OperationId, operation.ClientSequence, nextRevision, committedAtUtc);
                 var record = new OperationRecord(operation, snapshotMutation, result, CreateStatus(operation, SyncOperationState.SavedLocally, 0, committedAtUtc, null));
                 var capacity = AddCapacity(
@@ -370,7 +371,14 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
             EnsureRemoteEventsUnapplied(batch);
             var committedAtUtc = nowUtc;
             var nextRevision = checked(snapshotMutation.ExpectedRevision + 1);
-            var nextSnapshot = new LocalSnapshot(batch.StreamId, snapshotMutation.FormatVersion, batch.NextCursor, snapshotMutation.State, nextRevision, committedAtUtc);
+            var nextAuthoritativeState = snapshotMutation.AuthoritativeState ?? stream.Snapshot?.AuthoritativeState;
+            var nextSnapshot = new LocalSnapshot(
+                batch.StreamId,
+                snapshotMutation.FormatVersion,
+                batch.NextCursor,
+                snapshotMutation.State,
+                nextRevision,
+                committedAtUtc) { AuthoritativeState = nextAuthoritativeState };
             var capacity = AddCapacity(
                 new(0, checked(StringBytes(batch.NextCursor) - StringBytes(stream.ServerCursor))),
                 CapacityDifference(LocalSnapshotCapacity(stream.Snapshot), LocalSnapshotCapacity(nextSnapshot)));

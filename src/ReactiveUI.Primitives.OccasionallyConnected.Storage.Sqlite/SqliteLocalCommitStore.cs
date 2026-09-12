@@ -115,6 +115,10 @@ internal sealed class SqliteLocalCommitStore : IDisposable
             {
                 SqliteStoreSchema.MigrateLeaseSchemaToCurrent(connection, transaction);
             }
+            else if (userVersion == SqliteStoreSchema.PreAuthoritativeLocalCommitSchemaVersion)
+            {
+                SqliteStoreSchema.MigratePreAuthoritativeLocalCommitToCurrent(connection, transaction);
+            }
             else
             {
                 SqliteStoreSchema.ValidateExistingSchemaForLocalCommit(connection, transaction, userVersion);
@@ -210,6 +214,7 @@ internal sealed class SqliteLocalCommitStore : IDisposable
 
             var nextRevision = snapshotMutation.ExpectedRevision + 1;
             SqliteLocalCommitSql.InsertOutboxOperation(connection, transaction, storeIdentity, operation, nextRevision, fingerprint, committedAtUtc);
+            SqliteLocalCommitSql.InsertOutboxAuthoritativeMutation(connection, transaction, storeIdentity, operation.OperationId, snapshotMutation.AuthoritativeState);
             SqliteLocalCommitSql.InsertOperationMetadata(connection, transaction, storeIdentity, operation);
             SqliteLocalCommitSql.InsertInitialOperationState(connection, transaction, storeIdentity, operation, committedAtUtc);
             SqliteLocalCommitSql.UpsertSnapshot(connection, transaction, storeIdentity, snapshotMutation, nextRevision, stream.ServerCursor, committedAtUtc);
