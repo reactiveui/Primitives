@@ -168,6 +168,11 @@ internal static class ServerCommitJournalSizer
         var bytes = EventRecordBytes
             + ServerCommitJournalGuard.GetTextBytes(remoteEvent.ServerCursor)
             + GetPayloadBytes(remoteEvent.Payload);
+        if (remoteEvent.Origin is not null)
+        {
+            bytes = AddLogicalBytes(bytes, ServerCommitJournalGuard.GetTextBytes(remoteEvent.Origin.ClientId));
+        }
+
         foreach (var metadata in remoteEvent.Metadata)
         {
             bytes = AddLogicalBytes(bytes, ServerCommitJournalGuard.GetTextBytes(metadata.Key));

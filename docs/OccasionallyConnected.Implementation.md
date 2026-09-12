@@ -671,3 +671,15 @@ Conflict resolution retained the current Core APIs, SQLite registration, impleme
   branch coverage (747/743/743/743 lines and 300 branches). All eight library targets build without warnings or errors.
 - Authorization, concrete server effects/resolvers, durable journal storage, receive/ACK integration and global admission
   remain subsequent work. This journal is explicitly process-local.
+
+### Stage 5f: client-scoped remote event origin
+
+- Added immutable origin correlation containing the client identity and operation identifier. Optional event origins
+  must match the existing causal operation, and the server journal rejects origins belonging to another client.
+- Identity validation checks the length bound before UTF-8 validation and preserves ordinal Unicode identity. Journal
+  byte accounting includes origin text. This data does not authenticate a caller; trusted server and transport code
+  must establish its provenance.
+- Root reviewed validation ordering, equality isolation and boundary tests, then independently ran all 334 Core and
+  83 Server tests on net8/net9/net10/net11. MTP confirms 100% matching line and branch coverage: Core 891 lines and
+  328 branches; Server 752/748/748/748 lines and 306 branches. All eight library targets build without warnings or errors.
+- Client reconciliation and durable origin transport/persistence remain subsequent work.

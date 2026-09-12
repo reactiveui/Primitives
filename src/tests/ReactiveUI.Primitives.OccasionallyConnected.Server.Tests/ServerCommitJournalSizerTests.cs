@@ -7,6 +7,9 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Server.Tests;
 /// <summary>Tests for <see cref="ServerCommitJournalSizer"/>.</summary>
 public sealed class ServerCommitJournalSizerTests
 {
+    /// <summary>The valid supplementary code point used in UTF-8 accounting.</summary>
+    private const int ValidSupplementaryCodePoint = 128_512;
+
     /// <summary>The maximum payload length used to prove long widening starts before addition.</summary>
     private const int MaximumPayloadLength = int.MaxValue;
 
@@ -50,4 +53,42 @@ public sealed class ServerCommitJournalSizerTests
         await Assert.That(ServerCommitJournalSizer.GetEntryBytes(withReason))
             .IsEqualTo(ServerCommitJournalSizer.GetEntryBytes(withoutReason) + ServerCommitJournalGuard.GetTextBytes("reason"));
     }
+
+    /// <summary>Verifies retained origin identities use their actual strict UTF-8 byte count.</summary>
+    /// <returns>The asynchronous assertion operation.</returns>
+    [Test]
+    public async Task GetEntryBytesIncludesOriginClientUtf8Bytes()
+    {
+        var key = new ServerOperationKey("client", OperationId.New());
+        var fingerprint = new ServerCommitFingerprint(new byte[ServerCommitFingerprint.Length]);
+        var withoutOrigin = new ServerLedgerEntry(
+            key,
+            fingerprint,
+            new(key.OperationId, OperationResultKind.Accepted, null, "v1"),
+            [],
+            [CreateEvent(key.OperationId)]);
+        var clientId = char.ConvertFromUtf32(ValidSupplementaryCodePoint);
+        var withOrigin = new ServerLedgerEntry(
+            key,
+            fingerprint,
+            new(key.OperationId, OperationResultKind.Accepted, null, "v1"),
+            [],
+            [CreateEvent(key.OperationId) with { Origin = new(clientId, key.OperationId) }]);
+
+        await Assert.That(ServerCommitJournalSizer.GetEntryBytes(withOrigin))
+            .IsEqualTo(ServerCommitJournalSizer.GetEntryBytes(withoutOrigin) + ServerCommitJournalGuard.GetTextBytes(clientId));
+    }
+
+    /// <summary>Creates a representative remote event.</summary>
+    /// <param name="operationId">The causing operation identifier.</param>
+    /// <returns>The event.</returns>
+    private static RemoteEvent CreateEvent(OperationId operationId) =>
+        new(
+            Guid.NewGuid(),
+            new("stream"),
+            "cursor",
+            DateTimeOffset.UnixEpoch,
+            operationId,
+            new("contract", 1, "text/plain", Array.Empty<byte>(), "hash"),
+            new Dictionary<string, string>());
 }
