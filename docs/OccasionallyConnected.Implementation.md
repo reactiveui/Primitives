@@ -451,3 +451,16 @@ Conflict resolution retained the current Core APIs, SQLite registration, impleme
 - The byte limit covers stored payload bytes, not metadata or transport framing. The public adapter, current ownership
   checks at the upload attempt barrier, retry/status transitions, retention, encryption and crash conformance remain
   subsequent work; this component alone does not establish a complete delivery guarantee.
+
+### Stage 3j: shared lifecycle transitions
+
+- Added an internal coordinator with one driver and bounded shared startup/cleanup state. Concurrent callers join the
+  active transition; accepted opposite intent survives cancellation of the caller waiting for it. Application callbacks
+  run outside the state lock. Disposal prevents restart and joins cleanup.
+- Failed startup requires cleanup before retry. Cleanup failures stop automatic progress and permit an explicit retry.
+  Shared failures are observed even if every waiting caller cancels. Root made callback-result application and selection
+  of the next transition atomic to prevent an overlapping startup request from waiting indefinitely.
+- Root verified 337 TUnit tests on each modern target with 100% runtime line and branch coverage: 1600 lines on net8,
+  1585 on net9/net10, 1584 on net11 and 722 branches throughout. All eight library targets build without warnings or
+  errors. A deliberate stop-intent mutation failed the cancellation regression; restoring the implementation passed.
+- This remains an internal component. Concrete context, engine and stream lifecycle integration remain subsequent work.
