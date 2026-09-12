@@ -10,7 +10,7 @@ using ReactiveUI.Primitives.OccasionallyConnected;
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
 /// <summary>Executes SQLite statements for local commit and recovery rows.</summary>
-internal static class SqliteLocalCommitSql
+internal static partial class SqliteLocalCommitSql
 {
     /// <summary>The SQLite primary-key constraint extended error code.</summary>
     private const int SqliteConstraintPrimaryKey = 1555;
@@ -27,8 +27,29 @@ internal static class SqliteLocalCommitSql
     /// <summary>The store identity SQL parameter.</summary>
     private const string StoreIdentityParameter = "$storeIdentity";
 
+    /// <summary>The stream identity SQL parameter.</summary>
+    private const string StreamIdParameter = "$streamId";
+
     /// <summary>The invalid snapshot revision message.</summary>
     private const string InvalidSnapshotRevisionMessage = "The SQLite snapshot revision is invalid.";
+
+    /// <summary>The invalid operation sequence message.</summary>
+    private const string InvalidOperationSequenceMessage = "The SQLite operation sequence is invalid.";
+
+    /// <summary>The missing lease message.</summary>
+    private const string MissingLeaseMessage = "The SQLite outbox lease is missing.";
+
+    /// <summary>The lease member count minimum column index.</summary>
+    private const int LeaseMemberCountMinimumIndex = 1;
+
+    /// <summary>The lease member count maximum column index.</summary>
+    private const int LeaseMemberCountMaximumIndex = 2;
+
+    /// <summary>The lease expiry minimum column index.</summary>
+    private const int LeaseExpiryMinimumIndex = 3;
+
+    /// <summary>The lease expiry maximum column index.</summary>
+    private const int LeaseExpiryMaximumIndex = 4;
 
     /// <summary>Ensures a stream row exists for an identity mapping.</summary>
     /// <param name="connection">The connection.</param>
@@ -455,7 +476,7 @@ internal static class SqliteLocalCommitSql
         const int RevisionIndex = 1;
         const int CommittedAtIndex = 2;
         const int FingerprintIndex = 3;
-        var sequence = ReadPositiveLong(reader, SequenceIndex, "The SQLite operation sequence is invalid.");
+        var sequence = ReadPositiveLong(reader, SequenceIndex, InvalidOperationSequenceMessage);
         var revision = ReadNonNegativeLong(reader, RevisionIndex, InvalidSnapshotRevisionMessage);
         var storedFingerprint = ReadBytes(reader, FingerprintIndex, "The SQLite commit fingerprint is invalid.");
         if (sequence != operation.ClientSequence || revision != snapshotMutation.ExpectedRevision + 1
@@ -567,7 +588,7 @@ internal static class SqliteLocalCommitSql
             {
                 OperationId = operationId,
                 StreamId = streamId,
-                ClientSequence = ReadPositiveLong(reader, ClientSequenceIndex, "The SQLite operation sequence is invalid."),
+                ClientSequence = ReadPositiveLong(reader, ClientSequenceIndex, InvalidOperationSequenceMessage),
                 TimestampUtc = ReadDateTimeOffset(reader, TimestampIndex, "The SQLite operation timestamp is invalid."),
                 BaseVersion = ReadNullableString(reader, BaseVersionIndex),
                 Type = ReadOperationType(reader, TypeIndex),
@@ -712,7 +733,17 @@ internal static class SqliteLocalCommitSql
     internal static void AddStreamParameters(SqliteCommand command, string storeIdentity, StreamId streamId)
     {
         _ = command.Parameters.AddWithValue(StoreIdentityParameter, storeIdentity);
-        _ = command.Parameters.AddWithValue("$streamId", streamId.Value);
+        _ = command.Parameters.AddWithValue(StreamIdParameter, streamId.Value);
+    }
+
+    /// <summary>Adds lease parameters.</summary>
+    /// <param name="command">The command.</param>
+    /// <param name="storeIdentity">The store identity.</param>
+    /// <param name="leaseId">The lease identifier.</param>
+    internal static void AddLeaseParameters(SqliteCommand command, string storeIdentity, Guid leaseId)
+    {
+        _ = command.Parameters.AddWithValue(StoreIdentityParameter, storeIdentity);
+        _ = command.Parameters.AddWithValue("$leaseId", leaseId.ToString("D"));
     }
 
     /// <summary>Adds operation parameters.</summary>

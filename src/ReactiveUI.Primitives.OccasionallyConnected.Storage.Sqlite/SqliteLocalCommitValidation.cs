@@ -131,6 +131,56 @@ internal static class SqliteLocalCommitValidation
         }
     }
 
+    /// <summary>Validates lease acquisition input.</summary>
+    /// <param name="request">The lease request.</param>
+    /// <exception cref="ArgumentException">The supplied value is invalid.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">A numeric value is outside the supported range.</exception>
+    /// <exception cref="ArgumentNullException">A required value is null.</exception>
+    internal static void ValidateLeaseRequest(OutboxLeaseRequest request)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(request);
+        if (request.StreamId is { } streamId)
+        {
+            ValidateStreamId(streamId, nameof(request));
+        }
+
+        if (request.MaximumOperations <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(request), request.MaximumOperations, "MaximumOperations must be positive.");
+        }
+
+        if (request.MaximumBytes <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(request), request.MaximumBytes, "MaximumBytes must be positive.");
+        }
+
+        ThrowIfNotPositive(request.LeaseDuration, nameof(request), "LeaseDuration must be positive.");
+    }
+
+    /// <summary>Validates a lease renewal request.</summary>
+    /// <param name="leaseId">The lease identifier.</param>
+    /// <param name="extension">The extension duration.</param>
+    /// <exception cref="ArgumentException">The supplied value is invalid.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">A numeric value is outside the supported range.</exception>
+    internal static void ValidateLeaseRenewalInput(Guid leaseId, TimeSpan extension)
+    {
+        ValidateLeaseId(leaseId);
+        ThrowIfNotPositive(extension, nameof(extension), "Lease extension must be positive.");
+    }
+
+    /// <summary>Validates a lease identifier.</summary>
+    /// <param name="leaseId">The lease identifier.</param>
+    /// <exception cref="ArgumentException">The supplied value is invalid.</exception>
+    internal static void ValidateLeaseId(Guid leaseId)
+    {
+        if (leaseId != Guid.Empty)
+        {
+            return;
+        }
+
+        throw new ArgumentException("Lease id must be non-empty.", nameof(leaseId));
+    }
+
     /// <summary>Validates snapshot mutation input.</summary>
     /// <param name="snapshotMutation">The snapshot mutation.</param>
     /// <exception cref="ArgumentException">The supplied value is invalid.</exception>
@@ -266,6 +316,21 @@ internal static class SqliteLocalCommitValidation
         }
 
         throw new ArgumentException(message, parameterName);
+    }
+
+    /// <summary>Throws when a duration is not positive.</summary>
+    /// <param name="value">The duration.</param>
+    /// <param name="parameterName">The parameter name.</param>
+    /// <param name="message">The exception message.</param>
+    /// <exception cref="ArgumentOutOfRangeException">The duration is not positive.</exception>
+    private static void ThrowIfNotPositive(TimeSpan value, string parameterName, string message)
+    {
+        if (value > TimeSpan.Zero)
+        {
+            return;
+        }
+
+        throw new ArgumentOutOfRangeException(parameterName, value, message);
     }
 
     /// <summary>Validates one remote event.</summary>
