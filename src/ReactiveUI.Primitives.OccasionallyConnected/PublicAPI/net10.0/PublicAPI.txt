@@ -103,3 +103,27 @@ public sealed class SchemaRegistry : ReactiveUI.Primitives.OccasionallyConnected
     public ReactiveUI.Primitives.OccasionallyConnected.SchemaRegistry Register<T>(string contractId, int schemaVersion, System.Text.Json.Serialization.Metadata.JsonTypeInfo<T> jsonTypeInfo) { }
     public ReactiveUI.Primitives.OccasionallyConnected.SchemaRegistry RegisterUpcaster(ReactiveUI.Primitives.OccasionallyConnected.IPayloadUpcaster upcaster) { }
 }
+namespace Crdt
+{
+[System.Diagnostics.DebuggerDisplay("{AuthenticatedClientId,nq} {InitialState.Kind,nq}")]
+public sealed class CrdtLocalProjection : ReactiveUI.Primitives.OccasionallyConnected.ILocalProjection<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput>
+{
+    public CrdtLocalProjection(string authenticatedClientId, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtKind kind) { }
+    public CrdtLocalProjection(string authenticatedClientId, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState initialState, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds bounds) { }
+    public string AuthenticatedClientId { get; }
+    public ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState InitialState { get; }
+    public ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState ApplyLocal(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput input, ReactiveUI.Primitives.OccasionallyConnected.SyncOperation operation) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState ApplyRemote(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput input, ReactiveUI.Primitives.OccasionallyConnected.RemoteEvent remoteEvent) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState Reconcile(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state, ReactiveUI.Primitives.OccasionallyConnected.ConflictResolutionResult result) { }
+}
+[System.Diagnostics.DebuggerDisplay("{ContentType,nq}")]
+public sealed class CrdtPayloadSerializer : ReactiveUI.Primitives.OccasionallyConnected.IPayloadSerializer
+{
+    public CrdtPayloadSerializer() { }
+    public CrdtPayloadSerializer(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds bounds) { }
+    public string ContentType { get; }
+    public System.Threading.Tasks.ValueTask<object> DeserializeAsync(ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope envelope, System.Type targetType, System.Threading.CancellationToken cancellationToken) { }
+    public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope> SerializeAsync<T>(string contractId, int schemaVersion, T value, System.Threading.CancellationToken cancellationToken) { }
+}
+}
