@@ -117,6 +117,60 @@ public sealed partial class SqliteStoreSchemaTests
         await Assert.That(action).ThrowsExactly<InvalidOperationException>();
     }
 
+    /// <summary>Verifies schema version seven validates and migrates by adding durable payload quarantine markers.</summary>
+    /// <returns>A task that represents the asynchronous test.</returns>
+    [Test]
+    public async Task WhenPreQuarantineLocalCommitSchemaMigrates_ThenPayloadQuarantineTableIsCreated()
+    {
+        using var database = TempDatabase.Create();
+        await using var connection = OpenRawConnection(database.Path);
+        await using var transaction = connection.BeginTransaction();
+        CreatePreQuarantineLocalCommitSchema(connection, transaction);
+
+        _ = AssertNoThrow(() => SqliteStoreSchema.ValidateExistingSchemaForLocalCommit(
+            connection,
+            transaction,
+            SqliteStoreSchema.PreQuarantineLocalCommitSchemaVersion));
+        _ = AssertNoThrow(() => SqliteStoreSchema.ValidateExistingSchemaForIdentityFacade(
+            connection,
+            transaction,
+            SqliteStoreSchema.PreQuarantineLocalCommitSchemaVersion));
+        SqliteStoreSchema.MigratePreQuarantineLocalCommitToCurrent(connection, transaction);
+
+        await Assert.That(SelectUserVersion(connection, transaction)).IsEqualTo(SqliteStoreSchema.LocalCommitSchemaVersion);
+        await Assert.That(SqliteStoreSchema.SelectMetadata(connection, transaction, SqliteStoreSchema.SchemaVersionKey))
+            .IsEqualTo(SqliteStoreSchema.LocalCommitSchemaVersion.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        await Assert.That(TableExists(connection, transaction, SqliteStoreSchema.PayloadQuarantineTableName)).IsTrue();
+        SqliteStoreSchema.ValidateLocalCommitSchema(connection, transaction);
+    }
+
+    /// <summary>Verifies schema version seven validation rejects mismatched metadata.</summary>
+    /// <returns>A task that represents the asynchronous test.</returns>
+    [Test]
+    public async Task WhenPreQuarantineLocalCommitMetadataVersionDrifts_ThenValidationFailsClosed()
+    {
+        using var database = TempDatabase.Create();
+        await using var connection = OpenRawConnection(database.Path);
+        await using var transaction = connection.BeginTransaction();
+        CreatePreQuarantineLocalCommitSchema(connection, transaction);
+        SetMetadataVersion(connection, transaction, SqliteStoreSchema.LocalCommitSchemaVersion);
+
+        Action action = () => SqliteStoreSchema.ValidatePreQuarantineLocalCommitSchema(connection, transaction);
+
+        await Assert.That(action).ThrowsExactly<InvalidOperationException>();
+    }
+
+    /// <summary>Creates a schema version seven local commit schema from the current schema definitions.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    internal static void CreatePreQuarantineLocalCommitSchema(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        SqliteStoreSchema.CreateLocalCommitSchema(connection, transaction);
+        DropPayloadQuarantineTable(connection, transaction);
+        SetMetadataVersion(connection, transaction, SqliteStoreSchema.PreQuarantineLocalCommitSchemaVersion);
+        SetPreQuarantineUserVersion(connection, transaction);
+    }
+
     /// <summary>Executes an action and returns true when it does not throw.</summary>
     /// <param name="action">The action.</param>
     /// <returns>True when the action completes.</returns>
@@ -136,6 +190,28 @@ public sealed partial class SqliteStoreSchemaTests
         command.Transaction = transaction;
         command.CommandText = "UPDATE oc_metadata SET value = $value WHERE key = 'schema_version';";
         _ = command.Parameters.AddWithValue("$value", schemaVersion.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        _ = command.ExecuteNonQuery();
+    }
+
+    /// <summary>Drops the payload quarantine table from a schema fixture.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void DropPayloadQuarantineTable(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "DROP TABLE oc_payload_quarantine;";
+        _ = command.ExecuteNonQuery();
+    }
+
+    /// <summary>Sets the SQLite user version for the pre-quarantine schema fixture.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void SetPreQuarantineUserVersion(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "PRAGMA user_version = 7;";
         _ = command.ExecuteNonQuery();
     }
 

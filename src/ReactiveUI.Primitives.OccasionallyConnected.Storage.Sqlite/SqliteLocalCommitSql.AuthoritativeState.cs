@@ -76,6 +76,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="storeIdentity">The store identity.</param>
     /// <param name="operationId">The operation id.</param>
     /// <param name="requestedAuthoritativeState">The requested authoritative mutation.</param>
+    /// <param name="maximumPayloadBytes">The maximum payload bytes this adapter can materialize.</param>
     /// <returns>Whether the original authoritative mutation matches.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool HasSameOriginalAuthoritativeMutation(
@@ -83,33 +84,56 @@ internal static partial class SqliteLocalCommitSql
         SqliteTransaction transaction,
         string storeIdentity,
         OperationId operationId,
-        PayloadEnvelope? requestedAuthoritativeState) =>
-        OptionalPayloadEquals(ReadOutboxAuthoritativeMutation(connection, transaction, storeIdentity, operationId), requestedAuthoritativeState);
+        PayloadEnvelope? requestedAuthoritativeState,
+        long maximumPayloadBytes) =>
+        OptionalPayloadEquals(
+            ReadOutboxAuthoritativeMutation(connection, transaction, storeIdentity, operationId, maximumPayloadBytes),
+            requestedAuthoritativeState);
 
     /// <summary>Reads the original authoritative mutation stored for an outbox operation.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
     /// <param name="storeIdentity">The store identity.</param>
     /// <param name="operationId">The operation id.</param>
+    /// <param name="maximumPayloadBytes">The maximum payload bytes this adapter can materialize.</param>
     /// <returns>The original authoritative mutation, or null when absent.</returns>
     private static PayloadEnvelope? ReadOutboxAuthoritativeMutation(
         SqliteConnection connection,
         SqliteTransaction transaction,
         string storeIdentity,
-        OperationId operationId)
+        OperationId operationId,
+        long maximumPayloadBytes)
     {
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = """
-            SELECT payload_contract_id, payload_schema_version, payload_content_type, payload, payload_hash
+            SELECT payload_contract_id, payload_schema_version, payload_content_type, payload, payload_hash, rowid,
+                   typeof(payload_contract_id), length(CAST(payload_contract_id AS BLOB)), IFNULL(substr(CAST(payload_contract_id AS BLOB), 1, 4100), x''),
+                   typeof(payload_schema_version), payload_schema_version,
+                   typeof(payload_content_type), length(CAST(payload_content_type AS BLOB)), IFNULL(substr(CAST(payload_content_type AS BLOB), 1, 4100), x''),
+                   typeof(payload), length(CAST(payload AS BLOB)), IFNULL(substr(CAST(payload AS BLOB), 1, 4096), x''),
+                   typeof(payload_hash), length(CAST(payload_hash AS BLOB)), IFNULL(substr(CAST(payload_hash AS BLOB), 1, 4100), x'')
             FROM oc_outbox_authoritative_mutations
             WHERE store_identity = $storeIdentity AND operation_id = $operationId;
             """;
         _ = command.Parameters.AddWithValue(StoreIdentityParameter, storeIdentity);
         _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
         using var reader = command.ExecuteReader();
+        const int RowIdIndex = 5;
+        const int EvidenceIndex = 6;
         return reader.Read()
-            ? ReadAuthoritativePayload(reader, contractIndex: 0, schemaIndex: 1, contentTypeIndex: 2, payloadIndex: 3, hashIndex: 4)
+            ? ReadAuthoritativePayload(
+                connection,
+                reader,
+                SqlitePayloadColumns.Create(
+                    contractIndex: 0,
+                    schemaIndex: 1,
+                    contentTypeIndex: 2,
+                    payloadIndex: 3,
+                    hashIndex: 4,
+                    source: new(RowIdIndex, SqliteStoreSchema.OutboxAuthoritativeMutationsTableName, PayloadColumnName),
+                    evidenceStartIndex: EvidenceIndex),
+                maximumPayloadBytes)
             : null;
     }
 
@@ -145,22 +169,18 @@ internal static partial class SqliteLocalCommitSql
 #endif
 
     /// <summary>Reads an authoritative payload and validates canonical hash integrity when encoded.</summary>
+    /// <param name="connection">The connection.</param>
     /// <param name="reader">The reader.</param>
-    /// <param name="contractIndex">The contract index.</param>
-    /// <param name="schemaIndex">The schema index.</param>
-    /// <param name="contentTypeIndex">The content type index.</param>
-    /// <param name="payloadIndex">The payload index.</param>
-    /// <param name="hashIndex">The hash index.</param>
+    /// <param name="columns">The payload and evidence columns.</param>
+    /// <param name="maximumPayloadBytes">The maximum payload bytes this adapter can materialize.</param>
     /// <returns>The validated payload.</returns>
     private static PayloadEnvelope ReadAuthoritativePayload(
+        SqliteConnection connection,
         SqliteDataReader reader,
-        int contractIndex,
-        int schemaIndex,
-        int contentTypeIndex,
-        int payloadIndex,
-        int hashIndex)
+        SqlitePayloadColumns columns,
+        long maximumPayloadBytes)
     {
-        var payload = ReadPayload(reader, contractIndex, schemaIndex, contentTypeIndex, payloadIndex, hashIndex);
+        var payload = ReadPayload(connection, reader, columns, maximumPayloadBytes);
         SqliteLocalCommitValidation.ValidateAuthoritativePayload(payload, nameof(payload));
         return payload;
     }
@@ -170,24 +190,44 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="transaction">The transaction.</param>
     /// <param name="storeIdentity">The store identity.</param>
     /// <param name="streamId">The stream id.</param>
+    /// <param name="maximumPayloadBytes">The maximum payload bytes this adapter can materialize.</param>
     /// <returns>The authoritative payload, or null when unknown.</returns>
     private static PayloadEnvelope? ReadSnapshotAuthoritativeState(
         SqliteConnection connection,
         SqliteTransaction transaction,
         string storeIdentity,
-        StreamId streamId)
+        StreamId streamId,
+        long maximumPayloadBytes)
     {
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = """
-            SELECT payload_contract_id, payload_schema_version, payload_content_type, payload, payload_hash
+            SELECT payload_contract_id, payload_schema_version, payload_content_type, payload, payload_hash, rowid,
+                   typeof(payload_contract_id), length(CAST(payload_contract_id AS BLOB)), IFNULL(substr(CAST(payload_contract_id AS BLOB), 1, 4100), x''),
+                   typeof(payload_schema_version), payload_schema_version,
+                   typeof(payload_content_type), length(CAST(payload_content_type AS BLOB)), IFNULL(substr(CAST(payload_content_type AS BLOB), 1, 4100), x''),
+                   typeof(payload), length(CAST(payload AS BLOB)), IFNULL(substr(CAST(payload AS BLOB), 1, 4096), x''),
+                   typeof(payload_hash), length(CAST(payload_hash AS BLOB)), IFNULL(substr(CAST(payload_hash AS BLOB), 1, 4100), x'')
             FROM oc_snapshot_authoritative_states
             WHERE store_identity = $storeIdentity AND stream_id = $streamId;
-            """;
+        """;
         AddStreamParameters(command, storeIdentity, streamId);
         using var reader = command.ExecuteReader();
+        const int RowIdIndex = 5;
+        const int EvidenceIndex = 6;
         return reader.Read()
-            ? ReadAuthoritativePayload(reader, contractIndex: 0, schemaIndex: 1, contentTypeIndex: 2, payloadIndex: 3, hashIndex: 4)
+            ? ReadAuthoritativePayload(
+                connection,
+                reader,
+                SqlitePayloadColumns.Create(
+                    contractIndex: 0,
+                    schemaIndex: 1,
+                    contentTypeIndex: 2,
+                    payloadIndex: 3,
+                    hashIndex: 4,
+                    source: new(RowIdIndex, SqliteStoreSchema.SnapshotAuthoritativeStatesTableName, PayloadColumnName),
+                    evidenceStartIndex: EvidenceIndex),
+                maximumPayloadBytes)
             : null;
     }
 }

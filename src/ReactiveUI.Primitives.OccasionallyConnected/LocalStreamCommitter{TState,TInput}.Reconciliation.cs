@@ -73,7 +73,7 @@ internal sealed partial class LocalStreamCommitter<TState, TInput>
         foreach (var operation in operations)
         {
             ValidateRemotePayload(operation.Payload);
-            replayInputs.Add(await DecodeInputAsync(operation.Payload, cancellationToken).ConfigureAwait(false));
+            replayInputs.Add(await DecodePersistedOutboxInputAsync(operation, cancellationToken).ConfigureAwait(false));
             cancellationToken.ThrowIfCancellationRequested();
         }
 

@@ -79,9 +79,22 @@ internal static partial class SqliteLocalCommitSql
                 cancellationToken);
         }
 
-        var head = SelectFirstLeaseableStreamHead(connection, transaction, storeIdentity, request, nowUtc, cancellationToken);
+        var head = SelectFirstLeaseableStreamHead(
+            connection,
+            transaction,
+            storeIdentity,
+            request,
+            nowUtc,
+            cancellationToken);
         return head.HasValue
-            ? SelectLeaseableOperationIdsForStream(connection, transaction, storeIdentity, head.GetValueOrDefault().StreamId, request, nowUtc, cancellationToken)
+            ? SelectLeaseableOperationIdsForStream(
+                connection,
+                transaction,
+                storeIdentity,
+                head.GetValueOrDefault().StreamId,
+                request,
+                nowUtc,
+                cancellationToken)
             : [];
     }
 
@@ -151,12 +164,15 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="transaction">The transaction.</param>
     /// <param name="storeIdentity">The store identity.</param>
     /// <param name="leaseId">The lease identifier.</param>
+    /// <param name="maximumPayloadBytes">The maximum payload bytes this adapter can materialize.</param>
     /// <returns>The leased operations.</returns>
+    /// <exception cref="SqlitePayloadQuarantineException">Stored SQLite payload data is invalid.</exception>
     internal static List<SyncOperation> ReadLeasedOperations(
         SqliteConnection connection,
         SqliteTransaction transaction,
         string storeIdentity,
-        Guid leaseId)
+        Guid leaseId,
+        long maximumPayloadBytes)
     {
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
@@ -164,7 +180,15 @@ internal static partial class SqliteLocalCommitSql
             SELECT outbox.operation_id, outbox.stream_id, outbox.client_sequence, outbox.timestamp_utc,
                    outbox.base_version, outbox.operation_type, outbox.payload_contract_id, outbox.payload_schema_version,
                    outbox.payload_content_type, outbox.payload, outbox.payload_hash, outbox.policy_delivery_guarantee,
-                   outbox.policy_durability, outbox.policy_priority, outbox.policy_conflict, lease.stream_id
+                   outbox.policy_durability, outbox.policy_priority, outbox.policy_conflict, outbox.rowid,
+                   typeof(outbox.payload_contract_id), length(CAST(outbox.payload_contract_id AS BLOB)),
+                   IFNULL(substr(CAST(outbox.payload_contract_id AS BLOB), 1, 4100), x''),
+                   typeof(outbox.payload_schema_version), outbox.payload_schema_version,
+                   typeof(outbox.payload_content_type), length(CAST(outbox.payload_content_type AS BLOB)),
+                   IFNULL(substr(CAST(outbox.payload_content_type AS BLOB), 1, 4100), x''),
+                   typeof(outbox.payload), length(CAST(outbox.payload AS BLOB)), IFNULL(substr(CAST(outbox.payload AS BLOB), 1, 4096), x''),
+                   typeof(outbox.payload_hash), length(CAST(outbox.payload_hash AS BLOB)),
+                   IFNULL(substr(CAST(outbox.payload_hash AS BLOB), 1, 4100), x''), lease.stream_id
             FROM oc_outbox AS outbox
             INNER JOIN oc_outbox_leases AS lease
                 ON lease.store_identity = outbox.store_identity
@@ -177,7 +201,7 @@ internal static partial class SqliteLocalCommitSql
         List<SyncOperation> operations = [];
         while (reader.Read())
         {
-            operations.Add(ReadLeasedOperationRow(connection, transaction, storeIdentity, reader));
+            operations.Add(ReadLeasedOperation(connection, transaction, storeIdentity, reader, maximumPayloadBytes));
         }
 
         return operations;
@@ -189,6 +213,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="storeIdentity">The store identity.</param>
     /// <param name="leaseId">The lease identifier.</param>
     /// <param name="operationId">The operation identifier.</param>
+    /// <param name="maximumPayloadBytes">The maximum payload bytes this adapter can materialize.</param>
     /// <returns>The leased operation.</returns>
     /// <exception cref="InvalidOperationException">The lease does not own the operation or stored data is invalid.</exception>
     internal static SyncOperation ReadLeasedOperation(
@@ -196,15 +221,24 @@ internal static partial class SqliteLocalCommitSql
         SqliteTransaction transaction,
         string storeIdentity,
         Guid leaseId,
-        OperationId operationId)
+        OperationId operationId,
+        long maximumPayloadBytes)
     {
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = """
-            SELECT outbox.operation_id, outbox.client_sequence, outbox.timestamp_utc, outbox.base_version, outbox.operation_type,
-                   outbox.payload_contract_id, outbox.payload_schema_version, outbox.payload_content_type, outbox.payload, outbox.payload_hash,
-                   outbox.policy_delivery_guarantee, outbox.policy_durability, outbox.policy_priority, outbox.policy_conflict,
-                   outbox.stream_id, lease.stream_id
+            SELECT outbox.operation_id, outbox.stream_id, outbox.client_sequence, outbox.timestamp_utc,
+                   outbox.base_version, outbox.operation_type, outbox.payload_contract_id, outbox.payload_schema_version,
+                   outbox.payload_content_type, outbox.payload, outbox.payload_hash, outbox.policy_delivery_guarantee,
+                   outbox.policy_durability, outbox.policy_priority, outbox.policy_conflict, outbox.rowid,
+                   typeof(outbox.payload_contract_id), length(CAST(outbox.payload_contract_id AS BLOB)),
+                   IFNULL(substr(CAST(outbox.payload_contract_id AS BLOB), 1, 4100), x''),
+                   typeof(outbox.payload_schema_version), outbox.payload_schema_version,
+                   typeof(outbox.payload_content_type), length(CAST(outbox.payload_content_type AS BLOB)),
+                   IFNULL(substr(CAST(outbox.payload_content_type AS BLOB), 1, 4100), x''),
+                   typeof(outbox.payload), length(CAST(outbox.payload AS BLOB)), IFNULL(substr(CAST(outbox.payload AS BLOB), 1, 4096), x''),
+                   typeof(outbox.payload_hash), length(CAST(outbox.payload_hash AS BLOB)),
+                   IFNULL(substr(CAST(outbox.payload_hash AS BLOB), 1, 4100), x''), lease.stream_id
             FROM oc_outbox AS outbox
             INNER JOIN oc_outbox_leases AS lease
                 ON lease.store_identity = outbox.store_identity
@@ -221,12 +255,7 @@ internal static partial class SqliteLocalCommitSql
             throw new InvalidOperationException("The SQLite outbox lease does not own the operation.");
         }
 
-        const int OutboxStreamIdIndex = 14;
-        const int LeaseRowStreamIdIndex = 15;
-        var outboxStreamId = new StreamId(ReadString(reader, OutboxStreamIdIndex, InvalidOperationStreamMessage));
-        var leaseStreamId = new StreamId(ReadString(reader, LeaseRowStreamIdIndex, InvalidOperationStreamMessage));
-        ValidateLeaseStream(outboxStreamId, leaseStreamId);
-        return ReadPendingOperation(connection, transaction, storeIdentity, outboxStreamId, reader);
+        return ReadLeasedOperation(connection, transaction, storeIdentity, reader, maximumPayloadBytes);
     }
 
     /// <summary>Validates that a lease still owns its complete original batch.</summary>
@@ -372,13 +401,16 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="transaction">The transaction.</param>
     /// <param name="storeIdentity">The store identity.</param>
     /// <param name="reader">The row reader.</param>
+    /// <param name="maximumPayloadBytes">The maximum payload bytes this adapter can materialize.</param>
     /// <returns>The leased operation.</returns>
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
-    private static SyncOperation ReadLeasedOperationRow(
+    /// <exception cref="SqlitePayloadQuarantineException">Stored SQLite payload data is invalid.</exception>
+    private static SyncOperation ReadLeasedOperation(
         SqliteConnection connection,
         SqliteTransaction transaction,
         string storeIdentity,
-        SqliteDataReader reader)
+        SqliteDataReader reader,
+        long maximumPayloadBytes)
     {
         const int OperationIdIndex = 0;
         const int StreamIdIndex = 1;
@@ -395,7 +427,9 @@ internal static partial class SqliteLocalCommitSql
         const int DurabilityIndex = 12;
         const int PriorityIndex = 13;
         const int ConflictIndex = 14;
-        const int LeaseRowStreamIdIndex = 15;
+        const int RowIdIndex = 15;
+        const int EvidenceIndex = 16;
+        const int LeaseRowStreamIdIndex = 30;
         var operationId = ReadOperationId(reader, OperationIdIndex);
         var streamId = new StreamId(ReadString(reader, StreamIdIndex, InvalidOperationStreamMessage));
         var leaseStreamId = new StreamId(ReadString(reader, LeaseRowStreamIdIndex, InvalidOperationStreamMessage));
@@ -408,7 +442,19 @@ internal static partial class SqliteLocalCommitSql
             TimestampUtc = ReadDateTimeOffset(reader, TimestampIndex, "The SQLite operation timestamp is invalid."),
             BaseVersion = ReadNullableString(reader, BaseVersionIndex),
             Type = ReadOperationType(reader, TypeIndex),
-            Payload = ReadPayload(reader, PayloadContractIndex, PayloadSchemaIndex, PayloadContentTypeIndex, PayloadIndex, PayloadHashIndex),
+            Payload = ReadOperationPayload(
+                connection,
+                reader,
+                SqlitePayloadColumns.Create(
+                    PayloadContractIndex,
+                    PayloadSchemaIndex,
+                    PayloadContentTypeIndex,
+                    PayloadIndex,
+                    PayloadHashIndex,
+                    new(RowIdIndex, SqliteStoreSchema.OutboxTableName, PayloadColumnName),
+                    EvidenceIndex),
+                operationId,
+                maximumPayloadBytes),
             Policy = ReadPolicy(reader, DeliveryIndex, DurabilityIndex, PriorityIndex, ConflictIndex),
             Metadata = ReadMetadata(connection, transaction, storeIdentity, operationId),
         };
@@ -464,6 +510,11 @@ internal static partial class SqliteLocalCommitSql
                 AND lease.operation_id = outbox.operation_id
             WHERE outbox.store_identity = $storeIdentity AND outbox.stream_id = $streamId
                 AND (state.operation_state IS NULL OR state.operation_state NOT IN (4, 5, 6))
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM oc_payload_quarantine AS quarantine
+                    WHERE quarantine.store_identity = outbox.store_identity
+                        AND quarantine.stream_id = outbox.stream_id)
             ORDER BY outbox.client_sequence ASC
             LIMIT $maximumOperations;
             """;
@@ -521,6 +572,11 @@ internal static partial class SqliteLocalCommitSql
                 AND lease.operation_id = outbox.operation_id
             WHERE outbox.store_identity = $storeIdentity
                 AND (state.operation_state IS NULL OR state.operation_state NOT IN (4, 5, 6))
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM oc_payload_quarantine AS quarantine
+                    WHERE quarantine.store_identity = outbox.store_identity
+                        AND quarantine.stream_id = outbox.stream_id)
                 AND outbox.client_sequence = (
                     SELECT MIN(head.client_sequence)
                     FROM oc_outbox AS head
@@ -529,7 +585,12 @@ internal static partial class SqliteLocalCommitSql
                         AND head_state.operation_id = head.operation_id
                     WHERE head.store_identity = outbox.store_identity
                         AND head.stream_id = outbox.stream_id
-                        AND (head_state.operation_state IS NULL OR head_state.operation_state NOT IN (4, 5, 6)))
+                        AND (head_state.operation_state IS NULL OR head_state.operation_state NOT IN (4, 5, 6))
+                        AND NOT EXISTS (
+                            SELECT 1
+                            FROM oc_payload_quarantine AS head_quarantine
+                            WHERE head_quarantine.store_identity = head.store_identity
+                                AND head_quarantine.stream_id = head.stream_id))
             ORDER BY outbox.stream_id ASC;
             """;
         _ = command.Parameters.AddWithValue(StoreIdentityParameter, storeIdentity);

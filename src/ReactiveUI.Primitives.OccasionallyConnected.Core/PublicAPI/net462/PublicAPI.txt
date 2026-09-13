@@ -164,6 +164,11 @@ public interface ILocalProjection<TState, in TInput>
     TState ApplyRemote(TState state, TInput input, ReactiveUI.Primitives.OccasionallyConnected.RemoteEvent remoteEvent) { }
     TState Reconcile(TState state, ReactiveUI.Primitives.OccasionallyConnected.ConflictResolutionResult result) { }
 }
+public interface ILocalPayloadQuarantineStore
+{
+    System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.LocalPayloadQuarantineRecord?> GetPayloadQuarantineAsync(ReactiveUI.Primitives.OccasionallyConnected.StreamId streamId, System.Threading.CancellationToken cancellationToken) { }
+    System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.LocalPayloadQuarantineResult> QuarantinePayloadAsync(ReactiveUI.Primitives.OccasionallyConnected.LocalPayloadQuarantineRequest request, System.Threading.CancellationToken cancellationToken) { }
+}
 public interface ILocalSnapshotRecoveryStore
 {
     System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshotRecoveryResult> ApplySnapshotRecoveryAsync(ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshotRecoveryMutation mutation, System.Threading.CancellationToken cancellationToken) { }
@@ -496,6 +501,74 @@ public record LocalCommitResult : System.IEquatable<ReactiveUI.Primitives.Occasi
     public ReactiveUI.Primitives.OccasionallyConnected.OperationId OperationId { get; init; }
     public long SnapshotRevision { get; init; }
 }
+[System.Diagnostics.DebuggerDisplay("{ContractId,nq} Length={PayloadLength,nq}")]
+public record LocalPayloadQuarantineEvidence : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.LocalPayloadQuarantineEvidence>
+{
+    public LocalPayloadQuarantineEvidence(string? contractId, int? schemaVersion, string? contentType, int payloadLength, string? payloadHash, System.ReadOnlyMemory<byte> payloadPrefix) { }
+    public string? ContentType { get; init; }
+    public string? ContractId { get; init; }
+    public string? PayloadHash { get; init; }
+    public int PayloadLength { get; init; }
+    public System.ReadOnlyMemory<byte> PayloadPrefix { get; init; }
+    public int? SchemaVersion { get; init; }
+}
+public static class LocalPayloadQuarantineEvidenceFactory
+{
+    public static int DefaultMaximumEvidenceBytes { get; }
+    public static ReactiveUI.Primitives.OccasionallyConnected.LocalPayloadQuarantineEvidence FromEnvelope(ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope? envelope, int maximumEvidenceBytes) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.LocalPayloadQuarantineEvidence FromEvidence(ReactiveUI.Primitives.OccasionallyConnected.LocalPayloadQuarantineEvidence evidence, int maximumEvidenceBytes) { }
+}
+public enum LocalPayloadQuarantineReason
+{
+    SchemaRejected = 0,
+    PayloadHashMismatch = 1,
+    UpcastFailed = 2,
+    PersistedRecordCorrupt = 3,
+}
+[System.Diagnostics.DebuggerDisplay("{StreamId,nq}: {Reason,nq}")]
+public record LocalPayloadQuarantineRecord : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.LocalPayloadQuarantineRecord>
+{
+    public LocalPayloadQuarantineRecord(System.Guid QuarantineId, ReactiveUI.Primitives.OccasionallyConnected.StreamId StreamId, ReactiveUI.Primitives.OccasionallyConnected.SubscriptionId? SubscriptionId, ReactiveUI.Primitives.OccasionallyConnected.OperationId? OperationId, System.Guid? EventId, ReactiveUI.Primitives.OccasionallyConnected.LocalPayloadQuarantineSource Source, ReactiveUI.Primitives.OccasionallyConnected.LocalPayloadQuarantineReason Reason, string? ReasonCode, string? Cursor, ReactiveUI.Primitives.OccasionallyConnected.LocalPayloadQuarantineEvidence Evidence, System.DateTimeOffset ObservedAtUtc) { }
+    public string? Cursor { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.LocalPayloadQuarantineEvidence Evidence { get; init; }
+    public System.Guid? EventId { get; init; }
+    public System.DateTimeOffset ObservedAtUtc { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.OperationId? OperationId { get; init; }
+    public System.Guid QuarantineId { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.LocalPayloadQuarantineReason Reason { get; init; }
+    public string? ReasonCode { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.LocalPayloadQuarantineSource Source { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.StreamId StreamId { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.SubscriptionId? SubscriptionId { get; init; }
+}
+[System.Diagnostics.DebuggerDisplay("{StreamId,nq}: {Reason,nq}")]
+public record LocalPayloadQuarantineRequest : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.LocalPayloadQuarantineRequest>
+{
+    public string? Cursor { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope? Envelope { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.LocalPayloadQuarantineEvidence? Evidence { get; init; }
+    public System.Guid? EventId { get; init; }
+    public required System.DateTimeOffset ObservedAtUtc { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.OperationId? OperationId { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.LocalPayloadQuarantineReason Reason { get; init; }
+    public string? ReasonCode { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.LocalPayloadQuarantineSource Source { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.StreamId StreamId { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.SubscriptionId? SubscriptionId { get; init; }
+}
+[System.Diagnostics.DebuggerDisplay("{Record.StreamId,nq}: Created={Created,nq}")]
+public record LocalPayloadQuarantineResult : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.LocalPayloadQuarantineResult>
+{
+    public LocalPayloadQuarantineResult(ReactiveUI.Primitives.OccasionallyConnected.LocalPayloadQuarantineRecord Record, bool Created) { }
+    public bool Created { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.LocalPayloadQuarantineRecord Record { get; init; }
+}
+public enum LocalPayloadQuarantineSource
+{
+    Snapshot = 0,
+    OutboxOperation = 1,
+    RemoteEvent = 2,
+}
 [System.Diagnostics.DebuggerDisplay("{StreamId,nq} {FormatVersion,nq}")]
 public record LocalSnapshot : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshot>
 {
@@ -748,6 +821,7 @@ public record RecoveredStream : System.IEquatable<ReactiveUI.Primitives.Occasion
     public long NextClientSequence { get; }
     public System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.SyncOperation> PendingOperations { get; }
     public System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.SyncOperation> ReplayOperations { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.LocalPayloadQuarantineRecord? Quarantine { get; init; }
     public string? ServerCursor { get; }
     public ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshot? Snapshot { get; }
     public ReactiveUI.Primitives.OccasionallyConnected.SubscriptionId SubscriptionId { get; }

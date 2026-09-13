@@ -15,18 +15,53 @@ internal sealed partial class LocalStreamCommitter<TState, TInput>
     /// <exception cref="InvalidOperationException">The serializer returns the wrong state type.</exception>
     private async ValueTask<(TState State, PayloadEnvelope Payload)> PrepareProjectionStateAsync(
         LocalStreamCommitterState<TState> observed,
+        CancellationToken cancellationToken) =>
+        await PrepareProjectionStateAsync(
+            observed,
+            LocalPayloadQuarantineSource.Snapshot,
+            null,
+            observed.ServerCursor,
+            cancellationToken).ConfigureAwait(false);
+
+    /// <summary>Decodes an isolated persisted state instance before invoking application projection code.</summary>
+    /// <param name="observed">The committed state snapshot.</param>
+    /// <param name="source">The persisted payload source when the payload needs quarantine.</param>
+    /// <param name="operationId">The source operation identifier, when the payload came from an outbox operation.</param>
+    /// <param name="cursor">The source cursor, when known.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The isolated state and its unchanged source payload.</returns>
+    /// <exception cref="InvalidOperationException">The serializer returns the wrong state type or the persisted payload is quarantined.</exception>
+    private async ValueTask<(TState State, PayloadEnvelope Payload)> PrepareProjectionStateAsync(
+        LocalStreamCommitterState<TState> observed,
+        LocalPayloadQuarantineSource source,
+        OperationId? operationId,
+        string? cursor,
         CancellationToken cancellationToken)
     {
-        var payload = observed.MaterializedPayload ?? await _options.Dependencies.Serializer
+        var persistedPayload = observed.MaterializedPayload;
+        var payload = persistedPayload ?? await _options.Dependencies.Serializer
             .SerializeAsync(_options.Contracts.StateContractId, _options.Contracts.StateSchemaVersion, observed.State, cancellationToken)
             .ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
         ValidateStatePayload(payload);
-        var decoded = await _options.Dependencies.Serializer.DeserializeAsync(payload, typeof(TState), cancellationToken).ConfigureAwait(false);
-        cancellationToken.ThrowIfCancellationRequested();
-        if (decoded is TState typed)
+
+        try
         {
-            return (typed, payload);
+            var decoded = await _options.Dependencies.Serializer.DeserializeAsync(payload, typeof(TState), cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (decoded is TState typed)
+            {
+                return (typed, payload);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (PayloadSchemaException exception) when (persistedPayload is not null)
+        {
+            await QuarantinePersistedStateAsync(persistedPayload, source, operationId, cursor, exception, cancellationToken).ConfigureAwait(false);
+            throw CreateQuarantinedStreamException("Persisted state payload was quarantined.", exception);
         }
 
         throw new InvalidOperationException("The projection state decoded to the wrong state type.");

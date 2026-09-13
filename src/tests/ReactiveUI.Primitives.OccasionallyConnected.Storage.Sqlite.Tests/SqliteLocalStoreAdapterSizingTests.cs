@@ -28,6 +28,9 @@ public sealed class SqliteLocalStoreAdapterSizingTests
     /// <summary>The payload content used by inputs that fit the configured budget.</summary>
     private const string PayloadText = "payload";
 
+    /// <summary>The representative server cursor used by optional-value sizing checks.</summary>
+    private const string Cursor = "cursor";
+
     /// <summary>The invalid event identifier count used to validate preflight argument checks.</summary>
     private const int NegativeEventIdCount = -1;
 
@@ -134,10 +137,25 @@ public sealed class SqliteLocalStoreAdapterSizingTests
         var sizing = new SqliteLocalStoreAdapterSizing(long.MaxValue);
         var operationId = OperationId.New();
         var payload = CreatePayload("event");
+        var quarantineEvidence = new LocalPayloadQuarantineEvidence("reading", 1, "application/json", payload.PayloadLength, payload.PayloadHash, payload.Payload);
+        var quarantine = new LocalPayloadQuarantineRequest
+        {
+            StreamId = Stream,
+            SubscriptionId = SubscriptionId.New(),
+            OperationId = operationId,
+            EventId = Guid.NewGuid(),
+            Source = LocalPayloadQuarantineSource.RemoteEvent,
+            Reason = LocalPayloadQuarantineReason.SchemaRejected,
+            ReasonCode = "schema",
+            Evidence = quarantineEvidence,
+            Envelope = payload,
+            Cursor = Cursor,
+            ObservedAtUtc = DateTimeOffset.UnixEpoch,
+        };
         var remoteEvent = new RemoteEvent(
             Guid.NewGuid(),
             Stream,
-            "cursor",
+            Cursor,
             DateTimeOffset.UnixEpoch,
             operationId,
             payload,
@@ -145,7 +163,7 @@ public sealed class SqliteLocalStoreAdapterSizingTests
         var syncResult = new RemoteSyncResult(
             Guid.NewGuid(),
             [new(operationId, OperationResultKind.Accepted, "accepted", "version")],
-            "cursor",
+            Cursor,
             TimeSpan.FromSeconds(1));
 
         var subscriptionBytes = sizing.SubscriptionLookupBytes(Stream, SubscriptionId.New());
@@ -157,12 +175,21 @@ public sealed class SqliteLocalStoreAdapterSizingTests
             CreateSnapshot());
         var compactionBytes = sizing.CompactionBytes(new(Stream, DateTimeOffset.UnixEpoch, 1));
         var unfilteredCompactionBytes = sizing.CompactionBytes(new(null, DateTimeOffset.UnixEpoch, 1));
+        var normalizedQuarantine = SqliteLocalQuarantineRequestNormalizer.Normalize(quarantine);
+        var quarantineBytes = sizing.QuarantineBytes(normalizedQuarantine);
+        var quarantineWithoutEventBytes = sizing.QuarantineBytes(
+            SqliteLocalQuarantineRequestNormalizer.Normalize(
+                quarantine with { EventId = null, Evidence = quarantineEvidence with { SchemaVersion = null } }));
+        var quarantineFromEnvelope = SqliteLocalQuarantineRequestNormalizer.Normalize(quarantine with { Evidence = null });
 
         await Assert.That(subscriptionBytes).IsGreaterThan(sizing.SubscriptionLookupBytes(Stream, null));
         await Assert.That(leaseBytes).IsGreaterThan(unfilteredLeaseBytes);
         await Assert.That(syncBytes).IsGreaterThan(sizing.SyncResultBytes(new(syncResult.BatchId, syncResult.Operations, null, null)));
         await Assert.That(remoteBytes).IsGreaterThan(sizing.RemoteApplyBytes(new(Guid.NewGuid(), Stream, "previous", "next", []), CreateSnapshot()));
         await Assert.That(compactionBytes).IsGreaterThan(unfilteredCompactionBytes);
+        await Assert.That(quarantineBytes).IsGreaterThan(quarantineWithoutEventBytes);
+        await Assert.That(normalizedQuarantine.Request.Envelope).IsNull();
+        await Assert.That(quarantineFromEnvelope.Evidence.PayloadLength).IsEqualTo(payload.PayloadLength);
     }
 
     /// <summary>Verifies the sizer rejects a non-positive configured capacity.</summary>

@@ -66,6 +66,7 @@ internal sealed partial class InMemoryLocalStoreAdapter
         CancellationToken cancellationToken)
     {
         var lease = GetActiveLease(leaseId, nowUtc);
+        ThrowIfLeaseQuarantined(lease);
         SyncBatchValidator.Validate(new(leaseId, GetLeaseOperations(lease)), result);
         var statuses = CreateStatusesFromResult(result, nowUtc);
         var requiredStreams = GetReconciliationStreams(statuses);
@@ -73,6 +74,7 @@ internal sealed partial class InMemoryLocalStoreAdapter
         var capacity = GetSyncResultCapacityDelta(leaseId, statuses, nowUtc);
         foreach (var snapshot in snapshots)
         {
+            ThrowIfStreamQuarantined(snapshot.StreamId);
             capacity = AddCapacity(capacity, CapacityDifference(LocalSnapshotCapacity(GetStream(snapshot.StreamId).Snapshot), LocalSnapshotCapacity(snapshot)));
         }
 
@@ -139,6 +141,7 @@ internal sealed partial class InMemoryLocalStoreAdapter
             }
 
             var stream = GetStream(mutation.StreamId);
+            ThrowIfStreamQuarantined(stream);
             var current = stream.Snapshot;
             ArgumentExceptionHelper.ThrowIfNull(current);
             var authoritative = current.AuthoritativeState ?? throw new InvalidOperationException("The stream requires an authoritative checkpoint before reconciliation.");

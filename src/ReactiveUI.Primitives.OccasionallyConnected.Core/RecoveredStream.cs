@@ -54,6 +54,13 @@ public sealed record RecoveredStream
     /// <summary>Gets the recovered dead-letter records.</summary>
     public IReadOnlyList<DeadLetterRecord> DeadLetters { get; }
 
+    /// <summary>Gets the recovered quarantine marker for this stream, when one exists.</summary>
+    public LocalPayloadQuarantineRecord? Quarantine
+    {
+        get;
+        init;
+    }
+
     /// <summary>Gets the next client sequence to assign.</summary>
     public long NextClientSequence { get; }
 }

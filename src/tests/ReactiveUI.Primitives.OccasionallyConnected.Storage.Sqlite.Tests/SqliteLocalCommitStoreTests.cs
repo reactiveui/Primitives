@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.Tests;
 public sealed partial class SqliteLocalCommitStoreTests
 {
     /// <summary>The current local commit schema version.</summary>
-    private const int SchemaVersion = 7;
+    private const int SchemaVersion = 8;
 
     /// <summary>The legacy local commit schema version without a remote inbox.</summary>
     private const int LegacyLocalCommitSchemaVersion = 2;
@@ -499,6 +499,32 @@ public sealed partial class SqliteLocalCommitStoreTests
         await Assert.That(blank).ThrowsExactly<ArgumentException>();
         var missingException = Assert.ThrowsExactly<System.Reflection.TargetInvocationException>(missingPath);
         await Assert.That(missingException.InnerException).IsTypeOf<ArgumentNullException>();
+    }
+
+    /// <summary>Verifies zero read budgets are rejected before the SQLite database is created.</summary>
+    /// <returns>A task that represents the asynchronous test.</returns>
+    [Test]
+    public async Task WhenMaximumReadPayloadBytesIsZero_ThenConstructorRejectsItBeforeCreatingDatabase()
+    {
+        using var database = TempDatabase.Create();
+
+        Action action = () => _ = new SqliteLocalCommitStore(database.Path, TimeProvider.System, maximumReadPayloadBytes: 0);
+
+        await Assert.That(action).ThrowsExactly<ArgumentOutOfRangeException>();
+        await Assert.That(File.Exists(database.Path)).IsFalse();
+    }
+
+    /// <summary>Verifies negative read budgets are rejected before the SQLite database is created.</summary>
+    /// <returns>A task that represents the asynchronous test.</returns>
+    [Test]
+    public async Task WhenMaximumReadPayloadBytesIsNegative_ThenConstructorRejectsItBeforeCreatingDatabase()
+    {
+        using var database = TempDatabase.Create();
+
+        Action action = () => _ = new SqliteLocalCommitStore(database.Path, TimeProvider.System, maximumReadPayloadBytes: -1);
+
+        await Assert.That(action).ThrowsExactly<ArgumentOutOfRangeException>();
+        await Assert.That(File.Exists(database.Path)).IsFalse();
     }
 
     /// <summary>Verifies invalid commit identity inputs are rejected before durable state changes.</summary>

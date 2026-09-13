@@ -30,6 +30,18 @@ internal static partial class SqliteLocalCommitSql
     /// <summary>The stream identity SQL parameter.</summary>
     private const string StreamIdParameter = "$streamId";
 
+    /// <summary>The canonical payload column name.</summary>
+    private const string PayloadColumnName = "payload";
+
+    /// <summary>The SHA-256 payload hash prefix used by canonical envelopes.</summary>
+    private const string Sha256PayloadHashPrefix = "sha256-";
+
+    /// <summary>The byte count in one SHA-256 digest.</summary>
+    private const int Sha256ByteCount = 32;
+
+    /// <summary>The length of a canonical SHA-256 payload hash.</summary>
+    private const int Sha256PayloadHashLength = 51;
+
     /// <summary>The invalid snapshot revision message.</summary>
     private const string InvalidSnapshotRevisionMessage = "The SQLite snapshot revision is invalid.";
 
@@ -579,9 +591,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
     /// <param name="storeIdentity">The store partition.</param>
-    /// <param name="operation">The repeated operation.</param>
-    /// <param name="snapshotMutation">The original snapshot mutation.</param>
-    /// <param name="fingerprint">The canonical commit intent fingerprint.</param>
+    /// <param name="query">The repeated commit query.</param>
     /// <param name="result">The original receipt when present.</param>
     /// <returns>Whether the operation was previously committed.</returns>
     /// <exception cref="InvalidOperationException">Stored receipt data or repeated commit intent is inconsistent.</exception>
@@ -589,9 +599,7 @@ internal static partial class SqliteLocalCommitSql
         SqliteConnection connection,
         SqliteTransaction transaction,
         string storeIdentity,
-        SyncOperation operation,
-        SnapshotMutation snapshotMutation,
-        byte[] fingerprint,
+        SqliteCommittedResultQuery query,
         out LocalCommitResult? result)
     {
         using var command = connection.CreateCommand();
@@ -602,7 +610,7 @@ internal static partial class SqliteLocalCommitSql
             WHERE store_identity = $storeIdentity AND operation_id = $operationId;
             """;
         _ = command.Parameters.AddWithValue(StoreIdentityParameter, storeIdentity);
-        _ = command.Parameters.AddWithValue(OperationIdParameter, operation.OperationId.Value.ToString("D"));
+        _ = command.Parameters.AddWithValue(OperationIdParameter, query.Operation.OperationId.Value.ToString("D"));
         using (var reader = command.ExecuteReader())
         {
             if (!reader.Read())
@@ -619,14 +627,20 @@ internal static partial class SqliteLocalCommitSql
             var revision = ReadNonNegativeLong(reader, RevisionIndex, InvalidSnapshotRevisionMessage);
             var committedAtUtc = ReadDateTimeOffset(reader, CommittedAtIndex, "The SQLite operation commit timestamp is invalid.");
             var storedFingerprint = ReadBytes(reader, FingerprintIndex, "The SQLite commit fingerprint is invalid.");
-            if (sequence != operation.ClientSequence || revision != snapshotMutation.ExpectedRevision + 1)
+            if (sequence != query.Operation.ClientSequence || revision != query.SnapshotMutation.ExpectedRevision + 1)
             {
                 throw new InvalidOperationException("The SQLite operation id has already been committed with different content.");
             }
 
-            result = new(operation.OperationId, sequence, revision, committedAtUtc);
-            if (HasSameOriginalAuthoritativeMutation(connection, transaction, storeIdentity, operation.OperationId, snapshotMutation.AuthoritativeState)
-                && HasSameCommitFingerprint(storedFingerprint, fingerprint, operation, snapshotMutation))
+            result = new(query.Operation.OperationId, sequence, revision, committedAtUtc);
+            if (HasSameOriginalAuthoritativeMutation(
+                connection,
+                transaction,
+                storeIdentity,
+                query.Operation.OperationId,
+                query.SnapshotMutation.AuthoritativeState,
+                query.MaximumPayloadBytes)
+                && HasSameCommitFingerprint(storedFingerprint, query.Fingerprint, query.Operation, query.SnapshotMutation))
             {
                 return true;
             }
@@ -640,19 +654,26 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="transaction">The transaction.</param>
     /// <param name="storeIdentity">The store identity.</param>
     /// <param name="streamId">The stream id.</param>
+    /// <param name="maximumPayloadBytes">The maximum payload bytes this adapter can materialize.</param>
     /// <returns>The snapshot or null.</returns>
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
     internal static LocalSnapshot? ReadSnapshot(
         SqliteConnection connection,
         SqliteTransaction transaction,
         string storeIdentity,
-        StreamId streamId)
+        StreamId streamId,
+        long maximumPayloadBytes)
     {
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = """
             SELECT format_version, server_cursor, payload_contract_id, payload_schema_version, payload_content_type,
-                   payload, payload_hash, revision, saved_at_utc
+                   payload, payload_hash, revision, saved_at_utc, rowid,
+                   typeof(payload_contract_id), length(CAST(payload_contract_id AS BLOB)), IFNULL(substr(CAST(payload_contract_id AS BLOB), 1, 4100), x''),
+                   typeof(payload_schema_version), payload_schema_version,
+                   typeof(payload_content_type), length(CAST(payload_content_type AS BLOB)), IFNULL(substr(CAST(payload_content_type AS BLOB), 1, 4100), x''),
+                   typeof(payload), length(CAST(payload AS BLOB)), IFNULL(substr(CAST(payload AS BLOB), 1, 4096), x''),
+                   typeof(payload_hash), length(CAST(payload_hash AS BLOB)), IFNULL(substr(CAST(payload_hash AS BLOB), 1, 4100), x'')
             FROM oc_snapshots
             WHERE store_identity = $storeIdentity AND stream_id = $streamId;
             """;
@@ -667,23 +688,18 @@ internal static partial class SqliteLocalCommitSql
 
             const int FormatVersionIndex = 0;
             const int ServerCursorIndex = 1;
-            const int PayloadContractIndex = 2;
-            const int PayloadSchemaIndex = 3;
-            const int PayloadContentTypeIndex = 4;
-            const int PayloadIndex = 5;
-            const int PayloadHashIndex = 6;
             const int RevisionIndex = 7;
             const int SavedAtIndex = 8;
             snapshot = new(
                 streamId,
                 ReadPositiveInt(reader, FormatVersionIndex, "The SQLite snapshot format version is invalid."),
                 ReadNullableString(reader, ServerCursorIndex),
-                ReadPayload(reader, PayloadContractIndex, PayloadSchemaIndex, PayloadContentTypeIndex, PayloadIndex, PayloadHashIndex),
+                ReadSnapshotPayload(connection, reader, maximumPayloadBytes),
                 ReadNonNegativeLong(reader, RevisionIndex, InvalidSnapshotRevisionMessage),
                 ReadDateTimeOffset(reader, SavedAtIndex, "The SQLite snapshot timestamp is invalid."));
         }
 
-        snapshot = snapshot with { AuthoritativeState = ReadSnapshotAuthoritativeState(connection, transaction, storeIdentity, streamId) };
+        snapshot = snapshot with { AuthoritativeState = ReadSnapshotAuthoritativeState(connection, transaction, storeIdentity, streamId, maximumPayloadBytes) };
         SqliteLocalCommitValidation.ValidatePayload(snapshot.State, nameof(snapshot));
         return snapshot;
     }
@@ -693,13 +709,15 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="transaction">The transaction.</param>
     /// <param name="storeIdentity">The store identity.</param>
     /// <param name="streamId">The stream id.</param>
+    /// <param name="maximumPayloadBytes">The maximum payload bytes this adapter can materialize.</param>
     /// <returns>The pending operations.</returns>
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
     internal static List<SyncOperation> ReadPendingOperations(
         SqliteConnection connection,
         SqliteTransaction transaction,
         string storeIdentity,
-        StreamId streamId)
+        StreamId streamId,
+        long maximumPayloadBytes)
     {
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
@@ -707,7 +725,14 @@ internal static partial class SqliteLocalCommitSql
             SELECT outbox.operation_id, outbox.client_sequence, outbox.timestamp_utc, outbox.base_version, outbox.operation_type,
                    outbox.payload_contract_id, outbox.payload_schema_version, outbox.payload_content_type, outbox.payload, outbox.payload_hash,
                    outbox.policy_delivery_guarantee, outbox.policy_durability, outbox.policy_priority, outbox.policy_conflict,
-                   state.operation_state
+                   state.operation_state, outbox.rowid,
+                   typeof(outbox.payload_contract_id), length(CAST(outbox.payload_contract_id AS BLOB)),
+                   IFNULL(substr(CAST(outbox.payload_contract_id AS BLOB), 1, 4100), x''),
+                   typeof(outbox.payload_schema_version), outbox.payload_schema_version,
+                   typeof(outbox.payload_content_type), length(CAST(outbox.payload_content_type AS BLOB)),
+                   IFNULL(substr(CAST(outbox.payload_content_type AS BLOB), 1, 4100), x''),
+                   typeof(outbox.payload), length(CAST(outbox.payload AS BLOB)), IFNULL(substr(CAST(outbox.payload AS BLOB), 1, 4096), x''),
+                   typeof(outbox.payload_hash), length(CAST(outbox.payload_hash AS BLOB)), IFNULL(substr(CAST(outbox.payload_hash AS BLOB), 1, 4100), x'')
             FROM oc_outbox AS outbox
             LEFT JOIN oc_outbox_operation_states AS state
                 ON state.store_identity = outbox.store_identity
@@ -724,7 +749,7 @@ internal static partial class SqliteLocalCommitSql
         {
             const int OperationStateIndex = 14;
             _ = ReadOperationState(reader, OperationStateIndex);
-            operations.Add(ReadPendingOperation(connection, transaction, storeIdentity, streamId, reader));
+            operations.Add(ReadPendingOperation(connection, transaction, storeIdentity, streamId, reader, maximumPayloadBytes));
         }
 
         return operations;
@@ -735,13 +760,15 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="transaction">The transaction.</param>
     /// <param name="storeIdentity">The store identity.</param>
     /// <param name="streamId">The stream id.</param>
+    /// <param name="maximumPayloadBytes">The maximum payload bytes this adapter can materialize.</param>
     /// <returns>The replay operations.</returns>
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
     internal static List<SyncOperation> ReadReplayOperations(
         SqliteConnection connection,
         SqliteTransaction transaction,
         string storeIdentity,
-        StreamId streamId)
+        StreamId streamId,
+        long maximumPayloadBytes)
     {
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
@@ -749,7 +776,14 @@ internal static partial class SqliteLocalCommitSql
             SELECT outbox.operation_id, outbox.client_sequence, outbox.timestamp_utc, outbox.base_version, outbox.operation_type,
                    outbox.payload_contract_id, outbox.payload_schema_version, outbox.payload_content_type, outbox.payload, outbox.payload_hash,
                    outbox.policy_delivery_guarantee, outbox.policy_durability, outbox.policy_priority, outbox.policy_conflict,
-                   state.operation_state
+                   state.operation_state, outbox.rowid,
+                   typeof(outbox.payload_contract_id), length(CAST(outbox.payload_contract_id AS BLOB)),
+                   IFNULL(substr(CAST(outbox.payload_contract_id AS BLOB), 1, 4100), x''),
+                   typeof(outbox.payload_schema_version), outbox.payload_schema_version,
+                   typeof(outbox.payload_content_type), length(CAST(outbox.payload_content_type AS BLOB)),
+                   IFNULL(substr(CAST(outbox.payload_content_type AS BLOB), 1, 4100), x''),
+                   typeof(outbox.payload), length(CAST(outbox.payload AS BLOB)), IFNULL(substr(CAST(outbox.payload AS BLOB), 1, 4096), x''),
+                   typeof(outbox.payload_hash), length(CAST(outbox.payload_hash AS BLOB)), IFNULL(substr(CAST(outbox.payload_hash AS BLOB), 1, 4100), x'')
             FROM oc_outbox AS outbox
             LEFT JOIN oc_outbox_operation_states AS state
                 ON state.store_identity = outbox.store_identity
@@ -770,7 +804,7 @@ internal static partial class SqliteLocalCommitSql
         {
             const int OperationStateIndex = 14;
             _ = ReadOperationState(reader, OperationStateIndex);
-            operations.Add(ReadPendingOperation(connection, transaction, storeIdentity, streamId, reader));
+            operations.Add(ReadPendingOperation(connection, transaction, storeIdentity, streamId, reader, maximumPayloadBytes));
         }
 
         return operations;
@@ -781,13 +815,15 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="transaction">The transaction.</param>
     /// <param name="storeIdentity">The store identity.</param>
     /// <param name="streamId">The stream id.</param>
+    /// <param name="maximumPayloadBytes">The maximum payload bytes this adapter can materialize.</param>
     /// <returns>The recovered dead-letter records.</returns>
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
     internal static List<DeadLetterRecord> ReadDeadLetters(
         SqliteConnection connection,
         SqliteTransaction transaction,
         string storeIdentity,
-        StreamId streamId)
+        StreamId streamId,
+        long maximumPayloadBytes)
     {
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
@@ -795,6 +831,14 @@ internal static partial class SqliteLocalCommitSql
             SELECT outbox.operation_id, outbox.client_sequence, outbox.timestamp_utc, outbox.base_version, outbox.operation_type,
                    outbox.payload_contract_id, outbox.payload_schema_version, outbox.payload_content_type, outbox.payload, outbox.payload_hash,
                    outbox.policy_delivery_guarantee, outbox.policy_durability, outbox.policy_priority, outbox.policy_conflict,
+                   state.operation_state, outbox.rowid,
+                   typeof(outbox.payload_contract_id), length(CAST(outbox.payload_contract_id AS BLOB)),
+                   IFNULL(substr(CAST(outbox.payload_contract_id AS BLOB), 1, 4100), x''),
+                   typeof(outbox.payload_schema_version), outbox.payload_schema_version,
+                   typeof(outbox.payload_content_type), length(CAST(outbox.payload_content_type AS BLOB)),
+                   IFNULL(substr(CAST(outbox.payload_content_type AS BLOB), 1, 4100), x''),
+                   typeof(outbox.payload), length(CAST(outbox.payload AS BLOB)), IFNULL(substr(CAST(outbox.payload AS BLOB), 1, 4096), x''),
+                   typeof(outbox.payload_hash), length(CAST(outbox.payload_hash AS BLOB)), IFNULL(substr(CAST(outbox.payload_hash AS BLOB), 1, 4100), x''),
                    state.attempt_count, state.changed_at_utc, state.reason_code
             FROM oc_outbox AS outbox
             INNER JOIN oc_outbox_operation_states AS state
@@ -810,10 +854,12 @@ internal static partial class SqliteLocalCommitSql
         List<DeadLetterRecord> deadLetters = [];
         while (reader.Read())
         {
-            const int AttemptIndex = 14;
-            const int ChangedAtIndex = 15;
-            const int ReasonIndex = 16;
-            var operation = ReadPendingOperation(connection, transaction, storeIdentity, streamId, reader);
+            const int OperationStateIndex = 14;
+            const int AttemptIndex = 30;
+            const int ChangedAtIndex = 31;
+            const int ReasonIndex = 32;
+            _ = ReadOperationState(reader, OperationStateIndex);
+            var operation = ReadPendingOperation(connection, transaction, storeIdentity, streamId, reader, maximumPayloadBytes);
             var reason = ReadReasonCode(reader, ReasonIndex)
                 ?? throw new InvalidOperationException("The SQLite dead-letter reason code is invalid.");
             deadLetters.Add(new(
@@ -832,6 +878,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="storeIdentity">The store identity.</param>
     /// <param name="streamId">The stream id.</param>
     /// <param name="reader">The row reader.</param>
+    /// <param name="maximumPayloadBytes">The maximum payload bytes this adapter can materialize.</param>
     /// <returns>The pending operation.</returns>
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
     internal static SyncOperation ReadPendingOperation(
@@ -839,7 +886,8 @@ internal static partial class SqliteLocalCommitSql
         SqliteTransaction transaction,
         string storeIdentity,
         StreamId streamId,
-        SqliteDataReader reader)
+        SqliteDataReader reader,
+        long maximumPayloadBytes)
     {
         const int OperationIdIndex = 0;
         const int ClientSequenceIndex = 1;
@@ -855,6 +903,8 @@ internal static partial class SqliteLocalCommitSql
         const int DurabilityIndex = 11;
         const int PriorityIndex = 12;
         const int ConflictIndex = 13;
+        const int RowIdIndex = 15;
+        const int EvidenceIndex = 16;
         var operationId = ReadOperationId(reader, OperationIdIndex);
         var operation = new SyncOperation
         {
@@ -864,7 +914,19 @@ internal static partial class SqliteLocalCommitSql
             TimestampUtc = ReadDateTimeOffset(reader, TimestampIndex, "The SQLite operation timestamp is invalid."),
             BaseVersion = ReadNullableString(reader, BaseVersionIndex),
             Type = ReadOperationType(reader, TypeIndex),
-            Payload = ReadPayload(reader, PayloadContractIndex, PayloadSchemaIndex, PayloadContentTypeIndex, PayloadIndex, PayloadHashIndex),
+            Payload = ReadOperationPayload(
+                connection,
+                reader,
+                SqlitePayloadColumns.Create(
+                    PayloadContractIndex,
+                    PayloadSchemaIndex,
+                    PayloadContentTypeIndex,
+                    PayloadIndex,
+                    PayloadHashIndex,
+                    new(RowIdIndex, SqliteStoreSchema.OutboxTableName, PayloadColumnName),
+                    EvidenceIndex),
+                operationId,
+                maximumPayloadBytes),
             Policy = ReadPolicy(reader, DeliveryIndex, DurabilityIndex, PriorityIndex, ConflictIndex),
             Metadata = ReadMetadata(connection, transaction, storeIdentity, operationId),
         };
@@ -905,30 +967,49 @@ internal static partial class SqliteLocalCommitSql
     }
 
     /// <summary>Reads a payload envelope.</summary>
+    /// <param name="connection">The connection.</param>
     /// <param name="reader">The reader.</param>
-    /// <param name="contractIndex">The contract index.</param>
-    /// <param name="schemaIndex">The schema index.</param>
-    /// <param name="contentTypeIndex">The content type index.</param>
-    /// <param name="payloadIndex">The payload index.</param>
-    /// <param name="hashIndex">The hash index.</param>
+    /// <param name="columns">The payload and evidence columns.</param>
+    /// <param name="maximumPayloadBytes">The maximum payload bytes this adapter can materialize.</param>
     /// <returns>The payload.</returns>
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
+    /// <exception cref="SqlitePayloadQuarantineException">Stored SQLite payload data is invalid.</exception>
     internal static PayloadEnvelope ReadPayload(
+        SqliteConnection connection,
         SqliteDataReader reader,
-        int contractIndex,
-        int schemaIndex,
-        int contentTypeIndex,
-        int payloadIndex,
-        int hashIndex)
+        SqlitePayloadColumns columns,
+        long maximumPayloadBytes)
     {
-        var payload = new PayloadEnvelope(
-            ReadString(reader, contractIndex, "The SQLite payload contract is invalid."),
-            ReadPositiveInt(reader, schemaIndex, "The SQLite payload schema version is invalid."),
-            ReadString(reader, contentTypeIndex, "The SQLite payload content type is invalid."),
-            ReadBytes(reader, payloadIndex, "The SQLite payload bytes are invalid."),
-            ReadString(reader, hashIndex, "The SQLite payload hash is invalid."));
-        SqliteLocalCommitValidation.ValidatePayload(payload, nameof(payload));
-        return payload;
+        try
+        {
+            ValidatePayloadStorageTypes(reader, columns.Evidence);
+            var schemaVersion = ReadPositiveInt(reader, columns.SchemaIndex, "The SQLite payload schema version is invalid.");
+            var payloadLength = ReadPayloadLength(reader, columns.Evidence);
+            var metadataLength = ReadPayloadMetadataLength(reader, columns.Evidence);
+            ThrowIfPayloadExceedsReadBudget(payloadLength, metadataLength, maximumPayloadBytes);
+            var canonicalPayloadHash = ReadCanonicalPayloadHashPreflight(reader, columns.Evidence);
+            if (canonicalPayloadHash is not null)
+            {
+                ValidatePayloadHash(connection, reader, columns, payloadLength, canonicalPayloadHash);
+            }
+
+            var payloadHash = ReadString(reader, columns.HashIndex, "The SQLite payload hash is invalid.");
+            var payload = new PayloadEnvelope(
+                ReadString(reader, columns.ContractIndex, "The SQLite payload contract is invalid."),
+                schemaVersion,
+                ReadString(reader, columns.ContentTypeIndex, "The SQLite payload content type is invalid."),
+                ReadPayloadBytes(connection, reader, columns, payloadLength),
+                payloadHash);
+            SqliteLocalCommitValidation.ValidatePayload(payload, nameof(payload));
+            return payload;
+        }
+        catch (Exception exception) when (exception is not QueueCapacityExceededException
+            && (exception is InvalidOperationException or OverflowException))
+        {
+            throw new SqlitePayloadQuarantineException(
+                CapturePayloadEvidence(reader, columns.Evidence),
+                exception);
+        }
     }
 
     /// <summary>Reads operation policy.</summary>
@@ -1095,7 +1176,7 @@ internal static partial class SqliteLocalCommitSql
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
     internal static int ReadInt(SqliteDataReader reader, int index, string message)
     {
-        if (!reader.IsDBNull(index))
+        if (HasIntegerStorageClass(reader, index))
         {
             return reader.GetInt32(index);
         }
@@ -1128,7 +1209,7 @@ internal static partial class SqliteLocalCommitSql
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
     internal static long ReadPositiveLong(SqliteDataReader reader, int index, string message)
     {
-        if (!reader.IsDBNull(index))
+        if (HasIntegerStorageClass(reader, index))
         {
             var value = reader.GetInt64(index);
             if (value > 0)
@@ -1148,7 +1229,7 @@ internal static partial class SqliteLocalCommitSql
     /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
     internal static long ReadNonNegativeLong(SqliteDataReader reader, int index, string message)
     {
-        if (!reader.IsDBNull(index))
+        if (HasIntegerStorageClass(reader, index))
         {
             return ReadNonNegativeLong(reader.GetInt64(index), message);
         }
@@ -1193,6 +1274,70 @@ internal static partial class SqliteLocalCommitSql
     /// <returns>The formatted value.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static string FormatDateTimeOffset(DateTimeOffset value) => value.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture);
+
+    /// <summary>Determines whether the SQLite column currently stores an integer value.</summary>
+    /// <param name="reader">The reader.</param>
+    /// <param name="index">The column index.</param>
+    /// <returns>Whether the current storage class is INTEGER.</returns>
+    private static bool HasIntegerStorageClass(SqliteDataReader reader, int index) =>
+        reader.GetValue(index) is long;
+
+    /// <summary>Reads the payload envelope from a snapshot row.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="reader">The row reader.</param>
+    /// <param name="maximumPayloadBytes">The maximum payload bytes this adapter can materialize.</param>
+    /// <returns>The payload.</returns>
+    /// <exception cref="SqlitePayloadQuarantineException">Stored SQLite payload data is invalid.</exception>
+    private static PayloadEnvelope ReadSnapshotPayload(
+        SqliteConnection connection,
+        SqliteDataReader reader,
+        long maximumPayloadBytes)
+    {
+        const int PayloadContractIndex = 2;
+        const int PayloadSchemaIndex = 3;
+        const int PayloadContentTypeIndex = 4;
+        const int PayloadIndex = 5;
+        const int PayloadHashIndex = 6;
+        const int RowIdIndex = 9;
+        const int EvidenceIndex = 10;
+        return ReadPayload(
+            connection,
+            reader,
+            SqlitePayloadColumns.Create(
+                PayloadContractIndex,
+                PayloadSchemaIndex,
+                PayloadContentTypeIndex,
+                PayloadIndex,
+                PayloadHashIndex,
+                new(RowIdIndex, SqliteStoreSchema.SnapshotsTableName, PayloadColumnName),
+                EvidenceIndex),
+            maximumPayloadBytes);
+    }
+
+    /// <summary>Reads an operation payload and annotates quarantine evidence with the operation identifier.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="reader">The reader.</param>
+    /// <param name="columns">The payload and evidence columns.</param>
+    /// <param name="operationId">The operation identifier.</param>
+    /// <param name="maximumPayloadBytes">The maximum payload bytes this adapter can materialize.</param>
+    /// <returns>The payload.</returns>
+    /// <exception cref="SqlitePayloadQuarantineException">Stored SQLite payload data is invalid.</exception>
+    private static PayloadEnvelope ReadOperationPayload(
+        SqliteConnection connection,
+        SqliteDataReader reader,
+        SqlitePayloadColumns columns,
+        OperationId operationId,
+        long maximumPayloadBytes)
+    {
+        try
+        {
+            return ReadPayload(connection, reader, columns, maximumPayloadBytes);
+        }
+        catch (SqlitePayloadQuarantineException exception)
+        {
+            throw new SqlitePayloadQuarantineException(exception.Evidence, operationId, exception);
+        }
+    }
 
     /// <summary>Returns whether a SQLite exception identifies a duplicate inbox key.</summary>
     /// <param name="exception">The SQLite exception.</param>

@@ -30,8 +30,11 @@ internal static class SqliteStoreSchema
     /// <summary>The local commit schema version before receive inclusion sidecars.</summary>
     internal const int AuthoritativeLocalCommitSchemaVersion = 6;
 
+    /// <summary>The local commit schema version before payload quarantine markers.</summary>
+    internal const int PreQuarantineLocalCommitSchemaVersion = 7;
+
     /// <summary>The local commit schema version.</summary>
-    internal const int LocalCommitSchemaVersion = 7;
+    internal const int LocalCommitSchemaVersion = 8;
 
     /// <summary>The metadata key for the schema version.</summary>
     internal const string SchemaVersionKey = "schema_version";
@@ -71,6 +74,9 @@ internal static class SqliteStoreSchema
 
     /// <summary>The outbox receive inclusion table name.</summary>
     internal const string OutboxReceiveInclusionsTableName = "oc_outbox_receive_inclusions";
+
+    /// <summary>The payload quarantine table name.</summary>
+    internal const string PayloadQuarantineTableName = "oc_payload_quarantine";
 
     /// <summary>The invalid schema exception message.</summary>
     private const string InvalidSchemaMessage = "The SQLite identity schema is invalid.";
@@ -265,6 +271,32 @@ internal static class SqliteStoreSchema
                 ON DELETE CASCADE);
         """;
 
+    /// <summary>The SQL definition for stream payload quarantine markers.</summary>
+    private const string PayloadQuarantineTableSql = """
+        CREATE TABLE oc_payload_quarantine (
+            store_identity TEXT NOT NULL,
+            stream_id TEXT NOT NULL,
+            quarantine_id TEXT NOT NULL,
+            subscription_id TEXT NULL,
+            operation_id TEXT NULL,
+            event_id TEXT NULL,
+            source INTEGER NOT NULL,
+            reason INTEGER NOT NULL,
+            reason_code TEXT NULL,
+            cursor TEXT NULL,
+            evidence_contract_id TEXT NULL,
+            evidence_schema_version INTEGER NULL,
+            evidence_content_type TEXT NULL,
+            evidence_payload_length INTEGER NOT NULL,
+            evidence_payload_hash TEXT NULL,
+            evidence_payload_prefix BLOB NOT NULL,
+            observed_at_utc TEXT NOT NULL,
+            PRIMARY KEY (store_identity, stream_id),
+            FOREIGN KEY (store_identity, stream_id)
+                REFERENCES oc_streams (store_identity, stream_id)
+                ON DELETE CASCADE);
+        """;
+
     /// <summary>Creates schema version one.</summary>
     /// <param name="connection">The open connection.</param>
     /// <param name="transaction">The current transaction.</param>
@@ -292,6 +324,7 @@ internal static class SqliteStoreSchema
         CreateOutboxOperationStatesTable(connection, transaction);
         CreateAuthoritativeStateTables(connection, transaction);
         CreateOutboxReceiveInclusionsTable(connection, transaction);
+        CreatePayloadQuarantineTable(connection, transaction);
         InsertMetadata(connection, transaction, SchemaVersionKey, LocalCommitSchemaVersion.ToString(CultureInfo.InvariantCulture));
     }
 
@@ -310,6 +343,7 @@ internal static class SqliteStoreSchema
         CreateOutboxReceiveInclusionsTable(connection, transaction);
         BackfillStreamsFromIdentities(connection, transaction);
         BackfillOperationStates(connection, transaction);
+        CreatePayloadQuarantineTable(connection, transaction);
         UpdateMetadata(connection, transaction, SchemaVersionKey, LocalCommitSchemaVersion.ToString(CultureInfo.InvariantCulture));
         SetLocalCommitUserVersion(connection, transaction);
     }
@@ -327,6 +361,7 @@ internal static class SqliteStoreSchema
         CreateAuthoritativeStateTables(connection, transaction);
         CreateOutboxReceiveInclusionsTable(connection, transaction);
         BackfillOperationStates(connection, transaction);
+        CreatePayloadQuarantineTable(connection, transaction);
         UpdateMetadata(connection, transaction, SchemaVersionKey, LocalCommitSchemaVersion.ToString(CultureInfo.InvariantCulture));
         SetLocalCommitUserVersion(connection, transaction);
     }
@@ -343,6 +378,7 @@ internal static class SqliteStoreSchema
         CreateAuthoritativeStateTables(connection, transaction);
         CreateOutboxReceiveInclusionsTable(connection, transaction);
         BackfillOperationStates(connection, transaction);
+        CreatePayloadQuarantineTable(connection, transaction);
         UpdateMetadata(connection, transaction, SchemaVersionKey, LocalCommitSchemaVersion.ToString(CultureInfo.InvariantCulture));
         SetLocalCommitUserVersion(connection, transaction);
     }
@@ -358,6 +394,7 @@ internal static class SqliteStoreSchema
         CreateAuthoritativeStateTables(connection, transaction);
         CreateOutboxReceiveInclusionsTable(connection, transaction);
         BackfillOperationStates(connection, transaction);
+        CreatePayloadQuarantineTable(connection, transaction);
         UpdateMetadata(connection, transaction, SchemaVersionKey, LocalCommitSchemaVersion.ToString(CultureInfo.InvariantCulture));
         SetLocalCommitUserVersion(connection, transaction);
     }
@@ -371,6 +408,7 @@ internal static class SqliteStoreSchema
         ValidatePreAuthoritativeLocalCommitSchema(connection, transaction);
         CreateAuthoritativeStateTables(connection, transaction);
         CreateOutboxReceiveInclusionsTable(connection, transaction);
+        CreatePayloadQuarantineTable(connection, transaction);
         UpdateMetadata(connection, transaction, SchemaVersionKey, LocalCommitSchemaVersion.ToString(CultureInfo.InvariantCulture));
         SetLocalCommitUserVersion(connection, transaction);
     }
@@ -383,6 +421,19 @@ internal static class SqliteStoreSchema
     {
         ValidateAuthoritativeLocalCommitSchema(connection, transaction);
         CreateOutboxReceiveInclusionsTable(connection, transaction);
+        CreatePayloadQuarantineTable(connection, transaction);
+        UpdateMetadata(connection, transaction, SchemaVersionKey, LocalCommitSchemaVersion.ToString(CultureInfo.InvariantCulture));
+        SetLocalCommitUserVersion(connection, transaction);
+    }
+
+    /// <summary>Migrates an exact schema version seven database to schema version eight.</summary>
+    /// <param name="connection">The open connection.</param>
+    /// <param name="transaction">The current transaction.</param>
+    /// <exception cref="InvalidOperationException">The SQLite schema state is invalid.</exception>
+    internal static void MigratePreQuarantineLocalCommitToCurrent(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        ValidatePreQuarantineLocalCommitSchema(connection, transaction);
+        CreatePayloadQuarantineTable(connection, transaction);
         UpdateMetadata(connection, transaction, SchemaVersionKey, LocalCommitSchemaVersion.ToString(CultureInfo.InvariantCulture));
         SetLocalCommitUserVersion(connection, transaction);
     }
@@ -421,6 +472,12 @@ internal static class SqliteStoreSchema
         if (userVersion == AuthoritativeLocalCommitSchemaVersion)
         {
             ValidateAuthoritativeLocalCommitSchema(connection, transaction);
+            return;
+        }
+
+        if (userVersion == PreQuarantineLocalCommitSchemaVersion)
+        {
+            ValidatePreQuarantineLocalCommitSchema(connection, transaction);
             return;
         }
 
@@ -599,6 +656,7 @@ internal static class SqliteStoreSchema
                 OutboxMetadataTableName,
                 OutboxOperationStatesTableName,
                 OutboxReceiveInclusionsTableName,
+                PayloadQuarantineTableName,
                 SnapshotAuthoritativeStatesTableName,
                 SnapshotsTableName,
                 StreamsTableName,
@@ -607,6 +665,50 @@ internal static class SqliteStoreSchema
         ValidateTableDefinition(connection, transaction, MetadataTableName, MetadataTableSql);
         var schemaVersion = SelectMetadata(connection, transaction, SchemaVersionKey);
         if (schemaVersion != LocalCommitSchemaVersion.ToString(CultureInfo.InvariantCulture))
+        {
+            throw new InvalidOperationException(UnsupportedMetadataSchemaVersionMessage);
+        }
+
+        ValidateTableDefinition(connection, transaction, SubscriptionIdentitiesTableName, SubscriptionIdentitiesTableSql);
+        ValidateTableDefinition(connection, transaction, StreamsTableName, StreamsTableSql);
+        ValidateTableDefinition(connection, transaction, SnapshotsTableName, SnapshotsTableSql);
+        ValidateTableDefinition(connection, transaction, OutboxTableName, OutboxTableSql);
+        ValidateTableDefinition(connection, transaction, OutboxLeasesTableName, OutboxLeasesTableSql);
+        ValidateTableDefinition(connection, transaction, OutboxMetadataTableName, OutboxMetadataTableSql);
+        ValidateTableDefinition(connection, transaction, OutboxOperationStatesTableName, OutboxOperationStatesTableSql);
+        ValidateTableDefinition(connection, transaction, OutboxAuthoritativeMutationsTableName, OutboxAuthoritativeMutationsTableSql);
+        ValidateTableDefinition(connection, transaction, OutboxReceiveInclusionsTableName, OutboxReceiveInclusionsTableSql);
+        ValidateTableDefinition(connection, transaction, PayloadQuarantineTableName, PayloadQuarantineTableSql);
+        ValidateTableDefinition(connection, transaction, SnapshotAuthoritativeStatesTableName, SnapshotAuthoritativeStatesTableSql);
+        ValidateTableDefinition(connection, transaction, InboxTableName, InboxTableSql);
+    }
+
+    /// <summary>Validates an exact schema version seven database.</summary>
+    /// <param name="connection">The open connection.</param>
+    /// <param name="transaction">The current transaction.</param>
+    /// <exception cref="InvalidOperationException">The SQLite schema state is invalid.</exception>
+    internal static void ValidatePreQuarantineLocalCommitSchema(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        ValidateUserTableNames(
+            connection,
+            transaction,
+            [
+                InboxTableName,
+                MetadataTableName,
+                OutboxTableName,
+                OutboxAuthoritativeMutationsTableName,
+                OutboxLeasesTableName,
+                OutboxMetadataTableName,
+                OutboxOperationStatesTableName,
+                OutboxReceiveInclusionsTableName,
+                SnapshotAuthoritativeStatesTableName,
+                SnapshotsTableName,
+                StreamsTableName,
+                SubscriptionIdentitiesTableName,
+            ]);
+        ValidateTableDefinition(connection, transaction, MetadataTableName, MetadataTableSql);
+        var schemaVersion = SelectMetadata(connection, transaction, SchemaVersionKey);
+        if (schemaVersion != PreQuarantineLocalCommitSchemaVersion.ToString(CultureInfo.InvariantCulture))
         {
             throw new InvalidOperationException(UnsupportedMetadataSchemaVersionMessage);
         }
@@ -867,7 +969,7 @@ internal static class SqliteStoreSchema
     {
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
-        command.CommandText = "PRAGMA user_version = 7;";
+        command.CommandText = "PRAGMA user_version = 8;";
         _ = command.ExecuteNonQuery();
     }
 
@@ -967,6 +1069,17 @@ internal static class SqliteStoreSchema
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = OutboxReceiveInclusionsTableSql;
+        _ = command.ExecuteNonQuery();
+    }
+
+    /// <summary>Creates the payload quarantine table.</summary>
+    /// <param name="connection">The open connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void CreatePayloadQuarantineTable(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = PayloadQuarantineTableSql;
         _ = command.ExecuteNonQuery();
     }
 
