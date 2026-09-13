@@ -15,7 +15,8 @@ public sealed class HttpRemoteTransportCapabilitiesTests
         RemoteTransportCapabilities.BatchPush
         | RemoteTransportCapabilities.CursorResume
         | RemoteTransportCapabilities.ReceiveAcknowledgements
-        | RemoteTransportCapabilities.ServerIdempotency;
+        | RemoteTransportCapabilities.ServerIdempotency
+        | RemoteTransportCapabilities.AtomicApplyAndAcknowledge;
 
     /// <summary>The valid batch operation count.</summary>
     private const int MaximumBatchOperations = 10;
@@ -82,6 +83,9 @@ public sealed class HttpRemoteTransportCapabilitiesTests
     [Test]
     [Arguments(DeliveryGuarantee.AtLeastOnce, RemoteTransportCapabilities.BatchPush)]
     [Arguments(DeliveryGuarantee.ExactlyOnce, RemoteTransportCapabilities.BatchPush | RemoteTransportCapabilities.ServerIdempotency)]
+    [Arguments(
+        DeliveryGuarantee.ExactlyOnce,
+        RemoteTransportCapabilities.BatchPush | RemoteTransportCapabilities.ServerIdempotency | RemoteTransportCapabilities.ReceiveAcknowledgements)]
     public async Task ValidateNegotiationRejectsMissingGuaranteeFeatures(DeliveryGuarantee guarantee, RemoteTransportCapabilities features)
     {
         var exception = await CaptureHttpExceptionAsync(() => HttpRemoteTransportCapabilities.ValidateNegotiation(

@@ -57,7 +57,8 @@ internal static class HttpRemoteTransportCapabilities
         }
 
         if (guarantee is DeliveryGuarantee.ExactlyOnce
-            && Has(features, RemoteTransportCapabilities.BatchPush | RemoteTransportCapabilities.ServerIdempotency | RemoteTransportCapabilities.ReceiveAcknowledgements))
+            && Has(features, RemoteTransportCapabilities.BatchPush | RemoteTransportCapabilities.ServerIdempotency
+                | RemoteTransportCapabilities.AtomicApplyAndAcknowledge | RemoteTransportCapabilities.ReceiveAcknowledgements))
         {
             return;
         }

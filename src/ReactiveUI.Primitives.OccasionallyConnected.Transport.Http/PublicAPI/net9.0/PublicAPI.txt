@@ -1,5 +1,44 @@
 namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.Http;
 
+[System.Diagnostics.DebuggerDisplay("{DeclaredCapabilities,nq}")]
+public sealed class HttpServerEndpoint : System.IAsyncDisposable
+{
+    public HttpServerEndpoint(ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.HttpServerEndpointOptions options) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.NegotiatedCapabilities DeclaredCapabilities { get; }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public System.Threading.Tasks.ValueTask<System.Net.Http.HttpResponseMessage> HandleAsync(System.Net.Http.HttpRequestMessage request, ReactiveUI.Primitives.OccasionallyConnected.ServerAuthenticatedClient authenticatedClient) { }
+    public System.Threading.Tasks.ValueTask<System.Net.Http.HttpResponseMessage> HandleAsync(System.Net.Http.HttpRequestMessage request, ReactiveUI.Primitives.OccasionallyConnected.ServerAuthenticatedClient authenticatedClient, System.Threading.CancellationToken cancellationToken) { }
+    public System.Threading.Tasks.ValueTask DisposeAsync() { }
+}
+[System.Diagnostics.DebuggerDisplay("{PathBase,nq}")]
+public record HttpServerEndpointOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.HttpServerEndpointOptions>
+{
+    public string AcknowledgePath { get; init; }
+    public string ConnectPath { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.NegotiatedCapabilities DeclaredCapabilities { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.IServerStreamHub Hub { get; init; }
+    public System.TimeSpan LongPollTimeout { get; init; }
+    public int MaximumBatchOperations { get; init; }
+    public int MaximumCompletedOperationsPerBatch { get; init; }
+    public int MaximumConcurrentAcknowledgements { get; init; }
+    public int MaximumConcurrentRequests { get; init; }
+    public int MaximumConcurrentSubscriptions { get; init; }
+    public int MaximumEventsPerBatch { get; init; }
+    public int MaximumJsonDepth { get; init; }
+    public int MaximumMetadataEntries { get; init; }
+    public int MaximumMetadataKeyBytes { get; init; }
+    public int MaximumMetadataValueBytes { get; init; }
+    public int MaximumPayloadBytes { get; init; }
+    public int MaximumProtocolStringBytes { get; init; }
+    public int MaximumQueryBytes { get; init; }
+    public int MaximumQueryKeys { get; init; }
+    public int MaximumRequestBytes { get; init; }
+    public int MaximumResponseBytes { get; init; }
+    public string PathBase { get; init; }
+    public string PushPath { get; init; }
+    public string SubscribePath { get; init; }
+    public System.TimeProvider TimeProvider { get; init; }
+}
 [System.Diagnostics.DebuggerDisplay("{Kind,nq} {StatusCode,nq}")]
 public sealed class HttpRemoteTransportException : System.Exception, ReactiveUI.Primitives.OccasionallyConnected.IRemoteTransportFailure
 {
