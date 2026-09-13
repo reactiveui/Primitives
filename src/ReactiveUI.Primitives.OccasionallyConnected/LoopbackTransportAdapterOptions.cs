@@ -10,6 +10,9 @@ namespace ReactiveUI.Primitives.OccasionallyConnected;
 [DebuggerDisplay("Loopback; Client={Client,nq}; Features={PeerCapabilities.Features,nq}")]
 public sealed record LoopbackTransportAdapterOptions
 {
+    /// <summary>The default maximum logical encoded batch bytes accepted by the loopback adapter.</summary>
+    private const long DefaultMaximumLogicalBatchBytes = 64L * 1024L * 1024L;
+
     /// <summary>Gets the server hub supplied by the trusted host.</summary>
     public required IServerStreamHub Hub { get; init; }
 
@@ -30,6 +33,9 @@ public sealed record LoopbackTransportAdapterOptions
 
     /// <summary>Gets the maximum number of events accepted in one received batch.</summary>
     public int MaximumReceiveEvents { get; init; } = 1024;
+
+    /// <summary>Gets the maximum logical encoded bytes accepted for one loopback batch.</summary>
+    public long MaximumLogicalBatchBytes { get; init; } = DefaultMaximumLogicalBatchBytes;
 
     /// <summary>Gets the maximum number of completed operation declarations accepted in one received batch.</summary>
     public int MaximumCompletedOperations { get; init; } = 1024;

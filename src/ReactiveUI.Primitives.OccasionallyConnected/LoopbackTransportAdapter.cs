@@ -10,7 +10,7 @@ namespace ReactiveUI.Primitives.OccasionallyConnected;
 
 /// <summary>Connects a transport session directly to an in-process server stream hub supplied by the trusted host.</summary>
 [DebuggerDisplay("Loopback; Capabilities={Capabilities,nq}")]
-public sealed class LoopbackTransportAdapter : IRemoteTransportAdapter
+public sealed partial class LoopbackTransportAdapter : IRemoteTransportAdapter
 {
     /// <summary>Synchronizes adapter session lifetime.</summary>
 #if NET9_0_OR_GREATER
@@ -120,7 +120,7 @@ public sealed class LoopbackTransportAdapter : IRemoteTransportAdapter
     /// <summary>Represents a bounded loopback session.</summary>
     /// <param name="owner">The owning adapter.</param>
     /// <param name="options">The trusted host supplied options.</param>
-    private sealed class LoopbackTransportSession(LoopbackTransportAdapter owner, LoopbackTransportAdapterOptions options) : IRemoteTransportSession
+    private sealed partial class LoopbackTransportSession(LoopbackTransportAdapter owner, LoopbackTransportAdapterOptions options) : IRemoteTransportSession, IRemoteTransportBatchPreparer
     {
         /// <summary>The operation kind for push requests.</summary>
         private const int PushOperation = 0;
@@ -143,6 +143,9 @@ public sealed class LoopbackTransportAdapter : IRemoteTransportAdapter
 
         /// <summary>The active subscription enumerators owned by this session.</summary>
         private readonly HashSet<LoopbackSubscriptionEnumerator> _activeSubscriptionEnumerators = [];
+
+        /// <summary>The prepared push handles owned by this session.</summary>
+        private readonly HashSet<LoopbackPreparedPush> _preparedPushes = [];
 
         /// <summary>The number of active push requests.</summary>
         private int _activePushRequests;
@@ -175,14 +178,8 @@ public sealed class LoopbackTransportAdapter : IRemoteTransportAdapter
         /// <exception cref="SyncBatchValidationException">The hub result does not exactly match the pushed batch.</exception>
         public async ValueTask<RemoteSyncResult> PushAsync(SyncBatch batch, CancellationToken cancellationToken)
         {
-            ArgumentExceptionHelper.ThrowIfNull(batch);
-            using var lease = Admit(PushOperation, cancellationToken);
-            LoopbackTransportValidator.ValidateOutgoingBatch(batch, options);
-            var serverResult = await options.Hub.ApplyOperationsAsync(batch, options.Client, lease.Token).ConfigureAwait(false)
-                ?? throw new InvalidOperationException("The loopback hub returned no synchronization result.");
-
-            SyncBatchValidator.Validate(batch, serverResult.Result);
-            return serverResult.Result;
+            await using var prepared = PreparePush(batch, cancellationToken);
+            return await prepared.SendAsync(cancellationToken).ConfigureAwait(false);
         }
 
         /// <inheritdoc/>
@@ -215,6 +212,7 @@ public sealed class LoopbackTransportAdapter : IRemoteTransportAdapter
             TaskCompletionSource<object?>? completion = null;
             var drainTask = Task.CompletedTask;
             LoopbackSubscriptionEnumerator[] subscriptions = [];
+            LoopbackPreparedPush[] preparedPushes = [];
             Task task;
             lock (_gate)
             {
@@ -223,6 +221,7 @@ public sealed class LoopbackTransportAdapter : IRemoteTransportAdapter
                     _disposed = true;
                     drainTask = GetDrainTask();
                     subscriptions = CopySubscriptions();
+                    preparedPushes = CopyPreparedPushes();
                     completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
                     _disposeTask = completion.Task;
                 }
@@ -232,10 +231,38 @@ public sealed class LoopbackTransportAdapter : IRemoteTransportAdapter
 
             if (completion is not null)
             {
-                _ = DisposeCoreAsync(drainTask, subscriptions, completion);
+                _ = DisposeCoreAsync(drainTask, subscriptions, preparedPushes, completion);
             }
 
             return new(task);
+        }
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask<IPreparedRemotePush> IRemoteTransportBatchPreparer.PreparePushAsync(SyncBatch batch, CancellationToken cancellationToken) =>
+            new(PreparePush(batch, cancellationToken));
+
+        /// <summary>Prepares a push batch and reserves loopback capacity until send or disposal.</summary>
+        /// <param name="batch">The synchronization batch to prepare.</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <returns>The prepared remote push handle.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="batch"/> is <see langword="null"/>.</exception>
+        /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> is canceled.</exception>
+        /// <exception cref="InvalidOperationException">The batch exceeds loopback bounds.</exception>
+        private LoopbackPreparedPush PreparePush(SyncBatch batch, CancellationToken cancellationToken)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(batch);
+            var prepared = AdmitPreparedPush(batch, cancellationToken);
+            try
+            {
+                prepared.SetEncodedSizeBytes(LoopbackTransportValidator.ValidateOutgoingBatch(batch, options));
+                return prepared;
+            }
+            catch
+            {
+                prepared.ReleaseValidationFailureReservation();
+                throw;
+            }
         }
 
         /// <summary>Admits one operation when its bounded slot is available.</summary>
@@ -279,6 +306,36 @@ public sealed class LoopbackTransportAdapter : IRemoteTransportAdapter
             return new(this, operationKind, cancellation);
         }
 
+        /// <summary>Admits a prepared push without linking the later send to the prepare token.</summary>
+        /// <param name="batch">The synchronization batch retained by the prepared push.</param>
+        /// <param name="cancellationToken">The caller cancellation token.</param>
+        /// <returns>The operation lease.</returns>
+        /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> is canceled.</exception>
+        /// <exception cref="ObjectDisposedException">The session is disposed.</exception>
+        /// <exception cref="InvalidOperationException">No bounded slot is available.</exception>
+        private LoopbackPreparedPush AdmitPreparedPush(SyncBatch batch, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            CancellationToken disposeToken;
+            CancellationTokenSource cancellation;
+            LoopbackPreparedPush prepared;
+            lock (_gate)
+            {
+                ThrowIfDisposed();
+                if (!TryIncrement(PushOperation))
+                {
+                    throw new InvalidOperationException("The loopback session has reached its active operation limit.");
+                }
+
+                disposeToken = _disposeCts.Token;
+                cancellation = CancellationTokenSource.CreateLinkedTokenSource(disposeToken);
+                prepared = new(this, options, batch, new(this, PushOperation, cancellation));
+                _ = _preparedPushes.Add(prepared);
+            }
+
+            return prepared;
+        }
+
         /// <summary>Gets the drain task for the current operation count.</summary>
         /// <returns>The drain task.</returns>
         private Task GetDrainTask()
@@ -303,6 +360,29 @@ public sealed class LoopbackTransportAdapter : IRemoteTransportAdapter
 
             LoopbackSubscriptionEnumerator[] subscriptions = [.. _activeSubscriptionEnumerators];
             return subscriptions;
+        }
+
+        /// <summary>Copies prepared push handles for disposal outside the session gate.</summary>
+        /// <returns>The copied prepared pushes.</returns>
+        private LoopbackPreparedPush[] CopyPreparedPushes()
+        {
+            if (_preparedPushes.Count == 0)
+            {
+                return [];
+            }
+
+            LoopbackPreparedPush[] preparedPushes = [.. _preparedPushes];
+            return preparedPushes;
+        }
+
+        /// <summary>Unregisters a prepared push handle.</summary>
+        /// <param name="prepared">The prepared push handle.</param>
+        private void UnregisterPreparedPush(LoopbackPreparedPush prepared)
+        {
+            lock (_gate)
+            {
+                _ = _preparedPushes.Remove(prepared);
+            }
         }
 
         /// <summary>Registers an active subscription enumerator.</summary>
@@ -393,9 +473,14 @@ public sealed class LoopbackTransportAdapter : IRemoteTransportAdapter
         /// <summary>Cancels new work and waits for active work to drain.</summary>
         /// <param name="drainTask">The operation drain task.</param>
         /// <param name="subscriptions">The active subscriptions captured for disposal.</param>
+        /// <param name="preparedPushes">The active prepared pushes captured for disposal.</param>
         /// <param name="completion">The disposal completion signal.</param>
         /// <returns>The disposal task.</returns>
-        private async Task DisposeCoreAsync(Task drainTask, LoopbackSubscriptionEnumerator[] subscriptions, TaskCompletionSource<object?> completion)
+        private async Task DisposeCoreAsync(
+            Task drainTask,
+            LoopbackSubscriptionEnumerator[] subscriptions,
+            LoopbackPreparedPush[] preparedPushes,
+            TaskCompletionSource<object?> completion)
         {
             Exception? failure = null;
             try
@@ -417,6 +502,11 @@ public sealed class LoopbackTransportAdapter : IRemoteTransportAdapter
                 {
                     failure ??= exception;
                 }
+            }
+
+            for (var index = 0; index < preparedPushes.Length; index++)
+            {
+                preparedPushes[index].ReleaseIdleReservationForSessionDispose();
             }
 
             await drainTask.ConfigureAwait(false);
