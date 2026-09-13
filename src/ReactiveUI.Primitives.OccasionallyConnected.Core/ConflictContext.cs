@@ -13,10 +13,21 @@ public sealed record ConflictContext
     /// <param name="incoming">The client operations in ascending client-sequence order.</param>
     /// <param name="client">The identity bound to the authenticated caller.</param>
     public ConflictContext(ServerState current, IReadOnlyList<SyncOperation> incoming, ClientIdentity client)
+        : this(current, incoming, client, null)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="ConflictContext"/> class.</summary>
+    /// <param name="current">The current canonical server state.</param>
+    /// <param name="incoming">The client operations in ascending client-sequence order.</param>
+    /// <param name="client">The identity bound to the authenticated caller.</param>
+    /// <param name="server">The optional trusted server write provenance.</param>
+    public ConflictContext(ServerState current, IReadOnlyList<SyncOperation> incoming, ClientIdentity client, ConflictServerContext? server)
     {
         Current = current;
         Incoming = CollectionCopy.List(incoming);
         Client = client;
+        Server = server;
     }
 
     /// <summary>Gets the canonical state observed by the server transaction.</summary>
@@ -27,4 +38,7 @@ public sealed record ConflictContext
 
     /// <summary>Gets the authenticated client identity.</summary>
     public ClientIdentity Client { get; }
+
+    /// <summary>Gets trusted server write provenance when it is available.</summary>
+    public ConflictServerContext? Server { get; }
 }

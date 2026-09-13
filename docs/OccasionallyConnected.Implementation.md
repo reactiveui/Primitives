@@ -898,3 +898,16 @@ Root added behavioral failing regressions for lifecycle drainage and negotiated 
 and verified 187 HTTP tests on each modern test target. MTP reports 100% line and branch coverage on every target
 (1338/1333/1333/1329 lines; 432 branches each). All eight HTTP Release targets build with zero warnings/errors. Evidence:
 http-review worktree, artifacts/root-http-final. Production server endpoints and packed application acceptance remain.
+
+### Stage 6: trusted conflict provenance contracts
+
+Core now carries explicit server-owned candidate and prior-write provenance. The additive ConflictContext overload
+retains the server context; the original overload represents unavailable provenance with null and preserves its
+existing collection capture. Required-init write records identify the logical server timestamp and authenticated
+client/operation. Creating a DTO does not authenticate it: the server must populate and validate these values.
+
+Root reviewed the small contract draft, removed unrelated constructor behavior changes and clarified timestamp
+ownership. Root verification passed 375 Core tests on each of net8/net9/net10/net11 with MTP-confirmed 100% line and
+branch coverage (943 lines, 372 branches each), and all eight Core Release targets with zero warnings/errors.
+Evidence: conflict-provenance worktree, artifacts/root-provenance. The worker's reported absent-type RED is not counted
+as an executed behavioral regression; server ordering behavior is verified separately before integration.
