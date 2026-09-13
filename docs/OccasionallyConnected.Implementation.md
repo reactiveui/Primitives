@@ -1008,3 +1008,18 @@ Independent combined validation passed 299 Server tests on each of net8/net9/net
 and branch coverage (3539/3531/3531/3528 lines and 1162 branches per target). All eight Server Release targets compile
 with zero warnings and errors. Evidence: subscription-start worktree, artifacts/root-subscription-start-final and
 artifacts/root-start-final-all8-build.log. Public hub and HTTP endpoint integration remain in progress.
+
+### Stage 6: prepared upload attempt coordination
+
+The internal coordinator prepares and validates a bounded single-stream batch before recording durable attempt
+barriers, sends once, and reconciles the validated response. Lease renewal remains active through reconciliation,
+including late caller cancellation. Successful reconciliation explicitly transfers lease ownership; renewal is then
+drained before prepared-handle disposal. A renewal failure racing after the store consumes the lease cannot undo a
+successful durable result. Failure paths attempt every cleanup stage and preserve the primary failure.
+
+Root review required real-store regressions for lease consumption before callback completion and delayed prepared
+disposal, plus integration of test adapters with the current dead-letter contract. Independent validation passed
+856 Runtime tests on each of net8/net9/net10/net11. Matching MTP reports show 100% line and branch coverage on each
+target (4955/4884/4884/4862 lines; 2172/2172/2172/2178 branches). All eight Runtime Release targets compile without
+warnings or errors. Evidence: upload-integration worktree, artifacts/root-upload-verified and root-upload-all8-build.log.
+The engine must still compose this coordinator with scheduling, retry persistence, and receive processing.
