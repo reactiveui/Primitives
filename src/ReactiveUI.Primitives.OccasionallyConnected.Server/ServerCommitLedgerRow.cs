@@ -8,4 +8,5 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Server;
 /// <param name="StreamKey">The containing stream key.</param>
 /// <param name="Entry">The terminal ledger entry.</param>
 /// <param name="LogicalBytes">The retained logical bytes.</param>
-internal sealed record ServerCommitLedgerRow(ServerStreamKey StreamKey, ServerLedgerEntry Entry, long LogicalBytes);
+/// <param name="GroupSequence">The durable receive group sequence, or null for legacy unsequenced rows.</param>
+internal sealed record ServerCommitLedgerRow(ServerStreamKey StreamKey, ServerLedgerEntry Entry, long LogicalBytes, long? GroupSequence);

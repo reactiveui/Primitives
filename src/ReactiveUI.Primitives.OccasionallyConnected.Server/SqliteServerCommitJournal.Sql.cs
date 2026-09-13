@@ -117,7 +117,9 @@ internal sealed partial class SqliteServerCommitJournal
                 last_cursor = $lastCursor,
                 last_event_sequence = $lastEventSequence,
                 state_bytes = $stateBytes,
-                last_cursor_bytes = $lastCursorBytes
+                last_cursor_bytes = $lastCursorBytes,
+                last_group_sequence = $lastGroupSequence,
+                receive_history_incomplete = $receiveHistoryIncomplete
             WHERE tenant_id = $tenantId AND stream_id = $streamId;
             """;
         AddStreamParameters(command, streamKey);
@@ -127,6 +129,8 @@ internal sealed partial class SqliteServerCommitJournal
         _ = command.Parameters.AddWithValue("$lastCursor", (object?)lastCursor ?? DBNull.Value);
         _ = command.Parameters.AddWithValue("$lastEventSequence", checked(stream.LastEventSequence + commit.EventCount));
         _ = command.Parameters.AddWithValue("$lastCursorBytes", lastCursorBytes);
+        _ = command.Parameters.AddWithValue("$lastGroupSequence", checked(stream.LastGroupSequence + commit.Entries.Length));
+        _ = command.Parameters.AddWithValue("$receiveHistoryIncomplete", stream.HasReceiveHistoryGap ? 1 : 0);
         if (command.ExecuteNonQuery() == 1)
         {
             return;
@@ -147,9 +151,10 @@ internal sealed partial class SqliteServerCommitJournal
             INSERT INTO oc_server_journal_streams
                 (tenant_id, stream_id, revision, state_version, state_payload_contract_id, state_payload_schema_version,
                  state_payload_content_type, state_payload, state_payload_hash, write_stamp_committed_at_utc, write_stamp_client_id,
-                 write_stamp_operation_id, last_cursor, last_event_sequence, state_bytes, last_cursor_bytes)
+                 write_stamp_operation_id, last_cursor, last_event_sequence, state_bytes, last_cursor_bytes,
+                 last_group_sequence, receive_history_incomplete)
             VALUES
-                ($tenantId, $streamId, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0);
+                ($tenantId, $streamId, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0);
             """;
         AddStreamParameters(command, streamKey);
         _ = command.ExecuteNonQuery();
@@ -169,9 +174,11 @@ internal sealed partial class SqliteServerCommitJournal
         long[] entryBytes)
     {
         var nextEventSequence = ReadLastEventSequence(connection, transaction, streamKey);
+        var nextGroupSequence = ReadLastGroupSequence(connection, transaction, streamKey);
         for (var index = 0; index < entries.Length; index++)
         {
-            InsertLedgerEntry(connection, transaction, streamKey, entries[index], entryBytes[index]);
+            nextGroupSequence = checked(nextGroupSequence + 1);
+            InsertLedgerEntry(connection, transaction, streamKey, entries[index], entryBytes[index], nextGroupSequence);
             InsertConflicts(connection, transaction, streamKey, entries[index]);
             nextEventSequence = InsertEvents(connection, transaction, streamKey, entries[index], nextEventSequence);
         }
@@ -183,22 +190,24 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="streamKey">The stream key.</param>
     /// <param name="entry">The entry.</param>
     /// <param name="logicalBytes">The retained logical bytes.</param>
+    /// <param name="groupSequence">The receive group sequence.</param>
     private static void InsertLedgerEntry(
         SqliteConnection connection,
         SqliteTransaction transaction,
         ServerStreamKey streamKey,
         ServerLedgerEntry entry,
-        long logicalBytes)
+        long logicalBytes,
+        long groupSequence)
     {
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = """
             INSERT INTO oc_server_journal_ledger
                 (tenant_id, stream_id, client_id, operation_id, fingerprint, result_kind, result_reason_code,
-                 result_server_version, committed_at_utc, expires_at_utc, logical_bytes)
+                 result_server_version, committed_at_utc, expires_at_utc, logical_bytes, group_sequence)
             VALUES
                 ($tenantId, $streamId, $clientId, $operationId, $fingerprint, $resultKind, $resultReasonCode,
-                 $resultServerVersion, $committedAtUtc, $expiresAtUtc, $logicalBytes);
+                 $resultServerVersion, $committedAtUtc, $expiresAtUtc, $logicalBytes, $groupSequence);
             """;
         AddStreamParameters(command, streamKey);
         AddOperationParameters(command, entry.OperationKey);
@@ -209,6 +218,138 @@ internal sealed partial class SqliteServerCommitJournal
         _ = command.Parameters.AddWithValue("$committedAtUtc", FormatDateTimeOffset(entry.CommittedAtUtc));
         _ = command.Parameters.AddWithValue("$expiresAtUtc", FormatDateTimeOffset(entry.ExpiresAtUtc));
         _ = command.Parameters.AddWithValue("$logicalBytes", logicalBytes);
+        _ = command.Parameters.AddWithValue("$groupSequence", groupSequence);
+        _ = command.ExecuteNonQuery();
+    }
+
+    /// <summary>Migrates schema-one journals without fabricating receive group order.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void MigrateSchemaOneToTwo(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        ValidateSchemaOneForMigration(connection, transaction);
+        RenameSchemaOneTables(connection, transaction);
+        CreateStreamsTable(connection, transaction);
+        CreateLedgerTable(connection, transaction);
+        CreateConflictsTable(connection, transaction);
+        CreateEventsTable(connection, transaction);
+        CreateEventMetadataTable(connection, transaction);
+        CopySchemaOneRows(connection, transaction);
+        DropSchemaOneTables(connection, transaction);
+        WriteMetadataValue(connection, transaction, SchemaVersionKey, CurrentSchemaVersion.ToString(CultureInfo.InvariantCulture));
+        SetUserVersion(connection, transaction);
+    }
+
+    /// <summary>Validates the schema-one durable table set before migration.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <exception cref="InvalidOperationException">Thrown when SQLite data or schema validation fails.</exception>
+    private static void ValidateSchemaOneForMigration(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        ValidateUserTableNames(
+            connection,
+            transaction,
+            [
+                ConflictsTableName,
+                EventMetadataTableName,
+                EventsTableName,
+                LedgerTableName,
+                MetadataTableName,
+                StreamsTableName,
+            ]);
+        try
+        {
+            if (SelectMetadata(connection, transaction, SchemaVersionKey) == "1")
+            {
+                return;
+            }
+        }
+        catch (SqliteException exception)
+        {
+            throw new InvalidOperationException(InvalidSchemaMessage, exception);
+        }
+
+        throw new InvalidOperationException("The SQLite server journal metadata schema version is not supported.");
+    }
+
+    /// <summary>Renames schema-one tables before creating exact schema-two replacements.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void RenameSchemaOneTables(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            ALTER TABLE oc_server_journal_event_metadata RENAME TO oc_server_journal_event_metadata_v1;
+            ALTER TABLE oc_server_journal_events RENAME TO oc_server_journal_events_v1;
+            ALTER TABLE oc_server_journal_conflicts RENAME TO oc_server_journal_conflicts_v1;
+            ALTER TABLE oc_server_journal_ledger RENAME TO oc_server_journal_ledger_v1;
+            ALTER TABLE oc_server_journal_streams RENAME TO oc_server_journal_streams_v1;
+            """;
+        _ = command.ExecuteNonQuery();
+    }
+
+    /// <summary>Copies schema-one rows into schema-two tables without fabricating group sequences.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void CopySchemaOneRows(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            INSERT INTO oc_server_journal_streams
+                (tenant_id, stream_id, revision, state_version, state_payload_contract_id, state_payload_schema_version,
+                 state_payload_content_type, state_payload, state_payload_hash, write_stamp_committed_at_utc,
+                 write_stamp_client_id, write_stamp_operation_id, last_cursor, last_event_sequence, state_bytes,
+                 last_cursor_bytes, last_group_sequence, receive_history_incomplete)
+            SELECT tenant_id, stream_id, revision, state_version, state_payload_contract_id, state_payload_schema_version,
+                   state_payload_content_type, state_payload, state_payload_hash, write_stamp_committed_at_utc,
+                   write_stamp_client_id, write_stamp_operation_id, last_cursor, last_event_sequence, state_bytes,
+                   last_cursor_bytes, 0, 1
+            FROM oc_server_journal_streams_v1;
+            INSERT INTO oc_server_journal_ledger
+                (tenant_id, stream_id, client_id, operation_id, fingerprint, result_kind, result_reason_code,
+                 result_server_version, committed_at_utc, expires_at_utc, logical_bytes, group_sequence)
+            SELECT tenant_id, stream_id, client_id, operation_id, fingerprint, result_kind, result_reason_code,
+                   result_server_version, committed_at_utc, expires_at_utc, logical_bytes, NULL
+            FROM oc_server_journal_ledger_v1;
+            INSERT INTO oc_server_journal_conflicts
+                (tenant_id, stream_id, client_id, operation_id, conflict_index, resolution_code,
+                 resolved_payload_contract_id, resolved_payload_schema_version, resolved_payload_content_type,
+                 resolved_payload, resolved_payload_hash)
+            SELECT tenant_id, stream_id, client_id, operation_id, conflict_index, resolution_code,
+                   resolved_payload_contract_id, resolved_payload_schema_version, resolved_payload_content_type,
+                   resolved_payload, resolved_payload_hash
+            FROM oc_server_journal_conflicts_v1;
+            INSERT INTO oc_server_journal_events
+                (tenant_id, stream_id, event_sequence, client_id, operation_id, event_index, event_id, server_cursor,
+                 committed_at_utc, caused_by_operation_id, origin_client_id, origin_operation_id, payload_contract_id,
+                 payload_schema_version, payload_content_type, payload, payload_hash)
+            SELECT tenant_id, stream_id, event_sequence, client_id, operation_id, event_index, event_id, server_cursor,
+                   committed_at_utc, caused_by_operation_id, origin_client_id, origin_operation_id, payload_contract_id,
+                   payload_schema_version, payload_content_type, payload, payload_hash
+            FROM oc_server_journal_events_v1;
+            INSERT INTO oc_server_journal_event_metadata (tenant_id, stream_id, event_sequence, key, value)
+            SELECT tenant_id, stream_id, event_sequence, key, value
+            FROM oc_server_journal_event_metadata_v1;
+            """;
+        _ = command.ExecuteNonQuery();
+    }
+
+    /// <summary>Drops schema-one renamed tables after copying rows.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void DropSchemaOneTables(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            DROP TABLE oc_server_journal_event_metadata_v1;
+            DROP TABLE oc_server_journal_events_v1;
+            DROP TABLE oc_server_journal_conflicts_v1;
+            DROP TABLE oc_server_journal_ledger_v1;
+            DROP TABLE oc_server_journal_streams_v1;
+            """;
         _ = command.ExecuteNonQuery();
     }
 

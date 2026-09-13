@@ -855,3 +855,17 @@ on net8.0, net9.0, net10.0 and net11.0. MTP confirms 100% line and branch covera
 warnings and errors. Evidence is under artifacts/root-serialized in the serialized-commit worktree. Tests include real
 SQLite close/reopen, caller envelope preservation, stale sequences, duplicate identifiers, mutable projection isolation,
 cancellation, overlapping calls and malformed store receipts. Public engine routing remains integration work.
+
+### Stage 6: complete server receive groups
+
+Both journals now persist monotonic receive group positions with atomic operation effects, including zero-event
+acceptances. Eventful pages retain their final canonical event cursor. Paging emits only complete contiguous groups,
+respects count and logical byte limits, and reports retention gaps instead of silently skipping missing history.
+SQLite schema version 2 preserves legacy deduplication receipts without inventing legacy receive completeness.
+Receive reads use a companion interface so operation processing retains its narrower journal dependency.
+
+Root added an executed failing regression for a middle group expiring between two retained groups, then fixed page
+selection to stop before the gap. Root verification passed 189 Server tests on each of net8/net9/net10/net11 with
+MTP-confirmed 100% line and branch coverage (2254/2249/2249/2248 lines; 749 branches each). All eight Server Release
+targets build with zero warnings/errors. Evidence: server-pages-integration worktree, artifacts/root-server-pages.
+Durable subscription acknowledgements and the public server hub remain integration work.

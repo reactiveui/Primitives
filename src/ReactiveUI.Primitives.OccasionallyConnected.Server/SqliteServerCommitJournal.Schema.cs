@@ -21,7 +21,7 @@ internal sealed partial class SqliteServerCommitJournal
     {
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
-        command.CommandText = "PRAGMA user_version = 1;";
+        command.CommandText = "PRAGMA user_version = 2;";
         _ = command.ExecuteNonQuery();
     }
 

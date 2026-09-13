@@ -374,6 +374,31 @@ internal sealed partial class SqliteServerCommitJournal
         return number;
     }
 
+    /// <summary>Reads an optional non-negative integer-storage column.</summary>
+    /// <param name="reader">The reader.</param>
+    /// <param name="index">The index.</param>
+    /// <param name="message">The failure message.</param>
+    /// <returns>The long value or null.</returns>
+    private static long? ReadNullableNonNegativeLong(SqliteDataReader reader, int index, string message) =>
+        reader.IsDBNull(index) ? null : ReadNonNegativeLong(reader, index, message);
+
+    /// <summary>Reads a stored boolean column encoded as 0 or 1.</summary>
+    /// <param name="reader">The reader.</param>
+    /// <param name="index">The index.</param>
+    /// <param name="message">The failure message.</param>
+    /// <returns>The boolean value.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when stored SQLite data is invalid.</exception>
+    private static bool ReadBoolean(SqliteDataReader reader, int index, string message)
+    {
+        var value = ReadLong(reader, index, message);
+        return value switch
+        {
+            0 => false,
+            1 => true,
+            _ => throw new InvalidOperationException(message),
+        };
+    }
+
     /// <summary>Reads an integer-storage column without SQLite type coercion.</summary>
     /// <param name="reader">The reader.</param>
     /// <param name="index">The index.</param>

@@ -502,9 +502,10 @@ public sealed partial class SqliteServerCommitJournalTests
             INSERT INTO oc_server_journal_streams
                 (tenant_id, stream_id, revision, state_version, state_payload_contract_id, state_payload_schema_version,
                  state_payload_content_type, state_payload, state_payload_hash, write_stamp_committed_at_utc, write_stamp_client_id,
-                 write_stamp_operation_id, last_cursor, last_event_sequence, state_bytes, last_cursor_bytes)
+                 write_stamp_operation_id, last_cursor, last_event_sequence, state_bytes, last_cursor_bytes,
+                 last_group_sequence, receive_history_incomplete)
             VALUES
-                ('tenant', 'stream', 99, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0);
+                ('tenant', 'stream', 99, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0);
             """;
         _ = command.ExecuteNonQuery();
         return new(connection, transaction);

@@ -55,6 +55,12 @@ internal sealed partial class SqliteServerCommitJournal
     /// <summary>The stream cursor byte count column index.</summary>
     private const int StreamLastCursorBytesColumn = 13;
 
+    /// <summary>The stream last receive group sequence column index.</summary>
+    private const int StreamLastGroupSequenceColumn = 14;
+
+    /// <summary>The stream receive history gap marker column index.</summary>
+    private const int StreamReceiveHistoryGapColumn = 15;
+
     /// <summary>The ledger client column index.</summary>
     private const int LedgerClientColumn = 0;
 
@@ -81,6 +87,12 @@ internal sealed partial class SqliteServerCommitJournal
 
     /// <summary>The ledger logical byte count column index.</summary>
     private const int LedgerLogicalBytesColumn = 8;
+
+    /// <summary>The ledger receive group sequence column index.</summary>
+    private const int LedgerGroupSequenceColumn = 9;
+
+    /// <summary>The invalid group sequence message.</summary>
+    private const string InvalidGroupSequenceMessage = "The SQLite server journal group sequence is invalid.";
 
     /// <summary>The conflict resolution code column index.</summary>
     private const int ConflictResolutionCodeColumn = 0;
@@ -191,7 +203,7 @@ internal sealed partial class SqliteServerCommitJournal
             SELECT revision, state_version, state_payload_contract_id, state_payload_schema_version,
                    state_payload_content_type, state_payload, state_payload_hash, write_stamp_committed_at_utc,
                    write_stamp_client_id, write_stamp_operation_id, last_cursor, last_event_sequence,
-                   state_bytes, last_cursor_bytes
+                   state_bytes, last_cursor_bytes, last_group_sequence, receive_history_incomplete
             FROM oc_server_journal_streams
             WHERE tenant_id = $tenantId AND stream_id = $streamId;
             """;
@@ -221,6 +233,8 @@ internal sealed partial class SqliteServerCommitJournal
             LastEventSequence = ReadNonNegativeLong(reader, StreamLastEventSequenceColumn, InvalidEventSequenceMessage),
             StateBytes = ReadNonNegativeLong(reader, StreamStateBytesColumn, "The SQLite server journal state bytes are invalid."),
             LastCursorBytes = ReadNonNegativeLong(reader, StreamLastCursorBytesColumn, "The SQLite server journal cursor bytes are invalid."),
+            LastGroupSequence = ReadNonNegativeLong(reader, StreamLastGroupSequenceColumn, InvalidGroupSequenceMessage),
+            HasReceiveHistoryGap = ReadBoolean(reader, StreamReceiveHistoryGapColumn, "The SQLite server journal receive gap marker is invalid."),
         };
         return stream;
     }
@@ -240,10 +254,10 @@ internal sealed partial class SqliteServerCommitJournal
         command.Transaction = transaction;
         command.CommandText = """
             SELECT client_id, operation_id, fingerprint, result_kind, result_reason_code, result_server_version,
-                   committed_at_utc, expires_at_utc, logical_bytes
+                   committed_at_utc, expires_at_utc, logical_bytes, group_sequence
             FROM oc_server_journal_ledger
             WHERE tenant_id = $tenantId AND stream_id = $streamId
-            ORDER BY rowid ASC;
+            ORDER BY group_sequence IS NULL ASC, group_sequence ASC, rowid ASC;
             """;
         AddStreamParameters(command, streamKey);
         using var reader = command.ExecuteReader();
@@ -263,10 +277,20 @@ internal sealed partial class SqliteServerCommitJournal
                 .Commit(
                     ReadDateTimeOffset(reader, LedgerCommittedAtColumn, "The SQLite server journal commit timestamp is invalid."),
                     ReadDateTimeOffset(reader, LedgerExpiresAtColumn, "The SQLite server journal expiry timestamp is invalid."));
-            ServerCommitJournalOperations.AddLedgerRow(stream, streamKey, entry, ReadNonNegativeLong(reader, LedgerLogicalBytesColumn, InvalidLogicalBytesMessage));
+            var logicalBytes = ReadNonNegativeLong(reader, LedgerLogicalBytesColumn, InvalidLogicalBytesMessage);
+            var groupSequence = ReadNullableNonNegativeLong(reader, LedgerGroupSequenceColumn, InvalidGroupSequenceMessage);
+            if (groupSequence.HasValue)
+            {
+                ServerCommitJournalOperations.AddLedgerRow(stream, streamKey, entry, logicalBytes, groupSequence.Value);
+            }
+            else
+            {
+                ServerCommitJournalOperations.AddUnsequencedLedgerRow(stream, streamKey, entry, logicalBytes);
+            }
         }
 
         stream.LastEventSequence = ReadLastEventSequence(connection, transaction, streamKey);
+        stream.LastGroupSequence = ReadLastGroupSequence(connection, transaction, streamKey);
     }
 
     /// <summary>Reads conflict rows for one ledger entry.</summary>
@@ -505,6 +529,24 @@ internal sealed partial class SqliteServerCommitJournal
         return ReadNonNegativeLong(command.ExecuteScalar(), InvalidEventSequenceMessage);
     }
 
+    /// <summary>Reads the last receive group sequence for a stream.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="streamKey">The stream key.</param>
+    /// <returns>The last group sequence.</returns>
+    private static long ReadLastGroupSequence(SqliteConnection connection, SqliteTransaction transaction, ServerStreamKey streamKey)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            SELECT last_group_sequence
+            FROM oc_server_journal_streams
+            WHERE tenant_id = $tenantId AND stream_id = $streamId;
+            """;
+        AddStreamParameters(command, streamKey);
+        return ReadNonNegativeLong(command.ExecuteScalar(), InvalidGroupSequenceMessage);
+    }
+
     /// <summary>Reads the latest UTC high-water timestamp.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
@@ -519,13 +561,27 @@ internal sealed partial class SqliteServerCommitJournal
     /// <param name="transaction">The transaction.</param>
     /// <param name="utc">The timestamp.</param>
     /// <exception cref="InvalidOperationException">Thrown when SQLite data or schema validation fails.</exception>
-    private static void WriteLatestUtc(SqliteConnection connection, SqliteTransaction transaction, DateTimeOffset utc)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void WriteLatestUtc(SqliteConnection connection, SqliteTransaction transaction, DateTimeOffset utc) =>
+        WriteMetadataValue(connection, transaction, LatestUtcKey, FormatDateTimeOffset(utc));
+
+    /// <summary>Writes a metadata value.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="key">The metadata key.</param>
+    /// <param name="value">The metadata value.</param>
+    /// <exception cref="InvalidOperationException">Thrown when SQLite data or schema validation fails.</exception>
+    private static void WriteMetadataValue(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string key,
+        string value)
     {
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = "UPDATE oc_server_journal_metadata SET value = $value WHERE key = $key;";
-        _ = command.Parameters.AddWithValue("$key", LatestUtcKey);
-        _ = command.Parameters.AddWithValue(ValueParameterName, FormatDateTimeOffset(utc));
+        _ = command.Parameters.AddWithValue("$key", key);
+        _ = command.Parameters.AddWithValue(ValueParameterName, value);
         if (command.ExecuteNonQuery() == 1)
         {
             return;

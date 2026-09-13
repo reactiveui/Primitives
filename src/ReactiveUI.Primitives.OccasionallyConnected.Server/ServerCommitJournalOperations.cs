@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.OccasionallyConnected.Server;
 
 /// <summary>Provides stateless operations used by <see cref="InMemoryServerCommitJournal"/>.</summary>
@@ -25,7 +27,7 @@ internal static class ServerCommitJournalOperations
             return ServerCommitStatus.RevisionOverflow;
         }
 
-        return !CanAdvanceSequence(stream, commit.EventCount) ? ServerCommitStatus.EventSequenceOverflow : CheckDuplicateKeys(stream, commit);
+        return !CanAdvanceSequences(stream, commit) ? ServerCommitStatus.EventSequenceOverflow : CheckDuplicateKeys(stream, commit);
     }
 
     /// <summary>Applies optional state and stamp changes.</summary>
@@ -49,19 +51,57 @@ internal static class ServerCommitJournalOperations
     /// <param name="streamKey">The stream key.</param>
     /// <param name="entry">The committed entry.</param>
     /// <param name="logicalBytes">The retained logical bytes.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void AddLedgerRow(
         ServerCommitStreamRecord stream,
         ServerStreamKey streamKey,
         ServerLedgerEntry entry,
-        long logicalBytes)
+        long logicalBytes) =>
+        AddLedgerRow(stream, streamKey, entry, logicalBytes, checked(stream.LastGroupSequence + 1));
+
+    /// <summary>Adds a committed ledger row with an optional durable receive group sequence.</summary>
+    /// <param name="stream">The target stream.</param>
+    /// <param name="streamKey">The stream key.</param>
+    /// <param name="entry">The committed entry.</param>
+    /// <param name="logicalBytes">The retained logical bytes.</param>
+    /// <param name="groupSequence">The receive group sequence.</param>
+    internal static void AddLedgerRow(
+        ServerCommitStreamRecord stream,
+        ServerStreamKey streamKey,
+        ServerLedgerEntry entry,
+        long logicalBytes,
+        long? groupSequence)
     {
-        var row = new ServerCommitLedgerRow(streamKey, entry, logicalBytes);
+        var row = new ServerCommitLedgerRow(streamKey, entry, logicalBytes, groupSequence);
         stream.Ledger.Add(entry.OperationKey, row);
+        if (groupSequence.HasValue)
+        {
+            stream.LastGroupSequence = groupSequence.Value;
+            stream.Groups.Add(row);
+        }
+        else
+        {
+            stream.HasReceiveHistoryGap = true;
+        }
+
         for (var index = 0; index < entry.Events.Count; index++)
         {
             AddEventRow(stream, row, entry.Events[index]);
         }
     }
+
+    /// <summary>Adds a committed legacy ledger row whose original receive group order is unavailable.</summary>
+    /// <param name="stream">The target stream.</param>
+    /// <param name="streamKey">The stream key.</param>
+    /// <param name="entry">The committed entry.</param>
+    /// <param name="logicalBytes">The retained logical bytes.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void AddUnsequencedLedgerRow(
+        ServerCommitStreamRecord stream,
+        ServerStreamKey streamKey,
+        ServerLedgerEntry entry,
+        long logicalBytes) =>
+        AddLedgerRow(stream, streamKey, entry, logicalBytes, null);
 
     /// <summary>Creates committed entries from owned data without invoking caller callbacks.</summary>
     /// <param name="entries">The validated prepared entries.</param>
@@ -186,11 +226,13 @@ internal static class ServerCommitJournalOperations
         stream.LastCursor = remoteEvent.ServerCursor;
     }
 
-    /// <summary>Checks whether the event sidecar sequence can advance.</summary>
+    /// <summary>Checks whether the event and receive group sequences can advance.</summary>
     /// <param name="stream">The stream.</param>
-    /// <param name="eventCount">The event count to add.</param>
-    /// <returns>Whether the sequence can advance without overflowing.</returns>
-    private static bool CanAdvanceSequence(ServerCommitStreamRecord stream, int eventCount) => eventCount <= long.MaxValue - stream.LastEventSequence;
+    /// <param name="commit">The validated commit.</param>
+    /// <returns>Whether the sequences can advance without overflowing.</returns>
+    private static bool CanAdvanceSequences(ServerCommitStreamRecord stream, ServerCommitValidationResult commit) =>
+        commit.EventCount <= long.MaxValue - stream.LastEventSequence
+        && commit.Entries.Length <= long.MaxValue - stream.LastGroupSequence;
 
     /// <summary>Checks for duplicate ledger keys and retained event identifiers.</summary>
     /// <param name="stream">The target stream.</param>

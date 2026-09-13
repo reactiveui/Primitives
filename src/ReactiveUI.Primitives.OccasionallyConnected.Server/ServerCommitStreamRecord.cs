@@ -28,8 +28,17 @@ internal sealed class ServerCommitStreamRecord
     /// <summary>Gets or sets the last event sequence.</summary>
     internal long LastEventSequence { get; set; }
 
+    /// <summary>Gets or sets the last complete operation group sequence.</summary>
+    internal long LastGroupSequence { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether earlier group order is not reconstructable.</summary>
+    internal bool HasReceiveHistoryGap { get; set; }
+
     /// <summary>Gets the terminal ledger rows.</summary>
     internal Dictionary<ServerOperationKey, ServerCommitLedgerRow> Ledger { get; } = [];
+
+    /// <summary>Gets retained terminal rows that have durable receive group order.</summary>
+    internal List<ServerCommitLedgerRow> Groups { get; } = [];
 
     /// <summary>Gets the retained event rows.</summary>
     internal List<ServerCommitEventRow> Events { get; } = [];
