@@ -95,15 +95,29 @@ internal sealed partial class LocalStreamCommitter<TState, TInput>
     /// <param name="policy">The operation policy.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The local commit result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal ValueTask<LocalStreamCommitResult<TState, TInput>> CommitAsync(
+        TInput input,
+        OperationPolicy policy,
+        CancellationToken cancellationToken) => CommitAsync(input, policy, null, cancellationToken);
+
+    /// <summary>Commits a local input with its concurrency version and optimistic snapshot.</summary>
+    /// <param name="input">The caller input.</param>
+    /// <param name="policy">The operation policy.</param>
+    /// <param name="baseVersion">The optional authoritative version observed by the caller.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The local commit result.</returns>
     internal async ValueTask<LocalStreamCommitResult<TState, TInput>> CommitAsync(
         TInput input,
         OperationPolicy policy,
+        string? baseVersion,
         CancellationToken cancellationToken)
     {
         EnterExclusive();
         try
         {
             ValidatePolicy(policy);
+            SerializedOperationValidation.ValidateOptionalText(baseVersion, "Operation base version is malformed.");
             cancellationToken.ThrowIfCancellationRequested();
             ThrowIfNotRecovered();
             var observed = Current;
@@ -120,7 +134,7 @@ internal sealed partial class LocalStreamCommitter<TState, TInput>
             var decodedInput = await DecodeInputAsync(payload, cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
 
-            var operation = CreateOperation(policy, observed.NextClientSequence, operationId, timestamp, payload);
+            var operation = CreateOperation(policy, observed.NextClientSequence, operationId, timestamp, payload, baseVersion);
             var prepared = await PrepareProjectionStateAsync(observed, cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
             var nextStateValue = _options.Dependencies.Projection.ApplyLocal(prepared.State, decodedInput, operation);
@@ -710,13 +724,15 @@ internal sealed partial class LocalStreamCommitter<TState, TInput>
     /// <param name="operationId">The operation identifier.</param>
     /// <param name="timestamp">The operation timestamp.</param>
     /// <param name="payload">The input payload.</param>
+    /// <param name="baseVersion">The optional authoritative version observed by the caller.</param>
     /// <returns>The synchronization operation.</returns>
     private SyncOperation CreateOperation(
         OperationPolicy policy,
         long clientSequence,
         OperationId operationId,
         DateTimeOffset timestamp,
-        PayloadEnvelope payload) =>
+        PayloadEnvelope payload,
+        string? baseVersion) =>
         new()
         {
             OperationId = operationId,
@@ -726,6 +742,7 @@ internal sealed partial class LocalStreamCommitter<TState, TInput>
             Type = SyncOperationType.Update,
             Payload = payload,
             Policy = policy,
+            BaseVersion = baseVersion,
             Metadata = new Dictionary<string, string>(),
         };
 

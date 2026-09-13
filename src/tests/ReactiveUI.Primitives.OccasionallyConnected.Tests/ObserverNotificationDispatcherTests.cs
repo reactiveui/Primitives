@@ -10,7 +10,7 @@ using ReactiveUI.Primitives.Concurrency;
 namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
 
 /// <summary>Tests for <see cref="ObserverNotificationDispatcher{T}"/>.</summary>
-public sealed class ObserverNotificationDispatcherTests
+public sealed partial class ObserverNotificationDispatcherTests
 {
     /// <summary>Defines a one-item queue capacity.</summary>
     private const int OneItem = 1;
@@ -550,6 +550,188 @@ public sealed class ObserverNotificationDispatcherTests
         await observer.Notification.Task.WaitAsync(GuardTimeout);
         await Assert.That(result).IsEqualTo(ObserverNotificationPublishResult.Queued);
         await Assert.That(observer.Value).IsEqualTo(FirstValue);
+    }
+
+    /// <summary>Verifies explicit initial replay is queued before live values and validates replay size.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task SubscribeWithInitialValueQueuesReplayBeforeLiveNotification()
+    {
+        var scheduler = new ControlledObserverScheduler();
+        using var dispatcher = new ObserverNotificationDispatcher<int>(scheduler);
+        var observer = new RecordingObserver<int>();
+
+        using var subscription = dispatcher.Subscribe(observer, new(TwoItems, TwoBytes, ObserverNotificationOverflowMode.Disconnect), true, FirstValue, OneByte);
+        var result = dispatcher.PublishEvent(SecondValue, OneByte);
+        scheduler.RunAll();
+
+        await Assert.That(result).IsEqualTo(ObserverNotificationPublishResult.Queued);
+        await Assert.That(observer.Values).Count().IsEqualTo(TwoItems);
+        await Assert.That(observer.Values[0]).IsEqualTo(FirstValue);
+        await Assert.That(observer.Values[1]).IsEqualTo(SecondValue);
+        await Assert.That(() => dispatcher.Subscribe(new RecordingObserver<int>(), new(OneItem, OneByte, ObserverNotificationOverflowMode.Disconnect), true, FirstValue, NoBytes))
+            .ThrowsExactly<ArgumentOutOfRangeException>();
+    }
+
+    /// <summary>Verifies factory-backed initial replay creates the value only when callbacks drain.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task SubscribeWithInitialFactoryQueuesReplayBeforeLiveNotification()
+    {
+        var scheduler = new ControlledObserverScheduler();
+        using var dispatcher = new ObserverNotificationDispatcher<int>(scheduler);
+        var observer = new RecordingObserver<int>();
+        var factoryCalls = 0;
+
+        using var subscription = dispatcher.Subscribe(
+            observer,
+            new(TwoItems, TwoBytes, ObserverNotificationOverflowMode.Disconnect),
+            true,
+            () =>
+            {
+                factoryCalls++;
+                return FirstValue;
+            },
+            OneByte);
+        var result = dispatcher.PublishEvent(SecondValue, OneByte);
+
+        await Assert.That(factoryCalls).IsEqualTo(None);
+        scheduler.RunAll();
+
+        await Assert.That(result).IsEqualTo(ObserverNotificationPublishResult.Queued);
+        await Assert.That(factoryCalls).IsEqualTo(OneItem);
+        await Assert.That(observer.Values).Count().IsEqualTo(TwoItems);
+        await Assert.That(observer.Values[0]).IsEqualTo(FirstValue);
+        await Assert.That(observer.Values[1]).IsEqualTo(SecondValue);
+        await Assert.That(() => dispatcher.Subscribe(new RecordingObserver<int>(), new(OneItem, OneByte, ObserverNotificationOverflowMode.Disconnect), true, static () => FirstValue, NoBytes))
+            .ThrowsExactly<ArgumentOutOfRangeException>();
+    }
+
+    /// <summary>Verifies factory-backed latest notifications coalesce through per-callback factories.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task PublishLatestFactoryCoalescesQueuedNotification()
+    {
+        var scheduler = new ControlledObserverScheduler();
+        using var dispatcher = new ObserverNotificationDispatcher<int>(scheduler);
+        var observer = new RecordingObserver<int>();
+        using var subscription = dispatcher.Subscribe(observer, new(OneItem, OneByte, ObserverNotificationOverflowMode.CoalesceLatest));
+        var factoryCalls = 0;
+
+        var first = dispatcher.PublishLatest(static () => FirstValue, OneByte);
+        var second = dispatcher.PublishLatest(
+            () =>
+            {
+                factoryCalls++;
+                return SecondValue;
+            },
+            OneByte);
+
+        scheduler.RunAll();
+
+        await Assert.That(first).IsEqualTo(ObserverNotificationPublishResult.Queued);
+        await Assert.That(second).IsEqualTo(ObserverNotificationPublishResult.Coalesced);
+        await Assert.That(factoryCalls).IsEqualTo(OneItem);
+        await Assert.That(observer.Values).Count().IsEqualTo(OneItem);
+        await Assert.That(observer.Values[0]).IsEqualTo(SecondValue);
+    }
+
+    /// <summary>Verifies factory-backed latest overflow disconnects when a notification cannot fit.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task PublishLatestFactoryDisconnectsWhenNotificationExceedsByteCapacity()
+    {
+        var scheduler = new ControlledObserverScheduler();
+        using var dispatcher = new ObserverNotificationDispatcher<int>(scheduler);
+        var observer = new RecordingObserver<int>();
+        using var subscription = dispatcher.Subscribe(observer, new(OneItem, OneByte, ObserverNotificationOverflowMode.CoalesceLatest));
+
+        var result = dispatcher.PublishLatest(static () => FirstValue, TwoBytes);
+        scheduler.RunAll();
+
+        await Assert.That(result).IsEqualTo(ObserverNotificationPublishResult.Disconnected);
+        await Assert.That(observer.Values).IsEmpty();
+        await Assert.That(observer.Error).IsTypeOf<ObserverNotificationOverflowException>();
+        await Assert.That(dispatcher.SubscriptionCount).IsEqualTo(None);
+    }
+
+    /// <summary>Verifies factory publication skips a subscription after an overflow terminal has been queued.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task PublishLatestFactoryReturnsStoppedForTerminalQueuedSubscription()
+    {
+        var scheduler = new ControlledObserverScheduler();
+        using var dispatcher = new ObserverNotificationDispatcher<int>(scheduler);
+        var observer = new RecordingObserver<int>();
+        using var subscription = dispatcher.Subscribe(observer, new(OneItem, OneByte, ObserverNotificationOverflowMode.Disconnect));
+
+        _ = dispatcher.PublishEvent(FirstValue, TwoBytes);
+        var result = dispatcher.PublishLatest(static () => SecondValue, OneByte);
+        scheduler.RunAll();
+
+        await Assert.That(result).IsEqualTo(ObserverNotificationPublishResult.Stopped);
+        await Assert.That(observer.Error).IsTypeOf<ObserverNotificationOverflowException>();
+    }
+
+    /// <summary>Verifies factory-backed publication returns stopped when no subscription can receive it.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task PublishLatestFactoryReturnsStoppedWithoutSubscribers()
+    {
+        var scheduler = new ControlledObserverScheduler();
+        using var dispatcher = new ObserverNotificationDispatcher<int>(scheduler);
+
+        var result = dispatcher.PublishLatest(static () => FirstValue, OneByte);
+
+        await Assert.That(result).IsEqualTo(ObserverNotificationPublishResult.Stopped);
+    }
+
+    /// <summary>Verifies stopped dispatchers reject initial replay overloads and factory publication.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task StoppedDispatcherRejectsInitialReplayAndFactoryPublication()
+    {
+        var scheduler = new ControlledObserverScheduler();
+        using var dispatcher = new ObserverNotificationDispatcher<int>(scheduler);
+
+        _ = dispatcher.Complete();
+        var result = dispatcher.PublishLatest(static () => FirstValue, OneByte);
+
+        await Assert.That(result).IsEqualTo(ObserverNotificationPublishResult.Stopped);
+        await Assert.That(() => dispatcher.Subscribe(new RecordingObserver<int>(), new(OneItem, OneByte, ObserverNotificationOverflowMode.Disconnect), true, FirstValue, OneByte))
+            .ThrowsExactly<InvalidOperationException>();
+        await Assert.That(() => dispatcher.Subscribe(new RecordingObserver<int>(), new(OneItem, OneByte, ObserverNotificationOverflowMode.Disconnect), true, static () => FirstValue, OneByte))
+            .ThrowsExactly<InvalidOperationException>();
+    }
+
+    /// <summary>Verifies factory-backed scheduler failures detach the subscription.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task PublishLatestFactorySchedulerFailureClearsSubscription()
+    {
+        var scheduler = new ControlledObserverScheduler { FailNextSchedule = true };
+        using var dispatcher = new ObserverNotificationDispatcher<int>(scheduler);
+        var observer = new RecordingObserver<int>();
+        _ = dispatcher.Subscribe(observer, new(OneItem, OneByte, ObserverNotificationOverflowMode.CoalesceLatest));
+
+        var result = dispatcher.PublishLatest(static () => FirstValue, OneByte);
+
+        await Assert.That(result).IsEqualTo(ObserverNotificationPublishResult.SchedulerRejected);
+        await Assert.That(dispatcher.SubscriptionCount).IsEqualTo(None);
+    }
+
+    /// <summary>Verifies factory-backed initial replay scheduler failures detach the subscription.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task SubscribeWithInitialFactorySchedulerFailureClearsSubscription()
+    {
+        var scheduler = new ControlledObserverScheduler { FailNextSchedule = true };
+        using var dispatcher = new ObserverNotificationDispatcher<int>(scheduler);
+        var observer = new RecordingObserver<int>();
+
+        _ = dispatcher.Subscribe(observer, new(OneItem, OneByte, ObserverNotificationOverflowMode.CoalesceLatest), true, static () => FirstValue, OneByte);
+
+        await Assert.That(dispatcher.SubscriptionCount).IsEqualTo(None);
     }
 
     /// <summary>Provides deterministic execution of scheduled observer work.</summary>
