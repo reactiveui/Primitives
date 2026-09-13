@@ -911,3 +911,17 @@ ownership. Root verification passed 375 Core tests on each of net8/net9/net10/ne
 branch coverage (943 lines, 372 branches each), and all eight Core Release targets with zero warnings/errors.
 Evidence: conflict-provenance worktree, artifacts/root-provenance. The worker's reported absent-type RED is not counted
 as an executed behavioral regression; server ordering behavior is verified separately before integration.
+
+### Stage 6: stable server attempt timestamps
+
+The processor samples one server-owned logical write timestamp before domain preparation and exposes it through the
+internal preparation context. The committed state stamp and every produced event reuse it. A stale compare-and-swap
+attempt obtains new provenance from the fresh snapshot; a backward clock is clamped to the prior committed write time.
+Client timestamps do not determine this ordering.
+
+Root first executed two failing tests where domain preparation advanced the clock, then corrected timestamp capture.
+Expanded coverage includes forward/equal/backward clocks and competing commits in both journals. Final verification:
+199 Server tests on each modern target, MTP 100% line and branch coverage (2260/2255/2255/2254 lines, 753 branches each),
+and all eight Release targets with zero warnings/errors. The .NET Framework analyzer required the write stamp parameter
+by readonly reference; this was corrected without suppression. Evidence: server-attempt-stamp worktree,
+artifacts/root-server-stamp-final. Conflict resolver and public hub integration remains outstanding.

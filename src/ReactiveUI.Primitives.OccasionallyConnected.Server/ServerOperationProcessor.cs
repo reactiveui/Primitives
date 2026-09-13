@@ -518,7 +518,7 @@ internal sealed class ServerOperationProcessor
                 return replay;
             }
 
-            var context = new ServerOperationContext(client, operation, scope, streamKey, operationKey, snapshot);
+            var context = new ServerOperationContext(client, operation, scope, streamKey, operationKey, snapshot, CreateCandidateWrite(scope, operation, snapshot));
             var preparation = await _handler.PrepareAsync(context, cancellationToken).ConfigureAwait(false);
             ArgumentExceptionHelper.ThrowIfNull(preparation);
             cancellationToken.ThrowIfCancellationRequested();
@@ -569,7 +569,7 @@ internal sealed class ServerOperationProcessor
         var entry = new ServerLedgerEntry(context.OperationKey, fingerprint, preparation.Result, preparation.Conflicts, events);
         var stamp = preparation.NewState is null
             ? (ServerWriteStamp?)null
-            : new ServerWriteStamp(_options.TimeProvider.GetUtcNow(), context.Scope.ClientId, context.Operation.OperationId);
+            : context.CandidateWrite;
         cancellationToken.ThrowIfCancellationRequested();
         var commit = _journal.TryCommit(new(context.StreamKey, context.Snapshot.Revision, preparation.NewState, stamp, [entry]));
         return commit.Status switch
@@ -600,7 +600,7 @@ internal sealed class ServerOperationProcessor
                 prepared.EventId,
                 context.StreamKey.StreamId,
                 _cursorFactory.CreateCursor(context, index),
-                _options.TimeProvider.GetUtcNow(),
+                context.CandidateWrite.CommittedAtUtc,
                 context.Operation.OperationId,
                 prepared.Payload,
                 prepared.Metadata)
@@ -608,6 +608,25 @@ internal sealed class ServerOperationProcessor
         }
 
         return Array.AsReadOnly(events);
+    }
+
+    /// <summary>Captures one server timestamp and prevents a backward clock from reversing write time.</summary>
+    /// <param name="scope">The trusted client scope.</param>
+    /// <param name="operation">The authorized operation.</param>
+    /// <param name="snapshot">The state read for this compare-and-swap attempt.</param>
+    /// <returns>The immutable candidate write stamp.</returns>
+    private ServerWriteStamp CreateCandidateWrite(
+        ServerOperationScope scope,
+        SyncOperation operation,
+        ServerCommitSnapshot snapshot)
+    {
+        var timestamp = _options.TimeProvider.GetUtcNow();
+        if (snapshot.LastWriteStamp is { } previous && timestamp < previous.CommittedAtUtc)
+        {
+            timestamp = previous.CommittedAtUtc;
+        }
+
+        return new(timestamp, scope.ClientId, operation.OperationId);
     }
 
     /// <summary>Captures and validates the batch operation list under finite bounds.</summary>
