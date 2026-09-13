@@ -17,7 +17,7 @@ public sealed class SyncBatchValidatorTests
     private const int UndefinedOperationResultKindValue = 42;
 
     /// <summary>An operation type value that is outside the defined enum range.</summary>
-    private const int UndefinedOperationTypeValue = 42;
+    private const int UndefinedOperationTypeValue = 255;
 
     /// <summary>The first client sequence used in representative operations.</summary>
     private const int FirstClientSequence = 1;
@@ -135,6 +135,29 @@ public sealed class SyncBatchValidatorTests
         SyncBatchValidator.Validate(batch, result);
 
         await Assert.That(result.Operations).Count().IsEqualTo(CompleteOperationResultCount);
+    }
+
+    /// <summary>Verifies each declared operation type can be acknowledged by a matching remote result.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ValidateAcceptsAllDefinedOperationTypes()
+    {
+        var operationTypes = Enum.GetValues<SyncOperationType>();
+        var operations = new SyncOperation[operationTypes.Length];
+        for (var index = 0; index < operationTypes.Length; index++)
+        {
+            operations[index] = CreateOperation(
+                OperationId.New(),
+                index + FirstClientSequence,
+                new(TemperatureStream)) with { Type = operationTypes[index] };
+        }
+
+        var batch = new SyncBatch(Guid.NewGuid(), operations);
+        var result = CreateCompleteResult(batch);
+
+        SyncBatchValidator.Validate(batch, result);
+
+        await Assert.That(result.Operations).Count().IsEqualTo(operationTypes.Length);
     }
 
     /// <summary>Verifies a mismatched batch identity is rejected.</summary>
