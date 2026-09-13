@@ -14,7 +14,7 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Server;
 /// Authenticated tenant and client identifiers are trusted inputs from the host. This journal does not perform
 /// authorization, network coordination or capability advertisement.
 /// </remarks>
-internal sealed partial class SqliteServerCommitJournal : IDisposable
+internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, IDisposable
 {
     /// <summary>The current durable schema version.</summary>
     private const int CurrentSchemaVersion = 1;
@@ -247,6 +247,11 @@ internal sealed partial class SqliteServerCommitJournal : IDisposable
         return snapshot;
     }
 
+    /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    ServerCommitSnapshot IServerCommitJournal.Read(ServerStreamKey streamKey, IReadOnlyList<ServerOperationKey> operationKeys) =>
+        Read(streamKey, operationKeys);
+
     /// <summary>Attempts to atomically admit a fully prepared terminal server commit.</summary>
     /// <param name="plan">The prepared commit plan.</param>
     /// <returns>The result and atomic stream snapshot observed by the attempt.</returns>
@@ -304,6 +309,10 @@ internal sealed partial class SqliteServerCommitJournal : IDisposable
         transaction.Commit();
         return new(ServerCommitStatus.Committed, committedSnapshot);
     }
+
+    /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    ServerCommitResult IServerCommitJournal.TryCommit(ServerCommitPlan plan) => TryCommit(plan);
 
     /// <summary>Compacts expired terminal ledger entries and event rows using the journal clock.</summary>
     /// <returns>The number of terminal entries removed.</returns>

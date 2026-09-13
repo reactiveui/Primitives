@@ -826,3 +826,17 @@ Conflict resolution retained the current Core APIs, SQLite registration, impleme
 - All 675 runtime tests pass in Release on net8/net9/net10/net11. MTP confirms 100% matching line and branch coverage
   (3510/3466/3466/3458 lines, 1706/1706/1706/1710 branches); all eight runtime library targets build with zero warnings/errors.
 - Engine span placement and transport trace propagation remain integration work; this is the recorder component.
+
+### Stage 5: bounded server operation processing
+
+The internal processor authorizes the trusted client before journal lookup, replays canonical idempotency receipts,
+and prepares domain effects before a bounded compare-and-swap commit. Both journal implementations share the same
+processor through composition. Complete batches are validated before authorization; active requests, operation bytes,
+and prepared effects have finite limits. Cancellation after handler preparation and immediately before journal commit
+prevents durable effects. Rejected preparations cannot carry state, conflicts or events.
+
+Root verification: 164 Server tests passed separately on net8.0, net9.0, net10.0 and net11.0. MTP reports 100% line and
+branch coverage on each target (1902/1898/1898/1897 lines; 617 branches each). The all-eight-target Server Release build
+passed with zero warnings and errors. Reports are in the isolated server-processing-review worktree under
+artifacts/root-processor. Root removed a test null-forgiving operator and split the large fixture before verification.
+The public server hub, complete replay paging and durable receive acknowledgement integration remain outstanding.
