@@ -18,6 +18,9 @@ internal static class SqliteLocalCommitValidation
     /// <summary>The length of a canonical SHA-256 payload hash.</summary>
     private const int Sha256PayloadHashLength = 51;
 
+    /// <summary>The maximum accepted dead-letter reason code length in UTF-8 bytes.</summary>
+    private const int MaximumDeadLetterReasonBytes = 1024;
+
     /// <summary>Validates initialization input.</summary>
     /// <param name="initialization">The initialization requirements.</param>
     /// <exception cref="ArgumentException">The supplied value is invalid.</exception>
@@ -239,6 +242,44 @@ internal static class SqliteLocalCommitValidation
     {
         ValidateLeaseId(leaseId);
         ArgumentExceptionHelper.ThrowIfNull(result);
+    }
+
+    /// <summary>Validates dead-letter reconciliation input.</summary>
+    /// <param name="leaseId">The owning lease identifier.</param>
+    /// <param name="operationId">The operation identifier.</param>
+    /// <param name="reasonCode">The stable reason code.</param>
+    /// <param name="snapshotMutation">The replacement mutation.</param>
+    /// <exception cref="ArgumentException">An input is malformed.</exception>
+    /// <exception cref="ArgumentNullException">A required input is null.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The reason exceeds the supported size.</exception>
+    internal static void ValidateDeadLetterInput(
+        Guid leaseId,
+        OperationId operationId,
+        string reasonCode,
+        SnapshotMutation snapshotMutation)
+    {
+        ValidateLeaseId(leaseId);
+        ValidateOperationId(operationId, nameof(operationId));
+        ValidateDeadLetterReasonCode(reasonCode);
+        ValidateSnapshotMutation(snapshotMutation);
+    }
+
+    /// <summary>Validates a dead-letter reason code.</summary>
+    /// <param name="reasonCode">The reason code.</param>
+    /// <exception cref="ArgumentException">The reason code is blank.</exception>
+    /// <exception cref="ArgumentNullException">The reason code is null.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The reason code exceeds the supported size.</exception>
+    internal static void ValidateDeadLetterReasonCode(string reasonCode)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(reasonCode);
+        ThrowIfBlank(reasonCode, nameof(reasonCode), "Dead-letter reason code must be non-empty.");
+        var reasonBytes = Encoding.UTF8.GetByteCount(reasonCode);
+        if (reasonBytes <= MaximumDeadLetterReasonBytes)
+        {
+            return;
+        }
+
+        throw new ArgumentOutOfRangeException(nameof(reasonCode), reasonBytes, "Dead-letter reason code exceeds the supported size.");
     }
 
     /// <summary>Validates retry state persistence input.</summary>

@@ -273,10 +273,18 @@ internal sealed partial class InMemoryLocalStoreAdapter
     /// <summary>Returns the retained lease capacity.</summary>
     /// <param name="lease">The lease record.</param>
     /// <returns>The retained capacity.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static CapacityUsage LeaseRecordCapacity(LeaseRecord lease) =>
+        LeaseRecordCapacity(lease.OperationIds.Count);
+
+    /// <summary>Returns the retained lease capacity for a member count.</summary>
+    /// <param name="operationCount">The leased operation count.</param>
+    /// <returns>The retained capacity.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static CapacityUsage LeaseRecordCapacity(int operationCount) =>
         new(
-            checked(1 + lease.OperationIds.Count),
-            checked(GuidEncodedBytes + DateTimeOffsetEncodedBytes + (GuidEncodedBytes * lease.OperationIds.Count)));
+            checked(1 + operationCount),
+            checked(GuidEncodedBytes + DateTimeOffsetEncodedBytes + (GuidEncodedBytes * operationCount)));
 
     /// <summary>Returns the retained snapshot capacity.</summary>
     /// <param name="snapshot">The optional snapshot.</param>
@@ -496,15 +504,27 @@ internal sealed partial class InMemoryLocalStoreAdapter
     /// <param name="includedOperations">The operations already included by an authoritative receive batch.</param>
     /// <param name="pending">The pending operation output.</param>
     /// <param name="replay">The replay operation output.</param>
+    /// <param name="deadLetters">The dead-letter output.</param>
+    /// <exception cref="InvalidOperationException">A dead-lettered record has no reason code.</exception>
     private static void AddRecoveredOperation(
         StreamId streamId,
         OperationRecord record,
         HashSet<OperationId> includedOperations,
         List<SyncOperation> pending,
-        List<SyncOperation> replay)
+        List<SyncOperation> replay,
+        List<DeadLetterRecord> deadLetters)
     {
         if (record.Operation.StreamId != streamId)
         {
+            return;
+        }
+
+        if (record.Status.State == SyncOperationState.DeadLettered)
+        {
+            var reasonCode = record.Status.ReasonCode;
+            var deadLetteredAtUtc = record.TerminalAtUtc.GetValueOrDefault();
+            ArgumentExceptionHelper.ThrowIfNull(reasonCode);
+            deadLetters.Add(new(record.Operation, reasonCode, record.Status.Attempt, deadLetteredAtUtc));
             return;
         }
 

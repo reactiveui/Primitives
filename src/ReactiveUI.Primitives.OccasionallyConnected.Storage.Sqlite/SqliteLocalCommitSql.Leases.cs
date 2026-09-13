@@ -47,6 +47,9 @@ internal static partial class SqliteLocalCommitSql
     /// <summary>The invalid lease identifier message.</summary>
     private const string InvalidLeaseIdMessage = "The SQLite outbox lease id is invalid.";
 
+    /// <summary>The invalid operation stream message.</summary>
+    private const string InvalidOperationStreamMessage = "The SQLite operation stream is invalid.";
+
     /// <summary>Selects a contiguous leaseable operation prefix without reading payload bytes.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
@@ -161,7 +164,7 @@ internal static partial class SqliteLocalCommitSql
             SELECT outbox.operation_id, outbox.stream_id, outbox.client_sequence, outbox.timestamp_utc,
                    outbox.base_version, outbox.operation_type, outbox.payload_contract_id, outbox.payload_schema_version,
                    outbox.payload_content_type, outbox.payload, outbox.payload_hash, outbox.policy_delivery_guarantee,
-                   outbox.policy_durability, outbox.policy_priority, outbox.policy_conflict
+                   outbox.policy_durability, outbox.policy_priority, outbox.policy_conflict, lease.stream_id
             FROM oc_outbox AS outbox
             INNER JOIN oc_outbox_leases AS lease
                 ON lease.store_identity = outbox.store_identity
@@ -174,40 +177,56 @@ internal static partial class SqliteLocalCommitSql
         List<SyncOperation> operations = [];
         while (reader.Read())
         {
-            const int OperationIdIndex = 0;
-            const int StreamIdIndex = 1;
-            const int ClientSequenceIndex = 2;
-            const int TimestampIndex = 3;
-            const int BaseVersionIndex = 4;
-            const int TypeIndex = 5;
-            const int PayloadContractIndex = 6;
-            const int PayloadSchemaIndex = 7;
-            const int PayloadContentTypeIndex = 8;
-            const int PayloadIndex = 9;
-            const int PayloadHashIndex = 10;
-            const int DeliveryIndex = 11;
-            const int DurabilityIndex = 12;
-            const int PriorityIndex = 13;
-            const int ConflictIndex = 14;
-            var operationId = ReadOperationId(reader, OperationIdIndex);
-            var streamId = new StreamId(ReadString(reader, StreamIdIndex, "The SQLite operation stream is invalid."));
-            var operation = new SyncOperation
-            {
-                OperationId = operationId,
-                StreamId = streamId,
-                ClientSequence = ReadPositiveLong(reader, ClientSequenceIndex, InvalidOperationSequenceMessage),
-                TimestampUtc = ReadDateTimeOffset(reader, TimestampIndex, "The SQLite operation timestamp is invalid."),
-                BaseVersion = ReadNullableString(reader, BaseVersionIndex),
-                Type = ReadOperationType(reader, TypeIndex),
-                Payload = ReadPayload(reader, PayloadContractIndex, PayloadSchemaIndex, PayloadContentTypeIndex, PayloadIndex, PayloadHashIndex),
-                Policy = ReadPolicy(reader, DeliveryIndex, DurabilityIndex, PriorityIndex, ConflictIndex),
-                Metadata = ReadMetadata(connection, transaction, storeIdentity, operationId),
-            };
-            SqliteLocalCommitValidation.ValidateCommitInput(operation, new(streamId, operation.Payload, FormatVersion: 1, ExpectedRevision: 0));
-            operations.Add(operation);
+            operations.Add(ReadLeasedOperationRow(connection, transaction, storeIdentity, reader));
         }
 
         return operations;
+    }
+
+    /// <summary>Reads one operation owned by the active lease.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="storeIdentity">The store identity.</param>
+    /// <param name="leaseId">The lease identifier.</param>
+    /// <param name="operationId">The operation identifier.</param>
+    /// <returns>The leased operation.</returns>
+    /// <exception cref="InvalidOperationException">The lease does not own the operation or stored data is invalid.</exception>
+    internal static SyncOperation ReadLeasedOperation(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string storeIdentity,
+        Guid leaseId,
+        OperationId operationId)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            SELECT outbox.operation_id, outbox.client_sequence, outbox.timestamp_utc, outbox.base_version, outbox.operation_type,
+                   outbox.payload_contract_id, outbox.payload_schema_version, outbox.payload_content_type, outbox.payload, outbox.payload_hash,
+                   outbox.policy_delivery_guarantee, outbox.policy_durability, outbox.policy_priority, outbox.policy_conflict,
+                   outbox.stream_id, lease.stream_id
+            FROM oc_outbox AS outbox
+            INNER JOIN oc_outbox_leases AS lease
+                ON lease.store_identity = outbox.store_identity
+                AND lease.operation_id = outbox.operation_id
+            WHERE lease.store_identity = $storeIdentity
+                AND lease.lease_id = $leaseId
+                AND lease.operation_id = $operationId;
+            """;
+        AddLeaseParameters(command, storeIdentity, leaseId);
+        _ = command.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
+        using var reader = command.ExecuteReader();
+        if (!reader.Read())
+        {
+            throw new InvalidOperationException("The SQLite outbox lease does not own the operation.");
+        }
+
+        const int OutboxStreamIdIndex = 14;
+        const int LeaseRowStreamIdIndex = 15;
+        var outboxStreamId = new StreamId(ReadString(reader, OutboxStreamIdIndex, InvalidOperationStreamMessage));
+        var leaseStreamId = new StreamId(ReadString(reader, LeaseRowStreamIdIndex, InvalidOperationStreamMessage));
+        ValidateLeaseStream(outboxStreamId, leaseStreamId);
+        return ReadPendingOperation(connection, transaction, storeIdentity, outboxStreamId, reader);
     }
 
     /// <summary>Validates that a lease still owns its complete original batch.</summary>
@@ -304,6 +323,111 @@ internal static partial class SqliteLocalCommitSql
         }
 
         throw new InvalidOperationException(MissingLeaseMessage);
+    }
+
+    /// <summary>Releases one operation from a validated lease and keeps remaining members leased.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="storeIdentity">The store identity.</param>
+    /// <param name="leaseId">The lease identifier.</param>
+    /// <param name="operationId">The operation identifier.</param>
+    /// <exception cref="InvalidOperationException">The lease does not own the operation.</exception>
+    internal static void ReleaseLeaseOperation(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string storeIdentity,
+        Guid leaseId,
+        OperationId operationId)
+    {
+        using (var delete = connection.CreateCommand())
+        {
+            delete.Transaction = transaction;
+            delete.CommandText = """
+                DELETE FROM oc_outbox_leases
+                WHERE store_identity = $storeIdentity
+                    AND lease_id = $leaseId
+                    AND operation_id = $operationId;
+                """;
+            AddLeaseParameters(delete, storeIdentity, leaseId);
+            _ = delete.Parameters.AddWithValue(OperationIdParameter, operationId.Value.ToString("D"));
+            if (delete.ExecuteNonQuery() != 1)
+            {
+                throw new InvalidOperationException("The SQLite outbox lease does not own the operation.");
+            }
+        }
+
+        using var update = connection.CreateCommand();
+        update.Transaction = transaction;
+        update.CommandText = """
+            UPDATE oc_outbox_leases
+            SET lease_member_count = lease_member_count - 1
+            WHERE store_identity = $storeIdentity AND lease_id = $leaseId;
+            """;
+        AddLeaseParameters(update, storeIdentity, leaseId);
+        _ = update.ExecuteNonQuery();
+    }
+
+    /// <summary>Reads one operation from a leased batch row.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="storeIdentity">The store identity.</param>
+    /// <param name="reader">The row reader.</param>
+    /// <returns>The leased operation.</returns>
+    /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
+    private static SyncOperation ReadLeasedOperationRow(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string storeIdentity,
+        SqliteDataReader reader)
+    {
+        const int OperationIdIndex = 0;
+        const int StreamIdIndex = 1;
+        const int ClientSequenceIndex = 2;
+        const int TimestampIndex = 3;
+        const int BaseVersionIndex = 4;
+        const int TypeIndex = 5;
+        const int PayloadContractIndex = 6;
+        const int PayloadSchemaIndex = 7;
+        const int PayloadContentTypeIndex = 8;
+        const int PayloadIndex = 9;
+        const int PayloadHashIndex = 10;
+        const int DeliveryIndex = 11;
+        const int DurabilityIndex = 12;
+        const int PriorityIndex = 13;
+        const int ConflictIndex = 14;
+        const int LeaseRowStreamIdIndex = 15;
+        var operationId = ReadOperationId(reader, OperationIdIndex);
+        var streamId = new StreamId(ReadString(reader, StreamIdIndex, InvalidOperationStreamMessage));
+        var leaseStreamId = new StreamId(ReadString(reader, LeaseRowStreamIdIndex, InvalidOperationStreamMessage));
+        ValidateLeaseStream(streamId, leaseStreamId);
+        var operation = new SyncOperation
+        {
+            OperationId = operationId,
+            StreamId = streamId,
+            ClientSequence = ReadPositiveLong(reader, ClientSequenceIndex, InvalidOperationSequenceMessage),
+            TimestampUtc = ReadDateTimeOffset(reader, TimestampIndex, "The SQLite operation timestamp is invalid."),
+            BaseVersion = ReadNullableString(reader, BaseVersionIndex),
+            Type = ReadOperationType(reader, TypeIndex),
+            Payload = ReadPayload(reader, PayloadContractIndex, PayloadSchemaIndex, PayloadContentTypeIndex, PayloadIndex, PayloadHashIndex),
+            Policy = ReadPolicy(reader, DeliveryIndex, DurabilityIndex, PriorityIndex, ConflictIndex),
+            Metadata = ReadMetadata(connection, transaction, storeIdentity, operationId),
+        };
+        SqliteLocalCommitValidation.ValidateCommitInput(operation, new(streamId, operation.Payload, FormatVersion: 1, ExpectedRevision: 0));
+        return operation;
+    }
+
+    /// <summary>Validates that lease stream metadata matches the authoritative outbox stream.</summary>
+    /// <param name="outboxStreamId">The stream stored on the outbox row.</param>
+    /// <param name="leaseStreamId">The stream stored on the lease row.</param>
+    /// <exception cref="InvalidOperationException">The lease stream does not match the operation stream.</exception>
+    private static void ValidateLeaseStream(StreamId outboxStreamId, StreamId leaseStreamId)
+    {
+        if (outboxStreamId == leaseStreamId)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException("The SQLite outbox lease stream does not match the operation stream.");
     }
 
     /// <summary>Selects a contiguous leaseable operation prefix for one stream.</summary>
@@ -431,7 +555,7 @@ internal static partial class SqliteLocalCommitSql
     private static LeaseCandidateRow ReadLeaseCandidateRow(SqliteDataReader reader, DateTimeOffset nowUtc)
     {
         var operationId = ReadOperationId(reader, LeaseOperationIdIndex);
-        var streamId = new StreamId(ReadString(reader, LeaseStreamIdIndex, "The SQLite operation stream is invalid."));
+        var streamId = new StreamId(ReadString(reader, LeaseStreamIdIndex, InvalidOperationStreamMessage));
         var clientSequence = ReadPositiveLong(reader, LeaseClientSequenceIndex, InvalidOperationSequenceMessage);
         var payloadBytes = ReadNonNegativeLong(reader, LeasePayloadBytesIndex, "The SQLite operation payload length is invalid.");
         var state = ReadOperationState(reader, LeaseOperationStateIndex);

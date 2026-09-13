@@ -226,6 +226,32 @@ public sealed class SqliteLocalStoreAdapter : ILocalStoreAdapter
     }
 
     /// <inheritdoc/>
+    public async ValueTask<LocalSnapshot> DeadLetterOperationAsync(
+        Guid leaseId,
+        OperationId operationId,
+        string reasonCode,
+        SnapshotMutation snapshotMutation,
+        CancellationToken cancellationToken)
+    {
+        SqliteLocalCommitValidation.ValidateDeadLetterInput(leaseId, operationId, reasonCode, snapshotMutation);
+        cancellationToken.ThrowIfCancellationRequested();
+        var retainedBytes = _sizing.DeadLetterBytes(reasonCode, snapshotMutation);
+        ReserveCapture(retainedBytes);
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return await ExecuteAsync(
+                token => _store.DeadLetterOperation(leaseId, operationId, reasonCode, snapshotMutation, token),
+                retainedBytes,
+                cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            ReleaseCapture(retainedBytes);
+        }
+    }
+
+    /// <inheritdoc/>
     public async ValueTask<IReadOnlyList<Guid>> GetUnappliedEventIdsAsync(
         StreamId streamId,
         IReadOnlyList<Guid> eventIds,

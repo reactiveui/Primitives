@@ -37,6 +37,12 @@ public sealed partial class SqliteLocalStoreAdapterTests
     /// <summary>The mutation count used when the first mutation must stop later reads.</summary>
     private const int ResultTwoSnapshotMutations = 2;
 
+    /// <summary>The snapshot revision after an own completion receive before upload acknowledgement.</summary>
+    private const int DeadLetterIncludedRevision = 2;
+
+    /// <summary>The fixed store clock timestamp used by dead-letter tests.</summary>
+    private static readonly DateTimeOffset DeadLetterTimestamp = new(2026, 4, 5, 6, 7, 8, TimeSpan.Zero);
+
     /// <summary>Verifies mixed upload decisions replace optimistic state while retaining accepted work until receive inclusion.</summary>
     /// <returns>The asynchronous test.</returns>
     [Test]
@@ -704,82 +710,6 @@ public sealed partial class SqliteLocalStoreAdapterTests
         _ = command.ExecuteNonQuery();
     }
 
-    /// <summary>Expires an existing lease.</summary>
-    /// <param name="path">The database path.</param>
-    /// <param name="leaseId">The lease identifier.</param>
-    private static void ExpireLease(string path, Guid leaseId)
-    {
-        using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
-            UPDATE oc_outbox_leases
-            SET lease_expires_at_utc = '1970-01-01T00:00:00.0000000+00:00'
-            WHERE store_identity = $storeIdentity AND lease_id = $leaseId;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue("$leaseId", leaseId.ToString("D"));
-        _ = command.ExecuteNonQuery();
-    }
-
-    /// <summary>Deletes an operation state row.</summary>
-    /// <param name="path">The database path.</param>
-    /// <param name="operationId">The operation identifier.</param>
-    private static void DeleteOperationState(string path, OperationId operationId)
-    {
-        using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
-            DELETE FROM oc_outbox_operation_states
-            WHERE store_identity = $storeIdentity AND operation_id = $operationId;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue("$operationId", operationId.Value.ToString("D"));
-        _ = command.ExecuteNonQuery();
-    }
-
-    /// <summary>Deletes a stream snapshot row.</summary>
-    /// <param name="path">The database path.</param>
-    /// <param name="streamId">The stream identifier.</param>
-    private static void DeleteSnapshot(string path, StreamId streamId)
-    {
-        using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
-            DELETE FROM oc_snapshots
-            WHERE store_identity = $storeIdentity AND stream_id = $streamId;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue(StreamIdParameter, streamId.Value);
-        _ = command.ExecuteNonQuery();
-    }
-
-    /// <summary>Adds another operation to an existing lease to simulate historical mixed-stream corruption.</summary>
-    /// <param name="path">The database path.</param>
-    /// <param name="leaseId">The lease identifier.</param>
-    /// <param name="operation">The added operation.</param>
-    private static void AddOperationToLease(string path, Guid leaseId, SyncOperation operation)
-    {
-        using var connection = OpenRawConnection(path);
-        using var command = connection.CreateCommand();
-        command.CommandText = """
-            INSERT INTO oc_outbox_leases
-                (store_identity, lease_id, operation_id, stream_id, client_sequence, lease_expires_at_utc, lease_member_count)
-            SELECT store_identity, lease_id, $operationId, $streamId, $clientSequence, lease_expires_at_utc, 2
-            FROM oc_outbox_leases
-            WHERE store_identity = $storeIdentity AND lease_id = $leaseId
-            LIMIT 1;
-            UPDATE oc_outbox_leases
-            SET lease_member_count = 2
-            WHERE store_identity = $storeIdentity AND lease_id = $leaseId;
-            """;
-        _ = command.Parameters.AddWithValue(StoreIdentityParameter, StoreIdentity);
-        _ = command.Parameters.AddWithValue("$leaseId", leaseId.ToString("D"));
-        _ = command.Parameters.AddWithValue("$operationId", operation.OperationId.Value.ToString("D"));
-        _ = command.Parameters.AddWithValue(StreamIdParameter, operation.StreamId.Value);
-        _ = command.Parameters.AddWithValue("$clientSequence", operation.ClientSequence);
-        _ = command.ExecuteNonQuery();
-    }
-
     /// <summary>A caller-owned mutation list with observable indexing callbacks.</summary>
     private sealed class ResultMutationList : IReadOnlyList<SnapshotMutation>
     {
@@ -838,5 +768,13 @@ public sealed partial class SqliteLocalStoreAdapterTests
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
+    /// <summary>A fixed time provider for deterministic SQLite timestamps.</summary>
+    /// <param name="timestamp">The timestamp.</param>
+    private sealed class FixedTimeProvider(DateTimeOffset timestamp) : TimeProvider
+    {
+        /// <inheritdoc/>
+        public override DateTimeOffset GetUtcNow() => timestamp;
     }
 }

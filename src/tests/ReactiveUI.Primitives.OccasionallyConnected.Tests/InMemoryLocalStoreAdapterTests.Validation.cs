@@ -105,6 +105,19 @@ public sealed partial class InMemoryLocalStoreAdapterTests
             .ThrowsExactly<ArgumentException>();
     }
 
+    /// <summary>Verifies standalone dead-letter reason validation rejects blank and oversized values.</summary>
+    /// <returns>The asynchronous test.</returns>
+    [Test]
+    public async Task DeadLetterReasonValidationRejectsBlankAndOversizedReasons()
+    {
+        var oversizedReason = new string('x', OversizedDeadLetterReasonLength);
+
+        await Assert.That(static () => InMemoryLocalStoreAdapterValidation.ValidateDeadLetterReasonCode(" "))
+            .ThrowsExactly<ArgumentException>();
+        await Assert.That(() => InMemoryLocalStoreAdapterValidation.ValidateDeadLetterReasonCode(oversizedReason))
+            .ThrowsExactly<ArgumentOutOfRangeException>();
+    }
+
     /// <summary>Verifies malformed stream and subscription identifiers are rejected before state changes.</summary>
     /// <returns>The asynchronous test.</returns>
     [Test]

@@ -78,6 +78,20 @@ public static class ILocalStoreAdapterExtensions
             IReadOnlyList<SnapshotMutation> snapshotMutations) =>
             adapter.ApplySyncResultAsync(leaseId, result, snapshotMutations, CancellationToken.None);
 
+        /// <summary>Atomically dead-letters one leased operation and commits a replacement optimistic snapshot.</summary>
+        /// <param name="leaseId">The active lease.</param>
+        /// <param name="operationId">The operation to dead-letter.</param>
+        /// <param name="reasonCode">The stable local reason code.</param>
+        /// <param name="snapshotMutation">The replacement snapshot mutation.</param>
+        /// <returns>The committed snapshot.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask<LocalSnapshot> DeadLetterOperationAsync(
+            Guid leaseId,
+            OperationId operationId,
+            string reasonCode,
+            SnapshotMutation snapshotMutation) =>
+            adapter.DeadLetterOperationAsync(leaseId, operationId, reasonCode, snapshotMutation, CancellationToken.None);
+
         /// <summary>Returns remote event identifiers that have not yet been durably applied for a stream.</summary>
         /// <param name="streamId">The stream identifier.</param>
         /// <param name="eventIds">The candidate remote event identifiers in received order.</param>

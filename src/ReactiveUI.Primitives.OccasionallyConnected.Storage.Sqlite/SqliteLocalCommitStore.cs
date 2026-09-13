@@ -245,7 +245,8 @@ internal sealed class SqliteLocalCommitStore : IDisposable
             var snapshot = SqliteLocalCommitSql.ReadSnapshot(connection, transaction, storeIdentity, streamId);
             var pending = SqliteLocalCommitSql.ReadPendingOperations(connection, transaction, storeIdentity, streamId);
             var replay = SqliteLocalCommitSql.ReadReplayOperations(connection, transaction, storeIdentity, streamId);
-            if (!hasStream && (snapshot is not null || pending.Count != 0 || replay.Count != 0))
+            var deadLetters = SqliteLocalCommitSql.ReadDeadLetters(connection, transaction, storeIdentity, streamId);
+            if (!hasStream && (snapshot is not null || pending.Count != 0 || replay.Count != 0 || deadLetters.Count != 0))
             {
                 throw new InvalidOperationException("Committed data has no durable stream state.");
             }
@@ -259,7 +260,7 @@ internal sealed class SqliteLocalCommitStore : IDisposable
 
             cancellationToken.ThrowIfCancellationRequested();
             transaction.Commit();
-            var result = new RecoveredStream(subscriptionId, stream.ServerCursor, snapshot, pending, [], stream.NextClientSequence);
+            var result = new RecoveredStream(subscriptionId, stream.ServerCursor, snapshot, pending, deadLetters, stream.NextClientSequence);
             return result with { ReplayOperations = replay };
         }
     }
@@ -787,6 +788,70 @@ internal sealed class SqliteLocalCommitStore : IDisposable
         }
 
         var receipt = new ReadOnlyCollection<LocalSnapshot>(committedSnapshots);
+        cancellationToken.ThrowIfCancellationRequested();
+        transaction.Commit();
+        return receipt;
+    }
+
+    /// <summary>Dead-letters one leased operation and commits the rebuilt optimistic snapshot atomically.</summary>
+    /// <param name="leaseId">The owning lease identifier.</param>
+    /// <param name="operationId">The operation identifier.</param>
+    /// <param name="reasonCode">The stable local reason code.</param>
+    /// <param name="snapshotMutation">The replacement snapshot mutation.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The committed replacement snapshot.</returns>
+    /// <exception cref="ArgumentException">A dead-letter input is invalid.</exception>
+    /// <exception cref="ArgumentNullException">A required value is null.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The reason code exceeds the supported size.</exception>
+    /// <exception cref="InvalidOperationException">The store is not initialized or the transaction fences are stale.</exception>
+    /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
+    /// <exception cref="OperationCanceledException">The operation is canceled before the transaction commits.</exception>
+    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    internal LocalSnapshot DeadLetterOperation(
+        Guid leaseId,
+        OperationId operationId,
+        string reasonCode,
+        SnapshotMutation snapshotMutation,
+        CancellationToken cancellationToken)
+    {
+        SqliteLocalCommitValidation.ValidateDeadLetterInput(leaseId, operationId, reasonCode, snapshotMutation);
+        cancellationToken.ThrowIfCancellationRequested();
+        var storeIdentity = GetInitializedStoreIdentityForOperation();
+        using var connection = SqliteLocalCommitConnection.OpenConnection(_databasePath);
+        SqliteLocalCommitConnection.ConfigureLockPolling(connection);
+        SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+        using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
+        var nowUtc = _timeProvider.GetUtcNow();
+        var leaseExpiry = SqliteLocalCommitSql.ValidateLeaseMembership(connection, transaction, storeIdentity, leaseId);
+        if (leaseExpiry <= nowUtc)
+        {
+            throw new InvalidOperationException(ExpiredLeaseMessage);
+        }
+
+        var operation = SqliteLocalCommitSql.ReadLeasedOperation(connection, transaction, storeIdentity, leaseId, operationId);
+        var revision = snapshotMutation.ExpectedRevision + 1;
+        var committedSnapshot = SqliteLocalCommitSql.CreateDeadLetterSnapshot(
+            connection,
+            transaction,
+            storeIdentity,
+            operation,
+            snapshotMutation,
+            nowUtc);
+        SqliteLocalCommitSql.DeadLetterOperation(connection, transaction, storeIdentity, operationId, reasonCode, nowUtc);
+        SqliteLocalCommitSql.ReleaseLeaseOperation(connection, transaction, storeIdentity, leaseId, operationId);
+        var committedMutation = new SnapshotMutation(committedSnapshot.StreamId, committedSnapshot.State, committedSnapshot.FormatVersion, revision - 1)
+        {
+            AuthoritativeState = committedSnapshot.AuthoritativeState,
+        };
+        SqliteLocalCommitSql.UpsertSnapshot(
+            connection,
+            transaction,
+            storeIdentity,
+            committedMutation,
+            committedSnapshot.Revision,
+            committedSnapshot.ServerCursor,
+            committedSnapshot.SavedAtUtc);
+        var receipt = committedSnapshot;
         cancellationToken.ThrowIfCancellationRequested();
         transaction.Commit();
         return receipt;

@@ -12,7 +12,7 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
 public sealed class ILocalStoreAdapterExtensionsTests
 {
     /// <summary>The number of adapter calls expected by the forwarding test.</summary>
-    private const int AdapterCallCount = 15;
+    private const int AdapterCallCount = 16;
 
     /// <summary>The attempted send count.</summary>
     private const int AttemptNumber = 3;
@@ -89,6 +89,7 @@ public sealed class ILocalStoreAdapterExtensionsTests
         }
 
         await adapter.ApplySyncResultAsync(leaseId, result);
+        var deadLetter = await adapter.DeadLetterOperationAsync(leaseId, operation.OperationId, "OC.Test", mutation);
         var unapplied = await adapter.GetUnappliedEventIdsAsync(operation.StreamId, ids);
         var remoteApplied = await adapter.ApplyRemoteBatchAsync(batch, mutation);
         var status = await adapter.GetOperationStatusAsync(operation.OperationId);
@@ -103,6 +104,7 @@ public sealed class ILocalStoreAdapterExtensionsTests
         await Assert.That(recovered.SubscriptionId).IsEqualTo(subscription);
         await Assert.That(committed.OperationId).IsEqualTo(operation.OperationId);
         await Assert.That(leases).Count().IsEqualTo(1);
+        await Assert.That(deadLetter.StreamId).IsEqualTo(operation.StreamId);
         await Assert.That(unapplied).IsSameReferenceAs(ids);
         await Assert.That(remoteApplied.NextCursor).IsEqualTo(batch.NextCursor);
         await Assert.That(status).IsNull();
@@ -200,10 +202,11 @@ public sealed class ILocalStoreAdapterExtensionsTests
         SnapshotMutation mutation)
     {
         await AssertCall(adapter.Calls[5], leaseId, result);
-        await AssertCall(adapter.Calls[6], operation.StreamId, ids);
-        await AssertCall(adapter.Calls[7], batch, mutation);
-        await AssertCall(adapter.Calls[8], operation.OperationId);
+        await AssertCall(adapter.Calls[6], leaseId, operation.OperationId, "OC.Test", mutation);
+        await AssertCall(adapter.Calls[7], operation.StreamId, ids);
+        await AssertCall(adapter.Calls[8], batch, mutation);
         await AssertCall(adapter.Calls[9], operation.OperationId);
+        await AssertCall(adapter.Calls[10], operation.OperationId);
     }
 
     /// <summary>Asserts the lease-related recorded adapter calls.</summary>
@@ -220,11 +223,11 @@ public sealed class ILocalStoreAdapterExtensionsTests
         RetryState retry,
         CompactionRequest compact)
     {
-        await AssertCall(adapter.Calls[10], leaseId, operation.OperationId, AttemptNumber);
-        await AssertCall(adapter.Calls[11], operation.OperationId, retry);
-        await AssertCall(adapter.Calls[12], leaseId, TimeSpan.FromMinutes(RenewalMinutes));
-        await AssertCall(adapter.Calls[13], leaseId);
-        await AssertCall(adapter.Calls[14], compact);
+        await AssertCall(adapter.Calls[11], leaseId, operation.OperationId, AttemptNumber);
+        await AssertCall(adapter.Calls[12], operation.OperationId, retry);
+        await AssertCall(adapter.Calls[13], leaseId, TimeSpan.FromMinutes(RenewalMinutes));
+        await AssertCall(adapter.Calls[14], leaseId);
+        await AssertCall(adapter.Calls[15], compact);
     }
 
     /// <summary>Asserts that one recorded call matches the expected arguments and default token.</summary>
@@ -363,6 +366,24 @@ public sealed class ILocalStoreAdapterExtensionsTests
         {
             Calls.Add([leaseId, result, snapshotMutations, cancellationToken]);
             return new(ReconciledSnapshots);
+        }
+
+        /// <inheritdoc/>
+        public ValueTask<LocalSnapshot> DeadLetterOperationAsync(
+            Guid leaseId,
+            OperationId operationId,
+            string reasonCode,
+            SnapshotMutation snapshotMutation,
+            CancellationToken cancellationToken)
+        {
+            Calls.Add([leaseId, operationId, reasonCode, snapshotMutation, cancellationToken]);
+            return new(new LocalSnapshot(
+                snapshotMutation.StreamId,
+                snapshotMutation.FormatVersion,
+                null,
+                snapshotMutation.State,
+                snapshotMutation.ExpectedRevision + 1,
+                DateTimeOffset.UnixEpoch));
         }
 
         /// <inheritdoc />

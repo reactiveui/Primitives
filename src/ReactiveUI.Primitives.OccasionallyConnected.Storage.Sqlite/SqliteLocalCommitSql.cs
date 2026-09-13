@@ -776,6 +776,56 @@ internal static partial class SqliteLocalCommitSql
         return operations;
     }
 
+    /// <summary>Reads dead-lettered operations in client sequence order.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="storeIdentity">The store identity.</param>
+    /// <param name="streamId">The stream id.</param>
+    /// <returns>The recovered dead-letter records.</returns>
+    /// <exception cref="InvalidOperationException">Stored SQLite data is invalid.</exception>
+    internal static List<DeadLetterRecord> ReadDeadLetters(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string storeIdentity,
+        StreamId streamId)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            SELECT outbox.operation_id, outbox.client_sequence, outbox.timestamp_utc, outbox.base_version, outbox.operation_type,
+                   outbox.payload_contract_id, outbox.payload_schema_version, outbox.payload_content_type, outbox.payload, outbox.payload_hash,
+                   outbox.policy_delivery_guarantee, outbox.policy_durability, outbox.policy_priority, outbox.policy_conflict,
+                   state.attempt_count, state.changed_at_utc, state.reason_code
+            FROM oc_outbox AS outbox
+            INNER JOIN oc_outbox_operation_states AS state
+                ON state.store_identity = outbox.store_identity
+                AND state.operation_id = outbox.operation_id
+            WHERE outbox.store_identity = $storeIdentity
+                AND outbox.stream_id = $streamId
+                AND state.operation_state = 6
+            ORDER BY outbox.client_sequence ASC;
+            """;
+        AddStreamParameters(command, storeIdentity, streamId);
+        using var reader = command.ExecuteReader();
+        List<DeadLetterRecord> deadLetters = [];
+        while (reader.Read())
+        {
+            const int AttemptIndex = 14;
+            const int ChangedAtIndex = 15;
+            const int ReasonIndex = 16;
+            var operation = ReadPendingOperation(connection, transaction, storeIdentity, streamId, reader);
+            var reason = ReadReasonCode(reader, ReasonIndex)
+                ?? throw new InvalidOperationException("The SQLite dead-letter reason code is invalid.");
+            deadLetters.Add(new(
+                operation,
+                reason,
+                ReadNonNegativeInt(reader, AttemptIndex, InvalidAttemptCountMessage),
+                ReadDateTimeOffset(reader, ChangedAtIndex, "The SQLite operation state timestamp is invalid.")));
+        }
+
+        return deadLetters;
+    }
+
     /// <summary>Reads one pending operation row.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>

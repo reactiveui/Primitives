@@ -235,19 +235,21 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
 
             List<SyncOperation> pending = [];
             List<SyncOperation> replay = [];
+            List<DeadLetterRecord> deadLetters = [];
             foreach (var pair in _operations)
             {
-                AddRecoveredOperation(streamId, pair.Value, _includedOperations, pending, replay);
+                AddRecoveredOperation(streamId, pair.Value, _includedOperations, pending, replay, deadLetters);
             }
 
             pending.Sort(OperationSequenceComparison);
             replay.Sort(OperationSequenceComparison);
+            deadLetters.Sort(static (left, right) => left.Operation.ClientSequence.CompareTo(right.Operation.ClientSequence));
             result = new(
                 stream.SubscriptionId,
                 stream.ServerCursor,
                 stream.Snapshot,
                 pending,
-                [],
+                deadLetters,
                 stream.NextClientSequence);
             result = result with { ReplayOperations = replay };
         }
