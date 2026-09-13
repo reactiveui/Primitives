@@ -1,0 +1,70 @@
+namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.Http;
+
+[System.Diagnostics.DebuggerDisplay("{Kind,nq} {StatusCode,nq}")]
+public sealed class HttpRemoteTransportException : System.Exception
+{
+    public HttpRemoteTransportException() { }
+    public HttpRemoteTransportException(string message) { }
+    public HttpRemoteTransportException(string message, System.Exception innerException) { }
+    public HttpRemoteTransportException(ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.HttpTransportFailureKind kind) { }
+    public HttpRemoteTransportException(ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.HttpTransportFailureKind kind, System.Net.HttpStatusCode? statusCode) { }
+    public HttpRemoteTransportException(ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.HttpTransportFailureKind kind, System.Net.HttpStatusCode? statusCode, System.TimeSpan? retryAfter) { }
+    public HttpRemoteTransportException(ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.HttpTransportFailureKind kind, System.Net.HttpStatusCode? statusCode, System.TimeSpan? retryAfter, System.Exception? innerException) { }
+    public bool IsTransient { get; }
+    public ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.HttpTransportFailureKind Kind { get; }
+    public System.TimeSpan? RetryAfter { get; }
+    public System.Net.HttpStatusCode? StatusCode { get; }
+}
+public enum HttpTransportFailureKind
+{
+    ProtocolViolation = 0,
+    Authentication = 1,
+    AuthorizationDenied = 2,
+    ValidationRejected = 3,
+    SchemaIncompatible = 4,
+    PayloadTooLarge = 5,
+    Transient = 6,
+    AmbiguousTransportOutcome = 7,
+    Configuration = 8,
+}
+[System.Diagnostics.DebuggerDisplay("{Capabilities,nq}")]
+public sealed class HttpRemoteTransportAdapter : ReactiveUI.Primitives.OccasionallyConnected.IRemoteTransportAdapter
+{
+    public HttpRemoteTransportAdapter(ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.HttpRemoteTransportOptions options) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.RemoteTransportCapabilities Capabilities { get; }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.IRemoteTransportSession> ConnectAsync(ReactiveUI.Primitives.OccasionallyConnected.TransportConnectRequest request) { }
+    public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.IRemoteTransportSession> ConnectAsync(ReactiveUI.Primitives.OccasionallyConnected.TransportConnectRequest request, System.Threading.CancellationToken cancellationToken) { }
+    public System.Threading.Tasks.ValueTask DisposeAsync() { }
+}
+[System.Diagnostics.DebuggerDisplay("{BaseAddress,nq}")]
+public record HttpRemoteTransportOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.HttpRemoteTransportOptions>
+{
+    public string AcknowledgePath { get; init; }
+    public bool AllowInsecureLoopbackHttp { get; init; }
+    public required System.Uri BaseAddress { get; init; }
+    public string ConnectPath { get; init; }
+    public static string DefaultAcknowledgePath { get; }
+    public static string DefaultConnectPath { get; }
+    public static string DefaultPushPath { get; }
+    public static string DefaultSubscribePath { get; }
+    public required System.Net.Http.HttpClient HttpClient { get; init; }
+    public int MaximumBatchOperations { get; init; }
+    public int MaximumCompletedOperationsPerBatch { get; init; }
+    public int MaximumConcurrentAcknowledgements { get; init; }
+    public int MaximumConcurrentRequests { get; init; }
+    public int MaximumConcurrentSubscriptions { get; init; }
+    public int MaximumEventsPerBatch { get; init; }
+    public int MaximumJsonDepth { get; init; }
+    public int MaximumMetadataEntries { get; init; }
+    public int MaximumMetadataKeyBytes { get; init; }
+    public int MaximumMetadataValueBytes { get; init; }
+    public int MaximumPayloadBytes { get; init; }
+    public int MaximumRequestBytes { get; init; }
+    public int MaximumResponseBytes { get; init; }
+    public string PushPath { get; init; }
+    public string SubscribePath { get; init; }
+    public System.TimeProvider TimeProvider { get; init; }
+    public void Validate() { }
+}
+
