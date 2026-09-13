@@ -753,3 +753,18 @@ Conflict resolution retained the current Core APIs, SQLite registration, impleme
 - All 469 runtime TUnit tests pass in Release on net8/net9/net10/net11, with MTP-confirmed 100% matching package line
   and branch coverage (2646/2610/2610/2609 lines, 1258 branches). All eight runtime library targets build with zero
   warnings and errors. Observer admission and the complete publish/receive pipeline remain subsequent work.
+
+### Stage 5f: durable SQLite server commit journal
+
+- Added an independent schema-one SQLite journal for atomic server state, event rows and complete terminal operation
+  replay. Competing instances use transactional revision checks; duplicate requests preserve the original receipt.
+- Retention keeps the durable clock and event-sequence high-water marks. Reopening with smaller configured limits
+  rejects oversized retained history before reconstructing replay payloads, including growth by another instance.
+- Durable reads validate raw SQLite storage classes rather than accepting provider coercions. Real database tests cover
+  corrupted rows, competing commits, trigger-induced rollback, tenant/client isolation and zero-event acceptance.
+- Process termination tests verify acknowledged journal writes survive reopening and an uncommitted raw SQLite
+  transaction does not. The full application crash matrix remains a later integration gate.
+- Root review added two executed failing capacity regressions, then verified all 113 Server TUnit tests on
+  net8/net9/net10/net11. MTP reports 100% matching package line and branch coverage (1551/1547/1547/1547 lines,
+  474 branches); all eight Server library targets build in Release with zero warnings or errors.
+- This internal journal does not authorize callers, implement the server hub or advertise end-to-end guarantees.
