@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
 /// <summary>Persists occasionally connected stream state in SQLite on a bounded single-command worker.</summary>
 [DebuggerDisplay("Capabilities = {Capabilities}")]
-public sealed class SqliteLocalStoreAdapter : ILocalStoreAdapter
+public sealed class SqliteLocalStoreAdapter : ILocalStoreAdapter, ILocalPayloadQuarantineStore
 {
     /// <summary>The current SQLite local commit backend schema version.</summary>
     private const int CurrentSchemaVersion = SqliteStoreSchema.LocalCommitSchemaVersion;
@@ -93,7 +93,7 @@ public sealed class SqliteLocalStoreAdapter : ILocalStoreAdapter
         SqliteLocalCommitValidation.ThrowIfBlank(databasePath, nameof(databasePath), "The SQLite database path cannot be empty.");
         SqliteLocalCommitValidation.ThrowIfUnsupportedPath(databasePath);
         _databasePath = Path.GetFullPath(databasePath);
-        _store = new(_databasePath, options.TimeProvider);
+        _store = new(_databasePath, options.TimeProvider, options.WorkerCapacityBytes);
         _worker = new(options.WorkerCapacity, options.WorkerCapacityBytes);
     }
 
@@ -357,6 +357,27 @@ public sealed class SqliteLocalStoreAdapter : ILocalStoreAdapter
         new(ExecuteAsync(
             token => _store.Compact(request, _retention, token),
             _sizing.CompactionBytes(request),
+            cancellationToken));
+
+    /// <inheritdoc/>
+    public ValueTask<LocalPayloadQuarantineResult> QuarantinePayloadAsync(
+        LocalPayloadQuarantineRequest request,
+        CancellationToken cancellationToken)
+    {
+        var normalized = SqliteLocalQuarantineRequestNormalizer.Normalize(request);
+        return new(ExecuteAsync(
+            token => _store.QuarantinePayload(normalized, token),
+            _sizing.QuarantineBytes(normalized),
+            cancellationToken));
+    }
+
+    /// <inheritdoc/>
+    public ValueTask<LocalPayloadQuarantineRecord?> GetPayloadQuarantineAsync(
+        StreamId streamId,
+        CancellationToken cancellationToken) =>
+        new(ExecuteAsync(
+            token => _store.GetPayloadQuarantine(streamId, token),
+            _sizing.StreamIdBytes(streamId),
             cancellationToken));
 
     /// <inheritdoc/>

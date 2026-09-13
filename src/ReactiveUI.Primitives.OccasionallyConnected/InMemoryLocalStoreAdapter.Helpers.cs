@@ -32,6 +32,9 @@ internal sealed partial class InMemoryLocalStoreAdapter
     /// <summary>The maximum client identity length in UTF-16 code units.</summary>
     private const int MaximumClientIdLength = 256;
 
+    /// <summary>The maximum quarantine request metadata length in UTF-8 bytes.</summary>
+    private const int MaximumQuarantineMetadataUtf8Bytes = 4096;
+
     /// <summary>The retained metadata key used to represent a client identity binding.</summary>
     private const string ClientIdentityBindingMetadataKey = "rxui.localstore.client_id";
 
@@ -171,6 +174,194 @@ internal sealed partial class InMemoryLocalStoreAdapter
     private static bool ShouldRecoverReplayOperation(OperationRecord record, bool included) =>
         !included && record.Status.State is not SyncOperationState.Rejected and not SyncOperationState.DeadLettered;
 
+    /// <summary>Throws when a stream is quarantined.</summary>
+    /// <param name="stream">The stream record.</param>
+    /// <exception cref="InvalidOperationException">The stream is quarantined.</exception>
+    private static void ThrowIfStreamQuarantined(StreamRecord stream)
+    {
+        if (stream.Quarantine is null)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException("The local stream is quarantined.");
+    }
+
+    /// <summary>Validates a quarantine request.</summary>
+    /// <param name="request">The request.</param>
+    /// <exception cref="ArgumentException">The request is malformed.</exception>
+    /// <exception cref="ArgumentNullException">The request is null.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The evidence length is negative.</exception>
+    private static void ValidateQuarantineRequest(LocalPayloadQuarantineRequest request)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(request);
+        ValidateQuarantineIdentifiers(request);
+        ValidateQuarantineKind(request);
+        ValidateQuarantineEvidence(request);
+        ValidateQuarantineMetadata(request);
+    }
+
+    /// <summary>Validates quarantine identifiers.</summary>
+    /// <param name="request">The request.</param>
+    /// <exception cref="ArgumentException">An identifier is malformed.</exception>
+    private static void ValidateQuarantineIdentifiers(LocalPayloadQuarantineRequest request)
+    {
+        InMemoryLocalStoreAdapterValidation.ValidateStreamId(request.StreamId, nameof(request));
+        ValidateQuarantineSubscriptionId(request);
+        ValidateQuarantineOperationId(request);
+        ValidateQuarantineEventId(request);
+    }
+
+    /// <summary>Validates a quarantine subscription identifier.</summary>
+    /// <param name="request">The request.</param>
+    /// <exception cref="ArgumentException">The identifier is malformed.</exception>
+    private static void ValidateQuarantineSubscriptionId(LocalPayloadQuarantineRequest request)
+    {
+        if (!request.SubscriptionId.HasValue || request.SubscriptionId.Value.Value != Guid.Empty)
+        {
+            return;
+        }
+
+        throw new ArgumentException("Subscription identifier must be non-empty.", nameof(request));
+    }
+
+    /// <summary>Validates a quarantine operation identifier.</summary>
+    /// <param name="request">The request.</param>
+    /// <exception cref="ArgumentException">The identifier is malformed.</exception>
+    private static void ValidateQuarantineOperationId(LocalPayloadQuarantineRequest request)
+    {
+        if (!request.OperationId.HasValue || request.OperationId.Value.Value != Guid.Empty)
+        {
+            return;
+        }
+
+        throw new ArgumentException("Operation identifier must be non-empty.", nameof(request));
+    }
+
+    /// <summary>Validates a quarantine event identifier.</summary>
+    /// <param name="request">The request.</param>
+    /// <exception cref="ArgumentException">The identifier is malformed.</exception>
+    private static void ValidateQuarantineEventId(LocalPayloadQuarantineRequest request)
+    {
+        if (!request.EventId.HasValue || request.EventId.Value != Guid.Empty)
+        {
+            return;
+        }
+
+        throw new ArgumentException("Event identifier must be non-empty.", nameof(request));
+    }
+
+    /// <summary>Validates quarantine kind values.</summary>
+    /// <param name="request">The request.</param>
+    /// <exception cref="ArgumentException">A kind value is malformed.</exception>
+    private static void ValidateQuarantineKind(LocalPayloadQuarantineRequest request)
+    {
+        ValidateQuarantineSource(request.Source);
+        ValidateQuarantineReason(request.Reason);
+        if (request.ObservedAtUtc != default)
+        {
+            return;
+        }
+
+        throw new ArgumentException("Observation timestamp must be set.", nameof(request));
+    }
+
+    /// <summary>Validates a quarantine source.</summary>
+    /// <param name="source">The source.</param>
+    /// <exception cref="ArgumentException">The source is malformed.</exception>
+    private static void ValidateQuarantineSource(LocalPayloadQuarantineSource source)
+    {
+        if (source is LocalPayloadQuarantineSource.Snapshot or LocalPayloadQuarantineSource.OutboxOperation or LocalPayloadQuarantineSource.RemoteEvent)
+        {
+            return;
+        }
+
+        throw new ArgumentException("Quarantine source must be a defined value.", nameof(source));
+    }
+
+    /// <summary>Validates a quarantine reason.</summary>
+    /// <param name="reason">The reason.</param>
+    /// <exception cref="ArgumentException">The reason is malformed.</exception>
+    private static void ValidateQuarantineReason(LocalPayloadQuarantineReason reason)
+    {
+        if (reason is LocalPayloadQuarantineReason.SchemaRejected or LocalPayloadQuarantineReason.PayloadHashMismatch
+            or LocalPayloadQuarantineReason.UpcastFailed or LocalPayloadQuarantineReason.PersistedRecordCorrupt)
+        {
+            return;
+        }
+
+        throw new ArgumentException("Quarantine reason must be a defined value.", nameof(reason));
+    }
+
+    /// <summary>Validates quarantine evidence values.</summary>
+    /// <param name="request">The request.</param>
+    /// <exception cref="ArgumentException">Evidence is missing.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The evidence length is negative.</exception>
+    private static void ValidateQuarantineEvidence(LocalPayloadQuarantineRequest request)
+    {
+        if (request.Evidence is null && request.Envelope is null)
+        {
+            throw new ArgumentException("Quarantine evidence or envelope must be supplied.", nameof(request));
+        }
+
+        if (request.Evidence is null || request.Evidence.PayloadLength >= 0)
+        {
+            return;
+        }
+
+        throw new ArgumentOutOfRangeException(nameof(request), request.Evidence.PayloadLength, "Evidence payload length must not be negative.");
+    }
+
+    /// <summary>Validates quarantine request metadata that is persisted with the marker.</summary>
+    /// <param name="request">The request.</param>
+    /// <exception cref="ArgumentException">The metadata is malformed or too long.</exception>
+    private static void ValidateQuarantineMetadata(LocalPayloadQuarantineRequest request)
+    {
+        ValidateQuarantineMetadataValue(request.ReasonCode, nameof(request));
+        ValidateQuarantineMetadataValue(request.Cursor, nameof(request));
+    }
+
+    /// <summary>Validates an optional quarantine metadata value.</summary>
+    /// <param name="value">The metadata value.</param>
+    /// <param name="parameterName">The parameter name.</param>
+    /// <exception cref="ArgumentException">The metadata is malformed or too long.</exception>
+    private static void ValidateQuarantineMetadataValue(string? value, string parameterName)
+    {
+        if (value is null)
+        {
+            return;
+        }
+
+        int byteCount;
+        try
+        {
+            byteCount = StrictUtf8.GetByteCount(value);
+        }
+        catch (EncoderFallbackException exception)
+        {
+            throw new ArgumentException("Quarantine metadata must be well-formed Unicode.", parameterName, exception);
+        }
+
+        if (byteCount <= MaximumQuarantineMetadataUtf8Bytes)
+        {
+            return;
+        }
+
+        throw new ArgumentException("Quarantine metadata must be at most 4096 UTF-8 bytes.", parameterName);
+    }
+
+    /// <summary>Creates normalized evidence from a quarantine request.</summary>
+    /// <param name="request">The request.</param>
+    /// <returns>The normalized evidence.</returns>
+    private static LocalPayloadQuarantineEvidence NormalizeQuarantineEvidence(LocalPayloadQuarantineRequest request) =>
+        request.Evidence is null
+            ? LocalPayloadQuarantineEvidenceFactory.FromEnvelope(
+                request.Envelope,
+                LocalPayloadQuarantineEvidenceFactory.DefaultMaximumEvidenceBytes)
+            : LocalPayloadQuarantineEvidenceFactory.FromEvidence(
+                request.Evidence,
+                LocalPayloadQuarantineEvidenceFactory.DefaultMaximumEvidenceBytes);
+
     /// <summary>Validates an optional client identity binding.</summary>
     /// <param name="clientId">The client identity.</param>
     /// <param name="parameterName">The parameter name.</param>
@@ -303,6 +494,40 @@ internal sealed partial class InMemoryLocalStoreAdapter
                     + Int64EncodedBytes
                     + DateTimeOffsetEncodedBytes));
 
+    /// <summary>Returns the retained quarantine evidence capacity.</summary>
+    /// <param name="evidence">The evidence.</param>
+    /// <returns>The retained capacity.</returns>
+    private static long QuarantineEvidenceCapacityBytes(LocalPayloadQuarantineEvidence evidence) =>
+        checked(
+            StringBytes(evidence.ContractId)
+            + (evidence.SchemaVersion.HasValue ? Int32EncodedBytes : 0)
+            + StringBytes(evidence.ContentType)
+            + Int32EncodedBytes
+            + StringBytes(evidence.PayloadHash)
+            + Int32EncodedBytes
+            + evidence.PayloadPrefix.Length);
+
+    /// <summary>Returns the retained quarantine record capacity.</summary>
+    /// <param name="record">The quarantine record.</param>
+    /// <returns>The retained capacity.</returns>
+    private static CapacityUsage QuarantineRecordCapacity(LocalPayloadQuarantineRecord? record) =>
+        record is null
+            ? default
+            : new(
+                1,
+                checked(
+                    GuidEncodedBytes
+                    + StreamIdBytes(record.StreamId)
+                    + GuidBytes(record.SubscriptionId?.Value)
+                    + GuidBytes(record.OperationId?.Value)
+                    + GuidBytes(record.EventId)
+                    + EnumEncodedBytes
+                    + EnumEncodedBytes
+                    + StringBytes(record.ReasonCode)
+                    + StringBytes(record.Cursor)
+                    + QuarantineEvidenceCapacityBytes(record.Evidence)
+                    + DateTimeOffsetEncodedBytes));
+
     /// <summary>Returns the retained operation record capacity.</summary>
     /// <param name="record">The operation record.</param>
     /// <returns>The retained capacity.</returns>
@@ -390,8 +615,10 @@ internal sealed partial class InMemoryLocalStoreAdapter
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static CapacityUsage StreamRecordCapacity(StreamId streamId, StreamRecord stream) =>
         AddCapacity(
-            new(1, checked(StreamIdBytes(streamId) + GuidEncodedBytes + Int64EncodedBytes + StringBytes(stream.ServerCursor))),
-            LocalSnapshotCapacity(stream.Snapshot));
+            AddCapacity(
+                new(1, checked(StreamIdBytes(streamId) + GuidEncodedBytes + Int64EncodedBytes + StringBytes(stream.ServerCursor))),
+                LocalSnapshotCapacity(stream.Snapshot)),
+            QuarantineRecordCapacity(stream.Quarantine));
 
     /// <summary>Returns the retained client identity binding capacity.</summary>
     /// <param name="clientId">The client identity.</param>
@@ -832,6 +1059,39 @@ internal sealed partial class InMemoryLocalStoreAdapter
             ? record
             : throw new InvalidOperationException("The operation does not exist.");
 
+    /// <summary>Throws when an operation's stream is quarantined.</summary>
+    /// <param name="operationId">The operation identifier.</param>
+    /// <exception cref="InvalidOperationException">The operation or stream is quarantined.</exception>
+    private void ThrowIfOperationStreamQuarantined(OperationId operationId)
+    {
+        var record = GetOperation(operationId);
+        ThrowIfStreamQuarantined(record.Operation.StreamId);
+    }
+
+    /// <summary>Throws when any leased operation's stream is quarantined.</summary>
+    /// <param name="lease">The lease record.</param>
+    /// <exception cref="InvalidOperationException">A leased operation's stream is quarantined.</exception>
+    private void ThrowIfLeaseQuarantined(LeaseRecord lease)
+    {
+        for (var index = 0; index < lease.OperationIds.Count; index++)
+        {
+            ThrowIfOperationStreamQuarantined(lease.OperationIds[index]);
+        }
+    }
+
+    /// <summary>Throws when a stream is quarantined.</summary>
+    /// <param name="streamId">The stream identifier.</param>
+    /// <exception cref="InvalidOperationException">The stream is quarantined.</exception>
+    private void ThrowIfStreamQuarantined(StreamId streamId)
+    {
+        if (!_streams.TryGetValue(streamId, out var stream))
+        {
+            return;
+        }
+
+        ThrowIfStreamQuarantined(stream);
+    }
+
     /// <summary>Gets one stream's operation records.</summary>
     /// <param name="streamId">The stream identifier.</param>
     /// <returns>The sorted operation records.</returns>
@@ -1119,6 +1379,11 @@ internal sealed partial class InMemoryLocalStoreAdapter
         CancellationToken cancellationToken)
     {
         var records = GetStreamOperations(streamId);
+        if (_streams.TryGetValue(streamId, out var stream) && stream.Quarantine is not null)
+        {
+            return [];
+        }
+
         List<OperationRecord> selected = [];
         var bytes = 0L;
         for (var index = 0; index < records.Count; index++)

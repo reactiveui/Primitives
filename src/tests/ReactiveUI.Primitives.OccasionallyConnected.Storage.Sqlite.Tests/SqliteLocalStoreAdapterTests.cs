@@ -16,7 +16,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
     private const int MinimumRequiredSchemaVersion = 1;
 
     /// <summary>The current SQLite local commit schema version.</summary>
-    private const int SchemaVersion = 7;
+    private const int SchemaVersion = 8;
 
     /// <summary>An unsupported future local store schema version.</summary>
     private const int FutureRequiredSchemaVersion = SchemaVersion + 1;

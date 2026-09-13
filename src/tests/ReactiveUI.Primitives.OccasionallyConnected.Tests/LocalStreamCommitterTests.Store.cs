@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
 public sealed partial class LocalStreamCommitterTests
 {
     /// <summary>A scripted fake atomic store.</summary>
-    private sealed class ScriptedLocalStore : ILocalStoreAdapter
+    private sealed class ScriptedLocalStore : ILocalStoreAdapter, ILocalPayloadQuarantineStore
     {
         /// <summary>The event identifiers recorded in the durable inbox.</summary>
         private readonly HashSet<Guid> _appliedEventIds = [];
@@ -128,6 +128,18 @@ public sealed partial class LocalStreamCommitterTests
 
         /// <summary>Gets the dead-letter apply call count.</summary>
         public int DeadLetterApplyCallCount { get; private set; }
+
+        /// <summary>Gets the quarantine call count.</summary>
+        public int QuarantineCallCount { get; private set; }
+
+        /// <summary>Gets the latest quarantine request.</summary>
+        public LocalPayloadQuarantineRequest? QuarantineRequest { get; private set; }
+
+        /// <summary>Gets or sets a quarantine write failure.</summary>
+        public Exception? QuarantineException { get; set; }
+
+        /// <summary>Gets or sets a token source canceled immediately before the quarantine write failure.</summary>
+        public CancellationTokenSource? CancelBeforeQuarantineException { get; set; }
 
         /// <summary>Marks a remote event identifier as already applied.</summary>
         /// <param name="eventId">The remote event identifier.</param>
@@ -366,6 +378,43 @@ public sealed partial class LocalStreamCommitterTests
         /// <inheritdoc/>
         public ValueTask<CompactionResult> CompactAsync(CompactionRequest request, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
+
+        /// <inheritdoc/>
+        public ValueTask<LocalPayloadQuarantineResult> QuarantinePayloadAsync(
+            LocalPayloadQuarantineRequest request,
+            CancellationToken cancellationToken)
+        {
+            QuarantineCallCount++;
+            QuarantineRequest = request;
+            if (QuarantineException is not null)
+            {
+                CancelBeforeQuarantineException?.Cancel();
+                throw QuarantineException;
+            }
+
+            var evidence = request.Evidence ?? LocalPayloadQuarantineEvidenceFactory.FromEnvelope(request.Envelope, request.Envelope?.PayloadLength ?? 0);
+            var record = new LocalPayloadQuarantineRecord(
+                Guid.NewGuid(),
+                request.StreamId,
+                request.SubscriptionId,
+                request.OperationId,
+                request.EventId,
+                request.Source,
+                request.Reason,
+                request.ReasonCode,
+                request.Cursor,
+                evidence,
+                request.ObservedAtUtc);
+            Recovery = Recovery with { Quarantine = record };
+            return ValueTask.FromResult(new LocalPayloadQuarantineResult(record, Created: true));
+        }
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask<LocalPayloadQuarantineRecord?> GetPayloadQuarantineAsync(
+            StreamId streamId,
+            CancellationToken cancellationToken) =>
+            ValueTask.FromResult(Recovery.Quarantine);
 
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

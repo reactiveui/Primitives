@@ -374,7 +374,7 @@ public sealed partial class LocalStreamCommitterTests
             {
                 Contracts = CreateContracts() with { InputSchemaVersion = InitialSum },
             })).ThrowsExactly<InvalidOperationException>();
-        var dependenciesWithNullStore = CreateDependencies(new(), new(), null) with { };
+        var dependenciesWithNullStore = CreateDependencies(new ScriptedLocalStore(), new(), null) with { };
         var store = typeof(LocalStreamCommitterDependencies<ReadingState, MutableReading>).GetProperty(nameof(LocalStreamCommitterDependencies<,>.Store));
         ArgumentNullException.ThrowIfNull(store);
         store.SetValue(dependenciesWithNullStore, null);
@@ -400,13 +400,34 @@ public sealed partial class LocalStreamCommitterTests
         IOperationIdSource? operationIdSource = null) =>
         new(CreateOptions(store, serializer ?? new ScriptedPayloadSerializer(), operationIdSource ?? new SequenceOperationIdSource()));
 
+    /// <summary>Creates a configured committer from a non-scripted store.</summary>
+    /// <param name="store">The local store.</param>
+    /// <param name="serializer">The serializer.</param>
+    /// <returns>The committer.</returns>
+    private static LocalStreamCommitter<ReadingState, MutableReading> CreateCommitterWithStore(
+        ILocalStoreAdapter store,
+        ScriptedPayloadSerializer serializer) =>
+        new(CreateOptionsWithStore(store, serializer));
+
     /// <summary>Creates committer options.</summary>
     /// <param name="store">The fake store.</param>
     /// <param name="serializer">The serializer.</param>
     /// <param name="operationIdSource">The operation identifier source.</param>
     /// <returns>The committer options.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static LocalStreamCommitterOptions<ReadingState, MutableReading> CreateOptions(
         ScriptedLocalStore store,
+        ScriptedPayloadSerializer serializer,
+        IOperationIdSource? operationIdSource = null) =>
+        CreateOptionsWithStore(store, serializer, operationIdSource);
+
+    /// <summary>Creates committer options from a non-scripted store.</summary>
+    /// <param name="store">The local store.</param>
+    /// <param name="serializer">The serializer.</param>
+    /// <param name="operationIdSource">The operation identifier source.</param>
+    /// <returns>The committer options.</returns>
+    private static LocalStreamCommitterOptions<ReadingState, MutableReading> CreateOptionsWithStore(
+        ILocalStoreAdapter store,
         ScriptedPayloadSerializer serializer,
         IOperationIdSource? operationIdSource = null) =>
         new()
@@ -431,12 +452,12 @@ public sealed partial class LocalStreamCommitterTests
         };
 
     /// <summary>Creates committer dependencies.</summary>
-    /// <param name="store">The fake store.</param>
+    /// <param name="store">The local store.</param>
     /// <param name="serializer">The serializer.</param>
     /// <param name="operationIdSource">The operation identifier source.</param>
     /// <returns>The committer dependencies.</returns>
     private static LocalStreamCommitterDependencies<ReadingState, MutableReading> CreateDependencies(
-        ScriptedLocalStore store,
+        ILocalStoreAdapter store,
         ScriptedPayloadSerializer serializer,
         IOperationIdSource? operationIdSource)
     {
@@ -599,8 +620,14 @@ public sealed partial class LocalStreamCommitterTests
         /// <summary>Gets or sets the token source canceled after state deserialization.</summary>
         public CancellationTokenSource? CancelAfterStateDeserialization { get; set; }
 
+        /// <summary>Gets or sets the token source canceled during input deserialization.</summary>
+        public CancellationTokenSource? CancelDuringInputDeserialization { get; set; }
+
         /// <summary>Gets or sets a value indicating whether input deserialization returns a state.</summary>
         public bool DeserializeInputAsState { get; set; }
+
+        /// <summary>Gets or sets a value indicating whether malformed input text is a schema failure.</summary>
+        public bool TreatMalformedInputAsSchemaFailure { get; set; }
 
         /// <summary>Gets or sets a value indicating whether state deserialization returns an input.</summary>
         public bool DeserializeStateAsInput { get; set; }
@@ -610,6 +637,18 @@ public sealed partial class LocalStreamCommitterTests
 
         /// <summary>Gets or sets a value indicating whether input payload hashes are rejected.</summary>
         public bool RejectInputHash { get; set; }
+
+        /// <summary>Gets or sets a value indicating whether state payload hashes are rejected.</summary>
+        public bool RejectStateHash { get; set; }
+
+        /// <summary>Gets or sets a value indicating whether every state payload is rejected.</summary>
+        public bool RejectAllStatePayloads { get; set; }
+
+        /// <summary>Gets or sets the schema failure reason used when input payloads are rejected.</summary>
+        public PayloadSchemaFailureReason RejectedInputReason { get; set; } = PayloadSchemaFailureReason.PayloadHashMismatch;
+
+        /// <summary>Gets or sets the schema failure reason used when state payloads are rejected.</summary>
+        public PayloadSchemaFailureReason RejectedStateReason { get; set; } = PayloadSchemaFailureReason.PayloadHashMismatch;
 
         /// <summary>Gets the number of input payloads serialized.</summary>
         public int InputSerializeCount { get; private set; }
@@ -661,38 +700,119 @@ public sealed partial class LocalStreamCommitterTests
         {
             cancellationToken.ThrowIfCancellationRequested();
             var text = System.Text.Encoding.UTF8.GetString(envelope.Payload.Span);
-            var value = int.Parse(text, CultureInfo.InvariantCulture);
+            var value = ParsePayloadValue(text, targetType);
             if (targetType == typeof(MutableReading))
             {
-                if (envelope.ContractId == InputContract)
-                {
-                    var expectedEnvelope = new PayloadEnvelope(InputContract, envelope.SchemaVersion, envelope.ContentType, envelope.Payload, $"hash-{text}");
-                    if (RejectInputHash && !PayloadEnvelopeComparison.ContentEquals(envelope, expectedEnvelope))
-                    {
-                        throw new InvalidOperationException("Input payload hash mismatch.");
-                    }
-
-                    InputDeserializeCount++;
-                    RemoteInputDeserializeCount++;
-                }
-
-                return DeserializeInputAsState
-                    ? ValueTask.FromResult<object>(new ReadingState(value))
-                    : ValueTask.FromResult<object>(new MutableReading { Value = value });
+                return DeserializeInputAsync(envelope, text, value);
             }
 
             if (targetType == typeof(ReadingState))
             {
-                if (DeserializeStateAsInput)
-                {
-                    return ValueTask.FromResult<object>(new MutableReading { Value = value });
-                }
-
-                CancelAfterStateDeserialization?.Cancel();
-                return ValueTask.FromResult<object>(new ReadingState(value));
+                return DeserializeStateAsync(envelope, text, value);
             }
 
             throw new InvalidOperationException("Unexpected target type.");
+        }
+
+        /// <summary>Parses a scripted payload value.</summary>
+        /// <param name="text">The payload text.</param>
+        /// <param name="targetType">The target type.</param>
+        /// <returns>The parsed value.</returns>
+        /// <exception cref="FormatException">The local input payload text is not an integer.</exception>
+        /// <exception cref="PayloadSchemaException">The state payload text is not an integer.</exception>
+        private int ParsePayloadValue(string text, Type targetType)
+        {
+            try
+            {
+                return int.Parse(text, CultureInfo.InvariantCulture);
+            }
+            catch (FormatException exception)
+            {
+                if (targetType != typeof(ReadingState) && !TreatMalformedInputAsSchemaFailure)
+                {
+                    throw;
+                }
+
+                throw new PayloadSchemaException(PayloadSchemaFailureReason.DeserializationFailed, "Payload text is not an integer.", exception);
+            }
+        }
+
+        /// <summary>Deserializes an input payload.</summary>
+        /// <param name="envelope">The payload envelope.</param>
+        /// <param name="text">The decoded text.</param>
+        /// <param name="value">The decoded value.</param>
+        /// <returns>The decoded input object.</returns>
+        /// <exception cref="OperationCanceledException">The test serializer was configured to cancel input deserialization.</exception>
+        private ValueTask<object> DeserializeInputAsync(PayloadEnvelope envelope, string text, int value)
+        {
+            CancelDuringInputDeserialization?.Cancel();
+            if (CancelDuringInputDeserialization is not null)
+            {
+                throw new OperationCanceledException(CancelDuringInputDeserialization.Token);
+            }
+
+            if (envelope.ContractId == InputContract)
+            {
+                ValidateInputHash(envelope, text);
+                InputDeserializeCount++;
+                RemoteInputDeserializeCount++;
+            }
+
+            return DeserializeInputAsState
+                ? ValueTask.FromResult<object>(new ReadingState(value))
+                : ValueTask.FromResult<object>(new MutableReading { Value = value });
+        }
+
+        /// <summary>Deserializes a state payload.</summary>
+        /// <param name="envelope">The payload envelope.</param>
+        /// <param name="text">The decoded text.</param>
+        /// <param name="value">The decoded value.</param>
+        /// <returns>The decoded state object.</returns>
+        private ValueTask<object> DeserializeStateAsync(PayloadEnvelope envelope, string text, int value)
+        {
+            ValidateStateHash(envelope, text);
+            if (DeserializeStateAsInput)
+            {
+                return ValueTask.FromResult<object>(new MutableReading { Value = value });
+            }
+
+            CancelAfterStateDeserialization?.Cancel();
+            return ValueTask.FromResult<object>(new ReadingState(value));
+        }
+
+        /// <summary>Validates a scripted input hash.</summary>
+        /// <param name="envelope">The payload envelope.</param>
+        /// <param name="text">The decoded text.</param>
+        /// <exception cref="PayloadSchemaException">The input payload hash is rejected.</exception>
+        private void ValidateInputHash(PayloadEnvelope envelope, string text)
+        {
+            var expectedEnvelope = new PayloadEnvelope(InputContract, envelope.SchemaVersion, envelope.ContentType, envelope.Payload, $"hash-{text}");
+            if (!RejectInputHash || PayloadEnvelopeComparison.ContentEquals(envelope, expectedEnvelope))
+            {
+                return;
+            }
+
+            throw new PayloadSchemaException(RejectedInputReason, "Input payload hash mismatch.");
+        }
+
+        /// <summary>Validates a scripted state hash.</summary>
+        /// <param name="envelope">The payload envelope.</param>
+        /// <param name="text">The decoded text.</param>
+        /// <exception cref="PayloadSchemaException">The state payload hash is rejected.</exception>
+        private void ValidateStateHash(PayloadEnvelope envelope, string text)
+        {
+            if (RejectAllStatePayloads)
+            {
+                throw new PayloadSchemaException(RejectedStateReason, "State payload was rejected.");
+            }
+
+            var expectedEnvelope = new PayloadEnvelope(StateContract, envelope.SchemaVersion, envelope.ContentType, envelope.Payload, $"hash-{text}");
+            if (!RejectStateHash || PayloadEnvelopeComparison.ContentEquals(envelope, expectedEnvelope))
+            {
+                return;
+            }
+
+            throw new PayloadSchemaException(RejectedStateReason, "State payload hash mismatch.");
         }
     }
 }

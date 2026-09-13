@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.OccasionallyConnected;
 /// <summary>Stores occasionally connected stream state in this process.</summary>
 /// <remarks>The adapter is ephemeral and retains data only for the lifetime of this instance.</remarks>
 [DebuggerDisplay("Streams = {_streams.Count}, Operations = {_operations.Count}")]
-internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
+internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter, ILocalPayloadQuarantineStore
 {
     /// <summary>The default maximum retained operation and snapshot records.</summary>
     private const int DefaultMaximumRecordCount = 10_000;
@@ -194,6 +194,7 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
             ThrowIfReady(cancellationToken);
             if (_streams.TryGetValue(streamId, out var existing))
             {
+                ThrowIfStreamQuarantined(existing);
                 if (preferredId.HasValue && existing.SubscriptionId != preferredId.Value)
                 {
                     throw new InvalidOperationException("The preferred subscription identity does not match the stored identity.");
@@ -251,7 +252,7 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
                 pending,
                 deadLetters,
                 stream.NextClientSequence);
-            result = result with { ReplayOperations = replay };
+            result = result with { ReplayOperations = replay, Quarantine = stream.Quarantine };
         }
 
         return new(result);
@@ -270,6 +271,7 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
         lock (_gate)
         {
             ThrowIfReady(cancellationToken);
+            ThrowIfStreamQuarantined(operation.StreamId);
             if (_operations.TryGetValue(operation.OperationId, out var duplicate))
             {
                 result = GetDuplicateReceipt(duplicate, operation, snapshotMutation);
@@ -330,6 +332,7 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
         {
             ThrowIfReady(cancellationToken);
             var lease = GetActiveLease(leaseId, nowUtc);
+            ThrowIfLeaseQuarantined(lease);
             var operations = GetLeaseOperations(lease);
             SyncBatchValidator.Validate(new(leaseId, operations), result);
             var statuses = CreateStatusesFromResult(result, nowUtc);
@@ -358,6 +361,7 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
             lock (_gate)
             {
                 ThrowIfReady(cancellationToken);
+                ThrowIfStreamQuarantined(streamId);
                 List<Guid> unapplied = [with(capacity: count)];
                 for (var index = 0; index < candidates.Length; index++)
                 {
@@ -393,6 +397,7 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
         lock (_gate)
         {
             ThrowIfReady(cancellationToken);
+            ThrowIfStreamQuarantined(batch.StreamId);
             var stream = GetStream(batch.StreamId);
             ValidateRemoteVersion(stream, batch, snapshotMutation);
             var newEventCount = CountNewRemoteEvents(batch);
@@ -477,12 +482,14 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
         {
             ThrowIfReady(cancellationToken);
             var lease = GetActiveLease(leaseId, nowUtc);
+            ThrowIfLeaseQuarantined(lease);
             if (!lease.Owns(operationId))
             {
                 throw new InvalidOperationException("The lease does not own the operation.");
             }
 
             var record = _operations[operationId];
+            ThrowIfStreamQuarantined(record.Operation.StreamId);
             if (record.Operation.Policy.DeliveryGuarantee == DeliveryGuarantee.AtMostOnce && record.Attempt > 0)
             {
                 result = new(operationId, nextAttempt, MaySend: false, AtMostOnceAttemptRecordedReason);
@@ -530,6 +537,7 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
         {
             ThrowIfReady(cancellationToken);
             var record = GetOperation(operationId);
+            ThrowIfStreamQuarantined(record.Operation.StreamId);
             if (IsDefinitiveTerminal(record.Status.State) || IsBlockingHead(record.Status.State)
                 || (record.Attempt > 0 && record.Operation.Policy.DeliveryGuarantee == DeliveryGuarantee.AtMostOnce))
             {
@@ -557,6 +565,7 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
         {
             ThrowIfReady(cancellationToken);
             var lease = GetActiveLease(leaseId, nowUtc);
+            ThrowIfLeaseQuarantined(lease);
             lease.ExpiresAtUtc = CheckedAdd(lease.ExpiresAtUtc, extension, nameof(extension));
         }
 
@@ -573,6 +582,7 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
         {
             ThrowIfReady(cancellationToken);
             var lease = GetActiveLease(leaseId, nowUtc);
+            ThrowIfLeaseQuarantined(lease);
             ReleaseLeaseCore(leaseId, lease);
         }
 
@@ -607,6 +617,67 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
     }
 
     /// <inheritdoc/>
+    public ValueTask<LocalPayloadQuarantineResult> QuarantinePayloadAsync(
+        LocalPayloadQuarantineRequest request,
+        CancellationToken cancellationToken)
+    {
+        ValidateQuarantineRequest(request);
+        cancellationToken.ThrowIfCancellationRequested();
+        LocalPayloadQuarantineResult result;
+        lock (_gate)
+        {
+            ThrowIfReady(cancellationToken);
+            var stream = GetStream(request.StreamId);
+            ValidateQuarantineSubscriptionBinding(request, stream);
+            ValidateQuarantineOperationBinding(request);
+            if (stream.Quarantine is not null)
+            {
+                result = new(stream.Quarantine, Created: false);
+            }
+            else
+            {
+                var evidence = NormalizeQuarantineEvidence(request);
+                var record = new LocalPayloadQuarantineRecord(
+                    Guid.NewGuid(),
+                    request.StreamId,
+                    request.SubscriptionId,
+                    request.OperationId,
+                    request.EventId,
+                    request.Source,
+                    request.Reason,
+                    request.ReasonCode,
+                    request.Cursor,
+                    evidence,
+                    request.ObservedAtUtc);
+                var capacity = QuarantineRecordCapacity(record);
+                EnsureCapacityFor(capacity);
+                stream.Quarantine = record;
+                ApplyCapacity(capacity);
+                result = new(record, Created: true);
+            }
+        }
+
+        return new(result);
+    }
+
+    /// <inheritdoc/>
+    public ValueTask<LocalPayloadQuarantineRecord?> GetPayloadQuarantineAsync(
+        StreamId streamId,
+        CancellationToken cancellationToken)
+    {
+        InMemoryLocalStoreAdapterValidation.ValidateStreamId(streamId, nameof(streamId));
+        cancellationToken.ThrowIfCancellationRequested();
+        LocalPayloadQuarantineRecord? result;
+        lock (_gate)
+        {
+            ThrowIfReady(cancellationToken);
+            result = _streams.TryGetValue(streamId, out var stream) ? stream.Quarantine : null;
+        }
+
+        return new(result);
+    }
+
+    /// <inheritdoc/>
     public ValueTask DisposeAsync()
     {
         lock (_gate)
@@ -624,5 +695,42 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
         }
 
         return default;
+    }
+
+    /// <summary>Validates that a quarantine request matches the durable stream subscription binding.</summary>
+    /// <param name="request">The quarantine request.</param>
+    /// <param name="stream">The registered stream.</param>
+    /// <exception cref="InvalidOperationException">The supplied subscription does not match the stream.</exception>
+    private static void ValidateQuarantineSubscriptionBinding(LocalPayloadQuarantineRequest request, StreamRecord stream)
+    {
+        if (!request.SubscriptionId.HasValue || request.SubscriptionId.Value == stream.SubscriptionId)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException("The quarantine subscription does not match the stream binding.");
+    }
+
+    /// <summary>Validates that a supplied operation belongs to the quarantined stream.</summary>
+    /// <param name="request">The quarantine request.</param>
+    /// <exception cref="InvalidOperationException">The supplied operation is missing or belongs to another stream.</exception>
+    private void ValidateQuarantineOperationBinding(LocalPayloadQuarantineRequest request)
+    {
+        if (!request.OperationId.HasValue)
+        {
+            return;
+        }
+
+        if (!_operations.TryGetValue(request.OperationId.Value, out var operation))
+        {
+            throw new InvalidOperationException("The quarantine operation is not registered.");
+        }
+
+        if (operation.Operation.StreamId == request.StreamId)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException("The quarantine operation does not belong to the stream.");
     }
 }

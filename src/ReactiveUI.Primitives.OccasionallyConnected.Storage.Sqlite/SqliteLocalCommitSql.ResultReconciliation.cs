@@ -20,13 +20,15 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="storeIdentity">The store identity.</param>
     /// <param name="leasedOperations">The validated leased operations.</param>
     /// <param name="result">The validated result.</param>
+    /// <param name="maximumPayloadBytes">The maximum payload bytes this adapter can materialize.</param>
     /// <exception cref="InvalidOperationException">A rejection contradicts inclusion or requires a snapshot rebuild.</exception>
     internal static void ValidateStatusOnlyReconciliation(
         SqliteConnection connection,
         SqliteTransaction transaction,
         string storeIdentity,
         IReadOnlyList<SyncOperation> leasedOperations,
-        RemoteSyncResult result)
+        RemoteSyncResult result,
+        long maximumPayloadBytes)
     {
         var operationStreams = GetLeasedOperationStreams(leasedOperations);
         for (var index = 0; index < result.Operations.Count; index++)
@@ -42,7 +44,7 @@ internal static partial class SqliteLocalCommitSql
                 throw new InvalidOperationException("A rejection contradicts authoritative operation inclusion.");
             }
 
-            var snapshot = ReadSnapshot(connection, transaction, storeIdentity, operationStreams[operation.OperationId])
+            var snapshot = ReadSnapshot(connection, transaction, storeIdentity, operationStreams[operation.OperationId], maximumPayloadBytes)
                 ?? throw new InvalidOperationException(MissingSnapshotMessage);
             if (snapshot.AuthoritativeState is not null)
             {
@@ -56,9 +58,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="transaction">The transaction.</param>
     /// <param name="storeIdentity">The store identity.</param>
     /// <param name="leasedOperations">The validated leased operations.</param>
-    /// <param name="result">The validated result.</param>
-    /// <param name="snapshotMutations">The replacement mutations.</param>
-    /// <param name="savedAtUtc">The snapshot save timestamp.</param>
+    /// <param name="plan">The snapshot reconciliation plan.</param>
     /// <returns>The committed snapshots.</returns>
     /// <exception cref="InvalidOperationException">The replacement set or revision fence is invalid.</exception>
     internal static List<LocalSnapshot> CreateResultReconciliationSnapshots(
@@ -66,21 +66,19 @@ internal static partial class SqliteLocalCommitSql
         SqliteTransaction transaction,
         string storeIdentity,
         IReadOnlyList<SyncOperation> leasedOperations,
-        RemoteSyncResult result,
-        IReadOnlyList<SnapshotMutation> snapshotMutations,
-        DateTimeOffset savedAtUtc)
+        SqliteResultReconciliationPlan plan)
     {
         var operationStreams = GetLeasedOperationStreams(leasedOperations);
-        var requiredStreams = GetResultReconciliationStreams(connection, transaction, storeIdentity, operationStreams, result);
-        if (snapshotMutations.Count != requiredStreams.Count)
+        var requiredStreams = GetResultReconciliationStreams(connection, transaction, storeIdentity, operationStreams, plan.Result);
+        if (plan.SnapshotMutations.Count != requiredStreams.Count)
         {
             throw new InvalidOperationException("Each affected stream requires exactly one snapshot replacement.");
         }
 
-        List<LocalSnapshot> snapshots = [with(capacity: snapshotMutations.Count)];
-        for (var index = 0; index < snapshotMutations.Count; index++)
+        List<LocalSnapshot> snapshots = [with(capacity: plan.SnapshotMutations.Count)];
+        for (var index = 0; index < plan.SnapshotMutations.Count; index++)
         {
-            var mutation = snapshotMutations[index];
+            var mutation = plan.SnapshotMutations[index];
             SqliteLocalCommitValidation.ValidateSnapshotMutation(mutation);
             if (!requiredStreams.Remove(mutation.StreamId))
             {
@@ -88,7 +86,7 @@ internal static partial class SqliteLocalCommitSql
             }
 
             var stream = ReadStreamState(connection, transaction, storeIdentity, mutation.StreamId);
-            var current = ReadSnapshot(connection, transaction, storeIdentity, mutation.StreamId)
+            var current = ReadSnapshot(connection, transaction, storeIdentity, mutation.StreamId, plan.MaximumPayloadBytes)
                 ?? throw new InvalidOperationException(MissingSnapshotMessage);
             var authoritative = current.AuthoritativeState
                 ?? throw new InvalidOperationException("The stream requires an authoritative checkpoint before reconciliation.");
@@ -108,7 +106,7 @@ internal static partial class SqliteLocalCommitSql
                 stream.ServerCursor,
                 mutation.State,
                 checked(current.Revision + 1),
-                savedAtUtc) { AuthoritativeState = authoritative });
+                plan.SavedAtUtc) { AuthoritativeState = authoritative });
         }
 
         return snapshots;
@@ -121,6 +119,7 @@ internal static partial class SqliteLocalCommitSql
     /// <param name="operation">The leased operation to dead-letter.</param>
     /// <param name="mutation">The replacement mutation.</param>
     /// <param name="savedAtUtc">The snapshot save timestamp.</param>
+    /// <param name="maximumPayloadBytes">The maximum payload bytes this adapter can materialize.</param>
     /// <returns>The committed replacement snapshot.</returns>
     /// <exception cref="InvalidOperationException">The operation is already included, terminal, or the snapshot is stale.</exception>
     internal static LocalSnapshot CreateDeadLetterSnapshot(
@@ -129,14 +128,15 @@ internal static partial class SqliteLocalCommitSql
         string storeIdentity,
         SyncOperation operation,
         SnapshotMutation mutation,
-        DateTimeOffset savedAtUtc)
+        DateTimeOffset savedAtUtc,
+        long maximumPayloadBytes)
     {
         SqliteLocalCommitValidation.ValidateSnapshotMutation(mutation);
         ValidateDeadLetterOperationTarget(connection, transaction, storeIdentity, operation, mutation);
         ValidateDeadLetterOperationStatus(connection, transaction, storeIdentity, operation.OperationId);
 
         var stream = ReadStreamState(connection, transaction, storeIdentity, mutation.StreamId);
-        var current = ReadSnapshot(connection, transaction, storeIdentity, mutation.StreamId)
+        var current = ReadSnapshot(connection, transaction, storeIdentity, mutation.StreamId, maximumPayloadBytes)
             ?? throw new InvalidOperationException(MissingSnapshotMessage);
         var authoritative = current.AuthoritativeState
             ?? throw new InvalidOperationException("The stream requires an authoritative checkpoint before dead-letter reconciliation.");

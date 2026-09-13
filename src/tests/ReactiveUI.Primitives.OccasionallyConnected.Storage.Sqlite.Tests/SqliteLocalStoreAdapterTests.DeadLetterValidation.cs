@@ -714,7 +714,8 @@ public sealed partial class SqliteLocalStoreAdapterTests
             StoreIdentity,
             operation,
             CreateSnapshotMutation(1, ResultOptimisticLocalText),
-            DeadLetterTimestamp);
+            DeadLetterTimestamp,
+            NormalWorkerBytes);
     }
 
     /// <summary>Runs the low-level one-row lease release expecting failure.</summary>

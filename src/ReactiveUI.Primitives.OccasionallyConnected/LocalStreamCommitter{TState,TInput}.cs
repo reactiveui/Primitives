@@ -131,7 +131,7 @@ internal sealed partial class LocalStreamCommitter<TState, TInput>
                 .SerializeAsync(_options.Contracts.InputContractId, _options.Contracts.InputSchemaVersion, input, cancellationToken)
                 .ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
-            var decodedInput = await DecodeInputAsync(payload, cancellationToken).ConfigureAwait(false);
+            var decodedInput = await DecodeLocalInputAsync(payload, cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
 
             var operation = CreateOperation(policy, observed.NextClientSequence, operationId, timestamp, payload, baseVersion);
@@ -475,61 +475,6 @@ internal sealed partial class LocalStreamCommitter<TState, TInput>
         _recovered = true;
     }
 
-    /// <summary>Decodes recovered store state.</summary>
-    /// <param name="recovered">The recovered stream.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The recovered committer state.</returns>
-    /// <exception cref="InvalidOperationException">The recovered stream or snapshot is not safe to use.</exception>
-    private async ValueTask<LocalStreamCommitterState<TState>> DecodeRecoveredStateAsync(
-        RecoveredStream recovered,
-        CancellationToken cancellationToken)
-    {
-        if (recovered is null)
-        {
-            throw new InvalidOperationException("Local store recovery returned no stream state.");
-        }
-
-        if (recovered.SubscriptionId != _options.SubscriptionId)
-        {
-            throw new InvalidOperationException("Recovered subscription identity does not match the configured subscription.");
-        }
-
-        if (recovered.Snapshot is null)
-        {
-            return DecodePristineRecovery(recovered);
-        }
-
-        ValidateSnapshotHeader(recovered.Snapshot);
-        ValidateRecoveredCounters(recovered, recovered.Snapshot);
-        try
-        {
-            var value = await _options.Dependencies.Serializer
-                .DeserializeAsync(recovered.Snapshot.State, typeof(TState), cancellationToken)
-                .ConfigureAwait(false);
-            cancellationToken.ThrowIfCancellationRequested();
-            if (value is TState typed)
-            {
-                return new(
-                    _options.StreamId,
-                    recovered.SubscriptionId,
-                    typed,
-                    recovered.Snapshot.Revision,
-                    recovered.NextClientSequence,
-                    recovered.ServerCursor) { MaterializedPayload = recovered.Snapshot.State, AuthoritativePayload = recovered.Snapshot.AuthoritativeState };
-            }
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception exception)
-        {
-            throw new InvalidOperationException("Recovered snapshot could not be decoded.", exception);
-        }
-
-        throw new InvalidOperationException("Recovered snapshot decoded to the wrong state type.");
-    }
-
     /// <summary>Decodes recovery when no snapshot exists.</summary>
     /// <param name="recovered">The recovered stream.</param>
     /// <returns>The initial pristine state.</returns>
@@ -616,6 +561,27 @@ internal sealed partial class LocalStreamCommitter<TState, TInput>
         return typed;
     }
 
+    /// <summary>Decodes unpublished or caller-supplied local input without quarantining the stream.</summary>
+    /// <param name="payload">The input payload.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The decoded input.</returns>
+    /// <exception cref="InvalidOperationException">The input payload is rejected.</exception>
+    private async ValueTask<TInput> DecodeLocalInputAsync(PayloadEnvelope payload, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await DecodeInputAsync(payload, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (PayloadSchemaException exception)
+        {
+            throw new InvalidOperationException("Local input payload could not be decoded.", exception);
+        }
+    }
+
     /// <summary>Decodes filtered remote event inputs.</summary>
     /// <param name="events">The remote events to decode.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
@@ -627,12 +593,34 @@ internal sealed partial class LocalStreamCommitter<TState, TInput>
         List<TInput> decodedInputs = [with(capacity: events.Count)];
         foreach (var remoteEvent in events)
         {
-            var decoded = await DecodeInputAsync(remoteEvent.Payload, cancellationToken).ConfigureAwait(false);
+            var decoded = await DecodeRemoteInputAsync(remoteEvent, cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
             decodedInputs.Add(decoded);
         }
 
         return new System.Collections.ObjectModel.ReadOnlyCollection<TInput>(decodedInputs);
+    }
+
+    /// <summary>Decodes one received remote event input.</summary>
+    /// <param name="remoteEvent">The remote event.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The decoded input.</returns>
+    /// <exception cref="InvalidOperationException">The payload is quarantined or decoded to the wrong type.</exception>
+    private async ValueTask<TInput> DecodeRemoteInputAsync(RemoteEvent remoteEvent, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await DecodeInputAsync(remoteEvent.Payload, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (PayloadSchemaException exception)
+        {
+            await QuarantineRemoteEventAsync(remoteEvent, exception, cancellationToken).ConfigureAwait(false);
+            throw CreateQuarantinedStreamException("Remote event payload was quarantined.", exception);
+        }
     }
 
     /// <summary>Applies filtered remote events to a projected state.</summary>

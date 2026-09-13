@@ -275,6 +275,29 @@ public sealed partial class SqliteLocalCommitStoreTests
         await Assert.That(batch.Operations[0].OperationId).IsEqualTo(operation.OperationId);
     }
 
+    /// <summary>Verifies schema version seven databases migrate to quarantine-capable schema version eight.</summary>
+    /// <returns>A task that represents the asynchronous test.</returns>
+    [Test]
+    public async Task WhenPreQuarantineSchemaMigratesToCurrent_ThenQuarantineMarkersCanBeWritten()
+    {
+        using var database = TempDatabase.Create();
+        await using (var connection = OpenRawConnection(database.Path))
+        {
+            await using var transaction = connection.BeginTransaction();
+            SqliteStoreSchemaTests.CreatePreQuarantineLocalCommitSchema(connection, transaction);
+            transaction.Commit();
+        }
+
+        using var store = CreateInitializedStore(database.Path);
+        var operation = CommitOperation(store, Stream, clientSequence: 1, OperationPayloadText);
+        var quarantine = SqliteLocalQuarantineRequestNormalizer.Normalize(CreateQuarantineRequest(operation));
+        _ = store.QuarantinePayload(quarantine, CancellationToken.None);
+        var marker = store.GetPayloadQuarantine(Stream, CancellationToken.None);
+
+        await Assert.That(ReadUserVersion(database.Path)).IsEqualTo(SchemaVersion);
+        await Assert.That(marker?.OperationId).IsEqualTo(operation.OperationId);
+    }
+
     /// <summary>Leases a single batch from the store.</summary>
     /// <param name="store">The store.</param>
     /// <param name="request">The lease request.</param>
@@ -300,6 +323,21 @@ public sealed partial class SqliteLocalCommitStoreTests
 
         throw new InvalidOperationException("Expected a leased operation batch.");
     }
+
+    /// <summary>Creates a quarantine request for a committed operation.</summary>
+    /// <param name="operation">The committed operation.</param>
+    /// <returns>The quarantine request.</returns>
+    private static LocalPayloadQuarantineRequest CreateQuarantineRequest(SyncOperation operation) =>
+        new()
+        {
+            StreamId = operation.StreamId,
+            OperationId = operation.OperationId,
+            Source = LocalPayloadQuarantineSource.OutboxOperation,
+            Reason = LocalPayloadQuarantineReason.PayloadHashMismatch,
+            ReasonCode = "PayloadHashMismatch",
+            Envelope = operation.Payload,
+            ObservedAtUtc = operation.TimestampUtc,
+        };
 
     /// <summary>Commits one operation for a lease test.</summary>
     /// <param name="store">The store.</param>

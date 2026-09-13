@@ -2,7 +2,7 @@
 namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 
 [System.Diagnostics.DebuggerDisplay("Capabilities = {Capabilities}")]
-public sealed class SqliteLocalStoreAdapter : ReactiveUI.Primitives.OccasionallyConnected.ILocalStoreAdapter
+public sealed class SqliteLocalStoreAdapter : ReactiveUI.Primitives.OccasionallyConnected.ILocalPayloadQuarantineStore, ReactiveUI.Primitives.OccasionallyConnected.ILocalStoreAdapter
 {
     public SqliteLocalStoreAdapter(string databasePath) { }
     public SqliteLocalStoreAdapter(string databasePath, ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite.SqliteLocalStoreAdapterOptions options) { }
@@ -15,11 +15,13 @@ public sealed class SqliteLocalStoreAdapter : ReactiveUI.Primitives.Occasionally
     public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.CompactionResult> CompactAsync(ReactiveUI.Primitives.OccasionallyConnected.CompactionRequest request, System.Threading.CancellationToken cancellationToken) { }
     public System.Threading.Tasks.ValueTask DisposeAsync() { }
     public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.SyncOperationStatus?> GetOperationStatusAsync(ReactiveUI.Primitives.OccasionallyConnected.OperationId operationId, System.Threading.CancellationToken cancellationToken) { }
+    public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.LocalPayloadQuarantineRecord?> GetPayloadQuarantineAsync(ReactiveUI.Primitives.OccasionallyConnected.StreamId streamId, System.Threading.CancellationToken cancellationToken) { }
     public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.SubscriptionId> GetOrCreateSubscriptionIdAsync(ReactiveUI.Primitives.OccasionallyConnected.StreamId streamId, ReactiveUI.Primitives.OccasionallyConnected.SubscriptionId? preferredId, System.Threading.CancellationToken cancellationToken) { }
     public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.RetryState?> GetRetryStateAsync(ReactiveUI.Primitives.OccasionallyConnected.OperationId operationId, System.Threading.CancellationToken cancellationToken) { }
     public System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<System.Guid>> GetUnappliedEventIdsAsync(ReactiveUI.Primitives.OccasionallyConnected.StreamId streamId, System.Collections.Generic.IReadOnlyList<System.Guid> eventIds, System.Threading.CancellationToken cancellationToken) { }
     public System.Threading.Tasks.ValueTask InitializeAsync(ReactiveUI.Primitives.OccasionallyConnected.LocalStoreInitialization initialization, System.Threading.CancellationToken cancellationToken) { }
     public System.Collections.Generic.IAsyncEnumerable<ReactiveUI.Primitives.OccasionallyConnected.LeasedOperationBatch> LeasePendingOperationsAsync(ReactiveUI.Primitives.OccasionallyConnected.OutboxLeaseRequest request, System.Threading.CancellationToken cancellationToken) { }
+    public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.LocalPayloadQuarantineResult> QuarantinePayloadAsync(ReactiveUI.Primitives.OccasionallyConnected.LocalPayloadQuarantineRequest request, System.Threading.CancellationToken cancellationToken) { }
     public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.RecoveredStream> RecoverStreamAsync(ReactiveUI.Primitives.OccasionallyConnected.StreamId streamId, ReactiveUI.Primitives.OccasionallyConnected.SubscriptionId subscriptionId, System.Threading.CancellationToken cancellationToken) { }
     public System.Threading.Tasks.ValueTask ReleaseLeaseAsync(System.Guid leaseId, System.Threading.CancellationToken cancellationToken) { }
     public System.Threading.Tasks.ValueTask RenewLeaseAsync(System.Guid leaseId, System.TimeSpan extension, System.Threading.CancellationToken cancellationToken) { }

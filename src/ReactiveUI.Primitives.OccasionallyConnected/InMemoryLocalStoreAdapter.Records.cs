@@ -137,6 +137,9 @@ internal sealed partial class InMemoryLocalStoreAdapter
         /// <summary>Gets or sets the current local snapshot.</summary>
         internal LocalSnapshot? Snapshot { get; set; }
 
+        /// <summary>Gets or sets the local payload quarantine marker.</summary>
+        internal LocalPayloadQuarantineRecord? Quarantine { get; set; }
+
         /// <summary>Gets the subscription identifier.</summary>
         internal SubscriptionId SubscriptionId { get; }
     }

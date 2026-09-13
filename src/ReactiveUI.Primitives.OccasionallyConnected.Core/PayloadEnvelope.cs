@@ -54,4 +54,14 @@ public sealed record PayloadEnvelope
 
     /// <summary>Gets the cryptographic hash for <see cref="Payload"/>.</summary>
     public string PayloadHash { get; init; }
+
+    /// <summary>Copies a bounded prefix of the stored canonical payload bytes.</summary>
+    /// <param name="maximumBytes">The maximum number of bytes to copy.</param>
+    /// <returns>An owned payload prefix copy.</returns>
+    internal ReadOnlyMemory<byte> CopyPayloadPrefix(int maximumBytes)
+    {
+        ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(maximumBytes);
+        var prefixLength = Math.Min(_payload.Length, maximumBytes);
+        return _payload.AsSpan(0, prefixLength).ToArray();
+    }
 }

@@ -182,7 +182,12 @@ internal sealed partial class LocalStreamCommitter<TState, TInput>
         var recovered = await _options.Dependencies.Store.RecoverStreamAsync(_options.StreamId, _options.SubscriptionId, cancellationToken).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
         ValidateReplayRecovery(recovered, observed);
-        var prepared = await PrepareProjectionStateAsync(observed with { MaterializedPayload = authoritative }, cancellationToken).ConfigureAwait(false);
+        var prepared = await PrepareProjectionStateAsync(
+            observed with { MaterializedPayload = authoritative },
+            LocalPayloadQuarantineSource.Snapshot,
+            null,
+            observed.ServerCursor,
+            cancellationToken).ConfigureAwait(false);
         var state = await ReplayResultOperationsAsync(prepared.State, recovered.ReplayOperations, rejected, cancellationToken).ConfigureAwait(false);
         var payload = await _options.Dependencies.Serializer
             .SerializeAsync(_options.Contracts.StateContractId, _options.Contracts.StateSchemaVersion, state, cancellationToken)
@@ -225,7 +230,7 @@ internal sealed partial class LocalStreamCommitter<TState, TInput>
             }
 
             ValidateRemotePayload(operation.Payload);
-            var input = await DecodeInputAsync(operation.Payload, cancellationToken).ConfigureAwait(false);
+            var input = await DecodePersistedOutboxInputAsync(operation, cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
             state = _options.Dependencies.Projection.ApplyLocal(state, input, operation);
             cancellationToken.ThrowIfCancellationRequested();

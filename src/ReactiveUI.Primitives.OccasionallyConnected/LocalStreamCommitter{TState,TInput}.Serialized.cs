@@ -36,7 +36,7 @@ internal sealed partial class LocalStreamCommitter<TState, TInput>
                 throw new InvalidOperationException("Serialized operation client sequence does not match the next expected sequence.");
             }
 
-            var decodedInput = await DecodeInputAsync(operation.Payload, cancellationToken).ConfigureAwait(false);
+            var decodedInput = await DecodeLocalInputAsync(operation.Payload, cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
             var prepared = await PrepareProjectionStateAsync(observed, cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();

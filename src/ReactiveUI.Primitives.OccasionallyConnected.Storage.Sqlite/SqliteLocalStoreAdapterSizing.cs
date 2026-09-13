@@ -197,6 +197,22 @@ internal sealed class SqliteLocalStoreAdapterSizing
         return Add(ObjectHeaderBytes, Add(streamBytes, DateTimeOffsetBytes + LongBytes));
     }
 
+    /// <summary>Computes retained input bytes for payload quarantine.</summary>
+    /// <param name="request">The normalized request.</param>
+    /// <returns>The retained bytes.</returns>
+    internal long QuarantineBytes(SqliteNormalizedPayloadQuarantineRequest request)
+    {
+        var normalizedRequest = request.Request;
+        var bytes = Add(ObjectHeaderBytes, StreamIdBytes(normalizedRequest.StreamId));
+        bytes = Add(bytes, normalizedRequest.SubscriptionId.HasValue ? GuidBytes : NullableMarkerBytes);
+        bytes = Add(bytes, normalizedRequest.OperationId.HasValue ? GuidBytes : NullableMarkerBytes);
+        bytes = Add(bytes, normalizedRequest.EventId.HasValue ? GuidBytes : NullableMarkerBytes);
+        bytes = Add(bytes, IntBytes + IntBytes + DateTimeOffsetBytes);
+        bytes = Add(bytes, StringBytes(normalizedRequest.ReasonCode));
+        bytes = Add(bytes, StringBytes(normalizedRequest.Cursor));
+        return Add(bytes, QuarantineEvidenceBytes(request.Evidence));
+    }
+
     /// <summary>Computes retained input bytes for a stream identifier.</summary>
     /// <param name="streamId">The stream identifier.</param>
     /// <returns>The retained bytes.</returns>
@@ -277,6 +293,20 @@ internal sealed class SqliteLocalStoreAdapterSizing
         bytes = Add(bytes, StringBytes(payload.ContentType));
         bytes = Add(bytes, payload.PayloadLength);
         return Add(bytes, StringBytes(payload.PayloadHash));
+    }
+
+    /// <summary>Computes retained input bytes for quarantine evidence.</summary>
+    /// <param name="evidence">The evidence.</param>
+    /// <returns>The retained bytes.</returns>
+    private long QuarantineEvidenceBytes(LocalPayloadQuarantineEvidence evidence)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(evidence);
+        var bytes = Add(ObjectHeaderBytes, StringBytes(evidence.ContractId));
+        bytes = Add(bytes, evidence.SchemaVersion.HasValue ? IntBytes : NullableMarkerBytes);
+        bytes = Add(bytes, StringBytes(evidence.ContentType));
+        bytes = Add(bytes, IntBytes);
+        bytes = Add(bytes, StringBytes(evidence.PayloadHash));
+        return Add(bytes, evidence.PayloadPrefix.Length);
     }
 
     /// <summary>Computes retained input bytes for operation policy.</summary>

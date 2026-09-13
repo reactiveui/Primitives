@@ -610,7 +610,7 @@ public sealed partial class SqliteLocalCommitStoreTests
     {
         using var connection = OpenRawConnection(path);
         using var command = connection.CreateCommand();
-        command.CommandText = "PRAGMA user_version = 8;";
+        command.CommandText = "PRAGMA user_version = 9;";
         _ = command.ExecuteNonQuery();
     }
 
