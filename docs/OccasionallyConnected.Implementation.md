@@ -869,3 +869,16 @@ selection to stop before the gap. Root verification passed 189 Server tests on e
 MTP-confirmed 100% line and branch coverage (2254/2249/2249/2248 lines; 749 branches each). All eight Server Release
 targets build with zero warnings/errors. Evidence: server-pages-integration worktree, artifacts/root-server-pages.
 Durable subscription acknowledgements and the public server hub remain integration work.
+
+### Stage 6: prepared transport admission
+
+Core exposes a companion preparation contract and an owned, one-shot prepared push. Loopback reserves bounded request
+capacity, validates the complete batch and measures its logical size before any send. Payload negotiation and logical
+transport size have separate limits. Idle handles release retained batches on owner disposal; active sends publish
+ownership before callbacks and drain during disposal. Preparation cancellation does not become a later send token.
+
+Root source review and combined verification passed 373 Core and 712 runtime tests separately on each modern target.
+MTP confirms 100% line/branch coverage for both packages on all four targets: Core 940 lines/372 branches; runtime
+3705/3658/3658/3651 lines and 1776/1776/1776/1780 branches. Both libraries build all eight Release targets with no
+warnings/errors. Evidence: prepared-push worktree, artifacts/root-prepared. The engine must still integrate preparation
+before the durable attempt barrier; no engine completeness is claimed here.

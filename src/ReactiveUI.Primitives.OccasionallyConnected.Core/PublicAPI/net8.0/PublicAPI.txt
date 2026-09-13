@@ -305,6 +305,32 @@ public static class IRemoteTransportAdapterExtensions
         public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.IRemoteTransportSession> ConnectAsync(ReactiveUI.Primitives.OccasionallyConnected.TransportConnectRequest request) { }
     }
 }
+public interface IPreparedRemotePush : System.IAsyncDisposable
+{
+    ReactiveUI.Primitives.OccasionallyConnected.SyncBatch Batch { get; }
+    long EncodedSizeBytes { get; }
+    System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.RemoteSyncResult> SendAsync(System.Threading.CancellationToken cancellationToken) { }
+}
+public static class IPreparedRemotePushExtensions
+{
+    extension(ReactiveUI.Primitives.OccasionallyConnected.IPreparedRemotePush prepared)
+    {
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.RemoteSyncResult> SendAsync() { }
+    }
+}
+public interface IRemoteTransportBatchPreparer
+{
+    System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.IPreparedRemotePush> PreparePushAsync(ReactiveUI.Primitives.OccasionallyConnected.SyncBatch batch, System.Threading.CancellationToken cancellationToken) { }
+}
+public static class IRemoteTransportBatchPreparerExtensions
+{
+    extension(ReactiveUI.Primitives.OccasionallyConnected.IRemoteTransportBatchPreparer preparer)
+    {
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.IPreparedRemotePush> PreparePushAsync(ReactiveUI.Primitives.OccasionallyConnected.SyncBatch batch) { }
+    }
+}
 public interface IRemoteTransportSession : System.IAsyncDisposable
 {
     ReactiveUI.Primitives.OccasionallyConnected.NegotiatedCapabilities NegotiatedCapabilities { get; }

@@ -59,6 +59,7 @@ internal static class LoopbackTransportValidator
         ValidatePositive(options.MaximumConcurrentAcknowledgements, nameof(options.MaximumConcurrentAcknowledgements));
         ValidatePositive(options.MaximumConcurrentSubscriptions, nameof(options.MaximumConcurrentSubscriptions));
         ValidatePositive(options.MaximumReceiveEvents, nameof(options.MaximumReceiveEvents));
+        ValidatePositiveLogicalBatchBytes(options.MaximumLogicalBatchBytes);
         ValidatePositive(options.MaximumCompletedOperations, nameof(options.MaximumCompletedOperations));
         ValidatePositive(options.MaximumMetadataEntries, nameof(options.MaximumMetadataEntries));
         ValidatePositive(options.MaximumStringBytes, nameof(options.MaximumStringBytes));
@@ -88,22 +89,26 @@ internal static class LoopbackTransportValidator
     /// <summary>Validates an outbound batch after a bounded push slot has been admitted.</summary>
     /// <param name="batch">The outbound batch.</param>
     /// <param name="options">The trusted loopback bounds.</param>
+    /// <returns>The exact logical encoded size of the validated batch in bytes.</returns>
     /// <exception cref="InvalidOperationException">The batch exceeds loopback bounds or contains malformed operations.</exception>
-    internal static void ValidateOutgoingBatch(SyncBatch batch, LoopbackTransportAdapterOptions options)
+    internal static long ValidateOutgoingBatch(SyncBatch batch, LoopbackTransportAdapterOptions options)
     {
         ValidateOutgoingHeader(batch, options);
         long total = GuidByteCount + IntByteCount;
+        long payloadBytes = 0;
         StreamId? streamId = null;
         HashSet<OperationId> operationIds = [];
         HashSet<long> clientSequences = [];
         var previousSequence = 0L;
         foreach (var operation in batch.Operations)
         {
-            CountOutgoingOperation(operation, options, ref total);
+            payloadBytes += CountOutgoingOperation(operation, options, ref total);
             ValidateOperationMembership(operation, ref streamId, operationIds, clientSequences, ref previousSequence);
         }
 
-        ValidateLogicalByteBound(total, options.PeerCapabilities.MaximumBatchBytes, "The synchronization batch exceeds loopback byte bounds.");
+        ValidateLogicalByteBound(payloadBytes, options.PeerCapabilities.MaximumBatchBytes, "The synchronization batch exceeds negotiated payload byte bounds.");
+        ValidateLogicalByteBound(total, options.MaximumLogicalBatchBytes, "The synchronization batch exceeds loopback byte bounds.");
+        return total;
     }
 
     /// <summary>Runs the ValidateSubscribeRequest loopback validation step.</summary>
@@ -349,6 +354,19 @@ internal static class LoopbackTransportValidator
         throw new InvalidOperationException("Maximum batch bytes must be positive.");
     }
 
+    /// <summary>Runs the ValidatePositiveLogicalBatchBytes loopback validation step.</summary>
+    /// <param name="maximumLogicalBatchBytes">The maximumLogicalBatchBytes value for ValidatePositiveLogicalBatchBytes.</param>
+    /// <exception cref="InvalidOperationException">Validation fails during ValidatePositiveLogicalBatchBytes.</exception>
+    private static void ValidatePositiveLogicalBatchBytes(long maximumLogicalBatchBytes)
+    {
+        if (maximumLogicalBatchBytes > 0)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException("Maximum logical batch bytes must be positive.");
+    }
+
     /// <summary>Runs the ValidateOptionalRetention loopback validation step.</summary>
     /// <param name="retention">The retention value for ValidateOptionalRetention.</param>
     /// <param name="name">The name value for ValidateOptionalRetention.</param>
@@ -512,11 +530,12 @@ internal static class LoopbackTransportValidator
     /// <param name="operation">The operation value for CountOutgoingOperation.</param>
     /// <param name="options">The options value for CountOutgoingOperation.</param>
     /// <param name="total">The total value for CountOutgoingOperation.</param>
+    /// <returns>The operation payload byte count.</returns>
     /// <exception cref="ArgumentNullException">A required reference is missing during CountOutgoingOperation.</exception>
     /// <exception cref="InvalidOperationException">Validation fails during CountOutgoingOperation.</exception>
-    private static void CountOutgoingOperation(SyncOperation? operation, LoopbackTransportAdapterOptions options, ref long total)
+    private static long CountOutgoingOperation(SyncOperation? operation, LoopbackTransportAdapterOptions options, ref long total)
     {
-        if (operation is null || operation.OperationId.Value == Guid.Empty || operation.StreamId.Value is null || operation.ClientSequence <= 0)
+        if (operation is null || operation.OperationId.Value == Guid.Empty || operation.StreamId.Value is null || operation.ClientSequence <= 0 || operation.Payload is not { } payload)
         {
             throw new InvalidOperationException("The synchronization batch contains a malformed operation.");
         }
@@ -527,8 +546,9 @@ internal static class LoopbackTransportValidator
         total += CountRequiredString(operation.StreamId.Value, options.MaximumStringBytes, "The synchronization batch contains a malformed stream identifier.");
         total += LongByteCount + DateTimeOffsetByteCount + EnumByteCount + NullableMarkerByteCount;
         total += CountOptionalString(operation.BaseVersion, options.MaximumStringBytes, "The synchronization batch contains an oversized base version.");
-        total += CountPayload(operation.Payload, options, "The synchronization batch contains a malformed payload.");
+        total += CountPayload(payload, options, "The synchronization batch contains a malformed payload.");
         total += CountMetadata(operation.Metadata, options, "The synchronization batch contains malformed metadata.");
+        return payload.PayloadLength;
     }
 
     /// <summary>Runs the ValidateOperationType loopback validation step.</summary>

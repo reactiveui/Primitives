@@ -60,6 +60,7 @@ public record LoopbackTransportAdapterOptions : System.IEquatable<ReactiveUI.Pri
     public int MaximumConcurrentRequests { get; init; }
     public int MaximumConcurrentSubscriptions { get; init; }
     public int MaximumMetadataEntries { get; init; }
+    public long MaximumLogicalBatchBytes { get; init; }
     public int MaximumReceiveEvents { get; init; }
     public int MaximumStringBytes { get; init; }
     public required ReactiveUI.Primitives.OccasionallyConnected.NegotiatedCapabilities PeerCapabilities { get; init; }

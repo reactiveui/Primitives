@@ -59,6 +59,9 @@ public sealed partial class LoopbackTransportAdapterTests
     /// <summary>The expected count for two sequential batches.</summary>
     private const int ExpectedSequentialBatchCount = 2;
 
+    /// <summary>The request slots needed for one idle prepared push and one active prepared send.</summary>
+    private const int DualPreparedRequestSlots = 2;
+
     /// <summary>The peer operation count limit.</summary>
     private const int PeerMaximumOperations = 8;
 
@@ -174,6 +177,21 @@ public sealed partial class LoopbackTransportAdapterTests
         await Assert.That(hub.AcknowledgeCalls).IsEqualTo(0);
     }
 
+    /// <summary>Verifies loopback options reject nonpositive logical batch byte limits.</summary>
+    /// <returns>The assertion task.</returns>
+    [Test]
+    public async Task ConstructorRejectsNonPositiveMaximumLogicalBatchBytes()
+    {
+        var exception = await Assert.ThrowsExactlyAsync<InvalidOperationException>(
+            static () =>
+            {
+                _ = new LoopbackTransportAdapter(CreateOptions(new RecordingHub()) with { MaximumLogicalBatchBytes = 0 });
+                return Task.CompletedTask;
+            });
+
+        await Assert.That(exception?.Message).Contains("Maximum logical batch bytes");
+    }
+
     /// <summary>Verifies push validates bounds before hub use and validates hub results without retrying.</summary>
     /// <param name="scenario">The rejected push scenario.</param>
     /// <returns>The assertion task.</returns>
@@ -193,7 +211,7 @@ public sealed partial class LoopbackTransportAdapterTests
                 _ => (_, _, _) => ValueTask.FromResult(new ServerSyncResult(CreateResult(batch), [])),
             },
         };
-        var options = CreateOptions(hub) with { PeerCapabilities = CreateCapabilities(maximumBytes: scenario == OversizedScenario ? SmallBatchBytes : DefaultBatchBytes) };
+        var options = CreateOptions(hub) with { MaximumLogicalBatchBytes = scenario == OversizedScenario ? SmallBatchBytes : DefaultBatchBytes };
         await using var adapter = new LoopbackTransportAdapter(options);
         await using var session = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
 
