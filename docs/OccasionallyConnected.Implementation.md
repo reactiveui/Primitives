@@ -882,3 +882,19 @@ MTP confirms 100% line/branch coverage for both packages on all four targets: Co
 3705/3658/3658/3651 lines and 1776/1776/1776/1780 branches. Both libraries build all eight Release targets with no
 warnings/errors. Evidence: prepared-push worktree, artifacts/root-prepared. The engine must still integrate preparation
 before the durable attempt barrier; no engine completeness is claimed here.
+
+### Stage 6: bounded HTTP transport
+
+The HTTP adapter implements negotiation, push, receive polling and acknowledgement with finite request, response,
+subscription and encoded-body bounds. Prepared pushes retain exact serialized bytes and reserved admission before
+sending once. Cancellation and disposal share active-operation drainage, including reentrant disposal and throwing
+cancellation callbacks. Subscription cursors advance only across validated complete batches for the requested stream.
+
+Closed authored JSON metadata covers the protocol DTO allowlist without reflection fallback, generated coverage
+exclusions or suppressions. Duplicate properties, malformed shapes, unsupported versions and oversized responses fail
+before exposure. Tests include actual localhost HTTP exchanges, lost responses, admission pressure and hostile input.
+
+Root added behavioral failing regressions for lifecycle drainage and negotiated bounds, reviewed the complete source,
+and verified 187 HTTP tests on each modern test target. MTP reports 100% line and branch coverage on every target
+(1338/1333/1333/1329 lines; 432 branches each). All eight HTTP Release targets build with zero warnings/errors. Evidence:
+http-review worktree, artifacts/root-http-final. Production server endpoints and packed application acceptance remain.
