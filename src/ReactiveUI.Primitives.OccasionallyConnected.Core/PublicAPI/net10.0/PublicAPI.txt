@@ -59,9 +59,24 @@ public record CompactionResult : System.IEquatable<ReactiveUI.Primitives.Occasio
 public record ConflictContext : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.ConflictContext>
 {
     public ConflictContext(ReactiveUI.Primitives.OccasionallyConnected.ServerState current, System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.SyncOperation> incoming, ReactiveUI.Primitives.OccasionallyConnected.ClientIdentity client) { }
+    public ConflictContext(ReactiveUI.Primitives.OccasionallyConnected.ServerState current, System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.SyncOperation> incoming, ReactiveUI.Primitives.OccasionallyConnected.ClientIdentity client, ReactiveUI.Primitives.OccasionallyConnected.ConflictServerContext? server) { }
     public ReactiveUI.Primitives.OccasionallyConnected.ClientIdentity Client { get; }
     public ReactiveUI.Primitives.OccasionallyConnected.ServerState Current { get; }
     public System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.SyncOperation> Incoming { get; }
+    public ReactiveUI.Primitives.OccasionallyConnected.ConflictServerContext? Server { get; }
+}
+[System.Diagnostics.DebuggerDisplay("{CandidateWrite.ClientId,nq} {CandidateWrite.OperationId,nq}")]
+public record ConflictServerContext : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.ConflictServerContext>
+{
+    public required ReactiveUI.Primitives.OccasionallyConnected.ConflictWriteStamp CandidateWrite { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.ConflictWriteStamp? CurrentWrite { get; init; }
+}
+[System.Diagnostics.DebuggerDisplay("{ClientId,nq} {OperationId,nq}")]
+public record ConflictWriteStamp : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.ConflictWriteStamp>
+{
+    public required string ClientId { get; init; }
+    public required System.DateTimeOffset CommittedAtUtc { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.OperationId OperationId { get; init; }
 }
 public enum ConflictPolicy
 {
