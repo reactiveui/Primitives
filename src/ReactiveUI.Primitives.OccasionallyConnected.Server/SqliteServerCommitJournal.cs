@@ -17,13 +17,19 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Server;
 internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, IServerReceiveJournal, IServerSubscriptionAcknowledgementJournal, IDisposable
 {
     /// <summary>The current durable schema version.</summary>
-    private const int CurrentSchemaVersion = 3;
+    private const int CurrentSchemaVersion = 4;
+
+    /// <summary>The previous durable schema version.</summary>
+    private const int SchemaVersionThree = 3;
 
     /// <summary>The previous durable schema version.</summary>
     private const int SchemaVersionTwo = 2;
 
     /// <summary>The original durable schema version.</summary>
     private const int SchemaVersionOne = 1;
+
+    /// <summary>The SQL statement that stamps schema version three during migration.</summary>
+    private const string SetSchemaVersionThreeSql = "PRAGMA user_version = 3;";
 
     /// <summary>The SQL statement that stamps schema version two during migration.</summary>
     private const string SetSchemaVersionTwoSql = "PRAGMA user_version = 2;";
@@ -214,6 +220,30 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
             tenant_id TEXT NOT NULL,
             stream_id TEXT NOT NULL,
             client_id TEXT NOT NULL,
+            initial_position_kind INTEGER NOT NULL,
+            initial_sequence INTEGER NULL,
+            initial_timestamp_utc TEXT NULL,
+            initial_cursor TEXT NULL,
+            initial_anchor_cursor TEXT NULL,
+            initial_anchor_group_sequence INTEGER NOT NULL,
+            initial_anchor_resolved INTEGER NOT NULL,
+            acknowledged_cursor TEXT NULL,
+            acknowledged_group_sequence INTEGER NOT NULL,
+            latest_offered_cursor TEXT NULL,
+            latest_offered_group_sequence INTEGER NOT NULL,
+            acknowledged_at_utc TEXT NULL,
+            updated_at_utc TEXT NOT NULL,
+            last_touched_utc TEXT NOT NULL,
+            logical_bytes INTEGER NOT NULL);
+        """;
+
+    /// <summary>The SQL definition for the schema-three subscription acknowledgement table.</summary>
+    private const string SchemaThreeSubscriptionsTableSql = """
+        CREATE TABLE oc_server_journal_subscriptions (
+            subscription_id TEXT NOT NULL PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            stream_id TEXT NOT NULL,
+            client_id TEXT NOT NULL,
             acknowledged_cursor TEXT NULL,
             acknowledged_group_sequence INTEGER NOT NULL,
             latest_offered_cursor TEXT NULL,
@@ -387,13 +417,23 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
     {
         ThrowIfDisposed();
         ServerSubscriptionJournalOperations.ValidateIdentity(identity);
+        return RegisterSubscription(new ServerSubscriptionRegistrationRequest(identity, StartPosition.FromSequence(0)));
+    }
+
+    /// <summary>Registers or reads a trusted subscription binding with an initial stream position.</summary>
+    /// <param name="request">The registration request.</param>
+    /// <returns>The persisted subscription state.</returns>
+    internal ServerSubscriptionState RegisterSubscription(ServerSubscriptionRegistrationRequest request)
+    {
+        ThrowIfDisposed();
+        ServerSubscriptionJournalOperations.ValidateRegistrationRequest(request);
         var observedUtc = _options.TimeProvider.GetUtcNow();
         using var connection = OpenConnection();
         using var transaction = connection.BeginTransaction(IsolationLevel.Serializable, deferred: false);
         ValidateExistingSchema(connection, transaction);
         ValidateReadCapacity(connection, transaction);
         var updatedUtc = ServerCommitJournalOperations.Max(ReadLatestUtc(connection, transaction), observedUtc);
-        var state = RegisterSubscription(connection, transaction, identity, updatedUtc, _options);
+        var state = RegisterSubscription(connection, transaction, request, updatedUtc, _options);
         WriteLatestUtc(connection, transaction, updatedUtc);
         transaction.Commit();
         return state;
@@ -413,7 +453,15 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
         ValidateReadCapacity(connection, transaction);
         var record = ReadRegisteredSubscription(connection, transaction, request.Identity);
         var stream = ReadStreamRecord(connection, transaction, request.Identity.StreamKey);
-        var result = ServerReceivePageOperations.Create(ServerSubscriptionJournalOperations.CreateReceiveRequest(request), stream);
+        var initialRead = ResolveInitialReadCursor(connection, transaction, record, request.Cursor, stream, observedUtc);
+        if (!initialRead.HasReadCursor)
+        {
+            transaction.Commit();
+            return initialRead.PendingResult;
+        }
+
+        var result = ServerReceivePageOperations.Create(ServerSubscriptionJournalOperations.CreateReceiveRequest(request with { Cursor = initialRead.ReadCursor }), stream);
+        result = ServerSubscriptionStartPositionOperations.WithClientPreviousCursor(result, request.Cursor);
         if (result.Batch is not null)
         {
             ThrowIfPageRewindsAcknowledgement(record, result.NextGroupSequence);
@@ -462,6 +510,11 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     ServerSubscriptionState IServerSubscriptionAcknowledgementJournal.RegisterSubscription(ServerSubscriptionIdentity identity) =>
         RegisterSubscription(identity);
+
+    /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    ServerSubscriptionState IServerSubscriptionAcknowledgementJournal.RegisterSubscription(ServerSubscriptionRegistrationRequest request) =>
+        RegisterSubscription(request);
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -570,10 +623,16 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
         {
             MigrateSchemaOneToTwo(connection, transaction);
             MigrateSchemaTwoToThree(connection, transaction);
+            MigrateSchemaThreeToFour(connection, transaction);
         }
         else if (userVersion == SchemaVersionTwo)
         {
             MigrateSchemaTwoToThree(connection, transaction);
+            MigrateSchemaThreeToFour(connection, transaction);
+        }
+        else if (userVersion == SchemaVersionThree)
+        {
+            MigrateSchemaThreeToFour(connection, transaction);
         }
         else
         {

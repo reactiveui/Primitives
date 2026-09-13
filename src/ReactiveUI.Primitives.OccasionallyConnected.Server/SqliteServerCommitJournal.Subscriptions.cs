@@ -24,29 +24,50 @@ internal sealed partial class SqliteServerCommitJournal
     /// <summary>The subscription client column index.</summary>
     private const int SubscriptionClientColumn = 3;
 
+    /// <summary>The subscription initial position kind column index.</summary>
+    private const int SubscriptionInitialPositionKindColumn = 4;
+
+    /// <summary>The subscription initial sequence column index.</summary>
+    private const int SubscriptionInitialSequenceColumn = 5;
+
+    /// <summary>The subscription initial timestamp column index.</summary>
+    private const int SubscriptionInitialTimestampColumn = 6;
+
+    /// <summary>The subscription initial cursor column index.</summary>
+    private const int SubscriptionInitialCursorColumn = 7;
+
+    /// <summary>The subscription initial anchor cursor column index.</summary>
+    private const int SubscriptionInitialAnchorCursorColumn = 8;
+
+    /// <summary>The subscription initial anchor group sequence column index.</summary>
+    private const int SubscriptionInitialAnchorSequenceColumn = 9;
+
+    /// <summary>The subscription initial anchor resolved column index.</summary>
+    private const int SubscriptionInitialAnchorResolvedColumn = 10;
+
     /// <summary>The subscription acknowledged cursor column index.</summary>
-    private const int SubscriptionAcknowledgedCursorColumn = 4;
+    private const int SubscriptionAcknowledgedCursorColumn = 11;
 
     /// <summary>The subscription acknowledged group sequence column index.</summary>
-    private const int SubscriptionAcknowledgedSequenceColumn = 5;
+    private const int SubscriptionAcknowledgedSequenceColumn = 12;
 
     /// <summary>The subscription latest offered cursor column index.</summary>
-    private const int SubscriptionLatestOfferedCursorColumn = 6;
+    private const int SubscriptionLatestOfferedCursorColumn = 13;
 
     /// <summary>The subscription latest offered group sequence column index.</summary>
-    private const int SubscriptionLatestOfferedSequenceColumn = 7;
+    private const int SubscriptionLatestOfferedSequenceColumn = 14;
 
     /// <summary>The subscription acknowledged timestamp column index.</summary>
-    private const int SubscriptionAcknowledgedAtColumn = 8;
+    private const int SubscriptionAcknowledgedAtColumn = 15;
 
     /// <summary>The subscription updated timestamp column index.</summary>
-    private const int SubscriptionUpdatedAtColumn = 9;
+    private const int SubscriptionUpdatedAtColumn = 16;
 
     /// <summary>The subscription retention timestamp column index.</summary>
-    private const int SubscriptionLastTouchedColumn = 10;
+    private const int SubscriptionLastTouchedColumn = 17;
 
     /// <summary>The subscription logical byte count column index.</summary>
-    private const int SubscriptionLogicalBytesColumn = 11;
+    private const int SubscriptionLogicalBytesColumn = 18;
 
     /// <summary>The offer cursor column index.</summary>
     private const int OfferCursorColumn = 0;
@@ -69,6 +90,9 @@ internal sealed partial class SqliteServerCommitJournal
     /// <summary>The repeated SQLite updated-at parameter name.</summary>
     private const string UpdatedAtUtcParameterName = "$updatedAtUtc";
 
+    /// <summary>The repeated SQLite logical-bytes-delta parameter name.</summary>
+    private const string LogicalBytesDeltaParameterName = "$logicalBytesDelta";
+
     /// <summary>The missing subscription row message.</summary>
     private const string MissingSubscriptionMessage = "The SQLite server subscription row is missing.";
 
@@ -78,7 +102,7 @@ internal sealed partial class SqliteServerCommitJournal
     /// <summary>Registers a subscription inside an open transaction.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
-    /// <param name="identity">The identity.</param>
+    /// <param name="request">The registration request.</param>
     /// <param name="updatedUtc">The update timestamp.</param>
     /// <param name="options">The journal options.</param>
     /// <returns>The subscription state.</returns>
@@ -87,20 +111,22 @@ internal sealed partial class SqliteServerCommitJournal
     private static ServerSubscriptionState RegisterSubscription(
         SqliteConnection connection,
         SqliteTransaction transaction,
-        ServerSubscriptionIdentity identity,
+        ServerSubscriptionRegistrationRequest request,
         DateTimeOffset updatedUtc,
         ServerCommitJournalOptions options)
     {
-        var existing = ReadSubscriptionRecord(connection, transaction, identity.SubscriptionId);
+        var existing = ReadSubscriptionRecord(connection, transaction, request.Identity.SubscriptionId);
         if (existing is not null)
         {
-            ThrowIfIdentityMismatch(identity, existing);
-            UpdateSubscriptionUpdatedAt(connection, transaction, identity.SubscriptionId, updatedUtc);
+            ThrowIfRegistrationMismatch(request, existing);
+            UpdateSubscriptionUpdatedAt(connection, transaction, request.Identity.SubscriptionId, updatedUtc);
             existing.UpdatedAtUtc = updatedUtc;
             return ServerSubscriptionJournalOperations.CreateState(existing);
         }
 
-        var logicalBytes = ServerSubscriptionJournalOperations.GetSubscriptionBytes(identity);
+        var stream = ReadStreamRecord(connection, transaction, request.Identity.StreamKey);
+        var anchor = CaptureInitialAnchor(connection, transaction, request, stream);
+        var logicalBytes = ServerSubscriptionJournalOperations.GetSubscriptionBytes(request.Identity, request.StartPosition, anchor.Cursor);
         if (!HasSubscriptionCapacity(connection, transaction, 1, 0, logicalBytes, options))
         {
             DeleteExpiredSubscriptions(connection, transaction, updatedUtc, options);
@@ -110,8 +136,8 @@ internal sealed partial class SqliteServerCommitJournal
             }
         }
 
-        InsertSubscription(connection, transaction, identity, updatedUtc, logicalBytes);
-        return new(identity, null, 0, null, 0, 0);
+        InsertSubscription(connection, transaction, request, anchor, updatedUtc, logicalBytes);
+        return new(request.Identity, null, 0, null, 0, 0);
     }
 
     /// <summary>Reads a registered subscription and validates its trusted binding.</summary>
@@ -145,8 +171,10 @@ internal sealed partial class SqliteServerCommitJournal
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = """
-            SELECT subscription_id, tenant_id, stream_id, client_id, acknowledged_cursor, acknowledged_group_sequence,
-                   latest_offered_cursor, latest_offered_group_sequence, acknowledged_at_utc, updated_at_utc, last_touched_utc, logical_bytes
+            SELECT subscription_id, tenant_id, stream_id, client_id, initial_position_kind, initial_sequence,
+                   initial_timestamp_utc, initial_cursor, initial_anchor_cursor, initial_anchor_group_sequence,
+                   initial_anchor_resolved, acknowledged_cursor, acknowledged_group_sequence, latest_offered_cursor,
+                   latest_offered_group_sequence, acknowledged_at_utc, updated_at_utc, last_touched_utc, logical_bytes
             FROM oc_server_journal_subscriptions
             WHERE subscription_id = $subscriptionId;
             """;
@@ -168,6 +196,10 @@ internal sealed partial class SqliteServerCommitJournal
             ReadDateTimeOffset(reader, SubscriptionUpdatedAtColumn, "The SQLite server subscription timestamp is invalid."),
             ReadNonNegativeLong(reader, SubscriptionLogicalBytesColumn, "The SQLite server subscription logical bytes are invalid."))
         {
+            InitialStartPosition = ReadStartPosition(reader),
+            InitialAnchorCursor = ReadNullableCursor(reader, SubscriptionInitialAnchorCursorColumn, "The SQLite server subscription initial anchor cursor is invalid."),
+            InitialAnchorGroupSequence = ReadNonNegativeLong(reader, SubscriptionInitialAnchorSequenceColumn, "The SQLite server subscription initial anchor sequence is invalid."),
+            InitialAnchorResolved = ReadBoolean(reader, SubscriptionInitialAnchorResolvedColumn, "The SQLite server subscription initial anchor marker is invalid."),
             AcknowledgedCursor = ReadNullableCursor(reader, SubscriptionAcknowledgedCursorColumn, "The SQLite server subscription acknowledged cursor is invalid."),
             AcknowledgedGroupSequence = ReadNonNegativeLong(reader, SubscriptionAcknowledgedSequenceColumn, "The SQLite server subscription acknowledged sequence is invalid."),
             LatestOfferedCursor = ReadNullableCursor(reader, SubscriptionLatestOfferedCursorColumn, "The SQLite server subscription offered cursor is invalid."),
@@ -214,13 +246,15 @@ internal sealed partial class SqliteServerCommitJournal
     /// <summary>Inserts a subscription row.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
-    /// <param name="identity">The identity.</param>
+    /// <param name="request">The registration request.</param>
+    /// <param name="anchor">The initial anchor.</param>
     /// <param name="updatedUtc">The update timestamp.</param>
     /// <param name="logicalBytes">The logical bytes.</param>
     private static void InsertSubscription(
         SqliteConnection connection,
         SqliteTransaction transaction,
-        ServerSubscriptionIdentity identity,
+        ServerSubscriptionRegistrationRequest request,
+        ServerSubscriptionInitialAnchor anchor,
         DateTimeOffset updatedUtc,
         long logicalBytes)
     {
@@ -228,17 +262,223 @@ internal sealed partial class SqliteServerCommitJournal
         command.Transaction = transaction;
         command.CommandText = """
             INSERT INTO oc_server_journal_subscriptions
-                (subscription_id, tenant_id, stream_id, client_id, acknowledged_cursor, acknowledged_group_sequence,
-                 latest_offered_cursor, latest_offered_group_sequence, acknowledged_at_utc, updated_at_utc, last_touched_utc, logical_bytes)
+                (subscription_id, tenant_id, stream_id, client_id, initial_position_kind, initial_sequence, initial_timestamp_utc,
+                 initial_cursor, initial_anchor_cursor, initial_anchor_group_sequence, initial_anchor_resolved,
+                 acknowledged_cursor, acknowledged_group_sequence, latest_offered_cursor, latest_offered_group_sequence,
+                 acknowledged_at_utc, updated_at_utc, last_touched_utc, logical_bytes)
             VALUES
-                ($subscriptionId, $tenantId, $streamId, $clientId, NULL, 0, NULL, 0, NULL, $updatedAtUtc, $updatedAtUtc, $logicalBytes);
+                ($subscriptionId, $tenantId, $streamId, $clientId, $initialPositionKind, $initialSequence, $initialTimestampUtc,
+                 $initialCursor, $initialAnchorCursor, $initialAnchorGroupSequence, $initialAnchorResolved,
+                 NULL, 0, NULL, 0, NULL, $updatedAtUtc, $updatedAtUtc, $logicalBytes);
             """;
-        AddSubscriptionIdParameter(command, identity.SubscriptionId);
-        AddStreamParameters(command, identity.StreamKey);
-        _ = command.Parameters.AddWithValue("$clientId", identity.ClientId);
+        AddSubscriptionIdParameter(command, request.Identity.SubscriptionId);
+        AddStreamParameters(command, request.Identity.StreamKey);
+        _ = command.Parameters.AddWithValue("$clientId", request.Identity.ClientId);
+        AddStartPositionParameters(command, request.StartPosition);
+        _ = command.Parameters.AddWithValue("$initialAnchorCursor", (object?)anchor.Cursor ?? DBNull.Value);
+        _ = command.Parameters.AddWithValue("$initialAnchorGroupSequence", anchor.GroupSequence);
+        _ = command.Parameters.AddWithValue("$initialAnchorResolved", anchor.IsResolved ? 1 : 0);
         _ = command.Parameters.AddWithValue(UpdatedAtUtcParameterName, FormatDateTimeOffset(updatedUtc));
         _ = command.Parameters.AddWithValue("$logicalBytes", logicalBytes);
         _ = command.ExecuteNonQuery();
+    }
+
+    /// <summary>Captures an initial anchor using durable SQLite sequence rows when needed.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="request">The registration request.</param>
+    /// <param name="stream">The retained stream.</param>
+    /// <returns>The captured anchor.</returns>
+    private static ServerSubscriptionInitialAnchor CaptureInitialAnchor(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        ServerSubscriptionRegistrationRequest request,
+        ServerCommitStreamRecord? stream)
+    {
+        if (request.StartPosition.Kind != StartPositionKind.FromSequence)
+        {
+            return ServerSubscriptionStartPositionOperations.CaptureInitialAnchor(request.Identity.StreamKey, request.StartPosition, stream);
+        }
+
+        return TryResolveSequenceAnchor(connection, transaction, request.Identity.StreamKey, request.StartPosition.Sequence.GetValueOrDefault(), stream, out var anchor)
+            == ServerSubscriptionAnchorResolution.Resolved
+            ? anchor
+            : new(null, 0, false);
+    }
+
+    /// <summary>Resolves an initial anchor using durable SQLite sequence rows when needed.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="record">The subscription record.</param>
+    /// <param name="stream">The retained stream.</param>
+    /// <param name="anchor">The resolved anchor.</param>
+    /// <returns>The resolution outcome.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">The position kind is invalid.</exception>
+    /// <exception cref="ArgumentException">The cursor does not identify a complete group.</exception>
+    private static ServerSubscriptionAnchorResolution TryResolveInitialAnchor(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        ServerSubscriptionRecord record,
+        ServerCommitStreamRecord? stream,
+        out ServerSubscriptionInitialAnchor anchor) =>
+        record.InitialStartPosition.Kind == StartPositionKind.FromSequence
+            ? TryResolveSequenceAnchor(
+                connection,
+                transaction,
+                record.Identity.StreamKey,
+                record.InitialStartPosition.Sequence.GetValueOrDefault(),
+                stream,
+                out anchor)
+            : ServerSubscriptionStartPositionOperations.TryResolveAnchor(
+                record.Identity.StreamKey,
+                record.InitialStartPosition,
+                stream,
+                out anchor);
+
+    /// <summary>Resolves a sequence anchor from durable event-sequence rows.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="streamKey">The stream key.</param>
+    /// <param name="sequence">The requested event sequence.</param>
+    /// <param name="stream">The retained stream.</param>
+    /// <param name="anchor">The resolved anchor.</param>
+    /// <returns>The resolution outcome.</returns>
+    private static ServerSubscriptionAnchorResolution TryResolveSequenceAnchor(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        ServerStreamKey streamKey,
+        long sequence,
+        ServerCommitStreamRecord? stream,
+        out ServerSubscriptionInitialAnchor anchor)
+    {
+        anchor = default;
+        if (sequence == 0)
+        {
+            anchor = new(null, 0, true);
+            return ServerSubscriptionAnchorResolution.Resolved;
+        }
+
+        if (stream is null || sequence > stream.LastEventSequence)
+        {
+            return ServerSubscriptionAnchorResolution.Pending;
+        }
+
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            SELECT e.event_sequence, l.group_sequence
+            FROM oc_server_journal_events e
+            INNER JOIN oc_server_journal_ledger l
+                ON l.tenant_id = e.tenant_id AND l.stream_id = e.stream_id
+                AND l.client_id = e.client_id AND l.operation_id = e.operation_id
+            WHERE e.tenant_id = $tenantId AND e.stream_id = $streamId
+                AND e.event_sequence >= $eventSequence AND l.group_sequence IS NOT NULL
+            ORDER BY e.event_sequence ASC
+            LIMIT 1;
+            """;
+        AddStreamParameters(command, streamKey);
+        _ = command.Parameters.AddWithValue(EventSequenceParameterName, sequence);
+        using var reader = command.ExecuteReader();
+        if (!reader.Read())
+        {
+            return ServerSubscriptionAnchorResolution.RetentionGap;
+        }
+
+        var firstSequence = ReadNonNegativeLong(reader, 0, InvalidEventSequenceMessage);
+        var groupSequence = ReadNonNegativeLong(reader, 1, InvalidGroupSequenceMessage);
+        anchor = CreateBeforeGroupAnchor(streamKey, groupSequence);
+        if (firstSequence == sequence)
+        {
+            return ServerSubscriptionAnchorResolution.Resolved;
+        }
+
+        return stream.HasReceiveHistoryGap
+            ? ServerSubscriptionAnchorResolution.RetentionGap
+            : ServerSubscriptionAnchorResolution.Resolved;
+    }
+
+    /// <summary>Creates an anchor immediately before a selected group.</summary>
+    /// <param name="streamKey">The authenticated stream key.</param>
+    /// <param name="groupSequence">The selected group sequence.</param>
+    /// <returns>The anchor.</returns>
+    private static ServerSubscriptionInitialAnchor CreateBeforeGroupAnchor(ServerStreamKey streamKey, long groupSequence)
+    {
+        var previousGroupSequence = checked(groupSequence - 1);
+        return previousGroupSequence == 0
+            ? new(null, 0, true)
+            : new(ServerReceiveGroupCursor.Create(streamKey, previousGroupSequence), previousGroupSequence, true);
+    }
+
+    /// <summary>Reads the immutable initial start position from a subscription row.</summary>
+    /// <param name="reader">The row reader.</param>
+    /// <returns>The start position.</returns>
+    /// <exception cref="InvalidOperationException">The position kind is invalid.</exception>
+    private static StartPosition ReadStartPosition(SqliteDataReader reader)
+    {
+        var kind = (StartPositionKind)ReadNonNegativeLong(reader, SubscriptionInitialPositionKindColumn, "The SQLite server subscription initial position kind is invalid.");
+        return kind switch
+        {
+            StartPositionKind.Latest => StartPosition.Latest,
+            StartPositionKind.FromSequence => StartPosition.FromSequence(
+                ReadNonNegativeLong(reader, SubscriptionInitialSequenceColumn, "The SQLite server subscription initial sequence is invalid.")),
+            StartPositionKind.FromTimestamp => StartPosition.FromTimestamp(
+                ReadDateTimeOffset(reader, SubscriptionInitialTimestampColumn, "The SQLite server subscription initial timestamp is invalid.")),
+            StartPositionKind.FromCursor => StartPosition.FromCursor(
+                ReadCursor(reader, SubscriptionInitialCursorColumn, "The SQLite server subscription initial cursor is invalid.")),
+            _ => throw new InvalidOperationException("The SQLite server subscription initial position kind is invalid."),
+        };
+    }
+
+    /// <summary>Adds initial start position parameters.</summary>
+    /// <param name="command">The command.</param>
+    /// <param name="startPosition">The start position.</param>
+    private static void AddStartPositionParameters(SqliteCommand command, StartPosition startPosition)
+    {
+        _ = command.Parameters.AddWithValue("$initialPositionKind", (int)startPosition.Kind);
+        _ = command.Parameters.AddWithValue("$initialSequence", startPosition.Sequence.HasValue ? (object)startPosition.Sequence.Value : DBNull.Value);
+        _ = command.Parameters.AddWithValue("$initialTimestampUtc", startPosition.Timestamp.HasValue ? FormatDateTimeOffset(startPosition.Timestamp.Value) : DBNull.Value);
+        _ = command.Parameters.AddWithValue("$initialCursor", (object?)startPosition.Cursor ?? DBNull.Value);
+    }
+
+    /// <summary>Updates a deferred initial anchor on the subscription row.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="subscriptionId">The subscription id.</param>
+    /// <param name="anchor">The resolved anchor.</param>
+    /// <param name="updatedUtc">The update timestamp.</param>
+    /// <param name="logicalBytesDelta">The logical bytes delta.</param>
+    /// <exception cref="InvalidOperationException">The subscription row is missing.</exception>
+    private static void UpdateInitialAnchor(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        SubscriptionId subscriptionId,
+        ServerSubscriptionInitialAnchor anchor,
+        DateTimeOffset updatedUtc,
+        long logicalBytesDelta)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            UPDATE oc_server_journal_subscriptions
+            SET initial_anchor_cursor = $cursor,
+                initial_anchor_group_sequence = $groupSequence,
+                initial_anchor_resolved = 1,
+                updated_at_utc = $updatedAtUtc,
+                last_touched_utc = $updatedAtUtc,
+                logical_bytes = logical_bytes + $logicalBytesDelta
+            WHERE subscription_id = $subscriptionId;
+            """;
+        AddSubscriptionIdParameter(command, subscriptionId);
+        _ = command.Parameters.AddWithValue(CursorParameterName, (object?)anchor.Cursor ?? DBNull.Value);
+        _ = command.Parameters.AddWithValue(GroupSequenceParameterName, anchor.GroupSequence);
+        _ = command.Parameters.AddWithValue(UpdatedAtUtcParameterName, FormatDateTimeOffset(updatedUtc));
+        _ = command.Parameters.AddWithValue(LogicalBytesDeltaParameterName, logicalBytesDelta);
+        if (command.ExecuteNonQuery() == 1)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(MissingSubscriptionMessage);
     }
 
     /// <summary>Adds or refreshes an offered cursor.</summary>
@@ -391,7 +631,7 @@ internal sealed partial class SqliteServerCommitJournal
         _ = command.Parameters.AddWithValue(CursorParameterName, cursor);
         _ = command.Parameters.AddWithValue(GroupSequenceParameterName, groupSequence);
         _ = command.Parameters.AddWithValue(UpdatedAtUtcParameterName, FormatDateTimeOffset(updatedUtc));
-        _ = command.Parameters.AddWithValue("$logicalBytesDelta", logicalBytesDelta);
+        _ = command.Parameters.AddWithValue(LogicalBytesDeltaParameterName, logicalBytesDelta);
         if (command.ExecuteNonQuery() == 1)
         {
             return;
@@ -495,7 +735,7 @@ internal sealed partial class SqliteServerCommitJournal
         _ = command.Parameters.AddWithValue(CursorParameterName, offer.Cursor);
         _ = command.Parameters.AddWithValue(GroupSequenceParameterName, offer.GroupSequence);
         _ = command.Parameters.AddWithValue("$acknowledgedAtUtc", FormatDateTimeOffset(acknowledgedUtc));
-        _ = command.Parameters.AddWithValue("$logicalBytesDelta", logicalBytesDelta);
+        _ = command.Parameters.AddWithValue(LogicalBytesDeltaParameterName, logicalBytesDelta);
         if (command.ExecuteNonQuery() == 1)
         {
             return;
@@ -658,6 +898,20 @@ internal sealed partial class SqliteServerCommitJournal
         }
 
         throw new InvalidOperationException("The subscription identifier is already bound to another trusted identity.");
+    }
+
+    /// <summary>Rejects an identity or start position that conflicts with retained state.</summary>
+    /// <param name="request">The supplied request.</param>
+    /// <param name="record">The retained record.</param>
+    /// <exception cref="InvalidOperationException">The registration is incompatible.</exception>
+    private static void ThrowIfRegistrationMismatch(ServerSubscriptionRegistrationRequest request, ServerSubscriptionRecord record)
+    {
+        if (ServerSubscriptionJournalOperations.RegistrationMatches(request, record))
+        {
+            return;
+        }
+
+        throw new InvalidOperationException("The subscription registration is incompatible with retained state.");
     }
 
     /// <summary>Rejects a page that would move a subscription behind its durable acknowledgement.</summary>

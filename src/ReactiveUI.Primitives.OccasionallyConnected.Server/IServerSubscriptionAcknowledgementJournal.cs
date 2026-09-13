@@ -12,6 +12,11 @@ internal interface IServerSubscriptionAcknowledgementJournal
     /// <returns>The persisted subscription state.</returns>
     ServerSubscriptionState RegisterSubscription(ServerSubscriptionIdentity identity);
 
+    /// <summary>Registers or reads a trusted subscription binding with an initial stream position.</summary>
+    /// <param name="request">The registration request.</param>
+    /// <returns>The persisted subscription state.</returns>
+    ServerSubscriptionState RegisterSubscription(ServerSubscriptionRegistrationRequest request);
+
     /// <summary>Reads and durably offers a bounded page for a registered subscription.</summary>
     /// <param name="request">The subscription page request.</param>
     /// <returns>The receive page result.</returns>

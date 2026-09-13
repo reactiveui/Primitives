@@ -168,10 +168,19 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
     internal ServerSubscriptionState RegisterSubscription(ServerSubscriptionIdentity identity)
     {
         ServerSubscriptionJournalOperations.ValidateIdentity(identity);
+        return RegisterSubscription(new ServerSubscriptionRegistrationRequest(identity, StartPosition.FromSequence(0)));
+    }
+
+    /// <summary>Registers or reads a trusted subscription binding with an initial stream position.</summary>
+    /// <param name="request">The registration request.</param>
+    /// <returns>The persisted subscription state.</returns>
+    internal ServerSubscriptionState RegisterSubscription(ServerSubscriptionRegistrationRequest request)
+    {
+        ServerSubscriptionJournalOperations.ValidateRegistrationRequest(request);
         var observedUtc = _options.TimeProvider.GetUtcNow();
         lock (_gate)
         {
-            return RegisterSubscriptionUnderGate(identity, observedUtc);
+            return RegisterSubscriptionUnderGate(request, observedUtc);
         }
     }
 
@@ -218,6 +227,11 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     ServerSubscriptionState IServerSubscriptionAcknowledgementJournal.RegisterSubscription(ServerSubscriptionIdentity identity) =>
         RegisterSubscription(identity);
+
+    /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    ServerSubscriptionState IServerSubscriptionAcknowledgementJournal.RegisterSubscription(ServerSubscriptionRegistrationRequest request) =>
+        RegisterSubscription(request);
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -285,6 +299,20 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
         throw new InvalidOperationException("The subscription identifier is already bound to another trusted identity.");
     }
 
+    /// <summary>Rejects an identity or start position that conflicts with retained state.</summary>
+    /// <param name="request">The supplied request.</param>
+    /// <param name="record">The retained record.</param>
+    /// <exception cref="InvalidOperationException">The registration is incompatible.</exception>
+    private static void ThrowIfRegistrationMismatch(ServerSubscriptionRegistrationRequest request, ServerSubscriptionRecord record)
+    {
+        if (ServerSubscriptionJournalOperations.RegistrationMatches(request, record))
+        {
+            return;
+        }
+
+        throw new InvalidOperationException("The subscription registration is incompatible with retained state.");
+    }
+
     /// <summary>Rejects a page that would move a subscription behind its durable acknowledgement.</summary>
     /// <param name="record">The subscription record.</param>
     /// <param name="nextGroupSequence">The offered page sequence.</param>
@@ -300,24 +328,26 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
     }
 
     /// <summary>Registers a subscription while the journal gate is held.</summary>
-    /// <param name="identity">The identity.</param>
+    /// <param name="request">The registration request.</param>
     /// <param name="observedUtc">The caller-independent timestamp sampled before the gate.</param>
     /// <returns>The subscription state.</returns>
     /// <exception cref="InvalidOperationException">The subscription identity conflicts with retained state.</exception>
     /// <exception cref="QueueCapacityExceededException">The subscription storage is full.</exception>
-    private ServerSubscriptionState RegisterSubscriptionUnderGate(ServerSubscriptionIdentity identity, DateTimeOffset observedUtc)
+    private ServerSubscriptionState RegisterSubscriptionUnderGate(ServerSubscriptionRegistrationRequest request, DateTimeOffset observedUtc)
     {
         var updatedUtc = ServerCommitJournalOperations.Max(_latestUtc, observedUtc);
-        if (_subscriptions.TryGetValue(identity.SubscriptionId, out var existing))
+        if (_subscriptions.TryGetValue(request.Identity.SubscriptionId, out var existing))
         {
-            ThrowIfIdentityMismatch(identity, existing);
+            ThrowIfRegistrationMismatch(request, existing);
             existing.UpdatedAtUtc = updatedUtc;
             existing.LastTouchedUtc = updatedUtc;
             _latestUtc = updatedUtc;
             return ServerSubscriptionJournalOperations.CreateState(existing);
         }
 
-        var logicalBytes = ServerSubscriptionJournalOperations.GetSubscriptionBytes(identity);
+        _ = _streams.TryGetValue(request.Identity.StreamKey, out var stream);
+        var anchor = ServerSubscriptionStartPositionOperations.CaptureInitialAnchor(request.Identity.StreamKey, request.StartPosition, stream);
+        var logicalBytes = ServerSubscriptionJournalOperations.GetSubscriptionBytes(request.Identity, request.StartPosition, anchor.Cursor);
         if (!HasSubscriptionCapacity(1, 0, logicalBytes))
         {
             CompactSubscriptions(updatedUtc);
@@ -327,8 +357,14 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
             }
         }
 
-        var record = new ServerSubscriptionRecord(identity, updatedUtc, logicalBytes);
-        _subscriptions.Add(identity.SubscriptionId, record);
+        var record = new ServerSubscriptionRecord(request.Identity, updatedUtc, logicalBytes)
+        {
+            InitialStartPosition = request.StartPosition,
+            InitialAnchorCursor = anchor.Cursor,
+            InitialAnchorGroupSequence = anchor.GroupSequence,
+            InitialAnchorResolved = anchor.IsResolved,
+        };
+        _subscriptions.Add(request.Identity.SubscriptionId, record);
         _logicalBytes = ServerCommitJournalSizer.AddLogicalBytes(_logicalBytes, logicalBytes);
         _latestUtc = updatedUtc;
         return ServerSubscriptionJournalOperations.CreateState(record);
@@ -342,7 +378,14 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
     {
         var record = ReadRegisteredSubscription(request.Identity);
         _ = _streams.TryGetValue(request.Identity.StreamKey, out var stream);
-        var result = ServerReceivePageOperations.Create(ServerSubscriptionJournalOperations.CreateReceiveRequest(request), stream);
+        if (!TryResolveInitialReadCursor(record, request.Cursor, stream, observedUtc, out var readCursor, out var pendingResult))
+        {
+            return pendingResult;
+        }
+
+        var receiveRequest = ServerSubscriptionJournalOperations.CreateReceiveRequest(request with { Cursor = readCursor });
+        var result = ServerReceivePageOperations.Create(receiveRequest, stream);
+        result = ServerSubscriptionStartPositionOperations.WithClientPreviousCursor(result, request.Cursor);
         if (result.Batch is null)
         {
             return result;
@@ -401,6 +444,79 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
         }
 
         throw new InvalidOperationException("The subscription is not registered.");
+    }
+
+    /// <summary>Resolves the effective first-read cursor for a subscription.</summary>
+    /// <param name="record">The subscription record.</param>
+    /// <param name="clientCursor">The caller-supplied cursor.</param>
+    /// <param name="stream">The retained stream.</param>
+    /// <param name="observedUtc">The sampled timestamp.</param>
+    /// <param name="readCursor">The effective cursor to read from.</param>
+    /// <param name="pendingResult">The result to return when no cursor can be resolved.</param>
+    /// <returns>Whether a read cursor is available.</returns>
+    private bool TryResolveInitialReadCursor(
+        ServerSubscriptionRecord record,
+        string? clientCursor,
+        ServerCommitStreamRecord? stream,
+        DateTimeOffset observedUtc,
+        out string? readCursor,
+        out ServerReceivePageResult pendingResult)
+    {
+        pendingResult = new(ServerReceivePageStatus.EndOfStream, null, 0, 0);
+        if (clientCursor is not null)
+        {
+            readCursor = clientCursor;
+            return true;
+        }
+
+        if (record.InitialAnchorResolved)
+        {
+            readCursor = ServerSubscriptionStartPositionOperations.GetInitialReadCursor(record);
+            return true;
+        }
+
+        var resolution = ServerSubscriptionStartPositionOperations.TryResolveAnchor(
+            record.Identity.StreamKey,
+            record.InitialStartPosition,
+            stream,
+            out var anchor);
+        if (resolution == ServerSubscriptionAnchorResolution.Resolved)
+        {
+            ApplyInitialAnchor(record, anchor, observedUtc);
+            readCursor = ServerSubscriptionStartPositionOperations.GetInitialReadCursor(record);
+            return true;
+        }
+
+        readCursor = null;
+        var lastGroupSequence = stream?.LastGroupSequence ?? 0;
+        var status = resolution == ServerSubscriptionAnchorResolution.RetentionGap
+            ? ServerReceivePageStatus.RetentionGap
+            : ServerReceivePageStatus.EndOfStream;
+        pendingResult = new(status, null, lastGroupSequence, lastGroupSequence);
+        return false;
+    }
+
+    /// <summary>Persists a resolved initial anchor.</summary>
+    /// <param name="record">The subscription record.</param>
+    /// <param name="anchor">The resolved anchor.</param>
+    /// <param name="observedUtc">The sampled timestamp.</param>
+    /// <exception cref="QueueCapacityExceededException">The anchor exceeds the retained byte limit.</exception>
+    private void ApplyInitialAnchor(ServerSubscriptionRecord record, ServerSubscriptionInitialAnchor anchor, DateTimeOffset observedUtc)
+    {
+        var updatedUtc = ServerCommitJournalOperations.Max(_latestUtc, observedUtc);
+        var delta = ServerSubscriptionJournalOperations.GetInitialAnchorCursorDelta(record.InitialAnchorCursor, anchor.Cursor);
+        if (!HasSubscriptionCapacity(0, 0, delta))
+        {
+            throw new QueueCapacityExceededException("The server subscription anchor exceeds the journal byte limit.", canFitWhenEmpty: false);
+        }
+
+        ApplySubscriptionBytesDelta(record, delta);
+        record.InitialAnchorCursor = anchor.Cursor;
+        record.InitialAnchorGroupSequence = anchor.GroupSequence;
+        record.InitialAnchorResolved = true;
+        record.UpdatedAtUtc = updatedUtc;
+        record.LastTouchedUtc = updatedUtc;
+        _latestUtc = updatedUtc;
     }
 
     /// <summary>Adds or refreshes an offered cursor.</summary>

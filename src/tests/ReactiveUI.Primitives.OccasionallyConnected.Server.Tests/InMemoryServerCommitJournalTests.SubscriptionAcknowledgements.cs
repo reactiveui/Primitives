@@ -189,7 +189,7 @@ public sealed partial class InMemoryServerCommitJournalTests
         var page = journal.OfferReceivePage(new(identity, null, SingleEntryCount, DefaultMaximumEvents, DefaultMaximumLogicalBytes));
         var batch = page.Batch ?? throw new InvalidOperationException(MissingSubscriptionBatchMessage);
 
-        await Assert.That(() => journal.RegisterSubscription(new(new(OtherTenant, Stream), Client, identity.SubscriptionId))).ThrowsExactly<InvalidOperationException>();
+        await Assert.That(() => journal.RegisterSubscription(new ServerSubscriptionIdentity(new(OtherTenant, Stream), Client, identity.SubscriptionId))).ThrowsExactly<InvalidOperationException>();
         await Assert.That(() => journal.Acknowledge(new(StreamKey(), Client, new(identity.SubscriptionId, OtherStream, batch.NextCursor)))).ThrowsExactly<ArgumentException>();
         await Assert.That(() => journal.Acknowledge(new(StreamKey(), Client, new(identity.SubscriptionId, Stream, FirstCursor)))).ThrowsExactly<InvalidOperationException>();
         await Assert.That(() => journal.Acknowledge(new(StreamKey(), Client, new(identity.SubscriptionId, Stream, ThirdCursor)))).ThrowsExactly<InvalidOperationException>();
@@ -240,8 +240,8 @@ public sealed partial class InMemoryServerCommitJournalTests
         var identity = SubscriptionIdentity(FirstSubscription);
         _ = journal.RegisterSubscription(identity);
 
-        await Assert.That(() => journal.RegisterSubscription(new(StreamKey(), " ", SecondSubscription))).ThrowsExactly<ArgumentException>();
-        await Assert.That(() => journal.RegisterSubscription(new(StreamKey(), Client, new(Guid.Empty)))).ThrowsExactly<ArgumentException>();
+        await Assert.That(() => journal.RegisterSubscription(new ServerSubscriptionIdentity(StreamKey(), " ", SecondSubscription))).ThrowsExactly<ArgumentException>();
+        await Assert.That(() => journal.RegisterSubscription(new ServerSubscriptionIdentity(StreamKey(), Client, new(Guid.Empty)))).ThrowsExactly<ArgumentException>();
         await Assert.That(() => journal.OfferReceivePage(new(identity, null, SingleEntryCount, DefaultMaximumEvents, 0))).ThrowsExactly<ArgumentOutOfRangeException>();
         await Assert.That(() => journal.Acknowledge(new(StreamKey(), Client, new(SecondSubscription, Stream, FirstCursor)))).ThrowsExactly<InvalidOperationException>();
     }
