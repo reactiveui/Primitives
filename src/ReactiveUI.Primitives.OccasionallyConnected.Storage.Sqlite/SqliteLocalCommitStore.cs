@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Collections.ObjectModel;
 using System.Data;
 using System.Runtime.CompilerServices;
 using Microsoft.Data.Sqlite;
@@ -716,11 +717,95 @@ internal sealed class SqliteLocalCommitStore : IDisposable
         }
 
         var operations = SqliteLocalCommitSql.ReadLeasedOperations(connection, transaction, storeIdentity, leaseId);
+        ValidateResultCountForLeasedBatch(operations, result);
         SyncBatchValidator.Validate(new(leaseId, operations), result);
+        SqliteLocalCommitSql.ValidateStatusOnlyReconciliation(connection, transaction, storeIdentity, operations, result);
         SqliteLocalCommitSql.ApplySyncResult(connection, transaction, storeIdentity, result, nowUtc);
         SqliteLocalCommitSql.ReleaseLease(connection, transaction, storeIdentity, leaseId);
         cancellationToken.ThrowIfCancellationRequested();
         transaction.Commit();
+    }
+
+    /// <summary>Applies remote synchronization results and replacement snapshots to the currently leased batch.</summary>
+    /// <param name="leaseId">The owning lease identifier.</param>
+    /// <param name="result">The remote result.</param>
+    /// <param name="snapshotMutations">The replacement snapshots for affected streams.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The committed snapshots.</returns>
+    /// <exception cref="ArgumentException">The lease identifier is invalid.</exception>
+    /// <exception cref="ArgumentNullException">A required value is null.</exception>
+    /// <exception cref="InvalidOperationException">The store has not been initialized or the reconciliation is stale.</exception>
+    /// <exception cref="ObjectDisposedException">This instance has been disposed.</exception>
+    /// <exception cref="OperationCanceledException">The operation is canceled before the transaction commits.</exception>
+    /// <exception cref="SqliteException">SQLite rejects the operation.</exception>
+    /// <exception cref="SyncBatchValidationException">The result does not exactly match the leased batch.</exception>
+    internal IReadOnlyList<LocalSnapshot> ApplySyncResult(
+        Guid leaseId,
+        RemoteSyncResult result,
+        IReadOnlyList<SnapshotMutation> snapshotMutations,
+        CancellationToken cancellationToken)
+    {
+        SqliteLocalCommitValidation.ValidateSyncResultInput(leaseId, result);
+        ArgumentExceptionHelper.ThrowIfNull(snapshotMutations);
+        cancellationToken.ThrowIfCancellationRequested();
+        var storeIdentity = GetInitializedStoreIdentityForOperation();
+        using var connection = SqliteLocalCommitConnection.OpenConnection(_databasePath);
+        SqliteLocalCommitConnection.ConfigureLockPolling(connection);
+        SqliteConnectionSettings.ConfigureOperationalConnection(connection);
+        using var transaction = SqliteLocalCommitConnection.BeginWriteTransaction(connection, cancellationToken);
+        var nowUtc = _timeProvider.GetUtcNow();
+        var leaseExpiry = SqliteLocalCommitSql.ValidateLeaseMembership(connection, transaction, storeIdentity, leaseId);
+        if (leaseExpiry <= nowUtc)
+        {
+            throw new InvalidOperationException(ExpiredLeaseMessage);
+        }
+
+        var operations = SqliteLocalCommitSql.ReadLeasedOperations(connection, transaction, storeIdentity, leaseId);
+        ValidateResultCountForLeasedBatch(operations, result);
+        SyncBatchValidator.Validate(new(leaseId, operations), result);
+        var committedSnapshots = SqliteLocalCommitSql.CreateResultReconciliationSnapshots(
+            connection,
+            transaction,
+            storeIdentity,
+            operations,
+            result,
+            snapshotMutations,
+            nowUtc);
+        SqliteLocalCommitSql.ApplySyncResult(connection, transaction, storeIdentity, result, nowUtc);
+        SqliteLocalCommitSql.ReleaseLease(connection, transaction, storeIdentity, leaseId);
+        for (var index = 0; index < committedSnapshots.Count; index++)
+        {
+            var snapshot = committedSnapshots[index];
+            SqliteLocalCommitSql.UpsertSnapshot(
+                connection,
+                transaction,
+                storeIdentity,
+                new(snapshot.StreamId, snapshot.State, snapshot.FormatVersion, snapshot.Revision - 1) { AuthoritativeState = snapshot.AuthoritativeState },
+                snapshot.Revision,
+                snapshot.ServerCursor,
+                snapshot.SavedAtUtc);
+        }
+
+        var receipt = new ReadOnlyCollection<LocalSnapshot>(committedSnapshots);
+        cancellationToken.ThrowIfCancellationRequested();
+        transaction.Commit();
+        return receipt;
+    }
+
+    /// <summary>Rejects malformed result sizes before the shared validator allocates membership dictionaries.</summary>
+    /// <param name="operations">The bounded leased operations.</param>
+    /// <param name="result">The remote result.</param>
+    /// <exception cref="SyncBatchValidationException">The result count does not match the leased batch count.</exception>
+    private static void ValidateResultCountForLeasedBatch(List<SyncOperation> operations, RemoteSyncResult result)
+    {
+        if (result.Operations.Count == operations.Count)
+        {
+            return;
+        }
+
+        throw result.Operations.Count < operations.Count
+            ? new SyncBatchValidationException(SyncBatchValidationError.OmittedOperationResult, "The synchronization result omitted one or more operation results.")
+            : new SyncBatchValidationException(SyncBatchValidationError.UnknownOperationResult, "The synchronization result contains an unknown operation result.");
     }
 
     /// <summary>Creates, migrates, or validates the local commit schema.</summary>

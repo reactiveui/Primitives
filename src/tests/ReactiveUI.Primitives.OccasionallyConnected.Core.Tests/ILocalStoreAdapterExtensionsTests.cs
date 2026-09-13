@@ -38,6 +38,27 @@ public sealed class ILocalStoreAdapterExtensionsTests
     /// <summary>The committed snapshot revision.</summary>
     private const int SnapshotRevision = 0;
 
+    /// <summary>Verifies transactional result forwarding preserves the mutation collection and committed receipt.</summary>
+    /// <returns>The asynchronous test.</returns>
+    [Test]
+    public async Task ReconciledResultForwardsMutationsAndReturnsCommittedSnapshots()
+    {
+        var adapter = new RecordingAdapter();
+        var leaseId = Guid.NewGuid();
+        var result = new RemoteSyncResult(leaseId, [], null, null);
+        SnapshotMutation[] mutations = [CreateMutation(CreateOperation())];
+
+        var snapshots = await adapter.ApplySyncResultAsync(leaseId, result, mutations);
+
+        await Assert.That(snapshots).IsSameReferenceAs(adapter.ReconciledSnapshots);
+        await Assert.That(adapter.Calls.Count).IsEqualTo(1);
+        var call = adapter.Calls[0];
+        await Assert.That(call[0]).IsEqualTo(leaseId);
+        await Assert.That(call[1]).IsSameReferenceAs(result);
+        await Assert.That(call[2]).IsSameReferenceAs(mutations);
+        await Assert.That(call[3]).IsEqualTo(CancellationToken.None);
+    }
+
     /// <summary>Verifies the convenience overloads forward their arguments and cancellation token exactly once.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
@@ -265,6 +286,9 @@ public sealed class ILocalStoreAdapterExtensionsTests
         /// <summary>Gets the stable identifier returned when no preference is supplied.</summary>
         public SubscriptionId ResolvedSubscriptionId { get; } = SubscriptionId.New();
 
+        /// <summary>Gets the transaction receipt returned by this adapter.</summary>
+        public IReadOnlyList<LocalSnapshot> ReconciledSnapshots { get; } = [];
+
         /// <summary>Gets the local store capabilities.</summary>
         public LocalStoreCapabilities Capabilities => LocalStoreCapabilities.None;
 
@@ -328,6 +352,17 @@ public sealed class ILocalStoreAdapterExtensionsTests
         {
             Calls.Add([leaseId, result, cancellationToken]);
             return ValueTask.CompletedTask;
+        }
+
+        /// <inheritdoc/>
+        public ValueTask<IReadOnlyList<LocalSnapshot>> ApplySyncResultAsync(
+            Guid leaseId,
+            RemoteSyncResult result,
+            IReadOnlyList<SnapshotMutation> snapshotMutations,
+            CancellationToken cancellationToken)
+        {
+            Calls.Add([leaseId, result, snapshotMutations, cancellationToken]);
+            return new(ReconciledSnapshots);
         }
 
         /// <inheritdoc />

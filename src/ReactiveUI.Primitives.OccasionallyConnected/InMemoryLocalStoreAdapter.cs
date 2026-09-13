@@ -321,6 +321,7 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
     {
         InMemoryLocalStoreAdapterValidation.ValidateLeaseId(leaseId);
         ArgumentExceptionHelper.ThrowIfNull(result);
+        ValidateResultCaptureCount(result);
         cancellationToken.ThrowIfCancellationRequested();
         var nowUtc = _timeProvider.GetUtcNow();
         lock (_gate)
@@ -330,6 +331,7 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter
             var operations = GetLeaseOperations(lease);
             SyncBatchValidator.Validate(new(leaseId, operations), result);
             var statuses = CreateStatusesFromResult(result, nowUtc);
+            ValidateStatusOnlyReconciliation(statuses);
             ApplyStatusesAndReleaseLease(leaseId, statuses, nowUtc);
         }
 

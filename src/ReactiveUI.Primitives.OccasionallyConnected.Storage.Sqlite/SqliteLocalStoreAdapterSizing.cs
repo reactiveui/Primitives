@@ -116,6 +116,24 @@ internal sealed class SqliteLocalStoreAdapterSizing
         return Add(bytes, CollectionBytes(result.Operations, OperationSyncResultBytes));
     }
 
+    /// <summary>Adds retained input bytes for an owned snapshot mutation collection header.</summary>
+    /// <param name="bytes">The current byte count.</param>
+    /// <param name="snapshotMutationCount">The validated snapshot mutation count.</param>
+    /// <returns>The retained bytes.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal long AddSnapshotMutationCollectionBytes(long bytes, int snapshotMutationCount)
+    {
+        ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(snapshotMutationCount);
+        return Add(bytes, ObjectHeaderBytes + IntBytes);
+    }
+
+    /// <summary>Adds retained input bytes for one owned snapshot mutation.</summary>
+    /// <param name="bytes">The current byte count.</param>
+    /// <param name="snapshotMutation">The snapshot mutation.</param>
+    /// <returns>The retained bytes.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal long AddSnapshotMutationBytes(long bytes, SnapshotMutation snapshotMutation) => Add(bytes, SnapshotMutationBytes(snapshotMutation));
+
     /// <summary>Computes retained input bytes for event identifier lookup.</summary>
     /// <param name="streamId">The stream identifier.</param>
     /// <param name="eventIdCount">The copied event identifier count.</param>
@@ -280,11 +298,18 @@ internal sealed class SqliteLocalStoreAdapterSizing
     /// <param name="items">The collection.</param>
     /// <param name="itemSizer">The item sizing callback.</param>
     /// <returns>The retained bytes.</returns>
+    /// <exception cref="QueueCapacityExceededException">The collection cannot fit in an empty worker.</exception>
     private long CollectionBytes<T>(IReadOnlyList<T> items, Func<T, long> itemSizer)
     {
         ArgumentExceptionHelper.ThrowIfNull(items);
+        var count = items.Count;
+        if (count > _capacityBytes)
+        {
+            throw new QueueCapacityExceededException("The SQLite command worker has reached its configured capacity.", canFitWhenEmpty: false);
+        }
+
         var bytes = Add(ObjectHeaderBytes, IntBytes);
-        for (var index = 0; index < items.Count; index++)
+        for (var index = 0; index < count; index++)
         {
             bytes = Add(bytes, itemSizer(items[index]));
         }

@@ -90,6 +90,29 @@ public interface ILocalStoreAdapter : IAsyncDisposable
     /// </remarks>
     ValueTask ApplySyncResultAsync(Guid leaseId, RemoteSyncResult result, CancellationToken cancellationToken);
 
+    /// <summary>Atomically applies upload results and the optimistic snapshots rebuilt after rejection.</summary>
+    /// <param name="leaseId">The active lease owning every result operation.</param>
+    /// <param name="result">The complete result matching the leased batch exactly.</param>
+    /// <param name="snapshotMutations">One replacement for each stream losing rejected optimistic work.</param>
+    /// <param name="cancellationToken">The token observed before transaction commit.</param>
+    /// <returns>The snapshots committed with the operation results.</returns>
+    /// <remarks>
+    /// Stores capture the mutation collection within finite count and byte budgets before validating every lease,
+    /// operation identifier, and snapshot revision. Missing, duplicate, or unrelated replacements fail atomically.
+    /// Each replacement requires an existing authoritative checkpoint and increments the current snapshot revision.
+    /// An omitted authoritative payload preserves that checkpoint; an explicitly supplied payload must match it.
+    /// Upload results never advance the receive cursor or establish authoritative operation inclusion. Accepted
+    /// operations stop uploading but remain replay-visible until authoritative receive inclusion. A rejection that
+    /// contradicts existing receive inclusion fails closed. Cancellation before commit leaves state unchanged;
+    /// cancellation after commit returns the committed snapshots. Status-only result application must reject a
+    /// rejection requiring a snapshot rebuild when the stored authoritative checkpoint is known.
+    /// </remarks>
+    ValueTask<IReadOnlyList<LocalSnapshot>> ApplySyncResultAsync(
+        Guid leaseId,
+        RemoteSyncResult result,
+        IReadOnlyList<SnapshotMutation> snapshotMutations,
+        CancellationToken cancellationToken);
+
     /// <summary>Returns remote event identifiers that have not yet been durably applied for a stream.</summary>
     /// <param name="streamId">The stream identifier.</param>
     /// <param name="eventIds">The candidate remote event identifiers in received order.</param>
