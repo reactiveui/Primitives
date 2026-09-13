@@ -717,7 +717,8 @@ public sealed partial class ServerOperationProcessorTests
             new(Tenant, Client),
             StreamKey(),
             OperationKey(FirstOperationSeed),
-            new(StreamKey(), 0, null, null, [], null, 0));
+            new(StreamKey(), 0, null, null, [], null, 0),
+            Stamp(OperationKey(FirstOperationSeed)));
         var cursorFactory = new ServerOperationCursorFactory();
 
         await Assert.That(static () => new ServerOperationProcessorOptions { RetryAfter = TimeSpan.FromTicks(-1) }.Validate())

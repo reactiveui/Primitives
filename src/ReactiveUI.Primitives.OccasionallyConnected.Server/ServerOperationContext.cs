@@ -14,13 +14,15 @@ internal sealed class ServerOperationContext
     /// <param name="streamKey">The authenticated stream key.</param>
     /// <param name="operationKey">The authenticated operation key.</param>
     /// <param name="snapshot">The stream snapshot used for this preparation attempt.</param>
+    /// <param name="candidateWrite">The server-owned logical write stamp captured for this attempt.</param>
     internal ServerOperationContext(
         ClientIdentity client,
         SyncOperation operation,
         ServerOperationScope scope,
         ServerStreamKey streamKey,
         ServerOperationKey operationKey,
-        ServerCommitSnapshot snapshot)
+        ServerCommitSnapshot snapshot,
+        in ServerWriteStamp candidateWrite)
     {
         ArgumentExceptionHelper.ThrowIfNull(client);
         ArgumentExceptionHelper.ThrowIfNull(operation);
@@ -31,6 +33,7 @@ internal sealed class ServerOperationContext
         StreamKey = streamKey;
         OperationKey = operationKey;
         Snapshot = snapshot;
+        CandidateWrite = candidateWrite;
     }
 
     /// <summary>Gets the authenticated client identity.</summary>
@@ -50,4 +53,7 @@ internal sealed class ServerOperationContext
 
     /// <summary>Gets the snapshot used for this preparation attempt.</summary>
     internal ServerCommitSnapshot Snapshot { get; }
+
+    /// <summary>Gets the trusted write stamp shared by preparation and committed effects.</summary>
+    internal ServerWriteStamp CandidateWrite { get; }
 }
