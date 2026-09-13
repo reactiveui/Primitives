@@ -768,3 +768,22 @@ Conflict resolution retained the current Core APIs, SQLite registration, impleme
   net8/net9/net10/net11. MTP reports 100% matching package line and branch coverage (1551/1547/1547/1547 lines,
   474 branches); all eight Server library targets build in Release with zero warnings or errors.
 - This internal journal does not authorize callers, implement the server hub or advertise end-to-end guarantees.
+### Stage 4: atomic upload-result reconciliation
+
+- Added a bounded store transaction that commits complete lease results, lease release and optimistic snapshot
+  replacement together. Snapshot revisions fence competing work; authoritative payloads and receive cursors remain
+  unchanged. Rejections contradicting prior authoritative inclusion fail atomically.
+- The stream committer rebuilds from an isolated authoritative checkpoint and replays surviving operations in client
+  sequence order. Accepted operations remain replay-visible until receive inclusion; rejected edits disappear without
+  attempting to invert application mutations. Malformed store receipts poison the committer before further writes.
+- Both local stores implement this transaction. Status-only rejection fails when an authoritative snapshot requires
+  reconciliation. SQLite captures caller collections within finite limits and prepares the receipt before commit.
+- Application-style tests close and reopen SQLite before and after a mixed accept/reject response and verify replacement
+  state, revision, durable operation status and replay membership. Additional cases cover mutable projections, retryable
+  work, later echoes, cancellation timing, stale leases, failed transactions and invalid receipts.
+- Root independently reviewed the agents' code, extracted shared payload comparison, removed an unreachable nullable
+  branch and added missing receipt tests. A merged coverage report was insufficient; each framework was checked separately.
+- Integrated Release suites pass on net8/net9/net10/net11: Core 371, runtime 550 and SQLite 295 tests each. MTP confirms
+  100% matching line and branch coverage: Core 938 lines/372 branches; runtime 2911/2874/2874/2868 lines/1420 branches;
+  SQLite 3073/3057/3057/3059 lines/775 branches. All eight affected library targets build without warnings or errors.
+- Engine orchestration, terminal local failure handling and complete application integration remain subsequent work.

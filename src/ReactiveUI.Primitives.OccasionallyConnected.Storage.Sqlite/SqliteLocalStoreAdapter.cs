@@ -16,6 +16,9 @@ public sealed class SqliteLocalStoreAdapter : ILocalStoreAdapter
     /// <summary>The current SQLite local commit backend schema version.</summary>
     private const int CurrentSchemaVersion = SqliteStoreSchema.LocalCommitSchemaVersion;
 
+    /// <summary>The maximum number of snapshot replacements admitted for one upload result reconciliation.</summary>
+    private const int MaximumResultSnapshotMutations = 128;
+
     /// <summary>The local store capabilities backed by the SQLite implementation.</summary>
     private const LocalStoreCapabilities SupportedCapabilities =
         LocalStoreCapabilities.AtomicLocalCommit
@@ -176,6 +179,51 @@ public sealed class SqliteLocalStoreAdapter : ILocalStoreAdapter
             },
             _sizing.SyncResultBytes(result),
             cancellationToken));
+
+    /// <inheritdoc/>
+    public async ValueTask<IReadOnlyList<LocalSnapshot>> ApplySyncResultAsync(
+        Guid leaseId,
+        RemoteSyncResult result,
+        IReadOnlyList<SnapshotMutation> snapshotMutations,
+        CancellationToken cancellationToken)
+    {
+        SqliteLocalCommitValidation.ValidateSyncResultInput(leaseId, result);
+        ArgumentExceptionHelper.ThrowIfNull(snapshotMutations);
+        cancellationToken.ThrowIfCancellationRequested();
+        ReserveCapture(_workerCapacityBytes);
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var count = snapshotMutations.Count;
+            ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(count);
+            if (count > MaximumResultSnapshotMutations)
+            {
+                throw new QueueCapacityExceededException("The SQLite command worker has reached its configured capacity.", canFitWhenEmpty: false);
+            }
+
+            var retainedBytes = _sizing.SyncResultBytes(result);
+            retainedBytes = _sizing.AddSnapshotMutationCollectionBytes(retainedBytes, count);
+            var captured = new List<SnapshotMutation>(count);
+            for (var index = 0; index < count; index++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var mutation = snapshotMutations[index];
+                SqliteLocalCommitValidation.ValidateSnapshotMutation(mutation);
+                retainedBytes = _sizing.AddSnapshotMutationBytes(retainedBytes, mutation);
+                captured.Add(mutation);
+            }
+
+            var snapshotMutationsSnapshot = new ReadOnlyCollection<SnapshotMutation>(captured);
+            return await ExecuteAsync(
+                token => _store.ApplySyncResult(leaseId, result, snapshotMutationsSnapshot, token),
+                retainedBytes,
+                cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            ReleaseCapture(_workerCapacityBytes);
+        }
+    }
 
     /// <inheritdoc/>
     public async ValueTask<IReadOnlyList<Guid>> GetUnappliedEventIdsAsync(

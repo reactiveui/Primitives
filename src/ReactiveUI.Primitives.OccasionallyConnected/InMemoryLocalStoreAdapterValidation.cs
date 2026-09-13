@@ -3,13 +3,35 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected;
 
 /// <summary>Validates in-memory local store input.</summary>
 internal static class InMemoryLocalStoreAdapterValidation
 {
+    /// <summary>Validates a snapshot mutation.</summary>
+    /// <param name="snapshotMutation">The mutation.</param>
+    /// <exception cref="ArgumentException">The mutation is malformed.</exception>
+    /// <exception cref="ArgumentNullException">The mutation is null.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The format version or revision is invalid.</exception>
+    internal static void ValidateSnapshotMutation(SnapshotMutation snapshotMutation)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(snapshotMutation);
+        ValidateStreamId(snapshotMutation.StreamId, nameof(snapshotMutation));
+        ValidatePayload(snapshotMutation.State, nameof(snapshotMutation));
+        if (snapshotMutation.AuthoritativeState is { } authoritativeState)
+        {
+            ValidatePayload(authoritativeState, nameof(snapshotMutation));
+        }
+
+        _ = snapshotMutation.FormatVersion <= 0
+            ? throw new ArgumentOutOfRangeException(nameof(snapshotMutation), snapshotMutation.FormatVersion, "Snapshot format version must be positive.")
+            : true;
+        _ = snapshotMutation.ExpectedRevision < 0
+            ? throw new ArgumentOutOfRangeException(nameof(snapshotMutation), snapshotMutation.ExpectedRevision, "Snapshot expected revision must be non-negative.")
+            : true;
+    }
+
     /// <summary>Determines whether two commit attempts describe the same immutable intent.</summary>
     /// <param name="existingOperation">The existing operation.</param>
     /// <param name="requestedOperation">The requested operation.</param>
@@ -230,7 +252,7 @@ internal static class InMemoryLocalStoreAdapterValidation
         && left.Type == right.Type
         && left.Policy == right.Policy
         && HasSameMetadata(left.Metadata, right.Metadata)
-        && PayloadEquals(left.Payload, right.Payload);
+        && PayloadEnvelopeComparison.ContentEquals(left.Payload, right.Payload);
 
     /// <summary>Determines whether two snapshot mutations have the same canonical intent.</summary>
     /// <param name="left">The first mutation.</param>
@@ -240,46 +262,15 @@ internal static class InMemoryLocalStoreAdapterValidation
         left.StreamId == right.StreamId
         && left.FormatVersion == right.FormatVersion
         && left.ExpectedRevision == right.ExpectedRevision
-        && PayloadEquals(left.State, right.State)
+        && PayloadEnvelopeComparison.ContentEquals(left.State, right.State)
         && OptionalPayloadEquals(left.AuthoritativeState, right.AuthoritativeState);
-
-    /// <summary>Determines whether two payload envelopes contain the same canonical content.</summary>
-    /// <param name="left">The first payload.</param>
-    /// <param name="right">The second payload.</param>
-    /// <returns>Whether the payloads match.</returns>
-    private static bool PayloadEquals(PayloadEnvelope left, PayloadEnvelope right) =>
-        left.SchemaVersion == right.SchemaVersion
-        && string.Equals(left.ContractId, right.ContractId, StringComparison.Ordinal)
-        && string.Equals(left.ContentType, right.ContentType, StringComparison.Ordinal)
-        && left.PayloadLength == right.PayloadLength
-        && HashEquals(left.PayloadHash, right.PayloadHash)
-        && left.Payload.Span.SequenceEqual(right.Payload.Span);
 
     /// <summary>Determines whether two optional payload envelopes contain the same canonical content.</summary>
     /// <param name="left">The first optional payload.</param>
     /// <param name="right">The second optional payload.</param>
     /// <returns>Whether the payloads match.</returns>
     private static bool OptionalPayloadEquals(PayloadEnvelope? left, PayloadEnvelope? right) =>
-        left is null ? right is null : right is not null && PayloadEquals(left, right);
-
-    /// <summary>Determines whether two payload hashes match.</summary>
-    /// <param name="left">The first hash.</param>
-    /// <param name="right">The second hash.</param>
-    /// <returns>Whether the hashes match.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool HashEquals(string left, string right)
-    {
-        var leftBytes = Encoding.UTF8.GetBytes(left);
-        var rightBytes = Encoding.UTF8.GetBytes(right);
-        var difference = leftBytes.Length ^ rightBytes.Length;
-        var count = Math.Min(leftBytes.Length, rightBytes.Length);
-        for (var index = 0; index < count; index++)
-        {
-            difference |= leftBytes[index] ^ rightBytes[index];
-        }
-
-        return difference == 0;
-    }
+        left is null ? right is null : right is not null && PayloadEnvelopeComparison.ContentEquals(left, right);
 
     /// <summary>Validates a synchronization operation.</summary>
     /// <param name="operation">The operation.</param>
@@ -351,28 +342,5 @@ internal static class InMemoryLocalStoreAdapterValidation
         {
             ValidateRemoteEvent(batch, batch.Events[index], eventIds);
         }
-    }
-
-    /// <summary>Validates a snapshot mutation.</summary>
-    /// <param name="snapshotMutation">The mutation.</param>
-    /// <exception cref="ArgumentException">The mutation is malformed.</exception>
-    /// <exception cref="ArgumentNullException">The mutation is null.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">The format version or revision is invalid.</exception>
-    private static void ValidateSnapshotMutation(SnapshotMutation snapshotMutation)
-    {
-        ArgumentExceptionHelper.ThrowIfNull(snapshotMutation);
-        ValidateStreamId(snapshotMutation.StreamId, nameof(snapshotMutation));
-        ValidatePayload(snapshotMutation.State, nameof(snapshotMutation));
-        if (snapshotMutation.AuthoritativeState is { } authoritativeState)
-        {
-            ValidatePayload(authoritativeState, nameof(snapshotMutation));
-        }
-
-        _ = snapshotMutation.FormatVersion <= 0
-            ? throw new ArgumentOutOfRangeException(nameof(snapshotMutation), snapshotMutation.FormatVersion, "Snapshot format version must be positive.")
-            : true;
-        _ = snapshotMutation.ExpectedRevision < 0
-            ? throw new ArgumentOutOfRangeException(nameof(snapshotMutation), snapshotMutation.ExpectedRevision, "Snapshot expected revision must be non-negative.")
-            : true;
     }
 }

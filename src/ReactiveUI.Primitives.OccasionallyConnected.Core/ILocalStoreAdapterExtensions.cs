@@ -66,6 +66,18 @@ public static class ILocalStoreAdapterExtensions
         public ValueTask ApplySyncResultAsync(Guid leaseId, RemoteSyncResult result) =>
             adapter.ApplySyncResultAsync(leaseId, result, CancellationToken.None);
 
+        /// <summary>Atomically applies upload decisions and replacement optimistic snapshots.</summary>
+        /// <param name="leaseId">The active lease.</param>
+        /// <param name="result">The complete upload result.</param>
+        /// <param name="snapshotMutations">The replacements for streams losing rejected work.</param>
+        /// <returns>The committed snapshots.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask<IReadOnlyList<LocalSnapshot>> ApplySyncResultAsync(
+            Guid leaseId,
+            RemoteSyncResult result,
+            IReadOnlyList<SnapshotMutation> snapshotMutations) =>
+            adapter.ApplySyncResultAsync(leaseId, result, snapshotMutations, CancellationToken.None);
+
         /// <summary>Returns remote event identifiers that have not yet been durably applied for a stream.</summary>
         /// <param name="streamId">The stream identifier.</param>
         /// <param name="eventIds">The candidate remote event identifiers in received order.</param>
