@@ -15,7 +15,8 @@ public sealed class HttpRemoteTransportAdapter : IRemoteTransportAdapter
         RemoteTransportCapabilities.BatchPush
         | RemoteTransportCapabilities.CursorResume
         | RemoteTransportCapabilities.ReceiveAcknowledgements
-        | RemoteTransportCapabilities.ServerIdempotency;
+        | RemoteTransportCapabilities.ServerIdempotency
+        | RemoteTransportCapabilities.AtomicApplyAndAcknowledge;
 
     /// <summary>The adapter options.</summary>
     private readonly HttpRemoteTransportOptions _options;
