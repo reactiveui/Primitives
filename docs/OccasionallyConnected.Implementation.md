@@ -801,3 +801,15 @@ Conflict resolution retained the current Core APIs, SQLite registration, impleme
 - All 635 runtime TUnit tests pass in Release on net8/net9/net10/net11. MTP confirms 100% matching line and branch
   coverage (3412/3368/3368/3360 lines and 1634/1634/1634/1638 branches). All eight runtime targets build cleanly.
 - The adapter does not own the supplied hub or implement its durable authorization, subscription or acknowledgement store.
+
+### Stage 4: runtime metric instruments
+
+- Added an internal, owned meter with all thirteen specified counters, queue deltas and histograms. Disabled and
+  disposed recorders remain silent; emitted measurements contain no payloads, identifiers or caller-supplied tags.
+- Duration histograms preserve fractional milliseconds so fast local commits remain measurable. Root added an
+  executed regression that observed 0 ms for a 0.5 ms duration before correcting the integer truncation.
+- Root expanded the original tests to assert every instrument name, kind, unit and value through real MeterListener
+  callbacks, including queue decreases, invalid values, zero duration, disabled/disposed instances and concurrent writes.
+- All 655 runtime tests pass on net8/net9/net10/net11 with MTP-confirmed 100% matching line and branch coverage.
+  All eight runtime library targets build in Release without warnings or errors.
+- This recorder is ready for engine integration; complete runtime diagnostics and transport trace propagation remain required.
