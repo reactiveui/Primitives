@@ -2,9 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
-using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected;
 
@@ -14,8 +12,11 @@ namespace ReactiveUI.Primitives.OccasionallyConnected;
 /// The owning stream lane must serialize publications and terminal signals to establish a common order for every
 /// subscription. Each subscription drains independently; an observer callback cannot hold up another subscriber's queue.
 /// </remarks>
-internal sealed class ObserverNotificationDispatcher<T> : IDisposable
+internal sealed partial class ObserverNotificationDispatcher<T> : IDisposable
 {
+    /// <summary>The message used when subscribing after terminal dispatcher stop.</summary>
+    private const string StoppedMessage = "The observer notification dispatcher has already stopped.";
+
     /// <summary>Protects subscription membership and lifecycle state.</summary>
     private readonly Lock _gate = new();
 
@@ -168,6 +169,22 @@ internal sealed class ObserverNotificationDispatcher<T> : IDisposable
     internal ObserverNotificationPublishResult PublishLatest(T value, long sizeBytes) =>
         Publish(value, sizeBytes, true);
 
+    /// <summary>Publishes a latest-state notification through a per-observer value factory.</summary>
+    /// <param name="valueFactory">The value factory invoked for each observer callback.</param>
+    /// <param name="sizeBytes">The estimated byte size.</param>
+    /// <returns>The aggregate publication result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal ObserverNotificationPublishResult PublishLatest(Func<T> valueFactory, long sizeBytes) =>
+        Publish(valueFactory, sizeBytes, true);
+
+    /// <summary>Publishes a latest-state notification through an async per-observer value factory.</summary>
+    /// <param name="valueFactory">The value factory invoked for each observer callback.</param>
+    /// <param name="sizeBytes">The estimated byte size.</param>
+    /// <returns>The aggregate publication result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal ObserverNotificationPublishResult PublishLatest(Func<CancellationToken, ValueTask<T>> valueFactory, long sizeBytes) =>
+        Publish(valueFactory, sizeBytes, true);
+
     /// <summary>Publishes an event notification to active subscriptions.</summary>
     /// <param name="value">The event value.</param>
     /// <param name="sizeBytes">The estimated byte size.</param>
@@ -176,6 +193,34 @@ internal sealed class ObserverNotificationDispatcher<T> : IDisposable
     internal ObserverNotificationPublishResult PublishEvent(T value, long sizeBytes) =>
         Publish(value, sizeBytes, false);
 
+    /// <summary>Publishes an event notification through a per-observer value factory.</summary>
+    /// <param name="valueFactory">The value factory invoked for each observer callback.</param>
+    /// <param name="sizeBytes">The estimated byte size.</param>
+    /// <returns>The aggregate publication result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal ObserverNotificationPublishResult PublishEvent(Func<T> valueFactory, long sizeBytes) =>
+        Publish(valueFactory, sizeBytes, false);
+
+    /// <summary>Publishes an event notification through an async per-observer value factory.</summary>
+    /// <param name="valueFactory">The value factory invoked for each observer callback.</param>
+    /// <param name="sizeBytes">The estimated byte size.</param>
+    /// <returns>The aggregate publication result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal ObserverNotificationPublishResult PublishEvent(Func<CancellationToken, ValueTask<T>> valueFactory, long sizeBytes) =>
+        Publish(valueFactory, sizeBytes, false);
+
+    /// <summary>Queues a latest-state notification and returns any drain scheduling work to run later.</summary>
+    /// <param name="valueFactory">The value factory invoked for each observer callback.</param>
+    /// <param name="sizeBytes">The estimated byte size.</param>
+    /// <param name="schedules">The scheduling callbacks to run after the caller leaves its own lock.</param>
+    /// <returns>The aggregate publication result before deferred scheduling failures are observed.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal ObserverNotificationPublishResult PublishLatestDeferred(
+        Func<CancellationToken, ValueTask<T>> valueFactory,
+        long sizeBytes,
+        List<Action> schedules) =>
+        PublishDeferred(valueFactory, sizeBytes, true, schedules);
+
     /// <summary>Subscribes an observer with a bounded notification queue.</summary>
     /// <param name="observer">The observer receiving serialized callbacks.</param>
     /// <param name="options">The queue options.</param>
@@ -183,6 +228,7 @@ internal sealed class ObserverNotificationDispatcher<T> : IDisposable
     /// <exception cref="ArgumentNullException"><paramref name="observer"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException"><paramref name="options"/> is invalid or the dispatcher has stopped.</exception>
     /// <exception cref="ObjectDisposedException">The dispatcher has been disposed.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal IDisposable Subscribe(IObserver<T> observer, ObserverNotificationSubscriptionOptions options)
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
@@ -194,10 +240,192 @@ internal sealed class ObserverNotificationDispatcher<T> : IDisposable
             ObjectDisposedExceptionHelper.ThrowIf(_disposed, this);
             if (_stopped)
             {
-                throw new InvalidOperationException("The observer notification dispatcher has already stopped.");
+                throw new InvalidOperationException(StoppedMessage);
             }
 
             _subscriptions.Add(subscription);
+        }
+
+        return subscription;
+    }
+
+    /// <summary>Subscribes an observer and queues an initial value before later live notifications can reach it.</summary>
+    /// <param name="observer">The observer receiving serialized callbacks.</param>
+    /// <param name="options">The queue options.</param>
+    /// <param name="hasInitial">Whether an initial value should be queued.</param>
+    /// <param name="initialValue">The optional initial value.</param>
+    /// <param name="initialSizeBytes">The initial value byte size.</param>
+    /// <returns>The subscription handle.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="observer"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="initialSizeBytes"/> is not positive when replaying.</exception>
+    /// <exception cref="InvalidOperationException"><paramref name="options"/> is invalid or the dispatcher has stopped.</exception>
+    /// <exception cref="ObjectDisposedException">The dispatcher has been disposed.</exception>
+    internal IDisposable Subscribe(
+        IObserver<T> observer,
+        ObserverNotificationSubscriptionOptions options,
+        bool hasInitial,
+        T initialValue,
+        long initialSizeBytes)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(observer);
+        options.Validate();
+        if (hasInitial)
+        {
+            ValidateSize(initialSizeBytes);
+        }
+
+        var subscription = new Subscription(this, observer, options);
+        var scheduleInitial = false;
+
+        lock (_gate)
+        {
+            ObjectDisposedExceptionHelper.ThrowIf(_disposed, this);
+            if (_stopped)
+            {
+                throw new InvalidOperationException(StoppedMessage);
+            }
+
+            _subscriptions.Add(subscription);
+            if (hasInitial)
+            {
+                scheduleInitial = subscription.QueueInitial(initialValue, initialSizeBytes);
+            }
+        }
+
+        if (scheduleInitial)
+        {
+            subscription.ScheduleInitial();
+        }
+
+        return subscription;
+    }
+
+    /// <summary>Subscribes an observer and queues an initial value factory before later live notifications can reach it.</summary>
+    /// <param name="observer">The observer receiving serialized callbacks.</param>
+    /// <param name="options">The queue options.</param>
+    /// <param name="hasInitial">Whether an initial value should be queued.</param>
+    /// <param name="initialValueFactory">The optional initial value factory.</param>
+    /// <param name="initialSizeBytes">The initial value byte size.</param>
+    /// <returns>The subscription handle.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="observer"/> or <paramref name="initialValueFactory"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="initialSizeBytes"/> is not positive when replaying.</exception>
+    /// <exception cref="InvalidOperationException"><paramref name="options"/> is invalid or the dispatcher has stopped.</exception>
+    /// <exception cref="ObjectDisposedException">The dispatcher has been disposed.</exception>
+    internal IDisposable Subscribe(
+        IObserver<T> observer,
+        ObserverNotificationSubscriptionOptions options,
+        bool hasInitial,
+        Func<T> initialValueFactory,
+        long initialSizeBytes)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(observer);
+        options.Validate();
+        if (hasInitial)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(initialValueFactory);
+            ValidateSize(initialSizeBytes);
+        }
+
+        var subscription = new Subscription(this, observer, options);
+        var scheduleInitial = false;
+
+        lock (_gate)
+        {
+            ObjectDisposedExceptionHelper.ThrowIf(_disposed, this);
+            if (_stopped)
+            {
+                throw new InvalidOperationException(StoppedMessage);
+            }
+
+            _subscriptions.Add(subscription);
+            if (hasInitial)
+            {
+                scheduleInitial = subscription.QueueInitial(initialValueFactory, initialSizeBytes);
+            }
+        }
+
+        if (scheduleInitial)
+        {
+            subscription.ScheduleInitial();
+        }
+
+        return subscription;
+    }
+
+    /// <summary>Subscribes an observer and queues an async initial value factory before later live notifications can reach it.</summary>
+    /// <param name="observer">The observer receiving serialized callbacks.</param>
+    /// <param name="options">The queue options.</param>
+    /// <param name="hasInitial">Whether an initial value should be queued.</param>
+    /// <param name="initialValueFactory">The optional initial value factory.</param>
+    /// <param name="initialSizeBytes">The initial value byte size.</param>
+    /// <returns>The subscription handle.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="observer"/> or <paramref name="initialValueFactory"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="initialSizeBytes"/> is not positive when replaying.</exception>
+    /// <exception cref="InvalidOperationException"><paramref name="options"/> is invalid or the dispatcher has stopped.</exception>
+    /// <exception cref="ObjectDisposedException">The dispatcher has been disposed.</exception>
+    internal IDisposable Subscribe(
+        IObserver<T> observer,
+        ObserverNotificationSubscriptionOptions options,
+        bool hasInitial,
+        Func<CancellationToken, ValueTask<T>> initialValueFactory,
+        long initialSizeBytes)
+    {
+        var schedules = new List<Action>(1);
+        var subscription = SubscribeDeferred(observer, options, hasInitial, initialValueFactory, initialSizeBytes, schedules);
+        RunSchedules(schedules);
+        return subscription;
+    }
+
+    /// <summary>Subscribes an observer and defers async initial replay scheduling until the caller leaves its own lock.</summary>
+    /// <param name="observer">The observer receiving serialized callbacks.</param>
+    /// <param name="options">The queue options.</param>
+    /// <param name="hasInitial">Whether an initial value should be queued.</param>
+    /// <param name="initialValueFactory">The optional initial value factory.</param>
+    /// <param name="initialSizeBytes">The initial value byte size.</param>
+    /// <param name="schedules">The scheduling callbacks to run after the caller leaves its own lock.</param>
+    /// <returns>The subscription handle.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="observer"/>, <paramref name="initialValueFactory"/>, or <paramref name="schedules"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="initialSizeBytes"/> is not positive when replaying.</exception>
+    /// <exception cref="InvalidOperationException"><paramref name="options"/> is invalid or the dispatcher has stopped.</exception>
+    /// <exception cref="ObjectDisposedException">The dispatcher has been disposed.</exception>
+    internal IDisposable SubscribeDeferred(
+        IObserver<T> observer,
+        ObserverNotificationSubscriptionOptions options,
+        bool hasInitial,
+        Func<CancellationToken, ValueTask<T>> initialValueFactory,
+        long initialSizeBytes,
+        List<Action> schedules)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(observer);
+        ArgumentExceptionHelper.ThrowIfNull(schedules);
+        options.Validate();
+        if (hasInitial)
+        {
+            ArgumentExceptionHelper.ThrowIfNull(initialValueFactory);
+            ValidateSize(initialSizeBytes);
+        }
+
+        var subscription = new Subscription(this, observer, options);
+        var scheduleInitial = false;
+
+        lock (_gate)
+        {
+            ObjectDisposedExceptionHelper.ThrowIf(_disposed, this);
+            if (_stopped)
+            {
+                throw new InvalidOperationException(StoppedMessage);
+            }
+
+            _subscriptions.Add(subscription);
+            if (hasInitial)
+            {
+                scheduleInitial = subscription.QueueInitial(initialValueFactory, initialSizeBytes);
+            }
+        }
+
+        if (scheduleInitial)
+        {
+            schedules.Add(subscription.ScheduleInitial);
         }
 
         return subscription;
@@ -214,6 +442,16 @@ internal sealed class ObserverNotificationDispatcher<T> : IDisposable
         }
 
         throw new ArgumentOutOfRangeException(nameof(sizeBytes), "The notification byte size must be positive.");
+    }
+
+    /// <summary>Runs deferred scheduling callbacks.</summary>
+    /// <param name="schedules">The callbacks.</param>
+    private static void RunSchedules(List<Action> schedules)
+    {
+        for (var i = 0; i < schedules.Count; i++)
+        {
+            schedules[i]();
+        }
     }
 
     /// <summary>Copies the current subscription list.</summary>
@@ -285,386 +523,120 @@ internal sealed class ObserverNotificationDispatcher<T> : IDisposable
         return result;
     }
 
-    /// <summary>Stores one queued observer notification.</summary>
-    private readonly record struct Notification
+    /// <summary>Publishes a data notification through a per-observer value factory.</summary>
+    /// <param name="valueFactory">The value factory invoked for each observer callback.</param>
+    /// <param name="sizeBytes">The estimated byte size.</param>
+    /// <param name="coalesceLatest">A value indicating whether overflow may replace queued data with the newest value.</param>
+    /// <returns>The aggregate publication result.</returns>
+    private ObserverNotificationPublishResult Publish(Func<T> valueFactory, long sizeBytes, bool coalesceLatest)
     {
-        /// <summary>Stores the value for a data notification.</summary>
-        [AllowNull]
-        private readonly T _value;
+        ArgumentExceptionHelper.ThrowIfNull(valueFactory);
+        ValidateSize(sizeBytes);
+        Subscription[] subscriptions;
 
-        /// <summary>Stores the error for an error notification.</summary>
-        private readonly Exception? _error;
-
-        /// <summary>Initializes a new instance of the <see cref="Notification"/> struct.</summary>
-        /// <param name="value">The data value.</param>
-        /// <param name="sizeBytes">The notification byte size.</param>
-        private Notification(T value, long sizeBytes)
+        lock (_gate)
         {
-            _value = value;
-            SizeBytes = sizeBytes;
-            IsData = true;
-        }
-
-        /// <summary>Initializes a new instance of the <see cref="Notification"/> struct.</summary>
-        /// <param name="error">The optional terminal error.</param>
-        private Notification(Exception? error)
-        {
-            _value = default;
-            _error = error;
-            SizeBytes = 0;
-            IsData = false;
-        }
-
-        /// <summary>Gets the data byte size.</summary>
-        internal long SizeBytes { get; }
-
-        /// <summary>Gets whether this notification carries a data value.</summary>
-        private bool IsData { get; }
-
-        /// <summary>Creates a data notification.</summary>
-        /// <param name="value">The data value.</param>
-        /// <param name="sizeBytes">The notification byte size.</param>
-        /// <returns>The notification.</returns>
-        internal static Notification Next(T value, long sizeBytes) => new(value, sizeBytes);
-
-        /// <summary>Creates a completion notification.</summary>
-        /// <returns>The notification.</returns>
-        internal static Notification Completed() => new(null);
-
-        /// <summary>Creates an error notification.</summary>
-        /// <param name="error">The terminal error.</param>
-        /// <returns>The notification.</returns>
-        internal static Notification Error(Exception error) => new(error);
-
-        /// <summary>Invokes this notification on the supplied observer.</summary>
-        /// <param name="observer">The observer to notify.</param>
-        /// <returns><see langword="true"/> when the subscription can continue.</returns>
-        internal bool Invoke(IObserver<T> observer)
-        {
-            if (IsData)
+            if (_stopped)
             {
-                observer.OnNext(_value);
-                return true;
+                return ObserverNotificationPublishResult.Stopped;
             }
 
-            if (_error is null)
-            {
-                observer.OnCompleted();
-                return false;
-            }
-
-            observer.OnError(_error);
-            return false;
+            subscriptions = CopySubscriptions();
         }
+
+        var result = ObserverNotificationPublishResult.Stopped;
+        for (var i = 0; i < subscriptions.Length; i++)
+        {
+            var mode = coalesceLatest && subscriptions[i].Options.OverflowMode == ObserverNotificationOverflowMode.CoalesceLatest
+                ? ObserverNotificationOverflowMode.CoalesceLatest
+                : ObserverNotificationOverflowMode.Disconnect;
+            var subscriptionResult = subscriptions[i].Publish(valueFactory, sizeBytes, mode);
+            if (subscriptionResult > result)
+            {
+                result = subscriptionResult;
+            }
+        }
+
+        return result;
     }
 
-    /// <summary>Drains one subscription queue.</summary>
-    /// <param name="subscription">The subscription to drain.</param>
-    private sealed class DrainWorkItem(Subscription subscription) : IWorkItem
+    /// <summary>Publishes a data notification through an async per-observer value factory.</summary>
+    /// <param name="valueFactory">The value factory invoked for each observer callback.</param>
+    /// <param name="sizeBytes">The estimated byte size.</param>
+    /// <param name="coalesceLatest">A value indicating whether overflow may replace queued data with the newest value.</param>
+    /// <returns>The aggregate publication result.</returns>
+    private ObserverNotificationPublishResult Publish(Func<CancellationToken, ValueTask<T>> valueFactory, long sizeBytes, bool coalesceLatest)
     {
-        /// <summary>Stores the subscription to drain.</summary>
-        private readonly Subscription _subscription = subscription;
+        ArgumentExceptionHelper.ThrowIfNull(valueFactory);
+        ValidateSize(sizeBytes);
+        Subscription[] subscriptions;
 
-        /// <inheritdoc />
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Execute() => _subscription.Drain();
+        lock (_gate)
+        {
+            if (_stopped)
+            {
+                return ObserverNotificationPublishResult.Stopped;
+            }
+
+            subscriptions = CopySubscriptions();
+        }
+
+        var result = ObserverNotificationPublishResult.Stopped;
+        for (var i = 0; i < subscriptions.Length; i++)
+        {
+            var mode = coalesceLatest && subscriptions[i].Options.OverflowMode == ObserverNotificationOverflowMode.CoalesceLatest
+                ? ObserverNotificationOverflowMode.CoalesceLatest
+                : ObserverNotificationOverflowMode.Disconnect;
+            var subscriptionResult = subscriptions[i].Publish(valueFactory, sizeBytes, mode);
+            if (subscriptionResult > result)
+            {
+                result = subscriptionResult;
+            }
+        }
+
+        return result;
     }
 
-    /// <summary>Represents one isolated observer subscription.</summary>
-    private sealed class Subscription : IDisposable
+    /// <summary>Queues a data notification through a per-observer value factory without scheduling drains inline.</summary>
+    /// <param name="valueFactory">The value factory invoked for each observer callback.</param>
+    /// <param name="sizeBytes">The estimated byte size.</param>
+    /// <param name="coalesceLatest">A value indicating whether overflow may replace queued data with the newest value.</param>
+    /// <param name="schedules">The scheduling callbacks to run after leaving a caller-owned lock.</param>
+    /// <returns>The aggregate publication result before deferred scheduling failures are observed.</returns>
+    private ObserverNotificationPublishResult PublishDeferred(
+        Func<CancellationToken, ValueTask<T>> valueFactory,
+        long sizeBytes,
+        bool coalesceLatest,
+        List<Action> schedules)
     {
-        /// <summary>Protects this subscription queue and lifecycle.</summary>
-        private readonly Lock _gate = new();
+        ArgumentExceptionHelper.ThrowIfNull(valueFactory);
+        ArgumentExceptionHelper.ThrowIfNull(schedules);
+        ValidateSize(sizeBytes);
+        Subscription[] subscriptions;
 
-        /// <summary>Stores the owning dispatcher.</summary>
-        private readonly ObserverNotificationDispatcher<T> _owner;
-
-        /// <summary>Stores the observer.</summary>
-        private readonly IObserver<T> _observer;
-
-        /// <summary>Stores queued data notifications.</summary>
-        private readonly List<Notification> _queue = [];
-
-        /// <summary>Tracks queued data bytes.</summary>
-        private long _bytes;
-
-        /// <summary>Stores a pending terminal notification outside the bounded data queue.</summary>
-        private Notification _terminalNotification;
-
-        /// <summary>Tracks whether drain work has been scheduled.</summary>
-        private int _scheduled;
-
-        /// <summary>Tracks whether this subscription has reached a terminal state.</summary>
-        private bool _terminalQueued;
-
-        /// <summary>Tracks whether this subscription has been disposed.</summary>
-        private bool _disposed;
-
-        /// <summary>Initializes a new instance of the <see cref="Subscription"/> class.</summary>
-        /// <param name="owner">The owning dispatcher.</param>
-        /// <param name="observer">The observer receiving notifications.</param>
-        /// <param name="options">The subscription options.</param>
-        internal Subscription(
-            ObserverNotificationDispatcher<T> owner,
-            IObserver<T> observer,
-            ObserverNotificationSubscriptionOptions options)
+        lock (_gate)
         {
-            _owner = owner;
-            _observer = observer;
-            Options = options;
+            if (_stopped)
+            {
+                return ObserverNotificationPublishResult.Stopped;
+            }
+
+            subscriptions = CopySubscriptions();
         }
 
-        /// <summary>Gets the subscription options.</summary>
-        internal ObserverNotificationSubscriptionOptions Options { get; }
-
-        /// <inheritdoc />
-        public void Dispose()
+        var result = ObserverNotificationPublishResult.Stopped;
+        for (var i = 0; i < subscriptions.Length; i++)
         {
-            lock (_gate)
+            var mode = coalesceLatest && subscriptions[i].Options.OverflowMode == ObserverNotificationOverflowMode.CoalesceLatest
+                ? ObserverNotificationOverflowMode.CoalesceLatest
+                : ObserverNotificationOverflowMode.Disconnect;
+            var subscriptionResult = subscriptions[i].PublishDeferred(valueFactory, sizeBytes, mode, schedules);
+            if (subscriptionResult > result)
             {
-                if (_disposed)
-                {
-                    return;
-                }
-
-                _disposed = true;
-                _terminalQueued = true;
-                Volatile.Write(ref _scheduled, 0);
-                ClearQueuedNotifications();
-            }
-
-            _owner.Forget(this);
-        }
-
-        /// <summary>Publishes one data notification.</summary>
-        /// <param name="value">The value.</param>
-        /// <param name="sizeBytes">The notification byte size.</param>
-        /// <param name="mode">The overflow behavior.</param>
-        /// <returns>The publication result.</returns>
-        internal ObserverNotificationPublishResult Publish(T value, long sizeBytes, ObserverNotificationOverflowMode mode)
-        {
-            var result = ObserverNotificationPublishResult.Queued;
-            var schedule = false;
-
-            lock (_gate)
-            {
-                if (!CanAcceptData())
-                {
-                    return ObserverNotificationPublishResult.Stopped;
-                }
-
-                if (CanFit(sizeBytes))
-                {
-                    EnqueueData(value, sizeBytes);
-                }
-                else if (mode == ObserverNotificationOverflowMode.CoalesceLatest && CanCoalesce(sizeBytes))
-                {
-                    Coalesce(value, sizeBytes);
-                    result = ObserverNotificationPublishResult.Coalesced;
-                }
-                else
-                {
-                    QueueOverflowTerminal(sizeBytes);
-                    result = ObserverNotificationPublishResult.Disconnected;
-                }
-
-                schedule = TryMarkScheduled();
-            }
-
-            if (!schedule)
-            {
-                return result;
-            }
-
-            return ScheduleDrain() ? result : HandleScheduleFailure();
-        }
-
-        /// <summary>Publishes a terminal notification.</summary>
-        /// <param name="notification">The terminal notification.</param>
-        /// <returns>The publication result.</returns>
-        internal ObserverNotificationPublishResult PublishTerminal(Notification notification)
-        {
-            var schedule = false;
-
-            lock (_gate)
-            {
-                if (_disposed || _terminalQueued)
-                {
-                    return ObserverNotificationPublishResult.Stopped;
-                }
-
-                _terminalQueued = true;
-                _terminalNotification = notification;
-                schedule = TryMarkScheduled();
-            }
-
-            if (!schedule)
-            {
-                return ObserverNotificationPublishResult.Queued;
-            }
-
-            return ScheduleDrain() ? ObserverNotificationPublishResult.Queued : HandleScheduleFailure();
-        }
-
-        /// <summary>Drains queued notifications serially.</summary>
-        internal void Drain()
-        {
-            while (TryTakeNotification(out var notification))
-            {
-                if (Invoke(notification))
-                {
-                    continue;
-                }
-
-                Dispose();
-                return;
+                result = subscriptionResult;
             }
         }
 
-        /// <summary>Determines whether the subscription accepts data notifications.</summary>
-        /// <returns><see langword="true"/> when data can be queued.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool CanAcceptData() => !_disposed && !_terminalQueued;
-
-        /// <summary>Determines whether a data notification fits the queue.</summary>
-        /// <param name="sizeBytes">The incoming byte size.</param>
-        /// <returns><see langword="true"/> when the notification fits.</returns>
-        private bool CanFit(long sizeBytes) =>
-            _queue.Count < Options.Capacity && sizeBytes <= Options.CapacityBytes - _bytes;
-
-        /// <summary>Determines whether queued state can be replaced by the incoming value.</summary>
-        /// <param name="sizeBytes">The incoming byte size.</param>
-        /// <returns><see langword="true"/> when coalescing can fit.</returns>
-        private bool CanCoalesce(long sizeBytes) => sizeBytes <= Options.CapacityBytes;
-
-        /// <summary>Replaces queued data with the newest state notification.</summary>
-        /// <param name="value">The newest value.</param>
-        /// <param name="sizeBytes">The notification byte size.</param>
-        private void Coalesce(T value, long sizeBytes)
-        {
-            _queue.Clear();
-            _bytes = 0;
-            EnqueueData(value, sizeBytes);
-        }
-
-        /// <summary>Adds one data notification.</summary>
-        /// <param name="value">The value.</param>
-        /// <param name="sizeBytes">The byte size.</param>
-        private void EnqueueData(T value, long sizeBytes)
-        {
-            _queue.Add(Notification.Next(value, sizeBytes));
-            _bytes += sizeBytes;
-        }
-
-        /// <summary>Queues a terminal overflow error without exceeding the bounded data queue.</summary>
-        /// <param name="sizeBytes">The incoming notification byte size.</param>
-        private void QueueOverflowTerminal(long sizeBytes)
-        {
-            _terminalQueued = true;
-            _terminalNotification = Notification.Error(new ObserverNotificationOverflowException(Options.Capacity, Options.CapacityBytes, sizeBytes));
-        }
-
-        /// <summary>Clears all pending notifications.</summary>
-        private void ClearQueuedNotifications()
-        {
-            _queue.Clear();
-            _bytes = 0;
-            _terminalNotification = default;
-        }
-
-        /// <summary>Marks the subscription as having scheduled drain work.</summary>
-        /// <returns><see langword="true"/> when new work must be scheduled.</returns>
-        private bool TryMarkScheduled()
-        {
-            if (Volatile.Read(ref _scheduled) != 0)
-            {
-                return false;
-            }
-
-            Volatile.Write(ref _scheduled, 1);
-            return true;
-        }
-
-        /// <summary>Takes the next queued notification.</summary>
-        /// <param name="notification">The removed notification.</param>
-        /// <returns><see langword="true"/> when a notification was available.</returns>
-        private bool TryTakeNotification(out Notification notification)
-        {
-            lock (_gate)
-            {
-                if (_disposed)
-                {
-                    Volatile.Write(ref _scheduled, 0);
-                    notification = default;
-                    return false;
-                }
-
-                if (_queue.Count > 0)
-                {
-                    notification = _queue[0];
-                    _queue.RemoveAt(0);
-                    _bytes -= notification.SizeBytes;
-                    return true;
-                }
-
-                if (_terminalQueued)
-                {
-                    notification = _terminalNotification;
-                    _terminalNotification = default;
-                    return true;
-                }
-
-                Volatile.Write(ref _scheduled, 0);
-                notification = default;
-                return false;
-            }
-        }
-
-        /// <summary>Invokes a notification and contains observer/reporting failures.</summary>
-        /// <param name="notification">The notification to invoke.</param>
-        /// <returns><see langword="true"/> when the subscription can continue.</returns>
-        private bool Invoke(Notification notification)
-        {
-            try
-            {
-                return notification.Invoke(_observer);
-            }
-            catch (Exception exception)
-            {
-                _owner.ReportFault(exception);
-                return false;
-            }
-        }
-
-        /// <summary>Schedules this subscription for draining.</summary>
-        /// <returns><see langword="true"/> when scheduling succeeded.</returns>
-        private bool ScheduleDrain()
-        {
-            try
-            {
-                _owner._scheduler.Schedule(new DrainWorkItem(this));
-                return true;
-            }
-            catch (Exception)
-            {
-                return false;
-            }
-        }
-
-        /// <summary>Recovers subscription state after scheduler rejection.</summary>
-        /// <returns>The scheduler rejection publication result.</returns>
-        private ObserverNotificationPublishResult HandleScheduleFailure()
-        {
-            lock (_gate)
-            {
-                Volatile.Write(ref _scheduled, 0);
-                _disposed = true;
-                _terminalQueued = true;
-                ClearQueuedNotifications();
-            }
-
-            _owner.Forget(this);
-            return ObserverNotificationPublishResult.SchedulerRejected;
-        }
+        return result;
     }
 }

@@ -970,3 +970,24 @@ Combined acknowledgement/conflict verification passed 268 Server tests per moder
 and branch coverage (3135/3127/3127/3124 lines, 997 branches each), plus all eight Release library targets without
 warnings or errors. Evidence: conflict-handler worktree, artifacts/root-conflict-integrated. CRDT resolver/domain
 adapters and the public server hub remain required integration work.
+
+### Stage 5: serialized stream facade and asynchronous observer delivery
+
+The internal typed facade now composes durable identity recovery, the local committer, a bounded FIFO mutation lane,
+and per-observer asynchronous snapshot delivery. Local replay uses committed payloads, and each observer materializes
+its own value. Queued and in-flight notifications both count against admission limits; slow observers do not execute
+under the mutation lock. Lifecycle calls share completion and disposal drains admitted work and owned resources.
+
+Root review added regressions and fixes for dropped BaseVersion, canceled first-publish initialization, cleanup failure
+precedence, and diagnostic privacy. Fault notifications retain bounded exception type names without caller exception
+messages, data, or inner graphs. The lane registers cancellation before queue publication, treats scheduler rejection
+and execution as mutually exclusive owners, and releases capacity before completing the caller's task. Production
+test hooks were removed; real injected schedulers exercise cancellation, reentrancy, rejection, and FIFO behavior.
+
+Independent combined verification passed 794 Runtime tests on each modern target, with MTP-confirmed 100% line and
+branch coverage (4679/4611/4611/4593 lines and 2056/2056/2056/2060 branches). All eight Release library targets compile
+without warnings or errors. Evidence: stream-facade worktree, artifacts/root-facade-integrated for net9/net10/net11 and
+artifacts/root-facade-rebuilt for net8; the latter forced a rebuild after detecting an older cached test binary.
+
+This is an internal integration component. Concrete context/engine/builder composition, durable admission policies,
+owned Input capture, upload/result/status wiring, and full application integration remain required work.
