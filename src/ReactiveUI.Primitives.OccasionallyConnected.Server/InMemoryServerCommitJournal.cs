@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Server;
 /// Authenticated tenant and client identifiers are trusted inputs from the host. This journal does not perform
 /// authorization, durability, cross-process coordination or capability advertisement.
 /// </remarks>
-internal sealed class InMemoryServerCommitJournal
+internal sealed class InMemoryServerCommitJournal : IServerCommitJournal
 {
     /// <summary>Protects stream state and retained journal accounting.</summary>
     private readonly Lock _gate = new();
@@ -105,6 +105,11 @@ internal sealed class InMemoryServerCommitJournal
         }
     }
 
+    /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    ServerCommitSnapshot IServerCommitJournal.Read(ServerStreamKey streamKey, IReadOnlyList<ServerOperationKey> operationKeys) =>
+        Read(streamKey, operationKeys);
+
     /// <summary>Attempts to atomically admit a fully prepared terminal server commit.</summary>
     /// <param name="plan">The prepared commit plan.</param>
     /// <returns>The result and atomic stream snapshot observed by the attempt.</returns>
@@ -118,6 +123,10 @@ internal sealed class InMemoryServerCommitJournal
             return TryCommitUnderGate(commit, observedUtc);
         }
     }
+
+    /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    ServerCommitResult IServerCommitJournal.TryCommit(ServerCommitPlan plan) => TryCommit(plan);
 
     /// <summary>Compacts expired terminal ledger entries and event rows using the journal clock.</summary>
     /// <returns>The number of terminal entries removed.</returns>
