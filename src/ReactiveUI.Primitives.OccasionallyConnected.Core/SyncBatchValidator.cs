@@ -194,7 +194,8 @@ public static class SyncBatchValidator
     private static bool IsDefined(SyncOperationType type) => type is
         SyncOperationType.Append or
         SyncOperationType.Update or
-        SyncOperationType.Delete;
+        SyncOperationType.Delete or
+        SyncOperationType.Custom;
 
     /// <summary>Creates a synchronization batch validation exception.</summary>
     /// <param name="error">The validation error.</param>
