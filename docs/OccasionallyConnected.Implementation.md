@@ -813,3 +813,16 @@ Conflict resolution retained the current Core APIs, SQLite registration, impleme
 - All 655 runtime tests pass on net8/net9/net10/net11 with MTP-confirmed 100% matching line and branch coverage.
   All eight runtime library targets build in Release without warnings or errors.
 - This recorder is ready for engine integration; complete runtime diagnostics and transport trace propagation remain required.
+
+### Stage 4: bounded activity recorder
+
+- Added the seven specified activity names through an owned ActivitySource. Activities inherit ambient parent context,
+  contain no payload tags, and remain caller-owned after recorder disposal. Disabled or disposed recorders stay silent.
+- Sampling uses the W3C parent trace where available and a fresh root sampling seed otherwise; independent root calls
+  no longer all hash the same zero identifier. Constructor validation precedes source registration with process listeners.
+- Root added two executed failing regressions for invalid construction publishing a source and root sampling receiving
+  a zero identifier, then corrected both. Listener tests cover every name/kind, parent restoration, fractional sampling,
+  hierarchical parents, invalid configuration, source lifetime and concurrent starts without nullability suppressions.
+- All 675 runtime tests pass in Release on net8/net9/net10/net11. MTP confirms 100% matching line and branch coverage
+  (3510/3466/3466/3458 lines, 1706/1706/1706/1710 branches); all eight runtime library targets build with zero warnings/errors.
+- Engine span placement and transport trace propagation remain integration work; this is the recorder component.
