@@ -608,6 +608,15 @@ public sealed partial class LocalStreamCommitterTests
         /// <summary>Gets or sets whether state serialization incorrectly uses the input contract.</summary>
         public bool SerializeStateAsInputContract { get; set; }
 
+        /// <summary>Gets or sets a value indicating whether input payload hashes are rejected.</summary>
+        public bool RejectInputHash { get; set; }
+
+        /// <summary>Gets the number of input payloads serialized.</summary>
+        public int InputSerializeCount { get; private set; }
+
+        /// <summary>Gets the number of input payloads decoded.</summary>
+        public int InputDeserializeCount { get; private set; }
+
         /// <summary>Gets the number of remote input payloads decoded.</summary>
         public int RemoteInputDeserializeCount { get; private set; }
 
@@ -634,6 +643,11 @@ public sealed partial class LocalStreamCommitterTests
                 mutable.Value = MutatedReadingValue;
             }
 
+            if (contractId == InputContract)
+            {
+                InputSerializeCount++;
+            }
+
             if (contractId == StateContract)
             {
                 _ = CancelAfterStateSerialization?.CancelAsync();
@@ -652,6 +666,13 @@ public sealed partial class LocalStreamCommitterTests
             {
                 if (envelope.ContractId == InputContract)
                 {
+                    var expectedEnvelope = new PayloadEnvelope(InputContract, envelope.SchemaVersion, envelope.ContentType, envelope.Payload, $"hash-{text}");
+                    if (RejectInputHash && !PayloadEnvelopeComparison.ContentEquals(envelope, expectedEnvelope))
+                    {
+                        throw new InvalidOperationException("Input payload hash mismatch.");
+                    }
+
+                    InputDeserializeCount++;
                     RemoteInputDeserializeCount++;
                 }
 
