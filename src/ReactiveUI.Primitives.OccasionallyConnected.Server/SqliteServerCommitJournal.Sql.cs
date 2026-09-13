@@ -33,6 +33,8 @@ internal sealed partial class SqliteServerCommitJournal
         CreateConflictsTable(connection, transaction);
         CreateEventsTable(connection, transaction);
         CreateEventMetadataTable(connection, transaction);
+        CreateSubscriptionsTable(connection, transaction);
+        CreateSubscriptionOffersTable(connection, transaction);
         InsertMetadata(connection, transaction, SchemaVersionKey, CurrentSchemaVersion.ToString(CultureInfo.InvariantCulture));
         InsertMetadata(connection, transaction, LatestUtcKey, FormatDateTimeOffset(DateTimeOffset.MinValue));
     }
@@ -67,6 +69,8 @@ internal sealed partial class SqliteServerCommitJournal
                 LedgerTableName,
                 MetadataTableName,
                 StreamsTableName,
+                SubscriptionOffersTableName,
+                SubscriptionsTableName,
             ]);
         ValidateTableDefinition(connection, transaction, MetadataTableName, MetadataTableSql);
         ValidateTableDefinition(connection, transaction, StreamsTableName, StreamsTableSql);
@@ -74,13 +78,15 @@ internal sealed partial class SqliteServerCommitJournal
         ValidateTableDefinition(connection, transaction, ConflictsTableName, ConflictsTableSql);
         ValidateTableDefinition(connection, transaction, EventsTableName, EventsTableSql);
         ValidateTableDefinition(connection, transaction, EventMetadataTableName, EventMetadataTableSql);
+        ValidateTableDefinition(connection, transaction, SubscriptionsTableName, SubscriptionsTableSql);
+        ValidateTableDefinition(connection, transaction, SubscriptionOffersTableName, SubscriptionOffersTableSql);
         var metadataSchemaVersion = SelectMetadata(connection, transaction, SchemaVersionKey);
         if (metadataSchemaVersion == CurrentSchemaVersion.ToString(CultureInfo.InvariantCulture))
         {
             return;
         }
 
-        throw new InvalidOperationException("The SQLite server journal metadata schema version is not supported.");
+        throw new InvalidOperationException(UnsupportedMetadataSchemaVersionMessage);
     }
 
     /// <summary>Upserts one stream after admission.</summary>
@@ -236,8 +242,55 @@ internal sealed partial class SqliteServerCommitJournal
         CreateEventMetadataTable(connection, transaction);
         CopySchemaOneRows(connection, transaction);
         DropSchemaOneTables(connection, transaction);
+        WriteMetadataValue(connection, transaction, SchemaVersionKey, SchemaVersionTwo.ToString(CultureInfo.InvariantCulture));
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = SetSchemaVersionTwoSql;
+        _ = command.ExecuteNonQuery();
+    }
+
+    /// <summary>Migrates schema-two journals by adding subscription acknowledgement tables.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void MigrateSchemaTwoToThree(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        ValidateSchemaTwoForMigration(connection, transaction);
+        CreateSubscriptionsTable(connection, transaction);
+        CreateSubscriptionOffersTable(connection, transaction);
         WriteMetadataValue(connection, transaction, SchemaVersionKey, CurrentSchemaVersion.ToString(CultureInfo.InvariantCulture));
         SetUserVersion(connection, transaction);
+    }
+
+    /// <summary>Validates the schema-two durable table set before migration.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <exception cref="InvalidOperationException">Thrown when SQLite data or schema validation fails.</exception>
+    private static void ValidateSchemaTwoForMigration(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        ValidateUserTableNames(
+            connection,
+            transaction,
+            [
+                ConflictsTableName,
+                EventMetadataTableName,
+                EventsTableName,
+                LedgerTableName,
+                MetadataTableName,
+                StreamsTableName,
+            ]);
+        try
+        {
+            if (SelectMetadata(connection, transaction, SchemaVersionKey) == "2")
+            {
+                return;
+            }
+        }
+        catch (SqliteException exception)
+        {
+            throw new InvalidOperationException(InvalidSchemaMessage, exception);
+        }
+
+        throw new InvalidOperationException(UnsupportedMetadataSchemaVersionMessage);
     }
 
     /// <summary>Validates the schema-one durable table set before migration.</summary>
@@ -269,7 +322,7 @@ internal sealed partial class SqliteServerCommitJournal
             throw new InvalidOperationException(InvalidSchemaMessage, exception);
         }
 
-        throw new InvalidOperationException("The SQLite server journal metadata schema version is not supported.");
+        throw new InvalidOperationException(UnsupportedMetadataSchemaVersionMessage);
     }
 
     /// <summary>Renames schema-one tables before creating exact schema-two replacements.</summary>

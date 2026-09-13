@@ -925,3 +925,18 @@ Expanded coverage includes forward/equal/backward clocks and competing commits i
 and all eight Release targets with zero warnings/errors. The .NET Framework analyzer required the write stamp parameter
 by readonly reference; this was corrected without suppression. Evidence: server-attempt-stamp worktree,
 artifacts/root-server-stamp-final. Conflict resolver and public hub integration remains outstanding.
+
+### Stage 6: durable subscription acknowledgement journal
+
+Both server journals now bind subscription identifiers to trusted tenant, client and stream identities. Complete
+receive pages are durably recorded as offers before exposure. Acknowledgements accept only those offered cursors,
+advance monotonically, and remain idempotent after restart and offer cleanup while the binding is retained. Schema
+three migrates existing SQLite journals. Separate bounded subscription and offer retention prevents abandoned clients
+from permanently exhausting capacity; cursor payloads and retention timestamps participate in logical byte accounting.
+
+Root review corrected .NET Framework dictionary compatibility and reproduced two capacity defects with behavioral
+tests: missing binding timestamp bytes in both stores, and missing frontier cursor admission bytes in memory. Final
+verification passed 231 Server tests on each of net8/net9/net10/net11, with MTP-confirmed 100% line and branch coverage
+(2918/2910/2910/2909 lines, 887 branches each). All eight Release library targets build with zero warnings/errors.
+Evidence: server-subscription-ack worktree, artifacts/root-ack-verified. Public hub authorization, durable initial
+subscription positions and HTTP endpoint integration remain separate required work.

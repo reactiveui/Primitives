@@ -21,7 +21,7 @@ internal sealed partial class SqliteServerCommitJournal
     {
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
-        command.CommandText = "PRAGMA user_version = 2;";
+        command.CommandText = "PRAGMA user_version = 3;";
         _ = command.ExecuteNonQuery();
     }
 
@@ -88,6 +88,28 @@ internal sealed partial class SqliteServerCommitJournal
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = EventMetadataTableSql;
+        _ = command.ExecuteNonQuery();
+    }
+
+    /// <summary>Creates the subscription acknowledgement table.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void CreateSubscriptionsTable(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = SubscriptionsTableSql;
+        _ = command.ExecuteNonQuery();
+    }
+
+    /// <summary>Creates the subscription offer table.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void CreateSubscriptionOffersTable(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = SubscriptionOffersTableSql;
         _ = command.ExecuteNonQuery();
     }
 
