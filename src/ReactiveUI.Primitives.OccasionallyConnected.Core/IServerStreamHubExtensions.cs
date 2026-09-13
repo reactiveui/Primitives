@@ -15,26 +15,26 @@ public static class IServerStreamHubExtensions
     {
         /// <summary>Applies client operations.</summary>
         /// <param name="batch">The synchronization batch.</param>
-        /// <param name="client">The client identity.</param>
+        /// <param name="client">The authenticated server principal.</param>
         /// <returns>The server synchronization result.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask<ServerSyncResult> ApplyOperationsAsync(SyncBatch batch, ClientIdentity client) =>
+        public ValueTask<ServerSyncResult> ApplyOperationsAsync(SyncBatch batch, ServerAuthenticatedClient client) =>
             hub.ApplyOperationsAsync(batch, client, CancellationToken.None);
 
         /// <summary>Persists a receive acknowledgement.</summary>
         /// <param name="acknowledgement">The acknowledgement for a durably applied receive cursor.</param>
-        /// <param name="client">The client identity.</param>
+        /// <param name="client">The authenticated server principal.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask AcknowledgeAsync(ReceiveAcknowledgement acknowledgement, ClientIdentity client) =>
+        public ValueTask AcknowledgeAsync(ReceiveAcknowledgement acknowledgement, ServerAuthenticatedClient client) =>
             hub.AcknowledgeAsync(acknowledgement, client, CancellationToken.None);
 
         /// <summary>Subscribes a client to remote stream batches.</summary>
         /// <param name="request">The remote subscription request.</param>
-        /// <param name="client">The client identity.</param>
+        /// <param name="client">The authenticated server principal.</param>
         /// <returns>The remote event batches.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IAsyncEnumerable<RemoteEventBatch> SubscribeStreamAsync(RemoteSubscribeRequest request, ClientIdentity client) =>
+        public IAsyncEnumerable<RemoteEventBatch> SubscribeStreamAsync(RemoteSubscribeRequest request, ServerAuthenticatedClient client) =>
             hub.SubscribeStreamAsync(request, client, CancellationToken.None);
     }
 }

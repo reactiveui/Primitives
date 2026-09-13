@@ -1,0 +1,190 @@
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.OccasionallyConnected.Server.Tests")]
+namespace ReactiveUI.Primitives.OccasionallyConnected.Server;
+
+[System.Diagnostics.DebuggerDisplay("{_options.Kind,nq} {_options.InitialVersion,nq}")]
+public sealed class CrdtInitialStateFactory : ReactiveUI.Primitives.OccasionallyConnected.Server.IServerInitialStateFactory
+{
+    public CrdtInitialStateFactory(ReactiveUI.Primitives.OccasionallyConnected.Server.CrdtInitialStateFactoryOptions options) { }
+    public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.ServerState> CreateInitialStateAsync(ReactiveUI.Primitives.OccasionallyConnected.StreamId streamId, System.Threading.CancellationToken cancellationToken) { }
+}
+[System.Diagnostics.DebuggerDisplay("{Kind,nq} {InitialVersion,nq}")]
+public record CrdtInitialStateFactoryOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Server.CrdtInitialStateFactoryOptions>
+{
+    public ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds Bounds { get; init; }
+    public string InitialVersion { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtKind Kind { get; init; }
+}
+[System.Diagnostics.DebuggerDisplay("{_options.Kind,nq}")]
+public sealed class CrdtResolver : ReactiveUI.Primitives.OccasionallyConnected.IConflictResolver
+{
+    public CrdtResolver(ReactiveUI.Primitives.OccasionallyConnected.Server.CrdtResolverOptions options) { }
+    public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.ConflictResolutionResult> ResolveAsync(ReactiveUI.Primitives.OccasionallyConnected.ConflictContext context, System.Threading.CancellationToken cancellationToken) { }
+}
+[System.Diagnostics.DebuggerDisplay("{Kind,nq}")]
+public record CrdtResolverOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Server.CrdtResolverOptions>
+{
+    public ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds Bounds { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtKind Kind { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.Server.IServerConflictVersionFactory VersionFactory { get; init; }
+}
+[System.Diagnostics.DebuggerDisplay("{_prefix,nq}")]
+public sealed class CrdtSequentialVersionFactory : ReactiveUI.Primitives.OccasionallyConnected.Server.IServerConflictVersionFactory
+{
+    public CrdtSequentialVersionFactory() { }
+    public CrdtSequentialVersionFactory(ReactiveUI.Primitives.OccasionallyConnected.Server.CrdtSequentialVersionFactoryOptions options) { }
+    public string CreateNextVersion(ReactiveUI.Primitives.OccasionallyConnected.ConflictContext context, ReactiveUI.Primitives.OccasionallyConnected.SyncOperation operation) { }
+}
+[System.Diagnostics.DebuggerDisplay("{Prefix,nq}")]
+public record CrdtSequentialVersionFactoryOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Server.CrdtSequentialVersionFactoryOptions>
+{
+    public string Prefix { get; init; }
+}
+[System.Diagnostics.DebuggerDisplay("{_options.Kind,nq}")]
+public sealed class CrdtServerDomainHandler : ReactiveUI.Primitives.OccasionallyConnected.Server.IServerDomainHandler
+{
+    public CrdtServerDomainHandler(ReactiveUI.Primitives.OccasionallyConnected.Server.CrdtServerDomainHandlerOptions options) { }
+    public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.Server.ServerDomainApplyResult> ApplyAsync(ReactiveUI.Primitives.OccasionallyConnected.Server.ServerDomainApplyContext context, System.Threading.CancellationToken cancellationToken) { }
+}
+[System.Diagnostics.DebuggerDisplay("{Kind,nq}")]
+public record CrdtServerDomainHandlerOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Server.CrdtServerDomainHandlerOptions>
+{
+    public ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds Bounds { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtKind Kind { get; init; }
+}
+public static class CrdtServerPayloads
+{
+    public static string ContentType { get; }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope CreateInput(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput input) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope CreateInput(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput input, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds bounds) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope CreateState(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope CreateState(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds bounds) { }
+}
+public static class CrdtServerStreamRegistration
+{
+    public static ReactiveUI.Primitives.OccasionallyConnected.Server.ServerConflictStreamRegistration Create(ReactiveUI.Primitives.OccasionallyConnected.Server.CrdtServerStreamRegistrationOptions options) { }
+}
+[System.Diagnostics.DebuggerDisplay("{StreamId,nq} {Kind,nq}")]
+public record CrdtServerStreamRegistrationOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Server.CrdtServerStreamRegistrationOptions>
+{
+    public ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds Bounds { get; init; }
+    public string InitialVersion { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtKind Kind { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.StreamId StreamId { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.Server.IServerConflictVersionFactory VersionFactory { get; init; }
+}
+public interface IServerConflictVersionFactory
+{
+    string CreateNextVersion(ReactiveUI.Primitives.OccasionallyConnected.ConflictContext context, ReactiveUI.Primitives.OccasionallyConnected.SyncOperation operation) { }
+}
+public interface IServerDomainHandler
+{
+    System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.Server.ServerDomainApplyResult> ApplyAsync(ReactiveUI.Primitives.OccasionallyConnected.Server.ServerDomainApplyContext context, System.Threading.CancellationToken cancellationToken) { }
+}
+public interface IServerInitialStateFactory
+{
+    System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.ServerState> CreateInitialStateAsync(ReactiveUI.Primitives.OccasionallyConnected.StreamId streamId, System.Threading.CancellationToken cancellationToken) { }
+}
+[System.Diagnostics.DebuggerDisplay("LastWriterWinsResolver")]
+public sealed class LastWriterWinsResolver : ReactiveUI.Primitives.OccasionallyConnected.IConflictResolver
+{
+    public LastWriterWinsResolver(ReactiveUI.Primitives.OccasionallyConnected.Server.LastWriterWinsResolverOptions options) { }
+    public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.ConflictResolutionResult> ResolveAsync(ReactiveUI.Primitives.OccasionallyConnected.ConflictContext context, System.Threading.CancellationToken cancellationToken) { }
+}
+[System.Diagnostics.DebuggerDisplay("{VersionFactory,nq}")]
+public record LastWriterWinsResolverOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Server.LastWriterWinsResolverOptions>
+{
+    public required ReactiveUI.Primitives.OccasionallyConnected.Server.IServerConflictVersionFactory VersionFactory { get; init; }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public void Validate() { }
+}
+[System.Diagnostics.DebuggerDisplay("Streams={MaximumStreams}, Entries={MaximumLedgerEntries}, Events={MaximumEvents}")]
+public record ServerCommitJournalLimits : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Server.ServerCommitJournalLimits>
+{
+    public int MaximumEntryEventCount { get; init; }
+    public int MaximumEvents { get; init; }
+    public int MaximumLedgerEntries { get; init; }
+    public long MaximumLogicalBytes { get; init; }
+    public int MaximumOperationCaptureCount { get; init; }
+    public int MaximumStreams { get; init; }
+    public int MaximumSubscriptionOffers { get; init; }
+    public int MaximumSubscriptions { get; init; }
+    public System.TimeSpan OperationRetention { get; init; }
+    public System.TimeSpan SubscriptionRetention { get; init; }
+}
+[System.Diagnostics.DebuggerDisplay("{Streams.Count}")]
+public record ServerConflictHandlerOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Server.ServerConflictHandlerOptions>
+{
+    public int MaximumProducedEvents { get; init; }
+    public required System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.Server.ServerConflictStreamRegistration> Streams { get; init; }
+    public void Validate() { }
+}
+[System.Diagnostics.DebuggerDisplay("{StreamId,nq}")]
+public record ServerConflictStreamRegistration : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Server.ServerConflictStreamRegistration>
+{
+    public required ReactiveUI.Primitives.OccasionallyConnected.IConflictResolver CustomResolver { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.Server.IServerDomainHandler DomainHandler { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.Server.IServerInitialStateFactory InitialStateFactory { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.IConflictResolver LastWriterWinsResolver { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.IConflictResolver MergeResolver { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.StreamId StreamId { get; init; }
+    public void Validate() { }
+}
+[System.Diagnostics.DebuggerDisplay("{Operation.OperationId,nq} {Resolution.ServerVersion,nq}")]
+public record ServerDomainApplyContext : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Server.ServerDomainApplyContext>
+{
+    public required ReactiveUI.Primitives.OccasionallyConnected.ClientIdentity Client { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.ConflictContext Conflict { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.SyncOperation Operation { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.ConflictResolutionResult Resolution { get; init; }
+}
+[System.Diagnostics.DebuggerDisplay("{NewState.Version,nq} {Events.Count}")]
+public record ServerDomainApplyResult : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Server.ServerDomainApplyResult>
+{
+    public System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.Server.ServerProducedEvent> Events { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.ServerState NewState { get; init; }
+}
+[System.Diagnostics.DebuggerDisplay("{EventId,nq} {Payload.ContractId,nq}")]
+public record ServerProducedEvent : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Server.ServerProducedEvent>
+{
+    public required System.Guid EventId { get; init; }
+    public System.Collections.Generic.IReadOnlyDictionary<string, string> Metadata { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope Payload { get; init; }
+}
+[System.Diagnostics.DebuggerDisplay("{ReasonCode,nq}")]
+public sealed class ServerReceiveRetentionGapException : System.InvalidOperationException
+{
+    public ServerReceiveRetentionGapException() { }
+    public ServerReceiveRetentionGapException(string message) { }
+    public ServerReceiveRetentionGapException(string message, System.Exception innerException) { }
+    public string ReasonCode { get; }
+    public static string ReceiveRetentionGapReasonCode { get; }
+}
+[System.Diagnostics.DebuggerDisplay("Disposed={_disposed}")]
+public sealed class ServerStreamHub : ReactiveUI.Primitives.OccasionallyConnected.IServerStreamHub, System.IAsyncDisposable
+{
+    public System.Threading.Tasks.ValueTask AcknowledgeAsync(ReactiveUI.Primitives.OccasionallyConnected.ReceiveAcknowledgement acknowledgement, ReactiveUI.Primitives.OccasionallyConnected.ServerAuthenticatedClient client, System.Threading.CancellationToken cancellationToken) { }
+    public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.ServerSyncResult> ApplyOperationsAsync(ReactiveUI.Primitives.OccasionallyConnected.SyncBatch batch, ReactiveUI.Primitives.OccasionallyConnected.ServerAuthenticatedClient client, System.Threading.CancellationToken cancellationToken) { }
+    public System.Threading.Tasks.ValueTask DisposeAsync() { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public System.Collections.Generic.IAsyncEnumerable<ReactiveUI.Primitives.OccasionallyConnected.RemoteEventBatch> SubscribeStreamAsync(ReactiveUI.Primitives.OccasionallyConnected.RemoteSubscribeRequest request, ReactiveUI.Primitives.OccasionallyConnected.ServerAuthenticatedClient client, System.Threading.CancellationToken cancellationToken) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Server.ServerStreamHub CreateInMemory(ReactiveUI.Primitives.OccasionallyConnected.Server.ServerStreamHubOptions options) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Server.ServerStreamHub CreateSqlite(string databasePath, ReactiveUI.Primitives.OccasionallyConnected.Server.ServerStreamHubOptions options) { }
+}
+[System.Diagnostics.DebuggerDisplay("Calls={MaximumActiveCalls}, Subscriptions={MaximumActiveSubscriptions}")]
+public record ServerStreamHubOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Server.ServerStreamHubOptions>
+{
+    public required ReactiveUI.Primitives.OccasionallyConnected.IServerStreamAuthorizationPolicy AuthorizationPolicy { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.Server.ServerConflictHandlerOptions ConflictHandler { get; init; }
+    public System.TimeSpan EmptyPollDelay { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.Server.ServerCommitJournalLimits JournalLimits { get; init; }
+    public int MaximumActiveCalls { get; init; }
+    public int MaximumActiveSubscriptions { get; init; }
+    public long MaximumBatchLogicalBytes { get; init; }
+    public int MaximumBatchOperations { get; init; }
+    public int MaximumReceiveEvents { get; init; }
+    public int MaximumReceiveGroups { get; init; }
+    public long MaximumReceiveLogicalBytes { get; init; }
+    public System.TimeProvider TimeProvider { get; init; }
+}

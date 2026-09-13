@@ -6,6 +6,7 @@ on:
     paths:
       - 'src/ReactiveUI.Primitives.OccasionallyConnected*/**'
       - 'src/tests/ReactiveUI.Primitives.OccasionallyConnected*/**'
+      - 'src/examples/OccasionallyConnected.*/**'
       - 'src/Directory.*'
       - 'src/occasionally-connected.testconfig.json'
       - 'tools/Test-OccasionallyConnectedCoverage.ps1'
@@ -55,12 +56,16 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "Build failed: $($testProject.Name)" }
             $testAssembly = Join-Path $testProject.FullName "bin/Release/$env:OC_TEST_FRAMEWORK/$($testProject.Name).dll"
             $results = Join-Path $PWD "../artifacts/occasionally-connected/$($testProject.Name)/$env:OC_TEST_FRAMEWORK"
-            dotnet $testAssembly --coverage --coverage-output-format cobertura --results-directory $results --no-progress
+            dotnet $testAssembly --coverage --coverage-output-format cobertura --results-directory $results --progress off
             if ($LASTEXITCODE -ne 0) { throw "Tests failed: $($testProject.Name)" }
             $reports = @(Get-ChildItem -LiteralPath $results -Filter '*.cobertura.xml')
             if ($reports.Count -ne 1) { throw 'Expected exactly one fresh coverage report.' }
-            $packageName = $testProject.Name.Substring(0, $testProject.Name.Length - '.Tests'.Length)
-            & ../tools/Test-OccasionallyConnectedCoverage.ps1 -ReportPath $reports[0].FullName -PackageNames $packageName
+            $packageNames = if ($testProject.Name -eq 'ReactiveUI.Primitives.OccasionallyConnected.Examples.Tests') {
+              @('ReactiveUI.Primitives.OccasionallyConnected.Examples.DurableOutbox')
+            } else {
+              @($testProject.Name.Substring(0, $testProject.Name.Length - '.Tests'.Length))
+            }
+            & ../tools/Test-OccasionallyConnectedCoverage.ps1 -ReportPath $reports[0].FullName -PackageNames $packageNames
           }
       - name: Retain coverage evidence
         if: always()

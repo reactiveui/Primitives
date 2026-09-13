@@ -7,7 +7,7 @@ using System.Diagnostics;
 namespace ReactiveUI.Primitives.OccasionallyConnected;
 
 /// <summary>Configures the in-process loopback transport adapter.</summary>
-[DebuggerDisplay("Loopback; Client={Client,nq}; Features={PeerCapabilities.Features,nq}")]
+[DebuggerDisplay("Loopback; Client={AuthenticatedClient,nq}; Features={PeerCapabilities.Features,nq}")]
 public sealed record LoopbackTransportAdapterOptions
 {
     /// <summary>The default maximum logical encoded batch bytes accepted by the loopback adapter.</summary>
@@ -17,7 +17,7 @@ public sealed record LoopbackTransportAdapterOptions
     public required IServerStreamHub Hub { get; init; }
 
     /// <summary>Gets the client identity authenticated by the trusted host.</summary>
-    public required ClientIdentity Client { get; init; }
+    public required ServerAuthenticatedClient AuthenticatedClient { get; init; }
 
     /// <summary>Gets the peer capabilities authenticated by the trusted host.</summary>
     public required NegotiatedCapabilities PeerCapabilities { get; init; }
@@ -35,6 +35,11 @@ public sealed record LoopbackTransportAdapterOptions
     public int MaximumReceiveEvents { get; init; } = 1024;
 
     /// <summary>Gets the maximum logical encoded bytes accepted for one loopback batch.</summary>
+    /// <remarks>
+    /// Loopback counts UTF-8 string and payload bytes plus fixed-width identifiers, timestamps, policies,
+    /// collection counts and nullable markers. This logical representation excludes managed object overhead.
+    /// The negotiated batch limit is applied to the same complete representation.
+    /// </remarks>
     public long MaximumLogicalBatchBytes { get; init; } = DefaultMaximumLogicalBatchBytes;
 
     /// <summary>Gets the maximum number of completed operation declarations accepted in one received batch.</summary>

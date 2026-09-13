@@ -45,7 +45,7 @@ public sealed partial class HttpRemoteTransportAdapterTests
 
         await AwaitWithTimeoutAsync(firstDispose);
         await AwaitWithTimeoutAsync(secondDispose);
-        await Assert.That(connect.IsCanceled).IsTrue();
+        await Assert.That(async () => await connect).Throws<OperationCanceledException>();
     }
 
     /// <summary>Verifies disposing a clean session repeatedly remains stable.</summary>
@@ -90,6 +90,6 @@ public sealed partial class HttpRemoteTransportAdapterTests
 
         await AwaitWithTimeoutAsync(firstDispose);
         await AwaitWithTimeoutAsync(secondDispose);
-        await Assert.That(push.IsCanceled).IsTrue();
+        await Assert.That(async () => await push).Throws<OperationCanceledException>();
     }
 }

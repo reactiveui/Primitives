@@ -602,7 +602,7 @@ public sealed partial class PreparedUploadAttemptCoordinatorTests
         /// <inheritdoc/>
         public ValueTask<ServerSyncResult> ApplyOperationsAsync(
             SyncBatch batch,
-            ClientIdentity client,
+            ServerAuthenticatedClient client,
             CancellationToken cancellationToken)
         {
             ApplyCalls++;
@@ -613,14 +613,14 @@ public sealed partial class PreparedUploadAttemptCoordinatorTests
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask AcknowledgeAsync(
             ReceiveAcknowledgement acknowledgement,
-            ClientIdentity client,
+            ServerAuthenticatedClient client,
             CancellationToken cancellationToken) =>
             ValueTask.CompletedTask;
 
         /// <inheritdoc/>
         public async IAsyncEnumerable<RemoteEventBatch> SubscribeStreamAsync(
             RemoteSubscribeRequest request,
-            ClientIdentity client,
+            ServerAuthenticatedClient client,
             [EnumeratorCancellation] CancellationToken cancellationToken)
         {
             await Task.CompletedTask.ConfigureAwait(false);

@@ -34,4 +34,7 @@ public enum LocalStoreCapabilities
 
     /// <summary>The store binds initialized local partitions to a client identity.</summary>
     ClientIdentityBinding = 1 << 7,
+
+    /// <summary>The store can atomically replace authoritative and optimistic state from a snapshot recovery checkpoint.</summary>
+    AtomicSnapshotRecovery = 1 << 8,
 }

@@ -18,10 +18,13 @@ internal static class HttpProtocolCodecHelper
     /// <summary>The JSON null token byte count.</summary>
     private const long JsonNullTokenBytes = 4;
 
-    /// <summary>Converts milliseconds to a time span.</summary>
-    /// <param name="milliseconds">The optional milliseconds.</param>
-    /// <returns>The time span.</returns>
-    /// <exception cref="HttpRemoteTransportException">The duration is negative.</exception>
+    /// <summary>The largest protocol millisecond duration representable by <see cref="TimeSpan"/>.</summary>
+    private static readonly long MaximumTimeSpanMilliseconds = TimeSpan.MaxValue.Ticks / TimeSpan.TicksPerMillisecond;
+
+    /// <summary>Converts a protocol retention duration into a CLR time span.</summary>
+    /// <param name="milliseconds">Retention duration encoded in milliseconds, or <see langword="null"/> when absent.</param>
+    /// <returns>The decoded retention window, or <see langword="null"/> when absent.</returns>
+    /// <exception cref="HttpRemoteTransportException">The encoded duration is negative or too large for <see cref="TimeSpan"/>.</exception>
     internal static TimeSpan? ToTimeSpan(long? milliseconds)
     {
         if (!milliseconds.HasValue)
@@ -29,17 +32,17 @@ internal static class HttpProtocolCodecHelper
             return null;
         }
 
-        if (milliseconds.Value < 0)
+        if (milliseconds.Value < 0 || milliseconds.Value > MaximumTimeSpanMilliseconds)
         {
             throw new HttpRemoteTransportException(HttpTransportFailureKind.ProtocolViolation);
         }
 
-        return TimeSpan.FromMilliseconds(milliseconds.Value);
+        return TimeSpan.FromTicks(checked(milliseconds.Value * TimeSpan.TicksPerMillisecond));
     }
 
     /// <summary>Converts an operation result DTO.</summary>
     /// <param name="dto">The DTO.</param>
-    /// <returns>The operation result.</returns>
+    /// <returns>Domain result for one pushed operation.</returns>
     internal static OperationSyncResult ToOperationResult(HttpProtocolJsonContext.OperationSyncResultWire dto) =>
         new(new(dto.OperationId), (OperationResultKind)dto.Kind, dto.ReasonCode, dto.ServerVersion);
 
@@ -69,13 +72,13 @@ internal static class HttpProtocolCodecHelper
         return copy;
     }
 
-    /// <summary>Estimates the escaped UTF-8 byte count for one JSON string value.</summary>
-    /// <param name="value">The string value.</param>
+    /// <summary>Estimates the escaped UTF-8 byte count for one protocol JSON string.</summary>
+    /// <param name="value">Protocol text written as a JSON string.</param>
     /// <returns>The conservative encoded byte estimate.</returns>
     internal static long EstimateJsonStringBytes(string value) => JsonStringQuoteBytes + (Encoding.UTF8.GetByteCount(value) * JsonTextEscapeExpansion);
 
-    /// <summary>Estimates the escaped UTF-8 byte count for an optional JSON string value.</summary>
-    /// <param name="value">The optional string value.</param>
+    /// <summary>Estimates the escaped UTF-8 byte count for an optional protocol JSON string.</summary>
+    /// <param name="value">Protocol text written as a JSON string when present.</param>
     /// <returns>The conservative encoded byte estimate.</returns>
     internal static long EstimateOptionalJsonStringBytes(string? value) =>
         value is null ? JsonNullTokenBytes : EstimateJsonStringBytes(value);

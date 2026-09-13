@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(NetTargetFrameworks)</TargetFrameworks>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab</RootNamespace>
+    <AssemblyName>ReactiveUI.Primitives.OccasionallyConnected.ResilienceLab</AssemblyName>
+    <PackageDescription>Bounded runnable resilience demonstrations for occasionally connected primitives.</PackageDescription>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.OccasionallyConnected\ReactiveUI.Primitives.OccasionallyConnected.csproj" />
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.OccasionallyConnected.Server\ReactiveUI.Primitives.OccasionallyConnected.Server.csproj" />
+  </ItemGroup>
+
+</Project>

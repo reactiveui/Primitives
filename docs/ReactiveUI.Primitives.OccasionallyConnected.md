@@ -397,7 +397,7 @@ public interface IConflictResolver
 {
     ValueTask<ConflictResolutionResult> ResolveAsync(
         ConflictContext context,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken);
 }
 
 public sealed record ConflictContext(
@@ -413,6 +413,8 @@ public sealed record ConflictResolutionResult(
     string ServerVersion);
 ```
 
+Core exposes a cancellation-free `ResolveAsync(context)` extension overload that forwards `CancellationToken.None`; the interface itself keeps cancellation explicit and declares no optional parameters.
+
 Resolvers MUST be deterministic for the same ordered input and configuration. They MUST NOT perform network I/O or mutate external state inside the server transaction. Side effects are emitted as committed events and handled afterward.
 
 ### 7.6 Sync engine
@@ -426,11 +428,11 @@ public interface ISyncEngine : IAsyncDisposable
 
     ValueTask<PublishReceipt> EnqueueOperationAsync(
         SyncOperation operation,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken);
 
-    ValueTask StartAsync(CancellationToken cancellationToken = default);
-    ValueTask StopAsync(CancellationToken cancellationToken = default);
-    ValueTask TriggerSyncAsync(CancellationToken cancellationToken = default);
+    ValueTask StartAsync(CancellationToken cancellationToken);
+    ValueTask StopAsync(CancellationToken cancellationToken);
+    ValueTask TriggerSyncAsync(CancellationToken cancellationToken);
 }
 
 public enum SyncLifecycleStatus
@@ -479,6 +481,8 @@ public sealed record SyncOperationStatus(
     string? ReasonCode);
 ```
 
+Core extension overloads provide cancellation-free calls for `EnqueueOperationAsync`, `GetOperationStatusAsync`, `StartAsync`, `StopAsync`, and `TriggerSyncAsync`, each forwarding `CancellationToken.None`; the interface declares no optional parameters.
+
 All lifecycle operations are idempotent. Concurrent calls to `StartAsync` share one start transition. `StopAsync` waits for in-flight store commits, stops admitting new work, cancels transport I/O, and persists retry/checkpoint state. It does not require the remote peer to be available.
 
 ### 7.7 Storage contract
@@ -490,46 +494,48 @@ public interface ILocalStoreAdapter : IAsyncDisposable
 
     ValueTask InitializeAsync(
         LocalStoreInitialization initialization,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken);
 
     ValueTask<RecoveredStream> RecoverStreamAsync(
         StreamId streamId,
         SubscriptionId subscriptionId,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken);
 
     ValueTask<LocalCommitResult> CommitLocalOperationAsync(
         SyncOperation operation,
         SnapshotMutation snapshotMutation,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken);
 
     IAsyncEnumerable<LeasedOperationBatch> LeasePendingOperationsAsync(
         OutboxLeaseRequest request,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken);
 
     ValueTask ApplySyncResultAsync(
         Guid leaseId,
         RemoteSyncResult result,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken);
 
     ValueTask<RemoteApplyResult> ApplyRemoteBatchAsync(
         RemoteEventBatch batch,
         SnapshotMutation snapshotMutation,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken);
 
     ValueTask RenewLeaseAsync(
         Guid leaseId,
         TimeSpan extension,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken);
 
     ValueTask ReleaseLeaseAsync(
         Guid leaseId,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken);
 
     ValueTask<CompactionResult> CompactAsync(
         CompactionRequest request,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken);
 }
 ```
+
+Core extension overloads provide the same calls without a cancellation token and forward `CancellationToken.None`; the adapter interface declares no optional parameters.
 
 The adapter contract is intentionally transactional rather than CRUD-shaped. In particular:
 
@@ -552,24 +558,26 @@ public interface IRemoteTransportAdapter : IAsyncDisposable
 
     ValueTask<IRemoteTransportSession> ConnectAsync(
         TransportConnectRequest request,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken);
 }
 
 public interface IRemoteTransportSession : IAsyncDisposable
 {
     ValueTask<RemoteSyncResult> PushAsync(
         SyncBatch batch,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken);
 
     IAsyncEnumerable<RemoteEventBatch> SubscribeAsync(
         RemoteSubscribeRequest request,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken);
 
     ValueTask AcknowledgeAsync(
         ReceiveAcknowledgement acknowledgement,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken);
 }
 ```
+
+Core extension overloads provide cancellation-free calls for `ConnectAsync`, `PushAsync`, `SubscribeAsync`, and `AcknowledgeAsync`, forwarding `CancellationToken.None`; neither interface declares optional parameters.
 
 Transport implementations are thin protocol adapters. They MUST expose failure classification and server retry hints, but reconnect, backoff, circuit breaking, batching policy, and permanent-failure decisions belong to the sync engine.
 
@@ -752,19 +760,30 @@ These records are immutable value models in `.Core`. Production implementations 
 ### 7.9 Server hub
 
 ```csharp
+public sealed record ServerAuthenticatedClient(string TenantId, string ClientId);
+
 public interface IServerStreamHub
 {
     ValueTask<ServerSyncResult> ApplyOperationsAsync(
         SyncBatch batch,
-        ClientIdentity client,
-        CancellationToken cancellationToken = default);
+        ServerAuthenticatedClient client,
+        CancellationToken cancellationToken);
+
+    ValueTask AcknowledgeAsync(
+        ReceiveAcknowledgement acknowledgement,
+        ServerAuthenticatedClient client,
+        CancellationToken cancellationToken);
 
     IAsyncEnumerable<RemoteEventBatch> SubscribeStreamAsync(
         RemoteSubscribeRequest request,
-        ClientIdentity client,
-        CancellationToken cancellationToken = default);
+        ServerAuthenticatedClient client,
+        CancellationToken cancellationToken);
 }
 ```
+
+The host supplies `ServerAuthenticatedClient` after authentication. Authorization results MUST match both its tenant and client before any journal lookup or domain effect. `ClientIdentity.TenantHint` remains an untrusted transport routing hint. These identities are separate Core types so host authorization cannot accidentally infer trust from a request body. Explicit extension overloads provide calls without a cancellation token.
+
+An acknowledgement completes only after durable persistence, including an identical duplicate acknowledgement. Delivering a receive batch does not acknowledge it.
 
 The server MUST authorize each stream and operation, enforce size/rate limits, deduplicate before invoking domain logic, allocate canonical cursors, and atomically persist accepted effects plus idempotency results. A duplicate `OperationId` MUST return the original terminal result.
 
@@ -825,9 +844,11 @@ public static class OccasionallyConnectedExtensions
         this ISyncEngine engine,
         OperationId operationId,
         TimeSpan timeout,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken);
 }
 ```
+
+This planned helper follows the Core convention: its cancellation token parameter is explicit, with any cancellation-free convenience overload supplied separately.
 
 `ToOccasionallyConnected` does not subscribe to `localSource` until the returned stream starts. It owns and disposes that subscription. Extension implementations MUST not introduce hidden global contexts or unbounded replay.
 
@@ -843,12 +864,12 @@ public interface IPayloadSerializer
         string contractId,
         int schemaVersion,
         T value,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken);
 
     ValueTask<object> DeserializeAsync(
         PayloadEnvelope envelope,
         Type targetType,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken);
 }
 
 public interface IPayloadUpcaster
@@ -858,9 +879,11 @@ public interface IPayloadUpcaster
     int ToVersion { get; }
     ValueTask<PayloadEnvelope> UpcastAsync(
         PayloadEnvelope source,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken);
 }
 ```
+
+The Core interfaces require explicit cancellation tokens; callers pass `CancellationToken.None` when no cancellation is required.
 
 - Every payload MUST carry `ContractId`, positive `SchemaVersion`, `ContentType`, payload bytes, and a cryptographic payload hash.
 - Type names and assembly-qualified names MUST NOT be used as wire contract IDs.
@@ -1086,6 +1109,8 @@ Storage contents, transport input, cursors, metadata, and serialized payloads ar
 The test plan MUST include forged tenant IDs, unauthorized streams, duplicate/replayed batches, cursor tampering, path traversal, SQL metacharacters, oversized and deeply nested JSON, zip/decompression bombs, malicious polymorphic payloads, hash mismatch, stale keys, metadata cardinality attacks, and observer-triggered denial of service.
 
 ## 13. Configuration and dependency injection
+
+**Status: prospective design.** The Core contracts shown above are implemented, but the builder, dependency-injection, hosting, and concrete-adapter composition examples in this section are not yet implemented and do not indicate that the feature is ready.
 
 ### 13.1 Core builder
 
@@ -1346,6 +1371,8 @@ Shared lean/Reactive implementation files use neutral `RxVoid` and `ISequencer` 
 
 ## 16. API usage examples
 
+**Status: prospective composition examples.** These examples depend on the not-yet-implemented builder and hosting/adapter composition described in section 13. They illustrate the intended use of the implemented Core contracts and do not indicate feature readiness.
+
 ### 16.1 Local-first temperature stream
 
 ```csharp
@@ -1430,7 +1457,7 @@ public sealed class HighestQualityReadingResolver : IConflictResolver
 {
     public ValueTask<ConflictResolutionResult> ResolveAsync(
         ConflictContext context,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 

@@ -149,6 +149,41 @@ public sealed partial class InMemoryServerCommitJournalTests
             .ThrowsExactly<InvalidOperationException>();
     }
 
+    /// <summary>Verifies start-position cursor resolution skips retained operation groups that produced no events.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    public async Task SubscriptionStartPositionResolverSkipsZeroEventGroupForEventCursor()
+    {
+        var streamKey = StreamKey();
+        var stream = new ServerCommitStreamRecord();
+        var first = OperationKey(FirstOperationSeed);
+        var second = OperationKey(SecondOperationSeed);
+        var secondEntry = Entry(
+            second,
+            OperationResultKind.Accepted,
+            SecondOperationSeed,
+            events: [Event(second.OperationId, SecondCursor, EventPayload)]);
+        ServerCommitJournalOperations.AddLedgerRow(
+            stream,
+            streamKey,
+            Entry(first, OperationResultKind.Accepted, FirstOperationSeed, events: []).Commit(Start, Start.AddMinutes(DefaultRetentionMinutes)),
+            0);
+        ServerCommitJournalOperations.AddLedgerRow(
+            stream,
+            streamKey,
+            secondEntry.Commit(Start, Start.AddMinutes(DefaultRetentionMinutes)),
+            0);
+
+        var resolution = ServerSubscriptionStartPositionOperations.TryResolveAnchor(
+            streamKey,
+            StartPosition.FromCursor(SecondCursor),
+            stream,
+            out var anchor);
+
+        await Assert.That(resolution).IsEqualTo(ServerSubscriptionAnchorResolution.Resolved);
+        await Assert.That(anchor.GroupSequence).IsEqualTo(DoubleEntryCount);
+    }
+
     /// <summary>Verifies timestamp anchors require a retained predecessor when receive history has gaps.</summary>
     /// <returns>The asynchronous test operation.</returns>
     [Test]

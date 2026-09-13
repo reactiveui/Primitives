@@ -136,7 +136,7 @@ internal sealed partial class SqliteServerCommitJournal
         _ = command.Parameters.AddWithValue("$lastEventSequence", checked(stream.LastEventSequence + commit.EventCount));
         _ = command.Parameters.AddWithValue("$lastCursorBytes", lastCursorBytes);
         _ = command.Parameters.AddWithValue("$lastGroupSequence", checked(stream.LastGroupSequence + commit.Entries.Length));
-        _ = command.Parameters.AddWithValue("$receiveHistoryIncomplete", stream.HasReceiveHistoryGap ? 1 : 0);
+        _ = command.Parameters.AddWithValue("$receiveHistoryIncomplete", Convert.ToInt32(stream.HasReceiveHistoryGap));
         if (command.ExecuteNonQuery() == 1)
         {
             return;

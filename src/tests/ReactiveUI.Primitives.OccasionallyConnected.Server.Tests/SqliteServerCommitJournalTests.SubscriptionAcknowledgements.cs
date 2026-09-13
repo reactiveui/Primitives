@@ -500,6 +500,71 @@ public sealed partial class SqliteServerCommitJournalTests
         await Assert.That(() => smaller.Read(StreamKey(), [first])).ThrowsExactly<InvalidOperationException>();
     }
 
+    /// <summary>Verifies SQLite subscription admission compacts expired bindings when capacity is initially full.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    public async Task SubscriptionAdmissionCompactsExpiredBindingWhenFull()
+    {
+        using var database = new TemporaryDatabase();
+        var clock = new ManualTimeProvider(Start);
+        using var journal = CreateSubscriptionJournal(
+            database.Path,
+            clock,
+            retention: TimeSpan.FromTicks(SingleEntryCount),
+            subscriptionRetention: TimeSpan.FromTicks(SingleEntryCount),
+            maximumSubscriptions: SingleEntryCount);
+        _ = journal.RegisterSubscription(SubscriptionIdentity(FirstSubscription));
+        clock.SetUtcNow(Start.AddTicks(DoubleEntryCount));
+
+        var replacement = journal.RegisterSubscription(SubscriptionIdentity(SecondSubscription));
+
+        await Assert.That(replacement.Identity.SubscriptionId).IsEqualTo(SecondSubscription);
+        await Assert.That(journal.SubscriptionCount).IsEqualTo(SingleEntryCount);
+    }
+
+    /// <summary>Verifies SQLite offer admission compacts expired offer rows when offer capacity is initially full.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    /// <exception cref="InvalidOperationException">The expected page is missing.</exception>
+    [Test]
+    public async Task SubscriptionOfferAdmissionCompactsExpiredOfferWhenFull()
+    {
+        using var database = new TemporaryDatabase();
+        var clock = new ManualTimeProvider(Start);
+        using var journal = CreateSubscriptionJournal(
+            database.Path,
+            clock,
+            retention: TimeSpan.FromTicks(SingleEntryCount),
+            maximumSubscriptionOffers: SingleEntryCount);
+        var identity = SubscriptionIdentity(FirstSubscription);
+        _ = journal.RegisterSubscription(identity);
+        var first = OperationKey(FirstOperationSeed);
+        var second = OperationKey(SecondOperationSeed);
+        _ = journal.TryCommit(Plan(0, State(FirstVersion), Stamp(first), Entry(first, OperationResultKind.Accepted, FirstOperationSeed)));
+        _ = journal.TryCommit(Plan(SingleEntryCount, State(SecondVersion), Stamp(second), Entry(second, OperationResultKind.Accepted, SecondOperationSeed)));
+        var firstPage = journal.OfferReceivePage(new(identity, null, SingleEntryCount, DefaultMaximumEvents, DefaultMaximumLogicalBytes));
+        var firstBatch = firstPage.Batch ?? throw new InvalidOperationException(MissingSubscriptionBatchMessage);
+        clock.SetUtcNow(Start.AddTicks(DoubleEntryCount));
+
+        var secondPage = journal.OfferReceivePage(new(identity, firstBatch.NextCursor, SingleEntryCount, DefaultMaximumEvents, DefaultMaximumLogicalBytes));
+        var secondBatch = secondPage.Batch ?? throw new InvalidOperationException(MissingSubscriptionBatchMessage);
+
+        await Assert.That(secondBatch.NextCursor).IsEqualTo(SecondCursor);
+        await Assert.That(journal.SubscriptionOfferCount).IsEqualTo(SingleEntryCount);
+    }
+
+    /// <summary>Verifies schema validation rejects extra user tables after the expected table list.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    public async Task SubscriptionSchemaValidationRejectsExtraUserTable()
+    {
+        using var database = new TemporaryDatabase();
+        var initialized = CreateSubscriptionJournal(database.Path);
+        initialized.Dispose();
+        CreateExtraUserTable(database.Path);
+
+        await Assert.That(() => CreateSubscriptionJournal(database.Path)).ThrowsExactly<InvalidOperationException>();
+    }
+
     /// <summary>Verifies schema-three subscription table corruption fails validation.</summary>
     /// <returns>The asynchronous test operation.</returns>
     [Test]
@@ -512,6 +577,16 @@ public sealed partial class SqliteServerCommitJournalTests
         CorruptSubscriptionTables(database.Path);
 
         await Assert.That(() => CreateSubscriptionJournal(database.Path)).ThrowsExactly<InvalidOperationException>();
+    }
+
+    /// <summary>Creates an extra user table after schema initialization.</summary>
+    /// <param name="path">The database path.</param>
+    private static void CreateExtraUserTable(string path)
+    {
+        using var connection = OpenRawConnection(path);
+        using var command = connection.CreateCommand();
+        command.CommandText = "CREATE TABLE zzz_extra_user_table (id INTEGER NOT NULL);";
+        _ = command.ExecuteNonQuery();
     }
 
     /// <summary>Creates a subscription identity for the default trusted context.</summary>

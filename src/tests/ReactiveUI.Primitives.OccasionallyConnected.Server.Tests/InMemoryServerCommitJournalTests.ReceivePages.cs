@@ -383,6 +383,26 @@ public sealed partial class InMemoryServerCommitJournalTests
             .ThrowsExactly<InvalidOperationException>();
     }
 
+    /// <summary>Verifies event cursor resolution skips retained operation groups that produced no events.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    public async Task ReceivePagesResolveEventCursorAfterZeroEventGroup()
+    {
+        var journal = CreateJournal();
+        var firstKey = OperationKey(FirstOperationSeed);
+        var secondKey = OperationKey(SecondOperationSeed);
+        var secondEvent = Event(secondKey.OperationId, SecondCursor, EventPayload);
+        _ = journal.TryCommit(Plan(0, State(FirstVersion), Stamp(firstKey), [
+            Entry(firstKey, OperationResultKind.Accepted, FirstOperationSeed, events: []),
+            Entry(secondKey, OperationResultKind.Accepted, SecondOperationSeed, events: [secondEvent]),
+        ]));
+
+        var page = journal.ReadReceivePage(new(StreamKey(), SecondCursor, SingleEntryCount, DefaultMaximumEvents, DefaultMaximumLogicalBytes));
+
+        await Assert.That(page.Status).IsEqualTo(ServerReceivePageStatus.EndOfStream);
+        await Assert.That(page.NextGroupSequence).IsEqualTo(DoubleEntryCount);
+    }
+
     /// <summary>Verifies receive page dispatch through the journal interface.</summary>
     /// <returns>The asynchronous test operation.</returns>
     [Test]

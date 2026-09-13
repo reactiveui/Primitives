@@ -13,4 +13,11 @@ internal sealed record ServerReceivePageResult(
     ServerReceivePageStatus Status,
     RemoteEventBatch? Batch,
     long NextGroupSequence,
-    long LastGroupSequence);
+    long LastGroupSequence)
+{
+    /// <summary>Gets the batch for a page result and fails when an invariant was violated.</summary>
+    /// <returns>The complete receive page batch.</returns>
+    /// <exception cref="InvalidOperationException">The page result did not carry a batch.</exception>
+    internal RemoteEventBatch RequireBatch() =>
+        Batch ?? throw new InvalidOperationException("A receive page result must carry a batch.");
+}

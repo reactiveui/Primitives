@@ -24,7 +24,7 @@ internal sealed partial class HttpRemoteTransportSession
             lifetime = CancellationTokenSource.CreateLinkedTokenSource(_shutdown.Token, _adapterShutdownToken);
             admission = _requestGate.Enter(lifetime.Token);
             body = _codec.SerializePushRequest(batch);
-            ValidateNegotiatedBatch(batch);
+            ValidateNegotiatedBatch(batch, body.LongLength);
             cancellationToken.ThrowIfCancellationRequested();
             lifetime.Token.ThrowIfCancellationRequested();
         }
@@ -41,27 +41,15 @@ internal sealed partial class HttpRemoteTransportSession
         return new(prepared);
     }
 
-    /// <summary>Enforces the negotiated operation and payload limits independently of the HTTP body limit.</summary>
+    /// <summary>Enforces negotiated operation count and exact encoded request bytes alongside the local HTTP body limit.</summary>
     /// <param name="batch">The structurally validated batch.</param>
+    /// <param name="encodedSizeBytes">The exact serialized request body size.</param>
     /// <exception cref="HttpRemoteTransportException">The batch exceeds negotiated limits.</exception>
-    private void ValidateNegotiatedBatch(SyncBatch batch)
-    {
-        if (batch.Operations.Count > _negotiatedCapabilities.MaximumBatchOperations)
-        {
-            throw new HttpRemoteTransportException(HttpTransportFailureKind.PayloadTooLarge);
-        }
-
-        var remaining = _negotiatedCapabilities.MaximumBatchBytes;
-        foreach (var operation in batch.Operations)
-        {
-            if (operation.Payload.Payload.Length > remaining)
-            {
-                throw new HttpRemoteTransportException(HttpTransportFailureKind.PayloadTooLarge);
-            }
-
-            remaining -= operation.Payload.Payload.Length;
-        }
-    }
+    private void ValidateNegotiatedBatch(SyncBatch batch, long encodedSizeBytes) =>
+        _ = batch.Operations.Count > _negotiatedCapabilities.MaximumBatchOperations
+            || encodedSizeBytes > _negotiatedCapabilities.MaximumBatchBytes
+            ? throw new HttpRemoteTransportException(HttpTransportFailureKind.PayloadTooLarge)
+            : false;
 
     /// <summary>Sends an already encoded body through the admitted request.</summary>
     /// <param name="batch">The original validated batch.</param>

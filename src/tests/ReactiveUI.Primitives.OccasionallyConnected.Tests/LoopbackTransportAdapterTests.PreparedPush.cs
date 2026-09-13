@@ -10,6 +10,47 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
 /// <content>Prepared push tests for <see cref="LoopbackTransportAdapter"/>.</content>
 public sealed partial class LoopbackTransportAdapterTests
 {
+    /// <summary>The complete logical byte size of the fixed three-byte reading batch, including its four policy scalars.</summary>
+    private const long ReadingBatchLogicalBytes = 137;
+
+    /// <summary>Verifies the complete logical batch measurement includes delivery, durability, priority and conflict policy.</summary>
+    /// <returns>The asynchronous assertion operation.</returns>
+    [Test]
+    public async Task PreparePushAsyncCountsCompleteReadingBatchPolicy()
+    {
+        var hub = new RecordingHub();
+        await using var adapter = new LoopbackTransportAdapter(CreateOptions(hub));
+        await using var session = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
+        await using var prepared = await ((IRemoteTransportBatchPreparer)session).PreparePushAsync(CreateBatch(), CancellationToken.None);
+
+        await Assert.That(prepared.EncodedSizeBytes).IsEqualTo(ReadingBatchLogicalBytes);
+        await Assert.That(hub.ApplyCalls).IsEqualTo(0);
+    }
+
+    /// <summary>Verifies every declared mutation type reaches the hub through prepared transport validation.</summary>
+    /// <param name="operationType">The declared mutation type.</param>
+    /// <returns>The asynchronous assertion operation.</returns>
+    [Test]
+    [Arguments(SyncOperationType.Append)]
+    [Arguments(SyncOperationType.Update)]
+    [Arguments(SyncOperationType.Delete)]
+    [Arguments(SyncOperationType.Custom)]
+    public async Task PreparePushAsyncAcceptsEveryDeclaredOperationType(SyncOperationType operationType)
+    {
+        var source = CreateBatch();
+        var batch = new SyncBatch(source.BatchId, [source.Operations[0] with { Type = operationType }]);
+        var hub = new RecordingHub();
+        await using var adapter = new LoopbackTransportAdapter(CreateOptions(hub));
+        await using var session = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
+        await using var prepared = await ((IRemoteTransportBatchPreparer)session).PreparePushAsync(batch, CancellationToken.None);
+
+        var result = await prepared.SendAsync(CancellationToken.None);
+
+        await Assert.That(result.BatchId).IsEqualTo(batch.BatchId);
+        await Assert.That(hub.ApplyCalls).IsEqualTo(1);
+        await Assert.That(hub.ApplyBatch?.Operations[0].Type).IsEqualTo(operationType);
+    }
+
     /// <summary>Verifies preparing a push validates and reserves without calling the hub until send.</summary>
     /// <returns>The assertion task.</returns>
     [Test]
@@ -34,25 +75,48 @@ public sealed partial class LoopbackTransportAdapterTests
         await Assert.That(hub.ApplyBatch).IsSameReferenceAs(batch);
     }
 
-    /// <summary>Verifies negotiated batch bytes count payload bytes separately from logical loopback encoded bytes.</summary>
+    /// <summary>Verifies negotiated batch bytes include all logical framing and metadata before hub invocation.</summary>
+    /// <param name="byteAdjustment">The adjustment from the measured encoded batch size.</param>
     /// <returns>The assertion task.</returns>
     [Test]
-    public async Task PreparePushAsyncAllowsEncodedSizeAboveNegotiatedPayloadBytes()
+    [Arguments(-1)]
+    [Arguments(0)]
+    public async Task PreparePushAsyncEnforcesExactNegotiatedEncodedBytes(int byteAdjustment)
     {
-        var maximumPayloadBytes = OperationPayload.Length;
         var batch = CreateBatch();
         var hub = new RecordingHub();
+        long measuredBytes;
+        await using (var measuringAdapter = new LoopbackTransportAdapter(CreateOptions(hub)))
+        {
+            await using var measuringSession = await measuringAdapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
+            await using var measured = await ((IRemoteTransportBatchPreparer)measuringSession).PreparePushAsync(batch, CancellationToken.None);
+            measuredBytes = measured.EncodedSizeBytes;
+        }
+
+        var maximumBytes = measuredBytes + byteAdjustment;
         var options = CreateOptions(hub) with
         {
-            PeerCapabilities = CreateCapabilities(maximumBytes: maximumPayloadBytes),
+            PeerCapabilities = CreateCapabilities(maximumBytes: maximumBytes),
             MaximumLogicalBatchBytes = DefaultBatchBytes,
         };
         await using var adapter = new LoopbackTransportAdapter(options);
         await using var session = await adapter.ConnectAsync(CreateConnectRequest(), CancellationToken.None);
 
-        await using var prepared = await ((IRemoteTransportBatchPreparer)session).PreparePushAsync(batch, CancellationToken.None);
+        var preparer = (IRemoteTransportBatchPreparer)session;
+        await Assert.That(maximumBytes).IsGreaterThan(OperationPayload.Length);
+        if (byteAdjustment < 0)
+        {
+            await Assert.That(async () =>
+            {
+                await using var rejected = await preparer.PreparePushAsync(batch, CancellationToken.None);
+            }).ThrowsExactly<InvalidOperationException>();
+        }
+        else
+        {
+            await using var prepared = await preparer.PreparePushAsync(batch, CancellationToken.None);
+            await Assert.That(prepared.EncodedSizeBytes).IsEqualTo(maximumBytes);
+        }
 
-        await Assert.That(prepared.EncodedSizeBytes).IsGreaterThan(maximumPayloadBytes);
         await Assert.That(hub.ApplyCalls).IsEqualTo(0);
     }
 
@@ -70,7 +134,7 @@ public sealed partial class LoopbackTransportAdapterTests
         var exception = await Assert.ThrowsExactlyAsync<InvalidOperationException>(
             () => ((IRemoteTransportBatchPreparer)session).PreparePushAsync(CreateBatch(), CancellationToken.None).AsTask());
 
-        await Assert.That(exception?.Message).Contains("negotiated payload byte bounds");
+        await Assert.That(exception?.Message).Contains("negotiated encoded byte bounds");
         await Assert.That(hub.ApplyCalls).IsEqualTo(0);
     }
 

@@ -8,7 +8,7 @@ namespace ReactiveUI.Primitives.OccasionallyConnected;
 /// <param name="ProtocolVersion">The selected protocol version.</param>
 /// <param name="Features">The selected remote features.</param>
 /// <param name="MaximumBatchOperations">The maximum operation count in one batch.</param>
-/// <param name="MaximumBatchBytes">The maximum operation payload bytes in one batch.</param>
+/// <param name="MaximumBatchBytes">The maximum complete transport-encoded batch bytes, including framing and metadata.</param>
 /// <param name="ServerIdempotencyRetention">The server idempotency retention window.</param>
 /// <param name="ClientInboxRetentionRequired">The client inbox retention required by the server.</param>
 [System.Diagnostics.DebuggerDisplay("{ProtocolVersion,nq}")]

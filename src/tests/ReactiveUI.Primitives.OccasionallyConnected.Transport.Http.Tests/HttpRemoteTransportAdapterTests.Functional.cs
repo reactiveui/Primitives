@@ -348,7 +348,7 @@ public sealed partial class HttpRemoteTransportAdapterTests
 
         await AwaitWithTimeoutAsync(session.DisposeAsync().AsTask());
 
-        await Assert.That(push.IsCanceled).IsTrue();
+        await Assert.That(async () => await push).Throws<OperationCanceledException>();
     }
 
     /// <summary>Verifies disposing a session cancels an active acknowledgement request.</summary>
@@ -378,7 +378,7 @@ public sealed partial class HttpRemoteTransportAdapterTests
 
         await AwaitWithTimeoutAsync(session.DisposeAsync().AsTask());
 
-        await Assert.That(acknowledge.IsCanceled).IsTrue();
+        await Assert.That(async () => await acknowledge).Throws<OperationCanceledException>();
     }
 
     /// <summary>Captures the subscribe query for one start position.</summary>

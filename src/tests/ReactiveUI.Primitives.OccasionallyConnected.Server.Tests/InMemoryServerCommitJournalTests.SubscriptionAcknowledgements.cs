@@ -326,6 +326,54 @@ public sealed partial class InMemoryServerCommitJournalTests
         await Assert.That(minimumClockJournal.SubscriptionOfferCount).IsEqualTo(SingleEntryCount);
     }
 
+    /// <summary>Verifies subscription admission compacts expired bindings when capacity is initially full.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    public async Task SubscriptionAdmissionCompactsExpiredBindingWhenFull()
+    {
+        var clock = new ManualTimeProvider(Start);
+        var journal = CreateSubscriptionJournal(
+            clock,
+            retention: TimeSpan.FromTicks(SingleEntryCount),
+            subscriptionRetention: TimeSpan.FromTicks(SingleEntryCount),
+            maximumSubscriptions: SingleEntryCount);
+        _ = journal.RegisterSubscription(SubscriptionIdentity(FirstSubscription));
+        clock.SetUtcNow(Start.AddTicks(DoubleEntryCount));
+
+        var replacement = journal.RegisterSubscription(SubscriptionIdentity(SecondSubscription));
+
+        await Assert.That(replacement.Identity.SubscriptionId).IsEqualTo(SecondSubscription);
+        await Assert.That(journal.SubscriptionCount).IsEqualTo(SingleEntryCount);
+    }
+
+    /// <summary>Verifies offer admission compacts expired offer rows when offer capacity is initially full.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    /// <exception cref="InvalidOperationException">The expected page is missing.</exception>
+    [Test]
+    public async Task SubscriptionOfferAdmissionCompactsExpiredOfferWhenFull()
+    {
+        var clock = new ManualTimeProvider(Start);
+        var journal = CreateSubscriptionJournal(
+            clock,
+            retention: TimeSpan.FromTicks(SingleEntryCount),
+            maximumSubscriptionOffers: SingleEntryCount);
+        var identity = SubscriptionIdentity(FirstSubscription);
+        _ = journal.RegisterSubscription(identity);
+        var first = OperationKey(FirstOperationSeed);
+        var second = OperationKey(SecondOperationSeed);
+        _ = journal.TryCommit(Plan(0, State(FirstVersion), Stamp(first), Entry(first, OperationResultKind.Accepted, FirstOperationSeed)));
+        _ = journal.TryCommit(Plan(SingleEntryCount, State(SecondVersion), Stamp(second), Entry(second, OperationResultKind.Accepted, SecondOperationSeed)));
+        var firstPage = journal.OfferReceivePage(new(identity, null, SingleEntryCount, DefaultMaximumEvents, DefaultMaximumLogicalBytes));
+        var firstBatch = firstPage.Batch ?? throw new InvalidOperationException(MissingSubscriptionBatchMessage);
+        clock.SetUtcNow(Start.AddTicks(DoubleEntryCount));
+
+        var secondPage = journal.OfferReceivePage(new(identity, firstBatch.NextCursor, SingleEntryCount, DefaultMaximumEvents, DefaultMaximumLogicalBytes));
+        var secondBatch = secondPage.Batch ?? throw new InvalidOperationException(MissingSubscriptionBatchMessage);
+
+        await Assert.That(secondBatch.NextCursor).IsEqualTo(SecondCursor);
+        await Assert.That(journal.SubscriptionOfferCount).IsEqualTo(SingleEntryCount);
+    }
+
     /// <summary>Verifies identity matching distinguishes every trusted binding component.</summary>
     /// <returns>The asynchronous test operation.</returns>
     [Test]

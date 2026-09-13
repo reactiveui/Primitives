@@ -13,7 +13,7 @@ public sealed partial class ConflictResolvingServerOperationHandlerTests
     public async Task LastWriterWinsResolverRejectsForeignOperationProvenance()
     {
         var resolver = new LastWriterWinsResolver(new() { VersionFactory = new IncrementingVersionFactory() });
-        var operation = Operation(FirstOperationSeed, Alpha, InitialVersion, Start);
+        var operation = Operation(FirstOperationSeed, InitialVersion, Start);
         var context = new ConflictContext(
             State(InitialVersion, "initial"),
             [operation],
