@@ -113,6 +113,28 @@ public interface ILocalStoreAdapter : IAsyncDisposable
         IReadOnlyList<SnapshotMutation> snapshotMutations,
         CancellationToken cancellationToken);
 
+    /// <summary>Atomically dead-letters one leased local operation and commits the rebuilt optimistic snapshot.</summary>
+    /// <param name="leaseId">The active lease that owns <paramref name="operationId"/>.</param>
+    /// <param name="operationId">The leased operation to move to the dead-letter set.</param>
+    /// <param name="reasonCode">The stable local reason code.</param>
+    /// <param name="snapshotMutation">The optimistic replacement snapshot after excluding the operation.</param>
+    /// <param name="cancellationToken">The token observed before transaction commit.</param>
+    /// <returns>The snapshot committed with the dead-letter transition.</returns>
+    /// <remarks>
+    /// Stores must validate the active lease owns the target operation, the target has not been authoritatively
+    /// included, and the replacement snapshot matches the current stream revision. The operation payload remains
+    /// retained for <see cref="RecoveredStream.DeadLetters"/> and is removed from pending and replay recovery. Only
+    /// the target is removed from the lease; remaining lease members keep their ownership. Cancellation before commit
+    /// leaves status, lease membership, and snapshot unchanged. Cancellation requested after commit returns the
+    /// committed receipt.
+    /// </remarks>
+    ValueTask<LocalSnapshot> DeadLetterOperationAsync(
+        Guid leaseId,
+        OperationId operationId,
+        string reasonCode,
+        SnapshotMutation snapshotMutation,
+        CancellationToken cancellationToken);
+
     /// <summary>Returns remote event identifiers that have not yet been durably applied for a stream.</summary>
     /// <param name="streamId">The stream identifier.</param>
     /// <param name="eventIds">The candidate remote event identifiers in received order.</param>

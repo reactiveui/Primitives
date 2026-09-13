@@ -3,12 +3,19 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
+using System.Text;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected;
 
 /// <summary>Validates in-memory local store input.</summary>
 internal static class InMemoryLocalStoreAdapterValidation
 {
+    /// <summary>The maximum accepted dead-letter reason code length in UTF-8 bytes.</summary>
+    private const int MaximumDeadLetterReasonBytes = 1024;
+
+    /// <summary>Strict UTF-8 encoder for validating reason text before persistence.</summary>
+    private static readonly Encoding StrictUtf8 = new UTF8Encoding(false, true);
+
     /// <summary>Validates a snapshot mutation.</summary>
     /// <param name="snapshotMutation">The mutation.</param>
     /// <exception cref="ArgumentException">The mutation is malformed.</exception>
@@ -70,6 +77,58 @@ internal static class InMemoryLocalStoreAdapterValidation
         ValidateSnapshotMutation(snapshotMutation);
         _ = operation.StreamId != snapshotMutation.StreamId
             ? throw new ArgumentException("The operation and snapshot mutation must target the same stream.", nameof(snapshotMutation))
+            : true;
+    }
+
+    /// <summary>Validates a local dead-letter operation input.</summary>
+    /// <param name="leaseId">The active lease identifier.</param>
+    /// <param name="operationId">The operation identifier.</param>
+    /// <param name="reasonCode">The stable reason code.</param>
+    /// <param name="snapshotMutation">The replacement snapshot mutation.</param>
+    /// <exception cref="ArgumentException">An input is malformed.</exception>
+    /// <exception cref="ArgumentNullException">The reason or mutation is null.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The reason exceeds the supported size.</exception>
+    internal static void ValidateDeadLetterInput(
+        Guid leaseId,
+        OperationId operationId,
+        string reasonCode,
+        SnapshotMutation snapshotMutation)
+    {
+        ValidateLeaseId(leaseId);
+        ValidateOperationId(operationId, nameof(operationId));
+        ArgumentExceptionHelper.ThrowIfNull(reasonCode);
+        _ = string.IsNullOrWhiteSpace(reasonCode)
+            ? throw new ArgumentException("Dead-letter reason code must be non-empty.", nameof(reasonCode))
+            : true;
+        try
+        {
+            var reasonBytes = StrictUtf8.GetByteCount(reasonCode);
+            _ = reasonBytes > MaximumDeadLetterReasonBytes
+                ? throw new ArgumentOutOfRangeException(nameof(reasonCode), reasonBytes, "Dead-letter reason code exceeds the supported size.")
+                : true;
+        }
+        catch (EncoderFallbackException exception)
+        {
+            throw new ArgumentException("Dead-letter reason code must be well-formed Unicode.", nameof(reasonCode), exception);
+        }
+
+        ValidateSnapshotMutation(snapshotMutation);
+    }
+
+    /// <summary>Validates a local dead-letter reason code.</summary>
+    /// <param name="reasonCode">The stable reason code.</param>
+    /// <exception cref="ArgumentException">The reason is malformed.</exception>
+    /// <exception cref="ArgumentNullException">The reason is null.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The reason exceeds the supported size.</exception>
+    internal static void ValidateDeadLetterReasonCode(string reasonCode)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(reasonCode);
+        _ = string.IsNullOrWhiteSpace(reasonCode)
+            ? throw new ArgumentException("Dead-letter reason code must be non-empty.", nameof(reasonCode))
+            : true;
+        var reasonBytes = StrictUtf8.GetByteCount(reasonCode);
+        _ = reasonBytes > MaximumDeadLetterReasonBytes
+            ? throw new ArgumentOutOfRangeException(nameof(reasonCode), reasonBytes, "Dead-letter reason code exceeds the supported size.")
             : true;
     }
 

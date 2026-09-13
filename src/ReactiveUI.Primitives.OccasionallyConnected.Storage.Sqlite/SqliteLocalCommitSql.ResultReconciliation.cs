@@ -11,6 +11,9 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Storage.Sqlite;
 /// <content>Executes atomic upload result reconciliation statements.</content>
 internal static partial class SqliteLocalCommitSql
 {
+    /// <summary>The missing snapshot message.</summary>
+    private const string MissingSnapshotMessage = "The SQLite snapshot is missing.";
+
     /// <summary>Rejects status-only results that require an optimistic snapshot replacement.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
@@ -40,7 +43,7 @@ internal static partial class SqliteLocalCommitSql
             }
 
             var snapshot = ReadSnapshot(connection, transaction, storeIdentity, operationStreams[operation.OperationId])
-                ?? throw new InvalidOperationException("The SQLite snapshot is missing.");
+                ?? throw new InvalidOperationException(MissingSnapshotMessage);
             if (snapshot.AuthoritativeState is not null)
             {
                 throw new InvalidOperationException("Removing an optimistic operation requires an atomic snapshot replacement.");
@@ -86,7 +89,7 @@ internal static partial class SqliteLocalCommitSql
 
             var stream = ReadStreamState(connection, transaction, storeIdentity, mutation.StreamId);
             var current = ReadSnapshot(connection, transaction, storeIdentity, mutation.StreamId)
-                ?? throw new InvalidOperationException("The SQLite snapshot is missing.");
+                ?? throw new InvalidOperationException(MissingSnapshotMessage);
             var authoritative = current.AuthoritativeState
                 ?? throw new InvalidOperationException("The stream requires an authoritative checkpoint before reconciliation.");
             if (current.Revision != mutation.ExpectedRevision)
@@ -110,6 +113,136 @@ internal static partial class SqliteLocalCommitSql
 
         return snapshots;
     }
+
+    /// <summary>Creates the committed snapshot for a local dead-letter transition after validating all fences.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="storeIdentity">The store identity.</param>
+    /// <param name="operation">The leased operation to dead-letter.</param>
+    /// <param name="mutation">The replacement mutation.</param>
+    /// <param name="savedAtUtc">The snapshot save timestamp.</param>
+    /// <returns>The committed replacement snapshot.</returns>
+    /// <exception cref="InvalidOperationException">The operation is already included, terminal, or the snapshot is stale.</exception>
+    internal static LocalSnapshot CreateDeadLetterSnapshot(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string storeIdentity,
+        SyncOperation operation,
+        SnapshotMutation mutation,
+        DateTimeOffset savedAtUtc)
+    {
+        SqliteLocalCommitValidation.ValidateSnapshotMutation(mutation);
+        ValidateDeadLetterOperationTarget(connection, transaction, storeIdentity, operation, mutation);
+        ValidateDeadLetterOperationStatus(connection, transaction, storeIdentity, operation.OperationId);
+
+        var stream = ReadStreamState(connection, transaction, storeIdentity, mutation.StreamId);
+        var current = ReadSnapshot(connection, transaction, storeIdentity, mutation.StreamId)
+            ?? throw new InvalidOperationException(MissingSnapshotMessage);
+        var authoritative = current.AuthoritativeState
+            ?? throw new InvalidOperationException("The stream requires an authoritative checkpoint before dead-letter reconciliation.");
+        if (current.Revision != mutation.ExpectedRevision)
+        {
+            throw new InvalidOperationException("The optimistic snapshot changed before dead-letter reconciliation.");
+        }
+
+        if (mutation.AuthoritativeState is not null && !PayloadEquals(authoritative, mutation.AuthoritativeState))
+        {
+            throw new InvalidOperationException("A dead-letter transition cannot replace the authoritative checkpoint.");
+        }
+
+        return new(
+            mutation.StreamId,
+            mutation.FormatVersion,
+            stream.ServerCursor,
+            mutation.State,
+            checked(current.Revision + 1),
+            savedAtUtc) { AuthoritativeState = authoritative };
+    }
+
+    /// <summary>Validates dead-letter operation identity and authoritative inclusion fences.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="storeIdentity">The store identity.</param>
+    /// <param name="operation">The leased operation.</param>
+    /// <param name="mutation">The replacement mutation.</param>
+    /// <exception cref="InvalidOperationException">The mutation targets another stream or contradicts inclusion.</exception>
+    private static void ValidateDeadLetterOperationTarget(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string storeIdentity,
+        SyncOperation operation,
+        SnapshotMutation mutation)
+    {
+        ValidateDeadLetterStream(operation.StreamId, mutation.StreamId);
+        ValidateDeadLetterInclusion(connection, transaction, storeIdentity, operation.OperationId);
+    }
+
+    /// <summary>Validates that the replacement mutation targets the leased operation stream.</summary>
+    /// <param name="operationStreamId">The leased operation stream.</param>
+    /// <param name="mutationStreamId">The mutation stream.</param>
+    /// <exception cref="InvalidOperationException">The mutation targets another stream.</exception>
+    private static void ValidateDeadLetterStream(StreamId operationStreamId, StreamId mutationStreamId) =>
+        _ = operationStreamId == mutationStreamId
+            || ThrowInvalidOperation("The dead-letter snapshot targets a different stream.");
+
+    /// <summary>Validates that authoritative receive processing has not already included the operation.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="storeIdentity">The store identity.</param>
+    /// <param name="operationId">The operation identifier.</param>
+    /// <exception cref="InvalidOperationException">The operation is already included.</exception>
+    private static void ValidateDeadLetterInclusion(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string storeIdentity,
+        OperationId operationId) =>
+        _ = !IsOperationIncluded(connection, transaction, storeIdentity, operationId)
+            || ThrowInvalidOperation("A dead-letter transition contradicts authoritative operation inclusion.");
+
+    /// <summary>Validates operation state evidence before local dead-lettering.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="storeIdentity">The store identity.</param>
+    /// <param name="operationId">The operation identifier.</param>
+    /// <exception cref="InvalidOperationException">The operation is terminal or has prior upload evidence.</exception>
+    private static void ValidateDeadLetterOperationStatus(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string storeIdentity,
+        OperationId operationId)
+    {
+        var status = ReadOperationStatus(connection, transaction, storeIdentity, operationId)
+            ?? throw new InvalidOperationException("The SQLite operation state is missing.");
+        ValidateDeadLetterTerminalState(status.State);
+        ValidateDeadLetterAttemptEvidence(status);
+    }
+
+    /// <summary>Validates that an operation state is eligible for local dead-lettering.</summary>
+    /// <param name="state">The operation state.</param>
+    /// <exception cref="InvalidOperationException">The operation state is terminal.</exception>
+    private static void ValidateDeadLetterTerminalState(SyncOperationState state) =>
+        _ = !IsTerminalForDeadLetter(state)
+            || ThrowInvalidOperation("The SQLite operation state is terminal.");
+
+    /// <summary>Validates that an operation has no prior upload attempt evidence.</summary>
+    /// <param name="status">The operation status.</param>
+    /// <exception cref="InvalidOperationException">The operation might already have reached the remote service.</exception>
+    private static void ValidateDeadLetterAttemptEvidence(SyncOperationStatus status) =>
+        _ = !HasPriorUploadAttemptEvidence(status)
+            || ThrowInvalidOperation("The SQLite operation has prior upload attempt evidence.");
+
+    /// <summary>Throws an invalid operation exception from expression guards.</summary>
+    /// <param name="message">The exception message.</param>
+    /// <returns>This method never returns.</returns>
+    /// <exception cref="InvalidOperationException">Always thrown.</exception>
+    private static bool ThrowInvalidOperation(string message) =>
+        throw new InvalidOperationException(message);
+
+    /// <summary>Determines whether an operation status carries remote-attempt evidence.</summary>
+    /// <param name="status">The operation status.</param>
+    /// <returns>Whether the operation might already have reached the remote service.</returns>
+    private static bool HasPriorUploadAttemptEvidence(SyncOperationStatus status) =>
+        status.State != SyncOperationState.QueuedForUpload || status.Attempt != 0;
 
     /// <summary>Identifies streams whose optimistic replay membership will shrink.</summary>
     /// <param name="connection">The connection.</param>
@@ -145,6 +278,17 @@ internal static partial class SqliteLocalCommitSql
 
         return streams;
     }
+
+    /// <summary>Determines whether a state rejects local dead-letter transition.</summary>
+    /// <param name="state">The operation state.</param>
+    /// <returns>Whether the state is terminal for dead-letter reconciliation.</returns>
+    private static bool IsTerminalForDeadLetter(SyncOperationState state) =>
+        state is SyncOperationState.Conflict
+            or SyncOperationState.Synchronized
+            or SyncOperationState.Rejected
+            or SyncOperationState.DeadLettered
+            or SyncOperationState.Ambiguous
+            or SyncOperationState.GuaranteeExpired;
 
     /// <summary>Creates a stream lookup for validated leased operations.</summary>
     /// <param name="leasedOperations">The leased operations.</param>

@@ -116,6 +116,17 @@ internal sealed class SqliteLocalStoreAdapterSizing
         return Add(bytes, CollectionBytes(result.Operations, OperationSyncResultBytes));
     }
 
+    /// <summary>Computes retained input bytes for one dead-letter reconciliation.</summary>
+    /// <param name="reasonCode">The reason code.</param>
+    /// <param name="snapshotMutation">The snapshot mutation.</param>
+    /// <returns>The retained bytes.</returns>
+    internal long DeadLetterBytes(string reasonCode, SnapshotMutation snapshotMutation)
+    {
+        var bytes = Add(GuidBytes, GuidBytes);
+        bytes = Add(bytes, StringBytes(reasonCode));
+        return Add(bytes, SnapshotMutationBytes(snapshotMutation));
+    }
+
     /// <summary>Adds retained input bytes for an owned snapshot mutation collection header.</summary>
     /// <param name="bytes">The current byte count.</param>
     /// <param name="snapshotMutationCount">The validated snapshot mutation count.</param>

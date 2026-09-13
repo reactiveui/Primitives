@@ -72,6 +72,12 @@ public sealed partial class SqliteLocalStoreAdapterTests
     /// <summary>The SQLite stream id parameter name.</summary>
     private const string StreamIdParameter = "$streamId";
 
+    /// <summary>The SQLite lease id parameter name.</summary>
+    private const string LeaseIdParameter = "$leaseId";
+
+    /// <summary>The SQLite operation id parameter name.</summary>
+    private const string OperationIdParameter = "$operationId";
+
     /// <summary>A representative stream identity.</summary>
     private static readonly StreamId Stream = new("sensor/temperature");
 
@@ -155,7 +161,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
         _ = await adapter.CommitLocalOperationAsync(operation, CreateSnapshotMutation(remoteApply.SnapshotRevision), CancellationToken.None);
         var lease = await ReadSingleLeaseAsync(adapter, new(Stream, FirstAttempt, NormalWorkerBytes, TimeSpan.FromMinutes(1)));
         var attempt = await adapter.TryBeginRemoteAttemptAsync(lease.LeaseId, operation.OperationId, FirstAttempt, CancellationToken.None);
-        var ambiguousStatus = await adapter.GetOperationStatusAsync(operation.OperationId, CancellationToken.None);
+        var uploadingStatus = await adapter.GetOperationStatusAsync(operation.OperationId, CancellationToken.None);
 
         await adapter.RenewLeaseAsync(lease.LeaseId, TimeSpan.FromMinutes(1), CancellationToken.None);
         await adapter.ReleaseLeaseAsync(lease.LeaseId, CancellationToken.None);
@@ -170,7 +176,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
 
         await Assert.That(remoteApply.AppliedCount).IsEqualTo(FirstAttempt);
         await Assert.That(attempt.MaySend).IsTrue();
-        await Assert.That(ambiguousStatus?.State).IsEqualTo(SyncOperationState.Ambiguous);
+        await Assert.That(uploadingStatus?.State).IsEqualTo(SyncOperationState.Uploading);
         await Assert.That(synchronizedStatus?.State).IsEqualTo(SyncOperationState.Synchronized);
         await Assert.That(compaction.RecordsRemoved).IsGreaterThanOrEqualTo(0);
         await Assert.That(recovery.ServerCursor).IsEqualTo(RemoteCursor);
@@ -460,6 +466,15 @@ public sealed partial class SqliteLocalStoreAdapterTests
         new(
             path,
             new() { WorkerCapacity = TwoWorkerCommands, WorkerCapacityBytes = NormalWorkerBytes });
+
+    /// <summary>Creates a configured adapter with a supplied clock.</summary>
+    /// <param name="path">The SQLite database path.</param>
+    /// <param name="timeProvider">The time provider.</param>
+    /// <returns>The configured adapter.</returns>
+    private static SqliteLocalStoreAdapter CreateAdapter(string path, TimeProvider timeProvider) =>
+        new(
+            path,
+            new() { TimeProvider = timeProvider, WorkerCapacity = TwoWorkerCommands, WorkerCapacityBytes = NormalWorkerBytes });
 
     /// <summary>Creates a representative operation.</summary>
     /// <param name="clientSequence">The client sequence.</param>

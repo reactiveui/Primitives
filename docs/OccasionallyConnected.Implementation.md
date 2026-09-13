@@ -940,3 +940,19 @@ verification passed 231 Server tests on each of net8/net9/net10/net11, with MTP-
 (2918/2910/2910/2909 lines, 887 branches each). All eight Release library targets build with zero warnings/errors.
 Evidence: server-subscription-ack worktree, artifacts/root-ack-verified. Public hub authorization, durable initial
 subscription positions and HTTP endpoint integration remain separate required work.
+
+### Stage 3: atomic local dead-letter reconciliation
+
+The local store contract now supports atomically dead-lettering one leased operation together with a rebuilt optimistic
+snapshot. Both adapters preserve the authoritative checkpoint and cursor, remove only that lease member, retain the
+original operation and stable reason for recovery, and reject stale revisions or authoritative inclusion. Only a
+never-attempted queued operation is eligible: uncertain prior upload attempts cannot be silently discarded. SQLite
+now records Uploading for at-least-once/exactly-once barriers and Ambiguous for at-most-once, matching memory semantics.
+
+The committer rebuilds from the authoritative payload and surviving replay operations rather than reversing projection
+effects. Malformed store receipts poison the committer. Real SQLite tests cover restart, transaction rollback, lease
+membership, attempts and receive-before-ACK races. Root reviewed and integrated the isolated draft with the current
+code, then passed 375 Core, 727 Runtime and 325 SQLite tests on each modern target. MTP confirms 100% line and branch
+coverage for each matching package on every target; all eight targets of all three libraries build with zero warnings
+or errors. Evidence: dead-letter-integration worktree, artifacts/root-dead-letter. Engine classification and scheduling
+of eligible local failures remain required integration work.

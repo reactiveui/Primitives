@@ -45,11 +45,20 @@ public sealed partial class LocalStreamCommitterTests
         /// <summary>Gets or sets an upload result transaction failure before persistence.</summary>
         public Exception? ResultCommitException { get; set; }
 
+        /// <summary>Gets or sets asynchronous work before the dead-letter transaction.</summary>
+        public Func<Task>? BeforeDeadLetterCommitAsync { get; set; }
+
+        /// <summary>Gets or sets a dead-letter transaction failure before persistence.</summary>
+        public Exception? DeadLetterCommitException { get; set; }
+
         /// <summary>Gets or sets a transformation simulating a malformed adapter receipt.</summary>
         public Func<RemoteApplyResult, RemoteApplyResult>? TransformRemoteReceipt { get; set; }
 
         /// <summary>Gets or sets a transformation simulating a malformed result adapter receipt.</summary>
         public Func<IReadOnlyList<LocalSnapshot>, IReadOnlyList<LocalSnapshot>>? TransformResultSnapshots { get; set; }
+
+        /// <summary>Gets or sets a transformation simulating a malformed dead-letter adapter receipt.</summary>
+        public Func<LocalSnapshot, LocalSnapshot>? TransformDeadLetterSnapshot { get; set; }
 
         /// <summary>Gets or sets asynchronous work to run before recovery.</summary>
         public Func<Task>? BeforeRecoveryAsync { get; set; }
@@ -63,6 +72,9 @@ public sealed partial class LocalStreamCommitterTests
         /// <summary>Gets or sets the token source canceled after successful upload result apply.</summary>
         public CancellationTokenSource? CancelAfterSuccessfulResultApply { get; set; }
 
+        /// <summary>Gets or sets the token source canceled after successful dead-letter apply.</summary>
+        public CancellationTokenSource? CancelAfterSuccessfulDeadLetterApply { get; set; }
+
         /// <summary>Gets or sets the sequence offset applied to the returned receipt.</summary>
         public long ReceiptSequenceOffset { get; set; }
 
@@ -71,6 +83,9 @@ public sealed partial class LocalStreamCommitterTests
 
         /// <summary>Gets or sets the revision offset applied to returned result snapshots.</summary>
         public long ResultSnapshotRevisionOffset { get; set; }
+
+        /// <summary>Gets or sets the revision offset applied to returned dead-letter snapshots.</summary>
+        public long DeadLetterSnapshotRevisionOffset { get; set; }
 
         /// <summary>Gets or sets a value indicating whether commit returns a null receipt.</summary>
         public bool ReturnNullCommitResult { get; set; }
@@ -110,6 +125,9 @@ public sealed partial class LocalStreamCommitterTests
 
         /// <summary>Gets the result apply call count.</summary>
         public int ResultApplyCallCount { get; private set; }
+
+        /// <summary>Gets the dead-letter apply call count.</summary>
+        public int DeadLetterApplyCallCount { get; private set; }
 
         /// <summary>Marks a remote event identifier as already applied.</summary>
         /// <param name="eventId">The remote event identifier.</param>
@@ -217,6 +235,22 @@ public sealed partial class LocalStreamCommitterTests
             ApplyResultRecovery(snapshots, retained);
             _ = CancelAfterSuccessfulResultApply?.CancelAsync();
             return await CreateResultSnapshotReceiptAsync(snapshots).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc/>
+        public async ValueTask<LocalSnapshot> DeadLetterOperationAsync(
+            Guid leaseId,
+            OperationId operationId,
+            string reasonCode,
+            SnapshotMutation snapshotMutation,
+            CancellationToken cancellationToken)
+        {
+            DeadLetterApplyCallCount++;
+            await RunBeforeDeadLetterCommitAsync(cancellationToken).ConfigureAwait(false);
+            var snapshot = CreateDeadLetterSnapshot(snapshotMutation);
+            ApplyDeadLetterRecovery(operationId, reasonCode, snapshot);
+            _ = CancelAfterSuccessfulDeadLetterApply?.CancelAsync();
+            return TransformDeadLetterSnapshot is null ? snapshot : TransformDeadLetterSnapshot(snapshot);
         }
 
         /// <inheritdoc/>
@@ -371,6 +405,23 @@ public sealed partial class LocalStreamCommitterTests
             }
         }
 
+        /// <summary>Runs configured precommit behavior for dead-letter tests.</summary>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <returns>The asynchronous operation.</returns>
+        private async ValueTask RunBeforeDeadLetterCommitAsync(CancellationToken cancellationToken)
+        {
+            if (BeforeDeadLetterCommitAsync is not null)
+            {
+                await BeforeDeadLetterCommitAsync().ConfigureAwait(false);
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            if (DeadLetterCommitException is not null)
+            {
+                throw DeadLetterCommitException;
+            }
+        }
+
         /// <summary>Creates retained pending and replay operations after rejected entries are removed.</summary>
         /// <param name="rejected">The rejected operation identifiers.</param>
         /// <returns>The retained operations.</returns>
@@ -423,6 +474,22 @@ public sealed partial class LocalStreamCommitterTests
                 CommittedUtc) { AuthoritativeState = current.AuthoritativeState };
         }
 
+        /// <summary>Creates the snapshot returned by the dead-letter test transaction.</summary>
+        /// <param name="mutation">The requested mutation.</param>
+        /// <returns>The committed snapshot.</returns>
+        /// <exception cref="InvalidOperationException">The recovered stream has no snapshot.</exception>
+        private LocalSnapshot CreateDeadLetterSnapshot(SnapshotMutation mutation)
+        {
+            var current = Recovery.Snapshot ?? throw new InvalidOperationException("The stream requires a snapshot.");
+            return new(
+                mutation.StreamId,
+                mutation.FormatVersion,
+                Recovery.ServerCursor,
+                mutation.State,
+                mutation.ExpectedRevision + 1 + DeadLetterSnapshotRevisionOffset,
+                CommittedUtc) { AuthoritativeState = current.AuthoritativeState };
+        }
+
         /// <summary>Applies successful fake result recovery state.</summary>
         /// <param name="snapshots">The committed snapshots.</param>
         /// <param name="retained">The retained operations.</param>
@@ -437,6 +504,60 @@ public sealed partial class LocalStreamCommitterTests
 
             var recovery = new RecoveredStream(Recovery.SubscriptionId, Recovery.ServerCursor, snapshots[0], retained.Pending, Recovery.DeadLetters, Recovery.NextClientSequence);
             Recovery = recovery with { ReplayOperations = retained.Replay };
+        }
+
+        /// <summary>Applies successful fake dead-letter recovery state.</summary>
+        /// <param name="operationId">The dead-lettered operation identifier.</param>
+        /// <param name="reasonCode">The reason code.</param>
+        /// <param name="snapshot">The committed snapshot.</param>
+        private void ApplyDeadLetterRecovery(OperationId operationId, string reasonCode, LocalSnapshot snapshot)
+        {
+            List<SyncOperation> pending = [];
+            List<SyncOperation> replay = [];
+            SyncOperation? deadLetter = null;
+            for (var index = 0; index < Recovery.PendingOperations.Count; index++)
+            {
+                var operation = Recovery.PendingOperations[index];
+                if (operation.OperationId == operationId)
+                {
+                    deadLetter = operation;
+                    continue;
+                }
+
+                pending.Add(operation);
+            }
+
+            for (var index = 0; index < Recovery.ReplayOperations.Count; index++)
+            {
+                var operation = Recovery.ReplayOperations[index];
+                if (operation.OperationId != operationId)
+                {
+                    replay.Add(operation);
+                }
+            }
+
+            deadLetter ??= FindReplayOperation(operationId);
+            List<DeadLetterRecord> deadLetters = [.. Recovery.DeadLetters, new(deadLetter, reasonCode, Attempts: 0, CommittedUtc)];
+            var recovery = new RecoveredStream(Recovery.SubscriptionId, Recovery.ServerCursor, snapshot, pending, deadLetters, Recovery.NextClientSequence);
+            Recovery = recovery with { ReplayOperations = replay };
+        }
+
+        /// <summary>Finds a replay operation by identifier.</summary>
+        /// <param name="operationId">The operation identifier.</param>
+        /// <returns>The operation.</returns>
+        /// <exception cref="InvalidOperationException">The operation is missing.</exception>
+        private SyncOperation FindReplayOperation(OperationId operationId)
+        {
+            for (var index = 0; index < Recovery.ReplayOperations.Count; index++)
+            {
+                var operation = Recovery.ReplayOperations[index];
+                if (operation.OperationId == operationId)
+                {
+                    return operation;
+                }
+            }
+
+            throw new InvalidOperationException("The fake store does not contain the dead-letter target.");
         }
 
         /// <summary>Creates the fake store receipt for upload result tests.</summary>

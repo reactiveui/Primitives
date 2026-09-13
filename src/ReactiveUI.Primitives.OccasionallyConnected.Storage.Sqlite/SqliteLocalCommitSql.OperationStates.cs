@@ -232,11 +232,13 @@ internal static partial class SqliteLocalCommitSql
             return new(operationId, nextAttempt, MaySend: false, "OC.AttemptNotAdvanced");
         }
 
+        var state = GetAttemptState(ownership.DeliveryGuarantee);
+        var reasonCode = state == SyncOperationState.Ambiguous ? "OC.AttemptAmbiguous" : null;
         UpsertOperationState(
             connection,
             transaction,
             storeIdentity,
-            new(operationId, SyncOperationState.Ambiguous, nextAttempt, nowUtc, "OC.AttemptAmbiguous"));
+            new(operationId, state, nextAttempt, nowUtc, reasonCode));
         return new(operationId, nextAttempt, MaySend: true, null);
     }
 
@@ -267,6 +269,52 @@ internal static partial class SqliteLocalCommitSql
             };
             UpdateOperationState(connection, transaction, storeIdentity, operation.OperationId, nextState, changedAtUtc, operation.ReasonCode);
         }
+    }
+
+    /// <summary>Moves one operation to the dead-letter state while preserving its durable attempt count.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="storeIdentity">The store identity.</param>
+    /// <param name="operationId">The operation identifier.</param>
+    /// <param name="reasonCode">The stable reason code.</param>
+    /// <param name="changedAtUtc">The state change timestamp.</param>
+    /// <exception cref="InvalidOperationException">The operation is already terminal or missing.</exception>
+    internal static void DeadLetterOperation(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string storeIdentity,
+        OperationId operationId,
+        string reasonCode,
+        DateTimeOffset changedAtUtc)
+    {
+        var current = ReadOperationRetryTarget(connection, transaction, storeIdentity, operationId);
+        if (IsTerminal(current.State))
+        {
+            throw new InvalidOperationException("The SQLite operation state is terminal.");
+        }
+
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            UPDATE oc_outbox_operation_states
+            SET operation_state = $operationState,
+                changed_at_utc = $changedAtUtc,
+                reason_code = $reasonCode,
+                retry_started_utc = NULL,
+                retry_due_utc = NULL,
+                retry_previous_delay_ticks = NULL,
+                retry_transient_attempt_count = NULL,
+                retry_authentication_state = NULL,
+                retry_credentials_version = NULL
+            WHERE store_identity = $storeIdentity AND operation_id = $operationId;
+            """;
+        AddStatusParameters(command, storeIdentity, operationId, SyncOperationState.DeadLettered, changedAtUtc, reasonCode);
+        if (command.ExecuteNonQuery() == 1)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(MissingOperationStateMessage);
     }
 
     /// <summary>Saves retry state for an operation and returns it to queued eligibility.</summary>
@@ -329,6 +377,13 @@ internal static partial class SqliteLocalCommitSql
 
         throw new InvalidOperationException(MissingOperationStateMessage);
     }
+
+    /// <summary>Gets the durable state recorded when an attempt starts.</summary>
+    /// <param name="deliveryGuarantee">The delivery guarantee.</param>
+    /// <returns>The attempt state.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static SyncOperationState GetAttemptState(DeliveryGuarantee deliveryGuarantee) =>
+        deliveryGuarantee == DeliveryGuarantee.AtMostOnce ? SyncOperationState.Ambiguous : SyncOperationState.Uploading;
 
     /// <summary>Updates one operation state while preserving its current attempt count.</summary>
     /// <param name="connection">The connection.</param>

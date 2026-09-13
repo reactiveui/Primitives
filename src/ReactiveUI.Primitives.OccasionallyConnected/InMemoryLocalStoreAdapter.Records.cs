@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Collections.ObjectModel;
+using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected;
 
@@ -22,6 +23,9 @@ internal sealed partial class InMemoryLocalStoreAdapter
     /// <summary>Stores current lease ownership.</summary>
     private sealed class LeaseRecord
     {
+        /// <summary>The mutable operation identifiers owned by the lease.</summary>
+        private readonly List<OperationId> _operationIds;
+
         /// <summary>Initializes a new instance of the <see cref="LeaseRecord"/> class.</summary>
         /// <param name="leaseId">The lease identifier.</param>
         /// <param name="expiresAtUtc">The expiry timestamp.</param>
@@ -30,7 +34,8 @@ internal sealed partial class InMemoryLocalStoreAdapter
         {
             LeaseId = leaseId;
             ExpiresAtUtc = expiresAtUtc;
-            OperationIds = new(operationIds);
+            _operationIds = new(operationIds);
+            OperationIds = new(_operationIds);
         }
 
         /// <summary>Gets the lease identifier.</summary>
@@ -41,6 +46,12 @@ internal sealed partial class InMemoryLocalStoreAdapter
 
         /// <summary>Gets the leased operation identifiers.</summary>
         internal ReadOnlyCollection<OperationId> OperationIds { get; }
+
+        /// <summary>Removes one operation from the lease.</summary>
+        /// <param name="operationId">The operation identifier.</param>
+        /// <returns>Whether the operation was removed.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal bool Remove(OperationId operationId) => _operationIds.Remove(operationId);
 
         /// <summary>Determines whether the lease owns an operation.</summary>
         /// <param name="operationId">The operation identifier.</param>
