@@ -1,7 +1,7 @@
 namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.Http;
 
 [System.Diagnostics.DebuggerDisplay("{Kind,nq} {StatusCode,nq}")]
-public sealed class HttpRemoteTransportException : System.Exception
+public sealed class HttpRemoteTransportException : System.Exception, ReactiveUI.Primitives.OccasionallyConnected.IRemoteTransportFailure
 {
     public HttpRemoteTransportException() { }
     public HttpRemoteTransportException(string message) { }
@@ -13,6 +13,7 @@ public sealed class HttpRemoteTransportException : System.Exception
     public bool IsTransient { get; }
     public ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.HttpTransportFailureKind Kind { get; }
     public System.TimeSpan? RetryAfter { get; }
+    public ReactiveUI.Primitives.OccasionallyConnected.RetryFailure RetryFailure { get; }
     public System.Net.HttpStatusCode? StatusCode { get; }
 }
 public enum HttpTransportFailureKind
@@ -67,4 +68,3 @@ public record HttpRemoteTransportOptions : System.IEquatable<ReactiveUI.Primitiv
     public System.TimeProvider TimeProvider { get; init; }
     public void Validate() { }
 }
-

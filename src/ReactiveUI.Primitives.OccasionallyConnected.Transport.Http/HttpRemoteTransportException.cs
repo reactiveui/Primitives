@@ -3,12 +3,13 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Net;
+using ReactiveUI.Primitives.OccasionallyConnected;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.Http;
 
 /// <summary>Represents a typed HTTP transport failure.</summary>
 [System.Diagnostics.DebuggerDisplay("{Kind,nq} {StatusCode,nq}")]
-public sealed class HttpRemoteTransportException : Exception
+public sealed class HttpRemoteTransportException : Exception, IRemoteTransportFailure
 {
     /// <summary>Initializes a new instance of the <see cref="HttpRemoteTransportException"/> class.</summary>
     public HttpRemoteTransportException()
@@ -83,6 +84,9 @@ public sealed class HttpRemoteTransportException : Exception
     /// <summary>Gets the optional bounded retry hint.</summary>
     public TimeSpan? RetryAfter { get; }
 
+    /// <summary>Gets the Core retry classification for this transport failure.</summary>
+    public RetryFailure RetryFailure => new(MapRetryFailureKind(Kind), RetryAfter, credentialsVersion: null);
+
     /// <summary>Gets whether this failure is normally transient.</summary>
     public bool IsTransient => Kind is HttpTransportFailureKind.Transient or HttpTransportFailureKind.AmbiguousTransportOutcome;
 
@@ -95,4 +99,19 @@ public sealed class HttpRemoteTransportException : Exception
         var status = statusCode.HasValue ? ((int)statusCode.Value).ToString(System.Globalization.CultureInfo.InvariantCulture) : "none";
         return $"HTTP transport failure {kind} (status {status}).";
     }
+
+    /// <summary>Maps an HTTP-specific failure kind to the Core retry classification.</summary>
+    /// <param name="kind">The HTTP-specific failure kind.</param>
+    /// <returns>The Core retry failure kind.</returns>
+    private static RetryFailureKind MapRetryFailureKind(HttpTransportFailureKind kind) => kind switch
+    {
+        HttpTransportFailureKind.Authentication => RetryFailureKind.Authentication,
+        HttpTransportFailureKind.AuthorizationDenied => RetryFailureKind.AuthorizationDenied,
+        HttpTransportFailureKind.ValidationRejected => RetryFailureKind.ValidationRejected,
+        HttpTransportFailureKind.SchemaIncompatible => RetryFailureKind.SchemaIncompatible,
+        HttpTransportFailureKind.PayloadTooLarge => RetryFailureKind.PayloadTooLarge,
+        HttpTransportFailureKind.Transient => RetryFailureKind.Transient,
+        HttpTransportFailureKind.AmbiguousTransportOutcome => RetryFailureKind.AmbiguousTransportOutcome,
+        _ => RetryFailureKind.ValidationRejected,
+    };
 }

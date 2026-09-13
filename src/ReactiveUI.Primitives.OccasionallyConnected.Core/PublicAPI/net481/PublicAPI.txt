@@ -1,5 +1,4 @@
 namespace ReactiveUI.Primitives.OccasionallyConnected;
-
 [System.Diagnostics.DebuggerDisplay("{OperationId,nq} Attempt {Attempt,nq} MaySend={MaySend,nq}")]
 public record AttemptBarrierResult : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.AttemptBarrierResult>
 {
@@ -65,19 +64,6 @@ public record ConflictContext : System.IEquatable<ReactiveUI.Primitives.Occasion
     public System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.SyncOperation> Incoming { get; }
     public ReactiveUI.Primitives.OccasionallyConnected.ConflictServerContext? Server { get; }
 }
-[System.Diagnostics.DebuggerDisplay("{CandidateWrite.ClientId,nq} {CandidateWrite.OperationId,nq}")]
-public record ConflictServerContext : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.ConflictServerContext>
-{
-    public required ReactiveUI.Primitives.OccasionallyConnected.ConflictWriteStamp CandidateWrite { get; init; }
-    public ReactiveUI.Primitives.OccasionallyConnected.ConflictWriteStamp? CurrentWrite { get; init; }
-}
-[System.Diagnostics.DebuggerDisplay("{ClientId,nq} {OperationId,nq}")]
-public record ConflictWriteStamp : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.ConflictWriteStamp>
-{
-    public required string ClientId { get; init; }
-    public required System.DateTimeOffset CommittedAtUtc { get; init; }
-    public required ReactiveUI.Primitives.OccasionallyConnected.OperationId OperationId { get; init; }
-}
 public enum ConflictPolicy
 {
     LastWriterWins = 0,
@@ -93,6 +79,19 @@ public record ConflictResolutionResult : System.IEquatable<ReactiveUI.Primitives
     public System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.RemoteEvent> ProducedEvents { get; }
     public System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.RejectedOperation> RejectedOperations { get; }
     public string ServerVersion { get; }
+}
+[System.Diagnostics.DebuggerDisplay("{CandidateWrite.ClientId,nq} {CandidateWrite.OperationId,nq}")]
+public record ConflictServerContext : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.ConflictServerContext>
+{
+    public required ReactiveUI.Primitives.OccasionallyConnected.ConflictWriteStamp CandidateWrite { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.ConflictWriteStamp? CurrentWrite { get; init; }
+}
+[System.Diagnostics.DebuggerDisplay("{ClientId,nq} {OperationId,nq}")]
+public record ConflictWriteStamp : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.ConflictWriteStamp>
+{
+    public required string ClientId { get; init; }
+    public required System.DateTimeOffset CommittedAtUtc { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.OperationId OperationId { get; init; }
 }
 [System.Diagnostics.DebuggerDisplay("{ReasonCode,nq}")]
 public record DeadLetterRecord : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.DeadLetterRecord>
@@ -165,15 +164,27 @@ public interface ILocalProjection<TState, in TInput>
     TState ApplyRemote(TState state, TInput input, ReactiveUI.Primitives.OccasionallyConnected.RemoteEvent remoteEvent) { }
     TState Reconcile(TState state, ReactiveUI.Primitives.OccasionallyConnected.ConflictResolutionResult result) { }
 }
+public interface ILocalSnapshotRecoveryStore
+{
+    System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshotRecoveryResult> ApplySnapshotRecoveryAsync(ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshotRecoveryMutation mutation, System.Threading.CancellationToken cancellationToken) { }
+}
+public static class ILocalSnapshotRecoveryStoreExtensions
+{
+    extension(ReactiveUI.Primitives.OccasionallyConnected.ILocalSnapshotRecoveryStore store)
+    {
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshotRecoveryResult> ApplySnapshotRecoveryAsync(ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshotRecoveryMutation mutation) { }
+    }
+}
 public interface ILocalStoreAdapter : System.IAsyncDisposable
 {
     ReactiveUI.Primitives.OccasionallyConnected.LocalStoreCapabilities Capabilities { get; }
     System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.RemoteApplyResult> ApplyRemoteBatchAsync(ReactiveUI.Primitives.OccasionallyConnected.RemoteEventBatch batch, ReactiveUI.Primitives.OccasionallyConnected.SnapshotMutation snapshotMutation, System.Threading.CancellationToken cancellationToken) { }
     System.Threading.Tasks.ValueTask ApplySyncResultAsync(System.Guid leaseId, ReactiveUI.Primitives.OccasionallyConnected.RemoteSyncResult result, System.Threading.CancellationToken cancellationToken) { }
     System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshot>> ApplySyncResultAsync(System.Guid leaseId, ReactiveUI.Primitives.OccasionallyConnected.RemoteSyncResult result, System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.SnapshotMutation> snapshotMutations, System.Threading.CancellationToken cancellationToken) { }
-    System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshot> DeadLetterOperationAsync(System.Guid leaseId, ReactiveUI.Primitives.OccasionallyConnected.OperationId operationId, string reasonCode, ReactiveUI.Primitives.OccasionallyConnected.SnapshotMutation snapshotMutation, System.Threading.CancellationToken cancellationToken) { }
     System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.LocalCommitResult> CommitLocalOperationAsync(ReactiveUI.Primitives.OccasionallyConnected.SyncOperation operation, ReactiveUI.Primitives.OccasionallyConnected.SnapshotMutation snapshotMutation, System.Threading.CancellationToken cancellationToken) { }
     System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.CompactionResult> CompactAsync(ReactiveUI.Primitives.OccasionallyConnected.CompactionRequest request, System.Threading.CancellationToken cancellationToken) { }
+    System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshot> DeadLetterOperationAsync(System.Guid leaseId, ReactiveUI.Primitives.OccasionallyConnected.OperationId operationId, string reasonCode, ReactiveUI.Primitives.OccasionallyConnected.SnapshotMutation snapshotMutation, System.Threading.CancellationToken cancellationToken) { }
     System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.SyncOperationStatus?> GetOperationStatusAsync(ReactiveUI.Primitives.OccasionallyConnected.OperationId operationId, System.Threading.CancellationToken cancellationToken) { }
     System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.SubscriptionId> GetOrCreateSubscriptionIdAsync(ReactiveUI.Primitives.OccasionallyConnected.StreamId streamId, ReactiveUI.Primitives.OccasionallyConnected.SubscriptionId? preferredId, System.Threading.CancellationToken cancellationToken) { }
     System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.RetryState?> GetRetryStateAsync(ReactiveUI.Primitives.OccasionallyConnected.OperationId operationId, System.Threading.CancellationToken cancellationToken) { }
@@ -197,11 +208,11 @@ public static class ILocalStoreAdapterExtensions
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshot>> ApplySyncResultAsync(System.Guid leaseId, ReactiveUI.Primitives.OccasionallyConnected.RemoteSyncResult result, System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.SnapshotMutation> snapshotMutations) { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshot> DeadLetterOperationAsync(System.Guid leaseId, ReactiveUI.Primitives.OccasionallyConnected.OperationId operationId, string reasonCode, ReactiveUI.Primitives.OccasionallyConnected.SnapshotMutation snapshotMutation) { }
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.LocalCommitResult> CommitLocalOperationAsync(ReactiveUI.Primitives.OccasionallyConnected.SyncOperation operation, ReactiveUI.Primitives.OccasionallyConnected.SnapshotMutation snapshotMutation) { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.CompactionResult> CompactAsync(ReactiveUI.Primitives.OccasionallyConnected.CompactionRequest request) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshot> DeadLetterOperationAsync(System.Guid leaseId, ReactiveUI.Primitives.OccasionallyConnected.OperationId operationId, string reasonCode, ReactiveUI.Primitives.OccasionallyConnected.SnapshotMutation snapshotMutation) { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.SyncOperationStatus?> GetOperationStatusAsync(ReactiveUI.Primitives.OccasionallyConnected.OperationId operationId) { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
@@ -226,19 +237,6 @@ public static class ILocalStoreAdapterExtensions
         public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.AttemptBarrierResult> TryBeginRemoteAttemptAsync(System.Guid leaseId, ReactiveUI.Primitives.OccasionallyConnected.OperationId operationId, int nextAttempt) { }
     }
 }
-public interface IPayloadSerializer
-{
-    string ContentType { get; }
-    System.Threading.Tasks.ValueTask<object> DeserializeAsync(ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope envelope, System.Type targetType, System.Threading.CancellationToken cancellationToken) { }
-    System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope> SerializeAsync<T>(string contractId, int schemaVersion, T value, System.Threading.CancellationToken cancellationToken) { }
-}
-public interface IPayloadUpcaster
-{
-    string ContractId { get; }
-    int FromVersion { get; }
-    int ToVersion { get; }
-    System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope> UpcastAsync(ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope source, System.Threading.CancellationToken cancellationToken) { }
-}
 public interface IOccasionallyConnectedContext : System.IAsyncDisposable
 {
     ReactiveUI.Primitives.OccasionallyConnected.ISyncEngine SyncEngine { get; }
@@ -262,14 +260,14 @@ public interface IOccasionallyConnectedStream<T> : ReactiveUI.Primitives.Occasio
 }
 public interface IOccasionallyConnectedStream<TState, TInput> : System.IAsyncDisposable
 {
-    ReactiveUI.Primitives.OccasionallyConnected.StreamId StreamId { get; }
-    ReactiveUI.Primitives.OccasionallyConnected.SubscriptionId SubscriptionId { get; }
-    System.IObservable<TState> Local { get; }
-    System.IObservable<ReactiveUI.Primitives.OccasionallyConnected.RemoteMessage<TInput>> Remote { get; }
-    System.IObservable<ReactiveUI.Primitives.OccasionallyConnected.SyncState> SyncStates { get; }
-    System.IObservable<ReactiveUI.Primitives.OccasionallyConnected.SyncOperationStatus> OperationStates { get; }
     System.IObservable<ReactiveUI.Primitives.OccasionallyConnected.OccasionallyConnectedFault> Faults { get; }
     System.IObserver<TInput> Input { get; }
+    System.IObservable<TState> Local { get; }
+    System.IObservable<ReactiveUI.Primitives.OccasionallyConnected.SyncOperationStatus> OperationStates { get; }
+    System.IObservable<ReactiveUI.Primitives.OccasionallyConnected.RemoteMessage<TInput>> Remote { get; }
+    ReactiveUI.Primitives.OccasionallyConnected.StreamId StreamId { get; }
+    ReactiveUI.Primitives.OccasionallyConnected.SubscriptionId SubscriptionId { get; }
+    System.IObservable<ReactiveUI.Primitives.OccasionallyConnected.SyncState> SyncStates { get; }
     System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.PublishReceipt> PublishAsync(TInput value, ReactiveUI.Primitives.OccasionallyConnected.RemotePublishOptions? options, System.Threading.CancellationToken cancellationToken) { }
     System.Threading.Tasks.ValueTask StartAsync(System.Threading.CancellationToken cancellationToken) { }
     System.Threading.Tasks.ValueTask StopAsync(System.Threading.CancellationToken cancellationToken) { }
@@ -288,6 +286,33 @@ public static class IOccasionallyConnectedStreamExtensions
         public System.Threading.Tasks.ValueTask StartAsync() { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public System.Threading.Tasks.ValueTask StopAsync() { }
+    }
+}
+public interface IPayloadSerializer
+{
+    string ContentType { get; }
+    System.Threading.Tasks.ValueTask<object> DeserializeAsync(ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope envelope, System.Type targetType, System.Threading.CancellationToken cancellationToken) { }
+    System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope> SerializeAsync<T>(string contractId, int schemaVersion, T value, System.Threading.CancellationToken cancellationToken) { }
+}
+public interface IPayloadUpcaster
+{
+    string ContractId { get; }
+    int FromVersion { get; }
+    int ToVersion { get; }
+    System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope> UpcastAsync(ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope source, System.Threading.CancellationToken cancellationToken) { }
+}
+public interface IPreparedRemotePush : System.IAsyncDisposable
+{
+    ReactiveUI.Primitives.OccasionallyConnected.SyncBatch Batch { get; }
+    long EncodedSizeBytes { get; }
+    System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.RemoteSyncResult> SendAsync(System.Threading.CancellationToken cancellationToken) { }
+}
+public static class IPreparedRemotePushExtensions
+{
+    extension(ReactiveUI.Primitives.OccasionallyConnected.IPreparedRemotePush prepared)
+    {
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.RemoteSyncResult> SendAsync() { }
     }
 }
 public interface IRemoteObservable<T>
@@ -309,7 +334,18 @@ public static class IRemoteObserverExtensions
         public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.PublishReceipt> PublishAsync(T value, ReactiveUI.Primitives.OccasionallyConnected.RemotePublishOptions options) { }
     }
 }
-
+public interface IRemoteSnapshotRecoverySession
+{
+    System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.RemoteSnapshotRecoveryResult> GetSnapshotAsync(ReactiveUI.Primitives.OccasionallyConnected.RemoteSnapshotRecoveryRequest request, System.Threading.CancellationToken cancellationToken) { }
+}
+public static class IRemoteSnapshotRecoverySessionExtensions
+{
+    extension(ReactiveUI.Primitives.OccasionallyConnected.IRemoteSnapshotRecoverySession session)
+    {
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.RemoteSnapshotRecoveryResult> GetSnapshotAsync(ReactiveUI.Primitives.OccasionallyConnected.RemoteSnapshotRecoveryRequest request) { }
+    }
+}
 public interface IRemoteTransportAdapter : System.IAsyncDisposable
 {
     ReactiveUI.Primitives.OccasionallyConnected.RemoteTransportCapabilities Capabilities { get; }
@@ -323,20 +359,6 @@ public static class IRemoteTransportAdapterExtensions
         public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.IRemoteTransportSession> ConnectAsync(ReactiveUI.Primitives.OccasionallyConnected.TransportConnectRequest request) { }
     }
 }
-public interface IPreparedRemotePush : System.IAsyncDisposable
-{
-    ReactiveUI.Primitives.OccasionallyConnected.SyncBatch Batch { get; }
-    long EncodedSizeBytes { get; }
-    System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.RemoteSyncResult> SendAsync(System.Threading.CancellationToken cancellationToken) { }
-}
-public static class IPreparedRemotePushExtensions
-{
-    extension(ReactiveUI.Primitives.OccasionallyConnected.IPreparedRemotePush prepared)
-    {
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.RemoteSyncResult> SendAsync() { }
-    }
-}
 public interface IRemoteTransportBatchPreparer
 {
     System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.IPreparedRemotePush> PreparePushAsync(ReactiveUI.Primitives.OccasionallyConnected.SyncBatch batch, System.Threading.CancellationToken cancellationToken) { }
@@ -348,6 +370,10 @@ public static class IRemoteTransportBatchPreparerExtensions
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.IPreparedRemotePush> PreparePushAsync(ReactiveUI.Primitives.OccasionallyConnected.SyncBatch batch) { }
     }
+}
+public interface IRemoteTransportFailure
+{
+    ReactiveUI.Primitives.OccasionallyConnected.RetryFailure RetryFailure { get; }
 }
 public interface IRemoteTransportSession : System.IAsyncDisposable
 {
@@ -381,22 +407,41 @@ public interface ISchemaRegistry
     System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.IPayloadUpcaster> GetUpcastChain(string contractId, int fromVersion, int toVersion) { }
     bool IsRegistered(string contractId, int schemaVersion, System.Type targetType) { }
 }
+public interface IServerStreamAuthorizationPolicy
+{
+    System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.ServerStreamAuthorizationScope> AuthorizeAcknowledgeAsync(ReactiveUI.Primitives.OccasionallyConnected.ServerAuthenticatedClient client, ReactiveUI.Primitives.OccasionallyConnected.ReceiveAcknowledgement acknowledgement, System.Threading.CancellationToken cancellationToken) { }
+    System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.ServerStreamAuthorizationScope> AuthorizeOperationAsync(ReactiveUI.Primitives.OccasionallyConnected.ServerAuthenticatedClient client, ReactiveUI.Primitives.OccasionallyConnected.SyncOperation operation, System.Threading.CancellationToken cancellationToken) { }
+    System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.ServerStreamAuthorizationScope> AuthorizePublishAsync(ReactiveUI.Primitives.OccasionallyConnected.ServerAuthenticatedClient client, ReactiveUI.Primitives.OccasionallyConnected.SyncBatch batch, System.Threading.CancellationToken cancellationToken) { }
+    System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.ServerStreamAuthorizationScope> AuthorizeSubscribeAsync(ReactiveUI.Primitives.OccasionallyConnected.ServerAuthenticatedClient client, ReactiveUI.Primitives.OccasionallyConnected.RemoteSubscribeRequest request, System.Threading.CancellationToken cancellationToken) { }
+}
+public interface IServerSnapshotRecoveryHub
+{
+    System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.RemoteSnapshotRecoveryResult> GetSnapshotAsync(ReactiveUI.Primitives.OccasionallyConnected.RemoteSnapshotRecoveryRequest request, ReactiveUI.Primitives.OccasionallyConnected.ServerAuthenticatedClient client, System.Threading.CancellationToken cancellationToken) { }
+}
+public static class IServerSnapshotRecoveryHubExtensions
+{
+    extension(ReactiveUI.Primitives.OccasionallyConnected.IServerSnapshotRecoveryHub hub)
+    {
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.RemoteSnapshotRecoveryResult> GetSnapshotAsync(ReactiveUI.Primitives.OccasionallyConnected.RemoteSnapshotRecoveryRequest request, ReactiveUI.Primitives.OccasionallyConnected.ServerAuthenticatedClient client) { }
+    }
+}
 public interface IServerStreamHub
 {
-    System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.ServerSyncResult> ApplyOperationsAsync(ReactiveUI.Primitives.OccasionallyConnected.SyncBatch batch, ReactiveUI.Primitives.OccasionallyConnected.ClientIdentity client, System.Threading.CancellationToken cancellationToken) { }
-    System.Threading.Tasks.ValueTask AcknowledgeAsync(ReactiveUI.Primitives.OccasionallyConnected.ReceiveAcknowledgement acknowledgement, ReactiveUI.Primitives.OccasionallyConnected.ClientIdentity client, System.Threading.CancellationToken cancellationToken) { }
-    System.Collections.Generic.IAsyncEnumerable<ReactiveUI.Primitives.OccasionallyConnected.RemoteEventBatch> SubscribeStreamAsync(ReactiveUI.Primitives.OccasionallyConnected.RemoteSubscribeRequest request, ReactiveUI.Primitives.OccasionallyConnected.ClientIdentity client, System.Threading.CancellationToken cancellationToken) { }
+    System.Threading.Tasks.ValueTask AcknowledgeAsync(ReactiveUI.Primitives.OccasionallyConnected.ReceiveAcknowledgement acknowledgement, ReactiveUI.Primitives.OccasionallyConnected.ServerAuthenticatedClient client, System.Threading.CancellationToken cancellationToken) { }
+    System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.ServerSyncResult> ApplyOperationsAsync(ReactiveUI.Primitives.OccasionallyConnected.SyncBatch batch, ReactiveUI.Primitives.OccasionallyConnected.ServerAuthenticatedClient client, System.Threading.CancellationToken cancellationToken) { }
+    System.Collections.Generic.IAsyncEnumerable<ReactiveUI.Primitives.OccasionallyConnected.RemoteEventBatch> SubscribeStreamAsync(ReactiveUI.Primitives.OccasionallyConnected.RemoteSubscribeRequest request, ReactiveUI.Primitives.OccasionallyConnected.ServerAuthenticatedClient client, System.Threading.CancellationToken cancellationToken) { }
 }
 public static class IServerStreamHubExtensions
 {
     extension(ReactiveUI.Primitives.OccasionallyConnected.IServerStreamHub hub)
     {
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.ServerSyncResult> ApplyOperationsAsync(ReactiveUI.Primitives.OccasionallyConnected.SyncBatch batch, ReactiveUI.Primitives.OccasionallyConnected.ClientIdentity client) { }
+        public System.Threading.Tasks.ValueTask AcknowledgeAsync(ReactiveUI.Primitives.OccasionallyConnected.ReceiveAcknowledgement acknowledgement, ReactiveUI.Primitives.OccasionallyConnected.ServerAuthenticatedClient client) { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        public System.Threading.Tasks.ValueTask AcknowledgeAsync(ReactiveUI.Primitives.OccasionallyConnected.ReceiveAcknowledgement acknowledgement, ReactiveUI.Primitives.OccasionallyConnected.ClientIdentity client) { }
+        public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.ServerSyncResult> ApplyOperationsAsync(ReactiveUI.Primitives.OccasionallyConnected.SyncBatch batch, ReactiveUI.Primitives.OccasionallyConnected.ServerAuthenticatedClient client) { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        public System.Collections.Generic.IAsyncEnumerable<ReactiveUI.Primitives.OccasionallyConnected.RemoteEventBatch> SubscribeStreamAsync(ReactiveUI.Primitives.OccasionallyConnected.RemoteSubscribeRequest request, ReactiveUI.Primitives.OccasionallyConnected.ClientIdentity client) { }
+        public System.Collections.Generic.IAsyncEnumerable<ReactiveUI.Primitives.OccasionallyConnected.RemoteEventBatch> SubscribeStreamAsync(ReactiveUI.Primitives.OccasionallyConnected.RemoteSubscribeRequest request, ReactiveUI.Primitives.OccasionallyConnected.ServerAuthenticatedClient client) { }
     }
 }
 public interface ISyncEngine : System.IAsyncDisposable
@@ -455,14 +500,34 @@ public record LocalCommitResult : System.IEquatable<ReactiveUI.Primitives.Occasi
 public record LocalSnapshot : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshot>
 {
     public LocalSnapshot(ReactiveUI.Primitives.OccasionallyConnected.StreamId streamId, int formatVersion, string? serverCursor, ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope state, System.DateTimeOffset savedAtUtc) { }
-    public ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope? AuthoritativeState { get; init; }
     public LocalSnapshot(ReactiveUI.Primitives.OccasionallyConnected.StreamId StreamId, int FormatVersion, string? ServerCursor, ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope State, long Revision, System.DateTimeOffset SavedAtUtc) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope? AuthoritativeState { get; init; }
     public int FormatVersion { get; init; }
     public long Revision { get; init; }
     public System.DateTimeOffset SavedAtUtc { get; init; }
     public string? ServerCursor { get; init; }
     public ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope State { get; init; }
     public ReactiveUI.Primitives.OccasionallyConnected.StreamId StreamId { get; init; }
+}
+[System.Diagnostics.DebuggerDisplay("{StreamId,nq} {SnapshotFormatVersion,nq}")]
+public record LocalSnapshotRecoveryMutation : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshotRecoveryMutation>
+{
+    public required ReactiveUI.Primitives.OccasionallyConnected.RemoteSnapshotCheckpoint Checkpoint { get; init; }
+    public required string? ExpectedPreviousCursor { get; init; }
+    public required long ExpectedRevision { get; init; }
+    public required System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.SnapshotOperationDisposition> OperationDispositions { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope OptimisticState { get; init; }
+    public required int SnapshotFormatVersion { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.StreamId StreamId { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.SubscriptionId SubscriptionId { get; init; }
+}
+[System.Diagnostics.DebuggerDisplay("{Snapshot,nq}")]
+public record LocalSnapshotRecoveryResult : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshotRecoveryResult>
+{
+    public required int IncludedOperationCount { get; init; }
+    public required int PreservedPendingOperationCount { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshot Snapshot { get; init; }
+    public required int TerminalOperationCount { get; init; }
 }
 [System.Flags]
 public enum LocalStoreCapabilities
@@ -476,6 +541,7 @@ public enum LocalStoreCapabilities
     AuthenticatedEncryptionAtRest = 32,
     DurableLocalCommit = 64,
     ClientIdentityBinding = 128,
+    AtomicSnapshotRecovery = 256,
 }
 [System.Diagnostics.DebuggerDisplay("{StoreIdentity,nq}")]
 public record LocalStoreInitialization : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.LocalStoreInitialization>
@@ -640,15 +706,6 @@ public enum PayloadSchemaFailureReason
     SerializationFailed = 11,
     UpcasterFailed = 12,
 }
-[System.Diagnostics.DebuggerDisplay("{Message,nq}; CanFitWhenEmpty={CanFitWhenEmpty}")]
-public sealed class QueueCapacityExceededException : System.InvalidOperationException
-{
-    public QueueCapacityExceededException() { }
-    public QueueCapacityExceededException(string message) { }
-    public QueueCapacityExceededException(string message, bool canFitWhenEmpty) { }
-    public QueueCapacityExceededException(string message, System.Exception innerException) { }
-    public bool CanFitWhenEmpty { get; }
-}
 [System.Diagnostics.DebuggerDisplay("{OperationCount,nq} operations")]
 public record PendingSyncSummary : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.PendingSyncSummary>
 {
@@ -665,6 +722,15 @@ public record PublishReceipt : System.IEquatable<ReactiveUI.Primitives.Occasiona
     public ReactiveUI.Primitives.OccasionallyConnected.OperationId OperationId { get; init; }
     public System.DateTimeOffset SavedAtUtc { get; init; }
     public ReactiveUI.Primitives.OccasionallyConnected.SyncOperationState State { get; init; }
+}
+[System.Diagnostics.DebuggerDisplay("{Message,nq}; CanFitWhenEmpty={CanFitWhenEmpty}")]
+public sealed class QueueCapacityExceededException : System.InvalidOperationException
+{
+    public QueueCapacityExceededException() { }
+    public QueueCapacityExceededException(string message) { }
+    public QueueCapacityExceededException(string message, System.Exception innerException) { }
+    public QueueCapacityExceededException(string message, bool canFitWhenEmpty) { }
+    public bool CanFitWhenEmpty { get; }
 }
 [System.Diagnostics.DebuggerDisplay("{SubscriptionId,nq} {Cursor,nq}")]
 public record ReceiveAcknowledgement : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.ReceiveAcknowledgement>
@@ -749,7 +815,6 @@ public record RemoteMessage<T> : System.IEquatable<ReactiveUI.Primitives.Occasio
     public ReactiveUI.Primitives.OccasionallyConnected.StreamId StreamId { get; init; }
     public T Value { get; init; }
 }
-
 [System.Diagnostics.DebuggerDisplay("{Origin,nq}")]
 public record RemoteOperationCompletion : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.RemoteOperationCompletion>
 {
@@ -772,6 +837,47 @@ public record RemotePublishOptions : System.IEquatable<ReactiveUI.Primitives.Occ
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     public void Validate(bool supportsCustomPolicy) { }
     public void Validate(bool supportsCustomPolicy, int minimumPriority, int maximumPriority) { }
+}
+[System.Diagnostics.DebuggerDisplay("{StreamId,nq} {FrontierCursor,nq}")]
+public record RemoteSnapshotCheckpoint : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.RemoteSnapshotCheckpoint>
+{
+    public required ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope ClientState { get; init; }
+    public required string FrontierCursor { get; init; }
+    public required System.DateTimeOffset ObservedAtUtc { get; init; }
+    public required string ServerVersion { get; init; }
+    public required int SnapshotFormatVersion { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.StreamId StreamId { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.SubscriptionId SubscriptionId { get; init; }
+}
+[System.Diagnostics.DebuggerDisplay("{StreamId,nq} {SubscriptionId,nq}")]
+public record RemoteSnapshotRecoveryRequest : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.RemoteSnapshotRecoveryRequest>
+{
+    public required string ClientStateContractId { get; init; }
+    public required int ClientStateSchemaVersion { get; init; }
+    public required string? ExpiredCursor { get; init; }
+    public required long MaximumResponseBytes { get; init; }
+    public required System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.SyncOperation> PendingOperations { get; init; }
+    public required int SnapshotFormatVersion { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.StreamId StreamId { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.SubscriptionId SubscriptionId { get; init; }
+}
+[System.Diagnostics.DebuggerDisplay("{Status,nq}")]
+public record RemoteSnapshotRecoveryResult : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.RemoteSnapshotRecoveryResult>
+{
+    public ReactiveUI.Primitives.OccasionallyConnected.RemoteSnapshotCheckpoint? Checkpoint { get; init; }
+    public System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.SnapshotOperationDisposition> OperationDispositions { get; init; }
+    public string? ReasonCode { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.RemoteSnapshotRecoveryStatus Status { get; init; }
+}
+public enum RemoteSnapshotRecoveryStatus
+{
+    Recovered = 0,
+    UnsupportedProjection = 1,
+    RetentionExpired = 2,
+    AmbiguousPendingOperation = 3,
+    ValidationRejected = 4,
+    CapacityExceeded = 5,
+    RetryableConcurrentChange = 6,
 }
 [System.Diagnostics.DebuggerDisplay("{StreamId,nq} {SubscriptionId,nq}")]
 public record RemoteSubscribeRequest : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.RemoteSubscribeRequest>
@@ -796,6 +902,18 @@ public record RemoteSubscriptionOptions : System.IEquatable<ReactiveUI.Primitive
     public void Validate() { }
     public void Validate(bool supportsCustomPolicy) { }
 }
+[System.Diagnostics.DebuggerDisplay("{StreamId,nq} {SubscriptionId,nq}")]
+public sealed class RemoteSubscriptionRetentionGapException : System.InvalidOperationException
+{
+    public RemoteSubscriptionRetentionGapException() { }
+    public RemoteSubscriptionRetentionGapException(string message) { }
+    public RemoteSubscriptionRetentionGapException(string message, System.Exception innerException) { }
+    public RemoteSubscriptionRetentionGapException(ReactiveUI.Primitives.OccasionallyConnected.StreamId streamId, ReactiveUI.Primitives.OccasionallyConnected.SubscriptionId subscriptionId, string? expiredCursor, string? reasonCode) { }
+    public string? ExpiredCursor { get; }
+    public string? ReasonCode { get; }
+    public ReactiveUI.Primitives.OccasionallyConnected.StreamId StreamId { get; }
+    public ReactiveUI.Primitives.OccasionallyConnected.SubscriptionId SubscriptionId { get; }
+}
 [System.Diagnostics.DebuggerDisplay("{BatchId,nq}")]
 public record RemoteSyncResult : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.RemoteSyncResult>
 {
@@ -815,6 +933,7 @@ public enum RemoteTransportCapabilities
     ServerIdempotency = 8,
     AtomicApplyAndAcknowledge = 16,
     StreamingReceive = 32,
+    SnapshotRecovery = 64,
 }
 [System.Diagnostics.DebuggerDisplay("{OperationId,nq} {ResolutionCode,nq}")]
 public record ResolvedConflict : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.ResolvedConflict>
@@ -922,6 +1041,13 @@ public record SecurityOptions : System.IEquatable<ReactiveUI.Primitives.Occasion
     public bool RequireAuthenticatedEncryptionAtRest { get; init; }
     public void Validate() { }
 }
+[System.Diagnostics.DebuggerDisplay("{TenantId,nq} {ClientId,nq}")]
+public record ServerAuthenticatedClient : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.ServerAuthenticatedClient>
+{
+    public ServerAuthenticatedClient(string TenantId, string ClientId) { }
+    public string ClientId { get; init; }
+    public string TenantId { get; init; }
+}
 [System.Diagnostics.DebuggerDisplay("{StreamId,nq} {Version,nq}")]
 public record ServerState : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.ServerState>
 {
@@ -929,6 +1055,13 @@ public record ServerState : System.IEquatable<ReactiveUI.Primitives.Occasionally
     public ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope State { get; init; }
     public ReactiveUI.Primitives.OccasionallyConnected.StreamId StreamId { get; init; }
     public string Version { get; init; }
+}
+[System.Diagnostics.DebuggerDisplay("{TenantId,nq} {ClientId,nq}")]
+public record ServerStreamAuthorizationScope : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.ServerStreamAuthorizationScope>
+{
+    public ServerStreamAuthorizationScope(string TenantId, string ClientId) { }
+    public string ClientId { get; init; }
+    public string TenantId { get; init; }
 }
 [System.Diagnostics.DebuggerDisplay("{Result,nq}")]
 public record ServerSyncResult : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.ServerSyncResult>
@@ -941,12 +1074,45 @@ public record ServerSyncResult : System.IEquatable<ReactiveUI.Primitives.Occasio
 public record SnapshotMutation : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.SnapshotMutation>
 {
     public SnapshotMutation(ReactiveUI.Primitives.OccasionallyConnected.StreamId streamId, ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope state, int formatVersion) { }
-    public ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope? AuthoritativeState { get; init; }
     public SnapshotMutation(ReactiveUI.Primitives.OccasionallyConnected.StreamId StreamId, ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope State, int FormatVersion, long ExpectedRevision) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope? AuthoritativeState { get; init; }
     public long ExpectedRevision { get; init; }
     public int FormatVersion { get; init; }
     public ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope State { get; init; }
     public ReactiveUI.Primitives.OccasionallyConnected.StreamId StreamId { get; init; }
+}
+[System.Diagnostics.DebuggerDisplay("{OperationId,nq} {Kind,nq}")]
+public record SnapshotOperationDisposition : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.SnapshotOperationDisposition>
+{
+    public required ReactiveUI.Primitives.OccasionallyConnected.SnapshotOperationDispositionKind Kind { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.OperationId OperationId { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.OperationSyncResult? Result { get; init; }
+}
+public enum SnapshotOperationDispositionKind
+{
+    IncludedAccepted = 0,
+    TerminalRejected = 1,
+    Unknown = 2,
+}
+[System.Diagnostics.DebuggerDisplay("Pending={MaximumPendingOperations,nq}; Bytes={MaximumLogicalBytes,nq}")]
+public record SnapshotRecoveryLimits : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.SnapshotRecoveryLimits>
+{
+    public int MaximumContractUtf8Bytes { get; init; }
+    public int MaximumCursorUtf8Bytes { get; init; }
+    public long MaximumLogicalBytes { get; init; }
+    public int MaximumMetadataBytes { get; init; }
+    public int MaximumMetadataEntries { get; init; }
+    public int MaximumPayloadBytes { get; init; }
+    public int MaximumPendingOperations { get; init; }
+    public int MaximumReasonCodeUtf8Bytes { get; init; }
+    public int MaximumStreamIdUtf8Bytes { get; init; }
+    public void Validate() { }
+}
+public static class SnapshotRecoveryValidator
+{
+    public static void Validate(ReactiveUI.Primitives.OccasionallyConnected.RemoteSnapshotRecoveryRequest request, ReactiveUI.Primitives.OccasionallyConnected.SnapshotRecoveryLimits limits) { }
+    public static void Validate(ReactiveUI.Primitives.OccasionallyConnected.LocalSnapshotRecoveryMutation mutation, ReactiveUI.Primitives.OccasionallyConnected.RecoveredStream recovered, ReactiveUI.Primitives.OccasionallyConnected.SnapshotRecoveryLimits limits) { }
+    public static void Validate(ReactiveUI.Primitives.OccasionallyConnected.RemoteSnapshotRecoveryRequest request, ReactiveUI.Primitives.OccasionallyConnected.RemoteSnapshotRecoveryResult result, ReactiveUI.Primitives.OccasionallyConnected.SnapshotRecoveryLimits limits) { }
 }
 [System.Diagnostics.DebuggerDisplay("{Kind,nq}")]
 public record StartPosition : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.StartPosition>
@@ -1125,7 +1291,6 @@ namespace Crdt
 [System.Diagnostics.DebuggerDisplay("Components = {MaximumCounterComponents}, EncodedBytes = {MaximumEncodedBytes}")]
 public record CrdtBounds : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds>
 {
-    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds Default { get; }
     public int MaximumClientIdUtf8Bytes { get; init; }
     public int MaximumCounterComponents { get; init; }
     public int MaximumDotBindings { get; init; }
@@ -1134,6 +1299,7 @@ public record CrdtBounds : System.IEquatable<ReactiveUI.Primitives.OccasionallyC
     public int MaximumEncodedBytes { get; init; }
     public int MaximumRegisterBytes { get; init; }
     public int MaximumTombstones { get; init; }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds Default { get; }
     public void Validate() { }
 }
 public static class CrdtCodec

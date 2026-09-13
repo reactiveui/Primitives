@@ -7,13 +7,13 @@ using ReactiveUI.Primitives.OccasionallyConnected;
 namespace ReactiveUI.Primitives.OccasionallyConnected.Tests;
 
 /// <summary>Tests for <see cref="IServerStreamHubExtensions"/>.</summary>
-public sealed class IServerStreamHubExtensionsTests
+public sealed partial class IServerStreamHubExtensionsTests
 {
+    /// <summary>The tenant identifier used by tests.</summary>
+    private const string TenantId = "tenant";
+
     /// <summary>The client identifier used by tests.</summary>
     private const string ClientId = "client";
-
-    /// <summary>The tenant routing hint used by tests.</summary>
-    private const string TenantHint = "tenant";
 
     /// <summary>The cursor value used by tests.</summary>
     private const string Cursor = "cursor";
@@ -33,7 +33,7 @@ public sealed class IServerStreamHubExtensionsTests
         var batch = new SyncBatch(Guid.NewGuid(), []);
         var request = new RemoteSubscribeRequest(new(StreamName), SubscriptionId.New(), Cursor, StartPosition.Latest);
         var acknowledgement = new ReceiveAcknowledgement(request.SubscriptionId, request.StreamId, "next");
-        var client = new ClientIdentity(ClientId, TenantHint);
+        var client = new ServerAuthenticatedClient(TenantId, ClientId);
 
         var result = await hub.ApplyOperationsAsync(batch, client);
         var enumerable = hub.SubscribeStreamAsync(request, client);
@@ -70,7 +70,7 @@ public sealed class IServerStreamHubExtensionsTests
     {
         var error = new InvalidOperationException("apply failure");
         var hub = new RecordingHub { ApplyError = error };
-        Func<Task> action = async () => await hub.ApplyOperationsAsync(new(Guid.NewGuid(), []), new(ClientId));
+        Func<Task> action = async () => await hub.ApplyOperationsAsync(new(Guid.NewGuid(), []), new(TenantId, ClientId));
 
         var thrown = await Assert.That(action).ThrowsExactly<InvalidOperationException>();
 
@@ -85,7 +85,7 @@ public sealed class IServerStreamHubExtensionsTests
     {
         var hub = new RecordingHub { AcknowledgeCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously) };
         var acknowledgement = new ReceiveAcknowledgement(SubscriptionId.New(), new(StreamName), Cursor);
-        var client = new ClientIdentity(ClientId, TenantHint);
+        var client = new ServerAuthenticatedClient(TenantId, ClientId);
         var completion = hub.AcknowledgeAsync(acknowledgement, client).AsTask();
 
         await Assert.That(completion.IsCompleted).IsFalse();
@@ -108,7 +108,7 @@ public sealed class IServerStreamHubExtensionsTests
         var hub = new RecordingHub { AcknowledgeError = deferred ? null : error, AcknowledgeCompletion = deferred ? source : null };
         var completion = hub.AcknowledgeAsync(
             new(SubscriptionId.New(), new(StreamName), Cursor),
-            new(ClientId)).AsTask();
+            new(TenantId, ClientId)).AsTask();
         if (deferred)
         {
             await Assert.That(completion.IsCompleted).IsFalse();
@@ -130,7 +130,7 @@ public sealed class IServerStreamHubExtensionsTests
         var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var hub = new RecordingHub { AcknowledgeCompletion = source };
         var acknowledgement = new ReceiveAcknowledgement(SubscriptionId.New(), new(StreamName), Cursor);
-        var client = new ClientIdentity(ClientId, TenantHint);
+        var client = new ServerAuthenticatedClient(TenantId, ClientId);
         var completion = hub.AcknowledgeAsync(acknowledgement, client).AsTask();
         await Assert.That(completion.IsCompleted).IsFalse();
         await cancellationSource.CancelAsync();
@@ -151,7 +151,7 @@ public sealed class IServerStreamHubExtensionsTests
     {
         var error = new InvalidOperationException("subscribe failure");
         var hub = new RecordingHub { SubscribeError = error };
-        Action action = () => hub.SubscribeStreamAsync(CreateRequest(), new(ClientId));
+        Action action = () => hub.SubscribeStreamAsync(CreateRequest(), new(TenantId, ClientId));
 
         var thrown = await Assert.That(action).ThrowsExactly<InvalidOperationException>();
 
@@ -166,7 +166,7 @@ public sealed class IServerStreamHubExtensionsTests
     {
         var error = new InvalidOperationException("enumeration failure");
         var hub = new RecordingHub { EnumerationError = error };
-        var enumerable = hub.SubscribeStreamAsync(CreateRequest(), new(ClientId));
+        var enumerable = hub.SubscribeStreamAsync(CreateRequest(), new(TenantId, ClientId));
         Func<Task> action = async () =>
         {
             await foreach (var _ in enumerable)
@@ -216,19 +216,19 @@ public sealed class IServerStreamHubExtensionsTests
         public SyncBatch? ApplyBatch { get; private set; }
 
         /// <summary>Gets the client supplied to apply.</summary>
-        public ClientIdentity? ApplyClient { get; private set; }
+        public ServerAuthenticatedClient? ApplyClient { get; private set; }
 
         /// <summary>Gets the subscription request.</summary>
         public RemoteSubscribeRequest? SubscribeRequest { get; private set; }
 
         /// <summary>Gets the client supplied to subscribe.</summary>
-        public ClientIdentity? SubscribeClient { get; private set; }
+        public ServerAuthenticatedClient? SubscribeClient { get; private set; }
 
         /// <summary>Gets the acknowledgement supplied to the hub.</summary>
         public ReceiveAcknowledgement? Acknowledgement { get; private set; }
 
         /// <summary>Gets the client supplied to acknowledge.</summary>
-        public ClientIdentity? AcknowledgeClient { get; private set; }
+        public ServerAuthenticatedClient? AcknowledgeClient { get; private set; }
 
         /// <summary>Gets the apply cancellation token.</summary>
         public CancellationToken ApplyToken { get; private set; }
@@ -257,7 +257,7 @@ public sealed class IServerStreamHubExtensionsTests
         /// <inheritdoc />
         public ValueTask<ServerSyncResult> ApplyOperationsAsync(
             SyncBatch batch,
-            ClientIdentity client,
+            ServerAuthenticatedClient client,
             CancellationToken cancellationToken)
         {
             ApplyCalls++;
@@ -270,7 +270,7 @@ public sealed class IServerStreamHubExtensionsTests
         /// <inheritdoc />
         public IAsyncEnumerable<RemoteEventBatch> SubscribeStreamAsync(
             RemoteSubscribeRequest request,
-            ClientIdentity client,
+            ServerAuthenticatedClient client,
             CancellationToken cancellationToken)
         {
             SubscribeCalls++;
@@ -288,7 +288,7 @@ public sealed class IServerStreamHubExtensionsTests
         /// <inheritdoc />
         public ValueTask AcknowledgeAsync(
             ReceiveAcknowledgement acknowledgement,
-            ClientIdentity client,
+            ServerAuthenticatedClient client,
             CancellationToken cancellationToken)
         {
             AcknowledgeCalls++;

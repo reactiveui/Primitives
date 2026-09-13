@@ -27,6 +27,9 @@ internal static class LoopbackTransportValidator
     /// <summary>Stores the EnumByteCount value used by loopback validation.</summary>
     private const int EnumByteCount = 4;
 
+    /// <summary>The number of delivery, durability and conflict policy enum fields in an operation.</summary>
+    private const int PolicyEnumFieldCount = 3;
+
     /// <summary>Stores the NullableMarkerByteCount value used by loopback validation.</summary>
     private const int NullableMarkerByteCount = 1;
 
@@ -53,7 +56,7 @@ internal static class LoopbackTransportValidator
     internal static void ValidateOptions(LoopbackTransportAdapterOptions options)
     {
         ArgumentExceptionHelper.ThrowIfNull(options.Hub);
-        ArgumentExceptionHelper.ThrowIfNull(options.Client);
+        ArgumentExceptionHelper.ThrowIfNull(options.AuthenticatedClient);
         ArgumentExceptionHelper.ThrowIfNull(options.PeerCapabilities);
         ValidatePositive(options.MaximumConcurrentRequests, nameof(options.MaximumConcurrentRequests));
         ValidatePositive(options.MaximumConcurrentAcknowledgements, nameof(options.MaximumConcurrentAcknowledgements));
@@ -63,7 +66,7 @@ internal static class LoopbackTransportValidator
         ValidatePositive(options.MaximumCompletedOperations, nameof(options.MaximumCompletedOperations));
         ValidatePositive(options.MaximumMetadataEntries, nameof(options.MaximumMetadataEntries));
         ValidatePositive(options.MaximumStringBytes, nameof(options.MaximumStringBytes));
-        ValidateClientIdentity(options.Client, options.MaximumStringBytes);
+        ValidateAuthenticatedClient(options.AuthenticatedClient, options.MaximumStringBytes);
         ValidateCapabilities(options.PeerCapabilities);
     }
 
@@ -95,18 +98,17 @@ internal static class LoopbackTransportValidator
     {
         ValidateOutgoingHeader(batch, options);
         long total = GuidByteCount + IntByteCount;
-        long payloadBytes = 0;
         StreamId? streamId = null;
         HashSet<OperationId> operationIds = [];
         HashSet<long> clientSequences = [];
         var previousSequence = 0L;
         foreach (var operation in batch.Operations)
         {
-            payloadBytes += CountOutgoingOperation(operation, options, ref total);
+            CountOutgoingOperation(operation, options, ref total);
             ValidateOperationMembership(operation, ref streamId, operationIds, clientSequences, ref previousSequence);
         }
 
-        ValidateLogicalByteBound(payloadBytes, options.PeerCapabilities.MaximumBatchBytes, "The synchronization batch exceeds negotiated payload byte bounds.");
+        ValidateLogicalByteBound(total, options.PeerCapabilities.MaximumBatchBytes, "The synchronization batch exceeds negotiated encoded byte bounds.");
         ValidateLogicalByteBound(total, options.MaximumLogicalBatchBytes, "The synchronization batch exceeds loopback byte bounds.");
         return total;
     }
@@ -205,7 +207,7 @@ internal static class LoopbackTransportValidator
     /// <exception cref="InvalidOperationException">Validation fails during ValidateTrustedClient.</exception>
     private static void ValidateTrustedClient(TransportConnectRequest request, LoopbackTransportAdapterOptions options)
     {
-        if (string.Equals(request.Client.ClientId, options.Client.ClientId, StringComparison.Ordinal))
+        if (string.Equals(request.Client.ClientId, options.AuthenticatedClient.ClientId, StringComparison.Ordinal))
         {
             return;
         }
@@ -323,6 +325,16 @@ internal static class LoopbackTransportValidator
     {
         _ = CountRequiredString(client.ClientId, maximumStringBytes, "Client identity is malformed.");
         _ = CountOptionalString(client.TenantHint, maximumStringBytes, "Tenant hint is malformed.");
+    }
+
+    /// <summary>Runs the ValidateAuthenticatedClient loopback validation step.</summary>
+    /// <param name="client">The host-authenticated client.</param>
+    /// <param name="maximumStringBytes">The maximumStringBytes value for ValidateAuthenticatedClient.</param>
+    /// <exception cref="InvalidOperationException">Validation fails during ValidateAuthenticatedClient.</exception>
+    private static void ValidateAuthenticatedClient(ServerAuthenticatedClient client, int maximumStringBytes)
+    {
+        _ = CountRequiredString(client.TenantId, maximumStringBytes, "Authenticated tenant identity is malformed.");
+        _ = CountRequiredString(client.ClientId, maximumStringBytes, "Authenticated client identity is malformed.");
     }
 
     /// <summary>Runs the ValidatePositive loopback validation step.</summary>
@@ -530,10 +542,9 @@ internal static class LoopbackTransportValidator
     /// <param name="operation">The operation value for CountOutgoingOperation.</param>
     /// <param name="options">The options value for CountOutgoingOperation.</param>
     /// <param name="total">The total value for CountOutgoingOperation.</param>
-    /// <returns>The operation payload byte count.</returns>
     /// <exception cref="ArgumentNullException">A required reference is missing during CountOutgoingOperation.</exception>
     /// <exception cref="InvalidOperationException">Validation fails during CountOutgoingOperation.</exception>
-    private static long CountOutgoingOperation(SyncOperation? operation, LoopbackTransportAdapterOptions options, ref long total)
+    private static void CountOutgoingOperation(SyncOperation? operation, LoopbackTransportAdapterOptions options, ref long total)
     {
         if (operation is null || operation.OperationId.Value == Guid.Empty || operation.StreamId.Value is null || operation.ClientSequence <= 0 || operation.Payload is not { } payload)
         {
@@ -545,10 +556,10 @@ internal static class LoopbackTransportValidator
         total += GuidByteCount;
         total += CountRequiredString(operation.StreamId.Value, options.MaximumStringBytes, "The synchronization batch contains a malformed stream identifier.");
         total += LongByteCount + DateTimeOffsetByteCount + EnumByteCount + NullableMarkerByteCount;
+        total += (PolicyEnumFieldCount * EnumByteCount) + IntByteCount;
         total += CountOptionalString(operation.BaseVersion, options.MaximumStringBytes, "The synchronization batch contains an oversized base version.");
         total += CountPayload(payload, options, "The synchronization batch contains a malformed payload.");
         total += CountMetadata(operation.Metadata, options, "The synchronization batch contains malformed metadata.");
-        return payload.PayloadLength;
     }
 
     /// <summary>Runs the ValidateOperationType loopback validation step.</summary>
@@ -557,7 +568,7 @@ internal static class LoopbackTransportValidator
     /// <exception cref="InvalidOperationException">Validation fails during ValidateOperationType.</exception>
     private static void ValidateOperationType(SyncOperationType type)
     {
-        if (type is SyncOperationType.Append or SyncOperationType.Update or SyncOperationType.Delete)
+        if (type is SyncOperationType.Append or SyncOperationType.Update or SyncOperationType.Delete or SyncOperationType.Custom)
         {
             return;
         }

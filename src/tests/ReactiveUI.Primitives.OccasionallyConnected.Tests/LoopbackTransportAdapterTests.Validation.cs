@@ -41,16 +41,15 @@ public sealed partial class LoopbackTransportAdapterTests
                     TimeSpan.FromDays(ClientRetentionDays)),
             },
             "features" => CreateOptions(hub) with { PeerCapabilities = CreateCapabilities((RemoteTransportCapabilities)int.MinValue) },
-            "client" => CreateOptions(hub, new(" ")),
-            "tenant-unicode" => CreateOptions(hub, new(TrustedClientId, new string('\ud800', 1))),
-            _ => CreateOptions(hub, new(new('c', OversizedStringLength))) with { MaximumStringBytes = BoundedStringBytes },
+            "client" => CreateOptions(hub, new(TrustedTenant, " ")),
+            "tenant-unicode" => CreateOptions(hub, new(new string('\ud800', 1), TrustedClientId)),
+            _ => CreateOptions(hub, new(TrustedTenant, new string('c', OversizedStringLength))) with { MaximumStringBytes = BoundedStringBytes },
         };
 
-        var exception = Assert.ThrowsExactly<InvalidOperationException>(
-            () =>
+        var exception = await Assert.ThrowsExactlyAsync<InvalidOperationException>(
+            async () =>
             {
-                var rejected = new LoopbackTransportAdapter(options);
-                GC.KeepAlive(rejected);
+                await using var rejected = new LoopbackTransportAdapter(options);
             });
         await Assert.That(exception).IsNotNull();
     }
@@ -191,7 +190,7 @@ public sealed partial class LoopbackTransportAdapterTests
             "operation-id" => new SyncBatch(Guid.NewGuid(), [CreateOperation(operationId: new OperationId(Guid.Empty))]),
             "stream" => new SyncBatch(Guid.NewGuid(), [CreateOperation(streamId: default(StreamId))]),
             "sequence" => new SyncBatch(Guid.NewGuid(), [CreateOperation(sequence: 0)]),
-            "type" => new SyncBatch(Guid.NewGuid(), [CreateOperation(type: SyncOperationType.Custom)]),
+            "type" => new SyncBatch(Guid.NewGuid(), [CreateOperation(type: (SyncOperationType)byte.MaxValue)]),
             "mixed-stream" => new SyncBatch(Guid.NewGuid(), [CreateOperation(), CreateOperation(streamId: new("sensor/humidity"), sequence: 2)]),
             "duplicate-id" => new SyncBatch(Guid.NewGuid(), [CreateOperation(operationId: operationId), CreateOperation(operationId: operationId, sequence: 2)]),
             "duplicate-sequence" => new SyncBatch(Guid.NewGuid(), [CreateOperation(), CreateOperation()]),

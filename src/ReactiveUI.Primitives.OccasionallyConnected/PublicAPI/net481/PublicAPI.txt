@@ -50,10 +50,10 @@ public sealed class LoopbackTransportAdapter : ReactiveUI.Primitives.Occasionall
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     public System.Threading.Tasks.ValueTask DisposeAsync() { }
 }
-[System.Diagnostics.DebuggerDisplay("Loopback; Client={Client,nq}; Features={PeerCapabilities.Features,nq}")]
+[System.Diagnostics.DebuggerDisplay("Loopback; Client={AuthenticatedClient,nq}; Features={PeerCapabilities.Features,nq}")]
 public record LoopbackTransportAdapterOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.LoopbackTransportAdapterOptions>
 {
-    public required ReactiveUI.Primitives.OccasionallyConnected.ClientIdentity Client { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.ServerAuthenticatedClient AuthenticatedClient { get; init; }
     public required ReactiveUI.Primitives.OccasionallyConnected.IServerStreamHub Hub { get; init; }
     public int MaximumConcurrentAcknowledgements { get; init; }
     public int MaximumCompletedOperations { get; init; }

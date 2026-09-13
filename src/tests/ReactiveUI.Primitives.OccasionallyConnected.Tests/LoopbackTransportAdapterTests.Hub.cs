@@ -20,10 +20,10 @@ public sealed partial class LoopbackTransportAdapterTests
         public List<SyncBatch> ApplyBatches { get; } = [];
 
         /// <summary>Gets or sets a custom apply handler.</summary>
-        public Func<SyncBatch, ClientIdentity, CancellationToken, ValueTask<ServerSyncResult>>? ApplyHandler { get; init; }
+        public Func<SyncBatch, ServerAuthenticatedClient, CancellationToken, ValueTask<ServerSyncResult>>? ApplyHandler { get; init; }
 
         /// <summary>Gets or sets a custom subscribe handler.</summary>
-        public Func<RemoteSubscribeRequest, ClientIdentity, CancellationToken, IAsyncEnumerable<RemoteEventBatch>>? SubscribeHandler { get; init; }
+        public Func<RemoteSubscribeRequest, ServerAuthenticatedClient, CancellationToken, IAsyncEnumerable<RemoteEventBatch>>? SubscribeHandler { get; init; }
 
         /// <summary>Gets or sets a value indicating whether the next apply response is dropped.</summary>
         public bool DropNextApplyResponse { get; set; }
@@ -44,21 +44,21 @@ public sealed partial class LoopbackTransportAdapterTests
         public SyncBatch? ApplyBatch { get; private set; }
 
         /// <summary>Gets the last apply client identity.</summary>
-        public ClientIdentity? ApplyClient { get; private set; }
+        public ServerAuthenticatedClient? ApplyClient { get; private set; }
 
         /// <summary>Gets the last subscribe client identity.</summary>
-        public ClientIdentity? SubscribeClient { get; private set; }
+        public ServerAuthenticatedClient? SubscribeClient { get; private set; }
 
         /// <summary>Gets the last acknowledgement.</summary>
         public ReceiveAcknowledgement? Acknowledgement { get; private set; }
 
         /// <summary>Gets the last acknowledgement client identity.</summary>
-        public ClientIdentity? AcknowledgeClient { get; private set; }
+        public ServerAuthenticatedClient? AcknowledgeClient { get; private set; }
 
         /// <inheritdoc/>
         public ValueTask<ServerSyncResult> ApplyOperationsAsync(
             SyncBatch batch,
-            ClientIdentity client,
+            ServerAuthenticatedClient client,
             CancellationToken cancellationToken)
         {
             ApplyCalls++;
@@ -87,7 +87,7 @@ public sealed partial class LoopbackTransportAdapterTests
         /// <inheritdoc/>
         public ValueTask AcknowledgeAsync(
             ReceiveAcknowledgement acknowledgement,
-            ClientIdentity client,
+            ServerAuthenticatedClient client,
             CancellationToken cancellationToken)
         {
             AcknowledgeCalls++;
@@ -100,7 +100,7 @@ public sealed partial class LoopbackTransportAdapterTests
         /// <inheritdoc/>
         public IAsyncEnumerable<RemoteEventBatch> SubscribeStreamAsync(
             RemoteSubscribeRequest request,
-            ClientIdentity client,
+            ServerAuthenticatedClient client,
             CancellationToken cancellationToken)
         {
             SubscribeCalls++;

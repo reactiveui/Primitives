@@ -28,4 +28,7 @@ public enum RemoteTransportCapabilities
 
     /// <summary>The transport supports streaming receive.</summary>
     StreamingReceive = 1 << 5,
+
+    /// <summary>The remote peer can recover a retained-history gap with a bounded snapshot checkpoint.</summary>
+    SnapshotRecovery = 1 << 6,
 }

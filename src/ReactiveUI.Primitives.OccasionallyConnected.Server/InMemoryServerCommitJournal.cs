@@ -634,11 +634,7 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
     {
         for (var index = 0; index < remove.Count; index++)
         {
-            if (!record.Offers.TryGetValue(remove[index], out var offer))
-            {
-                continue;
-            }
-
+            var offer = record.Offers[remove[index]];
             _ = record.Offers.Remove(remove[index]);
             _subscriptionOfferCount--;
             _logicalBytes = ServerCommitJournalSizer.AddLogicalBytes(_logicalBytes, -offer.LogicalBytes);
@@ -651,11 +647,7 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
     {
         for (var index = 0; index < remove.Count; index++)
         {
-            if (!_subscriptions.TryGetValue(remove[index], out var record))
-            {
-                continue;
-            }
-
+            var record = _subscriptions[remove[index]];
             _ = _subscriptions.Remove(remove[index]);
             _logicalBytes = ServerCommitJournalSizer.AddLogicalBytes(_logicalBytes, -record.LogicalBytes);
         }

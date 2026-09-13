@@ -207,9 +207,14 @@ internal sealed class ConflictResolvingServerOperationHandler : IServerOperation
         {
             var candidate = rejectedOperations[index];
             ArgumentExceptionHelper.ThrowIfNull(candidate, nameof(rejectedOperations));
-            if (candidate.OperationId != operationId || rejected is not null)
+            if (candidate.OperationId != operationId)
             {
-                throw new InvalidOperationException("A conflict resolution cannot reject a foreign or duplicate operation.");
+                throw new InvalidOperationException("A conflict resolution cannot reject a foreign operation.");
+            }
+
+            if (rejected is not null)
+            {
+                throw new InvalidOperationException("A conflict resolution cannot reject a duplicate operation.");
             }
 
             ServerCommitJournalGuard.ValidateText(candidate.ReasonCode, nameof(candidate.ReasonCode));
@@ -301,18 +306,18 @@ internal sealed class ConflictResolvingServerOperationHandler : IServerOperation
         int domainEventCount,
         int maximumProducedEvents)
     {
-        if (resolverEventCount < 0 || resolverEventCount > maximumProducedEvents)
+        if (resolverEventCount > maximumProducedEvents)
         {
             throw new ArgumentOutOfRangeException(nameof(resolverEventCount), resolverEventCount, "The resolver event proposal count is outside the supported bounds.");
         }
 
         var remaining = maximumProducedEvents - resolverEventCount;
-        if (domainEventCount >= 0 && domainEventCount <= remaining)
+        if (domainEventCount > remaining)
         {
-            return resolverEventCount + domainEventCount;
+            throw new ArgumentOutOfRangeException(nameof(domainEventCount), domainEventCount, "The domain event proposal count is outside the supported bounds.");
         }
 
-        throw new ArgumentOutOfRangeException(nameof(domainEventCount), domainEventCount, "The domain event proposal count is outside the supported bounds.");
+        return resolverEventCount + domainEventCount;
     }
 
     /// <summary>Validates a domain result before conversion to a preparation.</summary>

@@ -4,13 +4,11 @@
 
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization.Metadata;
 
 namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.Http;
 
 /// <summary>Encodes and decodes the bounded HTTP protocol DTOs.</summary>
-internal sealed class HttpProtocolCodec
+internal sealed partial class HttpProtocolCodec
 {
     /// <summary>The base64 block input byte count.</summary>
     private const int Base64BlockInputBytes = 3;
@@ -24,18 +22,90 @@ internal sealed class HttpProtocolCodec
     /// <summary>The fixed per-operation estimate used before exact bounded JSON writing.</summary>
     private const long OperationEstimateOverheadBytes = 256;
 
-    /// <summary>The adapter options.</summary>
-    private readonly HttpRemoteTransportOptions _options;
+    /// <summary>The supported protocol major version.</summary>
+    private const int SupportedProtocolMajor = 1;
+
+    /// <summary>The known remote transport feature flags.</summary>
+    private const RemoteTransportCapabilities KnownFeatures = RemoteTransportCapabilities.BatchPush
+        | RemoteTransportCapabilities.CursorResume
+        | RemoteTransportCapabilities.ReceiveAcknowledgements
+        | RemoteTransportCapabilities.ServerIdempotency
+        | RemoteTransportCapabilities.AtomicApplyAndAcknowledge
+        | RemoteTransportCapabilities.StreamingReceive;
+
+    /// <summary>The decimal number base.</summary>
+    private const int DecimalRadix = 10;
+
+    /// <summary>The number of hexadecimal digits in a percent-encoded byte.</summary>
+    private const int PercentEncodedByteHexDigits = 2;
+
+    /// <summary>The stream identifier protocol property name.</summary>
+    private const string StreamIdPropertyName = "streamId";
+
+    /// <summary>The subscription identifier protocol property name.</summary>
+    private const string SubscriptionIdPropertyName = "subscriptionId";
+
+    /// <summary>The cursor protocol property name.</summary>
+    private const string CursorPropertyName = "cursor";
+
+    /// <summary>The start position kind protocol property name.</summary>
+    private const string PositionKindPropertyName = "positionKind";
+
+    /// <summary>The timestamp protocol property name.</summary>
+    private const string TimestampPropertyName = "timestamp";
+
+    /// <summary>The sequence protocol property name.</summary>
+    private const string SequencePropertyName = "sequence";
+
+    /// <summary>The initial cursor protocol property name.</summary>
+    private const string InitialCursorPropertyName = "initialCursor";
+
+    /// <summary>The batch identifier protocol property name.</summary>
+    private const string BatchIdPropertyName = "batchId";
+
+    /// <summary>The operation identifier protocol property name.</summary>
+    private const string OperationIdPropertyName = "operationId";
+
+    /// <summary>The payload protocol property name.</summary>
+    private const string PayloadPropertyName = "payload";
+
+    /// <summary>The origin protocol property name.</summary>
+    private const string OriginPropertyName = "origin";
+
+    /// <summary>The server cursor protocol property name.</summary>
+    private const string ServerCursorPropertyName = "serverCursor";
+
+    /// <summary>The JSON string type validation message.</summary>
+    private const string ExpectedJsonStringMessage = "Expected a JSON string.";
+
+    /// <summary>The JSON number type validation message.</summary>
+    private const string ExpectedJsonNumberMessage = "Expected a JSON number.";
+
+    /// <summary>The strict UTF-8 encoding.</summary>
+    private static readonly Encoding StrictUtf8 = new UTF8Encoding(false, true);
+
+    /// <summary>The protocol limits.</summary>
+    private readonly HttpProtocolLimits _limits;
 
     /// <summary>Initializes a new instance of the <see cref="HttpProtocolCodec"/> class.</summary>
     /// <param name="options">The adapter options.</param>
-    internal HttpProtocolCodec(HttpRemoteTransportOptions options) => _options = options;
+    internal HttpProtocolCodec(HttpRemoteTransportOptions options) => _limits = HttpProtocolLimits.FromOptions(options).Complete();
+
+    /// <summary>Initializes a new instance of the <see cref="HttpProtocolCodec"/> class.</summary>
+    /// <param name="limits">The protocol limits.</param>
+    internal HttpProtocolCodec(HttpProtocolLimits limits)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(limits);
+        _limits = limits.Complete();
+    }
 
     /// <summary>Serializes a connect request.</summary>
     /// <param name="request">The connect request.</param>
     /// <returns>The request bytes.</returns>
+    /// <exception cref="HttpRemoteTransportException">The request is malformed or violates configured limits.</exception>
     internal byte[] SerializeConnectRequest(TransportConnectRequest request)
     {
+        ValidateConnectRequest(request);
         var guarantees = new int[request.RequiredGuarantees.Count];
         var index = 0;
         foreach (var guarantee in request.RequiredGuarantees)
@@ -52,7 +122,53 @@ internal sealed class HttpProtocolCodec
             TenantHint = request.Client.TenantHint,
             RequiredGuarantees = guarantees,
         };
-        return Serialize(dto, HttpProtocolJsonContext.Default.ConnectRequestWireInfo);
+        return Serialize(dto, HttpProtocolJsonContext.Default.ConnectRequestWireInfo, _limits.MaximumRequestBytes);
+    }
+
+    /// <summary>Deserializes a connect request.</summary>
+    /// <param name="bytes">The request bytes.</param>
+    /// <returns>The connect request.</returns>
+    /// <exception cref="HttpRemoteTransportException">The request is malformed or violates configured limits.</exception>
+    internal TransportConnectRequest DeserializeConnectRequest(byte[] bytes)
+    {
+        var dto = Deserialize(bytes, HttpProtocolJsonContext.Default.ConnectRequestWireInfo, _limits.MaximumRequestBytes, ValidateConnectRequestElement);
+        if (!Version.TryParse(dto.MinimumProtocolVersion, out var minimum)
+            || !Version.TryParse(dto.MaximumProtocolVersion, out var maximum)
+            || minimum.CompareTo(maximum) > 0)
+        {
+            throw new HttpRemoteTransportException(HttpTransportFailureKind.ProtocolViolation);
+        }
+
+        ValidateProtocolString(dto.ClientId);
+        ValidateOptionalProtocolString(dto.TenantHint);
+        var count = dto.RequiredGuarantees.Length;
+        var guarantees = new DeliveryGuarantee[count];
+        for (var index = 0; index < count; index++)
+        {
+            guarantees[index] = ToDeliveryGuarantee(dto.RequiredGuarantees[index]);
+        }
+
+        var request = new TransportConnectRequest(new(minimum, maximum), new(dto.ClientId, dto.TenantHint), guarantees);
+        ValidateConnectRequest(request);
+        return request;
+    }
+
+    /// <summary>Serializes a connect response.</summary>
+    /// <param name="capabilities">The negotiated capabilities.</param>
+    /// <returns>The response bytes.</returns>
+    internal byte[] SerializeConnectResponse(NegotiatedCapabilities capabilities)
+    {
+        ValidateCapabilities(capabilities);
+        HttpProtocolJsonContext.ConnectResponseWire dto = new()
+        {
+            ProtocolVersion = capabilities.ProtocolVersion.ToString(),
+            Features = (int)capabilities.Features,
+            MaximumBatchOperations = capabilities.MaximumBatchOperations,
+            MaximumBatchBytes = capabilities.MaximumBatchBytes,
+            ServerIdempotencyRetentionMilliseconds = ToMilliseconds(capabilities.ServerIdempotencyRetention),
+            ClientInboxRetentionRequiredMilliseconds = ToMilliseconds(capabilities.ClientInboxRetentionRequired),
+        };
+        return Serialize(dto, HttpProtocolJsonContext.Default.ConnectResponseWireInfo, _limits.MaximumResponseBytes);
     }
 
     /// <summary>Deserializes a connect response.</summary>
@@ -61,20 +177,26 @@ internal sealed class HttpProtocolCodec
     /// <exception cref="HttpRemoteTransportException">The response is malformed or violates protocol bounds.</exception>
     internal NegotiatedCapabilities DeserializeConnectResponse(byte[] bytes)
     {
-        var dto = Deserialize(bytes, HttpProtocolJsonContext.Default.ConnectResponseWireInfo);
-        if (!Version.TryParse(dto.ProtocolVersion, out var version))
-        {
-            throw new HttpRemoteTransportException(HttpTransportFailureKind.ProtocolViolation);
-        }
+        var dto = Deserialize(bytes, HttpProtocolJsonContext.Default.ConnectResponseWireInfo, _limits.MaximumResponseBytes, ValidateConnectResponseElement);
+        return TranslateProtocolExceptions(
+            () =>
+            {
+                if (!Version.TryParse(dto.ProtocolVersion, out var version))
+                {
+                    throw new HttpRemoteTransportException(HttpTransportFailureKind.ProtocolViolation);
+                }
 
-        var features = (RemoteTransportCapabilities)dto.Features;
-        return new(
-            version,
-            features,
-            dto.MaximumBatchOperations,
-            dto.MaximumBatchBytes,
-            HttpProtocolCodecHelper.ToTimeSpan(dto.ServerIdempotencyRetentionMilliseconds),
-            HttpProtocolCodecHelper.ToTimeSpan(dto.ClientInboxRetentionRequiredMilliseconds));
+                var features = ToCapabilities(dto.Features);
+                var capabilities = new NegotiatedCapabilities(
+                    version,
+                    features,
+                    dto.MaximumBatchOperations,
+                    dto.MaximumBatchBytes,
+                    HttpProtocolCodecHelper.ToTimeSpan(dto.ServerIdempotencyRetentionMilliseconds),
+                    HttpProtocolCodecHelper.ToTimeSpan(dto.ClientInboxRetentionRequiredMilliseconds));
+                ValidateCapabilities(capabilities);
+                return capabilities;
+            });
     }
 
     /// <summary>Serializes a push request.</summary>
@@ -83,19 +205,15 @@ internal sealed class HttpProtocolCodec
     /// <exception cref="HttpRemoteTransportException">The batch cannot be encoded within configured bounds.</exception>
     internal byte[] SerializePushRequest(SyncBatch batch)
     {
-        if (batch.Operations.Count > _options.MaximumBatchOperations)
-        {
-            throw new HttpRemoteTransportException(HttpTransportFailureKind.PayloadTooLarge);
-        }
-
-        SyncBatchValidator.Validate(batch, CreateLocalAcceptedResult(batch));
-        var operations = new HttpProtocolJsonContext.SyncOperationWire[batch.Operations.Count];
+        ValidateBatch(batch);
+        var count = batch.Operations.Count;
+        var operations = new HttpProtocolJsonContext.SyncOperationWire[count];
         long requestBudget = 0;
-        for (var index = 0; index < batch.Operations.Count; index++)
+        for (var index = 0; index < count; index++)
         {
             var operation = batch.Operations[index];
             requestBudget = checked(requestBudget + EstimateOperationBytes(operation));
-            if (requestBudget > _options.MaximumRequestBytes)
+            if (requestBudget > _limits.MaximumRequestBytes)
             {
                 throw new HttpRemoteTransportException(HttpTransportFailureKind.PayloadTooLarge);
             }
@@ -104,7 +222,47 @@ internal sealed class HttpProtocolCodec
         }
 
         HttpProtocolJsonContext.PushRequestWire request = new() { BatchId = batch.BatchId, Operations = operations };
-        return Serialize(request, HttpProtocolJsonContext.Default.PushRequestWireInfo);
+        return Serialize(request, HttpProtocolJsonContext.Default.PushRequestWireInfo, _limits.MaximumRequestBytes);
+    }
+
+    /// <summary>Deserializes a push request.</summary>
+    /// <param name="bytes">The request bytes.</param>
+    /// <returns>The synchronization batch.</returns>
+    internal SyncBatch DeserializePushRequest(byte[] bytes)
+    {
+        var dto = Deserialize(bytes, HttpProtocolJsonContext.Default.PushRequestWireInfo, _limits.MaximumRequestBytes, ValidatePushRequestElement);
+        return TranslateProtocolExceptions(
+            () =>
+            {
+                var count = dto.Operations.Length;
+                var operations = new SyncOperation[count];
+                for (var index = 0; index < count; index++)
+                {
+                    operations[index] = ToOperation(dto.Operations[index]);
+                }
+
+                var batch = new SyncBatch(dto.BatchId, operations);
+                ValidateBatch(batch);
+                return batch;
+            });
+    }
+
+    /// <summary>Serializes a push response.</summary>
+    /// <param name="batch">The pushed batch.</param>
+    /// <param name="result">The synchronization result.</param>
+    /// <returns>The response bytes.</returns>
+    internal byte[] SerializePushResponse(SyncBatch batch, RemoteSyncResult result)
+    {
+        ValidateResult(batch, result);
+        var count = result.Operations.Count;
+        var operations = new HttpProtocolJsonContext.OperationSyncResultWire[count];
+        for (var index = 0; index < count; index++)
+        {
+            operations[index] = ToDto(result.Operations[index]);
+        }
+
+        HttpProtocolJsonContext.PushResponseWire response = new() { BatchId = result.BatchId, Operations = operations, ServerCursor = result.ServerCursor };
+        return Serialize(response, HttpProtocolJsonContext.Default.PushResponseWireInfo, _limits.MaximumResponseBytes);
     }
 
     /// <summary>Deserializes a push response and validates it against the pushed batch.</summary>
@@ -115,20 +273,16 @@ internal sealed class HttpProtocolCodec
     /// <exception cref="HttpRemoteTransportException">The response is malformed or does not match the pushed batch.</exception>
     internal RemoteSyncResult DeserializePushResponse(SyncBatch batch, byte[] bytes, TimeSpan? retryAfter)
     {
-        var dto = Deserialize(bytes, HttpProtocolJsonContext.Default.PushResponseWireInfo);
-        if (dto.Operations.Length > _options.MaximumBatchOperations)
-        {
-            throw new HttpRemoteTransportException(HttpTransportFailureKind.PayloadTooLarge);
-        }
-
-        var operations = new OperationSyncResult[dto.Operations.Length];
-        for (var index = 0; index < dto.Operations.Length; index++)
+        var dto = Deserialize(bytes, HttpProtocolJsonContext.Default.PushResponseWireInfo, _limits.MaximumResponseBytes, ValidatePushResponseElement);
+        var count = dto.Operations.Length;
+        var operations = new OperationSyncResult[count];
+        for (var index = 0; index < count; index++)
         {
             operations[index] = HttpProtocolCodecHelper.ToOperationResult(dto.Operations[index]);
         }
 
         RemoteSyncResult result = new(dto.BatchId, operations, dto.ServerCursor, retryAfter);
-        SyncBatchValidator.Validate(batch, result);
+        ValidateResult(batch, result);
         return result;
     }
 
@@ -137,14 +291,50 @@ internal sealed class HttpProtocolCodec
     /// <returns>The request bytes.</returns>
     internal byte[] SerializeAcknowledgement(ReceiveAcknowledgement acknowledgement)
     {
+        ValidateAcknowledgement(acknowledgement);
         var dto = new HttpProtocolJsonContext.AcknowledgeRequestWire
         {
             SubscriptionId = acknowledgement.SubscriptionId.Value,
             StreamId = acknowledgement.StreamId.Value,
             Cursor = acknowledgement.Cursor,
         };
-        return Serialize(dto, HttpProtocolJsonContext.Default.AcknowledgeRequestWireInfo);
+        return Serialize(dto, HttpProtocolJsonContext.Default.AcknowledgeRequestWireInfo, _limits.MaximumRequestBytes);
     }
+
+    /// <summary>Deserializes an acknowledgement request.</summary>
+    /// <param name="bytes">The request bytes.</param>
+    /// <returns>The acknowledgement.</returns>
+    internal ReceiveAcknowledgement DeserializeAcknowledgement(byte[] bytes)
+    {
+        var dto = Deserialize(bytes, HttpProtocolJsonContext.Default.AcknowledgeRequestWireInfo, _limits.MaximumRequestBytes, ValidateAcknowledgementElement);
+        return TranslateProtocolExceptions(
+            () =>
+            {
+                var acknowledgement = new ReceiveAcknowledgement(new(dto.SubscriptionId), new(dto.StreamId), dto.Cursor);
+                ValidateAcknowledgement(acknowledgement);
+                return acknowledgement;
+            });
+    }
+
+    /// <summary>Parses a subscribe request query string.</summary>
+    /// <param name="query">The encoded query string.</param>
+    /// <returns>The subscribe request.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal RemoteSubscribeRequest ParseSubscribeRequest(string query) =>
+        TranslateProtocolExceptions(
+            () =>
+            {
+                var values = ParseQuery(query);
+                RequireKeys(values, StreamIdPropertyName, SubscriptionIdPropertyName, PositionKindPropertyName);
+                var streamId = new StreamId(values[StreamIdPropertyName]);
+                var subscriptionId = new SubscriptionId(Guid.Parse(values[SubscriptionIdPropertyName]));
+                var cursor = GetOptionalQueryValue(values, CursorPropertyName);
+                var kind = (StartPositionKind)ParseInt32(values[PositionKindPropertyName]);
+                var position = CreateStartPosition(kind, values);
+                var request = new RemoteSubscribeRequest(streamId, subscriptionId, cursor, position);
+                ValidateSubscribeRequest(request);
+                return request;
+            });
 
     /// <summary>Deserializes a subscribe response into complete batches.</summary>
     /// <param name="bytes">The response bytes.</param>
@@ -162,335 +352,52 @@ internal sealed class HttpProtocolCodec
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal RemoteEventBatch[] DeserializeSubscribeResponse(byte[] bytes, StreamId? expectedStreamId, string? currentCursor = null)
     {
-        if (bytes.Length == 0)
+        if (bytes.Length is 0)
         {
             return [];
         }
 
-        var dto = Deserialize(bytes, HttpProtocolJsonContext.Default.SubscribeResponseWireInfo);
-        var batches = new RemoteEventBatch[dto.Batches.Length];
-        for (var index = 0; index < dto.Batches.Length; index++)
-        {
-            batches[index] = ToBatch(dto.Batches[index]);
-            ValidateStream(batches[index], expectedStreamId);
-            RemoteEventBatchValidator.Validate(
-                batches[index],
-                _options.MaximumEventsPerBatch,
-                _options.MaximumCompletedOperationsPerBatch);
-            ValidateCursorContinuity(batches[index], ref currentCursor);
-        }
-
-        return batches;
-    }
-
-    /// <summary>Validates that a received batch belongs to the requested stream.</summary>
-    /// <param name="batch">The received batch.</param>
-    /// <param name="expectedStreamId">The expected stream, when stream binding is required.</param>
-    /// <exception cref="HttpRemoteTransportException">The response includes a foreign stream.</exception>
-    private static void ValidateStream(RemoteEventBatch batch, StreamId? expectedStreamId)
-    {
-        if (expectedStreamId is null)
-        {
-            return;
-        }
-
-        var expectedValue = expectedStreamId.Value.Value;
-        if (!StringComparer.Ordinal.Equals(batch.StreamId.Value, expectedValue))
-        {
-            throw new HttpRemoteTransportException(HttpTransportFailureKind.ProtocolViolation);
-        }
-
-        for (var index = 0; index < batch.Events.Count; index++)
-        {
-            if (!StringComparer.Ordinal.Equals(batch.Events[index].StreamId.Value, expectedValue))
+        var dto = Deserialize(bytes, HttpProtocolJsonContext.Default.SubscribeResponseWireInfo, _limits.MaximumResponseBytes, ValidateSubscribeResponseElement);
+        return TranslateProtocolExceptions(
+            () =>
             {
-                throw new HttpRemoteTransportException(HttpTransportFailureKind.ProtocolViolation);
-            }
-        }
+                var cursor = currentCursor;
+                var count = dto.Batches.Length;
+                var batches = new RemoteEventBatch[count];
+                for (var index = 0; index < count; index++)
+                {
+                    batches[index] = ToBatch(dto.Batches[index]);
+                    ValidateStream(batches[index], expectedStreamId);
+                    ValidateReceiveBatch(batches[index]);
+                    ValidateCursorContinuity(batches[index], ref cursor);
+                }
+
+                return batches;
+            });
     }
 
-    /// <summary>Validates receive cursor continuity while allowing immediate duplicate candidates after a lost ACK.</summary>
-    /// <param name="batch">The received batch.</param>
-    /// <param name="currentCursor">The current receive cursor.</param>
-    /// <exception cref="HttpRemoteTransportException">A new batch skipped the current receive cursor.</exception>
-    private static void ValidateCursorContinuity(RemoteEventBatch batch, ref string? currentCursor)
+    /// <summary>Serializes an ordered subscribe response.</summary>
+    /// <param name="batches">The complete receive batches.</param>
+    /// <returns>The response bytes.</returns>
+    /// <exception cref="HttpRemoteTransportException">The response is malformed or violates configured limits.</exception>
+    internal byte[] SerializeSubscribeResponse(IReadOnlyList<RemoteEventBatch> batches)
     {
-        if (currentCursor is null)
-        {
-            currentCursor = batch.NextCursor;
-            return;
-        }
-
-        if (StringComparer.Ordinal.Equals(batch.NextCursor, currentCursor))
-        {
-            return;
-        }
-
-        if (!StringComparer.Ordinal.Equals(batch.PreviousCursor, currentCursor))
-        {
-            throw new HttpRemoteTransportException(HttpTransportFailureKind.ProtocolViolation);
-        }
-
-        currentCursor = batch.NextCursor;
-    }
-
-    /// <summary>Serializes a DTO and enforces the request byte bound.</summary>
-    /// <typeparam name="T">The DTO type.</typeparam>
-    /// <param name="dto">The DTO.</param>
-    /// <param name="typeInfo">The generated type metadata.</param>
-    /// <returns>The serialized bytes.</returns>
-    /// <exception cref="HttpRemoteTransportException">The DTO cannot be encoded within configured bounds.</exception>
-    private byte[] Serialize<T>(T dto, JsonTypeInfo<T> typeInfo)
-    {
-        HttpBoundedBufferWriter bufferWriter = new(_options.MaximumRequestBytes);
-        using Utf8JsonWriter jsonWriter = new(bufferWriter);
-        JsonSerializer.Serialize(jsonWriter, dto, typeInfo);
-        jsonWriter.Flush();
-
-        return bufferWriter.ToArray();
-    }
-
-    /// <summary>Deserializes a DTO after depth validation.</summary>
-    /// <typeparam name="T">The DTO type.</typeparam>
-    /// <param name="bytes">The serialized bytes.</param>
-    /// <param name="typeInfo">The generated type metadata.</param>
-    /// <returns>The DTO.</returns>
-    /// <exception cref="HttpRemoteTransportException">The response is malformed or violates protocol bounds.</exception>
-    private T Deserialize<T>(byte[] bytes, JsonTypeInfo<T> typeInfo)
-    {
-        ValidateJsonDepth(bytes);
-        try
-        {
-            var dto = JsonSerializer.Deserialize(bytes, typeInfo);
-            if (dto is not null)
-            {
-                return dto;
-            }
-        }
-        catch (JsonException exception)
-        {
-            throw new HttpRemoteTransportException(
-                HttpTransportFailureKind.ProtocolViolation,
-                statusCode: null,
-                retryAfter: null,
-                innerException: exception);
-        }
-
-        throw new HttpRemoteTransportException(HttpTransportFailureKind.ProtocolViolation);
-    }
-
-    /// <summary>Validates JSON nesting depth before DTO materialization.</summary>
-    /// <param name="bytes">The serialized JSON bytes.</param>
-    /// <exception cref="HttpRemoteTransportException">The JSON exceeds configured depth limits.</exception>
-    private void ValidateJsonDepth(byte[] bytes)
-    {
-        var reader = new Utf8JsonReader(bytes, new JsonReaderOptions { MaxDepth = _options.MaximumJsonDepth });
-        try
-        {
-            var tokenCount = 0;
-            while (reader.Read())
-            {
-                tokenCount++;
-            }
-        }
-        catch (JsonException exception)
-        {
-            throw new HttpRemoteTransportException(
-                HttpTransportFailureKind.ProtocolViolation,
-                statusCode: null,
-                retryAfter: null,
-                innerException: exception);
-        }
-    }
-
-    /// <summary>Creates a local accepted result for pre-validating the pushed batch shape.</summary>
-    /// <param name="batch">The batch.</param>
-    /// <returns>The local validation result.</returns>
-    private RemoteSyncResult CreateLocalAcceptedResult(SyncBatch batch)
-    {
-        var operations = new OperationSyncResult[batch.Operations.Count];
-        for (var index = 0; index < batch.Operations.Count; index++)
-        {
-            operations[index] = new(batch.Operations[index].OperationId, OperationResultKind.Accepted, null, null);
-        }
-
-        return new(batch.BatchId, operations, serverCursor: null, retryAfter: null);
-    }
-
-    /// <summary>Converts an operation to its HTTP DTO.</summary>
-    /// <param name="operation">The operation.</param>
-    /// <returns>The operation DTO.</returns>
-    private HttpProtocolJsonContext.SyncOperationWire ToDto(SyncOperation operation)
-    {
-        ValidateMetadata(operation.Metadata);
-        HttpProtocolJsonContext.SyncOperationWire dto = new()
-        {
-            OperationId = operation.OperationId.Value,
-            StreamId = operation.StreamId.Value,
-            ClientSequence = operation.ClientSequence,
-            TimestampUtc = operation.TimestampUtc,
-            BaseVersion = operation.BaseVersion,
-            Type = (int)operation.Type,
-            Payload = ToDto(operation.Payload),
-            Policy = new()
-            {
-                DeliveryGuarantee = (int)operation.Policy.DeliveryGuarantee,
-                Durability = (int)operation.Policy.Durability,
-                Priority = operation.Policy.Priority,
-                ConflictPolicy = (int)operation.Policy.ConflictPolicy,
-            },
-            Metadata = HttpProtocolCodecHelper.ToDictionary(operation.Metadata),
-        };
-        return dto;
-    }
-
-    /// <summary>Converts a payload envelope to its HTTP DTO.</summary>
-    /// <param name="payload">The payload.</param>
-    /// <returns>The payload DTO.</returns>
-    private HttpProtocolJsonContext.PayloadEnvelopeWire ToDto(PayloadEnvelope payload)
-    {
-        ValidatePayload(payload);
-        HttpProtocolJsonContext.PayloadEnvelopeWire dto = new()
-        {
-            ContractId = payload.ContractId,
-            SchemaVersion = payload.SchemaVersion,
-            ContentType = payload.ContentType,
-            Payload = Convert.ToBase64String(payload.Payload.ToArray()),
-            PayloadHash = payload.PayloadHash,
-        };
-        return dto;
-    }
-
-    /// <summary>Converts a remote event batch DTO.</summary>
-    /// <param name="dto">The DTO.</param>
-    /// <returns>The remote event batch.</returns>
-    private RemoteEventBatch ToBatch(HttpProtocolJsonContext.RemoteEventBatchWire dto)
-    {
-        var events = new RemoteEvent[dto.Events.Length];
-        for (var index = 0; index < dto.Events.Length; index++)
-        {
-            events[index] = ToEvent(dto.Events[index]);
-        }
-
-        var completions = new RemoteOperationCompletion[dto.CompletedOperations.Length];
-        for (var index = 0; index < dto.CompletedOperations.Length; index++)
-        {
-            completions[index] = HttpProtocolCodecHelper.ToCompletion(dto.CompletedOperations[index]);
-        }
-
-        return new(dto.BatchId, new(dto.StreamId), dto.PreviousCursor, dto.NextCursor, events) { CompletedOperations = completions };
-    }
-
-    /// <summary>Converts a remote event DTO.</summary>
-    /// <param name="dto">The DTO.</param>
-    /// <returns>The remote event.</returns>
-    private RemoteEvent ToEvent(HttpProtocolJsonContext.RemoteEventWire dto)
-    {
-        ValidateMetadata(dto.Metadata);
-        var operationId = dto.CausedByOperationId.HasValue
-            ? new OperationId(dto.CausedByOperationId.Value)
-            : (OperationId?)null;
-        return new(dto.EventId, new(dto.StreamId), dto.ServerCursor, dto.CommittedAtUtc, operationId, ToPayload(dto.Payload), HttpProtocolCodecHelper.ToDictionary(dto.Metadata))
-        {
-            Origin = dto.Origin is null ? null : HttpProtocolCodecHelper.ToOrigin(dto.Origin),
-        };
-    }
-
-    /// <summary>Converts a payload DTO.</summary>
-    /// <param name="dto">The DTO.</param>
-    /// <returns>The payload envelope.</returns>
-    /// <exception cref="HttpRemoteTransportException">The payload is malformed or violates configured limits.</exception>
-    private PayloadEnvelope ToPayload(HttpProtocolJsonContext.PayloadEnvelopeWire dto)
-    {
-        var maximumBase64Chars = checked(
-            ((_options.MaximumPayloadBytes + Base64RoundingBytes) / Base64BlockInputBytes) * Base64BlockOutputCharacters);
-        if (dto.Payload.Length > maximumBase64Chars)
+        ArgumentExceptionHelper.ThrowIfNull(batches);
+        var count = batches.Count;
+        if (count > _limits.MaximumBatchOperations)
         {
             throw new HttpRemoteTransportException(HttpTransportFailureKind.PayloadTooLarge);
         }
 
-        byte[] payload;
-        try
+        var dtoBatches = new HttpProtocolJsonContext.RemoteEventBatchWire[count];
+        for (var index = 0; index < count; index++)
         {
-            payload = Convert.FromBase64String(dto.Payload);
-        }
-        catch (FormatException exception)
-        {
-            throw new HttpRemoteTransportException(
-                HttpTransportFailureKind.ProtocolViolation,
-                statusCode: null,
-                retryAfter: null,
-                innerException: exception);
+            var batch = batches[index];
+            ValidateReceiveBatch(batch);
+            dtoBatches[index] = ToDto(batch);
         }
 
-        var envelope = new PayloadEnvelope(dto.ContractId, dto.SchemaVersion, dto.ContentType, payload, dto.PayloadHash);
-        ValidatePayload(envelope);
-        return envelope;
-    }
-
-    /// <summary>Validates payload byte limits.</summary>
-    /// <param name="payload">The payload envelope.</param>
-    /// <exception cref="HttpRemoteTransportException">The payload exceeds configured limits.</exception>
-    private void ValidatePayload(PayloadEnvelope payload)
-    {
-        if (payload.PayloadLength <= _options.MaximumPayloadBytes)
-        {
-            return;
-        }
-
-        throw new HttpRemoteTransportException(HttpTransportFailureKind.PayloadTooLarge);
-    }
-
-    /// <summary>Validates metadata count and UTF-8 byte limits.</summary>
-    /// <param name="metadata">The metadata.</param>
-    /// <exception cref="HttpRemoteTransportException">The metadata is malformed or violates configured limits.</exception>
-    private void ValidateMetadata(IReadOnlyDictionary<string, string> metadata)
-    {
-        if (metadata.Count > _options.MaximumMetadataEntries)
-        {
-            throw new HttpRemoteTransportException(HttpTransportFailureKind.PayloadTooLarge);
-        }
-
-        foreach (var pair in metadata)
-        {
-            if (pair.Value is null)
-            {
-                throw new HttpRemoteTransportException(HttpTransportFailureKind.ProtocolViolation);
-            }
-
-            if (Encoding.UTF8.GetByteCount(pair.Key) > _options.MaximumMetadataKeyBytes
-                || Encoding.UTF8.GetByteCount(pair.Value) > _options.MaximumMetadataValueBytes)
-            {
-                throw new HttpRemoteTransportException(HttpTransportFailureKind.PayloadTooLarge);
-            }
-        }
-    }
-
-    /// <summary>Estimates encoded operation size before DTO payload conversion.</summary>
-    /// <param name="operation">The operation.</param>
-    /// <returns>The conservative encoded byte estimate.</returns>
-    /// <exception cref="HttpRemoteTransportException">The operation payload or metadata exceeds configured limits.</exception>
-    private long EstimateOperationBytes(SyncOperation operation)
-    {
-        ValidatePayload(operation.Payload);
-        ValidateMetadata(operation.Metadata);
-        checked
-        {
-            var payloadBase64Characters =
-                ((operation.Payload.PayloadLength + Base64RoundingBytes) / Base64BlockInputBytes) * Base64BlockOutputCharacters;
-            var size = OperationEstimateOverheadBytes + payloadBase64Characters;
-            size += HttpProtocolCodecHelper.EstimateJsonStringBytes(operation.StreamId.Value);
-            size += HttpProtocolCodecHelper.EstimateOptionalJsonStringBytes(operation.BaseVersion);
-            size += HttpProtocolCodecHelper.EstimateJsonStringBytes(operation.Payload.ContractId);
-            size += HttpProtocolCodecHelper.EstimateJsonStringBytes(operation.Payload.ContentType);
-            size += HttpProtocolCodecHelper.EstimateJsonStringBytes(operation.Payload.PayloadHash);
-            foreach (var pair in operation.Metadata)
-            {
-                size += HttpProtocolCodecHelper.EstimateJsonStringBytes(pair.Key);
-                size += HttpProtocolCodecHelper.EstimateJsonStringBytes(pair.Value);
-            }
-
-            return size;
-        }
+        var response = new HttpProtocolJsonContext.SubscribeResponseWire { Batches = dtoBatches };
+        return Serialize(response, HttpProtocolJsonContext.Default.SubscribeResponseWireInfo, _limits.MaximumResponseBytes);
     }
 }

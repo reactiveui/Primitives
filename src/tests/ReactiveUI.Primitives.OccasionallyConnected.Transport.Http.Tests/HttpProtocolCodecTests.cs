@@ -10,7 +10,7 @@ using System.Text;
 namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.Tests;
 
 /// <summary>Tests <see cref="HttpProtocolCodec"/>.</summary>
-public sealed class HttpProtocolCodecTests
+public sealed partial class HttpProtocolCodecTests
 {
     /// <summary>The valid encoded empty JSON payload.</summary>
     private const string EmptyPayloadBase64 = "e30=";

@@ -175,7 +175,12 @@ internal sealed partial class SqliteServerCommitJournal
         var found = 0;
         while (reader.Read())
         {
-            if (found >= expectedNames.Length || ReadString(reader, 0, InvalidSchemaMessage) != expectedNames[found])
+            if (found >= expectedNames.Length)
+            {
+                throw new InvalidOperationException(InvalidSchemaMessage);
+            }
+
+            if (ReadString(reader, 0, InvalidSchemaMessage) != expectedNames[found])
             {
                 throw new InvalidOperationException(InvalidSchemaMessage);
             }

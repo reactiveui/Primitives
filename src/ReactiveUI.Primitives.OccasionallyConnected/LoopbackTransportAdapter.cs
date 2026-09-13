@@ -202,7 +202,7 @@ public sealed partial class LoopbackTransportAdapter : IRemoteTransportAdapter
             ArgumentExceptionHelper.ThrowIfNull(acknowledgement);
             LoopbackTransportValidator.ValidateAcknowledgement(acknowledgement, options);
             using var lease = Admit(AcknowledgeOperation, cancellationToken);
-            await options.Hub.AcknowledgeAsync(acknowledgement, options.Client, lease.Token).ConfigureAwait(false);
+            await options.Hub.AcknowledgeAsync(acknowledgement, options.AuthenticatedClient, lease.Token).ConfigureAwait(false);
         }
 
         /// <inheritdoc/>
@@ -555,7 +555,7 @@ public sealed partial class LoopbackTransportAdapter : IRemoteTransportAdapter
                 var lease = session.Admit(SubscribeOperation, callerCancellationToken, cancellationToken);
                 try
                 {
-                    var source = validatorOptions.Hub.SubscribeStreamAsync(request, validatorOptions.Client, lease.Token)
+                    var source = validatorOptions.Hub.SubscribeStreamAsync(request, validatorOptions.AuthenticatedClient, lease.Token)
                         ?? throw new InvalidOperationException("The loopback hub returned no subscription sequence.");
                     var upstream = source.GetAsyncEnumerator(lease.Token);
                     var subscription = new LoopbackSubscriptionEnumerator(session, lease, upstream, request, validatorOptions);

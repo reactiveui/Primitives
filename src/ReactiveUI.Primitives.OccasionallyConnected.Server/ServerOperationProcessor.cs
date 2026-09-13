@@ -461,7 +461,7 @@ internal sealed class ServerOperationProcessor
     /// <param name="type">The operation type.</param>
     /// <returns>Whether the operation type is defined.</returns>
     private static bool IsDefined(SyncOperationType type) =>
-        type is SyncOperationType.Append or SyncOperationType.Update or SyncOperationType.Delete;
+        type is SyncOperationType.Append or SyncOperationType.Update or SyncOperationType.Delete or SyncOperationType.Custom;
 
     /// <summary>Creates a synchronization batch validation exception.</summary>
     /// <param name="error">The validation error.</param>
@@ -474,19 +474,14 @@ internal sealed class ServerOperationProcessor
     /// <exception cref="QueueCapacityExceededException">The active request capacity has been reached.</exception>
     private void EnterActiveRequest()
     {
-        while (true)
+        var current = Interlocked.Increment(ref _activeRequests);
+        if (current <= _options.MaximumActiveRequests)
         {
-            var current = Volatile.Read(ref _activeRequests);
-            if (current >= _options.MaximumActiveRequests)
-            {
-                throw new QueueCapacityExceededException("The server operation processor is at active request capacity.", canFitWhenEmpty: true);
-            }
-
-            if (Interlocked.CompareExchange(ref _activeRequests, current + 1, current) == current)
-            {
-                return;
-            }
+            return;
         }
+
+        _ = Interlocked.Decrement(ref _activeRequests);
+        throw new QueueCapacityExceededException("The server operation processor is at active request capacity.", canFitWhenEmpty: true);
     }
 
     /// <summary>Processes one operation with bounded compare-and-swap retries.</summary>

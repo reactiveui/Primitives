@@ -124,7 +124,7 @@ public sealed partial class LoopbackTransportAdapterTests
         var receive = CreateReceiveBatch(first, second) with { CompletedOperations = [.. CreateCompletions(first, second), zeroEventCompletion] };
         var batch = CreateBatch();
         var result = CreateResult(batch);
-        var trusted = new ClientIdentity(TrustedClientId, TrustedTenant);
+        var trusted = new ServerAuthenticatedClient(TrustedTenant, TrustedClientId);
         var hub = new RecordingHub { ApplyHandler = (_, _, _) => ValueTask.FromResult(new ServerSyncResult(result, [])), SubscribeHandler = (_, _, _) => YieldBatches(receive) };
         await using var adapter = new LoopbackTransportAdapter(CreateOptions(hub, trusted));
         await using var session = await adapter.ConnectAsync(CreateConnectRequest(new(TrustedClientId, SpoofedTenant)), CancellationToken.None);
@@ -650,8 +650,8 @@ public sealed partial class LoopbackTransportAdapterTests
     /// <param name="hub">The server hub.</param>
     /// <param name="client">The trusted client identity.</param>
     /// <returns>The options.</returns>
-    private static LoopbackTransportAdapterOptions CreateOptions(IServerStreamHub hub, ClientIdentity? client = null) =>
-        new() { Hub = hub, Client = client ?? new(TrustedClientId, TrustedTenant), PeerCapabilities = CreateCapabilities() };
+    private static LoopbackTransportAdapterOptions CreateOptions(IServerStreamHub hub, ServerAuthenticatedClient? client = null) =>
+        new() { Hub = hub, AuthenticatedClient = client ?? new(TrustedTenant, TrustedClientId), PeerCapabilities = CreateCapabilities() };
 
     /// <summary>Creates a valid capability offer.</summary>
     /// <param name="features">The feature flags.</param>

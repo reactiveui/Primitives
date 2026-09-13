@@ -870,7 +870,7 @@ public sealed partial class PreparedUploadAttemptCoordinatorTests
         new()
         {
             Hub = hub,
-            Client = new(ClientId, Tenant),
+            AuthenticatedClient = new(Tenant, ClientId),
             PeerCapabilities = new(
                 new(FirstSequence, 0),
                 RemoteTransportCapabilities.BatchPush | RemoteTransportCapabilities.ServerIdempotency,

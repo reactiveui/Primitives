@@ -561,7 +561,7 @@ public sealed partial class HttpRemoteTransportAdapterTests
 
         await AwaitWithTimeoutAsync(adapter.DisposeAsync().AsTask());
 
-        await Assert.That(connect.IsCanceled).IsTrue();
+        await Assert.That(async () => await connect).Throws<OperationCanceledException>();
     }
 
     /// <summary>Verifies disposing a session cancels a paused subscription consumer.</summary>

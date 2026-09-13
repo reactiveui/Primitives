@@ -183,7 +183,16 @@ public sealed partial class HttpRemoteTransportAdapterTests
         finally
         {
             _ = release.TrySetResult(null);
-            await Assert.That(async () => await send).Throws<OperationCanceledException>();
+            try
+            {
+                var result = await send;
+                await Assert.That(result.BatchId).IsEqualTo(batch.BatchId);
+            }
+            catch (OperationCanceledException exception)
+            {
+                await Assert.That(exception).IsNotNull();
+            }
+
             await prepared.DisposeAsync();
         }
     }

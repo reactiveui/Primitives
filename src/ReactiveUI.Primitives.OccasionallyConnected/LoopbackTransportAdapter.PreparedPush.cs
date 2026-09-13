@@ -195,7 +195,7 @@ public sealed partial class LoopbackTransportAdapter
                     }
 
                     sendToken.ThrowIfCancellationRequested();
-                    var serverResult = await validatorOptions.Hub.ApplyOperationsAsync(retainedBatch, validatorOptions.Client, sendToken).ConfigureAwait(false)
+                    var serverResult = await validatorOptions.Hub.ApplyOperationsAsync(retainedBatch, validatorOptions.AuthenticatedClient, sendToken).ConfigureAwait(false)
                         ?? throw new InvalidOperationException("The loopback hub returned no synchronization result.");
 
                     SyncBatchValidator.Validate(retainedBatch, serverResult.Result);
