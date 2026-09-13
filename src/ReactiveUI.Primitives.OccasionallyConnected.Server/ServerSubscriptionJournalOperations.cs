@@ -19,7 +19,10 @@ internal static class ServerSubscriptionJournalOperations
     private const long DateTimeOffsetByteCount = 16;
 
     /// <summary>The retained fixed bytes for one subscription row.</summary>
-    private const long SubscriptionFixedBytes = SubscriptionIdByteCount + (DateTimeOffsetByteCount * 3) + (NullableMarkerByteCount * 4) + (sizeof(long) * 2);
+    private const long SubscriptionFixedBytes = SubscriptionIdByteCount + (DateTimeOffsetByteCount * 3) + (NullableMarkerByteCount * 7) + (sizeof(int) * 2) + (sizeof(long) * 4);
+
+    /// <summary>The retained fixed bytes for one schema-three subscription row.</summary>
+    private const long LegacySubscriptionFixedBytes = SubscriptionIdByteCount + (DateTimeOffsetByteCount * 3) + (NullableMarkerByteCount * 4) + (sizeof(long) * 2);
 
     /// <summary>The retained fixed bytes for one offered cursor row.</summary>
     private const long OfferFixedBytes = SubscriptionIdByteCount + DateTimeOffsetByteCount + sizeof(long);
@@ -33,6 +36,22 @@ internal static class ServerSubscriptionJournalOperations
         ServerCommitJournalGuard.ValidateStreamKey(identity.StreamKey);
         ValidateClientId(identity.ClientId);
         ValidateSubscriptionId(identity.SubscriptionId);
+    }
+
+    /// <summary>Validates a trusted subscription registration request.</summary>
+    /// <param name="request">The request.</param>
+    /// <exception cref="ArgumentException">The request is invalid.</exception>
+    internal static void ValidateRegistrationRequest(ServerSubscriptionRegistrationRequest request)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(request);
+        ValidateIdentity(request.Identity);
+        ArgumentExceptionHelper.ThrowIfNull(request.StartPosition);
+        if (request.StartPosition.Cursor is null)
+        {
+            return;
+        }
+
+        ServerCommitJournalGuard.ValidateCursor(request.StartPosition.Cursor);
     }
 
     /// <summary>Validates a subscription page request.</summary>
@@ -89,6 +108,14 @@ internal static class ServerSubscriptionJournalOperations
         && string.Equals(left.ClientId, right.ClientId, StringComparison.Ordinal)
         && left.StreamKey == right.StreamKey;
 
+    /// <summary>Checks whether a registration request matches retained immutable initial position state.</summary>
+    /// <param name="request">The supplied request.</param>
+    /// <param name="record">The retained record.</param>
+    /// <returns>Whether the start positions match.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static bool RegistrationMatches(ServerSubscriptionRegistrationRequest request, ServerSubscriptionRecord record) =>
+        IdentityMatches(request.Identity, record.Identity) && StartPositionMatches(request.StartPosition, record.InitialStartPosition);
+
     /// <summary>Creates a read-only state snapshot.</summary>
     /// <param name="record">The retained subscription record.</param>
     /// <returns>The state snapshot.</returns>
@@ -103,25 +130,49 @@ internal static class ServerSubscriptionJournalOperations
 
     /// <summary>Calculates retained logical bytes for a subscription binding row.</summary>
     /// <param name="identity">The identity.</param>
+    /// <param name="initialStartPosition">The immutable initial start position.</param>
+    /// <param name="initialAnchorCursor">The retained initial anchor cursor.</param>
     /// <param name="latestOfferedCursor">The latest retained offered cursor.</param>
     /// <param name="acknowledgedCursor">The latest retained acknowledged cursor.</param>
     /// <returns>The retained logical byte count.</returns>
-    internal static long GetSubscriptionBytes(ServerSubscriptionIdentity identity, string? latestOfferedCursor = null, string? acknowledgedCursor = null)
+    internal static long GetSubscriptionBytes(
+        ServerSubscriptionIdentity identity,
+        StartPosition? initialStartPosition = null,
+        string? initialAnchorCursor = null,
+        string? latestOfferedCursor = null,
+        string? acknowledgedCursor = null)
     {
         var bytes = SubscriptionFixedBytes;
         bytes = ServerCommitJournalSizer.AddLogicalBytes(bytes, ServerCommitJournalSizer.GetStreamKeyBytes(identity.StreamKey));
         bytes = ServerCommitJournalSizer.AddLogicalBytes(bytes, ServerCommitJournalGuard.GetTextBytes(identity.ClientId));
+        bytes = ServerCommitJournalSizer.AddLogicalBytes(bytes, GetStartPositionBytes(initialStartPosition ?? StartPosition.FromSequence(0)));
+        bytes = ServerCommitJournalSizer.AddLogicalBytes(bytes, GetOptionalCursorBytes(initialAnchorCursor));
         bytes = ServerCommitJournalSizer.AddLogicalBytes(bytes, GetOptionalCursorBytes(latestOfferedCursor));
         bytes = ServerCommitJournalSizer.AddLogicalBytes(bytes, GetOptionalCursorBytes(acknowledgedCursor));
         return bytes;
     }
 
+    /// <summary>Gets the logical bytes added to schema-three rows during start-position migration.</summary>
+    /// <returns>The schema-four logical byte delta for the default beginning position.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static long GetInitialPositionMigrationBytes() =>
+        SubscriptionFixedBytes - LegacySubscriptionFixedBytes + GetStartPositionBytes(StartPosition.FromSequence(0));
+
+    /// <summary>Calculates the retained logical byte delta for a nullable initial anchor cursor column.</summary>
+    /// <param name="previous">The previously retained cursor.</param>
+    /// <param name="current">The new retained cursor.</param>
+    /// <returns>The logical byte delta.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static long GetInitialAnchorCursorDelta(string? previous, string? current) =>
+        GetOptionalCursorBytes(current) - GetOptionalCursorBytes(previous);
+
     /// <summary>Calculates the retained logical byte delta for a nullable subscription cursor column.</summary>
     /// <param name="previous">The previously retained cursor.</param>
     /// <param name="current">The new retained cursor.</param>
     /// <returns>The logical byte delta.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static long GetSubscriptionCursorDelta(string? previous, string? current) =>
-        GetOptionalCursorBytes(current) - GetOptionalCursorBytes(previous);
+        GetInitialAnchorCursorDelta(previous, current);
 
     /// <summary>Calculates retained logical bytes for one offered cursor row.</summary>
     /// <param name="cursor">The cursor.</param>
@@ -146,6 +197,37 @@ internal static class ServerSubscriptionJournalOperations
     /// <returns>The cursor bytes or zero.</returns>
     private static long GetOptionalCursorBytes(string? cursor) =>
         cursor is null ? 0 : ServerCommitJournalGuard.GetTextBytes(cursor);
+
+    /// <summary>Calculates retained bytes for the initial start position payload.</summary>
+    /// <param name="position">The start position.</param>
+    /// <returns>The logical byte count.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">The position kind is invalid.</exception>
+    private static long GetStartPositionBytes(StartPosition position)
+    {
+        if (position.Kind == StartPositionKind.Latest)
+        {
+            return 0;
+        }
+
+        if (position.Kind == StartPositionKind.FromSequence)
+        {
+            return sizeof(long);
+        }
+
+        return position.Kind == StartPositionKind.FromTimestamp
+            ? DateTimeOffsetByteCount
+            : GetOptionalCursorBytes(position.Cursor);
+    }
+
+    /// <summary>Checks whether two start positions are exactly compatible.</summary>
+    /// <param name="left">The first position.</param>
+    /// <param name="right">The second position.</param>
+    /// <returns>Whether the positions match.</returns>
+    private static bool StartPositionMatches(StartPosition left, StartPosition right) =>
+        left.Kind == right.Kind
+        && Nullable.Equals(left.Timestamp, right.Timestamp)
+        && Nullable.Equals(left.Sequence, right.Sequence)
+        && string.Equals(left.Cursor, right.Cursor, StringComparison.Ordinal);
 
     /// <summary>Rejects a subscription ID that is not usable for durable binding.</summary>
     /// <param name="subscriptionId">The subscription identifier.</param>

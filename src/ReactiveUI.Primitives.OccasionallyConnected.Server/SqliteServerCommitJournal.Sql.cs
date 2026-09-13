@@ -255,10 +255,138 @@ internal sealed partial class SqliteServerCommitJournal
     private static void MigrateSchemaTwoToThree(SqliteConnection connection, SqliteTransaction transaction)
     {
         ValidateSchemaTwoForMigration(connection, transaction);
-        CreateSubscriptionsTable(connection, transaction);
+        CreateSchemaThreeSubscriptionsTable(connection, transaction);
         CreateSubscriptionOffersTable(connection, transaction);
+        WriteMetadataValue(connection, transaction, SchemaVersionKey, SchemaVersionThree.ToString(CultureInfo.InvariantCulture));
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = SetSchemaVersionThreeSql;
+        _ = command.ExecuteNonQuery();
+    }
+
+    /// <summary>Migrates schema-three journals by adding durable subscription start-position fields.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void MigrateSchemaThreeToFour(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        ValidateSchemaThreeForMigration(connection, transaction);
+        AddSubscriptionStartPositionColumns(connection, transaction);
         WriteMetadataValue(connection, transaction, SchemaVersionKey, CurrentSchemaVersion.ToString(CultureInfo.InvariantCulture));
         SetUserVersion(connection, transaction);
+    }
+
+    /// <summary>Validates the schema-three durable table set before migration.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <exception cref="InvalidOperationException">Thrown when SQLite data or schema validation fails.</exception>
+    private static void ValidateSchemaThreeForMigration(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        ValidateUserTableNames(
+            connection,
+            transaction,
+            [
+                ConflictsTableName,
+                EventMetadataTableName,
+                EventsTableName,
+                LedgerTableName,
+                MetadataTableName,
+                StreamsTableName,
+                SubscriptionOffersTableName,
+                SubscriptionsTableName,
+            ]);
+        try
+        {
+            if (SelectMetadata(connection, transaction, SchemaVersionKey) == SchemaVersionThree.ToString(CultureInfo.InvariantCulture))
+            {
+                ValidateTableDefinition(connection, transaction, SubscriptionsTableName, SchemaThreeSubscriptionsTableSql);
+                ValidateTableDefinition(connection, transaction, SubscriptionOffersTableName, SubscriptionOffersTableSql);
+                return;
+            }
+        }
+        catch (SqliteException exception)
+        {
+            throw new InvalidOperationException(InvalidSchemaMessage, exception);
+        }
+
+        throw new InvalidOperationException(UnsupportedMetadataSchemaVersionMessage);
+    }
+
+    /// <summary>Rebuilds schema-three subscription rows with schema-four initial position columns.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void AddSubscriptionStartPositionColumns(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        RenameSubscriptionTablesForSchemaFourMigration(connection, transaction);
+        CreateSubscriptionsTable(connection, transaction);
+        CreateSubscriptionOffersTable(connection, transaction);
+        CopySchemaThreeSubscriptions(connection, transaction);
+        CopySchemaThreeSubscriptionOffers(connection, transaction);
+        DropSchemaThreeSubscriptionTables(connection, transaction);
+    }
+
+    /// <summary>Renames schema-three subscription tables before rebuilding them.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void RenameSubscriptionTablesForSchemaFourMigration(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            ALTER TABLE oc_server_journal_subscription_offers RENAME TO oc_server_journal_subscription_offers_v3;
+            ALTER TABLE oc_server_journal_subscriptions RENAME TO oc_server_journal_subscriptions_v3;
+            """;
+        _ = command.ExecuteNonQuery();
+    }
+
+    /// <summary>Copies schema-three subscription rows into the schema-four table.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void CopySchemaThreeSubscriptions(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            INSERT INTO oc_server_journal_subscriptions
+                (subscription_id, tenant_id, stream_id, client_id, initial_position_kind, initial_sequence, initial_timestamp_utc,
+                 initial_cursor, initial_anchor_cursor, initial_anchor_group_sequence, initial_anchor_resolved,
+                 acknowledged_cursor, acknowledged_group_sequence, latest_offered_cursor, latest_offered_group_sequence,
+                 acknowledged_at_utc, updated_at_utc, last_touched_utc, logical_bytes)
+            SELECT subscription_id, tenant_id, stream_id, client_id, 2, 0, NULL, NULL, NULL, 0, 1,
+                   acknowledged_cursor, acknowledged_group_sequence, latest_offered_cursor, latest_offered_group_sequence,
+                   acknowledged_at_utc, updated_at_utc, last_touched_utc, logical_bytes + $migrationLogicalBytes
+            FROM oc_server_journal_subscriptions_v3;
+            """;
+        _ = command.Parameters.AddWithValue("$migrationLogicalBytes", ServerSubscriptionJournalOperations.GetInitialPositionMigrationBytes());
+        _ = command.ExecuteNonQuery();
+    }
+
+    /// <summary>Copies schema-three offer rows into the schema-four offer table.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void CopySchemaThreeSubscriptionOffers(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            INSERT INTO oc_server_journal_subscription_offers (subscription_id, cursor, group_sequence, offered_at_utc, logical_bytes)
+            SELECT subscription_id, cursor, group_sequence, offered_at_utc, logical_bytes
+            FROM oc_server_journal_subscription_offers_v3;
+            """;
+        _ = command.ExecuteNonQuery();
+    }
+
+    /// <summary>Drops schema-three subscription tables after rebuilding them.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void DropSchemaThreeSubscriptionTables(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            DROP TABLE oc_server_journal_subscription_offers_v3;
+            DROP TABLE oc_server_journal_subscriptions_v3;
+            """;
+        _ = command.ExecuteNonQuery();
     }
 
     /// <summary>Validates the schema-two durable table set before migration.</summary>

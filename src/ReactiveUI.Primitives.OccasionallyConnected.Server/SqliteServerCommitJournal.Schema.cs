@@ -21,7 +21,7 @@ internal sealed partial class SqliteServerCommitJournal
     {
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
-        command.CommandText = "PRAGMA user_version = 3;";
+        command.CommandText = "PRAGMA user_version = 4;";
         _ = command.ExecuteNonQuery();
     }
 
@@ -99,6 +99,17 @@ internal sealed partial class SqliteServerCommitJournal
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = SubscriptionsTableSql;
+        _ = command.ExecuteNonQuery();
+    }
+
+    /// <summary>Creates the schema-three subscription acknowledgement table.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void CreateSchemaThreeSubscriptionsTable(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = SchemaThreeSubscriptionsTableSql;
         _ = command.ExecuteNonQuery();
     }
 

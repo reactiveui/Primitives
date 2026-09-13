@@ -14,7 +14,7 @@ public sealed partial class SqliteServerCommitJournalTests
     private const long SubscriptionCursorTestMaximumLogicalBytes = 12_288;
 
     /// <summary>The migrated schema version expected after opening a schema-two database.</summary>
-    private const long MigratedSchemaVersion = 3;
+    private const long MigratedSchemaVersion = 4;
 
     /// <summary>The first deterministic subscription.</summary>
     private static readonly SubscriptionId FirstSubscription = new(new Guid("20000000-0000-0000-0000-000000000001"));
@@ -305,9 +305,9 @@ public sealed partial class SqliteServerCommitJournalTests
         var identity = SubscriptionIdentity(FirstSubscription);
         _ = journal.RegisterSubscription(identity);
 
-        await Assert.That(() => journal.RegisterSubscription(new(StreamKey(), " ", SecondSubscription))).ThrowsExactly<ArgumentException>();
-        await Assert.That(() => journal.RegisterSubscription(new(StreamKey(), Client, new(Guid.Empty)))).ThrowsExactly<ArgumentException>();
-        await Assert.That(() => journal.RegisterSubscription(new(new(Tenant, OtherStream), Client, FirstSubscription))).ThrowsExactly<InvalidOperationException>();
+        await Assert.That(() => journal.RegisterSubscription(new ServerSubscriptionIdentity(StreamKey(), " ", SecondSubscription))).ThrowsExactly<ArgumentException>();
+        await Assert.That(() => journal.RegisterSubscription(new ServerSubscriptionIdentity(StreamKey(), Client, new(Guid.Empty)))).ThrowsExactly<ArgumentException>();
+        await Assert.That(() => journal.RegisterSubscription(new ServerSubscriptionIdentity(new(Tenant, OtherStream), Client, FirstSubscription))).ThrowsExactly<InvalidOperationException>();
         await Assert.That(() => journal.OfferReceivePage(new(identity, null, SingleEntryCount, DefaultMaximumEvents, 0))).ThrowsExactly<ArgumentOutOfRangeException>();
         await Assert.That(() => journal.Acknowledge(new(StreamKey(), Client, new(SecondSubscription, Stream, FirstCursor)))).ThrowsExactly<InvalidOperationException>();
     }

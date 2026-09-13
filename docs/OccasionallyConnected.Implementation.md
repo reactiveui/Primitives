@@ -991,3 +991,20 @@ artifacts/root-facade-rebuilt for net8; the latter forced a rebuild after detect
 
 This is an internal integration component. Concrete context/engine/builder composition, durable admission policies,
 owned Input capture, upload/result/status wiring, and full application integration remain required work.
+
+### Stage 6: durable subscription starting positions
+
+Both server journals now retain immutable initial positions and resolved anchors. Latest is captured once, including
+empty streams; future event-sequence and timestamp thresholds wait for matching history. Selection includes complete
+operation groups and preserves the client's original PreviousCursor. Timestamp selection refuses to skip an unproven
+history gap. SQLite schema 4 retains the initial policy and anchor across reopen and migrates existing bindings.
+
+Root review added retained-byte-limit regressions for deferred cursor resolution and a behavioral regression proving
+that migration previously discarded an unsupported subscription column. Anchor growth now checks capacity before
+mutation, and migration validates the old subscription table definitions before rebuilding them. The timestamp gap
+fixture now removes the actual middle group.
+
+Independent combined validation passed 299 Server tests on each of net8/net9/net10/net11, with matching MTP 100% line
+and branch coverage (3539/3531/3531/3528 lines and 1162 branches per target). All eight Server Release targets compile
+with zero warnings and errors. Evidence: subscription-start worktree, artifacts/root-subscription-start-final and
+artifacts/root-start-final-all8-build.log. Public hub and HTTP endpoint integration remain in progress.

@@ -22,6 +22,18 @@ internal sealed class ServerSubscriptionRecord
     /// <summary>Gets the trusted identity.</summary>
     internal ServerSubscriptionIdentity Identity { get; }
 
+    /// <summary>Gets or sets the immutable initial position requested for this binding.</summary>
+    internal StartPosition InitialStartPosition { get; set; } = StartPosition.FromSequence(0);
+
+    /// <summary>Gets or sets the internally resolved first-read anchor cursor.</summary>
+    internal string? InitialAnchorCursor { get; set; }
+
+    /// <summary>Gets or sets the complete group sequence represented by the initial anchor.</summary>
+    internal long InitialAnchorGroupSequence { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether the initial anchor has resolved.</summary>
+    internal bool InitialAnchorResolved { get; set; } = true;
+
     /// <summary>Gets or sets the acknowledged cursor.</summary>
     internal string? AcknowledgedCursor { get; set; }
 
