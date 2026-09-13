@@ -11,13 +11,16 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Server;
 /// Authenticated tenant and client identifiers are trusted inputs from the host. This journal does not perform
 /// authorization, durability, cross-process coordination or capability advertisement.
 /// </remarks>
-internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServerReceiveJournal
+internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServerReceiveJournal, IServerSubscriptionAcknowledgementJournal
 {
     /// <summary>Protects stream state and retained journal accounting.</summary>
     private readonly Lock _gate = new();
 
     /// <summary>The retained process-local stream records.</summary>
     private readonly Dictionary<ServerStreamKey, ServerCommitStreamRecord> _streams = [];
+
+    /// <summary>The retained process-local subscription records.</summary>
+    private readonly Dictionary<SubscriptionId, ServerSubscriptionRecord> _subscriptions = [];
 
     /// <summary>The journal options.</summary>
     private readonly ServerCommitJournalOptions _options;
@@ -27,6 +30,9 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
 
     /// <summary>The retained event count.</summary>
     private int _eventCount;
+
+    /// <summary>The retained offered cursor count.</summary>
+    private int _subscriptionOfferCount;
 
     /// <summary>The retained logical encoded bytes.</summary>
     private long _logicalBytes;
@@ -74,6 +80,30 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
             lock (_gate)
             {
                 return _eventCount;
+            }
+        }
+    }
+
+    /// <summary>Gets the current retained subscription count.</summary>
+    internal int SubscriptionCount
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _subscriptions.Count;
+            }
+        }
+    }
+
+    /// <summary>Gets the current retained subscription offer count.</summary>
+    internal int SubscriptionOfferCount
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _subscriptionOfferCount;
             }
         }
     }
@@ -132,6 +162,45 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
         }
     }
 
+    /// <summary>Registers or reads a trusted subscription binding.</summary>
+    /// <param name="identity">The subscription identity.</param>
+    /// <returns>The persisted subscription state.</returns>
+    internal ServerSubscriptionState RegisterSubscription(ServerSubscriptionIdentity identity)
+    {
+        ServerSubscriptionJournalOperations.ValidateIdentity(identity);
+        var observedUtc = _options.TimeProvider.GetUtcNow();
+        lock (_gate)
+        {
+            return RegisterSubscriptionUnderGate(identity, observedUtc);
+        }
+    }
+
+    /// <summary>Reads and durably offers a bounded page for a registered subscription.</summary>
+    /// <param name="request">The subscription page request.</param>
+    /// <returns>The receive page result.</returns>
+    internal ServerReceivePageResult OfferReceivePage(ServerSubscriptionPageRequest request)
+    {
+        ServerSubscriptionJournalOperations.ValidatePageRequest(request);
+        var observedUtc = _options.TimeProvider.GetUtcNow();
+        lock (_gate)
+        {
+            return OfferReceivePageUnderGate(request, observedUtc);
+        }
+    }
+
+    /// <summary>Durably acknowledges a previously offered complete receive position.</summary>
+    /// <param name="request">The acknowledgement request.</param>
+    /// <returns>The persisted subscription state after acknowledgement.</returns>
+    internal ServerSubscriptionState Acknowledge(ServerSubscriptionAcknowledgementRequest request)
+    {
+        ServerSubscriptionJournalOperations.ValidateAcknowledgementRequest(request);
+        var observedUtc = _options.TimeProvider.GetUtcNow();
+        lock (_gate)
+        {
+            return AcknowledgeUnderGate(request, observedUtc);
+        }
+    }
+
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     ServerCommitSnapshot IServerCommitJournal.Read(ServerStreamKey streamKey, IReadOnlyList<ServerOperationKey> operationKeys) =>
@@ -144,6 +213,21 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     ServerReceivePageResult IServerReceiveJournal.ReadReceivePage(ServerReceivePageRequest request) => ReadReceivePage(request);
+
+    /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    ServerSubscriptionState IServerSubscriptionAcknowledgementJournal.RegisterSubscription(ServerSubscriptionIdentity identity) =>
+        RegisterSubscription(identity);
+
+    /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    ServerReceivePageResult IServerSubscriptionAcknowledgementJournal.OfferReceivePage(ServerSubscriptionPageRequest request) =>
+        OfferReceivePage(request);
+
+    /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    ServerSubscriptionState IServerSubscriptionAcknowledgementJournal.Acknowledge(ServerSubscriptionAcknowledgementRequest request) =>
+        Acknowledge(request);
 
     /// <summary>Compacts expired terminal ledger entries and event rows using the journal clock.</summary>
     /// <returns>The number of terminal entries removed.</returns>
@@ -161,6 +245,7 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
             var compactUtc = ServerCommitJournalOperations.Max(_latestUtc, sampledUtc);
             var expired = GetExpiredRows(compactUtc);
             ApplyExpired(expired);
+            CompactSubscriptions(compactUtc);
             _latestUtc = compactUtc;
             return expired.LedgerRows.Count;
         }
@@ -184,6 +269,348 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
         }
 
         stream.LastCursorBytes = commit.LastCursorBytes;
+    }
+
+    /// <summary>Rejects an identity that attempts to reuse another binding's subscription id.</summary>
+    /// <param name="identity">The supplied identity.</param>
+    /// <param name="record">The retained record.</param>
+    /// <exception cref="InvalidOperationException">The subscription belongs to another identity.</exception>
+    private static void ThrowIfIdentityMismatch(ServerSubscriptionIdentity identity, ServerSubscriptionRecord record)
+    {
+        if (ServerSubscriptionJournalOperations.IdentityMatches(identity, record))
+        {
+            return;
+        }
+
+        throw new InvalidOperationException("The subscription identifier is already bound to another trusted identity.");
+    }
+
+    /// <summary>Rejects a page that would move a subscription behind its durable acknowledgement.</summary>
+    /// <param name="record">The subscription record.</param>
+    /// <param name="nextGroupSequence">The offered page sequence.</param>
+    /// <exception cref="InvalidOperationException">The offered page would rewind the subscription.</exception>
+    private static void ThrowIfPageRewindsAcknowledgement(ServerSubscriptionRecord record, long nextGroupSequence)
+    {
+        if (nextGroupSequence > record.AcknowledgedGroupSequence)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException("The offered receive page would rewind the subscription acknowledgement.");
+    }
+
+    /// <summary>Registers a subscription while the journal gate is held.</summary>
+    /// <param name="identity">The identity.</param>
+    /// <param name="observedUtc">The caller-independent timestamp sampled before the gate.</param>
+    /// <returns>The subscription state.</returns>
+    /// <exception cref="InvalidOperationException">The subscription identity conflicts with retained state.</exception>
+    /// <exception cref="QueueCapacityExceededException">The subscription storage is full.</exception>
+    private ServerSubscriptionState RegisterSubscriptionUnderGate(ServerSubscriptionIdentity identity, DateTimeOffset observedUtc)
+    {
+        var updatedUtc = ServerCommitJournalOperations.Max(_latestUtc, observedUtc);
+        if (_subscriptions.TryGetValue(identity.SubscriptionId, out var existing))
+        {
+            ThrowIfIdentityMismatch(identity, existing);
+            existing.UpdatedAtUtc = updatedUtc;
+            existing.LastTouchedUtc = updatedUtc;
+            _latestUtc = updatedUtc;
+            return ServerSubscriptionJournalOperations.CreateState(existing);
+        }
+
+        var logicalBytes = ServerSubscriptionJournalOperations.GetSubscriptionBytes(identity);
+        if (!HasSubscriptionCapacity(1, 0, logicalBytes))
+        {
+            CompactSubscriptions(updatedUtc);
+            if (!HasSubscriptionCapacity(1, 0, logicalBytes))
+            {
+                throw new QueueCapacityExceededException("The server subscription acknowledgement journal is full.", canFitWhenEmpty: false);
+            }
+        }
+
+        var record = new ServerSubscriptionRecord(identity, updatedUtc, logicalBytes);
+        _subscriptions.Add(identity.SubscriptionId, record);
+        _logicalBytes = ServerCommitJournalSizer.AddLogicalBytes(_logicalBytes, logicalBytes);
+        _latestUtc = updatedUtc;
+        return ServerSubscriptionJournalOperations.CreateState(record);
+    }
+
+    /// <summary>Offers a receive page while the journal gate is held.</summary>
+    /// <param name="request">The request.</param>
+    /// <param name="observedUtc">The caller-independent timestamp sampled before the gate.</param>
+    /// <returns>The receive page.</returns>
+    private ServerReceivePageResult OfferReceivePageUnderGate(ServerSubscriptionPageRequest request, DateTimeOffset observedUtc)
+    {
+        var record = ReadRegisteredSubscription(request.Identity);
+        _ = _streams.TryGetValue(request.Identity.StreamKey, out var stream);
+        var result = ServerReceivePageOperations.Create(ServerSubscriptionJournalOperations.CreateReceiveRequest(request), stream);
+        if (result.Batch is null)
+        {
+            return result;
+        }
+
+        ThrowIfPageRewindsAcknowledgement(record, result.NextGroupSequence);
+        AddOffer(record, result.Batch.NextCursor, result.NextGroupSequence, observedUtc);
+        return result;
+    }
+
+    /// <summary>Acknowledges a cursor while the journal gate is held.</summary>
+    /// <param name="request">The request.</param>
+    /// <param name="observedUtc">The caller-independent timestamp sampled before the gate.</param>
+    /// <returns>The subscription state.</returns>
+    /// <exception cref="InvalidOperationException">The acknowledgement is not valid for the subscription.</exception>
+    private ServerSubscriptionState AcknowledgeUnderGate(ServerSubscriptionAcknowledgementRequest request, DateTimeOffset observedUtc)
+    {
+        var record = ReadRegisteredSubscription(new(request.StreamKey, request.ClientId, request.Acknowledgement.SubscriptionId));
+        var cursor = request.Acknowledgement.Cursor;
+        if (string.Equals(record.AcknowledgedCursor, cursor, StringComparison.Ordinal))
+        {
+            var duplicateUtc = ServerCommitJournalOperations.Max(_latestUtc, observedUtc);
+            record.UpdatedAtUtc = duplicateUtc;
+            record.LastTouchedUtc = duplicateUtc;
+            _latestUtc = duplicateUtc;
+            return ServerSubscriptionJournalOperations.CreateState(record);
+        }
+
+        if (!record.Offers.TryGetValue(cursor, out var offer))
+        {
+            throw new InvalidOperationException("The acknowledgement cursor was not offered to this subscription.");
+        }
+
+        var acknowledgedUtc = ServerCommitJournalOperations.Max(_latestUtc, observedUtc);
+        ApplySubscriptionBytesDelta(record, ServerSubscriptionJournalOperations.GetSubscriptionCursorDelta(record.AcknowledgedCursor, offer.Cursor));
+        record.AcknowledgedCursor = offer.Cursor;
+        record.AcknowledgedGroupSequence = offer.GroupSequence;
+        record.AcknowledgedAtUtc = acknowledgedUtc;
+        record.UpdatedAtUtc = acknowledgedUtc;
+        record.LastTouchedUtc = acknowledgedUtc;
+        PruneAcknowledgedOffers(record);
+        _latestUtc = acknowledgedUtc;
+        return ServerSubscriptionJournalOperations.CreateState(record);
+    }
+
+    /// <summary>Reads a registered subscription and validates its binding.</summary>
+    /// <param name="identity">The trusted identity.</param>
+    /// <returns>The retained record.</returns>
+    /// <exception cref="InvalidOperationException">The subscription is missing or bound to another identity.</exception>
+    private ServerSubscriptionRecord ReadRegisteredSubscription(ServerSubscriptionIdentity identity)
+    {
+        if (_subscriptions.TryGetValue(identity.SubscriptionId, out var record))
+        {
+            ThrowIfIdentityMismatch(identity, record);
+            return record;
+        }
+
+        throw new InvalidOperationException("The subscription is not registered.");
+    }
+
+    /// <summary>Adds or refreshes an offered cursor.</summary>
+    /// <param name="record">The subscription record.</param>
+    /// <param name="cursor">The offered cursor.</param>
+    /// <param name="groupSequence">The offered group sequence.</param>
+    /// <param name="observedUtc">The caller-independent timestamp sampled before the gate.</param>
+    /// <exception cref="QueueCapacityExceededException">The offer storage is full.</exception>
+    private void AddOffer(ServerSubscriptionRecord record, string cursor, long groupSequence, DateTimeOffset observedUtc)
+    {
+        var offeredUtc = ServerCommitJournalOperations.Max(_latestUtc, observedUtc);
+        var latestDelta = groupSequence > record.LatestOfferedGroupSequence
+            ? ServerSubscriptionJournalOperations.GetSubscriptionCursorDelta(record.LatestOfferedCursor, cursor)
+            : 0;
+        if (record.Offers.TryGetValue(cursor, out var existing))
+        {
+            record.Offers[cursor] = existing with { OfferedAtUtc = offeredUtc };
+            ApplyLatestOffer(record, cursor, groupSequence);
+            record.UpdatedAtUtc = offeredUtc;
+            record.LastTouchedUtc = offeredUtc;
+            _latestUtc = offeredUtc;
+            return;
+        }
+
+        var logicalBytes = ServerSubscriptionJournalOperations.GetOfferBytes(cursor);
+        var addedLogicalBytes = ServerCommitJournalSizer.AddLogicalBytes(logicalBytes, latestDelta);
+        if (!HasSubscriptionCapacity(0, 1, addedLogicalBytes))
+        {
+            CompactSubscriptionOffers(record, offeredUtc);
+            if (!HasSubscriptionCapacity(0, 1, addedLogicalBytes))
+            {
+                throw new QueueCapacityExceededException("The server subscription acknowledgement offer journal is full.", canFitWhenEmpty: false);
+            }
+        }
+
+        record.Offers.Add(cursor, new(cursor, groupSequence, offeredUtc, logicalBytes));
+        ApplyLatestOffer(record, cursor, groupSequence);
+        record.UpdatedAtUtc = offeredUtc;
+        record.LastTouchedUtc = offeredUtc;
+        _subscriptionOfferCount++;
+        _logicalBytes = ServerCommitJournalSizer.AddLogicalBytes(_logicalBytes, logicalBytes);
+        _latestUtc = offeredUtc;
+    }
+
+    /// <summary>Removes acknowledged and expired offered cursors.</summary>
+    /// <param name="utcNow">The compaction timestamp.</param>
+    private void CompactSubscriptions(DateTimeOffset utcNow)
+    {
+        List<SubscriptionId> staleSubscriptions = [];
+        foreach (var pair in _subscriptions)
+        {
+            CompactSubscriptionOffers(pair.Value, utcNow);
+            if (ShouldRemoveSubscription(pair.Value, utcNow))
+            {
+                staleSubscriptions.Add(pair.Key);
+            }
+        }
+
+        RemoveSubscriptions(staleSubscriptions);
+    }
+
+    /// <summary>Applies monotonic latest-offer state to a subscription row.</summary>
+    /// <param name="record">The subscription record.</param>
+    /// <param name="cursor">The offered cursor.</param>
+    /// <param name="groupSequence">The offered group sequence.</param>
+    private void ApplyLatestOffer(ServerSubscriptionRecord record, string cursor, long groupSequence)
+    {
+        if (groupSequence <= record.LatestOfferedGroupSequence)
+        {
+            return;
+        }
+
+        ApplySubscriptionBytesDelta(record, ServerSubscriptionJournalOperations.GetSubscriptionCursorDelta(record.LatestOfferedCursor, cursor));
+        record.LatestOfferedCursor = cursor;
+        record.LatestOfferedGroupSequence = groupSequence;
+    }
+
+    /// <summary>Removes acknowledged and expired offered cursors for one subscription.</summary>
+    /// <param name="record">The subscription record.</param>
+    /// <param name="utcNow">The compaction timestamp.</param>
+    private void CompactSubscriptionOffers(ServerSubscriptionRecord record, DateTimeOffset utcNow)
+    {
+        List<string> remove = [];
+        foreach (var pair in record.Offers)
+        {
+            if (ShouldRemoveOffer(pair.Value, utcNow))
+            {
+                remove.Add(pair.Key);
+            }
+        }
+
+        RemoveOffers(record, remove);
+    }
+
+    /// <summary>Removes offers already covered by the acknowledged cursor.</summary>
+    /// <param name="record">The subscription record.</param>
+    private void PruneAcknowledgedOffers(ServerSubscriptionRecord record)
+    {
+        List<string> remove = [];
+        foreach (var pair in record.Offers)
+        {
+            if (pair.Value.GroupSequence <= record.AcknowledgedGroupSequence)
+            {
+                remove.Add(pair.Key);
+            }
+        }
+
+        RemoveOffers(record, remove);
+    }
+
+    /// <summary>Removes retained offer rows and logical bytes.</summary>
+    /// <param name="record">The subscription record.</param>
+    /// <param name="remove">The cursors to remove.</param>
+    private void RemoveOffers(ServerSubscriptionRecord record, List<string> remove)
+    {
+        for (var index = 0; index < remove.Count; index++)
+        {
+            if (!record.Offers.TryGetValue(remove[index], out var offer))
+            {
+                continue;
+            }
+
+            _ = record.Offers.Remove(remove[index]);
+            _subscriptionOfferCount--;
+            _logicalBytes = ServerCommitJournalSizer.AddLogicalBytes(_logicalBytes, -offer.LogicalBytes);
+        }
+    }
+
+    /// <summary>Removes stale subscription rows and their retained bytes.</summary>
+    /// <param name="remove">The subscription identifiers to remove.</param>
+    private void RemoveSubscriptions(List<SubscriptionId> remove)
+    {
+        for (var index = 0; index < remove.Count; index++)
+        {
+            if (!_subscriptions.TryGetValue(remove[index], out var record))
+            {
+                continue;
+            }
+
+            _ = _subscriptions.Remove(remove[index]);
+            _logicalBytes = ServerCommitJournalSizer.AddLogicalBytes(_logicalBytes, -record.LogicalBytes);
+        }
+    }
+
+    /// <summary>Applies subscription-row byte changes to global accounting.</summary>
+    /// <param name="record">The subscription record.</param>
+    /// <param name="delta">The logical byte delta.</param>
+    private void ApplySubscriptionBytesDelta(ServerSubscriptionRecord record, long delta)
+    {
+        record.LogicalBytes = ServerCommitJournalSizer.AddLogicalBytes(record.LogicalBytes, delta);
+        _logicalBytes = ServerCommitJournalSizer.AddLogicalBytes(_logicalBytes, delta);
+    }
+
+    /// <summary>Checks whether an offer is eligible for removal.</summary>
+    /// <param name="offer">The offer.</param>
+    /// <param name="utcNow">The compaction timestamp.</param>
+    /// <returns>Whether the offer can be removed.</returns>
+    private bool ShouldRemoveOffer(ServerSubscriptionOffer offer, DateTimeOffset utcNow) =>
+        offer.OfferedAtUtc < GetExpiryBoundary(utcNow);
+
+    /// <summary>Checks whether a subscription row exceeded its binding retention horizon.</summary>
+    /// <param name="record">The subscription record.</param>
+    /// <param name="utcNow">The compaction timestamp.</param>
+    /// <returns>Whether the subscription row can be removed.</returns>
+    private bool ShouldRemoveSubscription(ServerSubscriptionRecord record, DateTimeOffset utcNow) =>
+        record.LastTouchedUtc < GetSubscriptionExpiryBoundary(utcNow);
+
+    /// <summary>Gets the oldest retained timestamp allowed at a compaction instant.</summary>
+    /// <param name="utcNow">The compaction timestamp.</param>
+    /// <returns>The timestamp before which rows expire.</returns>
+    private DateTimeOffset GetExpiryBoundary(DateTimeOffset utcNow)
+    {
+        try
+        {
+            return utcNow.Subtract(_options.OperationRetention);
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            return DateTimeOffset.MinValue;
+        }
+    }
+
+    /// <summary>Gets the oldest subscription binding timestamp allowed at a compaction instant.</summary>
+    /// <param name="utcNow">The compaction timestamp.</param>
+    /// <returns>The timestamp before which subscription bindings expire.</returns>
+    private DateTimeOffset GetSubscriptionExpiryBoundary(DateTimeOffset utcNow)
+    {
+        try
+        {
+            return utcNow.Subtract(_options.SubscriptionRetention);
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            return DateTimeOffset.MinValue;
+        }
+    }
+
+    /// <summary>Checks whether subscription acknowledgement storage has capacity.</summary>
+    /// <param name="addedSubscriptions">The subscriptions to add.</param>
+    /// <param name="addedOffers">The offers to add.</param>
+    /// <param name="addedLogicalBytes">The logical bytes to add.</param>
+    /// <returns>Whether capacity remains.</returns>
+    private bool HasSubscriptionCapacity(int addedSubscriptions, int addedOffers, long addedLogicalBytes)
+    {
+        var subscriptionCount = checked((long)_subscriptions.Count + addedSubscriptions);
+        var offerCount = checked((long)_subscriptionOfferCount + addedOffers);
+        var logicalBytes = checked(_logicalBytes + addedLogicalBytes);
+        return subscriptionCount <= _options.MaximumSubscriptions
+            && offerCount <= _options.MaximumSubscriptionOffers
+            && logicalBytes <= _options.MaximumLogicalBytes;
     }
 
     /// <summary>Performs the gated compare-and-swap commit.</summary>
@@ -286,7 +713,9 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
         var ledgerCount = checked((long)_ledgerEntryCount + commit.Entries.Length - (expired?.LedgerRows.Count ?? 0));
         var eventCount = checked((long)_eventCount + commit.EventCount - (expired?.EventRows.Count ?? 0));
         var logicalBytes = checked(_logicalBytes + commit.LedgerBytes + stateDelta + streamDelta + lastCursorDelta - (expired?.LogicalBytes ?? 0));
-        return HasCountCapacity(streamCount, ledgerCount, eventCount) && logicalBytes <= _options.MaximumLogicalBytes;
+        return HasCountCapacity(streamCount, ledgerCount, eventCount)
+            && HasSubscriptionCountCapacity()
+            && logicalBytes <= _options.MaximumLogicalBytes;
     }
 
     /// <summary>Checks retained count capacity.</summary>
@@ -298,6 +727,11 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
         streamCount <= _options.MaximumStreams
         && ledgerCount <= _options.MaximumLedgerEntries
         && eventCount <= _options.MaximumEvents;
+
+    /// <summary>Checks subscription acknowledgement count capacity.</summary>
+    /// <returns>Whether subscription count capacity remains.</returns>
+    private bool HasSubscriptionCountCapacity() =>
+        _subscriptions.Count <= _options.MaximumSubscriptions;
 
     /// <summary>Collects expired rows without mutating journal state.</summary>
     /// <param name="utcNow">The compaction timestamp.</param>

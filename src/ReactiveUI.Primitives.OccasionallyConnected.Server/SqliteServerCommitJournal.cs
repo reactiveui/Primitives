@@ -14,10 +14,19 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Server;
 /// Authenticated tenant and client identifiers are trusted inputs from the host. This journal does not perform
 /// authorization, network coordination or capability advertisement.
 /// </remarks>
-internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, IServerReceiveJournal, IDisposable
+internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, IServerReceiveJournal, IServerSubscriptionAcknowledgementJournal, IDisposable
 {
     /// <summary>The current durable schema version.</summary>
-    private const int CurrentSchemaVersion = 2;
+    private const int CurrentSchemaVersion = 3;
+
+    /// <summary>The previous durable schema version.</summary>
+    private const int SchemaVersionTwo = 2;
+
+    /// <summary>The original durable schema version.</summary>
+    private const int SchemaVersionOne = 1;
+
+    /// <summary>The SQL statement that stamps schema version two during migration.</summary>
+    private const string SetSchemaVersionTwoSql = "PRAGMA user_version = 2;";
 
     /// <summary>The metadata key for the schema version.</summary>
     private const string SchemaVersionKey = "schema_version";
@@ -46,6 +55,12 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
     /// <summary>The SQLite event metadata table.</summary>
     private const string EventMetadataTableName = "oc_server_journal_event_metadata";
 
+    /// <summary>The SQLite subscription acknowledgement table.</summary>
+    private const string SubscriptionsTableName = "oc_server_journal_subscriptions";
+
+    /// <summary>The SQLite subscription offer table.</summary>
+    private const string SubscriptionOffersTableName = "oc_server_journal_subscription_offers";
+
     /// <summary>The invalid schema exception message.</summary>
     private const string InvalidSchemaMessage = "The SQLite server journal schema is invalid.";
 
@@ -54,6 +69,9 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
 
     /// <summary>The invalid logical byte count exception message.</summary>
     private const string InvalidLogicalBytesMessage = "The SQLite server journal logical bytes are invalid.";
+
+    /// <summary>The unsupported metadata schema version message.</summary>
+    private const string UnsupportedMetadataSchemaVersionMessage = "The SQLite server journal metadata schema version is not supported.";
 
     /// <summary>The event sequence SQL parameter name.</summary>
     private const string EventSequenceParameterName = "$eventSequence";
@@ -189,6 +207,37 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
                 ON DELETE CASCADE);
         """;
 
+    /// <summary>The SQL definition for the subscription acknowledgement table.</summary>
+    private const string SubscriptionsTableSql = """
+        CREATE TABLE oc_server_journal_subscriptions (
+            subscription_id TEXT NOT NULL PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            stream_id TEXT NOT NULL,
+            client_id TEXT NOT NULL,
+            acknowledged_cursor TEXT NULL,
+            acknowledged_group_sequence INTEGER NOT NULL,
+            latest_offered_cursor TEXT NULL,
+            latest_offered_group_sequence INTEGER NOT NULL,
+            acknowledged_at_utc TEXT NULL,
+            updated_at_utc TEXT NOT NULL,
+            last_touched_utc TEXT NOT NULL,
+            logical_bytes INTEGER NOT NULL);
+        """;
+
+    /// <summary>The SQL definition for the subscription offer table.</summary>
+    private const string SubscriptionOffersTableSql = """
+        CREATE TABLE oc_server_journal_subscription_offers (
+            subscription_id TEXT NOT NULL,
+            cursor TEXT NOT NULL,
+            group_sequence INTEGER NOT NULL,
+            offered_at_utc TEXT NOT NULL,
+            logical_bytes INTEGER NOT NULL,
+            PRIMARY KEY (subscription_id, cursor),
+            FOREIGN KEY (subscription_id)
+                REFERENCES oc_server_journal_subscriptions (subscription_id)
+                ON DELETE CASCADE);
+        """;
+
     /// <summary>The canonical strict string encoding used for schema normalization.</summary>
     private static readonly Encoding TextEncoding = new UTF8Encoding(false, true);
 
@@ -224,6 +273,12 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
 
     /// <summary>Gets the current retained event count.</summary>
     internal int EventCount => ReadMetrics().EventCount;
+
+    /// <summary>Gets the current retained subscription count.</summary>
+    internal int SubscriptionCount => ReadMetrics().SubscriptionCount;
+
+    /// <summary>Gets the current retained subscription offer count.</summary>
+    internal int SubscriptionOfferCount => ReadMetrics().SubscriptionOfferCount;
 
     /// <summary>Gets the retained logical encoded byte count.</summary>
     internal long LogicalBytes => ReadMetrics().LogicalBytes;
@@ -325,6 +380,71 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
         return result;
     }
 
+    /// <summary>Registers or reads a trusted subscription binding.</summary>
+    /// <param name="identity">The subscription identity.</param>
+    /// <returns>The persisted subscription state.</returns>
+    internal ServerSubscriptionState RegisterSubscription(ServerSubscriptionIdentity identity)
+    {
+        ThrowIfDisposed();
+        ServerSubscriptionJournalOperations.ValidateIdentity(identity);
+        var observedUtc = _options.TimeProvider.GetUtcNow();
+        using var connection = OpenConnection();
+        using var transaction = connection.BeginTransaction(IsolationLevel.Serializable, deferred: false);
+        ValidateExistingSchema(connection, transaction);
+        ValidateReadCapacity(connection, transaction);
+        var updatedUtc = ServerCommitJournalOperations.Max(ReadLatestUtc(connection, transaction), observedUtc);
+        var state = RegisterSubscription(connection, transaction, identity, updatedUtc, _options);
+        WriteLatestUtc(connection, transaction, updatedUtc);
+        transaction.Commit();
+        return state;
+    }
+
+    /// <summary>Reads and durably offers a bounded page for a registered subscription.</summary>
+    /// <param name="request">The subscription page request.</param>
+    /// <returns>The receive page result.</returns>
+    internal ServerReceivePageResult OfferReceivePage(ServerSubscriptionPageRequest request)
+    {
+        ThrowIfDisposed();
+        ServerSubscriptionJournalOperations.ValidatePageRequest(request);
+        var observedUtc = _options.TimeProvider.GetUtcNow();
+        using var connection = OpenConnection();
+        using var transaction = connection.BeginTransaction(IsolationLevel.Serializable, deferred: false);
+        ValidateExistingSchema(connection, transaction);
+        ValidateReadCapacity(connection, transaction);
+        var record = ReadRegisteredSubscription(connection, transaction, request.Identity);
+        var stream = ReadStreamRecord(connection, transaction, request.Identity.StreamKey);
+        var result = ServerReceivePageOperations.Create(ServerSubscriptionJournalOperations.CreateReceiveRequest(request), stream);
+        if (result.Batch is not null)
+        {
+            ThrowIfPageRewindsAcknowledgement(record, result.NextGroupSequence);
+            var offeredUtc = ServerCommitJournalOperations.Max(ReadLatestUtc(connection, transaction), observedUtc);
+            AddOffer(connection, transaction, record, result.Batch.NextCursor, result.NextGroupSequence, offeredUtc, _options);
+            WriteLatestUtc(connection, transaction, offeredUtc);
+        }
+
+        transaction.Commit();
+        return result;
+    }
+
+    /// <summary>Durably acknowledges a previously offered complete receive position.</summary>
+    /// <param name="request">The acknowledgement request.</param>
+    /// <returns>The persisted subscription state after acknowledgement.</returns>
+    internal ServerSubscriptionState Acknowledge(ServerSubscriptionAcknowledgementRequest request)
+    {
+        ThrowIfDisposed();
+        ServerSubscriptionJournalOperations.ValidateAcknowledgementRequest(request);
+        var observedUtc = _options.TimeProvider.GetUtcNow();
+        using var connection = OpenConnection();
+        using var transaction = connection.BeginTransaction(IsolationLevel.Serializable, deferred: false);
+        ValidateExistingSchema(connection, transaction);
+        ValidateReadCapacity(connection, transaction);
+        var identity = new ServerSubscriptionIdentity(request.StreamKey, request.ClientId, request.Acknowledgement.SubscriptionId);
+        var record = ReadRegisteredSubscription(connection, transaction, identity);
+        var state = Acknowledge(connection, transaction, record, request.Acknowledgement.Cursor, observedUtc);
+        transaction.Commit();
+        return state;
+    }
+
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     ServerCommitSnapshot IServerCommitJournal.Read(ServerStreamKey streamKey, IReadOnlyList<ServerOperationKey> operationKeys) =>
@@ -337,6 +457,21 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     ServerReceivePageResult IServerReceiveJournal.ReadReceivePage(ServerReceivePageRequest request) => ReadReceivePage(request);
+
+    /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    ServerSubscriptionState IServerSubscriptionAcknowledgementJournal.RegisterSubscription(ServerSubscriptionIdentity identity) =>
+        RegisterSubscription(identity);
+
+    /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    ServerReceivePageResult IServerSubscriptionAcknowledgementJournal.OfferReceivePage(ServerSubscriptionPageRequest request) =>
+        OfferReceivePage(request);
+
+    /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    ServerSubscriptionState IServerSubscriptionAcknowledgementJournal.Acknowledge(ServerSubscriptionAcknowledgementRequest request) =>
+        Acknowledge(request);
 
     /// <summary>Compacts expired terminal ledger entries and event rows using the journal clock.</summary>
     /// <returns>The number of terminal entries removed.</returns>
@@ -355,6 +490,7 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
         ValidateExistingSchema(connection, transaction);
         var compactUtc = ServerCommitJournalOperations.Max(ReadLatestUtc(connection, transaction), sampledUtc);
         var removed = DeleteExpired(connection, transaction, compactUtc);
+        DeleteExpiredSubscriptions(connection, transaction, compactUtc, _options);
         WriteLatestUtc(connection, transaction, compactUtc);
         transaction.Commit();
         return removed;
@@ -380,7 +516,9 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
         var ledgerCount = checked((long)metrics.LedgerEntryCount + commit.Entries.Length - (expired?.LedgerEntryCount ?? 0));
         var eventCount = checked((long)metrics.EventCount + commit.EventCount - (expired?.EventCount ?? 0));
         var logicalBytes = checked(metrics.LogicalBytes + commit.LedgerBytes + stateDelta + streamDelta + lastCursorDelta - (expired?.LogicalBytes ?? 0));
-        return HasCountCapacity(streamCount, ledgerCount, eventCount) && logicalBytes <= _options.MaximumLogicalBytes;
+        return HasCountCapacity(streamCount, ledgerCount, eventCount)
+            && HasSubscriptionCountCapacity(metrics)
+            && logicalBytes <= _options.MaximumLogicalBytes;
     }
 
     /// <summary>Rejects retained data exceeding this instance's bounds before reconstructing replay payloads.</summary>
@@ -390,7 +528,9 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
     private void ValidateReadCapacity(SqliteConnection connection, SqliteTransaction transaction)
     {
         var metrics = ReadMetrics(connection, transaction);
-        if (HasCountCapacity(metrics.StreamCount, metrics.LedgerEntryCount, metrics.EventCount) && metrics.LogicalBytes <= _options.MaximumLogicalBytes)
+        if (HasCountCapacity(metrics.StreamCount, metrics.LedgerEntryCount, metrics.EventCount)
+            && HasSubscriptionCountCapacity(metrics)
+            && metrics.LogicalBytes <= _options.MaximumLogicalBytes)
         {
             return;
         }
@@ -408,6 +548,13 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
         && ledgerCount <= _options.MaximumLedgerEntries
         && eventCount <= _options.MaximumEvents;
 
+    /// <summary>Checks subscription acknowledgement count capacity.</summary>
+    /// <param name="metrics">The retained metrics.</param>
+    /// <returns>Whether subscription count capacity remains.</returns>
+    private bool HasSubscriptionCountCapacity(RetainedMetrics metrics) =>
+        metrics.SubscriptionCount <= _options.MaximumSubscriptions
+        && metrics.SubscriptionOfferCount <= _options.MaximumSubscriptionOffers;
+
     /// <summary>Initializes or validates the durable schema.</summary>
     private void InitializeSchema()
     {
@@ -419,9 +566,14 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
         {
             CreateSchema(connection, transaction);
         }
-        else if (userVersion == 1)
+        else if (userVersion == SchemaVersionOne)
         {
             MigrateSchemaOneToTwo(connection, transaction);
+            MigrateSchemaTwoToThree(connection, transaction);
+        }
+        else if (userVersion == SchemaVersionTwo)
+        {
+            MigrateSchemaTwoToThree(connection, transaction);
         }
         else
         {
@@ -495,6 +647,12 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
 
         /// <summary>Gets or sets the event count.</summary>
         internal int EventCount { get; set; }
+
+        /// <summary>Gets or sets the subscription count.</summary>
+        internal int SubscriptionCount { get; set; }
+
+        /// <summary>Gets or sets the subscription offer count.</summary>
+        internal int SubscriptionOfferCount { get; set; }
 
         /// <summary>Gets or sets the retained logical bytes.</summary>
         internal long LogicalBytes { get; set; }

@@ -32,8 +32,17 @@ internal sealed class ServerCommitJournalOptions
     /// <summary>The default captured event count per terminal entry.</summary>
     private const int DefaultMaximumEntryEventCount = 512;
 
+    /// <summary>The default retained subscription count.</summary>
+    private const int DefaultMaximumSubscriptions = 1024;
+
+    /// <summary>The default retained offered cursor count.</summary>
+    private const int DefaultMaximumSubscriptionOffers = 8192;
+
     /// <summary>The default terminal operation retention in minutes.</summary>
     private const int DefaultOperationRetentionMinutes = 5;
+
+    /// <summary>The default subscription binding retention in minutes.</summary>
+    private const int DefaultSubscriptionRetentionMinutes = 30;
 
     /// <summary>Gets the maximum retained stream count.</summary>
     internal int MaximumStreams { get; init; } = DefaultMaximumStreams;
@@ -53,8 +62,17 @@ internal sealed class ServerCommitJournalOptions
     /// <summary>Gets the maximum events accepted inside one terminal ledger entry.</summary>
     internal int MaximumEntryEventCount { get; init; } = DefaultMaximumEntryEventCount;
 
+    /// <summary>Gets the maximum retained subscription acknowledgement rows.</summary>
+    internal int MaximumSubscriptions { get; init; } = DefaultMaximumSubscriptions;
+
+    /// <summary>Gets the maximum retained subscription offer rows.</summary>
+    internal int MaximumSubscriptionOffers { get; init; } = DefaultMaximumSubscriptionOffers;
+
     /// <summary>Gets the finite terminal operation retention interval.</summary>
     internal TimeSpan OperationRetention { get; init; } = TimeSpan.FromMinutes(DefaultOperationRetentionMinutes);
+
+    /// <summary>Gets the finite subscription binding retention interval.</summary>
+    internal TimeSpan SubscriptionRetention { get; init; } = TimeSpan.FromMinutes(DefaultSubscriptionRetentionMinutes);
 
     /// <summary>Gets the clock used for commit and explicit compaction decisions.</summary>
     internal TimeProvider TimeProvider { get; init; } = TimeProvider.System;
@@ -71,12 +89,25 @@ internal sealed class ServerCommitJournalOptions
         ThrowIfNegativeOrZero(MaximumLogicalBytes, nameof(MaximumLogicalBytes));
         ArgumentOutOfRangeExceptionHelper.ThrowIfNegativeOrZero(MaximumOperationCaptureCount);
         ArgumentOutOfRangeExceptionHelper.ThrowIfNegativeOrZero(MaximumEntryEventCount);
-        if (OperationRetention > TimeSpan.Zero && OperationRetention != TimeSpan.MaxValue)
+        ArgumentOutOfRangeExceptionHelper.ThrowIfNegativeOrZero(MaximumSubscriptions);
+        ArgumentOutOfRangeExceptionHelper.ThrowIfNegativeOrZero(MaximumSubscriptionOffers);
+        ThrowIfInvalidRetention(OperationRetention, nameof(OperationRetention), "Operation retention must be positive and finite.");
+        ThrowIfInvalidRetention(SubscriptionRetention, nameof(SubscriptionRetention), "Subscription retention must be positive and finite.");
+    }
+
+    /// <summary>Throws when a retention interval is not positive and finite.</summary>
+    /// <param name="retention">The retention interval.</param>
+    /// <param name="parameterName">The source parameter name.</param>
+    /// <param name="message">The exception message.</param>
+    /// <exception cref="ArgumentOutOfRangeException">The retention interval is not positive or finite.</exception>
+    private static void ThrowIfInvalidRetention(TimeSpan retention, string parameterName, string message)
+    {
+        if (retention > TimeSpan.Zero && retention != TimeSpan.MaxValue)
         {
             return;
         }
 
-        throw new ArgumentOutOfRangeException(nameof(OperationRetention), OperationRetention, "Operation retention must be positive and finite.");
+        throw new ArgumentOutOfRangeException(parameterName, retention, message);
     }
 
     /// <summary>Throws when a long value is not positive.</summary>

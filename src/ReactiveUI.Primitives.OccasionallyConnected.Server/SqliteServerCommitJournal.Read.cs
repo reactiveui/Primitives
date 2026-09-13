@@ -450,8 +450,55 @@ internal sealed partial class SqliteServerCommitJournal
             }
         }
 
+        AddSubscriptionMetrics(connection, transaction, metrics);
+        AddSubscriptionOfferMetrics(connection, transaction, metrics);
+
         metrics.EventCount = ReadEventCount(connection, transaction);
         return metrics;
+    }
+
+    /// <summary>Adds subscription row accounting to retained metrics.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="metrics">The metrics to update.</param>
+    private static void AddSubscriptionMetrics(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        RetainedMetrics metrics)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "SELECT logical_bytes FROM oc_server_journal_subscriptions;";
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            metrics.SubscriptionCount++;
+            metrics.LogicalBytes = ServerCommitJournalSizer.AddLogicalBytes(
+                metrics.LogicalBytes,
+                ReadNonNegativeLong(reader, 0, "The SQLite server subscription logical bytes are invalid."));
+        }
+    }
+
+    /// <summary>Adds offered cursor accounting to retained metrics.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="metrics">The metrics to update.</param>
+    private static void AddSubscriptionOfferMetrics(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        RetainedMetrics metrics)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "SELECT logical_bytes FROM oc_server_journal_subscription_offers;";
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            metrics.SubscriptionOfferCount++;
+            metrics.LogicalBytes = ServerCommitJournalSizer.AddLogicalBytes(
+                metrics.LogicalBytes,
+                ReadNonNegativeLong(reader, 0, "The SQLite server subscription offer logical bytes are invalid."));
+        }
     }
 
     /// <summary>Reads projected expired metrics.</summary>
