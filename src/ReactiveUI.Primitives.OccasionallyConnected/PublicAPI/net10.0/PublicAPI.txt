@@ -47,6 +47,29 @@ public sealed class JsonPayloadSerializer : ReactiveUI.Primitives.OccasionallyCo
     public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope> SerializeAsync<T>(string contractId, int schemaVersion, T value, System.Threading.CancellationToken cancellationToken) { }
     public static string ComputePayloadHash(System.ReadOnlySpan<byte> payload) { }
 }
+[System.Diagnostics.DebuggerDisplay("Loopback; Capabilities={Capabilities,nq}")]
+public sealed class LoopbackTransportAdapter : ReactiveUI.Primitives.OccasionallyConnected.IRemoteTransportAdapter
+{
+    public LoopbackTransportAdapter(ReactiveUI.Primitives.OccasionallyConnected.LoopbackTransportAdapterOptions options) { }
+    public ReactiveUI.Primitives.OccasionallyConnected.RemoteTransportCapabilities Capabilities { get; }
+    public System.Threading.Tasks.ValueTask<ReactiveUI.Primitives.OccasionallyConnected.IRemoteTransportSession> ConnectAsync(ReactiveUI.Primitives.OccasionallyConnected.TransportConnectRequest request, System.Threading.CancellationToken cancellationToken) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public System.Threading.Tasks.ValueTask DisposeAsync() { }
+}
+[System.Diagnostics.DebuggerDisplay("Loopback; Client={Client,nq}; Features={PeerCapabilities.Features,nq}")]
+public record LoopbackTransportAdapterOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.LoopbackTransportAdapterOptions>
+{
+    public required ReactiveUI.Primitives.OccasionallyConnected.ClientIdentity Client { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.IServerStreamHub Hub { get; init; }
+    public int MaximumConcurrentAcknowledgements { get; init; }
+    public int MaximumCompletedOperations { get; init; }
+    public int MaximumConcurrentRequests { get; init; }
+    public int MaximumConcurrentSubscriptions { get; init; }
+    public int MaximumMetadataEntries { get; init; }
+    public int MaximumReceiveEvents { get; init; }
+    public int MaximumStringBytes { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.NegotiatedCapabilities PeerCapabilities { get; init; }
+}
 public static class OccasionallyConnectedExtensions
 {
     extension(ReactiveUI.Primitives.OccasionallyConnected.ISyncEngine engine)
