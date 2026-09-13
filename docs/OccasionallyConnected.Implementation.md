@@ -1023,3 +1023,26 @@ disposal, plus integration of test adapters with the current dead-letter contrac
 target (4955/4884/4884/4862 lines; 2172/2172/2172/2178 branches). All eight Runtime Release targets compile without
 warnings or errors. Evidence: upload-integration worktree, artifacts/root-upload-verified and root-upload-all8-build.log.
 The engine must still compose this coordinator with scheduling, retry persistence, and receive processing.
+
+### Stage 6: bounded CRDT client contracts and projection
+
+Core now exposes complete CRDT state and mutation contracts for G-counter, PN-counter, observed-remove sets, and
+last-writer-wins registers. A deterministic binary codec validates closed variants, causal identity uniqueness,
+UTF-8 bounds, numeric overflow, and write provenance before encoding or accepting decoded state. Collection copies
+capture caller counts once and enforce finite ownership ceilings before allocation. Counter updates contain absolute
+actor components; a later update can include a previously rejected increment. These are state-based counters, not
+independent delta commands. OR-set identities use authenticated client ID and durable operation sequence; retaining
+the same writable identity after losing its sequence store is unsupported. V1 retains bounded tombstones without GC.
+
+The Runtime serializer uses a closed CRDT content type and stable schema failures. It checks payload size before
+hashing, and malformed binary, invalid timestamps, and overflow are eligible for the normal quarantine path. The
+projection preserves one state type for optimistic and authoritative checkpoints and rejects remote family changes.
+SQLite committer tests verify authoritative recovery and pending replay through the normal local commit pipeline.
+
+Root review added behavioral regressions for ambiguous input variants, foreign mutation metadata, duplicate causal
+identities, invalid write identities, bounded actor validation, malformed envelopes, and remote family changes.
+Independent combined verification passed 409 Core and 866 Runtime tests per modern target, with matching MTP 100%
+line and branch coverage on all four targets. Core has 1717 lines and 690 branches; Runtime has
+5024/4953/4953/4931 lines and 2214/2214/2214/2220 branches. Core and Runtime compile across all eight Release targets
+without warnings or errors. Evidence: crdt-integration worktree, artifacts/root-crdt-accepted and
+root-crdt-accepted-all8-build.log. Server CRDT composition and complete application integration remain required.

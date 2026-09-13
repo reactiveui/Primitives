@@ -1120,3 +1120,151 @@ public record VersionRange : System.IEquatable<ReactiveUI.Primitives.Occasionall
     public System.Version Maximum { get; init; }
     public System.Version Minimum { get; init; }
 }
+namespace Crdt
+{
+[System.Diagnostics.DebuggerDisplay("Components = {MaximumCounterComponents}, EncodedBytes = {MaximumEncodedBytes}")]
+public record CrdtBounds : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds>
+{
+    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds Default { get; }
+    public int MaximumClientIdUtf8Bytes { get; init; }
+    public int MaximumCounterComponents { get; init; }
+    public int MaximumDotBindings { get; init; }
+    public int MaximumElementBytes { get; init; }
+    public int MaximumElements { get; init; }
+    public int MaximumEncodedBytes { get; init; }
+    public int MaximumRegisterBytes { get; init; }
+    public int MaximumTombstones { get; init; }
+    public void Validate() { }
+}
+public static class CrdtCodec
+{
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput DecodeInput(System.ReadOnlyMemory<byte> payload) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput DecodeInput(System.ReadOnlyMemory<byte> payload, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds bounds) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState DecodeState(System.ReadOnlyMemory<byte> payload) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState DecodeState(System.ReadOnlyMemory<byte> payload, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds bounds) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static byte[] EncodeInput(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput input) { }
+    public static byte[] EncodeInput(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput input, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds bounds) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static byte[] EncodeState(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state) { }
+    public static byte[] EncodeState(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds bounds) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static void ValidateInput(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput input) { }
+    public static void ValidateInput(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput input, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds bounds) { }
+}
+public static class CrdtContracts
+{
+    public static string InputContractId { get; }
+    public static int SchemaVersion { get; }
+    public static string StateContractId { get; }
+}
+[System.Diagnostics.DebuggerDisplay("{ClientId,nq}:{ClientSequence}")]
+public record CrdtDot : System.IComparable, System.IComparable<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtDot>, System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtDot>
+{
+    public required string ClientId { get; init; }
+    public required long ClientSequence { get; init; }
+    public int CompareTo(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtDot? other) { }
+    public int CompareTo(object? obj) { }
+}
+[System.Diagnostics.DebuggerDisplay("{Dot,nq} Bytes = {ElementLength}")]
+public record CrdtDotElement : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtDotElement>
+{
+    public required ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtDot Dot { get; init; }
+    public System.ReadOnlyMemory<byte> Element { get; init; }
+    public int ElementLength { get; }
+}
+public static class CrdtFunctions
+{
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState ApplyLocal(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput input, string authenticatedClientId, long clientSequence) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState ApplyLocal(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput input, string authenticatedClientId, long clientSequence, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds bounds) { }
+    public static int CompareWriteStamps(ReactiveUI.Primitives.OccasionallyConnected.ConflictWriteStamp? left, ReactiveUI.Primitives.OccasionallyConnected.ConflictWriteStamp? right) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState Empty(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtKind kind) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtValue GetValue(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState Merge(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState left, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState right) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState Merge(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState left, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState right, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds bounds) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState ReplaceAuthoritativeState(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState ReplaceAuthoritativeState(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds bounds) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static void ValidateState(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state) { }
+    public static void ValidateState(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state, ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtBounds bounds) { }
+}
+[System.Diagnostics.DebuggerDisplay("{Kind,nq}")]
+public record CrdtInput : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput>
+{
+    public required ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInputKind Kind { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtMutation? Mutation { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState? State { get; init; }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput ForAuthoritativeState(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState state) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtInput ForMutation(ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtMutation mutation) { }
+}
+public enum CrdtInputKind
+{
+    None = 0,
+    Mutation = 1,
+    AuthoritativeState = 2,
+}
+public enum CrdtKind
+{
+    None = 0,
+    GCounter = 1,
+    PNCounter = 2,
+    ORSet = 3,
+    LwwRegister = 4,
+}
+[System.Diagnostics.DebuggerDisplay("{Kind,nq} {ActorId,nq}")]
+public record CrdtMutation : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtMutation>
+{
+    public string? ActorId { get; init; }
+    public int ByteLength { get; }
+    public System.ReadOnlyMemory<byte> Bytes { get; init; }
+    public long GCounterComponent { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtMutationKind Kind { get; init; }
+    public System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtDot> ObservedDots { get; init; }
+    public long PNCounterNegativeComponent { get; init; }
+    public long PNCounterPositiveComponent { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.ConflictWriteStamp? RegisterStamp { get; init; }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtMutation GCounterSet(string actorId, long component) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtMutation LwwRegisterSet(System.ReadOnlyMemory<byte> value) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtMutation LwwRegisterSet(System.ReadOnlyMemory<byte> value, ReactiveUI.Primitives.OccasionallyConnected.ConflictWriteStamp? stamp) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtMutation ORSetAdd(System.ReadOnlyMemory<byte> element) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtMutation ORSetRemove(System.ReadOnlyMemory<byte> element, System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtDot> observedDots) { }
+    public static ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtMutation PNCounterSet(string actorId, long positiveComponent, long negativeComponent) { }
+}
+public enum CrdtMutationKind
+{
+    None = 0,
+    GCounterSet = 1,
+    PNCounterSet = 2,
+    ORSetAdd = 3,
+    ORSetRemove = 4,
+    LwwRegisterSet = 5,
+}
+[System.Diagnostics.DebuggerDisplay("{Kind,nq} Value = {Value}")]
+public record CrdtState : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtState>
+{
+    public System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtDotElement> DotBindings { get; init; }
+    public System.Collections.Generic.IReadOnlyDictionary<string, long> GCounterComponents { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtKind Kind { get; init; }
+    public System.Collections.Generic.IReadOnlyDictionary<string, long> PNCounterNegativeComponents { get; init; }
+    public System.Collections.Generic.IReadOnlyDictionary<string, long> PNCounterPositiveComponents { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.ConflictWriteStamp? RegisterStamp { get; init; }
+    public System.ReadOnlyMemory<byte> RegisterValue { get; init; }
+    public int RegisterValueLength { get; }
+    public System.Collections.Generic.IReadOnlyList<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtDotElement> Tombstones { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtValue Value { get; }
+}
+[System.Diagnostics.DebuggerDisplay("{Kind,nq} Counter = {Counter}")]
+public record CrdtValue : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtValue>
+{
+    public System.ReadOnlyMemory<byte> Bytes { get; init; }
+    public long Counter { get; init; }
+    public System.Collections.Generic.IReadOnlyList<System.ReadOnlyMemory<byte>> Elements { get; init; }
+    public required ReactiveUI.Primitives.OccasionallyConnected.Crdt.CrdtKind Kind { get; init; }
+}
+}
