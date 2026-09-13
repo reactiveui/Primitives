@@ -956,3 +956,17 @@ code, then passed 375 Core, 727 Runtime and 325 SQLite tests on each modern targ
 coverage for each matching package on every target; all eight targets of all three libraries build with zero warnings
 or errors. Evidence: dead-letter-integration worktree, artifacts/root-dead-letter. Engine classification and scheduling
 of eligible local failures remain required integration work.
+
+### Stage 6: server conflict and domain composition
+
+The server now provides owned, bounded stream registrations, initial-state and version factories, domain materializers,
+and a last-writer-wins resolver. The internal processor adapter invokes the selected resolver for every operation,
+preserves rejected server versions, rejects foreign decisions and durable effects on rejection, and converts event
+proposals into server-stamped events. Merge and custom policies do not bypass their resolver when base versions match.
+
+Root reviewed the draft and reproduced an additional provenance defect: a candidate could use a different operation's
+server write stamp. The resolver now requires both client and operation identity to match before accepting provenance.
+Combined acknowledgement/conflict verification passed 268 Server tests per modern target with MTP-confirmed 100% line
+and branch coverage (3135/3127/3127/3124 lines, 997 branches each), plus all eight Release library targets without
+warnings or errors. Evidence: conflict-handler worktree, artifacts/root-conflict-integrated. CRDT resolver/domain
+adapters and the public server hub remain required integration work.
