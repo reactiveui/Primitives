@@ -787,3 +787,17 @@ Conflict resolution retained the current Core APIs, SQLite registration, impleme
   100% matching line and branch coverage: Core 938 lines/372 branches; runtime 2911/2874/2874/2868 lines/1420 branches;
   SQLite 3073/3057/3057/3059 lines/775 branches. All eight affected library targets build without warnings or errors.
 - Engine orchestration, terminal local failure handling and complete application integration remain subsequent work.
+### Stage 3: bounded loopback reference transport
+
+- Added a public loopback transport that forwards an explicitly bound client identity to a caller-owned server hub.
+  Request and subscription admission is finite; acknowledgement capacity remains available when data slots are full.
+- Receive validation binds each batch to the requested stream and checks cursor continuity before exposing the same
+  validated batch instance. Redelivery at the current cursor remains a duplicate candidate for durable inbox validation;
+  it cannot rewind the transport cursor or bypass the store's checks for previously applied effects.
+- Subscription shutdown cancels active work, disposes paused upstream enumerators and releases admission even when a
+  cancellation callback or upstream disposal fails. Terminal moves close their admission lane before cleanup starts.
+- Root independently reviewed the hardening draft and added an executed lost-ACK redelivery regression before fixing
+  cursor admission. Continuous and resumed subscriptions both preserve the next valid cursor chain.
+- All 635 runtime TUnit tests pass in Release on net8/net9/net10/net11. MTP confirms 100% matching line and branch
+  coverage (3412/3368/3368/3360 lines and 1634/1634/1634/1638 branches). All eight runtime targets build cleanly.
+- The adapter does not own the supplied hub or implement its durable authorization, subscription or acknowledgement store.
