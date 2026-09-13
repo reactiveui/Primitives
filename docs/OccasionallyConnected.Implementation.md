@@ -840,3 +840,18 @@ branch coverage on each target (1902/1898/1898/1897 lines; 617 branches each). T
 passed with zero warnings and errors. Reports are in the isolated server-processing-review worktree under
 artifacts/root-processor. Root removed a test null-forgiving operator and split the large fixture before verification.
 The public server hub, complete replay paging and durable receive acknowledgement integration remain outstanding.
+
+### Stage 5: caller-preserving serialized local commits
+
+The internal serialized gateway validates the supplied stream, sequence, policy, envelope and metadata before applying
+the decoded input to an isolated projection state. It commits through the existing atomic local workflow, preserving
+the caller's operation identifier, sequence, timestamp, type, base version, metadata and exact payload. It neither
+allocates a replacement identity nor serializes the input again. Failures before commit leave the observed state intact;
+a known committed receipt remains available when cancellation arrives after the store transaction.
+
+Root reviewed the source and behavioral tests, then verified the combined branch: 696 runtime tests passed separately
+on net8.0, net9.0, net10.0 and net11.0. MTP confirms 100% line and branch coverage for the runtime on every target
+(3575/3531/3531/3524 lines; 1736/1736/1736/1740 branches). All eight runtime library targets build in Release with zero
+warnings and errors. Evidence is under artifacts/root-serialized in the serialized-commit worktree. Tests include real
+SQLite close/reopen, caller envelope preservation, stale sequences, duplicate identifiers, mutable projection isolation,
+cancellation, overlapping calls and malformed store receipts. Public engine routing remains integration work.
