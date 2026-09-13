@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Server;
 /// Authenticated tenant and client identifiers are trusted inputs from the host. This journal does not perform
 /// authorization, durability, cross-process coordination or capability advertisement.
 /// </remarks>
-internal sealed class InMemoryServerCommitJournal : IServerCommitJournal
+internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServerReceiveJournal
 {
     /// <summary>Protects stream state and retained journal accounting.</summary>
     private readonly Lock _gate = new();
@@ -105,11 +105,6 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal
         }
     }
 
-    /// <inheritdoc/>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    ServerCommitSnapshot IServerCommitJournal.Read(ServerStreamKey streamKey, IReadOnlyList<ServerOperationKey> operationKeys) =>
-        Read(streamKey, operationKeys);
-
     /// <summary>Attempts to atomically admit a fully prepared terminal server commit.</summary>
     /// <param name="plan">The prepared commit plan.</param>
     /// <returns>The result and atomic stream snapshot observed by the attempt.</returns>
@@ -124,9 +119,31 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal
         }
     }
 
+    /// <summary>Reads a bounded page of complete operation groups for receive subscribers.</summary>
+    /// <param name="request">The receive page request.</param>
+    /// <returns>The receive page result.</returns>
+    internal ServerReceivePageResult ReadReceivePage(ServerReceivePageRequest request)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(request);
+        lock (_gate)
+        {
+            _ = _streams.TryGetValue(request.StreamKey, out var stream);
+            return ServerReceivePageOperations.Create(request, stream);
+        }
+    }
+
+    /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    ServerCommitSnapshot IServerCommitJournal.Read(ServerStreamKey streamKey, IReadOnlyList<ServerOperationKey> operationKeys) =>
+        Read(streamKey, operationKeys);
+
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     ServerCommitResult IServerCommitJournal.TryCommit(ServerCommitPlan plan) => TryCommit(plan);
+
+    /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    ServerReceivePageResult IServerReceiveJournal.ReadReceivePage(ServerReceivePageRequest request) => ReadReceivePage(request);
 
     /// <summary>Compacts expired terminal ledger entries and event rows using the journal clock.</summary>
     /// <returns>The number of terminal entries removed.</returns>
@@ -318,6 +335,11 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal
     {
         var stream = _streams[ledgerRow.StreamKey];
         _ = stream.Ledger.Remove(ledgerRow.Entry.OperationKey);
+        if (ledgerRow.GroupSequence.HasValue)
+        {
+            _ = stream.Groups.Remove(ledgerRow);
+        }
+
         _ledgerEntryCount--;
         _logicalBytes = ServerCommitJournalSizer.AddLogicalBytes(_logicalBytes, -ledgerRow.LogicalBytes);
     }

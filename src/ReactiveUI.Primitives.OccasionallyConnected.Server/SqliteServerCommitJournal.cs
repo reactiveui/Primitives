@@ -14,10 +14,10 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Server;
 /// Authenticated tenant and client identifiers are trusted inputs from the host. This journal does not perform
 /// authorization, network coordination or capability advertisement.
 /// </remarks>
-internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, IDisposable
+internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, IServerReceiveJournal, IDisposable
 {
     /// <summary>The current durable schema version.</summary>
-    private const int CurrentSchemaVersion = 1;
+    private const int CurrentSchemaVersion = 2;
 
     /// <summary>The metadata key for the schema version.</summary>
     private const string SchemaVersionKey = "schema_version";
@@ -101,6 +101,8 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
             last_event_sequence INTEGER NOT NULL,
             state_bytes INTEGER NOT NULL,
             last_cursor_bytes INTEGER NOT NULL,
+            last_group_sequence INTEGER NOT NULL,
+            receive_history_incomplete INTEGER NOT NULL,
             PRIMARY KEY (tenant_id, stream_id));
         """;
 
@@ -118,6 +120,7 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
             committed_at_utc TEXT NOT NULL,
             expires_at_utc TEXT NOT NULL,
             logical_bytes INTEGER NOT NULL,
+            group_sequence INTEGER NULL,
             PRIMARY KEY (tenant_id, stream_id, client_id, operation_id),
             FOREIGN KEY (tenant_id, stream_id)
                 REFERENCES oc_server_journal_streams (tenant_id, stream_id)
@@ -247,11 +250,6 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
         return snapshot;
     }
 
-    /// <inheritdoc/>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    ServerCommitSnapshot IServerCommitJournal.Read(ServerStreamKey streamKey, IReadOnlyList<ServerOperationKey> operationKeys) =>
-        Read(streamKey, operationKeys);
-
     /// <summary>Attempts to atomically admit a fully prepared terminal server commit.</summary>
     /// <param name="plan">The prepared commit plan.</param>
     /// <returns>The result and atomic stream snapshot observed by the attempt.</returns>
@@ -310,9 +308,35 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
         return new(ServerCommitStatus.Committed, committedSnapshot);
     }
 
+    /// <summary>Reads a bounded page of complete operation groups for receive subscribers.</summary>
+    /// <param name="request">The receive page request.</param>
+    /// <returns>The receive page result.</returns>
+    internal ServerReceivePageResult ReadReceivePage(ServerReceivePageRequest request)
+    {
+        ThrowIfDisposed();
+        ArgumentExceptionHelper.ThrowIfNull(request);
+        using var connection = OpenConnection();
+        using var transaction = connection.BeginTransaction(IsolationLevel.Serializable, deferred: true);
+        ValidateExistingSchema(connection, transaction);
+        ValidateReadCapacity(connection, transaction);
+        var stream = ReadStreamRecord(connection, transaction, request.StreamKey);
+        var result = ServerReceivePageOperations.Create(request, stream);
+        transaction.Commit();
+        return result;
+    }
+
+    /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    ServerCommitSnapshot IServerCommitJournal.Read(ServerStreamKey streamKey, IReadOnlyList<ServerOperationKey> operationKeys) =>
+        Read(streamKey, operationKeys);
+
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     ServerCommitResult IServerCommitJournal.TryCommit(ServerCommitPlan plan) => TryCommit(plan);
+
+    /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    ServerReceivePageResult IServerReceiveJournal.ReadReceivePage(ServerReceivePageRequest request) => ReadReceivePage(request);
 
     /// <summary>Compacts expired terminal ledger entries and event rows using the journal clock.</summary>
     /// <returns>The number of terminal entries removed.</returns>
@@ -394,6 +418,10 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
         if (userVersion == 0 && !HasUserTables(connection, transaction))
         {
             CreateSchema(connection, transaction);
+        }
+        else if (userVersion == 1)
+        {
+            MigrateSchemaOneToTwo(connection, transaction);
         }
         else
         {
