@@ -166,12 +166,13 @@ public sealed partial class HttpServerEndpoint
             return string.Empty;
         }
 
-        if (Uri.TryCreate(pathBase, UriKind.Absolute, out _))
+        var relative = NormalizeRelativePath(pathBase);
+        if (Uri.TryCreate(relative, UriKind.Absolute, out _))
         {
             throw new ArgumentException("HTTP server endpoint path base must not be absolute.", nameof(pathBase));
         }
 
-        return NormalizeRelativePath(pathBase);
+        return relative;
     }
 
     /// <summary>Normalizes a route by trimming separators.</summary>

@@ -92,7 +92,9 @@ public sealed class SqliteLocalStoreAdapter : ILocalStoreAdapter, ILocalPayloadQ
         _workerCapacity = options.WorkerCapacity;
         SqliteLocalCommitValidation.ThrowIfBlank(databasePath, nameof(databasePath), "The SQLite database path cannot be empty.");
         SqliteLocalCommitValidation.ThrowIfUnsupportedPath(databasePath);
-        _databasePath = Path.GetFullPath(databasePath);
+        _databasePath = databasePath.StartsWith(@"\\", StringComparison.Ordinal) || databasePath.StartsWith("//", StringComparison.Ordinal)
+            ? databasePath
+            : Path.GetFullPath(databasePath);
         _store = new(_databasePath, options.TimeProvider, options.WorkerCapacityBytes);
         _worker = new(options.WorkerCapacity, options.WorkerCapacityBytes);
     }

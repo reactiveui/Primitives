@@ -72,13 +72,13 @@ internal sealed class SqliteSingleWriterOwnership : IDisposable
     /// <exception cref="NotSupportedException">The path root is a known unsupported network location.</exception>
     private static void ThrowIfUnsupportedRoot(string databasePath)
     {
-        var root = Path.GetPathRoot(databasePath);
-        ArgumentExceptionHelper.ThrowIfNull(root);
-        if (root.StartsWith(@"\\", StringComparison.Ordinal) || root.StartsWith("//", StringComparison.Ordinal))
+        if (databasePath.StartsWith(@"\\", StringComparison.Ordinal) || databasePath.StartsWith("//", StringComparison.Ordinal))
         {
             throw new NotSupportedException("SQLite single-writer ownership is not supported for UNC database paths.");
         }
 
+        var root = Path.GetPathRoot(databasePath);
+        ArgumentExceptionHelper.ThrowIfNull(root);
         var drive = new DriveInfo(root);
         ThrowIfUnsupportedDriveType(drive.DriveType);
     }

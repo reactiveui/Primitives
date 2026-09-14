@@ -601,10 +601,15 @@ public sealed partial class SqliteLocalStoreAdapterTests
         /// <returns>The temporary database helper.</returns>
         public static TempDatabase Create()
         {
-            var directory = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "rxui-oc-sqlite-adapter", Guid.NewGuid().ToString("N"));
+            var directory = System.IO.Path.Combine(GetTemporaryDirectory(), "rxui-oc-sqlite-adapter", Guid.NewGuid().ToString("N"));
             _ = System.IO.Directory.CreateDirectory(directory);
             return new(directory);
         }
+
+        /// <summary>Gets a physical temporary directory without operating-system directory aliases.</summary>
+        /// <returns>The temporary directory with existing parent links resolved.</returns>
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static string GetTemporaryDirectory() => ResolveDirectory(new(System.IO.Path.GetTempPath()));
 
         /// <inheritdoc/>
         public void Dispose()
@@ -615,6 +620,20 @@ public sealed partial class SqliteLocalStoreAdapterTests
             }
 
             System.IO.Directory.Delete(_directory, true);
+        }
+
+        /// <summary>Resolves existing directory aliases before a test creates its database.</summary>
+        /// <param name="directory">The directory whose parents may contain an operating-system alias.</param>
+        /// <returns>The physical directory path.</returns>
+        private static string ResolveDirectory(DirectoryInfo directory)
+        {
+            if (directory.Parent is not { } parent)
+            {
+                return directory.FullName;
+            }
+
+            var resolved = new DirectoryInfo(System.IO.Path.Combine(ResolveDirectory(parent), directory.Name));
+            return resolved.ResolveLinkTarget(returnFinalTarget: true)?.FullName ?? resolved.FullName;
         }
     }
 

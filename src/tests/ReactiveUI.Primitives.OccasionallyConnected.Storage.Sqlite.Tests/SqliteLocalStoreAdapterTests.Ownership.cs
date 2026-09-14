@@ -98,8 +98,8 @@ public sealed partial class SqliteLocalStoreAdapterTests
     [Test]
     public async Task WhenCurrentDirectoryChangesBeforeInitialize_ThenAdapterUsesConstructionPath()
     {
-        var signalPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), OwnershipTempRootName, $"{Guid.NewGuid():N}.signal");
-        _ = Directory.CreateDirectory(System.IO.Path.GetDirectoryName(signalPath) ?? System.IO.Path.GetTempPath());
+        var signalPath = System.IO.Path.Combine(TempDatabase.GetTemporaryDirectory(), OwnershipTempRootName, $"{Guid.NewGuid():N}.signal");
+        _ = Directory.CreateDirectory(System.IO.Path.GetDirectoryName(signalPath) ?? TempDatabase.GetTemporaryDirectory());
         using var child = StartCurrentDirectoryChild(signalPath);
         var standardOutput = child.StandardOutput.ReadToEndAsync();
         var standardError = child.StandardError.ReadToEndAsync();
@@ -142,7 +142,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
         }
 
         var originalDirectory = Environment.CurrentDirectory;
-        var root = System.IO.Path.Combine(System.IO.Path.GetTempPath(), OwnershipTempRootName, Guid.NewGuid().ToString("N"));
+        var root = System.IO.Path.Combine(TempDatabase.GetTemporaryDirectory(), OwnershipTempRootName, Guid.NewGuid().ToString("N"));
         var constructionDirectory = System.IO.Path.Combine(root, "construction");
         var initializationDirectory = System.IO.Path.Combine(root, "initialization");
         _ = Directory.CreateDirectory(constructionDirectory);
@@ -176,11 +176,14 @@ public sealed partial class SqliteLocalStoreAdapterTests
     }
 
     /// <summary>Verifies UNC database paths are rejected before ownership claims a writer.</summary>
+    /// <param name="databasePath">The UNC-style database path.</param>
     /// <returns>A task that represents the asynchronous test.</returns>
     [Test]
-    public async Task WhenUncDatabasePathInitializes_ThenOwnershipRejectsIt()
+    [Arguments(@"\\rxui-invalid-host\share\local.db")]
+    [Arguments("//rxui-invalid-host/share/local.db")]
+    public async Task WhenUncDatabasePathInitializes_ThenOwnershipRejectsIt(string databasePath)
     {
-        await using var adapter = CreateAdapter(@"\\rxui-invalid-host\share\local.db");
+        await using var adapter = CreateAdapter(databasePath);
         Func<Task> initialize = () => adapter.InitializeAsync(new(StoreIdentity, SchemaVersion, false), CancellationToken.None).AsTask();
 
         var exception = await Assert.ThrowsExactlyAsync<NotSupportedException>(initialize);
@@ -203,7 +206,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
     [Test]
     public async Task WhenDatabaseParentDoesNotExist_ThenOwnershipCreatesIt()
     {
-        var root = System.IO.Path.Combine(System.IO.Path.GetTempPath(), OwnershipTempRootName, Guid.NewGuid().ToString("N"));
+        var root = System.IO.Path.Combine(TempDatabase.GetTemporaryDirectory(), OwnershipTempRootName, Guid.NewGuid().ToString("N"));
         var databasePath = System.IO.Path.Combine(root, "missing", RelativeDatabaseFileName);
         try
         {
@@ -259,7 +262,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
     [Test]
     public async Task WhenDatabaseParentIsReparsePoint_ThenOwnershipRejectsIt()
     {
-        var root = System.IO.Path.Combine(System.IO.Path.GetTempPath(), OwnershipTempRootName, Guid.NewGuid().ToString("N"));
+        var root = System.IO.Path.Combine(TempDatabase.GetTemporaryDirectory(), OwnershipTempRootName, Guid.NewGuid().ToString("N"));
         var targetDirectory = System.IO.Path.Combine(root, "target");
         var linkDirectory = System.IO.Path.Combine(root, "link");
         _ = Directory.CreateDirectory(targetDirectory);
@@ -288,7 +291,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
     [Test]
     public async Task WhenDatabaseFileIsReparsePoint_ThenOwnershipRejectsIt()
     {
-        var root = System.IO.Path.Combine(System.IO.Path.GetTempPath(), OwnershipTempRootName, Guid.NewGuid().ToString("N"));
+        var root = System.IO.Path.Combine(TempDatabase.GetTemporaryDirectory(), OwnershipTempRootName, Guid.NewGuid().ToString("N"));
         var targetDatabase = System.IO.Path.Combine(root, "target.db");
         var linkDatabase = System.IO.Path.Combine(root, RelativeDatabaseFileName);
         _ = Directory.CreateDirectory(root);
