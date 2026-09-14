@@ -207,11 +207,14 @@ public sealed partial class HttpServerEndpointTests
     }
 
     /// <summary>Verifies route bases must remain local to the hosting pipeline.</summary>
+    /// <param name="pathBase">The absolute URI that cannot identify a local mount.</param>
     /// <returns>The asynchronous test operation.</returns>
     [Test]
-    public async Task ConstructorRejectsAbsolutePathBase()
+    [Arguments(AbsolutePathBase)]
+    [Arguments("file:///oc")]
+    public async Task ConstructorRejectsAbsolutePathBase(string pathBase)
     {
-        var options = CreateOptions(new RecordingHub()) with { PathBase = AbsolutePathBase };
+        var options = CreateOptions(new RecordingHub()) with { PathBase = pathBase };
 
         await Assert.That(() => new HttpServerEndpoint(options)).ThrowsExactly<ArgumentException>();
     }
@@ -227,14 +230,18 @@ public sealed partial class HttpServerEndpointTests
     }
 
     /// <summary>Verifies construction accepts normalized mounted routes and exposes the declared capabilities.</summary>
+    /// <param name="pathBase">The local route mount, independent of file-system URI rules.</param>
     /// <returns>The asynchronous test operation.</returns>
     [Test]
-    public async Task ConstructorExposesDeclaredCapabilitiesForMountedRoutes()
+    [Arguments(MountedPathBase)]
+    [Arguments("oc")]
+    [Arguments("/oc/")]
+    public async Task ConstructorExposesDeclaredCapabilitiesForMountedRoutes(string pathBase)
     {
         var capabilities = CreateCapabilities(RemoteTransportCapabilities.BatchPush | RemoteTransportCapabilities.CursorResume);
         await using var endpoint = new HttpServerEndpoint(CreateOptions(new RecordingHub()) with
         {
-            PathBase = MountedPathBase,
+            PathBase = pathBase,
             DeclaredCapabilities = capabilities,
         });
 
