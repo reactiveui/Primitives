@@ -118,7 +118,7 @@ public sealed partial class LocalStreamCommitterTests
     [Test]
     public async Task CommitSerializedAsyncPersistsCallerEnvelopeAcrossSqliteReopen()
     {
-        var directory = Directory.CreateTempSubdirectory("oc-serialized-commit-");
+        var directory = SqliteTestDirectory.Create("oc-serialized-commit-");
         try
         {
             var databasePath = Path.Combine(directory.FullName, "local.db");
@@ -501,7 +501,7 @@ public sealed partial class LocalStreamCommitterTests
     [Test]
     public async Task CommitSerializedAsyncDuplicateOperationIdRollsBackState()
     {
-        var directory = Directory.CreateTempSubdirectory("oc-serialized-duplicate-");
+        var directory = SqliteTestDirectory.Create("oc-serialized-duplicate-");
         try
         {
             var databasePath = Path.Combine(directory.FullName, "local.db");

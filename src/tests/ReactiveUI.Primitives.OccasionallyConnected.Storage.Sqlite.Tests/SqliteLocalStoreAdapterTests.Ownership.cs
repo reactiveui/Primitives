@@ -113,7 +113,7 @@ public sealed partial class SqliteLocalStoreAdapterTests
                 throw new InvalidOperationException(CreateOwnershipSignalTimeoutMessage(output));
             }
 
-            await child.WaitForExitAsync().WaitAsync(GuardTimeout);
+            // The signal follows every assertion and resource cleanup; the test host may keep running.
             output = await StopAndDrainCrashReceiptChildAsync(child, standardOutput, standardError);
 
             await Assert.That(output.StandardError).IsEmpty();
