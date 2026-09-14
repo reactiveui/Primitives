@@ -767,7 +767,7 @@ public sealed partial class SqliteServerCommitJournalTests
     {
         using var connection = OpenRawConnection(path);
         using var command = connection.CreateCommand();
-        command.CommandText = "PRAGMA user_version = 5;";
+        command.CommandText = "PRAGMA user_version = 6;";
         _ = command.ExecuteNonQuery();
     }
 
@@ -777,7 +777,7 @@ public sealed partial class SqliteServerCommitJournalTests
     {
         using var connection = OpenRawConnection(path);
         using var command = connection.CreateCommand();
-        command.CommandText = "UPDATE oc_server_journal_metadata SET value = '5' WHERE key = 'schema_version';";
+        command.CommandText = "UPDATE oc_server_journal_metadata SET value = '6' WHERE key = 'schema_version';";
         _ = command.ExecuteNonQuery();
     }
 

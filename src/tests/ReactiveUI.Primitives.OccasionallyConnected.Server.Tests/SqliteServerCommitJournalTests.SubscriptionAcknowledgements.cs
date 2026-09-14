@@ -14,7 +14,7 @@ public sealed partial class SqliteServerCommitJournalTests
     private const long SubscriptionCursorTestMaximumLogicalBytes = 12_288;
 
     /// <summary>The migrated schema version expected after opening a schema-two database.</summary>
-    private const long MigratedSchemaVersion = 4;
+    private const long MigratedSchemaVersion = 5;
 
     /// <summary>The first deterministic subscription.</summary>
     private static readonly SubscriptionId FirstSubscription = new(new Guid("20000000-0000-0000-0000-000000000001"));
@@ -691,6 +691,7 @@ public sealed partial class SqliteServerCommitJournalTests
         command.CommandText = """
             DROP TABLE oc_server_journal_subscription_offers;
             DROP TABLE oc_server_journal_subscriptions;
+            DELETE FROM oc_server_journal_metadata WHERE key = 'subscription_generation_high_water';
             UPDATE oc_server_journal_metadata SET value = $metadataVersion WHERE key = 'schema_version';
             PRAGMA user_version = 2;
             """;

@@ -19,13 +19,19 @@ internal static class ServerSubscriptionJournalOperations
     private const long DateTimeOffsetByteCount = 16;
 
     /// <summary>The retained fixed bytes for one subscription row.</summary>
-    private const long SubscriptionFixedBytes = SubscriptionIdByteCount + (DateTimeOffsetByteCount * 3) + (NullableMarkerByteCount * 7) + (sizeof(int) * 2) + (sizeof(long) * 4);
+    private const long SubscriptionFixedBytes = SubscriptionIdByteCount + (DateTimeOffsetByteCount * 3) + (NullableMarkerByteCount * 7) + (sizeof(int) * 2) + (sizeof(long) * 6);
+
+    /// <summary>The retained fixed bytes for one schema-four subscription row.</summary>
+    private const long SchemaFourSubscriptionFixedBytes = SubscriptionIdByteCount + (DateTimeOffsetByteCount * 3) + (NullableMarkerByteCount * 7) + (sizeof(int) * 2) + (sizeof(long) * 4);
 
     /// <summary>The retained fixed bytes for one schema-three subscription row.</summary>
     private const long LegacySubscriptionFixedBytes = SubscriptionIdByteCount + (DateTimeOffsetByteCount * 3) + (NullableMarkerByteCount * 4) + (sizeof(long) * 2);
 
     /// <summary>The retained fixed bytes for one offered cursor row.</summary>
     private const long OfferFixedBytes = SubscriptionIdByteCount + DateTimeOffsetByteCount + sizeof(long);
+
+    /// <summary>The retained fixed bytes for one snapshot offer proof.</summary>
+    private const long SnapshotOfferFixedBytes = (NullableMarkerByteCount * 7) + (sizeof(int) * 2) + (sizeof(long) * 5);
 
     /// <summary>Validates a trusted subscription identity.</summary>
     /// <param name="identity">The identity.</param>
@@ -108,6 +114,34 @@ internal static class ServerSubscriptionJournalOperations
         && string.Equals(left.ClientId, right.ClientId, StringComparison.Ordinal)
         && left.StreamKey == right.StreamKey;
 
+    /// <summary>Gets the next durable subscription generation from the current high-water value.</summary>
+    /// <param name="currentHighWater">The current highest allocated generation.</param>
+    /// <returns>The next generation.</returns>
+    /// <exception cref="InvalidOperationException">The generation allocator overflowed.</exception>
+    internal static long GetNextSubscriptionGeneration(long currentHighWater)
+    {
+        if (currentHighWater == long.MaxValue)
+        {
+            throw new InvalidOperationException("The server subscription generation allocator overflowed.");
+        }
+
+        return currentHighWater + 1;
+    }
+
+    /// <summary>Gets the next durable semantic revision for a subscription.</summary>
+    /// <param name="record">The subscription record.</param>
+    /// <returns>The next revision.</returns>
+    /// <exception cref="InvalidOperationException">The revision allocator overflowed.</exception>
+    internal static long GetNextSubscriptionRevision(ServerSubscriptionRecord record)
+    {
+        if (record.Revision == long.MaxValue)
+        {
+            throw new InvalidOperationException("The server subscription semantic revision overflowed.");
+        }
+
+        return record.Revision + 1;
+    }
+
     /// <summary>Checks whether a registration request matches retained immutable initial position state.</summary>
     /// <param name="request">The supplied request.</param>
     /// <param name="record">The retained record.</param>
@@ -120,13 +154,17 @@ internal static class ServerSubscriptionJournalOperations
     /// <param name="record">The retained subscription record.</param>
     /// <returns>The state snapshot.</returns>
     internal static ServerSubscriptionState CreateState(ServerSubscriptionRecord record) =>
-        new(
-            record.Identity,
-            record.LatestOfferedCursor,
-            record.LatestOfferedGroupSequence,
-            record.AcknowledgedCursor,
-            record.AcknowledgedGroupSequence,
-            record.Offers.Count);
+        new()
+        {
+            Identity = record.Identity,
+            Generation = record.Generation,
+            Revision = record.Revision,
+            LatestOfferedCursor = record.LatestOfferedCursor,
+            LatestOfferedGroupSequence = record.LatestOfferedGroupSequence,
+            AcknowledgedCursor = record.AcknowledgedCursor,
+            AcknowledgedGroupSequence = record.AcknowledgedGroupSequence,
+            OfferCount = record.Offers.Count,
+        };
 
     /// <summary>Calculates retained logical bytes for a subscription binding row.</summary>
     /// <param name="identity">The identity.</param>
@@ -156,7 +194,13 @@ internal static class ServerSubscriptionJournalOperations
     /// <returns>The schema-four logical byte delta for the default beginning position.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static long GetInitialPositionMigrationBytes() =>
-        SubscriptionFixedBytes - LegacySubscriptionFixedBytes + GetStartPositionBytes(StartPosition.FromSequence(0));
+        SchemaFourSubscriptionFixedBytes - LegacySubscriptionFixedBytes + GetStartPositionBytes(StartPosition.FromSequence(0));
+
+    /// <summary>Gets the logical bytes added to schema-four rows during snapshot offer migration.</summary>
+    /// <returns>The schema-five logical byte delta.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static long GetSnapshotOfferMigrationBytes() =>
+        SubscriptionFixedBytes - SchemaFourSubscriptionFixedBytes;
 
     /// <summary>Calculates the retained logical byte delta for a nullable initial anchor cursor column.</summary>
     /// <param name="previous">The previously retained cursor.</param>
@@ -180,6 +224,16 @@ internal static class ServerSubscriptionJournalOperations
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static long GetOfferBytes(string cursor) =>
         ServerCommitJournalSizer.AddLogicalBytes(OfferFixedBytes, ServerCommitJournalGuard.GetTextBytes(cursor));
+
+    /// <summary>Calculates retained logical bytes for one snapshot offer row.</summary>
+    /// <param name="cursor">The cursor.</param>
+    /// <param name="clientState">The retained client state payload.</param>
+    /// <returns>The retained logical byte count.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static long GetSnapshotOfferBytes(string cursor, PayloadEnvelope clientState) =>
+        ServerCommitJournalSizer.AddLogicalBytes(
+            ServerCommitJournalSizer.AddLogicalBytes(GetOfferBytes(cursor), SnapshotOfferFixedBytes),
+            ServerCommitJournalSizer.GetPayloadBytes(clientState));
 
     /// <summary>Creates a receive-page request from a subscription page request.</summary>
     /// <param name="request">The subscription page request.</param>

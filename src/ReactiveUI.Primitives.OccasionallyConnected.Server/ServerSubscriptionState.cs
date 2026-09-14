@@ -5,16 +5,29 @@
 namespace ReactiveUI.Primitives.OccasionallyConnected.Server;
 
 /// <summary>Reports persisted subscription acknowledgement state.</summary>
-/// <param name="Identity">The trusted subscription identity.</param>
-/// <param name="LatestOfferedCursor">The latest offered complete cursor.</param>
-/// <param name="LatestOfferedGroupSequence">The latest offered complete group sequence.</param>
-/// <param name="AcknowledgedCursor">The acknowledged cursor.</param>
-/// <param name="AcknowledgedGroupSequence">The acknowledged complete group sequence.</param>
-/// <param name="OfferCount">The retained offered cursor count.</param>
-internal sealed record ServerSubscriptionState(
-    ServerSubscriptionIdentity Identity,
-    string? LatestOfferedCursor,
-    long LatestOfferedGroupSequence,
-    string? AcknowledgedCursor,
-    long AcknowledgedGroupSequence,
-    int OfferCount);
+internal sealed record ServerSubscriptionState
+{
+    /// <summary>Gets the trusted subscription identity.</summary>
+    internal required ServerSubscriptionIdentity Identity { get; init; }
+
+    /// <summary>Gets the durable generation assigned when this binding was created.</summary>
+    internal required long Generation { get; init; }
+
+    /// <summary>Gets the durable semantic revision for this binding.</summary>
+    internal required long Revision { get; init; }
+
+    /// <summary>Gets the latest offered complete cursor.</summary>
+    internal required string? LatestOfferedCursor { get; init; }
+
+    /// <summary>Gets the latest offered complete group sequence.</summary>
+    internal required long LatestOfferedGroupSequence { get; init; }
+
+    /// <summary>Gets the acknowledged cursor.</summary>
+    internal required string? AcknowledgedCursor { get; init; }
+
+    /// <summary>Gets the acknowledged complete group sequence.</summary>
+    internal required long AcknowledgedGroupSequence { get; init; }
+
+    /// <summary>Gets the retained offered cursor count.</summary>
+    internal required int OfferCount { get; init; }
+}

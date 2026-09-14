@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Server;
 /// Authenticated tenant and client identifiers are trusted inputs from the host. This journal does not perform
 /// authorization, durability, cross-process coordination or capability advertisement.
 /// </remarks>
-internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServerReceiveJournal, IServerSubscriptionAcknowledgementJournal
+internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServerReceiveJournal, IServerSubscriptionAcknowledgementJournal, IServerSnapshotRecoveryJournal
 {
     /// <summary>Protects stream state and retained journal accounting.</summary>
     private readonly Lock _gate = new();
@@ -39,6 +39,9 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
 
     /// <summary>The latest clock value accepted by commit or compaction.</summary>
     private DateTimeOffset _latestUtc = DateTimeOffset.MinValue;
+
+    /// <summary>The highest durable subscription generation allocated.</summary>
+    private long _lastSubscriptionGeneration;
 
     /// <summary>Initializes a new instance of the <see cref="InMemoryServerCommitJournal"/> class.</summary>
     /// <param name="options">The finite journal bounds.</param>
@@ -117,6 +120,61 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
             {
                 return _logicalBytes;
             }
+        }
+    }
+
+    /// <summary>Reads a trusted bounded view used to evaluate a snapshot recovery request.</summary>
+    /// <param name="request">The read request.</param>
+    /// <returns>The retained snapshot-recovery view.</returns>
+    internal ServerSnapshotRecoveryView ReadSnapshotRecoveryView(ServerSnapshotRecoveryReadRequest request)
+    {
+        ServerSnapshotRecoveryJournalOperations.ValidateReadRequest(request);
+        var operationKeys = ServerSnapshotRecoveryJournalOperations.CaptureOperationProofs(request, out var fingerprints);
+        lock (_gate)
+        {
+            _ = _streams.TryGetValue(request.StreamKey, out var stream);
+            var snapshot = ServerCommitJournalOperations.CreateSnapshot(request.StreamKey, stream, operationKeys);
+            ServerSubscriptionState? state = null;
+            ServerSubscriptionOffer? expiredCursorOffer = null;
+            if (_subscriptions.TryGetValue(request.Subscription.SubscriptionId, out var record))
+            {
+                ThrowIfIdentityMismatch(request.Subscription, record);
+                state = ServerSubscriptionJournalOperations.CreateState(record);
+                if (request.RecoveryRequest.ExpiredCursor is not null
+                    && record.Offers.TryGetValue(request.RecoveryRequest.ExpiredCursor, out var offer))
+                {
+                    expiredCursorOffer = offer;
+                }
+            }
+
+            return new()
+            {
+                Snapshot = snapshot,
+                SubscriptionState = state,
+                ExpiredCursorOffer = expiredCursorOffer,
+                RequestedExpiredCursor = request.RecoveryRequest.ExpiredCursor,
+                OperationDispositions = ServerSnapshotRecoveryJournalOperations.CreateOperationDispositions(snapshot, operationKeys, fingerprints),
+                OperationFingerprints = fingerprints,
+            };
+        }
+    }
+
+    /// <summary>Durably offers a recovered snapshot cursor for later authenticated acknowledgement.</summary>
+    /// <param name="request">The offer request.</param>
+    /// <returns>The offer result.</returns>
+    internal ServerSnapshotOfferResult TryOfferSnapshot(ServerSnapshotOfferRequest request)
+    {
+        ServerSnapshotRecoveryJournalOperations.ValidateOfferRequest(request);
+        if (!ServerSnapshotRecoveryJournalOperations.OfferRequestMatchesView(request)
+            || !ServerSnapshotRecoveryJournalOperations.RecoveryResultMatchesView(request.View, request.RecoveryResult))
+        {
+            return CreateSnapshotOfferResult(ServerSnapshotOfferStatus.ValidationRejected, null, null);
+        }
+
+        var observedUtc = _options.TimeProvider.GetUtcNow();
+        lock (_gate)
+        {
+            return TryOfferSnapshotUnderGate(request, observedUtc);
         }
     }
 
@@ -243,6 +301,16 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
     ServerSubscriptionState IServerSubscriptionAcknowledgementJournal.Acknowledge(ServerSubscriptionAcknowledgementRequest request) =>
         Acknowledge(request);
 
+    /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    ServerSnapshotRecoveryView IServerSnapshotRecoveryJournal.ReadSnapshotRecoveryView(ServerSnapshotRecoveryReadRequest request) =>
+        ReadSnapshotRecoveryView(request);
+
+    /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    ServerSnapshotOfferResult IServerSnapshotRecoveryJournal.TryOfferSnapshot(ServerSnapshotOfferRequest request) =>
+        TryOfferSnapshot(request);
+
     /// <summary>Compacts expired terminal ledger entries and event rows using the journal clock.</summary>
     /// <returns>The number of terminal entries removed.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -327,6 +395,238 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
         throw new InvalidOperationException("The offered receive page would rewind the subscription acknowledgement.");
     }
 
+    /// <summary>Creates a snapshot offer result.</summary>
+    /// <param name="status">The offer status.</param>
+    /// <param name="state">The subscription state, or null when unavailable.</param>
+    /// <param name="cursor">The cursor that was offered or replayed.</param>
+    /// <returns>The offer result.</returns>
+    private static ServerSnapshotOfferResult CreateSnapshotOfferResult(
+        ServerSnapshotOfferStatus status,
+        ServerSubscriptionState? state,
+        string? cursor) =>
+        new() { Status = status, SubscriptionState = state, Cursor = cursor };
+
+    /// <summary>Creates operation keys for the captured view proof.</summary>
+    /// <param name="identity">The trusted subscription identity.</param>
+    /// <param name="view">The captured recovery view.</param>
+    /// <returns>The requested operation keys.</returns>
+    private static ServerOperationKey[] CreateOperationKeys(ServerSubscriptionIdentity identity, ServerSnapshotRecoveryView view)
+    {
+        var keys = new ServerOperationKey[view.OperationDispositions.Count];
+        for (var index = 0; index < keys.Length; index++)
+        {
+            keys[index] = new(identity.ClientId, view.OperationDispositions[index].OperationId);
+        }
+
+        return keys;
+    }
+
+    /// <summary>Checks whether the current stream snapshot still matches the captured recovery view.</summary>
+    /// <param name="identity">The trusted subscription identity.</param>
+    /// <param name="view">The captured recovery view.</param>
+    /// <param name="current">The current stream snapshot.</param>
+    /// <returns>Whether the stream has not semantically changed.</returns>
+    private static bool SnapshotMatches(ServerSubscriptionIdentity identity, ServerSnapshotRecoveryView view, ServerCommitSnapshot current) =>
+        view.Snapshot.Revision == current.Revision
+        && view.Snapshot.LastEventSequence == current.LastEventSequence
+        && view.Snapshot.LastGroupSequence == current.LastGroupSequence
+        && string.Equals(view.Snapshot.LastCursor, current.LastCursor, StringComparison.Ordinal)
+        && ServerSnapshotRecoveryJournalOperations.PositiveProofsMatch(identity, view, current);
+
+    /// <summary>Checks whether a recovered checkpoint matches the current durable frontier.</summary>
+    /// <param name="request">The offer request.</param>
+    /// <param name="checkpoint">The already validated recovered snapshot checkpoint.</param>
+    /// <param name="stream">The stream record.</param>
+    /// <returns>Whether the checkpoint is bound to the view frontier.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool CheckpointMatches(
+        ServerSnapshotOfferRequest request,
+        RemoteSnapshotCheckpoint checkpoint,
+        ServerCommitStreamRecord? stream) =>
+        string.Equals(
+            checkpoint.FrontierCursor,
+            ServerSnapshotRecoveryJournalOperations.CreateFrontierCursor(request.StreamKey, stream, request.View.Snapshot),
+            StringComparison.Ordinal);
+
+    /// <summary>Checks whether a retained snapshot offer is an identical replay of this request.</summary>
+    /// <param name="offer">The retained offer.</param>
+    /// <param name="request">The offer request.</param>
+    /// <returns>Whether the proof and payload match.</returns>
+    private static bool SnapshotOfferMatches(ServerSubscriptionOffer offer, ServerSnapshotOfferRequest request)
+    {
+        var viewState = request.View.SubscriptionState;
+        var checkpoint = request.RecoveryResult.Checkpoint;
+        return viewState is not null
+            && checkpoint is not null
+            && viewState.Revision < long.MaxValue
+            && offer.SnapshotStreamRevision == request.View.Snapshot.Revision
+            && offer.SnapshotLastEventSequence == request.View.Snapshot.LastEventSequence
+            && offer.SnapshotSubscriptionGeneration == viewState.Generation
+            && offer.SnapshotOriginatingSubscriptionRevision == viewState.Revision
+            && offer.SnapshotIssuedSubscriptionRevision == viewState.Revision + 1
+            && offer.SnapshotFormatVersion == checkpoint.SnapshotFormatVersion
+            && ServerSnapshotRecoveryJournalOperations.PayloadMatches(offer.SnapshotClientState, checkpoint.ClientState);
+    }
+
+    /// <summary>Allocates the next durable subscription generation.</summary>
+    /// <returns>The generation.</returns>
+    /// <exception cref="InvalidOperationException">The generation allocator overflowed.</exception>
+    private long AllocateSubscriptionGeneration()
+    {
+        var generation = ServerSubscriptionJournalOperations.GetNextSubscriptionGeneration(_lastSubscriptionGeneration);
+        _lastSubscriptionGeneration = generation;
+        return generation;
+    }
+
+    /// <summary>Offers a recovered snapshot cursor while the journal gate is held.</summary>
+    /// <param name="request">The offer request.</param>
+    /// <param name="observedUtc">The caller-independent timestamp sampled before the gate.</param>
+    /// <returns>The durable offer result.</returns>
+    private ServerSnapshotOfferResult TryOfferSnapshotUnderGate(ServerSnapshotOfferRequest request, DateTimeOffset observedUtc)
+    {
+        if (!_subscriptions.TryGetValue(request.Subscription.SubscriptionId, out var record))
+        {
+            return CreateSnapshotOfferResult(ServerSnapshotOfferStatus.MissingSubscription, null, null);
+        }
+
+        return ServerSubscriptionJournalOperations.IdentityMatches(request.Subscription, record)
+            ? TryOfferSnapshotForRecord(request, observedUtc, record)
+            : CreateSnapshotOfferResult(ServerSnapshotOfferStatus.ValidationRejected, null, null);
+    }
+
+    /// <summary>Offers a recovered snapshot cursor for a matching subscription record.</summary>
+    /// <param name="request">The offer request.</param>
+    /// <param name="observedUtc">The caller-independent timestamp sampled before the gate.</param>
+    /// <param name="record">The retained subscription record.</param>
+    /// <returns>The durable offer result.</returns>
+    private ServerSnapshotOfferResult TryOfferSnapshotForRecord(
+        ServerSnapshotOfferRequest request,
+        DateTimeOffset observedUtc,
+        ServerSubscriptionRecord record)
+    {
+        var currentState = ServerSubscriptionJournalOperations.CreateState(record);
+        var viewState = request.View.SubscriptionState;
+        var checkpoint = request.RecoveryResult.Checkpoint;
+        if (viewState is null || checkpoint is null)
+        {
+            return CreateSnapshotOfferResult(ServerSnapshotOfferStatus.ConcurrentChange, currentState, null);
+        }
+
+        if (viewState.Generation != record.Generation || viewState.Identity != record.Identity)
+        {
+            return CreateSnapshotOfferResult(ServerSnapshotOfferStatus.ConcurrentChange, currentState, null);
+        }
+
+        _ = _streams.TryGetValue(request.StreamKey, out var stream);
+        var current = ServerCommitJournalOperations.CreateSnapshot(request.StreamKey, stream, CreateOperationKeys(record.Identity, request.View));
+        if (!SnapshotMatches(record.Identity, request.View, current))
+        {
+            return CreateSnapshotOfferResult(ServerSnapshotOfferStatus.ConcurrentChange, currentState, null);
+        }
+
+        return CheckpointMatches(request, checkpoint, stream)
+            && request.View.Snapshot.LastGroupSequence >= record.AcknowledgedGroupSequence
+            ? TryPersistSnapshotOfferUnderGate(request, observedUtc, record, currentState, viewState, checkpoint)
+            : CreateSnapshotOfferResult(ServerSnapshotOfferStatus.ValidationRejected, currentState, null);
+    }
+
+    /// <summary>Persists a recovered snapshot offer after all durable fences match.</summary>
+    /// <param name="request">The offer request.</param>
+    /// <param name="observedUtc">The caller-independent timestamp sampled before the gate.</param>
+    /// <param name="record">The retained subscription record.</param>
+    /// <param name="currentState">The state captured before mutation.</param>
+    /// <param name="viewState">The subscription state captured in the recovery view.</param>
+    /// <param name="checkpoint">The recovered snapshot checkpoint.</param>
+    /// <returns>The durable offer result.</returns>
+    private ServerSnapshotOfferResult TryPersistSnapshotOfferUnderGate(
+        ServerSnapshotOfferRequest request,
+        DateTimeOffset observedUtc,
+        ServerSubscriptionRecord record,
+        ServerSubscriptionState currentState,
+        ServerSubscriptionState viewState,
+        RemoteSnapshotCheckpoint checkpoint)
+    {
+        var cursor = checkpoint.FrontierCursor;
+        if (record.Offers.TryGetValue(cursor, out var existing)
+            && SnapshotOfferMatches(existing, request)
+            && existing.SnapshotIssuedSubscriptionRevision == record.Revision)
+        {
+            return CreateSnapshotOfferResult(ServerSnapshotOfferStatus.AlreadyOffered, currentState, cursor);
+        }
+
+        if (record.Offers.ContainsKey(cursor) || viewState.Revision != record.Revision)
+        {
+            return CreateSnapshotOfferResult(ServerSnapshotOfferStatus.ConcurrentChange, currentState, null);
+        }
+
+        var issuedRevision = ServerSubscriptionJournalOperations.GetNextSubscriptionRevision(record);
+        var offeredUtc = ServerCommitJournalOperations.Max(_latestUtc, observedUtc);
+        var latestDelta = request.View.Snapshot.LastGroupSequence > record.LatestOfferedGroupSequence
+            ? ServerSubscriptionJournalOperations.GetSubscriptionCursorDelta(record.LatestOfferedCursor, cursor)
+            : 0;
+        var logicalBytes = ServerSubscriptionJournalOperations.GetSnapshotOfferBytes(cursor, checkpoint.ClientState);
+        var addedLogicalBytes = ServerCommitJournalSizer.AddLogicalBytes(logicalBytes, latestDelta);
+        if (!HasSubscriptionCapacity(0, 1, addedLogicalBytes) && !CompactAndCheckOfferCapacity(record, offeredUtc, addedLogicalBytes))
+        {
+            return CreateSnapshotOfferResult(ServerSnapshotOfferStatus.CapacityExceeded, ServerSubscriptionJournalOperations.CreateState(record), null);
+        }
+
+        var addContext = new SnapshotOfferAddContext(
+            request,
+            viewState,
+            checkpoint,
+            cursor,
+            offeredUtc,
+            logicalBytes,
+            issuedRevision);
+        AddSnapshotOffer(record, in addContext);
+        return CreateSnapshotOfferResult(ServerSnapshotOfferStatus.Offered, ServerSubscriptionJournalOperations.CreateState(record), cursor);
+    }
+
+    /// <summary>Compacts expired offers before checking whether the new offer can fit.</summary>
+    /// <param name="record">The retained subscription record.</param>
+    /// <param name="offeredUtc">The offer timestamp.</param>
+    /// <param name="addedLogicalBytes">The logical bytes required by the new offer.</param>
+    /// <returns>Whether the offer can fit after compaction.</returns>
+    private bool CompactAndCheckOfferCapacity(
+        ServerSubscriptionRecord record,
+        DateTimeOffset offeredUtc,
+        long addedLogicalBytes)
+    {
+        CompactSubscriptionOffers(record, offeredUtc);
+        return HasSubscriptionCapacity(0, 1, addedLogicalBytes);
+    }
+
+    /// <summary>Adds a snapshot offer after every durable fence has matched.</summary>
+    /// <param name="record">The retained subscription record.</param>
+    /// <param name="context">The already validated offer insert context.</param>
+    private void AddSnapshotOffer(ServerSubscriptionRecord record, in SnapshotOfferAddContext context)
+    {
+        record.Offers.Add(
+            context.Cursor,
+            new()
+            {
+                Cursor = context.Cursor,
+                GroupSequence = context.Request.View.Snapshot.LastGroupSequence,
+                OfferedAtUtc = context.OfferedAtUtc,
+                LogicalBytes = context.LogicalBytes,
+                SnapshotStreamRevision = context.Request.View.Snapshot.Revision,
+                SnapshotLastEventSequence = context.Request.View.Snapshot.LastEventSequence,
+                SnapshotSubscriptionGeneration = context.ViewState.Generation,
+                SnapshotOriginatingSubscriptionRevision = context.ViewState.Revision,
+                SnapshotIssuedSubscriptionRevision = context.IssuedRevision,
+                SnapshotFormatVersion = context.Checkpoint.SnapshotFormatVersion,
+                SnapshotClientState = context.Checkpoint.ClientState,
+            });
+        ApplyLatestOffer(record, context.Cursor, context.Request.View.Snapshot.LastGroupSequence);
+        record.Revision = context.IssuedRevision;
+        record.UpdatedAtUtc = context.OfferedAtUtc;
+        record.LastTouchedUtc = context.OfferedAtUtc;
+        _subscriptionOfferCount++;
+        _logicalBytes = ServerCommitJournalSizer.AddLogicalBytes(_logicalBytes, context.LogicalBytes);
+        _latestUtc = context.OfferedAtUtc;
+    }
+
     /// <summary>Registers a subscription while the journal gate is held.</summary>
     /// <param name="request">The registration request.</param>
     /// <param name="observedUtc">The caller-independent timestamp sampled before the gate.</param>
@@ -359,6 +659,7 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
 
         var record = new ServerSubscriptionRecord(request.Identity, updatedUtc, logicalBytes)
         {
+            Generation = AllocateSubscriptionGeneration(),
             InitialStartPosition = request.StartPosition,
             InitialAnchorCursor = anchor.Cursor,
             InitialAnchorGroupSequence = anchor.GroupSequence,
@@ -419,11 +720,15 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
             throw new InvalidOperationException("The acknowledgement cursor was not offered to this subscription.");
         }
 
+        ServerSnapshotRecoveryJournalOperations.ThrowIfSnapshotOfferGenerationMismatch(offer, record.Generation);
+
+        var nextRevision = ServerSubscriptionJournalOperations.GetNextSubscriptionRevision(record);
         var acknowledgedUtc = ServerCommitJournalOperations.Max(_latestUtc, observedUtc);
         ApplySubscriptionBytesDelta(record, ServerSubscriptionJournalOperations.GetSubscriptionCursorDelta(record.AcknowledgedCursor, offer.Cursor));
         record.AcknowledgedCursor = offer.Cursor;
         record.AcknowledgedGroupSequence = offer.GroupSequence;
         record.AcknowledgedAtUtc = acknowledgedUtc;
+        record.Revision = nextRevision;
         record.UpdatedAtUtc = acknowledgedUtc;
         record.LastTouchedUtc = acknowledgedUtc;
         PruneAcknowledgedOffers(record);
@@ -505,6 +810,7 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
     {
         var updatedUtc = ServerCommitJournalOperations.Max(_latestUtc, observedUtc);
         var delta = ServerSubscriptionJournalOperations.GetInitialAnchorCursorDelta(record.InitialAnchorCursor, anchor.Cursor);
+        var nextRevision = ServerSubscriptionJournalOperations.GetNextSubscriptionRevision(record);
         if (!HasSubscriptionCapacity(0, 0, delta))
         {
             throw new QueueCapacityExceededException("The server subscription anchor exceeds the journal byte limit.", canFitWhenEmpty: false);
@@ -514,6 +820,7 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
         record.InitialAnchorCursor = anchor.Cursor;
         record.InitialAnchorGroupSequence = anchor.GroupSequence;
         record.InitialAnchorResolved = true;
+        record.Revision = nextRevision;
         record.UpdatedAtUtc = updatedUtc;
         record.LastTouchedUtc = updatedUtc;
         _latestUtc = updatedUtc;
@@ -528,6 +835,7 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
     private void AddOffer(ServerSubscriptionRecord record, string cursor, long groupSequence, DateTimeOffset observedUtc)
     {
         var offeredUtc = ServerCommitJournalOperations.Max(_latestUtc, observedUtc);
+        var nextRevision = ServerSubscriptionJournalOperations.GetNextSubscriptionRevision(record);
         var latestDelta = groupSequence > record.LatestOfferedGroupSequence
             ? ServerSubscriptionJournalOperations.GetSubscriptionCursorDelta(record.LatestOfferedCursor, cursor)
             : 0;
@@ -535,6 +843,7 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
         {
             record.Offers[cursor] = existing with { OfferedAtUtc = offeredUtc };
             ApplyLatestOffer(record, cursor, groupSequence);
+            record.Revision = nextRevision;
             record.UpdatedAtUtc = offeredUtc;
             record.LastTouchedUtc = offeredUtc;
             _latestUtc = offeredUtc;
@@ -552,8 +861,11 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
             }
         }
 
-        record.Offers.Add(cursor, new(cursor, groupSequence, offeredUtc, logicalBytes));
+        record.Offers.Add(
+            cursor,
+            new() { Cursor = cursor, GroupSequence = groupSequence, OfferedAtUtc = offeredUtc, LogicalBytes = logicalBytes });
         ApplyLatestOffer(record, cursor, groupSequence);
+        record.Revision = nextRevision;
         record.UpdatedAtUtc = offeredUtc;
         record.LastTouchedUtc = offeredUtc;
         _subscriptionOfferCount++;
@@ -911,4 +1223,21 @@ internal sealed class InMemoryServerCommitJournal : IServerCommitJournal, IServe
             return DateTimeOffset.MaxValue;
         }
     }
+
+    /// <summary>Groups the already validated fields needed to add a snapshot offer.</summary>
+    /// <param name="Request">The offer request.</param>
+    /// <param name="ViewState">The subscription state captured in the recovery view.</param>
+    /// <param name="Checkpoint">The recovered snapshot checkpoint.</param>
+    /// <param name="Cursor">The recovered cursor.</param>
+    /// <param name="OfferedAtUtc">The offer timestamp.</param>
+    /// <param name="LogicalBytes">The retained offer bytes.</param>
+    /// <param name="IssuedRevision">The assigned subscription revision.</param>
+    private readonly record struct SnapshotOfferAddContext(
+        ServerSnapshotOfferRequest Request,
+        ServerSubscriptionState ViewState,
+        RemoteSnapshotCheckpoint Checkpoint,
+        string Cursor,
+        DateTimeOffset OfferedAtUtc,
+        long LogicalBytes,
+        long IssuedRevision);
 }

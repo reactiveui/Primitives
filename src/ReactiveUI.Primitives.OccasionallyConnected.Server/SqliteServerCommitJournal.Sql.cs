@@ -21,6 +21,30 @@ internal sealed partial class SqliteServerCommitJournal
     private static long GetLastCursorDelta(ServerCommitStreamRecord stream, ServerCommitValidationResult commit) =>
         commit.LastCursor is null ? 0 : commit.LastCursorBytes - stream.LastCursorBytes;
 
+    /// <summary>Reads the durable subscription generation high-water value.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <returns>The current high-water value.</returns>
+    /// <exception cref="InvalidOperationException">The stored generation value is invalid.</exception>
+    private static long ReadSubscriptionGenerationHighWater(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        var value = SelectMetadata(connection, transaction, SubscriptionGenerationHighWaterKey);
+        return long.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var generation) && generation >= 0
+            ? generation
+            : throw new InvalidOperationException("The SQLite server subscription generation high-water value is invalid.");
+    }
+
+    /// <summary>Writes the durable subscription generation high-water value.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <param name="generation">The high-water value.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void WriteSubscriptionGenerationHighWater(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        long generation) =>
+        WriteMetadataValue(connection, transaction, SubscriptionGenerationHighWaterKey, generation.ToString(CultureInfo.InvariantCulture));
+
     /// <summary>Creates the SQLite schema.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
@@ -37,6 +61,7 @@ internal sealed partial class SqliteServerCommitJournal
         CreateSubscriptionOffersTable(connection, transaction);
         InsertMetadata(connection, transaction, SchemaVersionKey, CurrentSchemaVersion.ToString(CultureInfo.InvariantCulture));
         InsertMetadata(connection, transaction, LatestUtcKey, FormatDateTimeOffset(DateTimeOffset.MinValue));
+        InsertMetadata(connection, transaction, SubscriptionGenerationHighWaterKey, "0");
     }
 
     /// <summary>Validates the current durable schema.</summary>
@@ -83,6 +108,7 @@ internal sealed partial class SqliteServerCommitJournal
         var metadataSchemaVersion = SelectMetadata(connection, transaction, SchemaVersionKey);
         if (metadataSchemaVersion == CurrentSchemaVersion.ToString(CultureInfo.InvariantCulture))
         {
+            _ = ReadSubscriptionGenerationHighWater(connection, transaction);
             return;
         }
 
@@ -256,7 +282,7 @@ internal sealed partial class SqliteServerCommitJournal
     {
         ValidateSchemaTwoForMigration(connection, transaction);
         CreateSchemaThreeSubscriptionsTable(connection, transaction);
-        CreateSubscriptionOffersTable(connection, transaction);
+        CreateSchemaFourSubscriptionOffersTable(connection, transaction);
         WriteMetadataValue(connection, transaction, SchemaVersionKey, SchemaVersionThree.ToString(CultureInfo.InvariantCulture));
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
@@ -271,8 +297,90 @@ internal sealed partial class SqliteServerCommitJournal
     {
         ValidateSchemaThreeForMigration(connection, transaction);
         AddSubscriptionStartPositionColumns(connection, transaction);
+        WriteMetadataValue(connection, transaction, SchemaVersionKey, SchemaVersionFour.ToString(CultureInfo.InvariantCulture));
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "PRAGMA user_version = 4;";
+        _ = command.ExecuteNonQuery();
+    }
+
+    /// <summary>Migrates schema-four journals by adding durable snapshot-offer proof fields.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void MigrateSchemaFourToFive(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        ValidateSchemaFourForMigration(connection, transaction);
+        AddSnapshotOfferColumns(connection, transaction);
         WriteMetadataValue(connection, transaction, SchemaVersionKey, CurrentSchemaVersion.ToString(CultureInfo.InvariantCulture));
         SetUserVersion(connection, transaction);
+    }
+
+    /// <summary>Validates the schema-four durable table set before migration.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    /// <exception cref="InvalidOperationException">Thrown when SQLite data or schema validation fails.</exception>
+    private static void ValidateSchemaFourForMigration(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        ValidateUserTableNames(
+            connection,
+            transaction,
+            [
+                ConflictsTableName,
+                EventMetadataTableName,
+                EventsTableName,
+                LedgerTableName,
+                MetadataTableName,
+                StreamsTableName,
+                SubscriptionOffersTableName,
+                SubscriptionsTableName,
+            ]);
+        try
+        {
+            if (SelectMetadata(connection, transaction, SchemaVersionKey) == SchemaVersionFour.ToString(CultureInfo.InvariantCulture))
+            {
+                ValidateTableDefinition(connection, transaction, SubscriptionsTableName, SchemaFourSubscriptionsTableSql);
+                ValidateTableDefinition(connection, transaction, SubscriptionOffersTableName, SchemaFourSubscriptionOffersTableSql);
+                return;
+            }
+        }
+        catch (SqliteException exception)
+        {
+            throw new InvalidOperationException(InvalidSchemaMessage, exception);
+        }
+
+        throw new InvalidOperationException(UnsupportedMetadataSchemaVersionMessage);
+    }
+
+    /// <summary>Adds durable snapshot-offer proof columns to schema-four journals.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void AddSnapshotOfferColumns(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            ALTER TABLE oc_server_journal_subscriptions ADD COLUMN generation INTEGER NOT NULL DEFAULT 0;
+            ALTER TABLE oc_server_journal_subscriptions ADD COLUMN revision INTEGER NOT NULL DEFAULT 0;
+            UPDATE oc_server_journal_subscriptions SET generation = rowid WHERE generation = 0;
+            UPDATE oc_server_journal_subscriptions SET logical_bytes = logical_bytes + $migrationLogicalBytes;
+            INSERT INTO oc_server_journal_metadata (key, value)
+            SELECT $subscriptionGenerationHighWaterKey, CAST(COALESCE(MAX(generation), 0) AS TEXT)
+            FROM oc_server_journal_subscriptions;
+            ALTER TABLE oc_server_journal_subscription_offers ADD COLUMN snapshot_stream_revision INTEGER NULL;
+            ALTER TABLE oc_server_journal_subscription_offers ADD COLUMN snapshot_last_event_sequence INTEGER NULL;
+            ALTER TABLE oc_server_journal_subscription_offers ADD COLUMN snapshot_subscription_generation INTEGER NULL;
+            ALTER TABLE oc_server_journal_subscription_offers ADD COLUMN snapshot_originating_subscription_revision INTEGER NULL;
+            ALTER TABLE oc_server_journal_subscription_offers ADD COLUMN snapshot_issued_subscription_revision INTEGER NULL;
+            ALTER TABLE oc_server_journal_subscription_offers ADD COLUMN snapshot_format_version INTEGER NULL;
+            ALTER TABLE oc_server_journal_subscription_offers ADD COLUMN snapshot_client_state_payload_contract_id TEXT NULL;
+            ALTER TABLE oc_server_journal_subscription_offers ADD COLUMN snapshot_client_state_payload_schema_version INTEGER NULL;
+            ALTER TABLE oc_server_journal_subscription_offers ADD COLUMN snapshot_client_state_payload_content_type TEXT NULL;
+            ALTER TABLE oc_server_journal_subscription_offers ADD COLUMN snapshot_client_state_payload BLOB NULL;
+            ALTER TABLE oc_server_journal_subscription_offers ADD COLUMN snapshot_client_state_payload_hash TEXT NULL;
+            """;
+        _ = command.Parameters.AddWithValue("$migrationLogicalBytes", ServerSubscriptionJournalOperations.GetSnapshotOfferMigrationBytes());
+        _ = command.Parameters.AddWithValue("$subscriptionGenerationHighWaterKey", SubscriptionGenerationHighWaterKey);
+        _ = command.ExecuteNonQuery();
     }
 
     /// <summary>Validates the schema-three durable table set before migration.</summary>
@@ -299,7 +407,7 @@ internal sealed partial class SqliteServerCommitJournal
             if (SelectMetadata(connection, transaction, SchemaVersionKey) == SchemaVersionThree.ToString(CultureInfo.InvariantCulture))
             {
                 ValidateTableDefinition(connection, transaction, SubscriptionsTableName, SchemaThreeSubscriptionsTableSql);
-                ValidateTableDefinition(connection, transaction, SubscriptionOffersTableName, SubscriptionOffersTableSql);
+                ValidateTableDefinition(connection, transaction, SubscriptionOffersTableName, SchemaFourSubscriptionOffersTableSql);
                 return;
             }
         }
@@ -317,8 +425,8 @@ internal sealed partial class SqliteServerCommitJournal
     private static void AddSubscriptionStartPositionColumns(SqliteConnection connection, SqliteTransaction transaction)
     {
         RenameSubscriptionTablesForSchemaFourMigration(connection, transaction);
-        CreateSubscriptionsTable(connection, transaction);
-        CreateSubscriptionOffersTable(connection, transaction);
+        CreateSchemaFourSubscriptionsTable(connection, transaction);
+        CreateSchemaFourSubscriptionOffersTable(connection, transaction);
         CopySchemaThreeSubscriptions(connection, transaction);
         CopySchemaThreeSubscriptionOffers(connection, transaction);
         DropSchemaThreeSubscriptionTables(connection, transaction);
