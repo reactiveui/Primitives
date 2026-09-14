@@ -69,16 +69,18 @@ internal sealed partial class SqliteServerCommitJournal
     {
         var updatedUtc = ServerCommitJournalOperations.Max(ReadLatestUtc(connection, transaction), observedUtc);
         var logicalBytesDelta = ServerSubscriptionJournalOperations.GetInitialAnchorCursorDelta(record.InitialAnchorCursor, anchor.Cursor);
+        var nextRevision = ServerSubscriptionJournalOperations.GetNextSubscriptionRevision(record);
         if (!HasSubscriptionCapacity(connection, transaction, 0, 0, logicalBytesDelta, _options))
         {
             throw new QueueCapacityExceededException("The server subscription anchor exceeds the journal byte limit.", canFitWhenEmpty: false);
         }
 
-        UpdateInitialAnchor(connection, transaction, record.Identity.SubscriptionId, anchor, updatedUtc, logicalBytesDelta);
+        UpdateInitialAnchor(connection, transaction, record.Identity.SubscriptionId, anchor, updatedUtc, logicalBytesDelta, nextRevision);
         WriteLatestUtc(connection, transaction, updatedUtc);
         record.InitialAnchorCursor = anchor.Cursor;
         record.InitialAnchorGroupSequence = anchor.GroupSequence;
         record.InitialAnchorResolved = true;
+        record.Revision = nextRevision;
         record.UpdatedAtUtc = updatedUtc;
         record.LastTouchedUtc = updatedUtc;
     }

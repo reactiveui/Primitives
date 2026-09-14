@@ -140,7 +140,17 @@ internal static class ServerCommitJournalOperations
     {
         if (stream is null)
         {
-            return new(streamKey, 0, null, null, [], null, 0);
+            return new(new ServerCommitSnapshotOptions
+            {
+                StreamKey = streamKey,
+                Revision = 0,
+                State = null,
+                LastWriteStamp = null,
+                Entries = [],
+                LastCursor = null,
+                LastEventSequence = 0,
+                LastGroupSequence = 0,
+            });
         }
 
         var entries = new List<ServerLedgerEntry>(requested.Length);
@@ -152,7 +162,17 @@ internal static class ServerCommitJournalOperations
             }
         }
 
-        return new(streamKey, stream.Revision, stream.State, stream.LastWriteStamp, entries, stream.LastCursor, stream.LastEventSequence);
+        return new(new ServerCommitSnapshotOptions
+        {
+            StreamKey = streamKey,
+            Revision = stream.Revision,
+            State = stream.State,
+            LastWriteStamp = stream.LastWriteStamp,
+            Entries = entries,
+            LastCursor = stream.LastCursor,
+            LastEventSequence = stream.LastEventSequence,
+            LastGroupSequence = stream.LastGroupSequence,
+        });
     }
 
     /// <summary>Collects expired ledger rows from one stream.</summary>

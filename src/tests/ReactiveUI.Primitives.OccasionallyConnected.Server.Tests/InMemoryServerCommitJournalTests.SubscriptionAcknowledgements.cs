@@ -388,6 +388,41 @@ public sealed partial class InMemoryServerCommitJournalTests
         await Assert.That(ServerSubscriptionJournalOperations.IdentityMatches(new(new(OtherTenant, Stream), Client, FirstSubscription), record)).IsFalse();
     }
 
+    /// <summary>Verifies shared subscription generation arithmetic uses a checked high-water convention.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    public async Task SubscriptionGenerationAllocatorUsesCheckedHighWater()
+    {
+        await Assert.That(ServerSubscriptionJournalOperations.GetNextSubscriptionGeneration(0)).IsEqualTo(SingleEntryCount);
+        await Assert
+            .That(ServerSubscriptionJournalOperations.GetNextSubscriptionGeneration(long.MaxValue - 1))
+            .IsEqualTo(long.MaxValue);
+        await Assert
+            .That(static () => ServerSubscriptionJournalOperations.GetNextSubscriptionGeneration(long.MaxValue))
+            .ThrowsExactly<InvalidOperationException>();
+    }
+
+    /// <summary>Verifies shared subscription revision arithmetic rejects overflow before mutation.</summary>
+    /// <returns>The asynchronous test operation.</returns>
+    [Test]
+    public async Task SubscriptionRevisionAllocatorRejectsOverflow()
+    {
+        var identity = SubscriptionIdentity(FirstSubscription);
+        var record = new ServerSubscriptionRecord(identity, Start, ServerSubscriptionJournalOperations.GetSubscriptionBytes(identity));
+
+        await Assert
+            .That(ServerSubscriptionJournalOperations.GetNextSubscriptionRevision(record))
+            .IsEqualTo(SingleEntryCount);
+
+        record.Revision = long.MaxValue - 1;
+        await Assert.That(ServerSubscriptionJournalOperations.GetNextSubscriptionRevision(record)).IsEqualTo(long.MaxValue);
+
+        record.Revision = long.MaxValue;
+        await Assert
+            .That(() => ServerSubscriptionJournalOperations.GetNextSubscriptionRevision(record))
+            .ThrowsExactly<InvalidOperationException>();
+    }
+
     /// <summary>Creates a subscription identity for the default trusted context.</summary>
     /// <param name="subscriptionId">The subscription identifier.</param>
     /// <returns>The identity.</returns>

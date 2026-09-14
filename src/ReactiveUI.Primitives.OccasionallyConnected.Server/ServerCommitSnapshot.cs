@@ -28,15 +28,34 @@ internal sealed class ServerCommitSnapshot
         IReadOnlyList<ServerLedgerEntry> entries,
         string? lastCursor,
         long lastEventSequence)
+        : this(new ServerCommitSnapshotOptions
+        {
+            StreamKey = streamKey,
+            Revision = revision,
+            State = state,
+            LastWriteStamp = lastWriteStamp,
+            Entries = entries,
+            LastCursor = lastCursor,
+            LastEventSequence = lastEventSequence,
+            LastGroupSequence = 0,
+        })
     {
-        ArgumentExceptionHelper.ThrowIfNull(entries);
-        StreamKey = streamKey;
-        Revision = revision;
-        State = state;
-        LastWriteStamp = lastWriteStamp;
-        _entries = Copy(entries);
-        LastCursor = lastCursor;
-        LastEventSequence = lastEventSequence;
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="ServerCommitSnapshot"/> class.</summary>
+    /// <param name="options">The snapshot field composition.</param>
+    internal ServerCommitSnapshot(ServerCommitSnapshotOptions options)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(options);
+        ArgumentExceptionHelper.ThrowIfNull(options.Entries);
+        StreamKey = options.StreamKey;
+        Revision = options.Revision;
+        State = options.State;
+        LastWriteStamp = options.LastWriteStamp;
+        _entries = Copy(options.Entries);
+        LastCursor = options.LastCursor;
+        LastEventSequence = options.LastEventSequence;
+        LastGroupSequence = options.LastGroupSequence;
     }
 
     /// <summary>Gets the authenticated stream key.</summary>
@@ -59,6 +78,9 @@ internal sealed class ServerCommitSnapshot
 
     /// <summary>Gets the last sidecar event sequence.</summary>
     internal long LastEventSequence { get; }
+
+    /// <summary>Gets the complete durable receive group frontier.</summary>
+    internal long LastGroupSequence { get; }
 
     /// <summary>Copies a list while preserving item identity.</summary>
     /// <param name="source">The source list.</param>

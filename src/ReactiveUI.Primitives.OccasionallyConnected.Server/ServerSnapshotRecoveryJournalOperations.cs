@@ -1,0 +1,351 @@
+// Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
+// ReactiveUI Association Incorporated licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for full license information.
+
+using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
+using System.Text;
+
+namespace ReactiveUI.Primitives.OccasionallyConnected.Server;
+
+/// <summary>Provides shared validation for internal server snapshot recovery journal requests.</summary>
+internal static class ServerSnapshotRecoveryJournalOperations
+{
+    /// <summary>Creates operation keys and canonical fingerprints for one recovery read.</summary>
+    /// <param name="request">The read request.</param>
+    /// <param name="fingerprints">The computed fingerprints.</param>
+    /// <returns>The trusted operation keys.</returns>
+    internal static ServerOperationKey[] CaptureOperationProofs(
+        ServerSnapshotRecoveryReadRequest request,
+        out ServerCommitFingerprint[] fingerprints)
+    {
+        fingerprints = CaptureOperationFingerprints(request.StreamKey, request.Subscription, request.RecoveryRequest, request.Limits);
+        return CaptureOperationKeys(request.Subscription, request.RecoveryRequest);
+    }
+
+    /// <summary>Creates canonical fingerprints for the current pending operations.</summary>
+    /// <param name="streamKey">The trusted stream key.</param>
+    /// <param name="subscription">The trusted subscription identity.</param>
+    /// <param name="request">The bounded recovery request.</param>
+    /// <param name="limits">The configured limits.</param>
+    /// <returns>The trusted operation fingerprints.</returns>
+    internal static ServerCommitFingerprint[] CaptureOperationFingerprints(
+        ServerStreamKey streamKey,
+        ServerSubscriptionIdentity subscription,
+        RemoteSnapshotRecoveryRequest request,
+        SnapshotRecoveryLimits limits)
+    {
+        var operations = request.PendingOperations;
+        var fingerprints = new ServerCommitFingerprint[operations.Count];
+        var budget = GetCanonicalFingerprintBudget(limits);
+        for (var index = 0; index < operations.Count; index++)
+        {
+            var operation = operations[index];
+            fingerprints[index] = new(CanonicalOperationFingerprint.Compute(streamKey.TenantId, subscription.ClientId, operation, budget));
+        }
+
+        return fingerprints;
+    }
+
+    /// <summary>Creates retained operation dispositions from a stream snapshot and trusted fingerprints.</summary>
+    /// <param name="snapshot">The stream snapshot.</param>
+    /// <param name="operationKeys">The requested operation keys.</param>
+    /// <param name="fingerprints">The exact requested operation fingerprints.</param>
+    /// <returns>The owned operation dispositions.</returns>
+    internal static ServerSnapshotOperationDisposition[] CreateOperationDispositions(
+        ServerCommitSnapshot snapshot,
+        IReadOnlyList<ServerOperationKey> operationKeys,
+        IReadOnlyList<ServerCommitFingerprint> fingerprints)
+    {
+        var dispositions = new ServerSnapshotOperationDisposition[operationKeys.Count];
+        for (var index = 0; index < dispositions.Length; index++)
+        {
+            var entry = FindEntry(snapshot, operationKeys[index]);
+            dispositions[index] = entry is not null && entry.Fingerprint.Matches(fingerprints[index])
+                ? CreatePositiveDisposition(entry)
+                : CreateUnknownDisposition(operationKeys[index].OperationId);
+        }
+
+        return dispositions;
+    }
+
+    /// <summary>Checks whether all retained positive proofs still match current ledger entries.</summary>
+    /// <param name="identity">The trusted subscription identity.</param>
+    /// <param name="view">The captured recovery view.</param>
+    /// <param name="current">The current stream snapshot.</param>
+    /// <returns>Whether positive proofs still match.</returns>
+    internal static bool PositiveProofsMatch(
+        ServerSubscriptionIdentity identity,
+        ServerSnapshotRecoveryView view,
+        ServerCommitSnapshot current)
+    {
+        var dispositions = view.OperationDispositions;
+        for (var index = 0; index < dispositions.Count; index++)
+        {
+            var disposition = dispositions[index];
+            if (disposition.Kind == SnapshotOperationDispositionKind.Unknown)
+            {
+                continue;
+            }
+
+            var entry = FindEntry(current, new(identity.ClientId, disposition.OperationId));
+            if (entry is null
+                || disposition.Fingerprint is null
+                || !entry.Fingerprint.Matches(disposition.Fingerprint)
+                || !Equals(entry.Result, disposition.Result))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>Rejects acknowledging a snapshot offer created for a different subscription generation.</summary>
+    /// <param name="offer">The retained offer.</param>
+    /// <param name="generation">The current subscription generation.</param>
+    /// <exception cref="InvalidOperationException">The snapshot offer belongs to another generation.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void ThrowIfSnapshotOfferGenerationMismatch(ServerSubscriptionOffer offer, long generation)
+    {
+        if (offer.SnapshotSubscriptionGeneration is null)
+        {
+            return;
+        }
+
+        if (offer.SnapshotSubscriptionGeneration == generation)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException("The acknowledgement cursor belongs to another subscription generation.");
+    }
+
+    /// <summary>Checks whether a remote recovered result matches the captured positive/unknown proofs.</summary>
+    /// <param name="view">The captured recovery view.</param>
+    /// <param name="result">The remote recovery result.</param>
+    /// <returns>Whether dispositions are consistent.</returns>
+    internal static bool RecoveryResultMatchesView(ServerSnapshotRecoveryView view, RemoteSnapshotRecoveryResult result)
+    {
+        if (result.Status != RemoteSnapshotRecoveryStatus.Recovered || result.Checkpoint is null)
+        {
+            return false;
+        }
+
+        var server = view.OperationDispositions;
+        var remote = result.OperationDispositions;
+        if (server.Count != remote.Count)
+        {
+            return false;
+        }
+
+        for (var index = 0; index < server.Count; index++)
+        {
+            if (server[index].OperationId != remote[index].OperationId
+                || server[index].Kind != remote[index].Kind
+                || !Equals(server[index].Result, remote[index].Result))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>Checks whether the offer request is still bound to the exact recovery request that produced the view.</summary>
+    /// <param name="request">The offer request.</param>
+    /// <returns>Whether the current request matches the captured stream, expired cursor and pending operation intents.</returns>
+    internal static bool OfferRequestMatchesView(ServerSnapshotOfferRequest request)
+    {
+        if (request.View.Snapshot.StreamKey != request.StreamKey
+            || !string.Equals(request.View.RequestedExpiredCursor, request.RecoveryRequest.ExpiredCursor, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var currentFingerprints = CaptureOperationFingerprints(request.StreamKey, request.Subscription, request.RecoveryRequest, request.Limits);
+        return OperationFingerprintsMatch(request.View, request.RecoveryRequest.PendingOperations, currentFingerprints);
+    }
+
+    /// <summary>Checks whether two payload envelopes are identical without relying on reference identity.</summary>
+    /// <param name="left">The first payload.</param>
+    /// <param name="right">The second payload.</param>
+    /// <returns>Whether both payloads are equal.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static bool PayloadMatches(PayloadEnvelope? left, PayloadEnvelope right) =>
+        left is not null
+        && string.Equals(left.ContractId, right.ContractId, StringComparison.Ordinal)
+        && left.SchemaVersion == right.SchemaVersion
+        && string.Equals(left.ContentType, right.ContentType, StringComparison.Ordinal)
+        && FixedTimeEquals(left.PayloadHash, right.PayloadHash)
+        && left.Payload.Span.SequenceEqual(right.Payload.Span);
+
+    /// <summary>Creates the frontier cursor for a complete group frontier.</summary>
+    /// <param name="streamKey">The stream key.</param>
+    /// <param name="stream">The retained stream.</param>
+    /// <param name="snapshot">The atomic snapshot.</param>
+    /// <returns>The cursor representing the complete group frontier.</returns>
+    internal static string CreateFrontierCursor(ServerStreamKey streamKey, ServerCommitStreamRecord? stream, ServerCommitSnapshot snapshot)
+    {
+        if (stream is not null && stream.Groups.Count > 0)
+        {
+            var last = stream.Groups[stream.Groups.Count - 1];
+            if (last.GroupSequence == snapshot.LastGroupSequence && last.Entry.Events.Count > 0 && snapshot.LastCursor is not null)
+            {
+                return snapshot.LastCursor;
+            }
+        }
+
+        return ServerReceiveGroupCursor.Create(streamKey, snapshot.LastGroupSequence);
+    }
+
+    /// <summary>Validates a retained view read request before a transaction can observe state.</summary>
+    /// <param name="request">The read request.</param>
+    /// <exception cref="ArgumentException">The request is malformed or not bound to the authenticated subscription.</exception>
+    internal static void ValidateReadRequest(ServerSnapshotRecoveryReadRequest request)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(request);
+        ServerCommitJournalGuard.ValidateStreamKey(request.StreamKey);
+        ServerSubscriptionJournalOperations.ValidateIdentity(request.Subscription);
+        ArgumentExceptionHelper.ThrowIfNull(request.RecoveryRequest);
+        ArgumentExceptionHelper.ThrowIfNull(request.Limits);
+        if (request.Subscription.StreamKey != request.StreamKey
+            || request.RecoveryRequest.StreamId != request.StreamKey.StreamId
+            || request.RecoveryRequest.SubscriptionId != request.Subscription.SubscriptionId)
+        {
+            throw new ArgumentException("The snapshot recovery read request is not bound to the authenticated subscription.", nameof(request));
+        }
+
+        SnapshotRecoveryValidator.Validate(request.RecoveryRequest, request.Limits);
+    }
+
+    /// <summary>Validates a snapshot cursor offer request before durable mutation.</summary>
+    /// <param name="request">The offer request.</param>
+    /// <exception cref="ArgumentException">The request is malformed or not bound to the authenticated subscription.</exception>
+    internal static void ValidateOfferRequest(ServerSnapshotOfferRequest request)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(request);
+        ServerCommitJournalGuard.ValidateStreamKey(request.StreamKey);
+        ServerSubscriptionJournalOperations.ValidateIdentity(request.Subscription);
+        ArgumentExceptionHelper.ThrowIfNull(request.View);
+        ArgumentExceptionHelper.ThrowIfNull(request.RecoveryRequest);
+        ArgumentExceptionHelper.ThrowIfNull(request.RecoveryResult);
+        ArgumentExceptionHelper.ThrowIfNull(request.Limits);
+        if (request.Subscription.StreamKey != request.StreamKey
+            || request.RecoveryRequest.StreamId != request.StreamKey.StreamId
+            || request.RecoveryRequest.SubscriptionId != request.Subscription.SubscriptionId)
+        {
+            throw new ArgumentException("The snapshot recovery offer request is not bound to the authenticated subscription.", nameof(request));
+        }
+
+        SnapshotRecoveryValidator.Validate(request.RecoveryRequest, request.RecoveryResult, request.Limits);
+    }
+
+    /// <summary>Creates a positive disposition from a retained ledger entry.</summary>
+    /// <param name="entry">The retained entry.</param>
+    /// <returns>The disposition.</returns>
+    private static ServerSnapshotOperationDisposition CreatePositiveDisposition(ServerLedgerEntry entry) =>
+        new()
+        {
+            OperationId = entry.OperationKey.OperationId,
+            Kind = entry.Result.Kind == OperationResultKind.Rejected
+                ? SnapshotOperationDispositionKind.TerminalRejected
+                : SnapshotOperationDispositionKind.IncludedAccepted,
+            Result = entry.Result,
+            Fingerprint = entry.Fingerprint,
+        };
+
+    /// <summary>Creates an unknown disposition for a missing or mismatched retained proof.</summary>
+    /// <param name="operationId">The operation identifier.</param>
+    /// <returns>The disposition.</returns>
+    private static ServerSnapshotOperationDisposition CreateUnknownDisposition(OperationId operationId) =>
+        new() { OperationId = operationId, Kind = SnapshotOperationDispositionKind.Unknown, Result = null, Fingerprint = null };
+
+    /// <summary>Creates operation keys for pending operations.</summary>
+    /// <param name="subscription">The trusted subscription identity.</param>
+    /// <param name="request">The recovery request.</param>
+    /// <returns>The trusted operation keys.</returns>
+    private static ServerOperationKey[] CaptureOperationKeys(ServerSubscriptionIdentity subscription, RemoteSnapshotRecoveryRequest request)
+    {
+        var operations = request.PendingOperations;
+        var keys = new ServerOperationKey[operations.Count];
+        for (var index = 0; index < operations.Count; index++)
+        {
+            keys[index] = new(subscription.ClientId, operations[index].OperationId);
+        }
+
+        return keys;
+    }
+
+    /// <summary>Checks whether current pending operations match the captured operation ids and fingerprints.</summary>
+    /// <param name="view">The captured view.</param>
+    /// <param name="operations">The current pending operations.</param>
+    /// <param name="currentFingerprints">The current operation fingerprints.</param>
+    /// <returns>Whether the request is unchanged.</returns>
+    private static bool OperationFingerprintsMatch(
+        ServerSnapshotRecoveryView view,
+        IReadOnlyList<SyncOperation> operations,
+        ServerCommitFingerprint[] currentFingerprints)
+    {
+        if (view.OperationDispositions.Count != operations.Count || view.OperationFingerprints.Count != operations.Count)
+        {
+            return false;
+        }
+
+        for (var index = 0; index < operations.Count; index++)
+        {
+            if (view.OperationDispositions[index].OperationId != operations[index].OperationId
+                || !view.OperationFingerprints[index].Matches(currentFingerprints[index]))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>Finds a retained entry by operation key.</summary>
+    /// <param name="snapshot">The stream snapshot.</param>
+    /// <param name="operationKey">The operation key.</param>
+    /// <returns>The entry or null.</returns>
+    private static ServerLedgerEntry? FindEntry(ServerCommitSnapshot snapshot, ServerOperationKey operationKey)
+    {
+        for (var index = 0; index < snapshot.Entries.Count; index++)
+        {
+            if (snapshot.Entries[index].OperationKey == operationKey)
+            {
+                return snapshot.Entries[index];
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>Gets the bounded canonical fingerprint budget from snapshot limits.</summary>
+    /// <param name="limits">The limits.</param>
+    /// <returns>The fingerprint byte budget.</returns>
+    private static int GetCanonicalFingerprintBudget(SnapshotRecoveryLimits limits) =>
+        limits.MaximumLogicalBytes > int.MaxValue ? int.MaxValue : (int)limits.MaximumLogicalBytes;
+
+    /// <summary>Compares two hashes without early exit.</summary>
+    /// <param name="left">The left hash.</param>
+    /// <param name="right">The right hash.</param>
+    /// <returns>Whether the values are equal.</returns>
+    private static bool FixedTimeEquals(string left, string right)
+    {
+        var leftBytes = Encoding.UTF8.GetBytes(left);
+        var rightBytes = Encoding.UTF8.GetBytes(right);
+#if NETFRAMEWORK
+        var difference = leftBytes.Length ^ rightBytes.Length;
+        var count = Math.Min(leftBytes.Length, rightBytes.Length);
+        for (var index = 0; index < count; index++)
+        {
+            difference |= leftBytes[index] ^ rightBytes[index];
+        }
+
+        return difference == 0;
+#else
+        return CryptographicOperations.FixedTimeEquals(leftBytes, rightBytes);
+#endif
+    }
+}

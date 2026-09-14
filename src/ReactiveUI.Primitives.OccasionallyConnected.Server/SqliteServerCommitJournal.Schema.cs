@@ -21,7 +21,7 @@ internal sealed partial class SqliteServerCommitJournal
     {
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
-        command.CommandText = "PRAGMA user_version = 4;";
+        command.CommandText = "PRAGMA user_version = 5;";
         _ = command.ExecuteNonQuery();
     }
 
@@ -113,6 +113,17 @@ internal sealed partial class SqliteServerCommitJournal
         _ = command.ExecuteNonQuery();
     }
 
+    /// <summary>Creates the schema-four subscription table during migration.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void CreateSchemaFourSubscriptionsTable(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = SchemaFourSubscriptionsTableSql;
+        _ = command.ExecuteNonQuery();
+    }
+
     /// <summary>Creates the subscription offer table.</summary>
     /// <param name="connection">The connection.</param>
     /// <param name="transaction">The transaction.</param>
@@ -121,6 +132,17 @@ internal sealed partial class SqliteServerCommitJournal
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = SubscriptionOffersTableSql;
+        _ = command.ExecuteNonQuery();
+    }
+
+    /// <summary>Creates the schema-four subscription offer table during migration.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="transaction">The transaction.</param>
+    private static void CreateSchemaFourSubscriptionOffersTable(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = SchemaFourSubscriptionOffersTableSql;
         _ = command.ExecuteNonQuery();
     }
 

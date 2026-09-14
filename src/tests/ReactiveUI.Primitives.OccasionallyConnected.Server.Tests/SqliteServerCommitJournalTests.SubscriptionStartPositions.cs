@@ -587,6 +587,7 @@ public sealed partial class SqliteServerCommitJournalTests
                 FOREIGN KEY (subscription_id)
                     REFERENCES oc_server_journal_subscriptions (subscription_id)
                     ON DELETE CASCADE);
+            DELETE FROM oc_server_journal_metadata WHERE key = 'subscription_generation_high_water';
             UPDATE oc_server_journal_metadata SET value = '3' WHERE key = 'schema_version';
             PRAGMA user_version = 3;
             """;
@@ -600,6 +601,7 @@ public sealed partial class SqliteServerCommitJournalTests
         using var connection = OpenRawConnection(path);
         using var command = connection.CreateCommand();
         command.CommandText = """
+            DELETE FROM oc_server_journal_metadata WHERE key = 'subscription_generation_high_water';
             UPDATE oc_server_journal_metadata SET value = '2' WHERE key = 'schema_version';
             PRAGMA user_version = 3;
             """;

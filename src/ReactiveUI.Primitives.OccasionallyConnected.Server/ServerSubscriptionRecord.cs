@@ -22,6 +22,12 @@ internal sealed class ServerSubscriptionRecord
     /// <summary>Gets the trusted identity.</summary>
     internal ServerSubscriptionIdentity Identity { get; }
 
+    /// <summary>Gets or sets the durable generation assigned when this binding was created.</summary>
+    internal long Generation { get; set; }
+
+    /// <summary>Gets or sets the durable semantic revision for this binding.</summary>
+    internal long Revision { get; set; }
+
     /// <summary>Gets or sets the immutable initial position requested for this binding.</summary>
     internal StartPosition InitialStartPosition { get; set; } = StartPosition.FromSequence(0);
 

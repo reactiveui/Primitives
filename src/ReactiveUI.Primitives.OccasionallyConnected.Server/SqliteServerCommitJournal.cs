@@ -14,10 +14,13 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Server;
 /// Authenticated tenant and client identifiers are trusted inputs from the host. This journal does not perform
 /// authorization, network coordination or capability advertisement.
 /// </remarks>
-internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, IServerReceiveJournal, IServerSubscriptionAcknowledgementJournal, IDisposable
+internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, IServerReceiveJournal, IServerSubscriptionAcknowledgementJournal, IServerSnapshotRecoveryJournal, IDisposable
 {
     /// <summary>The current durable schema version.</summary>
-    private const int CurrentSchemaVersion = 4;
+    private const int CurrentSchemaVersion = 5;
+
+    /// <summary>The previous durable schema version.</summary>
+    private const int SchemaVersionFour = 4;
 
     /// <summary>The previous durable schema version.</summary>
     private const int SchemaVersionThree = 3;
@@ -39,6 +42,9 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
 
     /// <summary>The metadata key for the latest retained UTC high-water timestamp.</summary>
     private const string LatestUtcKey = "latest_utc";
+
+    /// <summary>The metadata key for the durable subscription generation high-water value.</summary>
+    private const string SubscriptionGenerationHighWaterKey = "subscription_generation_high_water";
 
     /// <summary>The SQLite integer value for FULL synchronous writes.</summary>
     private const long SqliteFullSynchronous = 2;
@@ -234,6 +240,32 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
             acknowledged_at_utc TEXT NULL,
             updated_at_utc TEXT NOT NULL,
             last_touched_utc TEXT NOT NULL,
+            logical_bytes INTEGER NOT NULL,
+            generation INTEGER NOT NULL DEFAULT 0,
+            revision INTEGER NOT NULL DEFAULT 0);
+        """;
+
+    /// <summary>The SQL definition for the schema-four subscription acknowledgement table.</summary>
+    private const string SchemaFourSubscriptionsTableSql = """
+        CREATE TABLE oc_server_journal_subscriptions (
+            subscription_id TEXT NOT NULL PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            stream_id TEXT NOT NULL,
+            client_id TEXT NOT NULL,
+            initial_position_kind INTEGER NOT NULL,
+            initial_sequence INTEGER NULL,
+            initial_timestamp_utc TEXT NULL,
+            initial_cursor TEXT NULL,
+            initial_anchor_cursor TEXT NULL,
+            initial_anchor_group_sequence INTEGER NOT NULL,
+            initial_anchor_resolved INTEGER NOT NULL,
+            acknowledged_cursor TEXT NULL,
+            acknowledged_group_sequence INTEGER NOT NULL,
+            latest_offered_cursor TEXT NULL,
+            latest_offered_group_sequence INTEGER NOT NULL,
+            acknowledged_at_utc TEXT NULL,
+            updated_at_utc TEXT NOT NULL,
+            last_touched_utc TEXT NOT NULL,
             logical_bytes INTEGER NOT NULL);
         """;
 
@@ -256,6 +288,31 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
 
     /// <summary>The SQL definition for the subscription offer table.</summary>
     private const string SubscriptionOffersTableSql = """
+        CREATE TABLE oc_server_journal_subscription_offers (
+            subscription_id TEXT NOT NULL,
+            cursor TEXT NOT NULL,
+            group_sequence INTEGER NOT NULL,
+            offered_at_utc TEXT NOT NULL,
+            logical_bytes INTEGER NOT NULL,
+            snapshot_stream_revision INTEGER NULL,
+            snapshot_last_event_sequence INTEGER NULL,
+            snapshot_subscription_generation INTEGER NULL,
+            snapshot_originating_subscription_revision INTEGER NULL,
+            snapshot_issued_subscription_revision INTEGER NULL,
+            snapshot_format_version INTEGER NULL,
+            snapshot_client_state_payload_contract_id TEXT NULL,
+            snapshot_client_state_payload_schema_version INTEGER NULL,
+            snapshot_client_state_payload_content_type TEXT NULL,
+            snapshot_client_state_payload BLOB NULL,
+            snapshot_client_state_payload_hash TEXT NULL,
+            PRIMARY KEY (subscription_id, cursor),
+            FOREIGN KEY (subscription_id)
+                REFERENCES oc_server_journal_subscriptions (subscription_id)
+                ON DELETE CASCADE);
+        """;
+
+    /// <summary>The SQL definition for the schema-four subscription offer table.</summary>
+    private const string SchemaFourSubscriptionOffersTableSql = """
         CREATE TABLE oc_server_journal_subscription_offers (
             subscription_id TEXT NOT NULL,
             cursor TEXT NOT NULL,
@@ -493,6 +550,70 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
         return state;
     }
 
+    /// <summary>Reads a trusted bounded view used to evaluate a snapshot recovery request.</summary>
+    /// <param name="request">The read request.</param>
+    /// <returns>The retained snapshot-recovery view.</returns>
+    internal ServerSnapshotRecoveryView ReadSnapshotRecoveryView(ServerSnapshotRecoveryReadRequest request)
+    {
+        ThrowIfDisposed();
+        ServerSnapshotRecoveryJournalOperations.ValidateReadRequest(request);
+        var operationKeys = ServerSnapshotRecoveryJournalOperations.CaptureOperationProofs(request, out var fingerprints);
+        using var connection = OpenConnection();
+        using var transaction = connection.BeginTransaction(IsolationLevel.Serializable, deferred: true);
+        ValidateExistingSchema(connection, transaction);
+        ValidateReadCapacity(connection, transaction);
+        var stream = ReadStreamRecord(connection, transaction, request.StreamKey);
+        var snapshot = ServerCommitJournalOperations.CreateSnapshot(request.StreamKey, stream, operationKeys);
+        var record = ReadSubscriptionRecord(connection, transaction, request.Subscription.SubscriptionId);
+        ServerSubscriptionState? state = null;
+        ServerSubscriptionOffer? expiredCursorOffer = null;
+        if (record is not null)
+        {
+            ThrowIfIdentityMismatch(request.Subscription, record);
+            state = ServerSubscriptionJournalOperations.CreateState(record);
+            if (request.RecoveryRequest.ExpiredCursor is not null
+                && record.Offers.TryGetValue(request.RecoveryRequest.ExpiredCursor, out var offer))
+            {
+                expiredCursorOffer = offer;
+            }
+        }
+
+        var view = new ServerSnapshotRecoveryView
+        {
+            Snapshot = snapshot,
+            SubscriptionState = state,
+            ExpiredCursorOffer = expiredCursorOffer,
+            RequestedExpiredCursor = request.RecoveryRequest.ExpiredCursor,
+            OperationDispositions = ServerSnapshotRecoveryJournalOperations.CreateOperationDispositions(snapshot, operationKeys, fingerprints),
+            OperationFingerprints = fingerprints,
+        };
+        transaction.Commit();
+        return view;
+    }
+
+    /// <summary>Durably offers a recovered snapshot cursor for later authenticated acknowledgement.</summary>
+    /// <param name="request">The offer request.</param>
+    /// <returns>The offer result.</returns>
+    internal ServerSnapshotOfferResult TryOfferSnapshot(ServerSnapshotOfferRequest request)
+    {
+        ThrowIfDisposed();
+        ServerSnapshotRecoveryJournalOperations.ValidateOfferRequest(request);
+        if (!ServerSnapshotRecoveryJournalOperations.OfferRequestMatchesView(request)
+            || !ServerSnapshotRecoveryJournalOperations.RecoveryResultMatchesView(request.View, request.RecoveryResult))
+        {
+            return CreateSnapshotOfferResult(ServerSnapshotOfferStatus.ValidationRejected, null, null);
+        }
+
+        var observedUtc = _options.TimeProvider.GetUtcNow();
+        using var connection = OpenConnection();
+        using var transaction = connection.BeginTransaction(IsolationLevel.Serializable, deferred: false);
+        ValidateExistingSchema(connection, transaction);
+        ValidateReadCapacity(connection, transaction);
+        var result = TryOfferSnapshot(connection, transaction, request, observedUtc);
+        transaction.Commit();
+        return result;
+    }
+
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     ServerCommitSnapshot IServerCommitJournal.Read(ServerStreamKey streamKey, IReadOnlyList<ServerOperationKey> operationKeys) =>
@@ -525,6 +646,16 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     ServerSubscriptionState IServerSubscriptionAcknowledgementJournal.Acknowledge(ServerSubscriptionAcknowledgementRequest request) =>
         Acknowledge(request);
+
+    /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    ServerSnapshotRecoveryView IServerSnapshotRecoveryJournal.ReadSnapshotRecoveryView(ServerSnapshotRecoveryReadRequest request) =>
+        ReadSnapshotRecoveryView(request);
+
+    /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    ServerSnapshotOfferResult IServerSnapshotRecoveryJournal.TryOfferSnapshot(ServerSnapshotOfferRequest request) =>
+        TryOfferSnapshot(request);
 
     /// <summary>Compacts expired terminal ledger entries and event rows using the journal clock.</summary>
     /// <returns>The number of terminal entries removed.</returns>
@@ -624,15 +755,22 @@ internal sealed partial class SqliteServerCommitJournal : IServerCommitJournal, 
             MigrateSchemaOneToTwo(connection, transaction);
             MigrateSchemaTwoToThree(connection, transaction);
             MigrateSchemaThreeToFour(connection, transaction);
+            MigrateSchemaFourToFive(connection, transaction);
         }
         else if (userVersion == SchemaVersionTwo)
         {
             MigrateSchemaTwoToThree(connection, transaction);
             MigrateSchemaThreeToFour(connection, transaction);
+            MigrateSchemaFourToFive(connection, transaction);
         }
         else if (userVersion == SchemaVersionThree)
         {
             MigrateSchemaThreeToFour(connection, transaction);
+            MigrateSchemaFourToFive(connection, transaction);
+        }
+        else if (userVersion == SchemaVersionFour)
+        {
+            MigrateSchemaFourToFive(connection, transaction);
         }
         else
         {
