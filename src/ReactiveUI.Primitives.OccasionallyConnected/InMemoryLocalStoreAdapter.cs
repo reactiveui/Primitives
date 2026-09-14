@@ -11,7 +11,7 @@ namespace ReactiveUI.Primitives.OccasionallyConnected;
 /// <summary>Stores occasionally connected stream state in this process.</summary>
 /// <remarks>The adapter is ephemeral and retains data only for the lifetime of this instance.</remarks>
 [DebuggerDisplay("Streams = {_streams.Count}, Operations = {_operations.Count}")]
-internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter, ILocalPayloadQuarantineStore
+internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter, ILocalPayloadQuarantineStore, ILocalSnapshotRecoveryStore
 {
     /// <summary>The default maximum retained operation and snapshot records.</summary>
     private const int DefaultMaximumRecordCount = 10_000;
@@ -118,6 +118,7 @@ internal sealed partial class InMemoryLocalStoreAdapter : ILocalStoreAdapter, IL
     public LocalStoreCapabilities Capabilities { get; } =
         LocalStoreCapabilities.AtomicLocalCommit
         | LocalStoreCapabilities.AtomicRemoteApply
+        | LocalStoreCapabilities.AtomicSnapshotRecovery
         | LocalStoreCapabilities.ClientIdentityBinding
         | LocalStoreCapabilities.LeasedOutbox;
 
