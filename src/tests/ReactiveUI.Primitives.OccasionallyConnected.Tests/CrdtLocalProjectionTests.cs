@@ -160,7 +160,7 @@ public sealed partial class CrdtLocalProjectionTests
     [Test]
     public async Task SqliteCommitterRecoversTypedStateAndPreservesAuthoritativeCheckpoint()
     {
-        var directory = Directory.CreateTempSubdirectory("oc-crdt-");
+        var directory = SqliteTestDirectory.Create("oc-crdt-");
         try
         {
             var databasePath = Path.Combine(directory.FullName, "local.db");

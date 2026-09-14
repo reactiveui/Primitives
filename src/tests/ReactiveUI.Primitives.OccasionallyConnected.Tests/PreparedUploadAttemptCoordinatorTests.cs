@@ -550,7 +550,7 @@ public sealed partial class PreparedUploadAttemptCoordinatorTests
     [Test]
     public async Task ExecuteAsyncLostResponseRestartCannotResendAtMostOnceOperation()
     {
-        var directory = Directory.CreateTempSubdirectory("oc-upload-attempt-");
+        var directory = SqliteTestDirectory.Create("oc-upload-attempt-");
         try
         {
             var databasePath = Path.Combine(directory.FullName, "local.db");
@@ -582,7 +582,7 @@ public sealed partial class PreparedUploadAttemptCoordinatorTests
     [Test]
     public async Task ExecuteAsyncRealSqliteReopenAndLoopbackReconcilesAcceptedUpload()
     {
-        var directory = Directory.CreateTempSubdirectory("oc-upload-attempt-");
+        var directory = SqliteTestDirectory.Create("oc-upload-attempt-");
         try
         {
             var databasePath = Path.Combine(directory.FullName, "local.db");

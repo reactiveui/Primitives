@@ -15,7 +15,7 @@ public sealed partial class LocalStreamCommitterTests
     [Test]
     public async Task ApplySyncResultAsyncRestoresReplacementEditAcrossSqliteReopens()
     {
-        var directory = Directory.CreateTempSubdirectory("oc-result-application-");
+        var directory = SqliteTestDirectory.Create("oc-result-application-");
         try
         {
             var databasePath = Path.Combine(directory.FullName, "local.db");

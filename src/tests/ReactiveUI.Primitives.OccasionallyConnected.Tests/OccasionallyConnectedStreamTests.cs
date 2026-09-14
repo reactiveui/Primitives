@@ -107,7 +107,7 @@ public sealed partial class OccasionallyConnectedStreamTests
     [Test]
     public async Task StartAsyncResolvesImplicitSubscriptionRecoversSqliteStateAndReplaysLatestAcrossRestart()
     {
-        var directory = Directory.CreateTempSubdirectory("oc-stream-facade-");
+        var directory = SqliteTestDirectory.Create("oc-stream-facade-");
         try
         {
             var databasePath = Path.Combine(directory.FullName, LocalDatabaseFileName);
@@ -150,7 +150,7 @@ public sealed partial class OccasionallyConnectedStreamTests
     [Test]
     public async Task ExplicitSubscriptionIsAvailableImmediatelyAndValidatedDuringStart()
     {
-        var directory = Directory.CreateTempSubdirectory("oc-stream-explicit-");
+        var directory = SqliteTestDirectory.Create("oc-stream-explicit-");
         try
         {
             var databasePath = Path.Combine(directory.FullName, LocalDatabaseFileName);
@@ -306,7 +306,7 @@ public sealed partial class OccasionallyConnectedStreamTests
     [Test]
     public async Task LocalNotificationsUseCommittedSnapshotsForMutableStates()
     {
-        var directory = Directory.CreateTempSubdirectory("oc-stream-mutable-");
+        var directory = SqliteTestDirectory.Create("oc-stream-mutable-");
         try
         {
             var databasePath = Path.Combine(directory.FullName, LocalDatabaseFileName);
@@ -360,7 +360,7 @@ public sealed partial class OccasionallyConnectedStreamTests
     /// <returns>The initialized store.</returns>
     private static async ValueTask<SqliteLocalStoreAdapter> CreateInitializedStoreAsync(string? databasePath = null)
     {
-        var path = databasePath ?? Path.Combine(Directory.CreateTempSubdirectory("oc-stream-store-").FullName, LocalDatabaseFileName);
+        var path = databasePath ?? Path.Combine(SqliteTestDirectory.Create("oc-stream-store-").FullName, LocalDatabaseFileName);
         var store = new SqliteLocalStoreAdapter(path);
         await store.InitializeAsync(new(StoreIdentity, 1, false) { ClientId = ClientId }, CancellationToken.None);
         return store;
