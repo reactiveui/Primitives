@@ -766,7 +766,7 @@ These put two or more signals together.
 | `CombineLatest(source2)` through `CombineLatest(source2, ..., source16)`, 15 overloads | Combines the latest values and hands you a named tuple, so you write no selector. | `CombineLatest` (tuple) |
 | `CombineLatest()` on a collection of signals | Combines a collection of same-typed signals into one list per notification. | `CombineLatest` |
 | `CombineLatest(resultSelector)` on a collection of signals | Does the same and runs your function on the list. | `CombineLatest` |
-| `LinqExtensions.CombineLatest(params sources)` | Array form of the collection combine. | `CombineLatest` |
+| `LinqExtensions.CombineLatest(new[] { a, b })` | Array form of the collection combine. Pass an array: listing the sources one by one binds to the tuple overload and gives you a tuple, not a list. | `CombineLatest` |
 | `Latch(right, selector)` | Emits once per left value and attaches whatever the right side produced last. | `WithLatestFrom` |
 | `WithLatestFrom(right, selector)` | Another name for `Latch`. | `WithLatestFrom` |
 | `ForkJoin(right, selector)` | Waits for both sides to complete, then emits one result from their final values. | `ForkJoin` |
