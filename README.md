@@ -861,7 +861,7 @@ These change when values arrive.
 | `Stabilize(dueTime)`, `Stabilize(dueTime, sequencer)` | Another name for `Calm`. | `Throttle` |
 | `Throttle(dueTime)`, `Throttle(dueTime, sequencer)` | A third name for `Calm`. | `Throttle` |
 | `EmitIfQuiet(dueTime)`, `EmitIfQuiet(dueTime, sequencer)` | Works like `Calm` and hands back the source unchanged when `dueTime` is zero or less. | `Throttle` |
-| `Probe(period)`, `Probe(period, sequencer)` | Emits the latest value once the period has passed since the value that started the timer. A quiet source sends nothing, a steady source drifts away from a fixed schedule, and a value still waiting when the source completes is dropped. Use `Calm` when you need that last value. | `Sample` |
+| `Probe(period)`, `Probe(period, sequencer)` | Emits the latest value once the period has passed since the value that started the timer. A quiet source sends nothing, and a steady source drifts away from a fixed schedule. A value still waiting when the source completes is sent before the completion. | `Sample` |
 | `Sample(interval)`, `Sample(interval, sequencer)` | Another name for `Probe`. | `Sample` |
 | `Buffer(timeSpan)`, `Buffer(timeSpan, sequencer)` | Gathers values into one batch per time window. | `Buffer` |
 | `Buffer(count)` | Gathers values into batches of a fixed size that do not overlap. | `Buffer` |
@@ -935,7 +935,7 @@ These decide what happens when a signal fails.
 | `Resume(fallback)` | Carries on with your fallback signal after an error. | `OnErrorResumeNext` |
 | `OnErrorResumeNext(second)` | Carries on with `second` when this signal completes or fails. Unlike `Resume`, it also moves on after a clean completion. | `OnErrorResumeNext` |
 | `Reattempt(retryCount)` | Subscribes again after an error, up to the number of extra tries you allow, then passes the last error along. The count is extra tries, so `Reattempt(2)` subscribes three times. | `Retry` |
-| `Retry(retryCount)` | Another name for `Reattempt`. | `Retry` |
+| `Retry(retryCount)` | Runs the source up to that many times in total, stopping at the first run that ends without an error. `Retry(3)` runs it three times. | `Retry` |
 | `Repeat()` | Subscribes again each time the source completes, forever. | `Repeat` |
 | `Repeat(repeatCount)` | Runs the source the number of times you name in total, starting each run when the one before it completes. `Repeat(3)` runs it three times, not four. | `Repeat` |
 | `Finally(finallyAction)` | Runs your cleanup action once when the subscription ends, whatever ends it. | `Finally` |

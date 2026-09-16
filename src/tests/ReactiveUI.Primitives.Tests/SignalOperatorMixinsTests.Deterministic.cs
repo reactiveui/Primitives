@@ -743,7 +743,8 @@ public partial class SignalOperatorMixinsTests
         int[] expectedDirectCurrentThreadExpire = [One];
         await Assert.That(directCurrentThreadExpire.Values.SequenceEqual(expectedDirectCurrentThreadExpire)).IsTrue();
         await Assert.That(directCurrentThreadExpire.Completed).IsEqualTo(1);
-        await Assert.That(directCurrentThreadProbe.Values.Count).IsEqualTo(0);
+        int[] expectedDirectCurrentThreadProbe = [Two];
+        await Assert.That(directCurrentThreadProbe.Values.SequenceEqual(expectedDirectCurrentThreadProbe)).IsTrue();
         await Assert.That(directCurrentThreadProbe.Completed).IsEqualTo(1);
         RecordingWitness<int> currentThreadExpire = new();
         RecordingWitness<int> currentThreadProbe = new();
@@ -755,7 +756,8 @@ public partial class SignalOperatorMixinsTests
         int[] expectedCurrentThreadExpire = [One];
         await Assert.That(currentThreadExpire.Values.SequenceEqual(expectedCurrentThreadExpire)).IsTrue();
         await Assert.That(currentThreadExpire.Completed).IsEqualTo(1);
-        await Assert.That(currentThreadProbe.Values.Count).IsEqualTo(0);
+        int[] expectedCurrentThreadProbe = [Two];
+        await Assert.That(currentThreadProbe.Values.SequenceEqual(expectedCurrentThreadProbe)).IsTrue();
         await Assert.That(currentThreadProbe.Completed).IsEqualTo(1);
     }
 

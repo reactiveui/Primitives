@@ -133,7 +133,7 @@ public static partial class LinqExtensions
             Dispose();
         }
 
-        /// <summary>Queues completion behind any pending sample, then releases active resources.</summary>
+        /// <summary>Queues any value still waiting, then completion, then releases active resources.</summary>
         public void OnCompleted()
         {
             lock (_gate)
@@ -144,6 +144,14 @@ public static partial class LinqExtensions
                 }
 
                 _done = true;
+
+                // A value that arrived since the last tick still goes out, ahead of completion.
+                if (_hasLatest)
+                {
+                    _hasLatest = false;
+                    _ = _delivery.Post(_latest!);
+                }
+
                 _ = _delivery.PostCompleted();
             }
 

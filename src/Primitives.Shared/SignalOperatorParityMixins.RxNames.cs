@@ -812,7 +812,6 @@ public static partial class LinqExtensions
         /// <summary>Emits the most recent value once the period has passed since the value that started the timer.</summary>
         /// <param name="interval">The sampling period.</param>
         /// <returns>A sequence carrying the latest source value once each period elapses; a quiet source sends nothing.</returns>
-        /// <remarks>A value still waiting when the source completes is dropped; <c>Calm</c> delivers it instead.</remarks>
         public IObservable<TLeft> Sample(TimeSpan interval)
         {
             ArgumentExceptionHelper.ThrowIfNull(left);
@@ -828,7 +827,6 @@ public static partial class LinqExtensions
         /// <returns>A sequence carrying the latest source value once each period elapses; a quiet source sends nothing.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="left"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeExceptionHelper"><paramref name="interval"/> is less than <see cref="TimeSpan.Zero"/>.</exception>
-        /// <remarks>A value still waiting when the source completes is dropped; <c>Calm</c> delivers it instead.</remarks>
         public IObservable<TLeft> Sample(TimeSpan interval, ISequencer? scheduler)
         {
             ArgumentExceptionHelper.ThrowIfNull(left);
@@ -839,18 +837,21 @@ public static partial class LinqExtensions
             return new ProbeSignal<TLeft>(left, interval, scheduler);
         }
 
-        /// <summary>Resubscribes to the source after an error up to <paramref name="retryCount"/> times.</summary>
-        /// <param name="retryCount">The maximum number of retry attempts after the initial subscription.</param>
-        /// <returns>A sequence that retries the source before forwarding the final error.</returns>
+        /// <summary>Runs the source up to <paramref name="retryCount"/> times in total, stopping at the first run that ends without an error.</summary>
+        /// <param name="retryCount">The total number of runs. Zero runs the source not at all and completes.</param>
+        /// <returns>A sequence that runs the source again after an error before forwarding the final error.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="left"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeExceptionHelper"><paramref name="retryCount"/> is less than zero.</exception>
+        /// <remarks>The count is total runs, matching the System.Reactive operator of this name. Use <c>Reattempt</c> to count extra tries instead.</remarks>
         public IObservable<TLeft> Retry(int retryCount)
         {
             ArgumentExceptionHelper.ThrowIfNull(left);
 
             ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(retryCount);
 
-            return new ReattemptSignal<TLeft>(left, retryCount);
+            return retryCount == 0
+                ? ImmutableEmptySignal<TLeft>.Instance
+                : new ReattemptSignal<TLeft>(left, retryCount - 1);
         }
 
         /// <summary>Converts source values and terminal notifications into <see cref="Spark{T}"/> values.</summary>

@@ -21,17 +21,19 @@ public static partial class SignalAsyncExtensions
             return new ReattemptSignal<T>(source, retryCount);
         }
 
-        /// <summary>Repeats the source observable sequence on error up to the specified number of times.</summary>
-        /// <param name="retryCount">The maximum number of times to re-subscribe to the source on error.
-        /// Must be greater than or equal to zero. A value of 0 means no retries (original sequence only).</param>
-        /// <returns>An observable sequence that mirrors the source, re-subscribing on error up to the
-        /// specified number of times. If all retries are exhausted, the last error is propagated.</returns>
+        /// <summary>Runs the source up to the specified number of times in total, stopping at the first run that ends without an error.</summary>
+        /// <param name="retryCount">The total number of runs. Zero runs the source not at all and completes.</param>
+        /// <returns>An observable sequence that mirrors the source and runs it again on error. If every run
+        /// fails, the last error is propagated.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="retryCount"/> is negative.</exception>
+        /// <remarks>The count is total runs, matching the System.Reactive operator of this name. Use <c>Reattempt</c> to count extra tries instead.</remarks>
         public IObservableAsync<T> Retry(int retryCount)
         {
             ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(retryCount);
 
-            return new ReattemptSignal<T>(source, retryCount);
+            return retryCount == 0
+                ? SignalAsync.Empty<T>()
+                : new ReattemptSignal<T>(source, retryCount - 1);
         }
     }
 }

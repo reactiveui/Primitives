@@ -619,7 +619,6 @@ public static partial class LinqExtensions
         /// <returns>A sequence that emits the latest source value on each sampling tick.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeExceptionHelper"><paramref name="period"/> is less than <see cref="TimeSpan.Zero"/>.</exception>
-        /// <remarks>A value still waiting when the source completes is dropped; <c>Calm</c> delivers it instead.</remarks>
         public IObservable<T> Probe(TimeSpan period)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -635,7 +634,6 @@ public static partial class LinqExtensions
         /// <returns>A sequence that emits the latest source value on each sampling tick.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeExceptionHelper"><paramref name="period"/> is less than <see cref="TimeSpan.Zero"/>.</exception>
-        /// <remarks>A value still waiting when the source completes is dropped; <c>Calm</c> delivers it instead.</remarks>
         public IObservable<T> Probe(TimeSpan period, ISequencer? scheduler)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);

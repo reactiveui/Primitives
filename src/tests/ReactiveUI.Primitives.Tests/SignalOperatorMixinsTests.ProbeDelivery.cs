@@ -53,7 +53,7 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(downstream.Completed).IsEqualTo(0);
     }
 
-    /// <summary>An earlier sample tick that fires again after the source completed delivers nothing further.</summary>
+    /// <summary>Completion delivers the value waiting since the last tick, and a later stale tick delivers nothing further.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task ProbeEarlierTickFiringAfterCompletionDeliversNothing()
@@ -70,6 +70,45 @@ public partial class SignalOperatorMixinsTests
         source.OnNext(Two);
         source.OnCompleted();
         sequencer.RunStaleTick();
+
+        await Assert.That(downstream.Values.SequenceEqual([One, Two])).IsTrue();
+        await Assert.That(downstream.Completed).IsEqualTo(1);
+    }
+
+    /// <summary>A value that arrives before the first tick is delivered when the source completes.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ProbeCompletionDeliversTheValueStillWaiting()
+    {
+        ManualSequencer sequencer = new();
+        IObserver<int>? source = null;
+        RecordingWitness<int> downstream = new();
+        using var subscription = new ScriptedObservable<int>(observer => source = observer)
+            .Probe(TimeSpan.FromTicks(Ten), sequencer)
+            .Subscribe(downstream);
+
+        source!.OnNext(One);
+        source.OnCompleted();
+
+        await Assert.That(downstream.Values.SequenceEqual([One])).IsTrue();
+        await Assert.That(downstream.Completed).IsEqualTo(1);
+    }
+
+    /// <summary>Completion with no value waiting since the last tick delivers only the completion.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ProbeCompletionWithNothingWaitingDeliversOnlyCompletion()
+    {
+        ManualSequencer sequencer = new();
+        IObserver<int>? source = null;
+        RecordingWitness<int> downstream = new();
+        using var subscription = new ScriptedObservable<int>(observer => source = observer)
+            .Probe(TimeSpan.FromTicks(Ten), sequencer)
+            .Subscribe(downstream);
+
+        source!.OnNext(One);
+        sequencer.RunPending();
+        source.OnCompleted();
 
         await Assert.That(downstream.Values.SequenceEqual([One])).IsTrue();
         await Assert.That(downstream.Completed).IsEqualTo(1);
