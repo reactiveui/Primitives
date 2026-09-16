@@ -1079,6 +1079,7 @@ namespace ReactiveUI.Primitives.Advanced
     [System.Diagnostics.DebuggerDisplay("OnErrorResumeNextSignal: Sources = {_sources}")]
     public sealed class OnErrorResumeNextSignal<T> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<T>
     {
+        public OnErrorResumeNextSignal(System.Collections.Generic.IEnumerable<System.IObservable<T>> sources) { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public bool IsRequiredSubscribeOnCurrentThread() { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
