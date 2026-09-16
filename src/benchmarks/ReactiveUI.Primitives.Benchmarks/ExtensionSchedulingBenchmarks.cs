@@ -285,10 +285,10 @@ public class ExtensionSchedulingBenchmarks
         ValueTally tally = new();
         for (var i = 0; i < Count; i++)
         {
-            using var delayed = PrimitivesExtensions.Schedule(i, Window, clock).Subscribe(observer);
-            using var transformed = PrimitivesExtensions.Schedule(i, clock, static value => value + 1)
+            using var delayed = PrimitivesExtensions.ScheduleValue(i, Window, clock).Subscribe(observer);
+            using var transformed = PrimitivesExtensions.ScheduleValue(i, clock, static value => value + 1)
                 .Subscribe(observer);
-            using var absolute = PrimitivesExtensions.Schedule(i, clock.Now + Window, clock, tally.Add)
+            using var absolute = PrimitivesExtensions.ScheduleValue(i, clock.Now + Window, clock, tally.Add)
                 .Subscribe(observer);
             clock.AdvanceBy(Window);
         }

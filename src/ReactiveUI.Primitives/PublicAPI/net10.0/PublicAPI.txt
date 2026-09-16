@@ -2108,17 +2108,17 @@ namespace ReactiveUI.Primitives.Extensions
         extension<T>(T value)
         {
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.IObservable<T> Schedule(ReactiveUI.Primitives.Concurrency.ISequencer scheduler, System.Func<T, T> function) { }
+            public System.IObservable<T> ScheduleValue(ReactiveUI.Primitives.Concurrency.ISequencer scheduler, System.Func<T, T> function) { }
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.IObservable<T> Schedule(System.DateTimeOffset dueTime, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+            public System.IObservable<T> ScheduleValue(System.DateTimeOffset dueTime, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.IObservable<T> Schedule(System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
+            public System.IObservable<T> ScheduleValue(System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer scheduler) { }
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.IObservable<T> Schedule(System.DateTimeOffset dueTime, ReactiveUI.Primitives.Concurrency.ISequencer scheduler, System.Action<T> action) { }
+            public System.IObservable<T> ScheduleValue(System.DateTimeOffset dueTime, ReactiveUI.Primitives.Concurrency.ISequencer scheduler, System.Action<T> action) { }
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.IObservable<T> Schedule(System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer scheduler, System.Action<T> action) { }
+            public System.IObservable<T> ScheduleValue(System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer scheduler, System.Action<T> action) { }
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-            public System.IObservable<T> Schedule(System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer scheduler, System.Func<T, T> function) { }
+            public System.IObservable<T> ScheduleValue(System.TimeSpan dueTime, ReactiveUI.Primitives.Concurrency.ISequencer scheduler, System.Func<T, T> function) { }
         }
         extension<TKey>(System.Collections.Generic.IReadOnlyList<TKey> candidates)
         {

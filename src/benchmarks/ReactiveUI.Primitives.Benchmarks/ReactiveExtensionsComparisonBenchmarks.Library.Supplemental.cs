@@ -145,7 +145,7 @@ public partial class ReactiveExtensionsComparisonBenchmarks
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int RunSchedule(ExtensionsLibrary library) =>
         DrainInt(library == ExtensionsLibrary.Primitives
-            ? PrimitivesExtensions.Schedule(Value, Sequencer.Immediate, static value => value + 1)
+            ? PrimitivesExtensions.ScheduleValue(Value, Sequencer.Immediate, static value => value + 1)
             : PackageExtensions.Schedule(Value, ImmediateScheduler.Instance, static value => value + 1));
 
     /// <summary>Schedules an error-isolated callback on an immediate scheduler.</summary>

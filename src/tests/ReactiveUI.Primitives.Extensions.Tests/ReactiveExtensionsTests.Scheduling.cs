@@ -158,7 +158,7 @@ public partial class ReactiveExtensionsTests
     {
         VirtualClock scheduler = new();
         int? result = null;
-        using var sub = SampleValue10.Schedule(TimeSpan.FromTicks(SchedulerWindowTicks), scheduler, static x => x * SampleValue2).Subscribe(x => result = x);
+        using var sub = SampleValue10.ScheduleValue(TimeSpan.FromTicks(SchedulerWindowTicks), scheduler, static x => x * SampleValue2).Subscribe(x => result = x);
         await Assert.That(result).IsNull();
         scheduler.AdvanceBy(SchedulerAdvancePastWindowTicks);
         await Assert.That(result).IsEqualTo(SampleValue20);
@@ -240,7 +240,7 @@ public partial class ReactiveExtensionsTests
         VirtualClock scheduler = new();
         var executed = false;
         const int Value = 42;
-        _ = Value.Schedule(TimeSpan.FromMilliseconds(ShortScheduleDelayMilliseconds), scheduler, v => executed = true).Subscribe();
+        _ = Value.ScheduleValue(TimeSpan.FromMilliseconds(ShortScheduleDelayMilliseconds), scheduler, v => executed = true).Subscribe();
         scheduler.Start();
         await Assert.That(executed).IsTrue();
     }
@@ -293,7 +293,7 @@ public partial class ReactiveExtensionsTests
         VirtualClock scheduler = new();
         var executed = false;
         const int Value = 42;
-        _ = Value.Schedule(
+        _ = Value.ScheduleValue(
             scheduler.Now.AddMilliseconds(SampleValue10),
             scheduler,
             v => executed = true).Subscribe();
@@ -325,7 +325,7 @@ public partial class ReactiveExtensionsTests
     {
         const int Value = 42;
         var result = 0;
-        _ = Value.Schedule(Sequencer.Immediate, static v => v * SampleValue2).Subscribe(r => result = r);
+        _ = Value.ScheduleValue(Sequencer.Immediate, static v => v * SampleValue2).Subscribe(r => result = r);
         await Assert.That(result).IsEqualTo(SampleValue84);
     }
 
@@ -349,7 +349,7 @@ public partial class ReactiveExtensionsTests
         VirtualClock scheduler = new();
         const int Value = 42;
         var result = 0;
-        _ = Value.Schedule(TimeSpan.FromMilliseconds(ShortScheduleDelayMilliseconds), scheduler, static v => v * SampleValue2)
+        _ = Value.ScheduleValue(TimeSpan.FromMilliseconds(ShortScheduleDelayMilliseconds), scheduler, static v => v * SampleValue2)
             .Subscribe(r => result = r);
         scheduler.Start();
         await Assert.That(result).IsEqualTo(SampleValue84);
@@ -539,7 +539,7 @@ public partial class ReactiveExtensionsTests
     {
         VirtualClock scheduler = new();
         int? result = null;
-        using var sub = SampleValue42.Schedule(TimeSpan.FromTicks(SchedulerWindowTicks), scheduler).Subscribe(x => result = x);
+        using var sub = SampleValue42.ScheduleValue(TimeSpan.FromTicks(SchedulerWindowTicks), scheduler).Subscribe(x => result = x);
         await Assert.That(result).IsNull();
         scheduler.AdvanceBy(SchedulerAdvancePastWindowTicks);
         await Assert.That(result).IsEqualTo(SampleValue42);
@@ -568,7 +568,7 @@ public partial class ReactiveExtensionsTests
         VirtualClock scheduler = new();
         int? result = null;
         var dueTime = scheduler.Now.AddTicks(SchedulerWindowTicks);
-        using var sub = SampleValue42.Schedule(dueTime, scheduler).Subscribe(x => result = x);
+        using var sub = SampleValue42.ScheduleValue(dueTime, scheduler).Subscribe(x => result = x);
         await Assert.That(result).IsNull();
         scheduler.AdvanceBy(SchedulerWindowTicks + 1);
         await Assert.That(result).IsEqualTo(SampleValue42);
@@ -598,7 +598,7 @@ public partial class ReactiveExtensionsTests
         VirtualClock scheduler = new();
         var actionExecuted = false;
         int? result = null;
-        using var sub = SampleValue42.Schedule(TimeSpan.FromTicks(SchedulerWindowTicks), scheduler, v => actionExecuted = v == SampleValue42)
+        using var sub = SampleValue42.ScheduleValue(TimeSpan.FromTicks(SchedulerWindowTicks), scheduler, v => actionExecuted = v == SampleValue42)
             .Subscribe(x => result = x);
         await Assert.That(actionExecuted).IsFalse();
         scheduler.AdvanceBy(SchedulerAdvancePastWindowTicks);

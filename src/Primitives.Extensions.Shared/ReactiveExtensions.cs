@@ -1005,7 +1005,7 @@ public static partial class ReactiveExtensions
         }
     }
 
-    /// <summary>Scheduling operators for a single value.</summary>
+    /// <summary>Scheduling operators for a single value, named apart from the source operators so a concrete signal type cannot bind them by mistake.</summary>
     /// <typeparam name="T">The value type.</typeparam>
     /// <param name="value">The value to schedule.</param>
     extension<T>(T value)
@@ -1015,7 +1015,7 @@ public static partial class ReactiveExtensions
         /// <param name="scheduler">Scheduler.</param>
         /// <returns>Observable that emits the value.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IObservable<T> Schedule(TimeSpan dueTime, ISequencer scheduler) =>
+        public IObservable<T> ScheduleValue(TimeSpan dueTime, ISequencer scheduler) =>
             new ScheduledValueObservable<T>(value, scheduler, dueTime, null, null, null);
 
         /// <summary>Schedules the specified due time.</summary>
@@ -1023,7 +1023,7 @@ public static partial class ReactiveExtensions
         /// <param name="scheduler">The sequencer the work runs on.</param>
         /// <returns>An IObservable of T.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IObservable<T> Schedule(DateTimeOffset dueTime, ISequencer scheduler) =>
+        public IObservable<T> ScheduleValue(DateTimeOffset dueTime, ISequencer scheduler) =>
             new ScheduledValueObservable<T>(value, scheduler, null, dueTime, null, null);
 
         /// <summary>Schedules the specified due time.</summary>
@@ -1032,7 +1032,7 @@ public static partial class ReactiveExtensions
         /// <param name="action">The work to run.</param>
         /// <returns>An IObservable of T.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IObservable<T> Schedule(TimeSpan dueTime, ISequencer scheduler, Action<T> action) =>
+        public IObservable<T> ScheduleValue(TimeSpan dueTime, ISequencer scheduler, Action<T> action) =>
             new ScheduledValueObservable<T>(value, scheduler, dueTime, null, null, action);
 
         /// <summary>Schedules the specified due time.</summary>
@@ -1041,7 +1041,7 @@ public static partial class ReactiveExtensions
         /// <param name="action">The work to run.</param>
         /// <returns>An IObservable of T.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IObservable<T> Schedule(DateTimeOffset dueTime, ISequencer scheduler, Action<T> action) =>
+        public IObservable<T> ScheduleValue(DateTimeOffset dueTime, ISequencer scheduler, Action<T> action) =>
             new ScheduledValueObservable<T>(value, scheduler, null, dueTime, null, action);
 
         /// <summary>Schedules the specified due time.</summary>
@@ -1049,7 +1049,7 @@ public static partial class ReactiveExtensions
         /// <param name="function">The function.</param>
         /// <returns>An IObservable of T.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IObservable<T> Schedule(ISequencer scheduler, Func<T, T> function) =>
+        public IObservable<T> ScheduleValue(ISequencer scheduler, Func<T, T> function) =>
             new ScheduledValueObservable<T>(value, scheduler, null, null, function, null);
 
         /// <summary>Schedules the specified due time.</summary>
@@ -1058,7 +1058,7 @@ public static partial class ReactiveExtensions
         /// <param name="function">The function.</param>
         /// <returns>An IObservable of T.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IObservable<T> Schedule(TimeSpan dueTime, ISequencer scheduler, Func<T, T> function) =>
+        public IObservable<T> ScheduleValue(TimeSpan dueTime, ISequencer scheduler, Func<T, T> function) =>
             new ScheduledValueObservable<T>(value, scheduler, dueTime, null, function, null);
     }
 
