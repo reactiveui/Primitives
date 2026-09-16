@@ -5,12 +5,15 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
 /// <summary>Partitions values by predicate into two outputs that share a source subscription.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-/// <remarks>The first subscriber connects and the last disposal disconnects; terminal notifications reach both outputs.</remarks>
+/// <remarks>The first subscriber connects and the last disposal disconnects; terminal notifications reach both outputs.
+/// Over a cold source that produces its values during subscribe, the first side to subscribe consumes the sequence and the
+/// other side sees nothing, so share the source first when both sides need it.</remarks>
 [System.Diagnostics.DebuggerDisplay("PartitionObservable: Source = {_source}, Subscriptions = {_subscriptionCount}")]
 public sealed class PartitionObservable<T>
 {
@@ -23,7 +26,7 @@ public sealed class PartitionObservable<T>
     /// <summary>The gate for synchronization.</summary>
     private readonly Lock _gate = new();
 
-    /// <summary>The source subscription.</summary>
+    /// <summary>The source subscription, assigned after the first subscriber is registered.</summary>
     private IDisposable? _sourceSubscription;
 
     /// <summary>The shared source observer, live only while at least one side is subscribed.</summary>
@@ -60,17 +63,26 @@ public sealed class PartitionObservable<T>
     /// <returns>A disposable to unsubscribe.</returns>
     private Subscription Subscribe(IObserver<T> observer, bool side)
     {
+        PartitionSink sink;
+        SingleDisposable? connection = null;
         lock (_gate)
         {
             if (_subscriptionCount == 0)
             {
                 _sink = new(this);
-                _sourceSubscription = _source.Subscribe(_sink);
+                connection = new();
+                _sourceSubscription = connection;
             }
 
+            sink = _sink!;
+            sink.Add(observer, side);
             _subscriptionCount++;
-            _sink!.Add(observer, side);
         }
+
+        // The observer is registered before the source is subscribed, so a cold source that runs to
+        // completion inside Subscribe delivers to it. The gate is released first, so the source does
+        // not run while it is held.
+        connection?.Create(_source.Subscribe(sink));
 
         return new(this, observer, side);
     }
@@ -101,17 +113,20 @@ public sealed class PartitionObservable<T>
                 return;
             }
 
+            IDisposable? connection = null;
             lock (_parent._gate)
             {
-                _parent._sink!.Remove(_observer, _side);
+                _parent._sink?.Remove(_observer, _side);
                 _parent._subscriptionCount--;
                 if (_parent._subscriptionCount == 0)
                 {
-                    _parent._sourceSubscription!.Dispose();
+                    connection = _parent._sourceSubscription;
                     _parent._sourceSubscription = null;
                     _parent._sink = null;
                 }
             }
+
+            connection?.Dispose();
         }
     }
 
