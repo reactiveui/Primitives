@@ -2312,6 +2312,19 @@ This keeps your change small if you already use `IObservable<T>`. You keep the c
 the lower allocation profile. When you need full System.Reactive or R3 behaviour, the `.Reactive` package variants and
 the R3 source-generator bridges cover those boundaries.
 
+### Two ways to build an operator
+
+System.Reactive and R3 build operators from a small set of general parts. `Synchronize` shows the idea well. It is one
+operator, and you compose it with any other operator when you need values delivered one at a time. That design keeps the
+library small. It also reads well in a chain.
+
+This library takes the other path. Each operator has its own sink. A sink that needs to deliver one value at a time
+builds that in. You get more types as a result. You also get a sink that does its own job with no general layer between
+it and your code.
+
+Neither path is wrong. They trade different things. The composed path costs less surface area. The dedicated path costs
+more classes and pays you back in speed and allocations. We chose speed, and we accepted the extra classes to get it.
+
 ### Where we could not stay on the standard types
 
 Keeping `IObservable<T>` and `IObserver<T>` was easy. Both ship in .NET itself. Two related types do not, so we had to
