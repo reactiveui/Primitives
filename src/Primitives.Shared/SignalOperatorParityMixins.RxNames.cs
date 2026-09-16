@@ -812,6 +812,7 @@ public static partial class LinqExtensions
         /// <summary>Emits the most recent value once the period has passed since the value that started the timer.</summary>
         /// <param name="interval">The sampling period.</param>
         /// <returns>A sequence carrying the latest source value once each period elapses; a quiet source sends nothing.</returns>
+        /// <remarks>A value still waiting when the source completes is dropped; <c>Calm</c> delivers it instead.</remarks>
         public IObservable<TLeft> Sample(TimeSpan interval)
         {
             ArgumentExceptionHelper.ThrowIfNull(left);
@@ -827,6 +828,7 @@ public static partial class LinqExtensions
         /// <returns>A sequence carrying the latest source value once each period elapses; a quiet source sends nothing.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="left"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeExceptionHelper"><paramref name="interval"/> is less than <see cref="TimeSpan.Zero"/>.</exception>
+        /// <remarks>A value still waiting when the source completes is dropped; <c>Calm</c> delivers it instead.</remarks>
         public IObservable<TLeft> Sample(TimeSpan interval, ISequencer? scheduler)
         {
             ArgumentExceptionHelper.ThrowIfNull(left);

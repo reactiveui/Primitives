@@ -857,7 +857,7 @@ These change when values arrive.
 | `Stabilize(dueTime)`, `Stabilize(dueTime, sequencer)` | Another name for `Calm`. | `Throttle` |
 | `Throttle(dueTime)`, `Throttle(dueTime, sequencer)` | A third name for `Calm`. | `Throttle` |
 | `EmitIfQuiet(dueTime)`, `EmitIfQuiet(dueTime, sequencer)` | Works like `Calm` and hands back the source unchanged when `dueTime` is zero or less. | `Throttle` |
-| `Probe(period)`, `Probe(period, sequencer)` | Emits the latest value once the period has passed since the value that started the timer. A quiet source sends nothing, and a steady source drifts away from a fixed schedule. | `Sample` |
+| `Probe(period)`, `Probe(period, sequencer)` | Emits the latest value once the period has passed since the value that started the timer. A quiet source sends nothing, a steady source drifts away from a fixed schedule, and a value still waiting when the source completes is dropped. Use `Calm` when you need that last value. | `Sample` |
 | `Sample(interval)`, `Sample(interval, sequencer)` | Another name for `Probe`. | `Sample` |
 | `Buffer(timeSpan)`, `Buffer(timeSpan, sequencer)` | Gathers values into one batch per time window. | `Buffer` |
 | `Buffer(count)` | Gathers values into batches of a fixed size that do not overlap. | `Buffer` |
@@ -1095,7 +1095,8 @@ share one subscription instead of starting the work over each time.
 | `ObserveOn(sequencer)` | Delivers notifications to subscribers on the sequencer you name. | `ObserveOn` |
 | `WitnessOn(sequencer)` | Another name for `ObserveOn`. | `ObserveOn` |
 | `SubscribeOn(sequencer)` | Runs the subscription itself on the sequencer you name. | `SubscribeOn` |
-| `Synchronize()`, `Synchronize(Lock gate)`, `Synchronize(object gate)` | Delivers notifications one at a time behind a lock, which you can share with other signals. | `Synchronize` |
+| `Synchronize()`, `Synchronize(object gate)` | Delivers notifications one at a time behind a lock, which you can share with other signals. | `Synchronize` |
+| `Synchronize(Lock gate)` | The same, taking a `System.Threading.Lock`. Available on net9.0 and later only. | `Synchronize` |
 | `Serialize()` | Delivers notifications one at a time and holds no lock while your code runs, so a late arrival queues instead of blocking. | `Synchronize` (deadlock-safe) |
 | `Tap(onNext)` | Runs your action for each value and passes the value through unchanged. | `Do` |
 | `Tap(onNext, onError, onCompleted)` | Does the same and hooks errors and completion too. | `Do` |
@@ -1121,8 +1122,8 @@ share one subscription instead of starting the work over each time.
 | `AutoConnect()` | Connects on the first subscriber and never disconnects. | `AutoConnect` |
 | `AutoConnect(subscriberCount)` | Waits for that many subscribers, then connects. | `AutoConnect(n)` |
 | `AutoConnect(subscriberCount, onConnect)` | Does the same and hands you the connection to dispose. | `AutoConnect(n, onConnect)` |
-| `ShareLatest()` | Shares one live subscription for as long as anyone listens. | `Publish().RefCount()` |
-| `ToReadOnlyState(initialValue, selector)` | Turns a signal into an object with a current `Value` and a `Changed` signal. | `ToProperty` |
+| `ShareLatest()` | Shares one live subscription for as long as anyone listens, and drops it when the last one leaves. It does not replay: a late subscriber sees nothing until the next value, despite the name. | `Publish().RefCount()` |
+| `ToReadOnlyState(initialValue, selector)` | Turns a signal into an object with a current `Value` and a `Changed` signal. `Changed` sends the current value when you subscribe, then once per source value, including when your selector returns the same value again. | `ToProperty`, which notifies only on a real change |
 
 `Subscribe` starts the signal. Dispose the result to stop listening.
 
@@ -2042,17 +2043,17 @@ signal. `OnCompleted` ends the signal with no error. The last two are **terminal
 
 | Type | What it is | When you reach for it |
 |---|---|---|
-| `Signal<T>` | The plain signal. It passes each value straight to the current subscribers. | You want a simple hub. One piece of code pushes values, several pieces listen. |
+| `Signal<T>` | The plain signal. It passes each value straight to the current subscribers. `SubscribeAction(Action<T>)` subscribes with a plain action. | You want a simple hub. One piece of code pushes values, several pieces listen. |
 | `BehaviorSignal<T>` | Keeps the most recent value and replays it to each new subscriber. Exposes `Value` and `TryGetValue`. | A late subscriber must see the current value at once, not wait for the next one. |
-| `StateSignal<T>` | Holds a value you can read and write through `Value`. Writing sends the value to subscribers. Also offers `Changed`, `Refresh()` and `ToReadOnlyState(selector)`. | You are modelling a piece of state, such as a property on a view model. |
+| `StateSignal<T>` | Holds a value you can read and write through `Value`. Writing sends the value to subscribers. Also offers `Changed`, `Refresh()`, `TryGetValue` and `ToReadOnlyState(selector)`, which returns a `ProjectedReadOnlyState<T, TResult>`. | You are modelling a piece of state, such as a property on a view model. |
 | `ReplaySignal<T>` | Buffers past values and replays them to each new subscriber. You bound the buffer by count, by age, or by both. | A new subscriber needs recent history, not just the latest value. |
 | `SerializedSignal<T>` | Wraps another signal. Producers on any number of threads deliver one at a time. | Several threads push into the same signal. |
 | `CurrentValueSignal<T>` | Reads a value that something else owns. It emits on subscribe and again on every change. Observable only. | You are bridging a value that already has its own change notification, such as a control property. |
-| `AsyncSignal<T>` | Records the latest value and replays it when the signal completes. You can await it. | You want one final answer, and you want to `await` it. |
+| `AsyncSignal<T>` | Records the latest value and replays it when the signal completes. Offers `IsCompleted`, `Value`, `GetAwaiter`, `GetResult` and `RemoveObserver`, so you can await it. | You want one final answer, and you want to `await` it. |
 | `ScheduledSignal<T>` | Sends its notifications through an `ISequencer`. | Subscribers must run on a particular thread, such as a UI thread. |
 | `DelayableNotificationSignal<T>` | Passes values through while a test you supply says "not delayed". It buffers them while that test says "delayed", then `Flush()` emits the batch with duplicates removed. Build one with `Signal.Delayable`. | You want to hold back a burst of notifications and release it as one batch. |
-| `PrioritySemaphoreSignal<T>` | Forwards at most `MaximumCount` values at a time and releases the rest in priority order. `T` must implement `IComparable<T>`. | You need to cap how much work is in flight and run the most important item first. |
-| `CommandSignal<TResult>` | An action you can run, exposed as a signal. Offers `CanRun`, `IsRunning`, `Results`, `Faults` and `ExecuteAsync`. | A button or a menu item runs an operation, and the screen tracks whether it may run and whether it is running. |
+| `PrioritySemaphoreSignal<T>` | Forwards at most `MaximumCount` values at a time and releases the rest in priority order. `MaximumCount` is settable, and `Release()` frees one slot. `T` must implement `IComparable<T>`. | You need to cap how much work is in flight and run the most important item first. |
+| `CommandSignal<TResult>` | An action you can run, exposed as a signal. Offers `CanRun`, `IsRunning` (a `StateSignal<bool>`), `Results`, `Faults` and `ExecuteAsync([CancellationToken])`, which returns a `CommandExecution<TResult>`. | A button or a menu item runs an operation, and the screen tracks whether it may run and whether it is running. |
 | `ReadOnlyState<T>` | A read-only view of a latest value, built from a source and an initial value. Offers `Value` and `Changed`. | You want to hand out state that callers can read but not write. |
 | `CurrentValueSubject<T>` | Keeps the latest value and replays it to new subscribers. Lives in `ReactiveUI.Primitives.Extensions`. | You want a latest-value signal from the extensions surface. |
 
