@@ -12,7 +12,8 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Subscribes to each source in turn, moving to the next one whenever a source errors.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-internal sealed class CatchSignal<T> : IRequireCurrentThread<T>
+[System.Diagnostics.DebuggerDisplay("CatchSignal<{typeof(T).Name,nq}>")]
+public sealed class CatchSignal<T> : IRequireCurrentThread<T>
 {
     /// <summary>The sources tried in order.</summary>
     private readonly IEnumerable<IObservable<T>> _sources;

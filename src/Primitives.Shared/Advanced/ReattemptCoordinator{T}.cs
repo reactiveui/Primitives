@@ -15,7 +15,8 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <param name="source">The source observable.</param>
 /// <param name="retryCount">The maximum number of retries.</param>
 /// <param name="observer">The downstream observer.</param>
-internal sealed class ReattemptCoordinator<T>(IObservable<T> source, int retryCount, IObserver<T> observer) : IDisposable
+[System.Diagnostics.DebuggerDisplay("ReattemptCoordinator<{typeof(T).Name,nq}>")]
+public sealed class ReattemptCoordinator<T>(IObservable<T> source, int retryCount, IObserver<T> observer) : IDisposable
 {
     /// <summary>The source observable.</summary>
     private readonly IObservable<T> _source = source;
@@ -38,7 +39,7 @@ internal sealed class ReattemptCoordinator<T>(IObservable<T> source, int retryCo
 
     /// <summary>Starts the first subscription attempt.</summary>
     /// <returns>The coordinator that owns the subscription cleanup.</returns>
-    internal ReattemptCoordinator<T> Run()
+    public ReattemptCoordinator<T> Run()
     {
         SubscribeNext();
         return this;

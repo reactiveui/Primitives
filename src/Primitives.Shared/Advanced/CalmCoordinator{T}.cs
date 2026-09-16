@@ -17,7 +17,8 @@ namespace ReactiveUI.Primitives.Advanced;
 /// The gate only guards the latest value and the flags. Emissions and terminals are queued in order under the gate and
 /// delivered by a <see cref="SerializedDelivery{T}"/> after it is released, so no lock is held while the observer runs.
 /// </remarks>
-internal sealed class CalmCoordinator<T> : IDisposable
+[System.Diagnostics.DebuggerDisplay("CalmCoordinator<{typeof(T).Name,nq}>")]
+public sealed class CalmCoordinator<T> : IDisposable
 {
     /// <summary>The source observable.</summary>
     private readonly IObservable<T> _source;
@@ -62,7 +63,7 @@ internal sealed class CalmCoordinator<T> : IDisposable
     /// <param name="source">The source observable.</param>
     /// <param name="dueTime">The quiet period.</param>
     /// <param name="sequencer">The sequencer used to schedule timers.</param>
-    internal CalmCoordinator(IObservable<T> source, TimeSpan dueTime, ISequencer sequencer)
+    public CalmCoordinator(IObservable<T> source, TimeSpan dueTime, ISequencer sequencer)
     {
         _source = source;
         _dueTime = Sequencer.Normalize(dueTime);
@@ -93,7 +94,7 @@ internal sealed class CalmCoordinator<T> : IDisposable
     /// <summary>Starts quiet-period coordination.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <returns>The coordinator that owns the subscription cleanup.</returns>
-    internal CalmCoordinator<T> Run(IObserver<T> observer)
+    public CalmCoordinator<T> Run(IObserver<T> observer)
     {
         _observer = observer;
         _subscriptions.Add(_timer);

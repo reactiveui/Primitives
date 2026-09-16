@@ -920,6 +920,12 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public BackgroundJobSignal(System.Func<ReactiveUI.Primitives.Async.IObserverAsync<T>, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> job, bool startSynchronously, System.Threading.Tasks.TaskScheduler? taskScheduler) { }
         System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<T>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
     }
+    public sealed class CallbackSignalAsync<T> : ReactiveUI.Primitives.Async.IObservableAsync<T>
+    {
+        public CallbackSignalAsync(System.Func<ReactiveUI.Primitives.Async.IObserverAsync<T>, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<System.IAsyncDisposable>> subscribeAsync) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        System.Threading.Tasks.ValueTask<System.IAsyncDisposable> ReactiveUI.Primitives.Async.IObservableAsync<T>.SubscribeAsync(ReactiveUI.Primitives.Async.IObserverAsync<T> observer, System.Threading.CancellationToken cancellationToken) { }
+    }
     [System.Diagnostics.DebuggerDisplay("CallbackWitnessAsync: {_witness}")]
     public sealed class CallbackWitnessAsync<T> : ReactiveUI.Primitives.Async.IWitnessAsync<T>
     {

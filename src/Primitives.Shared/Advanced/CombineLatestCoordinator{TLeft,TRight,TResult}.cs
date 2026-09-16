@@ -21,7 +21,8 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="TResult">The result value type.</typeparam>
 /// <param name="observer">The downstream observer.</param>
 /// <param name="selector">The projection function.</param>
-internal sealed class CombineLatestCoordinator<TLeft, TRight, TResult>(IObserver<TResult> observer, Func<TLeft, TRight, TResult> selector) : IDrainTarget
+[System.Diagnostics.DebuggerDisplay("CombineLatestCoordinator<{typeof(TLeft).Name,nq},{typeof(TRight).Name,nq}>")]
+public sealed class CombineLatestCoordinator<TLeft, TRight, TResult>(IObserver<TResult> observer, Func<TLeft, TRight, TResult> selector) : IDrainTarget
 {
     /// <summary>The downstream observer.</summary>
     private readonly IObserver<TResult> _observer = observer;
@@ -90,7 +91,7 @@ internal sealed class CombineLatestCoordinator<TLeft, TRight, TResult>(IObserver
     /// <param name="left">The left source.</param>
     /// <param name="right">The right source.</param>
     /// <returns>The subscription cleanup.</returns>
-    internal MultipleDisposable Run(IObservable<TLeft> left, IObservable<TRight> right) =>
+    public MultipleDisposable Run(IObservable<TLeft> left, IObservable<TRight> right) =>
         new(
             left.Subscribe(OnLeftNext, OnError, OnLeftCompleted),
             right.Subscribe(OnRightNext, OnError, OnRightCompleted));

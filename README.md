@@ -17,6 +17,9 @@ as it happens. The library builds on `IObservable<T>` and `IObserver<T>`, two in
 keep the types your code already uses. It adds no runtime reflection and generates no code at run time, so it works
 under ahead-of-time compilation.
 
+**Full documentation lives at [reactiveui.net/documentation/primitives](https://www.reactiveui.net/documentation/primitives/).** This readme
+covers the whole surface in brief; the site carries the detailed guides, per-operator pages and runnable samples.
+
 ## Contents
 
 - [The problem it solves](#the-problem-it-solves)
@@ -2978,12 +2981,26 @@ the same thing.
 | `AutoConnectSignal` | `AutoConnect` |
 | `AutoShareSignal` | `AutoShare` |
 | `ConnectableSignal<T>` | `Publish` and its `Connect` handle |
+| `CreateSignal<T>`, `CreateSignal<T, TState>` | `Signal.Create` |
+| `CreateSafeSignal<T>` | `Signal.CreateSafe` |
+| `DeferSignal<T>` | `Signal.Lazy` / `Signal.Defer` |
+| `CatchSignal<T>` | `Catch` |
+| `WitnessOnSignal<T>` | `WitnessOn` / `ObserveOn` |
+| `SelectManyThenCoordinator<TSource, TMid, TResult>` | `SelectManyThen`, both projection stages in one sink |
+| `CalmCoordinator<T>` | `Calm` / `Throttle` |
+| `ReattemptCoordinator<T>` | `Reattempt` |
+| `LatchCoordinator<TLeft, TRight, TResult>` | `Latch` |
+| `CombineLatestCoordinator<TLeft, TRight, TResult>` | `CombineLatest` |
 
 Sources carry concrete types too: `AnonymousSignal<T>` behind `Signal.Create`, plus `ReturnSignal<T>`,
 `EmptySignal<T>`, `ThrowSignal<T>`, `RangeSignal`, `RepeatSignal<T>`, `UnfoldSignal<TState, TResult>`,
 `FromEnumerableSignal<T>`, `AsyncEnumerableSignal<T>`, `UseSignal<TResource, T>`, `EverySignal`, `AfterSignal`,
 `StartSignal`, `FromAsyncSignal<T>` and `FromEventPatternSignal`. The constant fast paths
 `ImmediateReturnSignal<T>`, `ImmutableEmptySignal<T>` and `ImmutableNeverSignal<T>` allocate nothing.
+
+Each operator is one sink. An operator never builds its behaviour by chaining other operators, so a value passes
+through one layer per operator you wrote and no more. Where an operator has two jobs, such as a stop condition and a
+cancellation token, one sink watches both.
 
 Every fused operator type is public and takes its sources through the constructor, so you can build one directly
 instead of calling the operator.

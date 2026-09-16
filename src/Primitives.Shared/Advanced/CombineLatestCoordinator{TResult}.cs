@@ -92,7 +92,7 @@ public sealed class CombineLatestCoordinator<TResult> : IDisposable, IDrainTarge
     /// <typeparam name="T">The source element type.</typeparam>
     /// <param name="source">The source observable.</param>
     /// <returns>The slot that will hold the source's latest value.</returns>
-    internal CombineLatestSlot<TResult, T> Attach<T>(IObservable<T> source)
+    public CombineLatestSlot<TResult, T> Attach<T>(IObservable<T> source)
     {
         CombineLatestSlot<TResult, T> slot = new(this, source);
         _slots.Add(slot);

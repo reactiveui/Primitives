@@ -13,7 +13,8 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <summary>Creates a signal from a subscribe delegate that receives a caller-supplied state value.</summary>
 /// <typeparam name="T">The value type.</typeparam>
 /// <typeparam name="TState">The state type handed to the subscribe delegate.</typeparam>
-internal sealed class CreateSignal<T, TState> : IRequireCurrentThread<T>
+[System.Diagnostics.DebuggerDisplay("CreateSignal<{typeof(T).Name,nq},{typeof(TState).Name,nq}>")]
+public sealed class CreateSignal<T, TState> : IRequireCurrentThread<T>
 {
     /// <summary>The state handed to the subscribe delegate.</summary>
     private readonly TState _state;

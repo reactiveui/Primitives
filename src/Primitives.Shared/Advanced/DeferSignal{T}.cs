@@ -12,7 +12,8 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Invokes a factory per subscription and subscribes the observer to the observable it returns.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-internal sealed class DeferSignal<T> : IRequireCurrentThread<T>
+[System.Diagnostics.DebuggerDisplay("DeferSignal<{typeof(T).Name,nq}>")]
+public sealed class DeferSignal<T> : IRequireCurrentThread<T>
 {
     /// <summary>The factory invoked for each subscription.</summary>
     private readonly Func<IObservable<T>> _observableFactory;

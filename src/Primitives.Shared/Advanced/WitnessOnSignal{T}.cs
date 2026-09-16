@@ -14,7 +14,8 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="T">The value type.</typeparam>
 /// <param name="source">The source observable.</param>
 /// <param name="scheduler">The sequencer that dispatches the notifications.</param>
-internal sealed class WitnessOnSignal<T>(IObservable<T> source, ISequencer scheduler) : IRequireCurrentThread<T>
+[System.Diagnostics.DebuggerDisplay("WitnessOnSignal<{typeof(T).Name,nq}>")]
+public sealed class WitnessOnSignal<T>(IObservable<T> source, ISequencer scheduler) : IRequireCurrentThread<T>
 {
     /// <summary>The source observable.</summary>
     private readonly IObservable<T> _source = source;

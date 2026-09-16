@@ -17,7 +17,7 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <param name="coordinator">The coordinator that serializes this slot against its siblings.</param>
 /// <param name="source">The source observable.</param>
 [System.Diagnostics.DebuggerDisplay("CombineLatestSlot: Value = {Value}, HasValue = {HasValue}")]
-internal sealed class CombineLatestSlot<TResult, T>(
+public sealed class CombineLatestSlot<TResult, T>(
     CombineLatestCoordinator<TResult> coordinator,
     IObservable<T> source) : ICombineLatestSlot, IObserver<T>
 {
@@ -28,7 +28,7 @@ internal sealed class CombineLatestSlot<TResult, T>(
     private int _completed;
 
     /// <summary>Gets the latest value this source produced, valid once every slot has one.</summary>
-    internal T Value { get; private set; } = default!;
+    public T Value { get; private set; } = default!;
 
     /// <summary>Gets or sets a value indicating whether the source has produced a value; touched only while the delivery gate is held.</summary>
     internal bool HasValue { get; set; }

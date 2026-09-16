@@ -12,7 +12,8 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Creates a signal from a caller-supplied subscribe delegate.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-internal sealed class CreateSignal<T> : IRequireCurrentThread<T>
+[System.Diagnostics.DebuggerDisplay("CreateSignal<{typeof(T).Name,nq}>")]
+public sealed class CreateSignal<T> : IRequireCurrentThread<T>
 {
     /// <summary>The delegate invoked for each subscription.</summary>
     private readonly Func<IObserver<T>, IDisposable> _subscribe;

@@ -14,7 +14,8 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="TResult">The result value type.</typeparam>
 /// <param name="observer">The downstream observer.</param>
 /// <param name="selector">The projection function.</param>
-internal sealed class LatchCoordinator<TLeft, TRight, TResult>(IObserver<TResult> observer, Func<TLeft, TRight, TResult> selector)
+[System.Diagnostics.DebuggerDisplay("LatchCoordinator<{typeof(TLeft).Name,nq},{typeof(TRight).Name,nq}>")]
+public sealed class LatchCoordinator<TLeft, TRight, TResult>(IObserver<TResult> observer, Func<TLeft, TRight, TResult> selector)
 {
     /// <summary>Guards the latest-right state.</summary>
     private readonly Lock _gate = new();
@@ -35,7 +36,7 @@ internal sealed class LatchCoordinator<TLeft, TRight, TResult>(IObserver<TResult
     /// <param name="left">The left source.</param>
     /// <param name="right">The right source.</param>
     /// <returns>The subscription cleanup.</returns>
-    internal MultipleDisposable Run(IObservable<TLeft> left, IObservable<TRight> right) =>
+    public MultipleDisposable Run(IObservable<TLeft> left, IObservable<TRight> right) =>
         new(
             right.Subscribe(OnRightNext, _observer.OnError, NoOp),
             left.Subscribe(OnLeftNext, _observer.OnError, _observer.OnCompleted));
