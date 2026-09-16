@@ -843,10 +843,6 @@ namespace ReactiveUI.Primitives.Reactive
             public System.IObservable<TResult> SwitchSelect<TResult>(System.Func<TSource, System.IObservable<TResult>> selector) { }
         }
     }
-    public class Resource : _Microsoft.Android.Resource.Designer.Resource
-    {
-        public Resource() { }
-    }
 }
 namespace ReactiveUI.Primitives.Reactive.Advanced
 {

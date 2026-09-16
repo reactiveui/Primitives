@@ -497,10 +497,6 @@ namespace ReactiveUI.Primitives
             public System.IObservable<TResult> SwitchSelect<TResult>(System.Func<TSource, System.IObservable<TResult>> selector) { }
         }
     }
-    public class Resource : _Microsoft.Android.Resource.Designer.Resource
-    {
-        public Resource() { }
-    }
     [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
     [System.Serializable]
     public readonly struct RxVoid : System.IEquatable<ReactiveUI.Primitives.RxVoid>
