@@ -197,6 +197,47 @@ These rules are authoritative for everything under `src/tests/`.
 
 ---
 
+## Writing Docs
+
+These rules cover `README.md`, `CLAUDE.md` and every other doc in the repository. They do not cover XML doc comments.
+
+### Who you write for
+
+Write for a reader at a grade 8 level who knows basic C#. They know what a class, a property and an event are. They do
+not know this library.
+
+### Sentences
+
+- Put the main point first.
+- Give each sentence one subject. Use two only when they are tightly coupled.
+- Keep sentences short. Split a sentence that needs a dash, a semicolon or a "which" to hold together.
+- Use the active voice. Say who does what: "the operator delivers the value", not "the value is delivered".
+- Use verbs, not nouns made from verbs. Write "decide", not "make a decision".
+- Say what is true. Avoid double negatives.
+- Cut words that add nothing. Do not restate a point in the next sentence.
+
+### Words
+
+- Use everyday words. When you need a technical term, define it the first time you use it.
+- Define each term once. After that, use it without explaining it again.
+- Use the same word for the same thing every time. Do not swap in a synonym for variety.
+- Use "you" for the reader.
+
+### Structure
+
+- Use headings so a reader can find a topic.
+- Use a list for steps or for separate items. Use a table to compare items across the same columns.
+- Show a short code example when it explains faster than words.
+
+### Scope
+
+- Each section says what this library does, on its own terms.
+- A comparison with System.Reactive, R3 or R3Async goes only under the comparison headers: "Why not System.Reactive or
+  R3?" and the migration guides in `README.md`. Do not compare with them anywhere else.
+- Describe the code as it is. Do not describe what it used to do.
+
+---
+
 ## Agent Compatibility
 
 If another agent entrypoint file exists, it should defer to this file.
