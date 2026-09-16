@@ -1406,7 +1406,8 @@ These start listening, and some of them block until a result arrives.
 | `source.WaitForError(sequencer)` | Same, with the subscribe call dispatched through the sequencer. |
 | `source.WaitForError(sequencer, timeout)` | Same, with both a sequencer and your own timeout. |
 
-Every `WaitFor` helper throws a `TimeoutException` when the source does not end in time.
+Every `WaitForValue`, `WaitForCompletion` and `WaitForError` helper throws a `TimeoutException` when the source does
+not end in time.
 
 ### Types you can name
 
@@ -2540,7 +2541,7 @@ dotnet add xyz/xyz.csproj package ReactiveUI.Primitives.Maui
 ```
 
 4. Convert boundary types one at a time. `System.Reactive.Unit` becomes `RxVoid`. `IScheduler` becomes `ISequencer`. Rx
-   subjects become `Signal<T>`, `StateSignal<T>`, `ReplaySignal<T>`, or `FinalSignal<T>`. Composite disposable types
+   subjects become `Signal<T>`, `StateSignal<T>`, `ReplaySignal<T>`, or `AsyncSignal<T>`. Composite disposable types
    become `MultipleDisposable`, `Pocket`, `Slot`, or `AssignmentSlot`.
 5. Keep the code compiling on the first pass with the Rx-name compatibility layer: `Select`, `Where`, `Aggregate`,
    `Scan`, `Merge`, `Concat`, `CombineLatest`, `SelectMany`, and related aliases. Then move hot paths to the Primitives
@@ -2965,6 +2966,33 @@ instead of calling the operator.
 IObservable<int> viaOperator = source.Unique();
 IObservable<int> viaType = new UniqueSignal<int>(source, EqualityComparer<int>.Default);
 ```
+
+### Helper, option and collection types
+
+These sit beside the operators. You call them directly rather than through a chain.
+
+| Type | Namespace | What it is |
+|---|---|---|
+| `ExceptionExtensions` | `ReactiveUI.Primitives` | `Throw()` on an exception rethrows it and keeps the stack trace from the original throw site. |
+| `SubscribeExtensions` | `ReactiveUI.Primitives` | `Rethrow()` on a nullable exception, which does nothing when there is none, plus subscribe helpers on a source. |
+| `ObserverExtensions` | `ReactiveUI.Primitives.Extensions` | Helpers on an `IObserver<T>`. |
+| `OptionalExtensions` | `ReactiveUI.Primitives.Async` | Helpers on an `Optional<T>`. |
+| `SignalExtensions` | `ReactiveUI.Primitives.Async` | Operators on an `ISignalAsync<T>`, including the cancellation-handling helpers. |
+| `StateSignalExtensions` | `ReactiveUI.Primitives.Signals` | Builds a `StateSignal<T>` or a read-only state from a source. |
+| `ConnectableSignalExtensions`, `ConnectableSignalRxNameExtensions` | `ReactiveUI.Primitives` | Operators over a `ConnectableSignal<T>` and over a plain source, under both naming schemes. |
+| `DisposableAsyncExtensions` | `ReactiveUI.Primitives.Async.Disposables` | Helpers over `IAsyncDisposable`. |
+| `SignalCreationOptions`, `BehaviorSignalCreationOptions`, `ReplayLatestSignalCreationOptions` | `ReactiveUI.Primitives.Async.Signals` | Records you pass to `Signal.Create`. Each carries `IsStateless` and a `PublishingOption`, and offers a `Default`. |
+| `PublishingOption` | `ReactiveUI.Primitives.Async.Signals` | Chooses how an async signal publishes to its subscribers. |
+| `SparkKind` | `ReactiveUI.Primitives.Core` | Which notification a `Spark` carries. |
+| `Broadcaster<T>` | `ReactiveUI.Primitives.Signals` | The struct behind a signal's subscriber list. `Add`, `Remove`, `Next`, `Error`, `Completed` and `HasObservers`. Hold it as a field. |
+| `CopyOnWriteList<T>` | `ReactiveUI.Primitives.Advanced` | An immutable list that returns a new instance from `Add` and `Remove`. `Empty` starts one. |
+| `SinkTerminal`, `SinkSubscription`, `SinkDelivery` | `ReactiveUI.Primitives.Advanced` | The static helpers a synchronous sink calls: forward a terminal notification, assign or dispose the upstream subscription, and forward a value while disposing the sink if the observer throws. |
+| `AsyncContext`, `AsyncContextExtensions` | `ReactiveUI.Primitives.Async` | The ambient context an async signal flows through its operators. |
+| `ScheduledItem<TAbsolute>`, `ScheduledItem<TAbsolute, TValue>` | `ReactiveUI.Primitives.Concurrency` | One queued item of work with its `DueTime`, ordered by a comparer. The virtual-time sequencers hold these. |
+
+Every operator also has a public type behind it, named after the operator: `MapSignal<TSource, TResult>` for `Map`,
+`SkipWitness<T>` for the sink `Skip` installs, and so on. The tables above name the ones worth reaching for; the rest
+follow the same convention and you can construct any of them directly.
 
 ### Embedded state types
 
