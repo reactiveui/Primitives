@@ -141,8 +141,10 @@ public static partial class ReactiveExtensions
     /// <param name="source">The source observable sequence.</param>
     extension<T>(IObservable<T> source)
     {
-        /// <summary>Filters out null values and returns a sequence with a non-nullable element type.</summary>
-        /// <returns>A non nullable version of the observable that only emits valid values.</returns>
+        /// <summary>Filters out null values, keeping the source's element type.</summary>
+        /// <returns>A sequence carrying only the source's non-null values.</returns>
+        /// <remarks>The element type is unchanged, so a nullable source stays nullable downstream and a handler that takes
+        /// a non-nullable parameter still warns. The async operator of this name narrows a <c>T?</c> source to <c>T</c>.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> WhereIsNotNull() =>
             new WhereIsNotNullObservable<T>(source);

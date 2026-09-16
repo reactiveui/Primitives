@@ -1265,7 +1265,7 @@ These drop values you do not want.
 
 | Member | What it does |
 |---|---|
-| `source.WhereIsNotNull()` | Drops null values and passes everything else through. |
+| `source.WhereIsNotNull()` | Drops null values and passes everything else through. The element type is unchanged, so a nullable source stays nullable downstream. The async operator of this name narrows `T?` to `T`. |
 | `source.WhereTrue()` | Keeps only the true values. |
 | `source.WhereFalse()` | Keeps only the false values. |
 | `source.SkipWhileNull()` | Drops nulls until the first non-null value, then forwards everything, nulls included. |
