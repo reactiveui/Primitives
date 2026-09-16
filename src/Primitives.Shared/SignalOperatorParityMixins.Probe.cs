@@ -14,48 +14,6 @@ namespace ReactiveUI.Primitives;
 /// <summary>The Probe operator: emits the most recent source value on a fixed period.</summary>
 public static partial class LinqExtensions
 {
-    /// <summary>Sample signal with a direct subscription path.</summary>
-    /// <typeparam name="T">The source value type.</typeparam>
-    /// <param name="source">The source observable.</param>
-    /// <param name="period">The sample period.</param>
-    /// <param name="sequencer">The sequencer used to schedule ticks.</param>
-    private sealed class ProbeSignal<T>(IObservable<T> source, TimeSpan period, ISequencer sequencer) : IRequireCurrentThread<T>
-    {
-        /// <summary>The source observable.</summary>
-        private readonly IObservable<T> _source = source;
-
-        /// <summary>The sample period.</summary>
-        private readonly TimeSpan _period = period;
-
-        /// <summary>The sequencer used to schedule ticks.</summary>
-        private readonly ISequencer _sequencer = sequencer;
-
-        /// <inheritdoc/>
-        public bool IsRequiredSubscribeOnCurrentThread() => _sequencer == Sequencer.CurrentThread;
-
-        /// <inheritdoc/>
-        public IDisposable Subscribe(IObserver<T> observer)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(observer);
-
-            ProbeCoordinator<T> coordinator = new(_source, _period, _sequencer, observer);
-            if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
-            {
-                return coordinator.Run();
-            }
-
-            SingleDisposable subscription = new();
-            _ = Sequencer.CurrentThread.Schedule(
-                (subscription, coordinator),
-                static (_, s) =>
-                {
-                    s.subscription.Create(s.coordinator.Run());
-                    return EmptyDisposable.Instance;
-                });
-            return subscription;
-        }
-    }
-
     /// <summary>Coordinates a sampled observable sequence and its tick timer.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     /// <param name="source">The source observable.</param>
@@ -66,7 +24,7 @@ public static partial class LinqExtensions
     /// The gate only guards the latest value and the flags. Samples and terminals are queued in order under the gate and
     /// delivered by a <see cref="SerializedDelivery{T}"/> after it is released, so no lock is held while the observer runs.
     /// </remarks>
-    private sealed class ProbeCoordinator<T>(IObservable<T> source, TimeSpan period, ISequencer sequencer, IObserver<T> observer) : IObserver<T>, IDisposable
+    internal sealed class ProbeCoordinator<T>(IObservable<T> source, TimeSpan period, ISequencer sequencer, IObserver<T> observer) : IObserver<T>, IDisposable
     {
         /// <summary>The source observable.</summary>
         private readonly IObservable<T> _source = source;

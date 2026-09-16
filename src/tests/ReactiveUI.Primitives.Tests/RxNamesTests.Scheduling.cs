@@ -37,7 +37,7 @@ public partial class RxNamesTests
         var expiring = explicitNull
             ? Signal.Silent<int>().Timeout(dueTime, null)
             : Signal.Silent<int>().Timeout(dueTime);
-        var timeout = await Assert.That(expiring).IsTypeOf<LinqExtensions.AbsoluteExpireSignal<int>>().And.IsNotNull();
+        var timeout = await Assert.That(expiring).IsTypeOf<Advanced.AbsoluteExpireSignal<int>>().And.IsNotNull();
         await Assert.That(timeout.Scheduler).IsSameReferenceAs(ThreadPoolSequencer.Instance);
     }
 

@@ -109,27 +109,4 @@ public static partial class LinqExtensions
 
         return materialized;
     }
-
-    /// <summary>A combine-latest signal, carrying the factory for a variable number of same-typed sources.</summary>
-    private sealed partial class CombineLatestSignal<TResult>
-    {
-        /// <summary>Creates a combine-latest signal over a variable number of same-typed sources.</summary>
-        /// <typeparam name="T">The element type shared by every source.</typeparam>
-        /// <param name="sources">The source observables.</param>
-        /// <param name="selector">The selector that projects the subscription's latest-value slots.</param>
-        /// <returns>The combine-latest signal.</returns>
-        internal static CombineLatestSignal<TResult> Create<T>(
-            IObservable<T>[] sources,
-            Func<CombineLatestSlot<TResult, T>[], TResult> selector) =>
-            new(coordinator =>
-            {
-                var slots = new CombineLatestSlot<TResult, T>[sources.Length];
-                for (var i = 0; i < sources.Length; i++)
-                {
-                    slots[i] = coordinator.Attach(sources[i]);
-                }
-
-                return () => selector(slots);
-            });
-    }
 }

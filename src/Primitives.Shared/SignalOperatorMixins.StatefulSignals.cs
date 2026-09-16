@@ -327,29 +327,6 @@ public static partial class LinqExtensions
 #endif
     }
 
-    /// <summary>Dedicated signal for <c>Unique</c> (adjacent distinct).</summary>
-    /// <typeparam name="T">The value type.</typeparam>
-    /// <param name="source">The source observable.</param>
-    /// <param name="comparer">The comparer used to compare adjacent values.</param>
-    private sealed class UniqueSignal<T>(IObservable<T> source, IEqualityComparer<T> comparer) : IObservable<T>
-    {
-        /// <summary>The source observable.</summary>
-        private readonly IObservable<T> _source = source;
-
-        /// <summary>The comparer used to compare adjacent values.</summary>
-        private readonly IEqualityComparer<T> _comparer = comparer;
-
-        /// <inheritdoc/>
-        public IDisposable Subscribe(IObserver<T> observer)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(observer);
-
-            UniqueWitness<T> sink = new(observer, _comparer);
-            sink.SetSubscription(_source.Subscribe(sink));
-            return sink;
-        }
-    }
-
     /// <summary>Dedicated signal for <c>UniqueBy</c> (adjacent distinct by key).</summary>
     /// <typeparam name="T">The value type.</typeparam>
     /// <typeparam name="TKey">The key type.</typeparam>
@@ -373,68 +350,6 @@ public static partial class LinqExtensions
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
             UniqueByWitness<T, TKey> sink = new(observer, _keySelector, _comparer);
-            sink.SetSubscription(_source.Subscribe(sink));
-            return sink;
-        }
-    }
-
-    /// <summary>Dedicated signal for <c>Fold</c> (running accumulation).</summary>
-    /// <typeparam name="TSource">The source value type.</typeparam>
-    /// <typeparam name="TAccumulate">The accumulated value type.</typeparam>
-    /// <param name="source">The source observable.</param>
-    /// <param name="seed">The initial accumulated value.</param>
-    /// <param name="accumulator">The accumulator function.</param>
-    private sealed class FoldSignal<TSource, TAccumulate>(
-        IObservable<TSource> source,
-        TAccumulate seed,
-        Func<TAccumulate, TSource, TAccumulate> accumulator) : IObservable<TAccumulate>
-    {
-        /// <summary>The source observable.</summary>
-        private readonly IObservable<TSource> _source = source;
-
-        /// <summary>The initial accumulated value.</summary>
-        private readonly TAccumulate _seed = seed;
-
-        /// <summary>The accumulator function.</summary>
-        private readonly Func<TAccumulate, TSource, TAccumulate> _accumulator = accumulator;
-
-        /// <inheritdoc/>
-        public IDisposable Subscribe(IObserver<TAccumulate> observer)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(observer);
-
-            FoldWitness<TSource, TAccumulate> sink = new(observer, _seed, _accumulator);
-            sink.SetSubscription(_source.Subscribe(sink));
-            return sink;
-        }
-    }
-
-    /// <summary>Dedicated signal for <c>Reduce</c> (final accumulation).</summary>
-    /// <typeparam name="TSource">The source value type.</typeparam>
-    /// <typeparam name="TAccumulate">The accumulated value type.</typeparam>
-    /// <param name="source">The source observable.</param>
-    /// <param name="seed">The initial accumulated value.</param>
-    /// <param name="accumulator">The accumulator function.</param>
-    private sealed class ReduceSignal<TSource, TAccumulate>(
-        IObservable<TSource> source,
-        TAccumulate seed,
-        Func<TAccumulate, TSource, TAccumulate> accumulator) : IObservable<TAccumulate>
-    {
-        /// <summary>The source observable.</summary>
-        private readonly IObservable<TSource> _source = source;
-
-        /// <summary>The initial accumulated value.</summary>
-        private readonly TAccumulate _seed = seed;
-
-        /// <summary>The accumulator function.</summary>
-        private readonly Func<TAccumulate, TSource, TAccumulate> _accumulator = accumulator;
-
-        /// <inheritdoc/>
-        public IDisposable Subscribe(IObserver<TAccumulate> observer)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(observer);
-
-            ReduceWitness<TSource, TAccumulate> sink = new(observer, _seed, _accumulator);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
@@ -502,51 +417,6 @@ public static partial class LinqExtensions
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
             SkipWhileWitness<T> sink = new(observer, _predicate);
-            sink.SetSubscription(_source.Subscribe(sink));
-            return sink;
-        }
-    }
-
-    /// <summary>Dedicated signal for <c>KeepNotNull</c>.</summary>
-    /// <typeparam name="T">The value type.</typeparam>
-    private sealed class KeepNotNullSignal<T> : IObservable<T>
-        where T : class
-    {
-        /// <summary>The source observable.</summary>
-        private readonly IObservable<T?> _source;
-
-        /// <summary>Initializes a new instance of the <see cref="KeepNotNullSignal{T}"/> class.</summary>
-        /// <param name="source">The source observable.</param>
-        internal KeepNotNullSignal(IObservable<T?> source) => _source = source;
-
-        /// <inheritdoc/>
-        public IDisposable Subscribe(IObserver<T> observer)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(observer);
-
-            KeepNotNullWitness<T> sink = new(observer);
-            sink.SetSubscription(_source.Subscribe(sink));
-            return sink;
-        }
-    }
-
-    /// <summary>Dedicated signal for <c>KeepType</c>.</summary>
-    /// <typeparam name="TResult">The result value type.</typeparam>
-    private sealed class KeepTypeSignal<TResult> : IObservable<TResult>
-    {
-        /// <summary>The source observable.</summary>
-        private readonly IObservable<object?> _source;
-
-        /// <summary>Initializes a new instance of the <see cref="KeepTypeSignal{TResult}"/> class.</summary>
-        /// <param name="source">The source observable.</param>
-        internal KeepTypeSignal(IObservable<object?> source) => _source = source;
-
-        /// <inheritdoc/>
-        public IDisposable Subscribe(IObserver<TResult> observer)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(observer);
-
-            KeepTypeWitness<TResult> sink = new(observer);
             sink.SetSubscription(_source.Subscribe(sink));
             return sink;
         }
