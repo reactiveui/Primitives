@@ -67,6 +67,22 @@ public enum HttpTransportFailureKind
     AmbiguousTransportOutcome = 7,
     Configuration = 8,
 }
+[System.Diagnostics.DebuggerDisplay("Enabled = {Enabled}, Entries = {MaximumEntries,nq}")]
+public record HttpReplayProtectionOptions : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.Transport.Http.HttpReplayProtectionOptions>
+{
+    public bool Enabled { get; init; }
+    public int MaximumActiveReplayWaiters { get; init; }
+    public int MaximumCachedResponseBytes { get; init; }
+    public int MaximumCanonicalRequestBytes { get; init; }
+    public int MaximumEntries { get; init; }
+    public int MaximumReplaySessions { get; init; }
+    public long MaximumRetainedBytes { get; init; }
+    public System.TimeSpan FreshnessWindow { get; init; }
+    public System.TimeSpan NonceRetention { get; init; }
+    public System.TimeSpan ReplaySessionRetention { get; init; }
+    public System.TimeProvider TimeProvider { get; init; }
+    public void Validate() { }
+}
 [System.Diagnostics.DebuggerDisplay("{Capabilities,nq}")]
 public sealed class HttpRemoteTransportAdapter : ReactiveUI.Primitives.OccasionallyConnected.IRemoteTransportAdapter
 {
