@@ -36,21 +36,15 @@ public static partial class SignalAsyncExtensions
     internal sealed class SkipSignal<T>(IObservableAsync<T> source, int count) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
-            CancellationToken cancellationToken)
-        {
-            SkipWitness sink = new(observer, count, cancellationToken);
-
-            if (observer is IWitnessAsync<T> downstreamBase)
-            {
-                downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
-            }
-
-            var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
-            return sink;
-        }
+            CancellationToken cancellationToken) =>
+            WitnessSubscription.SubscribeAsync(
+                source,
+                new SkipWitness(observer, count, cancellationToken),
+                observer,
+                cancellationToken);
 
         /// <summary>Per-subscription observer that drops leading emissions then forwards.</summary>
         /// <param name="downstream">The downstream observer.</param>

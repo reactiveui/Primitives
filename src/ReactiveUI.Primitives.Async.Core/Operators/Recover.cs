@@ -76,21 +76,15 @@ public static partial class SignalAsyncExtensions
         Func<Exception, CancellationToken, ValueTask>? onErrorResume) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
-            CancellationToken cancellationToken)
-        {
-            CatchWitness sink = new(observer, handler, onErrorResume, cancellationToken);
-
-            if (observer is IWitnessAsync<T> downstreamBase)
-            {
-                downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
-            }
-
-            var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
-            return sink;
-        }
+            CancellationToken cancellationToken) =>
+            WitnessSubscription.SubscribeAsync(
+                source,
+                new CatchWitness(observer, handler, onErrorResume, cancellationToken),
+                observer,
+                cancellationToken);
 
         /// <summary>Forwards values, routes error-resume to the callback or downstream, and swaps in the fallback on failure.</summary>
         /// <param name="downstream">The downstream witness.</param>

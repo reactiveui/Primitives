@@ -16,21 +16,15 @@ public static partial class SignalAsyncExtensions
     internal sealed class PairwiseSignal<T>(IObservableAsync<T> source) : IObservableAsync<(T Previous, T Current)>
     {
         /// <inheritdoc/>
-        async ValueTask<IAsyncDisposable> IObservableAsync<(T Previous, T Current)>.SubscribeAsync(
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask<IAsyncDisposable> IObservableAsync<(T Previous, T Current)>.SubscribeAsync(
             IObserverAsync<(T Previous, T Current)> observer,
-            CancellationToken cancellationToken)
-        {
-            PairwiseWitness sink = new(observer, cancellationToken);
-
-            if (observer is IWitnessAsync<(T Previous, T Current)> downstreamBase)
-            {
-                downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
-            }
-
-            var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
-            return sink;
-        }
+            CancellationToken cancellationToken) =>
+            WitnessSubscription.SubscribeAsync(
+                source,
+                new PairwiseWitness(observer, cancellationToken),
+                observer,
+                cancellationToken);
 
         /// <summary>Per-subscription witness that emits <c>(previous, current)</c> tuples once primed.</summary>
         /// <param name="downstream">The downstream observer.</param>
@@ -104,21 +98,15 @@ public static partial class SignalAsyncExtensions
         where T : class
     {
         /// <inheritdoc/>
-        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
-            CancellationToken cancellationToken)
-        {
-            SkipWhileNullWitness sink = new(observer, cancellationToken);
-
-            if (observer is IWitnessAsync<T> downstreamBase)
-            {
-                downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
-            }
-
-            var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
-            return sink;
-        }
+            CancellationToken cancellationToken) =>
+            WitnessSubscription.SubscribeAsync(
+                source,
+                new SkipWhileNullWitness(observer, cancellationToken),
+                observer,
+                cancellationToken);
 
         /// <summary>Per-subscription observer that skips leading nulls then forwards every subsequent value.</summary>
         /// <param name="downstream">The downstream observer expecting non-nullable values.</param>
@@ -190,21 +178,15 @@ public static partial class SignalAsyncExtensions
         where T : class
     {
         /// <inheritdoc/>
-        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
-            CancellationToken cancellationToken)
-        {
-            WhereIsNotNullWitness sink = new(observer, cancellationToken);
-
-            if (observer is IWitnessAsync<T> downstreamBase)
-            {
-                downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
-            }
-
-            var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
-            return sink;
-        }
+            CancellationToken cancellationToken) =>
+            WitnessSubscription.SubscribeAsync(
+                source,
+                new WhereIsNotNullWitness(observer, cancellationToken),
+                observer,
+                cancellationToken);
 
         /// <summary>Per-subscription observer that strips nulls and forwards the rest as non-nullable.</summary>
         /// <param name="downstream">The downstream observer expecting non-nullable values.</param>
@@ -352,21 +334,15 @@ public static partial class SignalAsyncExtensions
     internal sealed class WaitUntilSignal<T>(IObservableAsync<T> source, Func<T, bool> predicate) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
-            CancellationToken cancellationToken)
-        {
-            WaitUntilWitness sink = new(observer, predicate, cancellationToken);
-
-            if (observer is IWitnessAsync<T> downstreamBase)
-            {
-                downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
-            }
-
-            var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
-            return sink;
-        }
+            CancellationToken cancellationToken) =>
+            WitnessSubscription.SubscribeAsync(
+                source,
+                new WaitUntilWitness(observer, predicate, cancellationToken),
+                observer,
+                cancellationToken);
 
         /// <summary>Per-subscription witness that matches the predicate, forwards the first hit, and completes.</summary>
         /// <param name="downstream">The downstream observer.</param>
@@ -435,21 +411,15 @@ public static partial class SignalAsyncExtensions
     internal sealed class NotSignal(IObservableAsync<bool> source) : IObservableAsync<bool>
     {
         /// <inheritdoc/>
-        async ValueTask<IAsyncDisposable> IObservableAsync<bool>.SubscribeAsync(
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask<IAsyncDisposable> IObservableAsync<bool>.SubscribeAsync(
             IObserverAsync<bool> observer,
-            CancellationToken cancellationToken)
-        {
-            NotWitness sink = new(observer, cancellationToken);
-
-            if (observer is IWitnessAsync<bool> downstreamBase)
-            {
-                downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
-            }
-
-            var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
-            return sink;
-        }
+            CancellationToken cancellationToken) =>
+            WitnessSubscription.SubscribeAsync(
+                source,
+                new NotWitness(observer, cancellationToken),
+                observer,
+                cancellationToken);
 
         /// <summary>Negates every upstream emission.</summary>
         /// <param name="downstream">The downstream observer.</param>
@@ -505,21 +475,15 @@ public static partial class SignalAsyncExtensions
     internal sealed class WhereTrueSignal(IObservableAsync<bool> source) : IObservableAsync<bool>
     {
         /// <inheritdoc/>
-        async ValueTask<IAsyncDisposable> IObservableAsync<bool>.SubscribeAsync(
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask<IAsyncDisposable> IObservableAsync<bool>.SubscribeAsync(
             IObserverAsync<bool> observer,
-            CancellationToken cancellationToken)
-        {
-            WhereTrueWitness sink = new(observer, cancellationToken);
-
-            if (observer is IWitnessAsync<bool> downstreamBase)
-            {
-                downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
-            }
-
-            var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
-            return sink;
-        }
+            CancellationToken cancellationToken) =>
+            WitnessSubscription.SubscribeAsync(
+                source,
+                new WhereTrueWitness(observer, cancellationToken),
+                observer,
+                cancellationToken);
 
         /// <summary>Forwards only <see langword="true"/> values.</summary>
         /// <param name="downstream">The downstream observer.</param>
@@ -574,21 +538,15 @@ public static partial class SignalAsyncExtensions
     internal sealed class WhereFalseSignal(IObservableAsync<bool> source) : IObservableAsync<bool>
     {
         /// <inheritdoc/>
-        async ValueTask<IAsyncDisposable> IObservableAsync<bool>.SubscribeAsync(
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask<IAsyncDisposable> IObservableAsync<bool>.SubscribeAsync(
             IObserverAsync<bool> observer,
-            CancellationToken cancellationToken)
-        {
-            WhereFalseWitness sink = new(observer, cancellationToken);
-
-            if (observer is IWitnessAsync<bool> downstreamBase)
-            {
-                downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
-            }
-
-            var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
-            return sink;
-        }
+            CancellationToken cancellationToken) =>
+            WitnessSubscription.SubscribeAsync(
+                source,
+                new WhereFalseWitness(observer, cancellationToken),
+                observer,
+                cancellationToken);
 
         /// <summary>Forwards only <see langword="false"/> values.</summary>
         /// <param name="downstream">The downstream observer.</param>

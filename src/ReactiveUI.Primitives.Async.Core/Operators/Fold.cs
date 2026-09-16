@@ -61,21 +61,15 @@ public static partial class SignalAsyncExtensions
         Func<TAcc, T, CancellationToken, ValueTask<TAcc>> accumulator) : IObservableAsync<TAcc>
     {
         /// <inheritdoc/>
-        async ValueTask<IAsyncDisposable> IObservableAsync<TAcc>.SubscribeAsync(
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask<IAsyncDisposable> IObservableAsync<TAcc>.SubscribeAsync(
             IObserverAsync<TAcc> observer,
-            CancellationToken cancellationToken)
-        {
-            FoldAsyncWitness sink = new(observer, seed, accumulator, cancellationToken);
-
-            if (observer is IWitnessAsync<TAcc> downstreamBase)
-            {
-                downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
-            }
-
-            var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
-            return sink;
-        }
+            CancellationToken cancellationToken) =>
+            WitnessSubscription.SubscribeAsync(
+                source,
+                new FoldAsyncWitness(observer, seed, accumulator, cancellationToken),
+                observer,
+                cancellationToken);
 
         /// <summary>Per-subscription observer that maintains the running accumulator and forwards each result.</summary>
         /// <param name="downstream">The downstream observer.</param>
@@ -166,21 +160,15 @@ public static partial class SignalAsyncExtensions
         Func<TAcc, T, TAcc> accumulator) : IObservableAsync<TAcc>
     {
         /// <inheritdoc/>
-        async ValueTask<IAsyncDisposable> IObservableAsync<TAcc>.SubscribeAsync(
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask<IAsyncDisposable> IObservableAsync<TAcc>.SubscribeAsync(
             IObserverAsync<TAcc> observer,
-            CancellationToken cancellationToken)
-        {
-            FoldSyncWitness sink = new(observer, seed, accumulator, cancellationToken);
-
-            if (observer is IWitnessAsync<TAcc> downstreamBase)
-            {
-                downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
-            }
-
-            var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
-            return sink;
-        }
+            CancellationToken cancellationToken) =>
+            WitnessSubscription.SubscribeAsync(
+                source,
+                new FoldSyncWitness(observer, seed, accumulator, cancellationToken),
+                observer,
+                cancellationToken);
 
         /// <summary>Per-subscription observer that maintains the running accumulator and forwards each result.</summary>
         /// <param name="downstream">The downstream observer.</param>

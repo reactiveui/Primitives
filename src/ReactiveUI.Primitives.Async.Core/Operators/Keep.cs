@@ -78,21 +78,15 @@ public static partial class SignalAsyncExtensions
         Func<T, CancellationToken, ValueTask<bool>> predicate) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
-            CancellationToken cancellationToken)
-        {
-            KeepAsyncWitness sink = new(observer, predicate, cancellationToken);
-
-            if (observer is IWitnessAsync<T> downstreamBase)
-            {
-                downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
-            }
-
-            var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
-            return sink;
-        }
+            CancellationToken cancellationToken) =>
+            WitnessSubscription.SubscribeAsync(
+                source,
+                new KeepAsyncWitness(observer, predicate, cancellationToken),
+                observer,
+                cancellationToken);
 
         /// <summary>Per-subscription observer that applies the async predicate and forwards passing elements.</summary>
         /// <param name="downstream">The downstream observer.</param>
@@ -161,21 +155,15 @@ public static partial class SignalAsyncExtensions
         Func<T, bool> predicate) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
-            CancellationToken cancellationToken)
-        {
-            KeepSyncWitness sink = new(observer, predicate, cancellationToken);
-
-            if (observer is IWitnessAsync<T> downstreamBase)
-            {
-                downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
-            }
-
-            var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
-            return sink;
-        }
+            CancellationToken cancellationToken) =>
+            WitnessSubscription.SubscribeAsync(
+                source,
+                new KeepSyncWitness(observer, predicate, cancellationToken),
+                observer,
+                cancellationToken);
 
         /// <summary>Per-subscription observer that applies the sync predicate and forwards passing elements.</summary>
         /// <param name="downstream">The downstream observer.</param>

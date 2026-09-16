@@ -50,21 +50,15 @@ public static partial class SignalAsyncExtensions
     internal sealed class TakeWhileSyncSignal<T>(IObservableAsync<T> source, Func<T, bool> predicate) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
-            CancellationToken cancellationToken)
-        {
-            TakeWhileSyncWitness sink = new(observer, predicate, cancellationToken);
-
-            if (observer is IWitnessAsync<T> downstreamBase)
-            {
-                downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
-            }
-
-            var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
-            return sink;
-        }
+            CancellationToken cancellationToken) =>
+            WitnessSubscription.SubscribeAsync(
+                source,
+                new TakeWhileSyncWitness(observer, predicate, cancellationToken),
+                observer,
+                cancellationToken);
 
         /// <summary>Per-subscription observer that forwards while the predicate holds.</summary>
         /// <param name="downstream">The downstream observer.</param>
@@ -141,21 +135,15 @@ public static partial class SignalAsyncExtensions
         Func<T, CancellationToken, ValueTask<bool>> predicate) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
-            CancellationToken cancellationToken)
-        {
-            TakeWhileAsyncWitness sink = new(observer, predicate, cancellationToken);
-
-            if (observer is IWitnessAsync<T> downstreamBase)
-            {
-                downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
-            }
-
-            var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
-            return sink;
-        }
+            CancellationToken cancellationToken) =>
+            WitnessSubscription.SubscribeAsync(
+                source,
+                new TakeWhileAsyncWitness(observer, predicate, cancellationToken),
+                observer,
+                cancellationToken);
 
         /// <summary>Per-subscription observer that skips the await when the predicate completes synchronously.</summary>
         /// <param name="downstream">The downstream observer.</param>

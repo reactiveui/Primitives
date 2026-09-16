@@ -184,14 +184,7 @@ internal sealed class CatchSignal<T> : IRequireCurrentThread<T>
 
             var advanced = TryMoveToNextSource(enumerator!, out var next, out var error);
 
-            bool tornDown;
-            lock (_gate)
-            {
-                _isAdvancing = false;
-                tornDown = _isDisposed;
-            }
-
-            if (tornDown)
+            if (EndAdvance())
             {
                 ReleaseEnumerator();
                 return;
@@ -210,6 +203,18 @@ internal sealed class CatchSignal<T> : IRequireCurrentThread<T>
             }
 
             _subscription.Create(new SingleDisposable(next.Subscribe(this)));
+        }
+
+        /// <summary>Clears the advancing flag once the next source has been chosen.</summary>
+        /// <returns><see langword="true"/> when <see cref="TearDown"/> ran on another thread during the advance, which
+        /// leaves the enumerator for this walker to release.</returns>
+        private bool EndAdvance()
+        {
+            lock (_gate)
+            {
+                _isAdvancing = false;
+                return _isDisposed;
+            }
         }
 
         /// <summary>Stops the walk, disposing the enumerator unless the walker is advancing it.</summary>

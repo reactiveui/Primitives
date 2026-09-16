@@ -22,20 +22,15 @@ public static partial class SignalAsyncReactiveExtensions
     /// <param name = "source">The upstream observable.</param>
     internal sealed class AsRxVoidSignal<T>(IObservableAsync<T> source) : IObservableAsync<RxVoid>
     {
-        async ValueTask<IAsyncDisposable> IObservableAsync<RxVoid>.SubscribeAsync(
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask<IAsyncDisposable> IObservableAsync<RxVoid>.SubscribeAsync(
             IObserverAsync<RxVoid> observer,
-            CancellationToken cancellationToken)
-        {
-            AsSignalWitness sink = new(observer, cancellationToken);
-            if (observer is IWitnessAsync<RxVoid> downstreamBase)
-            {
-                downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
-            }
-
-            var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
-            return sink;
-        }
+            CancellationToken cancellationToken) =>
+            WitnessSubscription.SubscribeAsync(
+                source,
+                new AsSignalWitness(observer, cancellationToken),
+                observer,
+                cancellationToken);
 
         /// <summary>Forwards <see cref = "RxVoid.Default"/> for every upstream emission.</summary>
         /// <param name = "downstream">The downstream observer.</param>

@@ -69,6 +69,16 @@ public sealed class TaskResultCompletionSource<T>(CancellationToken cancellation
         return WitnessAsync.DisposeFromNotificationAsync(owner);
     }
 
+    /// <summary>Publishes <paramref name="result"/> as the terminal result and disposes <paramref name="owner"/>.</summary>
+    /// <param name="result">The terminal result; a success publishes <paramref name="value"/>, a failure publishes its exception.</param>
+    /// <param name="value">The result value published when <paramref name="result"/> is a success.</param>
+    /// <param name="owner">The owner to dispose after publishing.</param>
+    /// <returns>A task that completes when the owner has been disposed.</returns>
+    public ValueTask CompleteAndDisposeAsync(Result result, T value, IWitnessState owner) =>
+        result.IsSuccess
+            ? SetResultAndDisposeAsync(value, owner)
+            : SetExceptionAndDisposeAsync(result.Exception, owner);
+
     /// <summary>Registers cancellation for the pending result task.</summary>
     /// <returns>The cancellation registration.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

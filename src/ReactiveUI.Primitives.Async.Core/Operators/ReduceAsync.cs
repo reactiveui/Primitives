@@ -264,23 +264,12 @@ public static partial class SignalAsyncExtensions
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-            SetExceptionAndDisposeAsync(error);
+            _completion.SetExceptionAndDisposeAsync(error, this);
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) =>
-            result.IsSuccess ? SetResultAndDisposeAsync(_acc) : SetExceptionAndDisposeAsync(result.Exception);
-
-        /// <summary>Sets the result value and disposes this witness.</summary>
-        /// <param name="value">The result value.</param>
-        /// <returns>A task representing the asynchronous operation.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ValueTask SetResultAndDisposeAsync(TAcc value) => _completion.SetResultAndDisposeAsync(value, this);
-
-        /// <summary>Faults the result with an exception and disposes this witness.</summary>
-        /// <param name="e">The exception that caused the fault.</param>
-        /// <returns>A task representing the asynchronous operation.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ValueTask SetExceptionAndDisposeAsync(Exception e) => _completion.SetExceptionAndDisposeAsync(e, this);
+            _completion.CompleteAndDisposeAsync(result, _acc, this);
     }
 
     /// <summary>Observer that accumulates values using a synchronous accumulator function and produces the final result.</summary>
@@ -341,22 +330,11 @@ public static partial class SignalAsyncExtensions
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-            SetExceptionAndDisposeAsync(error);
+            _completion.SetExceptionAndDisposeAsync(error, this);
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) =>
-            result.IsSuccess ? SetResultAndDisposeAsync(_acc) : SetExceptionAndDisposeAsync(result.Exception);
-
-        /// <summary>Sets the result value and disposes this witness.</summary>
-        /// <param name="value">The result value.</param>
-        /// <returns>A task representing the asynchronous operation.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ValueTask SetResultAndDisposeAsync(TAcc value) => _completion.SetResultAndDisposeAsync(value, this);
-
-        /// <summary>Faults the result with an exception and disposes this witness.</summary>
-        /// <param name="e">The exception that caused the fault.</param>
-        /// <returns>A task representing the asynchronous operation.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ValueTask SetExceptionAndDisposeAsync(Exception e) => _completion.SetExceptionAndDisposeAsync(e, this);
+            _completion.CompleteAndDisposeAsync(result, _acc, this);
     }
 }

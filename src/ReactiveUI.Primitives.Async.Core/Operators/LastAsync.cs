@@ -126,37 +126,25 @@ public static partial class SignalAsyncExtensions
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-            SetExceptionAndDisposeAsync(error);
+            _completion.SetExceptionAndDisposeAsync(error, this);
 
         /// <inheritdoc/>
         ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result)
         {
             if (!result.IsSuccess)
             {
-                return SetExceptionAndDisposeAsync(result.Exception);
+                return _completion.SetExceptionAndDisposeAsync(result.Exception, this);
             }
 
             if (_hasValue)
             {
-                return SetResultAndDisposeAsync(_last!);
+                return _completion.SetResultAndDisposeAsync(_last!, this);
             }
 
             var message = predicate is null
                 ? "Sequence contains no elements."
                 : "Sequence contains no matching elements.";
-            return SetExceptionAndDisposeAsync(new InvalidOperationException(message));
+            return _completion.SetExceptionAndDisposeAsync(new InvalidOperationException(message), this);
         }
-
-        /// <summary>Sets the result value and disposes this witness.</summary>
-        /// <param name="value">The result value.</param>
-        /// <returns>A task representing the asynchronous operation.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ValueTask SetResultAndDisposeAsync(T value) => _completion.SetResultAndDisposeAsync(value, this);
-
-        /// <summary>Faults the result with an exception and disposes this witness.</summary>
-        /// <param name="e">The exception that caused the fault.</param>
-        /// <returns>A task representing the asynchronous operation.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ValueTask SetExceptionAndDisposeAsync(Exception e) => _completion.SetExceptionAndDisposeAsync(e, this);
     }
 }

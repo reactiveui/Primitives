@@ -1824,6 +1824,7 @@ namespace ReactiveUI.Primitives.Async.Advanced
     {
         public TaskResultCompletionSource(System.Threading.CancellationToken cancellationToken) { }
         public System.Threading.Tasks.ValueTask<T> AwaitResultAsync(System.IAsyncDisposable owner) { }
+        public System.Threading.Tasks.ValueTask CompleteAndDisposeAsync(ReactiveUI.Primitives.Result result, T value, ReactiveUI.Primitives.Async.IWitnessState owner) { }
         public System.Threading.Tasks.ValueTask SetExceptionAndDisposeAsync(System.Exception exception, ReactiveUI.Primitives.Async.IWitnessState owner) { }
         public System.Threading.Tasks.ValueTask SetResultAndDisposeAsync(T value, ReactiveUI.Primitives.Async.IWitnessState owner) { }
     }
@@ -1909,6 +1910,10 @@ namespace ReactiveUI.Primitives.Async.Advanced
         System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<T>.OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<T>.OnNextAsyncCore(T value, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public static class WitnessSubscription
+    {
+        public static System.Threading.Tasks.ValueTask<System.IAsyncDisposable> SubscribeAsync<TSource, TResult>(ReactiveUI.Primitives.Async.IObservableAsync<TSource> source, ReactiveUI.Primitives.Async.IWitnessAsync<TSource> witness, ReactiveUI.Primitives.Async.IObserverAsync<TResult> observer, System.Threading.CancellationToken cancellationToken) { }
     }
 }
 namespace ReactiveUI.Primitives.Async.Disposables

@@ -215,21 +215,15 @@ public static partial class SignalAsyncExtensions
         TimeProvider timeProvider) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
-            CancellationToken cancellationToken)
-        {
-            ThrottleDistinctWitness sink = new(observer, dueTime, timeProvider, cancellationToken);
-
-            if (observer is IWitnessAsync<T> downstreamBase)
-            {
-                downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
-            }
-
-            var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
-            return sink;
-        }
+            CancellationToken cancellationToken) =>
+            WitnessSubscription.SubscribeAsync(
+                source,
+                new ThrottleDistinctWitness(observer, dueTime, timeProvider, cancellationToken),
+                observer,
+                cancellationToken);
 
         /// <summary>Per-subscription witness fusing upstream-distinct + debounce + downstream-distinct.</summary>
         /// <param name="downstream">The downstream observer.</param>
@@ -406,21 +400,15 @@ public static partial class SignalAsyncExtensions
         Func<T, CancellationToken, ValueTask> asyncAction) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
-            CancellationToken cancellationToken)
-        {
-            DropIfBusyWitness sink = new(observer, asyncAction, cancellationToken);
-
-            if (observer is IWitnessAsync<T> downstreamBase)
-            {
-                downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
-            }
-
-            var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
-            return sink;
-        }
+            CancellationToken cancellationToken) =>
+            WitnessSubscription.SubscribeAsync(
+                source,
+                new DropIfBusyWitness(observer, asyncAction, cancellationToken),
+                observer,
+                cancellationToken);
 
         /// <summary>Per-subscription witness that drops upstream emissions while a prior action is pending.</summary>
         /// <param name="downstream">The downstream observer.</param>
@@ -551,21 +539,15 @@ public static partial class SignalAsyncExtensions
         TimeProvider timeProvider) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
-            CancellationToken cancellationToken)
-        {
-            DebounceUntilWitness sink = new(observer, debounce, condition, timeProvider, cancellationToken);
-
-            if (observer is IWitnessAsync<T> downstreamBase)
-            {
-                downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
-            }
-
-            var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
-            return sink;
-        }
+            CancellationToken cancellationToken) =>
+            WitnessSubscription.SubscribeAsync(
+                source,
+                new DebounceUntilWitness(observer, debounce, condition, timeProvider, cancellationToken),
+                observer,
+                cancellationToken);
 
         /// <summary>Per-subscription observer that fuses the bypass-condition + Switch-debounce pipeline.</summary>
         /// <param name="downstream">The downstream observer.</param>
@@ -717,21 +699,15 @@ public static partial class SignalAsyncExtensions
     internal sealed class ForEachEnumerableSignal<T>(IObservableAsync<IEnumerable<T>> source) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
-            CancellationToken cancellationToken)
-        {
-            ForEachEnumerableWitness sink = new(observer, cancellationToken);
-
-            if (observer is IWitnessAsync<T> downstreamBase)
-            {
-                downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
-            }
-
-            var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
-            return sink;
-        }
+            CancellationToken cancellationToken) =>
+            WitnessSubscription.SubscribeAsync(
+                source,
+                new ForEachEnumerableWitness(observer, cancellationToken),
+                observer,
+                cancellationToken);
 
         /// <summary>Per-subscription witness that flattens each upstream enumerable inline.</summary>
         /// <param name="downstream">The downstream observer.</param>

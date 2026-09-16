@@ -78,7 +78,9 @@ public sealed class SingleElementWitness<T>(
             var message = predicate is null
                 ? "Sequence contains more than one element."
                 : "Sequence contains more than one matching element.";
-            await SetExceptionAndDisposeAsync(new InvalidOperationException(message)).ConfigureAwait(false);
+            await _completion
+                .SetExceptionAndDisposeAsync(new InvalidOperationException(message), this)
+                .ConfigureAwait(false);
             return;
         }
 
@@ -89,14 +91,14 @@ public sealed class SingleElementWitness<T>(
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-        SetExceptionAndDisposeAsync(error);
+        _completion.SetExceptionAndDisposeAsync(error, this);
 
     /// <inheritdoc/>
     ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result)
     {
         if (!result.IsSuccess)
         {
-            return SetExceptionAndDisposeAsync(result.Exception);
+            return _completion.SetExceptionAndDisposeAsync(result.Exception, this);
         }
 
         if (!_hasValue && requireExactlyOne)
@@ -104,21 +106,9 @@ public sealed class SingleElementWitness<T>(
             var message = predicate is null
                 ? "Sequence contains no elements."
                 : "Sequence contains no matching elements.";
-            return SetExceptionAndDisposeAsync(new InvalidOperationException(message));
+            return _completion.SetExceptionAndDisposeAsync(new InvalidOperationException(message), this);
         }
 
-        return SetResultAndDisposeAsync(_value);
+        return _completion.SetResultAndDisposeAsync(_value, this);
     }
-
-    /// <summary>Sets the result value and disposes this witness.</summary>
-    /// <param name="value">The result value.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private ValueTask SetResultAndDisposeAsync(T? value) => _completion.SetResultAndDisposeAsync(value, this);
-
-    /// <summary>Faults the result with an exception and disposes this witness.</summary>
-    /// <param name="e">The exception that caused the fault.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private ValueTask SetExceptionAndDisposeAsync(Exception e) => _completion.SetExceptionAndDisposeAsync(e, this);
 }

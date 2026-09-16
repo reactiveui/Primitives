@@ -110,28 +110,19 @@ public static partial class SignalAsyncExtensions
         ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken)
         {
             _ = cancellationToken;
-            return !comparer.Equals(target, value) ? default : SetResultAndDisposeAsync(true);
+            return !comparer.Equals(target, value)
+                ? default
+                : _completion.SetResultAndDisposeAsync(true, this);
         }
 
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-            SetExceptionAndDisposeAsync(error);
+            _completion.SetExceptionAndDisposeAsync(error, this);
 
         /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) =>
-            result.IsSuccess ? SetResultAndDisposeAsync(false) : SetExceptionAndDisposeAsync(result.Exception);
-
-        /// <summary>Sets the result value and disposes this witness.</summary>
-        /// <param name="value">The result value.</param>
-        /// <returns>A task representing the asynchronous operation.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ValueTask SetResultAndDisposeAsync(bool value) => _completion.SetResultAndDisposeAsync(value, this);
-
-        /// <summary>Faults the result with an exception and disposes this witness.</summary>
-        /// <param name="e">The exception that caused the fault.</param>
-        /// <returns>A task representing the asynchronous operation.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ValueTask SetExceptionAndDisposeAsync(Exception e) => _completion.SetExceptionAndDisposeAsync(e, this);
+            _completion.CompleteAndDisposeAsync(result, false, this);
     }
 }

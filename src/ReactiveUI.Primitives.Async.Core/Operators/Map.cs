@@ -84,21 +84,15 @@ public static partial class SignalAsyncExtensions
         Func<T, CancellationToken, ValueTask<TDest>> selector) : IObservableAsync<TDest>
     {
         /// <inheritdoc/>
-        async ValueTask<IAsyncDisposable> IObservableAsync<TDest>.SubscribeAsync(
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask<IAsyncDisposable> IObservableAsync<TDest>.SubscribeAsync(
             IObserverAsync<TDest> observer,
-            CancellationToken cancellationToken)
-        {
-            MapAsyncWitness sink = new(observer, selector, cancellationToken);
-
-            if (observer is IWitnessAsync<TDest> downstreamBase)
-            {
-                downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
-            }
-
-            var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
-            return sink;
-        }
+            CancellationToken cancellationToken) =>
+            WitnessSubscription.SubscribeAsync(
+                source,
+                new MapAsyncWitness(observer, selector, cancellationToken),
+                observer,
+                cancellationToken);
 
         /// <summary>Per-subscription observer that applies the async selector and forwards each result.</summary>
         /// <param name="downstream">The downstream observer.</param>
@@ -163,21 +157,15 @@ public static partial class SignalAsyncExtensions
         Func<T, TDest> selector) : IObservableAsync<TDest>
     {
         /// <inheritdoc/>
-        async ValueTask<IAsyncDisposable> IObservableAsync<TDest>.SubscribeAsync(
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask<IAsyncDisposable> IObservableAsync<TDest>.SubscribeAsync(
             IObserverAsync<TDest> observer,
-            CancellationToken cancellationToken)
-        {
-            MapSyncWitness sink = new(observer, selector, cancellationToken);
-
-            if (observer is IWitnessAsync<TDest> downstreamBase)
-            {
-                downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
-            }
-
-            var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
-            return sink;
-        }
+            CancellationToken cancellationToken) =>
+            WitnessSubscription.SubscribeAsync(
+                source,
+                new MapSyncWitness(observer, selector, cancellationToken),
+                observer,
+                cancellationToken);
 
         /// <summary>Per-subscription observer that applies the sync selector and forwards each result.</summary>
         /// <param name="downstream">The downstream observer.</param>
