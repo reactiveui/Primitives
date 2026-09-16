@@ -11,7 +11,9 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <summary>Pairs each source value with an independent disposable acknowledgement handle.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
-/// <remarks>An undisposed handle leaves only its own acknowledgement pending.</remarks>
+/// <remarks>The handles are independent: the producer does not wait on one, and one value's handle does not gate the next.
+/// An undisposed handle leaves only its own acknowledgement pending, so a subscriber that ignores the handle still receives
+/// every value and the terminal notification.</remarks>
 public sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IObservable<(T Value, IDisposable Sync)>
 {
     /// <inheritdoc/>

@@ -341,8 +341,9 @@ public static partial class ReactiveExtensions
             return new TakeUntilInclusiveObservable<T>(source, predicate);
         }
 
-        /// <summary>Wraps values with a synchronization disposable that completes when disposed.</summary>
-        /// <returns>Sequence of (value, sync handle).</returns>
+        /// <summary>Another name for <c>SynchronizeAsync</c>, pairing each value with its own acknowledgement handle.</summary>
+        /// <returns>A sequence of each value and its own acknowledgement handle.</returns>
+        /// <remarks>The producer does not wait on the handle, and one value's handle does not gate the next.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<(T Value, IDisposable Sync)> SynchronizeSynchronous() =>
             new SynchronizeAsyncObservable<T>(source);
@@ -390,8 +391,11 @@ public static partial class ReactiveExtensions
         public IObservable<T> SwitchIfEmpty(IObservable<T> fallback) =>
             new SwitchIfEmptyObservable<T>(source, fallback);
 
-        /// <summary>Pairs each value with a disposable acknowledgement that releases its downstream wait.</summary>
-        /// <returns>An Observable of T and a release mechanism.</returns>
+        /// <summary>Pairs each value with an independent acknowledgement handle the subscriber disposes when it has finished with that value.</summary>
+        /// <returns>A sequence of each value and its own acknowledgement handle.</returns>
+        /// <remarks>The producer does not wait on the handle, and one value's handle does not gate the next. Disposing a
+        /// handle settles that emission's acknowledgement and nothing else, so a subscriber that ignores the handle still
+        /// receives every value and the terminal notification.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<(T Value, IDisposable Sync)> SynchronizeAsync() =>
             new SynchronizeAsyncObservable<T>(source);
