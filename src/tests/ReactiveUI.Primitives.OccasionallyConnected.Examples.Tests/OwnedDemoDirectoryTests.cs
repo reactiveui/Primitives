@@ -16,6 +16,20 @@ public sealed class OwnedDemoDirectoryTests
     /// <summary>The user file name used by ownership safety tests.</summary>
     private const string ExistingUserFileName = "user-data.txt";
 
+    /// <summary>Verifies a volume root produces an immediate child without requiring permission to write there.</summary>
+    /// <returns>A task that represents the asynchronous test.</returns>
+    [Test]
+    public async Task WhenRootIsVolumeRoot_ThenGeneratedPathIsAnImmediateChild()
+    {
+        var root = Path.GetPathRoot(Path.GetFullPath(AppContext.BaseDirectory));
+        ArgumentNullException.ThrowIfNull(root);
+        OwnedDemoDirectory directory = new(root);
+
+        await Assert.That(Path.GetDirectoryName(directory.DirectoryPath)).IsEqualTo(root);
+        await Assert.That(Guid.TryParseExact(Path.GetFileName(directory.DirectoryPath), "N", out _)).IsTrue();
+        await Assert.That(Directory.Exists(directory.DirectoryPath)).IsFalse();
+    }
+
     /// <summary>Verifies cleanup removes an empty directory created before the ownership marker is written.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
     [Test]
