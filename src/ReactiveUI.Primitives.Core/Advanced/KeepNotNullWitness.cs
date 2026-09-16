@@ -30,15 +30,7 @@ public sealed class KeepNotNullWitness<T> : IObserver<T?>, IDisposable
             return;
         }
 
-        try
-        {
-            _observer.OnNext(value);
-        }
-        catch
-        {
-            Dispose();
-            throw;
-        }
+        SinkDelivery.Next(_observer, value, this);
     }
 
     /// <inheritdoc/>

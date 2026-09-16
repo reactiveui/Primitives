@@ -30,15 +30,7 @@ public sealed class DistinctWitness<T>(IObserver<T> observer, HashSet<T> seen) :
             return;
         }
 
-        try
-        {
-            _observer.OnNext(value);
-        }
-        catch
-        {
-            Dispose();
-            throw;
-        }
+        SinkDelivery.Next(_observer, value, this);
     }
 
     /// <inheritdoc/>

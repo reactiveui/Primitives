@@ -29,15 +29,7 @@ public sealed class KeepTypeWitness<TResult> : IObserver<object?>, IDisposable
             return;
         }
 
-        try
-        {
-            _observer.OnNext(result);
-        }
-        catch
-        {
-            Dispose();
-            throw;
-        }
+        SinkDelivery.Next(_observer, result, this);
     }
 
     /// <inheritdoc/>

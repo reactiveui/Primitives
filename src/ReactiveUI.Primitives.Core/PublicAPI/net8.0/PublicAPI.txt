@@ -190,6 +190,7 @@ namespace ReactiveUI.Primitives.Advanced
         public void OnCompleted() { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void OnError(System.Exception error) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void OnNext(T value) { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
@@ -742,6 +743,10 @@ namespace ReactiveUI.Primitives.Advanced
         public bool PostError(System.Exception error) { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public bool TryClaim() { }
+    }
+    public static class SinkDelivery
+    {
+        public static void Next<TResult>(System.IObserver<TResult> observer, TResult value, System.IDisposable sink) { }
     }
     public static class SinkSubscription
     {

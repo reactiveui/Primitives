@@ -39,15 +39,7 @@ public sealed class TakeWitness<T>(IObserver<T> observer, int count) : IObserver
             return;
         }
 
-        try
-        {
-            _observer.OnNext(value);
-        }
-        catch
-        {
-            Dispose();
-            throw;
-        }
+        SinkDelivery.Next(_observer, value, this);
 
         _remaining--;
         if (_remaining != 0)

@@ -46,15 +46,7 @@ public sealed class DistinctByWitness<T, TKey> : IObserver<T>, IDisposable
             return;
         }
 
-        try
-        {
-            _observer.OnNext(value);
-        }
-        catch
-        {
-            Dispose();
-            throw;
-        }
+        SinkDelivery.Next(_observer, value, this);
     }
 
     /// <inheritdoc/>

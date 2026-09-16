@@ -31,15 +31,7 @@ public sealed class SkipWitness<T>(IObserver<T> observer, int count) : IObserver
             return;
         }
 
-        try
-        {
-            _observer.OnNext(value);
-        }
-        catch
-        {
-            Dispose();
-            throw;
-        }
+        SinkDelivery.Next(_observer, value, this);
     }
 
     /// <inheritdoc/>

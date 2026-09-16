@@ -29,15 +29,7 @@ public sealed class DefaultIfEmptyWitness<T>(IObserver<T> observer, T defaultVal
     public void OnNext(T value)
     {
         _seen = true;
-        try
-        {
-            _observer.OnNext(value);
-        }
-        catch
-        {
-            Dispose();
-            throw;
-        }
+        SinkDelivery.Next(_observer, value, this);
     }
 
     /// <inheritdoc/>

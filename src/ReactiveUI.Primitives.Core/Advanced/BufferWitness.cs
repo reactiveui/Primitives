@@ -134,16 +134,6 @@ public sealed class BufferWitness<T>(IObserver<IList<T>> observer, int count, in
 
     /// <summary>Forwards a completed window, tearing down the sink if the observer throws.</summary>
     /// <param name="batch">The completed window.</param>
-    private void Emit(IList<T> batch)
-    {
-        try
-        {
-            _observer.OnNext(batch);
-        }
-        catch
-        {
-            Dispose();
-            throw;
-        }
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void Emit(IList<T> batch) => SinkDelivery.Next(_observer, batch, this);
 }
