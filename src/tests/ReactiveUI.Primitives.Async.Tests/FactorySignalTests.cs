@@ -365,10 +365,10 @@ public class FactorySignalTests
     public async Task WhenIntervalWithCancellation_ThenEmitsPeriodicValues()
     {
         const int SecondValue = 2;
-        const long SecondTick = 2L;
+        const long SecondTick = 1L;
         ManualTimeProvider time = new();
         var values = await time.RunAsync(SignalAsync.Interval(PeriodicInterval, time).Take(SecondValue).ToListAsync().AsTask());
-        await Assert.That(values).IsCollectionEqualTo([1L, SecondTick]);
+        await Assert.That(values).IsCollectionEqualTo([0L, SecondTick]);
     }
 
     /// <summary>Tests that enumerable subscription emission returns early when the cancellation token is already cancelled.</summary>
@@ -386,7 +386,7 @@ public class FactorySignalTests
         });
         const int RangeCount = 100;
         EnumerableSubscription<int> subscription = new(observer, Enumerable.Range(0, RangeCount));
-        await subscription.ExecuteAsync(cts.Token);
+        await TaskSignalState.ExecuteAsync(subscription, observer, cts.Token);
         await subscription.DisposeAsync();
         await Assert.That(items).IsEmpty();
     }

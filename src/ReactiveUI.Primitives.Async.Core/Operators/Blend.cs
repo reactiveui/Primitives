@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Disposables;
@@ -112,7 +113,7 @@ public static partial class SignalAsyncExtensions
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            BoundedBlendCoordinator<T> subscription = new(observer, maxConcurrent);
+            BlendCoordinator<T> subscription = new(observer, maxConcurrent);
             subscription.LinkExternalCancellation(cancellationToken);
             return SubscriptionHelper.SubscribeAndDisposeOnFailureAsync(
                 subscription,
@@ -122,7 +123,8 @@ public static partial class SignalAsyncExtensions
 
     /// <summary>Manages subscriptions for merged observable sequences, forwarding items from all inner sources to a single observer.</summary>
     /// <typeparam name="T">The type of the elements in the merged sequence.</typeparam>
-    internal class BlendCoordinator<T> : IAsyncDisposable
+    /// <remarks>With a concurrency limit, a semaphore bounds the inner sources subscribed at once and each branch releases its slot once when it is disposed.</remarks>
+    internal sealed class BlendCoordinator<T> : IAsyncDisposable
     {
         /// <summary>The cancellation token source backing <see cref="DisposedCancellationToken"/>.</summary>
         private readonly CancellationTokenSource _disposeCts = new();
@@ -139,6 +141,9 @@ public static partial class SignalAsyncExtensions
         /// <summary>The downstream observer that receives merged items.</summary>
         private readonly IObserverAsync<T> _observer;
 
+        /// <summary>Limits the number of concurrently subscribed inner observables, or <see langword="null"/> when unbounded.</summary>
+        private readonly SemaphoreSlim? _semaphore;
+
         /// <summary>Registration that propagates the original subscribe-token cancellation into <see cref="_disposeCts"/>.</summary>
         private CancellationTokenRegistration _externalLinkRegistration;
 
@@ -151,12 +156,18 @@ public static partial class SignalAsyncExtensions
         /// <summary>Whether this subscription has been disposed.</summary>
         private int _disposed;
 
-        /// <summary>Initializes a new instance of the <see cref="BlendCoordinator{T}"/> class.</summary>
+        /// <summary>Initializes a new instance of the <see cref="BlendCoordinator{T}"/> class with no concurrency limit.</summary>
         /// <param name="observer">The downstream observer to forward merged items to.</param>
         public BlendCoordinator(IObserverAsync<T> observer) => _observer = observer;
 
+        /// <summary>Initializes a new instance of the <see cref="BlendCoordinator{T}"/> class that limits concurrent inner subscriptions.</summary>
+        /// <param name="observer">The downstream observer to forward merged items to.</param>
+        /// <param name="maxConcurrent">The maximum number of inner observable sequences to subscribe to concurrently.</param>
+        public BlendCoordinator(IObserverAsync<T> observer, int maxConcurrent)
+            : this(observer) => _semaphore = new(maxConcurrent, maxConcurrent);
+
         /// <summary>Gets a cancellation token that is canceled when this subscription is disposed.</summary>
-        protected CancellationToken DisposedCancellationToken => _disposeCts.Token;
+        private CancellationToken DisposedCancellationToken => _disposeCts.Token;
 
         /// <summary>Asynchronously releases resources used by this subscription.</summary>
         /// <returns>A task representing the asynchronous dispose operation.</returns>
@@ -263,25 +274,17 @@ public static partial class SignalAsyncExtensions
             }
         }
 
-        /// <summary>Subscribes to an inner observable sequence and begins forwarding its items.</summary>
+        /// <summary>Subscribes to an inner observable sequence and begins forwarding its items, waiting for a slot first when concurrency is limited.</summary>
         /// <param name="inner">The inner observable to subscribe to.</param>
         /// <returns>A task representing the asynchronous subscribe operation.</returns>
-        internal virtual async ValueTask SubscribeBranchAsync(IObservableAsync<T> inner)
-        {
-            try
-            {
-                var innerObserver = CreateBranchObserver();
-                await innerObserver.SubscribeSourcesAsync(inner, DisposedCancellationToken).ConfigureAwait(false);
-            }
-            catch (Exception e)
-            {
-                await FinishAsync(Result.Failure(e)).ConfigureAwait(false);
-            }
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal ValueTask SubscribeBranchAsync(IObservableAsync<T> inner) =>
+            _semaphore is null ? SubscribeUnboundedBranchAsync(inner) : SubscribeBoundedBranchAsync(inner, _semaphore);
 
-        /// <summary>Creates a new inner observer for subscribing to an inner observable sequence.</summary>
-        /// <returns>A new inner async observer instance.</returns>
-        internal virtual BlendBranchWitness CreateBranchObserver() => new(this);
+        /// <summary>Creates a new inner witness for subscribing to an inner observable sequence.</summary>
+        /// <returns>A new inner witness.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal BlendBranchWitness CreateBranchObserver() => new(this);
 
         /// <summary>Completes the merged sequence, disposes all subscriptions, and optionally signals the downstream observer.</summary>
         /// <param name="result">The completion result to forward, or null if disposing without signaling completion.</param>
@@ -308,12 +311,107 @@ public static partial class SignalAsyncExtensions
 #endif
             _disposeCts.Dispose();
             _onSomethingGate.Dispose();
+            _semaphore?.Dispose();
+        }
+
+        /// <summary>Subscribes an inner source with no concurrency limit, finishing the merge when subscription fails.</summary>
+        /// <param name="inner">The inner observable to subscribe to.</param>
+        /// <returns>A task representing the asynchronous subscribe operation.</returns>
+        private async ValueTask SubscribeUnboundedBranchAsync(IObservableAsync<T> inner)
+        {
+            try
+            {
+                var innerObserver = CreateBranchObserver();
+                await innerObserver.SubscribeSourcesAsync(inner, DisposedCancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                await FinishAsync(Result.Failure(e)).ConfigureAwait(false);
+            }
+        }
+
+        /// <summary>Waits for a concurrency slot, then subscribes an inner source, releasing the slot when subscription fails.</summary>
+        /// <param name="inner">The inner observable to subscribe to.</param>
+        /// <param name="semaphore">The semaphore bounding concurrent inner subscriptions.</param>
+        /// <returns>A task representing the asynchronous subscribe operation.</returns>
+        private async ValueTask SubscribeBoundedBranchAsync(IObservableAsync<T> inner, SemaphoreSlim semaphore)
+        {
+            await semaphore.WaitAsync(DisposedCancellationToken).ConfigureAwait(false);
+            var innerObserver = CreateBranchObserver();
+            Exception failure;
+            try
+            {
+                await innerObserver.SubscribeSourcesAsync(inner, DisposedCancellationToken).ConfigureAwait(false);
+                return;
+            }
+            catch (Exception e)
+            {
+                failure = e;
+            }
+
+            await innerObserver.DisposeAsync().ConfigureAwait(false);
+            await FinishAsync(Result.Failure(failure)).ConfigureAwait(false);
         }
 
         /// <summary>Witness that forwards items from an inner observable to the parent merge subscription.</summary>
         /// <param name="parent">The parent merge coordinator that receives forwarded notifications.</param>
-        internal class BlendBranchWitness(BlendCoordinator<T> parent) : WitnessAsync<T>
+        [DebuggerDisplay("BlendBranchWitness: {_witness}")]
+        internal sealed class BlendBranchWitness(BlendCoordinator<T> parent) : IWitnessAsync<T>
         {
+            /// <summary>The notification gate, cancellation link and disposal state.</summary>
+            private WitnessAsyncState _witness;
+
+            /// <summary>Releases the parent's concurrency slot once for this witness.</summary>
+            private int _released;
+
+            /// <inheritdoc/>
+            ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
+                WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+                WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
+                parent.RelayNextAsync(value, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+                parent.RelayErrorAsync(error, cancellationToken);
+
+            /// <inheritdoc/>
+            ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result)
+            {
+                bool shouldComplete;
+                lock (parent._disposeCts)
+                {
+                    var count = --parent._innerActiveCount;
+                    shouldComplete = result.IsFailure || (count == 0 && parent._outerCompleted);
+                }
+
+                return shouldComplete ? parent.FinishAsync(result) : default;
+            }
+
+            /// <inheritdoc/>
+            public async ValueTask DisposeAsync()
+            {
+                ReleaseSlot();
+                await parent._innerDisposables.Remove(this).ConfigureAwait(false);
+                await WitnessAsync.DisposeStateAsync(this).ConfigureAwait(false);
+            }
+
             /// <summary>Subscribes this witness to an inner observable sequence.</summary>
             /// <param name="inner">The inner observable to subscribe to.</param>
             /// <param name="cancellationToken">A token to cancel the subscription.</param>
@@ -329,95 +427,17 @@ public static partial class SignalAsyncExtensions
                 await inner.SubscribeAsync(this, cancellationToken).ConfigureAwait(false);
             }
 
-            /// <inheritdoc/>
-            protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
-                parent.RelayNextAsync(value, cancellationToken);
-
-            /// <inheritdoc/>
-            protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-                parent.RelayErrorAsync(error, cancellationToken);
-
-            /// <inheritdoc/>
-            protected override ValueTask OnCompletedAsyncCore(Result result)
+            /// <summary>Releases the parent's concurrency slot once, when concurrency is limited and the parent is still active.</summary>
+            private void ReleaseSlot()
             {
-                bool shouldComplete;
-                lock (parent._disposeCts)
+                if (parent._semaphore is null
+                    || Interlocked.Exchange(ref _released, 1) != 0
+                    || DisposalHelper.HasDisposed(parent._disposed))
                 {
-                    var count = --parent._innerActiveCount;
-                    shouldComplete = result.IsFailure || (count == 0 && parent._outerCompleted);
-                }
-
-                return shouldComplete ? parent.FinishAsync(result) : default;
-            }
-
-            /// <inheritdoc/>
-            protected override async ValueTask DisposeAsyncCore()
-            {
-                await CleanupBranchAsync().ConfigureAwait(false);
-                await parent._innerDisposables.Remove(this).ConfigureAwait(false);
-                await base.DisposeAsyncCore().ConfigureAwait(false);
-            }
-
-            /// <summary>Called during disposal to perform subclass-specific cleanup such as releasing semaphore slots.</summary>
-            /// <returns>A task representing the asynchronous cleanup operation.</returns>
-            protected virtual ValueTask CleanupBranchAsync() => default;
-        }
-    }
-
-    /// <summary>Extends <see cref="BlendCoordinator{T}"/> to limit the number of concurrently subscribed inner observables.</summary>
-    /// <typeparam name="T">The type of the elements in the merged sequence.</typeparam>
-    /// <param name="observer">The downstream observer to forward merged items to.</param>
-    /// <param name="maxConcurrent">The maximum number of inner observable sequences to subscribe to concurrently.</param>
-    internal sealed class BoundedBlendCoordinator<T>(IObserverAsync<T> observer, int maxConcurrent) : BlendCoordinator<T>(observer)
-    {
-        /// <summary>Limits the number of concurrently subscribed inner observables.</summary>
-        private readonly SemaphoreSlim _semaphore = new(maxConcurrent, maxConcurrent);
-
-        /// <inheritdoc/>
-        internal override async ValueTask SubscribeBranchAsync(IObservableAsync<T> inner)
-        {
-            await _semaphore.WaitAsync(DisposedCancellationToken).ConfigureAwait(false);
-            var innerObserver = (BlendBranchWitnessWithPermit)CreateBranchObserver();
-            var subscribed = false;
-            try
-            {
-                await innerObserver.SubscribeSourcesAsync(inner, DisposedCancellationToken).ConfigureAwait(false);
-                subscribed = true;
-            }
-            catch (Exception e)
-            {
-                await FinishAsync(Result.Failure(e)).ConfigureAwait(false);
-            }
-            finally
-            {
-                if (!subscribed)
-                {
-                    await innerObserver.DisposeAsync().ConfigureAwait(false);
-                }
-            }
-        }
-
-        /// <inheritdoc/>
-        internal override BlendBranchWitness CreateBranchObserver() =>
-            new BlendBranchWitnessWithPermit(this);
-
-        /// <summary>Inner witness that releases a semaphore slot on disposal.</summary>
-        /// <param name="parent">The parent bounded merge coordinator whose semaphore slot is released on disposal.</param>
-        internal sealed class BlendBranchWitnessWithPermit(BoundedBlendCoordinator<T> parent) : BlendBranchWitness(parent)
-        {
-            /// <summary>Releases the semaphore once for this witness.</summary>
-            private int _released;
-
-            /// <inheritdoc/>
-            protected override ValueTask CleanupBranchAsync()
-            {
-                if (Interlocked.Exchange(ref _released, 1) != 0)
-                {
-                    return default;
+                    return;
                 }
 
                 _ = parent._semaphore.Release();
-                return default;
             }
         }
     }
@@ -505,10 +525,6 @@ public static partial class SignalAsyncExtensions
 
             /// <summary>Begins subscribing to all source observables asynchronously.</summary>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            [SuppressMessage(
-                "Roslynator",
-                "RCS1047:Non-asynchronous method name should not end with \'Async\'",
-                Justification = "Fire-and-forget launcher; the asynchronous work is the lambda it starts.")]
             internal void BeginSubscribing() => FireAndForgetHelper.Run(async () =>
             {
                 _reentrant.Value = true;
@@ -669,27 +685,51 @@ public static partial class SignalAsyncExtensions
 
             /// <summary>Witness that forwards items from an inner source to the parent enumerable merge subscription.</summary>
             /// <param name="parent">The parent enumerable merge coordinator that receives forwarded notifications.</param>
-            internal sealed class BlendBranchWitness(BlendSequenceCoordinator parent) : WitnessAsync<T>
+            [DebuggerDisplay("BlendBranchWitness: {_witness}")]
+            internal sealed class BlendBranchWitness(BlendSequenceCoordinator parent) : IWitnessAsync<T>
             {
+                /// <summary>The notification gate, cancellation link and disposal state.</summary>
+                private WitnessAsyncState _witness;
+
                 /// <inheritdoc/>
-                protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
+                ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+                /// <inheritdoc/>
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
+                    WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+                /// <inheritdoc/>
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+                    WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+                /// <inheritdoc/>
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+                /// <inheritdoc/>
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
                     parent.RelayNextAsync(value, cancellationToken);
 
                 /// <inheritdoc/>
-                protected override ValueTask OnErrorResumeAsyncCore(
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(
                     Exception error,
                     CancellationToken cancellationToken) =>
                     parent.RelayErrorAsync(error, cancellationToken);
 
                 /// <inheritdoc/>
-                protected override ValueTask OnCompletedAsyncCore(Result result) =>
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) =>
                     parent.AcceptBranchCompletionAsync(result);
 
                 /// <inheritdoc/>
-                protected override async ValueTask DisposeAsyncCore()
+                public async ValueTask DisposeAsync()
                 {
                     await parent._innerDisposables.Remove(this).ConfigureAwait(false);
-                    await base.DisposeAsyncCore().ConfigureAwait(false);
+                    await WitnessAsync.DisposeStateAsync(this).ConfigureAwait(false);
                 }
             }
         }

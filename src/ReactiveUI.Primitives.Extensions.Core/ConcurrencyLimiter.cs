@@ -4,6 +4,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Advanced;
 
 namespace ReactiveUI.Primitives.Extensions;
 
@@ -13,7 +14,7 @@ namespace ReactiveUI.Primitives.Extensions;
 /// <param name="maxConcurrency">The maximum concurrency.</param>
 /// <remarks>
 /// Subscribers share progress; disposing any subscription stops every drain. A task fault or cancellation terminates the sequence with its
-/// error.
+/// error. Results are queued under the gate and delivered after it is released, so no lock is held while an observer runs.
 /// </remarks>
 [System.Diagnostics.DebuggerDisplay("ConcurrencyLimiter: Outstanding = {_outstanding}, Disposed = {_disposed}")]
 public sealed class ConcurrencyLimiter<T>(IEnumerable<Task<T>> taskFunctions, int maxConcurrency) : IObservable<T>
@@ -85,6 +86,7 @@ public sealed class ConcurrencyLimiter<T>(IEnumerable<Task<T>> taskFunctions, in
             "The task is complete at this call site, so reading Result does not block.")]
     internal void ProcessTaskCompletion(Subscription subscription, Task<T> completed)
     {
+        var pullNext = false;
         lock (_gate)
         {
             if (subscription.Disposed || completed.IsFaulted || completed.IsCanceled)
@@ -95,23 +97,31 @@ public sealed class ConcurrencyLimiter<T>(IEnumerable<Task<T>> taskFunctions, in
                     var innerException = completed.Exception?.InnerExceptions is null
                         ? new OperationCanceledException()
                         : completed.Exception.InnerException!;
-                    subscription.Observer.OnError(innerException);
+                    _ = subscription.PostError(innerException);
                 }
-
-                return;
-            }
-
-            subscription.Observer.OnNext(completed.Result);
-            _outstanding--;
-            if (_outstanding == 0 && _rator is null)
-            {
-                subscription.Observer.OnCompleted();
             }
             else
             {
-                PullNextTask(subscription);
+                _ = subscription.Post(completed.Result);
+                _outstanding--;
+                if (_outstanding == 0 && _rator is null)
+                {
+                    _ = subscription.PostCompleted();
+                }
+                else
+                {
+                    pullNext = true;
+                }
             }
         }
+
+        subscription.Flush();
+        if (!pullNext)
+        {
+            return;
+        }
+
+        PullNextTask(subscription);
     }
 
     /// <summary>Registers result delivery for the pending task.</summary>
@@ -130,10 +140,11 @@ public sealed class ConcurrencyLimiter<T>(IEnumerable<Task<T>> taskFunctions, in
             TaskContinuationOptions.ExecuteSynchronously,
             TaskScheduler.Default);
 
-    /// <summary>Pulls the next task and schedules its continuation against this limiter.</summary>
+    /// <summary>Pulls the next task under the gate, then registers its continuation after releasing it.</summary>
     /// <param name="subscription">The owning subscription.</param>
     private void PullNextTask(Subscription subscription)
     {
+        Task<T>? task = null;
         lock (_gate)
         {
             if (subscription.Disposed)
@@ -151,19 +162,23 @@ public sealed class ConcurrencyLimiter<T>(IEnumerable<Task<T>> taskFunctions, in
                 ClearRator();
                 if (_outstanding == 0)
                 {
-                    subscription.Observer.OnCompleted();
+                    _ = subscription.PostCompleted();
                 }
-
-                return;
             }
-
-            _outstanding++;
-
-            if (_rator.Current is { } task)
+            else
             {
-                RegisterCompletion(task, subscription);
+                _outstanding++;
+                task = _rator.Current;
             }
         }
+
+        if (task is null)
+        {
+            subscription.Flush();
+            return;
+        }
+
+        RegisterCompletion(task, subscription);
     }
 
     /// <summary>Pairs an observer with its limiter and reports the limiter's disposal state to the drain loop.</summary>
@@ -171,6 +186,9 @@ public sealed class ConcurrencyLimiter<T>(IEnumerable<Task<T>> taskFunctions, in
     /// <param name="observer">The downstream observer.</param>
     internal sealed class Subscription(ConcurrencyLimiter<T> limiter, IObserver<T> observer) : IDisposable
     {
+        /// <summary>Serializes deliveries to <see cref="Observer"/>.</summary>
+        private SerializedDelivery<T> _delivery = new();
+
         /// <summary>Gets the owning limiter.</summary>
         internal ConcurrencyLimiter<T> Limiter { get; } = limiter;
 
@@ -182,5 +200,35 @@ public sealed class ConcurrencyLimiter<T>(IEnumerable<Task<T>> taskFunctions, in
 
         /// <inheritdoc/>
         public void Dispose() => Limiter.Disposed = true;
+
+        /// <summary>Queues a result for <see cref="Observer"/> while the limiter's gate is held.</summary>
+        /// <param name="value">The result.</param>
+        /// <returns><see langword="true"/> when the result was queued.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal bool Post(T value) => _delivery.Post(value);
+
+        /// <summary>Queues an error as the terminal notification while the limiter's gate is held.</summary>
+        /// <param name="error">The error.</param>
+        /// <returns><see langword="true"/> when this is the first terminal notification.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal bool PostError(Exception error) => _delivery.PostError(error);
+
+        /// <summary>Queues completion as the terminal notification while the limiter's gate is held.</summary>
+        /// <returns><see langword="true"/> when this is the first terminal notification.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal bool PostCompleted() => _delivery.PostCompleted();
+
+        /// <summary>Delivers the queued notifications; call it after releasing the limiter's gate.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void Flush() => _delivery.Flush(new PendingDrain(this));
+
+        /// <summary>Drains this subscription's queued notifications for the delivery gate.</summary>
+        /// <param name="Owner">The subscription.</param>
+        private readonly record struct PendingDrain(Subscription Owner) : IDrainTarget
+        {
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Drain() => _ = Owner._delivery.DrainTo(Owner.Observer);
+        }
     }
 }

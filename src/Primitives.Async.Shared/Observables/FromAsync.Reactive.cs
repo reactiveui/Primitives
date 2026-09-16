@@ -29,10 +29,6 @@ public static partial class SignalAsyncReactiveExtensions
         /// followed by a completion notification.</returns>
         /// <exception cref="ArgumentExceptionHelper">Thrown if <paramref name="factory"/> is <see langword="null"/>.</exception>
         /// <remarks>The factory is invoked once per subscription.</remarks>
-        [SuppressMessage(
-            "Roslynator",
-            "RCS1047:Non-asynchronous method name should not end with \'Async\'",
-            Justification = "Names the asynchronous observable factory.")]
         public IObservableAsync<RxVoid> FromAsync()
         {
             ArgumentExceptionHelper.ThrowIfNull(factory);

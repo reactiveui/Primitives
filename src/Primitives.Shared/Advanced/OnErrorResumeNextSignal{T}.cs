@@ -20,7 +20,7 @@ public sealed class OnErrorResumeNextSignal<T> : IRequireCurrentThread<T>
 
     /// <summary>Initializes a new instance of the <see cref="OnErrorResumeNextSignal{T}"/> class.</summary>
     /// <param name="sources">The sources to subscribe in order.</param>
-    internal OnErrorResumeNextSignal(IEnumerable<IObservable<T>> sources) => _sources = sources;
+    public OnErrorResumeNextSignal(IEnumerable<IObservable<T>> sources) => _sources = sources;
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

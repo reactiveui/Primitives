@@ -131,13 +131,13 @@ public static partial class SignalExtensions
         }
     }
 
-    /// <summary>Starts an observable wait on the task pool.</summary>
+    /// <summary>Starts an observable wait on the task pool, cancelling the wait itself when the token fires.</summary>
     /// <typeparam name="TResult">The source value type.</typeparam>
     /// <param name="source">The source to await.</param>
-    /// <param name="token">The token cancelling dispatch.</param>
+    /// <param name="token">The token that cancels the wait.</param>
     /// <returns>The source's terminal result.</returns>
-    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    /// <remarks>The token reaches the wait rather than only the dispatch, so cancelling part-way through ends it.</remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static Task<TResult> AwaitOnTaskPoolAsync<TResult>(IObservable<TResult> source, CancellationToken token) =>
-        Task.Run(async () => await source, token);
+        Task.Run(() => source.ToTask(token), token);
 }

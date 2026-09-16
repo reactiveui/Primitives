@@ -223,6 +223,18 @@ public partial class ReactiveExtensionsTests
         await Assert.That(completed).IsFalse();
     }
 
+    /// <summary>Verifies the limiter's disposal latch can be cleared again.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WithLimitedConcurrency_DisposedLatchCleared_ThenReportsNotDisposed()
+    {
+        ConcurrencyLimiter<int> limiter = new([], 1) { Disposed = true };
+
+        limiter.Disposed = false;
+
+        await Assert.That(limiter.Disposed).IsFalse();
+    }
+
     /// <summary>Exercises the null-current continuation path defensively tolerated by the limiter.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]

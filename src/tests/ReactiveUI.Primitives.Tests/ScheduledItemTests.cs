@@ -37,4 +37,32 @@ public class ScheduledItemTests
         item.Dispose();
         await Assert.That(result.DisposeCount).IsEqualTo(1);
     }
+
+    /// <summary>A null work delegate is rejected.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Constructor_NullInvokeCore_ThrowsArgumentNull() =>
+        await Assert.That(static () => new ScheduledItem<long>(0, Comparer<long>.Default, null!))
+            .ThrowsExactly<ArgumentNullException>();
+
+    /// <summary>Disposing before the item runs prevents the work and leaves no result to release.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Dispose_BeforeInvoke_PreventsWork()
+    {
+        RecordingDisposable result = new();
+        var runs = 0;
+        ScheduledItem<long> item = new(0, Comparer<long>.Default, _ =>
+        {
+            runs++;
+            return result;
+        });
+
+        item.Dispose();
+        item.Invoke();
+
+        await Assert.That(runs).IsEqualTo(0);
+        await Assert.That(result.DisposeCount).IsEqualTo(0);
+        await Assert.That(item.IsDisposed).IsTrue();
+    }
 }

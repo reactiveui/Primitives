@@ -133,7 +133,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return source.DefaultIfEmpty(defaultValue).ToTask();
+            return Signal.ToTaskOrDefault(source, defaultValue, CancellationToken.None);
         }
 
         /// <summary>Awaits source completion and returns the last value produced by the source, or <see langword="default"/> when the source is empty.</summary>
@@ -155,7 +155,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return source.DefaultIfEmpty(defaultValue).ToTask(cancellationToken);
+            return Signal.ToTaskOrDefault(source, defaultValue, cancellationToken);
         }
 
         /// <summary>Awaits the source count as a task.</summary>
@@ -257,7 +257,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return source is RangeSignal range && typeof(T) == typeof(int)
+            return source is RangeSignal range
                 ? new RangeArraySignal<T>(range)
                 : new CollectArraySignal<T>(source);
         }
@@ -300,7 +300,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return source is RangeSignal range && typeof(T) == typeof(int)
+            return source is RangeSignal range
                 ? new RangeListSignal<T>(range)
                 : new CollectListSignal<T>(source);
         }

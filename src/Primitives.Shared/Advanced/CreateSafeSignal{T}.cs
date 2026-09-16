@@ -12,7 +12,8 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Creates a signal from a subscribe delegate whose sink releases the subscription when a downstream <c>OnNext</c> throws.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-internal sealed class CreateSafeSignal<T> : IRequireCurrentThread<T>
+[System.Diagnostics.DebuggerDisplay("CreateSafeSignal<{typeof(T).Name,nq}>")]
+public sealed class CreateSafeSignal<T> : IRequireCurrentThread<T>
 {
     /// <summary>The delegate invoked for each subscription.</summary>
     private readonly Func<IObserver<T>, IDisposable> _subscribe;

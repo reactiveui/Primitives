@@ -6,6 +6,7 @@ using System.Reactive.Linq;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Extensions.Operators;
+using ReactiveUI.Primitives.Extensions.Tests.Operators;
 
 namespace ReactiveUI.Primitives.Extensions.Tests;
 
@@ -774,7 +775,7 @@ public partial class ReactiveExtensionsTests
         });
         List<int> results = [];
 
-        // When — backoffFactor 500 with initialDelay 1ms yields huge computed delays,
+        // When - backoffFactor 500 with initialDelay 1ms yields huge computed delays,
         // all of which must be capped to maxDelay 5ms.
         using var sub = source.RetryWithBackoff(
             MaxRetries,
@@ -819,5 +820,53 @@ public partial class ReactiveExtensionsTests
         await Assert.That(caught).IsNotNull();
         await Assert.That(caught).IsTypeOf<InvalidOperationException>();
         await Assert.That(caught.Message).IsEqualTo("permanent");
+    }
+
+    /// <summary>Verifies an observer that marshals the forwarded RetryWithBackoff error to another thread which disposes the subscription is not deadlocked.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenRetryWithBackoffErrorObserverMarshalsDispose_ThenNoDeadlock()
+    {
+        using MarshallingThread dispatcher = new();
+        SyncDirectSource<int> source = new();
+        IDisposable? subscription = null;
+        Exception? caught = null;
+        InvalidOperationException expected = new("backoff-exhausted");
+        subscription = source.RetryWithBackoff(0, TimeSpan.Zero, 1.0, null, new VirtualClock()).Subscribe(
+            static _ => { },
+            ex =>
+            {
+                caught = ex;
+                dispatcher.Invoke(() => subscription!.Dispose());
+            });
+
+        var worker = BackgroundThread.Start(() => source.Observer.OnError(expected));
+
+        await Assert.That(await BackgroundThread.FinishesPromptly(worker)).IsTrue();
+        await Assert.That(caught).IsSameReferenceAs(expected);
+    }
+
+    /// <summary>Verifies an observer that marshals the forwarded RetryWithDelay error to another thread which disposes the subscription is not deadlocked.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenRetryWithDelayErrorObserverMarshalsDispose_ThenNoDeadlock()
+    {
+        using MarshallingThread dispatcher = new();
+        SyncDirectSource<int> source = new();
+        IDisposable? subscription = null;
+        Exception? caught = null;
+        InvalidOperationException expected = new("delay-exhausted");
+        subscription = new RetryWithDelayObservable<int>(source, 0, static _ => TimeSpan.Zero, new VirtualClock()).Subscribe(
+            static _ => { },
+            ex =>
+            {
+                caught = ex;
+                dispatcher.Invoke(() => subscription!.Dispose());
+            });
+
+        var worker = BackgroundThread.Start(() => source.Observer.OnError(expected));
+
+        await Assert.That(await BackgroundThread.FinishesPromptly(worker)).IsTrue();
+        await Assert.That(caught).IsSameReferenceAs(expected);
     }
 }

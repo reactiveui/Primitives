@@ -2,6 +2,9 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Extensions;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -10,10 +13,15 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Coordinates timeout delivery with one active timer.</summary>
 /// <typeparam name="T">The source value type.</typeparam>
+/// <remarks>
+/// The gate only guards the deadline, the epoch and the termination flag. Deliveries are serialized by a
+/// <see cref="SerializedDelivery{T}"/>, so no lock is held while the observer runs and a timeout raised during a value's
+/// delivery follows that value. A terminal notification raised before <see cref="Dispose"/> is still delivered.
+/// </remarks>
 [System.Diagnostics.DebuggerDisplay("ExpireCoordinator: Done = {_done}, DueTime = {_dueTime}, Deadline = {_deadline}")]
 public sealed class ExpireCoordinator<T> : IObserver<T>, IDisposable
 {
-    /// <summary>The synchronization gate for downstream observer calls.</summary>
+    /// <summary>Guards the deadline, the epoch and the termination flag; never held while the observer runs.</summary>
     private readonly Lock _gate = new();
 
     /// <summary>The source observable.</summary>
@@ -27,6 +35,12 @@ public sealed class ExpireCoordinator<T> : IObserver<T>, IDisposable
 
     /// <summary>The downstream observer.</summary>
     private readonly IObserver<T> _observer;
+
+    /// <summary>Whether a value restarts the timeout window, which is what separates an inactivity timeout from a deadline.</summary>
+    private readonly bool _restartOnValue;
+
+    /// <summary>Serializes downstream deliveries.</summary>
+    private SerializedDelivery<T> _delivery = new();
 
     /// <summary>The active source subscription.</summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
@@ -42,7 +56,7 @@ public sealed class ExpireCoordinator<T> : IObserver<T>, IDisposable
         Justification = "Disposed through Interlocked.Exchange in Dispose.")]
     private IDisposable? _timer;
 
-    /// <summary>A value indicating whether the timeout or source has terminated.</summary>
+    /// <summary>A value indicating whether a terminal notification has been queued.</summary>
     private int _done;
 
     /// <summary>Monotonic version that suppresses timeouts superseded by a newer value.</summary>
@@ -57,6 +71,22 @@ public sealed class ExpireCoordinator<T> : IObserver<T>, IDisposable
     /// <param name="sequencer">The sequencer that schedules the timeout.</param>
     /// <param name="observer">The downstream observer.</param>
     public ExpireCoordinator(IObservable<T> source, TimeSpan dueTime, ISequencer sequencer, IObserver<T> observer)
+        : this(source, dueTime, sequencer, observer, restartOnValue: true)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="ExpireCoordinator{T}"/> class.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="dueTime">The timeout period.</param>
+    /// <param name="sequencer">The sequencer that schedules the timeout.</param>
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="restartOnValue">When <see langword="true"/> each value restarts the window; when <see langword="false"/> the window runs once from subscription.</param>
+    internal ExpireCoordinator(
+        IObservable<T> source,
+        TimeSpan dueTime,
+        ISequencer sequencer,
+        IObserver<T> observer,
+        bool restartOnValue)
     {
         ArgumentExceptionHelper.ThrowIfNull(source);
 
@@ -68,6 +98,7 @@ public sealed class ExpireCoordinator<T> : IObserver<T>, IDisposable
         _dueTime = dueTime;
         _sequencer = sequencer;
         _observer = observer;
+        _restartOnValue = restartOnValue;
     }
 
     /// <inheritdoc/>
@@ -81,93 +112,77 @@ public sealed class ExpireCoordinator<T> : IObserver<T>, IDisposable
     /// <inheritdoc/>
     public void OnCompleted()
     {
-        var shouldDispose = false;
-        try
+        lock (_gate)
         {
-            lock (_gate)
+            if (_done != 0)
             {
-                if (_done != 0)
-                {
-                    return;
-                }
+                return;
+            }
 
-                _done = 1;
-                shouldDispose = true;
-                _observer.OnCompleted();
-            }
+            _done = 1;
+            _ = _delivery.PostCompleted();
         }
-        finally
-        {
-            if (shouldDispose)
-            {
-                Dispose();
-            }
-        }
+
+        FlushThenDispose();
     }
 
     /// <inheritdoc/>
     public void OnError(Exception error)
     {
-        var shouldDispose = false;
-        try
-        {
-            lock (_gate)
-            {
-                if (_done != 0)
-                {
-                    return;
-                }
+        ArgumentExceptionHelper.ThrowIfNull(error);
 
-                _done = 1;
-                shouldDispose = true;
-                _observer.OnError(error);
-            }
-        }
-        finally
+        lock (_gate)
         {
-            if (shouldDispose)
+            if (_done != 0)
             {
-                Dispose();
+                return;
             }
+
+            _done = 1;
+            _ = _delivery.PostError(error);
         }
+
+        FlushThenDispose();
     }
 
     /// <inheritdoc/>
     /// <remarks>Values arriving at or after the clock deadline fail with TimeoutException, even if the timer callback has not run.</remarks>
     public void OnNext(T value)
     {
-        long epoch;
-        var shouldDispose = false;
-        try
+        long epoch = 0;
+        var expired = false;
+        lock (_gate)
         {
-            lock (_gate)
+            if (_done != 0)
             {
-                if (_done != 0)
-                {
-                    return;
-                }
+                return;
+            }
 
-                if (_sequencer.Now >= _deadline)
-                {
-                    _done = 1;
-                    shouldDispose = true;
-                    _observer.OnError(new TimeoutException());
-                    return;
-                }
-
+            if (_sequencer.Now >= _deadline)
+            {
+                _done = 1;
+                expired = true;
+                _ = _delivery.PostError(new TimeoutException());
+            }
+            else if (_restartOnValue)
+            {
                 epoch = ++_epoch;
-                _observer.OnNext(value);
-            }
-        }
-        finally
-        {
-            if (shouldDispose)
-            {
-                Dispose();
             }
         }
 
-        ArmTimer(epoch);
+        if (expired)
+        {
+            FlushThenDispose();
+            return;
+        }
+
+        _delivery.OnNext(_observer, value, new PendingDrain(this));
+
+        // A deadline keeps the window armed at subscription; only an inactivity timeout restarts it.
+        if (_restartOnValue)
+        {
+            ArmTimer(epoch);
+        }
     }
 
     /// <summary>Starts observing the source and timeout timer.</summary>
@@ -231,34 +246,45 @@ public sealed class ExpireCoordinator<T> : IObserver<T>, IDisposable
         return DateTimeOffset.MaxValue - now <= dueTime ? DateTimeOffset.MaxValue : now + dueTime;
     }
 
-    /// <summary>Emits the timeout error when the firing timer is the current one.</summary>
+    /// <summary>Queues the timeout error when the firing timer is the current one.</summary>
     /// <param name="epoch">The version captured when the firing timer was armed.</param>
     /// <returns>An empty disposable.</returns>
     private EmptyDisposable EmitTimeout(long epoch)
     {
-        var shouldDispose = false;
+        lock (_gate)
+        {
+            if (_done != 0 || epoch != _epoch)
+            {
+                return EmptyDisposable.Instance;
+            }
+
+            _done = 1;
+            _ = _delivery.PostError(new TimeoutException());
+        }
+
+        FlushThenDispose();
+        return EmptyDisposable.Instance;
+    }
+
+    /// <summary>Delivers the queued terminal notification, then releases the source subscription and the timer.</summary>
+    private void FlushThenDispose()
+    {
         try
         {
-            lock (_gate)
-            {
-                if (_done != 0 || epoch != _epoch)
-                {
-                    return EmptyDisposable.Instance;
-                }
-
-                _done = 1;
-                shouldDispose = true;
-                _observer.OnError(new TimeoutException());
-            }
+            _delivery.Flush(new PendingDrain(this));
         }
         finally
         {
-            if (shouldDispose)
-            {
-                Dispose();
-            }
+            Dispose();
         }
+    }
 
-        return EmptyDisposable.Instance;
+    /// <summary>Drains this coordinator's queued notifications for the delivery gate.</summary>
+    /// <param name="Owner">The coordinator.</param>
+    private readonly record struct PendingDrain(ExpireCoordinator<T> Owner) : IDrainTarget
+    {
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Drain() => _ = Owner._delivery.DrainTo(Owner._observer);
     }
 }

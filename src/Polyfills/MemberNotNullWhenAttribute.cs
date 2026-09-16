@@ -26,9 +26,9 @@ internal sealed class MemberNotNullWhenAttribute : Attribute
     }
 
     /// <summary>Gets the return value condition for which the members are not <see langword="null"/>.</summary>
-    internal bool ReturnValue { get; }
+    public bool ReturnValue { get; }
 
     /// <summary>Gets the field and property member names that are promised to be not-<see langword="null"/>.</summary>
-    internal string[] Members { get; }
+    public string[] Members { get; }
 }
 #endif

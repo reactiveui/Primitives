@@ -34,15 +34,7 @@ public sealed class FoldWitness<TSource, TAccumulate>(
     public void OnNext(TSource value)
     {
         _current = _accumulator(_current, value);
-        try
-        {
-            _observer.OnNext(_current);
-        }
-        catch
-        {
-            Dispose();
-            throw;
-        }
+        SinkDelivery.Next(_observer, _current, this);
     }
 
     /// <inheritdoc/>

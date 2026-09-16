@@ -121,7 +121,7 @@ public static partial class Sequencer
                 return;
             }
 
-            Interlocked.Exchange(ref _disposable, EmptyDisposable.Instance)?.Dispose();
+            ReleaseResult();
         }
 
         /// <inheritdoc/>
@@ -151,12 +151,16 @@ public static partial class Sequencer
                 return;
             }
 
-            Interlocked.Exchange(ref _disposable, EmptyDisposable.Instance)?.Dispose();
+            ReleaseResult();
         }
+
+        /// <summary>Takes and disposes the published result, leaving the empty disposable in its place.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ReleaseResult() => Interlocked.Exchange(ref _disposable, EmptyDisposable.Instance)?.Dispose();
     }
 
     /// <summary>Holds state for recursive action scheduling.</summary>
-    internal sealed class RecursiveScheduleState : MultipleDisposable
+    internal sealed class RecursiveScheduleState : IDisposable
     {
         /// <summary>Sequencer used for recursive scheduling.</summary>
         private readonly ISequencer _scheduler;
@@ -170,6 +174,9 @@ public static partial class Sequencer
         /// <summary>Cached delegate used to avoid recreating the recursive action.</summary>
         private readonly Action _recursiveAction;
 
+        /// <summary>The pending scheduled work, disposed together when recursion is cancelled.</summary>
+        private DisposableSet _scheduled;
+
         /// <summary>Initializes a new instance of the <see cref="RecursiveScheduleState"/> class.</summary>
         /// <param name="scheduler">Sequencer used for recursive scheduling.</param>
         /// <param name="action">Recursive action supplied by the caller.</param>
@@ -178,13 +185,18 @@ public static partial class Sequencer
             _scheduler = scheduler;
             _action = action;
             _recursiveAction = RunRecursiveAction;
+            _scheduled = new();
         }
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Dispose() => _scheduled.Dispose();
 
         /// <summary>Starts recursive scheduling.</summary>
         /// <returns>The disposable object used to cancel recursive work.</returns>
         internal RecursiveScheduleState Start()
         {
-            Add(_scheduler.Schedule(_recursiveAction));
+            _scheduled.Add(_scheduler.Schedule(_recursiveAction));
             return this;
         }
 
@@ -204,7 +216,7 @@ public static partial class Sequencer
             {
                 if (!handoff.IsDone)
                 {
-                    Add(handoff.Disposable);
+                    _scheduled.Add(handoff.Disposable);
                     handoff.IsAdded = true;
                 }
             }
@@ -219,7 +231,7 @@ public static partial class Sequencer
             {
                 if (handoff.IsAdded)
                 {
-                    _ = Remove(handoff.Disposable!);
+                    _ = _scheduled.Remove(handoff.Disposable!);
                 }
                 else
                 {

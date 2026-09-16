@@ -102,7 +102,7 @@ public sealed class FirstMatchFromCandidatesObservable<TKey, TRaw, TResult>(
         return EmptyDisposable.Instance;
     }
 
-    /// <summary>Observer that records one candidate projection's synchronous outcome — value, error and termination — for the inline walk.</summary>
+    /// <summary>Observer that records one candidate projection's synchronous outcome - value, error and termination - for the inline walk.</summary>
     [System.Diagnostics.DebuggerDisplay("SyncProbe: Completed = {Completed}, HasValue = {HasValue}, Value = {Value}")]
     public sealed class SyncProbe : IObserver<TRaw>
     {

@@ -2,6 +2,9 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.ExceptionServices;
+using ReactiveUI.Primitives.Async.Helpers;
+
 namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>An observable that creates and disposes an asynchronous resource for each subscription.</summary>
@@ -35,6 +38,7 @@ public sealed class UsingSignal<TResource, T> : IObservableAsync<T>
     {
         var resource = await ResourceFactory(cancellationToken).ConfigureAwait(false);
         UsingWitness<TResource, T>? usingObserver = null;
+        ExceptionDispatchInfo failure;
 
         try
         {
@@ -44,18 +48,20 @@ public sealed class UsingSignal<TResource, T> : IObservableAsync<T>
             await usingObserver.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
             return usingObserver;
         }
-        catch
+        catch (Exception e)
         {
-            if (usingObserver is not null)
-            {
-                await usingObserver.DisposeAsync().ConfigureAwait(false);
-            }
-            else
-            {
-                await resource.DisposeAsync().ConfigureAwait(false);
-            }
-
-            throw;
+            failure = ExceptionDispatchInfo.Capture(e);
         }
+
+        if (usingObserver is not null)
+        {
+            await usingObserver.DisposeAsync().ConfigureAwait(false);
+        }
+        else
+        {
+            await resource.DisposeAsync().ConfigureAwait(false);
+        }
+
+        return CapturedFailure.Rethrow<IAsyncDisposable>(failure);
     }
 }

@@ -8,7 +8,7 @@ namespace ReactiveUI.Primitives.Async.Tests;
 public class IntervalOperatorTests
 {
     /// <summary>The tick the handler disposes on.</summary>
-    private const long DisposeOnTick = 2;
+    private const long DisposeOnTick = 1;
 
     /// <summary>The interval between ticks.</summary>
     private static readonly TimeSpan TickPeriod = TimeSpan.FromMilliseconds(20);
@@ -18,7 +18,7 @@ public class IntervalOperatorTests
     [Test]
     public async Task WhenDisposedFromWithinATick_ThenTheTickLoopStops()
     {
-        const long SecondTick = 2L;
+        const long FirstTick = 0L;
         ManualTimeProvider time = new();
         List<long> ticks = [];
         IAsyncDisposable? handle = null;
@@ -33,6 +33,6 @@ public class IntervalOperatorTests
             }
         });
         await time.RunAsync(disposed.Task);
-        await Assert.That(ticks).IsCollectionEqualTo([1L, SecondTick]);
+        await Assert.That(ticks).IsCollectionEqualTo([FirstTick, DisposeOnTick]);
     }
 }

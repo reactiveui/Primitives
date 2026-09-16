@@ -165,7 +165,7 @@ public class ErrorHandlingOperatorTests
         await Assert.That(result).IsCollectionEqualTo([ExpectedValue]);
     }
 
-    /// <summary>Exercises <c>CatchObserver.OnErrorResumeAsyncCore</c>'s null-callback branch —
+    /// <summary>Exercises <c>CatchObserver.OnErrorResumeAsyncCore</c>'s null-callback branch -
     /// when <c>Catch(handler)</c> is used without an <c>onErrorResume</c> argument, source
     /// <c>OnErrorResumeAsync</c> notifications flow through to the downstream verbatim.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -213,10 +213,10 @@ public class ErrorHandlingOperatorTests
         await Assert.That(result).Contains(FallbackValue);
     }
 
-    /// <summary>Tests Retry with count zero propagates error immediately without retrying.</summary>
+    /// <summary>Tests Retry with count zero never runs the source and completes, because the count is total runs.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenRetryWithCountZero_ThenPropagatesErrorImmediately()
+    public async Task WhenRetryWithCountZero_ThenCompletesWithoutRunningTheSource()
     {
         var attempt = 0;
         TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -233,8 +233,8 @@ public class ErrorHandlingOperatorTests
             return default;
         });
         var completionResult = await completed.Task;
-        await Assert.That(completionResult.IsFailure).IsTrue();
-        await Assert.That(attempt).IsEqualTo(1);
+        await Assert.That(completionResult.IsSuccess).IsTrue();
+        await Assert.That(attempt).IsEqualTo(0);
     }
 
     /// <summary>Tests Retry with count two exhausts all retries then propagates the last error.</summary>
@@ -242,7 +242,7 @@ public class ErrorHandlingOperatorTests
     [Test]
     public async Task WhenRetryCountExhausted_ThenPropagatesLastError()
     {
-        const int ExpectedAttempts = 3;
+        const int ExpectedAttempts = 2;
         const int RetryCount = 2;
 
         var attempt = 0;
@@ -264,12 +264,12 @@ public class ErrorHandlingOperatorTests
         await Assert.That(attempt).IsEqualTo(ExpectedAttempts);
     }
 
-    /// <summary>Tests Retry with count one retries exactly once then propagates the error.</summary>
+    /// <summary>Tests Retry with count one runs the source exactly once then propagates the error.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenRetryWithCountOne_ThenRetriesOnceAndPropagates()
+    public async Task WhenRetryWithCountOne_ThenRunsOnceAndPropagates()
     {
-        const int ExpectedAttempts = 2;
+        const int ExpectedAttempts = 1;
         var attempt = 0;
         TaskCompletionSource<Result> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var source = SignalAsync.CreateAsBackgroundJob<int>(
@@ -331,7 +331,7 @@ public class ErrorHandlingOperatorTests
         await sub.DisposeAsync();
     }
 
-    /// <summary>Exercises the <c>CatchObserver.DisposeAsyncCore</c> catch branch — when the
+    /// <summary>Exercises the <c>CatchObserver.DisposeAsyncCore</c> catch branch - when the
     /// handler-produced subscription throws on <see cref = "IAsyncDisposable.DisposeAsync"/>, the
     /// failure is routed through <see cref = "UnhandledExceptionHandler"/> rather than re-thrown.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>

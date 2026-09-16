@@ -36,15 +36,16 @@ internal sealed class ThrottleDistinctObservable<T>(
     /// <param name="downstream">The observer to forward elements to.</param>
     /// <param name="throttle">The throttle duration.</param>
     /// <param name="scheduler">The scheduler to use for timing.</param>
+    /// <remarks>Emissions are queued in order under the gate and delivered after it is released.</remarks>
     internal sealed class ThrottleDistinctSink(
         IObserver<T> downstream,
         TimeSpan throttle,
         ISequencer scheduler) : IObserver<T>, IDisposable
     {
-        /// <summary>The gate protecting state transitions and downstream notification.</summary>
+        /// <summary>Guards the received and emitted values and the order notifications are queued in; never held while the observer runs.</summary>
         private readonly Lock _gate = new();
 
-        /// <summary>Shared timer / done-flag plumbing.</summary>
+        /// <summary>Shared timer, terminal state and serialized delivery.</summary>
         private readonly TimerSinkState<T> _state = new(downstream);
 
         /// <summary>The last emitted value.</summary>
@@ -78,8 +79,9 @@ internal sealed class ThrottleDistinctObservable<T>(
 
                 _lastReceived = value;
                 _hasLastReceived = true;
-                _state.Timer.Disposable = scheduler.Schedule(throttle, Emit);
             }
+
+            _state.Timer.Disposable = scheduler.Schedule(throttle, Emit);
         }
 
         /// <inheritdoc/>
@@ -87,8 +89,10 @@ internal sealed class ThrottleDistinctObservable<T>(
         {
             lock (_gate)
             {
-                _state.HandleErrorLocked(error);
+                _ = _state.QueueErrorLocked(error);
             }
+
+            _state.Flush();
         }
 
         /// <inheritdoc/>
@@ -96,8 +100,10 @@ internal sealed class ThrottleDistinctObservable<T>(
         {
             lock (_gate)
             {
-                _state.HandleCompletedLocked();
+                _ = _state.QueueCompletedLocked();
             }
+
+            _state.Flush();
         }
 
         /// <inheritdoc/>
@@ -109,10 +115,9 @@ internal sealed class ThrottleDistinctObservable<T>(
             }
         }
 
-        /// <summary>Emits the last received value when it differs from the last emitted value.</summary>
+        /// <summary>Queues and delivers the last received value when it differs from the last emitted value.</summary>
         internal void Emit()
         {
-            T? toEmit;
             lock (_gate)
             {
                 if (_state.Done || !_hasLastReceived)
@@ -120,13 +125,13 @@ internal sealed class ThrottleDistinctObservable<T>(
                     return;
                 }
 
-                toEmit = _lastReceived;
-                _lastEmitted = toEmit;
+                _lastEmitted = _lastReceived;
                 _hasLastEmitted = true;
                 _hasLastReceived = false;
+                _ = _state.QueueLocked(_lastEmitted!);
             }
 
-            downstream.OnNext(toEmit!);
+            _state.Flush();
         }
     }
 }

@@ -56,7 +56,7 @@ internal sealed class WhileObservable(
         private readonly ISequencer? _scheduler = scheduler;
 
         /// <summary>The disposable tracking the currently-scheduled iteration.</summary>
-        private readonly MutableDisposable _current = new();
+        private readonly SwapDisposable _current = new();
 
         /// <summary>Whether the sink has been disposed.</summary>
         private int _disposed;

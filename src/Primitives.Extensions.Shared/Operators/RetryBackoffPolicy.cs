@@ -14,11 +14,13 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <param name="BackoffFactor">Multiplier applied to the delay per retry attempt.</param>
 /// <param name="MaxDelay">Cap on the computed delay, or <see langword="null"/> for no cap.</param>
 /// <param name="Scheduler">Scheduler that times each retry delay.</param>
-/// <param name="OnError">Optional callback invoked on every upstream error.</param>
+/// <param name="OnError">Optional callback invoked on every retryable upstream error.</param>
+/// <param name="ShouldRetry">Decides whether an error is retryable, or <see langword="null"/> to retry every error. An error it rejects goes straight downstream.</param>
 internal readonly record struct RetryBackoffPolicy(
     int MaxRetries,
     TimeSpan InitialDelay,
     double BackoffFactor,
     TimeSpan? MaxDelay,
     ISequencer Scheduler,
-    Action<Exception>? OnError);
+    Action<Exception>? OnError,
+    Func<Exception, bool>? ShouldRetry = null);

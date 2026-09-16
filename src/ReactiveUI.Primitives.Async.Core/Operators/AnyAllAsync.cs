@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async;
@@ -44,6 +45,15 @@ public static partial class SignalAsyncExtensions
         public ValueTask<bool> AnyAsync(CancellationToken cancellationToken) =>
             source.AnyAsync(null, cancellationToken);
 
+        /// <summary>Asynchronously determines whether any element in the sequence satisfies the specified predicate.</summary>
+        /// <param name="predicate">A function to test each element for a condition.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains <see langword="true"/> if any
+        /// element of the sequence passes the test in the specified predicate; otherwise, <see langword="false"/>.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="predicate"/> is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask<bool> AnyAsync(Func<T, bool> predicate) =>
+            source.AnyAsync(predicate, CancellationToken.None);
+
         /// <summary>Asynchronously determines whether all elements in the sequence satisfy the specified predicate.</summary>
         /// <param name="predicate">A function to test each element for a condition. The method evaluates this predicate for each element in the
         /// sequence.</param>
@@ -78,46 +88,118 @@ public static partial class SignalAsyncExtensions
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
     /// <param name="predicate">An optional predicate to test each element. If null, the sequence is checked for any elements.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
-    internal sealed class AnyTaskWitness<T>(Func<T, bool>? predicate, CancellationToken cancellationToken) : TaskResultWitnessAsyncBase<T, bool>(cancellationToken)
+    [DebuggerDisplay("AnyTaskWitness: {_witness}")]
+    internal sealed class AnyTaskWitness<T>(Func<T, bool>? predicate, CancellationToken cancellationToken) : IWitnessAsync<T>
     {
+        /// <summary>Produces and cancels the witness's single result value.</summary>
+        private readonly TaskResultCompletionSource<bool> _completion = new(cancellationToken);
+
+        /// <summary>The notification gate, cancellation link and disposal state.</summary>
+        private WitnessAsyncState _witness;
+
         /// <inheritdoc/>
-        protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
+        ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
+            WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+            WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
+
+        /// <summary>Asynchronously waits for the witness to produce its result value.</summary>
+        /// <returns>A task representing the asynchronous operation, containing the result value.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal ValueTask<bool> AwaitResultAsync() => _completion.AwaitResultAsync(this);
+
+        /// <inheritdoc/>
+        ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken)
         {
             _ = cancellationToken;
-            return predicate is not null && !predicate(value) ? default : SetResultAndDisposeAsync(true);
+            return predicate is not null && !predicate(value)
+                ? default
+                : _completion.SetResultAndDisposeAsync(true, this);
         }
 
         /// <inheritdoc/>
-        protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-            SetExceptionAndDisposeAsync(error);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            _completion.SetExceptionAndDisposeAsync(error, this);
 
         /// <inheritdoc/>
-        protected override ValueTask OnCompletedAsyncCore(Result result) =>
-            !result.IsSuccess ? SetExceptionAndDisposeAsync(result.Exception) : SetResultAndDisposeAsync(false);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) =>
+            _completion.CompleteAndDisposeAsync(result, false, this);
     }
 
     /// <summary>A witness that determines whether all elements in the sequence satisfy a predicate.</summary>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
     /// <param name="predicate">The predicate to test each element against.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
-    internal sealed class AllTaskWitness<T>(Func<T, bool> predicate, CancellationToken cancellationToken) : TaskResultWitnessAsyncBase<T, bool>(cancellationToken)
+    [DebuggerDisplay("AllTaskWitness: {_witness}")]
+    internal sealed class AllTaskWitness<T>(Func<T, bool> predicate, CancellationToken cancellationToken) : IWitnessAsync<T>
     {
+        /// <summary>Produces and cancels the witness's single result value.</summary>
+        private readonly TaskResultCompletionSource<bool> _completion = new(cancellationToken);
+
         /// <summary>The test applied to every element.</summary>
         private readonly Func<T, bool> _predicate = predicate;
 
+        /// <summary>The notification gate, cancellation link and disposal state.</summary>
+        private WitnessAsyncState _witness;
+
         /// <inheritdoc/>
-        protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
+        ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
+            WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+            WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
+
+        /// <summary>Asynchronously waits for the witness to produce its result value.</summary>
+        /// <returns>A task representing the asynchronous operation, containing the result value.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal ValueTask<bool> AwaitResultAsync() => _completion.AwaitResultAsync(this);
+
+        /// <inheritdoc/>
+        ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken)
         {
             _ = cancellationToken;
-            return _predicate(value) ? default : SetResultAndDisposeAsync(false);
+            return _predicate(value) ? default : _completion.SetResultAndDisposeAsync(false, this);
         }
 
         /// <inheritdoc/>
-        protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-            SetExceptionAndDisposeAsync(error);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            _completion.SetExceptionAndDisposeAsync(error, this);
 
         /// <inheritdoc/>
-        protected override ValueTask OnCompletedAsyncCore(Result result) =>
-            !result.IsSuccess ? SetExceptionAndDisposeAsync(result.Exception) : SetResultAndDisposeAsync(true);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) =>
+            _completion.CompleteAndDisposeAsync(result, true, this);
     }
 }

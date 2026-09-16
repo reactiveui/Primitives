@@ -72,22 +72,29 @@ public class CombineLatestIndexedObserverTests
         await parent.DisposeAsync();
     }
 
-    /// <summary>Minimal concrete subclass exposing the base's EmitLatestAsync invocation count.</summary>
+    /// <summary>Minimal single-source coordinator counting its <see cref="EmitLatestAsync"/> invocations.</summary>
     /// <param name="observer">The downstream observer.</param>
-    private sealed class TestSubscription(IObserverAsync<int> observer) : SyncLatestCoordinatorBase<int>(observer, 1)
+    private sealed class TestSubscription(IObserverAsync<int> observer) : ISyncLatestCoordinator<int>
     {
+        /// <inheritdoc/>
+        public SyncLatestLifecycle<int> Lifecycle { get; } = new(observer, 1);
+
         /// <summary>Gets the number of times <see cref="EmitLatestAsync"/> has been invoked.</summary>
         public int EmitLatestCount { get; private set; }
 
         /// <inheritdoc/>
-        internal override ValueTask EmitLatestAsync()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask DisposeAsync() => Lifecycle.DisposeAsync();
+
+        /// <inheritdoc/>
+        public ValueTask EmitLatestAsync()
         {
             EmitLatestCount++;
             return default;
         }
 
         /// <inheritdoc/>
-        protected override ValueTask<IAsyncDisposable> SubscribeAtAsync(int index, CancellationToken cancellationToken)
+        public ValueTask<IAsyncDisposable> SubscribeAtAsync(int index, CancellationToken cancellationToken)
         {
             _ = index;
             _ = cancellationToken;

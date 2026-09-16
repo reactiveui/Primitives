@@ -41,12 +41,6 @@ public sealed class LoopSignal<T> : IRequireCurrentThread<T>
     public IDisposable Subscribe(IObserver<T> observer) =>
         SignalSubscription.Subscribe(observer, _currentThreadRequired, SubscribeCore);
 
-    /// <summary>Checks whether a cancellation handle has been disposed.</summary>
-    /// <param name="disposable">The cancellation handle.</param>
-    /// <returns><see langword="true"/> when the handle is disposed.</returns>
-    private static bool IsDisposed(IDisposable disposable) =>
-        disposable is IsDisposed state && state.IsDisposed;
-
     /// <summary>Schedules the recursive emission loop, which stops as soon as the handle is disposed.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="cancel">The outer subscription handle.</param>
@@ -56,20 +50,24 @@ public sealed class LoopSignal<T> : IRequireCurrentThread<T>
         "Allocations",
         "PSH1011",
         Justification = "No state-taking recursive Schedule overload exists.")]
-    private IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel) =>
-        Sequencer.CurrentThread.Schedule(self =>
+    private IDisposable SubscribeCore(IObserver<T> observer, IDisposable cancel)
+    {
+        // The subscription helper always hands over a disposal-tracking handle.
+        var handle = (IsDisposed)cancel;
+        return Sequencer.CurrentThread.Schedule(self =>
         {
-            if (IsDisposed(cancel))
+            if (handle.IsDisposed)
             {
                 return;
             }
 
             observer.OnNext(Value);
-            if (IsDisposed(cancel))
+            if (handle.IsDisposed)
             {
                 return;
             }
 
             self();
         });
+    }
 }

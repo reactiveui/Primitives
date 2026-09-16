@@ -7,7 +7,7 @@ namespace ReactiveUI.Primitives.Async.Tests;
 /// <summary>Tests cancellation-token and comparer overloads of terminal async operators.</summary>
 public partial class TerminalOperatorTests
 {
-    /// <summary>Exercises the <c>CountAsync(cancellationToken)</c> overload — the no-predicate
+    /// <summary>Exercises the <c>CountAsync(cancellationToken)</c> overload - the no-predicate
     /// shortcut that forwards to the full overload with a null predicate.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -18,7 +18,7 @@ public partial class TerminalOperatorTests
         await Assert.That(result).IsEqualTo(ExpectedCount);
     }
 
-    /// <summary>Exercises the <c>LongCountAsync(cancellationToken)</c> overload — the no-predicate
+    /// <summary>Exercises the <c>LongCountAsync(cancellationToken)</c> overload - the no-predicate
     /// shortcut that forwards to the full overload with a null predicate.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -29,7 +29,7 @@ public partial class TerminalOperatorTests
         await Assert.That(result).IsEqualTo(ExpectedCount);
     }
 
-    /// <summary>Exercises the <c>FirstOrDefaultAsync(cancellationToken)</c> overload — the no-default-no-predicate shortcut.</summary>
+    /// <summary>Exercises the <c>FirstOrDefaultAsync(cancellationToken)</c> overload - the no-default-no-predicate shortcut.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenFirstOrDefaultAsyncWithCancellationTokenOverload_ThenReturnsFirst()
@@ -39,7 +39,7 @@ public partial class TerminalOperatorTests
         await Assert.That(result).IsEqualTo(ExpectedFirst);
     }
 
-    /// <summary>Exercises the <c>LastOrDefaultAsync(cancellationToken)</c> overload — the no-default-no-predicate shortcut.</summary>
+    /// <summary>Exercises the <c>LastOrDefaultAsync(cancellationToken)</c> overload - the no-default-no-predicate shortcut.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenLastOrDefaultAsyncWithCancellationTokenOverload_ThenReturnsLast()
@@ -50,7 +50,7 @@ public partial class TerminalOperatorTests
         await Assert.That(result).IsEqualTo(ExpectedLast);
     }
 
-    /// <summary>Exercises the <c>SingleOrDefaultAsync(cancellationToken)</c> overload — the no-default-no-predicate shortcut.</summary>
+    /// <summary>Exercises the <c>SingleOrDefaultAsync(cancellationToken)</c> overload - the no-default-no-predicate shortcut.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenSingleOrDefaultAsyncWithCancellationTokenOverload_ThenReturnsValue()
@@ -60,7 +60,7 @@ public partial class TerminalOperatorTests
         await Assert.That(result).IsEqualTo(ExpectedSingle);
     }
 
-    /// <summary>Exercises the <c>ContainsAsync(value, comparer)</c> overload — the no-cancellation
+    /// <summary>Exercises the <c>ContainsAsync(value, comparer)</c> overload - the no-cancellation
     /// shortcut that forwards to the full overload with <see cref="CancellationToken.None"/>.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -71,7 +71,7 @@ public partial class TerminalOperatorTests
         await Assert.That(result).IsTrue();
     }
 
-    /// <summary>Exercises the <c>ContainsAsync(value, cancellationToken)</c> overload — the
+    /// <summary>Exercises the <c>ContainsAsync(value, cancellationToken)</c> overload - the
     /// no-comparer shortcut that forwards to the full overload with a null comparer.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]

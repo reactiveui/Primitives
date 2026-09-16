@@ -13,7 +13,7 @@ public class PooledDelaySourceTests
     /// <summary>A delay long enough that it can only end through cancellation.</summary>
     private static readonly TimeSpan DelayOutlivingTheTest = TimeSpan.FromSeconds(10);
 
-    /// <summary>Verifies that a pre-cancelled token fails the source immediately with <see cref = "OperationCanceledException"/> — the BeginAsync early-return path.</summary>
+    /// <summary>Verifies that a pre-cancelled token fails the source immediately with <see cref = "OperationCanceledException"/> - the BeginAsync early-return path.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenPreCancelledToken_ThenFailsWithOperationCanceled()

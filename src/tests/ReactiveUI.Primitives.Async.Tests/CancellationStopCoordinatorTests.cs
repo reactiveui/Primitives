@@ -15,6 +15,24 @@ public sealed class CancellationStopCoordinatorTests
     /// <summary>The recorded start of completion.</summary>
     private const string CompletionEntered = "completion entered";
 
+    /// <summary>Disposing before the sources are subscribed releases the coordinator without a token registration or source subscription.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task DisposeAsync_BeforeSubscribe_ReleasesWithoutRegistration()
+    {
+        List<Result> completions = [];
+        CallbackWitnessAsync<int> observer = new(static (_, _) => default, null, result =>
+        {
+            completions.Add(result);
+            return default;
+        });
+        SignalAsyncExtensions.CancellationStopSignal<int> signal = new(SignalAsync.Never<int>(), CancellationToken.None);
+        SignalAsyncExtensions.CancellationStopSignal<int>.CancellationStopCoordinator coordinator = new(signal, observer);
+
+        await Assert.That(async () => await coordinator.DisposeAsync()).ThrowsNothing();
+        await Assert.That(completions).IsEmpty();
+    }
+
     /// <summary>Completion waits for the downstream completion callback.</summary>
     /// <returns>The test operation.</returns>
     [Test]

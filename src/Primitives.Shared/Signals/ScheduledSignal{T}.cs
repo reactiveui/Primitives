@@ -5,8 +5,12 @@
 using System.Runtime.CompilerServices;
 
 #if REACTIVE_SHIM
+using ReactiveUI.Primitives.Reactive.Advanced;
+
 namespace ReactiveUI.Primitives.Reactive.Signals;
 #else
+using ReactiveUI.Primitives.Advanced;
+
 namespace ReactiveUI.Primitives.Signals;
 #endif
 
@@ -21,11 +25,11 @@ public class ScheduledSignal<T> : ISignal<T>
     /// <summary>The observer that receives values while no other subscriber is active.</summary>
     private readonly IObserver<T>? _defaultObserver;
 
-    /// <summary>The sequencer notifications are emitted on.</summary>
-    private readonly ISequencer _scheduler;
-
     /// <summary>The backing signal this instance wraps.</summary>
     private readonly ISignal<T> _subject;
+
+    /// <summary>The backing signal observed on the sequencer, built once and shared by every subscriber.</summary>
+    private readonly IObservable<T> _observed;
 
     /// <summary>The number of active non-default observers.</summary>
     private int _observerRefCount;
@@ -59,9 +63,11 @@ public class ScheduledSignal<T> : ISignal<T>
     {
         ArgumentExceptionHelper.ThrowIfNull(scheduler);
 
-        _scheduler = scheduler;
         _defaultObserver = defaultObserver;
         _subject = defaultSubject ?? new Signal<T>();
+        _observed = scheduler == Sequencer.Immediate
+            ? _subject
+            : new WitnessOnSignal<T>(_subject, scheduler);
         _defaultObserverSub = defaultObserver is null ? null : SubscribeDefaultObserver(defaultObserver);
     }
 
@@ -113,7 +119,7 @@ public class ScheduledSignal<T> : ISignal<T>
         IDisposable observedSubscription;
         try
         {
-            observedSubscription = _subject.ObserveOn(_scheduler).Subscribe(observer);
+            observedSubscription = _observed.Subscribe(observer);
         }
         catch
         {
@@ -168,7 +174,7 @@ public class ScheduledSignal<T> : ISignal<T>
     /// <returns>The subscription to dispose once another observer arrives.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private IDisposable SubscribeDefaultObserver(IObserver<T> observer) =>
-        _subject.ObserveOn(_scheduler).Subscribe(observer);
+        _observed.Subscribe(observer);
 
     /// <summary>Releases one non-default observer and restores the default observer when needed.</summary>
     private void ReleaseObserver()

@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Disposables;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
@@ -31,6 +32,15 @@ public class DetectStaleObservableTests
         await Assert.That(caught).IsSameReferenceAs(expected);
         await Assert.That(source.Subscription.IsDisposed).IsTrue();
     }
+
+    /// <summary>Verifies an observer that marshals to another thread which completes the source does not deadlock the update delivery.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Task WhenObserverMarshalsCompletionDuringUpdate_ThenNoDeadlock() =>
+        SerializedDeliveryAssertions.ObserverMarshallingCompletionDoesNotDeadlock<Stale<int>>(
+            static (source, observer) => source.DetectStale(TimeSpan.FromTicks(WindowTicks), new VirtualClock()).Subscribe(observer),
+            static observer => observer.OnNext(1));
 
     /// <summary>Observable that errors during <c>Subscribe</c> and exposes the handle it returned.</summary>
     /// <typeparam name = "T">The element type.</typeparam>

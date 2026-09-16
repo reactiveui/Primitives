@@ -44,12 +44,23 @@ public static partial class SignalAsync
         }
 
         /// <summary>Per-subscription task body that emits the captured value and signals completion.</summary>
-        /// <param name="observer">The downstream observer.</param>
+        /// <param name="downstream">The downstream observer.</param>
         /// <param name="value">The captured value.</param>
-        private sealed class ReturnSubscription(IObserverAsync<T> observer, T value) : TaskSignalSubscription<T>(observer)
+        private sealed class ReturnSubscription(IObserverAsync<T> downstream, T value) : IAsyncDisposable, ITaskSignalJob<T>
         {
+            /// <summary>Runs the job and joins it on disposal.</summary>
+            private readonly TaskSignalState _task = new();
+
+            /// <summary>Starts the job and returns without waiting for it to finish.</summary>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Start() => _task.Start(this, downstream);
+
             /// <inheritdoc/>
-            protected override async ValueTask ExecuteAsyncCore(
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask DisposeAsync() => _task.DisposeAsync();
+
+            /// <inheritdoc/>
+            async ValueTask ITaskSignalJob<T>.ExecuteAsync(
                 IObserverAsync<T> observer,
                 CancellationToken cancellationToken)
             {

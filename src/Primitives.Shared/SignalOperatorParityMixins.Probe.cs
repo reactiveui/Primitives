@@ -2,6 +2,9 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Extensions;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive;
 #else
@@ -11,55 +14,17 @@ namespace ReactiveUI.Primitives;
 /// <summary>The Probe operator: emits the most recent source value on a fixed period.</summary>
 public static partial class LinqExtensions
 {
-    /// <summary>Sample signal with a direct subscription path.</summary>
-    /// <typeparam name="T">The source value type.</typeparam>
-    /// <param name="source">The source observable.</param>
-    /// <param name="period">The sample period.</param>
-    /// <param name="sequencer">The sequencer used to schedule ticks.</param>
-    private sealed class ProbeSignal<T>(IObservable<T> source, TimeSpan period, ISequencer sequencer) : IRequireCurrentThread<T>
-    {
-        /// <summary>The source observable.</summary>
-        private readonly IObservable<T> _source = source;
-
-        /// <summary>The sample period.</summary>
-        private readonly TimeSpan _period = period;
-
-        /// <summary>The sequencer used to schedule ticks.</summary>
-        private readonly ISequencer _sequencer = sequencer;
-
-        /// <inheritdoc/>
-        public bool IsRequiredSubscribeOnCurrentThread() => _sequencer == Sequencer.CurrentThread;
-
-        /// <inheritdoc/>
-        public IDisposable Subscribe(IObserver<T> observer)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(observer);
-
-            ProbeCoordinator<T> coordinator = new(_source, _period, _sequencer, observer);
-            if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
-            {
-                return coordinator.Run();
-            }
-
-            SingleDisposable subscription = new();
-            _ = Sequencer.CurrentThread.Schedule(
-                (subscription, coordinator),
-                static (_, s) =>
-                {
-                    s.subscription.Create(s.coordinator.Run());
-                    return EmptyDisposable.Instance;
-                });
-            return subscription;
-        }
-    }
-
     /// <summary>Coordinates a sampled observable sequence and its tick timer.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     /// <param name="source">The source observable.</param>
     /// <param name="period">The sample period.</param>
     /// <param name="sequencer">The sequencer used to schedule ticks.</param>
     /// <param name="observer">The downstream observer.</param>
-    private sealed class ProbeCoordinator<T>(IObservable<T> source, TimeSpan period, ISequencer sequencer, IObserver<T> observer) : IObserver<T>, IDisposable
+    /// <remarks>
+    /// The gate only guards the latest value and the flags. Samples and terminals are queued in order under the gate and
+    /// delivered by a <see cref="SerializedDelivery{T}"/> after it is released, so no lock is held while the observer runs.
+    /// </remarks>
+    internal sealed class ProbeCoordinator<T>(IObservable<T> source, TimeSpan period, ISequencer sequencer, IObserver<T> observer) : IObserver<T>, IDisposable
     {
         /// <summary>The source observable.</summary>
         private readonly IObservable<T> _source = source;
@@ -73,8 +38,11 @@ public static partial class LinqExtensions
         /// <summary>The downstream observer.</summary>
         private readonly IObserver<T> _observer = observer;
 
-        /// <summary>The synchronization gate, reentrant because emissions are made while it is held.</summary>
+        /// <summary>Guards the latest value and the flags; never held while the observer runs.</summary>
         private readonly Lock _gate = new();
+
+        /// <summary>Serializes downstream deliveries.</summary>
+        private SerializedDelivery<T> _delivery = new();
 
         /// <summary>The active source subscription.</summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage(
@@ -95,7 +63,7 @@ public static partial class LinqExtensions
         /// <summary>The latest value.</summary>
         private T? _latest;
 
-        /// <summary>A value indicating whether the source has completed.</summary>
+        /// <summary>A value indicating whether the source has terminated or the coordinator was disposed.</summary>
         private bool _done;
 
         /// <summary>A value indicating whether the coordinator has been disposed.</summary>
@@ -146,7 +114,7 @@ public static partial class LinqExtensions
             ScheduleNext();
         }
 
-        /// <summary>Forwards source errors and releases active resources.</summary>
+        /// <summary>Queues the source error behind any pending sample, then releases active resources.</summary>
         /// <param name="error">The source error.</param>
         public void OnError(Exception error)
         {
@@ -158,13 +126,14 @@ public static partial class LinqExtensions
                 }
 
                 _done = true;
-                _observer.OnError(error);
+                _ = _delivery.PostError(error);
             }
 
+            _delivery.Flush(new PendingDrain(this));
             Dispose();
         }
 
-        /// <summary>Forwards completion and releases active resources.</summary>
+        /// <summary>Queues any value still waiting, then completion, then releases active resources.</summary>
         public void OnCompleted()
         {
             lock (_gate)
@@ -175,9 +144,18 @@ public static partial class LinqExtensions
                 }
 
                 _done = true;
-                _observer.OnCompleted();
+
+                // A value that arrived since the last tick still goes out, ahead of completion.
+                if (_hasLatest)
+                {
+                    _hasLatest = false;
+                    _ = _delivery.Post(_latest!);
+                }
+
+                _ = _delivery.PostCompleted();
             }
 
+            _delivery.Flush(new PendingDrain(this));
             Dispose();
         }
 
@@ -202,26 +180,33 @@ public static partial class LinqExtensions
             timer.Dispose();
         }
 
-        /// <summary>Handles a sample tick.</summary>
+        /// <summary>Queues the latest value as a sample under the gate, then delivers it.</summary>
         /// <returns>An empty disposable.</returns>
         private EmptyDisposable Tick()
         {
-            // Samples cannot interleave with terminal notifications.
             lock (_gate)
             {
+                _timerActive = false;
                 if (_done || !_hasLatest)
                 {
-                    _timerActive = false;
                     return EmptyDisposable.Instance;
                 }
 
-                var value = _latest!;
                 _hasLatest = false;
-                _timerActive = false;
-                _observer.OnNext(value);
+                _ = _delivery.Post(_latest!);
             }
 
+            _delivery.Flush(new PendingDrain(this));
             return EmptyDisposable.Instance;
+        }
+
+        /// <summary>Drains this coordinator's queued notifications for the delivery gate.</summary>
+        /// <param name="Owner">The coordinator.</param>
+        private readonly record struct PendingDrain(ProbeCoordinator<T> Owner) : IDrainTarget
+        {
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Drain() => _ = Owner._delivery.DrainTo(Owner._observer);
         }
     }
 }

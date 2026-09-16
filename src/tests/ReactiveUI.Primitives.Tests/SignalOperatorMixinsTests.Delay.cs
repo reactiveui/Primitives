@@ -59,11 +59,11 @@ public partial class SignalOperatorMixinsTests
         await Assert.That(observer.Values.SequenceEqual([One])).IsTrue();
     }
 
-    /// <summary>Disposing during delivery suppresses the queued notifications that follow it.</summary>
+    /// <summary>Disposing during delivery still delivers the notifications that were already due, including the terminal.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task ShiftDisposalClaimDuringDeliverySuppressesQueuedNotifications()
-{
+    public async Task ShiftDisposalClaimDuringDeliveryStillDeliversTheNotificationsAlreadyDue()
+    {
         var dueTime = TimeSpan.FromTicks(One);
         RecordingSequencer sequencer = new(DateTimeOffset.UnixEpoch);
         Signal<int> source = new();
@@ -73,10 +73,10 @@ public partial class SignalOperatorMixinsTests
         LinqExtensions.ShiftCoordinator<int>? coordinator = null;
         var observer = new DelegateWitness<int>(
             value =>
-        {
-            values.Add(value);
-            claimed = coordinator!.TryBeginDispose();
-        },
+            {
+                values.Add(value);
+                claimed |= coordinator!.TryBeginDispose();
+            },
             static _ => { },
             () => completed++);
         coordinator = new(source, dueTime, sequencer, observer);
@@ -89,8 +89,8 @@ public partial class SignalOperatorMixinsTests
         coordinator.ReleaseSubscriptions();
         await Assert.That(claimed).IsTrue();
         await Assert.That(coordinator.TryBeginDispose()).IsFalse();
-        await Assert.That(values.SequenceEqual([One])).IsTrue();
-        await Assert.That(completed).IsEqualTo(0);
+        await Assert.That(values.SequenceEqual([One, Two])).IsTrue();
+        await Assert.That(completed).IsEqualTo(1);
     }
 
     /// <summary>Verifies a delayed error is forwarded after the queued values that precede it.</summary>

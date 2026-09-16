@@ -85,7 +85,7 @@ internal static class AllocationProbe
         var failSource = Signal.Fail<int>(error, Sequencer.Immediate);
         var handles = new IDisposable[FanOut];
 
-        Console.WriteLine("Operator allocation — bytes/op, observer excluded (GC.GetAllocatedBytesForCurrentThread)");
+        Console.WriteLine("Operator allocation - bytes/op, observer excluded (GC.GetAllocatedBytesForCurrentThread)");
         Console.WriteLine(new string('-', SeparatorWidth));
 
         Section("Factories / sources");

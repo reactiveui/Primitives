@@ -16,6 +16,9 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <param name="source">The source observable.</param>
 /// <param name="minimumUpdatePeriod">The minimum period between emissions.</param>
 /// <param name="scheduler">The scheduler to run the conflation on.</param>
+/// <remarks>Each window emits its newest value at the end of that window, not at the start. The clock starts at
+/// subscription, so the first value is held for a full period; a value arriving after a quiet gap longer than the period
+/// goes out at once.</remarks>
 internal sealed class ConflateObservable<T>(
     IObservable<T> source,
     TimeSpan minimumUpdatePeriod,
@@ -34,6 +37,7 @@ internal sealed class ConflateObservable<T>(
     }
 
     /// <summary>Delivers notifications on the scheduler and limits value emissions to the conflate interval.</summary>
+    /// <remarks>Inline and deferred emissions are serialized, and no lock is held while the observer runs.</remarks>
     internal sealed class ConflateSink : IObserver<T>, IDisposable, IDrainTarget
     {
         /// <summary>The downstream observer.</summary>
@@ -45,7 +49,7 @@ internal sealed class ConflateObservable<T>(
         /// <summary>The scheduler to run the conflation on.</summary>
         private readonly ISequencer _scheduler;
 
-        /// <summary>The gate protecting the queue, throttle window, and downstream notification.</summary>
+        /// <summary>The gate protecting the queue and the throttle window; never held while the observer runs.</summary>
         private readonly Lock _gate = new();
 
         /// <summary>The notification queue and scheduled-drain bookkeeping shared with the drain loop.</summary>
@@ -53,6 +57,9 @@ internal sealed class ConflateObservable<T>(
 
         /// <summary>The disposable tracking a scheduled deferred emission.</summary>
         private readonly MutableDisposable _updateScheduled = new();
+
+        /// <summary>Serializes downstream deliveries.</summary>
+        private SerializedDelivery<T> _delivery = new();
 
         /// <summary>Wall-clock timestamp of the last emission forwarded downstream.</summary>
         private DateTimeOffset _lastUpdateTime = DateTimeOffset.MinValue;
@@ -187,7 +194,7 @@ internal sealed class ConflateObservable<T>(
                 _updateScheduled.Dispose();
             }
 
-            _downstream.OnError(error);
+            _delivery.OnError(error, new PendingDrain(this));
         }
 
         /// <summary>Forwards completion, deferring it when a throttled emission is scheduled.</summary>
@@ -209,7 +216,7 @@ internal sealed class ConflateObservable<T>(
                 _state.MarkDoneLocked();
             }
 
-            _downstream.OnCompleted();
+            _delivery.OnCompleted(new PendingDrain(this));
         }
 
         /// <summary>Schedules a value for the end of the conflate interval.</summary>
@@ -228,17 +235,23 @@ internal sealed class ConflateObservable<T>(
         /// <param name="value">The deferred value.</param>
         private void EmitDeferred(T value)
         {
-            _downstream.OnNext(value);
+            _delivery.OnNext(_downstream, value, new PendingDrain(this));
 
+            bool complete;
             lock (_gate)
             {
                 _lastUpdateTime = _scheduler.Now;
                 _updateScheduled.Disposable = null;
-                if (_completionRequested)
+                complete = _completionRequested;
+                if (complete)
                 {
                     _state.MarkDoneLocked();
-                    _downstream.OnCompleted();
                 }
+            }
+
+            if (complete)
+            {
+                _delivery.OnCompleted(new PendingDrain(this));
             }
         }
 
@@ -246,11 +259,20 @@ internal sealed class ConflateObservable<T>(
         /// <param name="value">The value to emit.</param>
         private void EmitInline(T value)
         {
-            _downstream.OnNext(value);
+            _delivery.OnNext(_downstream, value, new PendingDrain(this));
             lock (_gate)
             {
                 _lastUpdateTime = _scheduler.Now;
             }
+        }
+
+        /// <summary>Drains this sink's queued notifications for the delivery gate.</summary>
+        /// <param name="Owner">The sink.</param>
+        private readonly record struct PendingDrain(ConflateSink Owner) : IDrainTarget
+        {
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Drain() => _ = Owner._delivery.DrainTo(Owner._downstream);
         }
     }
 }

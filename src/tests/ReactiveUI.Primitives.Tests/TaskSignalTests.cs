@@ -49,6 +49,19 @@ public partial class TaskSignalTests
         await Assert.That(taskSignal.IsCancellationRequested).IsTrue();
     }
 
+    /// <summary>A task signal on the immediate sequencer subscribes its source directly.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task TaskSignalOnTheImmediateSequencerSubscribesTheSourceDirectly()
+    {
+        using var taskSignal = TaskSignal<int>.Create(static _ => Signal.Emit(SuccessValue), Sequencer.Immediate);
+        List<int> values = [];
+
+        _ = taskSignal.Subscribe(values.Add);
+
+        await Assert.That(values.SequenceEqual([SuccessValue])).IsTrue();
+    }
+
     /// <summary>Disposal tolerates a token source that the completion path has disposed.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]

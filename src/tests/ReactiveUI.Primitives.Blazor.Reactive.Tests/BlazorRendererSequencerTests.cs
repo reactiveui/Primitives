@@ -17,6 +17,9 @@ public sealed class BlazorRendererSequencerTests
     /// <summary>The failure reported by a rejected renderer operation.</summary>
     private const string RendererFailure = "renderer rejected";
 
+    /// <summary>The upper bound for delayed work to complete on a loaded machine.</summary>
+    private static readonly TimeSpan CompletionTimeout = TimeSpan.FromSeconds(30);
+
     /// <summary>The values an immediate burst produces, in the FIFO order asserted.</summary>
     private static readonly int[] ExpectedBurst = [1, 2, 3];
 
@@ -237,6 +240,52 @@ public sealed class BlazorRendererSequencerTests
         }
 
         await Assert.That(values).IsEquivalentTo(ExpectedBurst, EqualityComparer<int>.Default, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+    }
+
+    /// <summary>Verifies delayed work waits out its delay and then runs through the renderer.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task DelayedScheduleRunsThroughRendererAfterTheDelay()
+    {
+        FakeRenderer renderer = new();
+        BlazorRendererSequencer scheduler = new(renderer.InvokeAsync);
+        TaskCompletionSource ran = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        Func<IScheduler, TaskCompletionSource, IDisposable> action = static (_, completion) =>
+        {
+            completion.SetResult();
+            return EmptyDisposable.Instance;
+        };
+
+        using var handle = scheduler.Schedule(ran, TimeSpan.FromMilliseconds(1), action);
+
+        await Assert.That(ran.Task).CompletesWithin(CompletionTimeout);
+        await Assert.That(renderer.InvokeCount).IsGreaterThan(0);
+    }
+
+    /// <summary>Verifies cancelling queued work twice suppresses it and releases nothing twice.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [Test]
+    public async Task CancellingQueuedWorkTwiceSuppressesIt()
+    {
+        List<Action> posted = [];
+        BlazorRendererSequencer scheduler = new(drain =>
+        {
+            posted.Add(drain);
+            return Task.CompletedTask;
+        });
+        var ran = false;
+
+        var item = scheduler.Schedule(0, (_, _) =>
+        {
+            ran = true;
+            return EmptyDisposable.Instance;
+        });
+        item.Dispose();
+        item.Dispose();
+        posted[0]();
+
+        await Assert.That(ran).IsFalse();
     }
 
     /// <summary>Fake renderer that runs marshalled work synchronously and records how often it was invoked.</summary>

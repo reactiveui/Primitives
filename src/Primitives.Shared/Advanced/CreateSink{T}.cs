@@ -76,15 +76,7 @@ public sealed class CreateSink<T> : IDisposable, IObserver<T>
             return;
         }
 
-        try
-        {
-            _observer.OnNext(value);
-        }
-        catch
-        {
-            Dispose();
-            throw;
-        }
+        SinkDelivery.Next(_observer, value, this);
     }
 
     /// <inheritdoc/>

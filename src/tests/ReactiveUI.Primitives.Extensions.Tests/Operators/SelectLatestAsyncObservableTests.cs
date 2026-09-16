@@ -4,6 +4,7 @@
 
 using System.Reactive;
 using System.Reactive.Subjects;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Extensions.Operators;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
@@ -116,6 +117,80 @@ public class SelectLatestAsyncObservableTests
         await Assert.That(completed).IsTrue();
         await Assert.That(results).IsCollectionEqualTo([Fast * ProjectionMultiplier]);
     }
+
+    /// <summary>Verifies a superseded projection that fails does not terminate the sequence.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenSelectLatestAsyncSupersededProjectionFails_ThenErrorDropped()
+    {
+        const int Slow = 1;
+        const int Fast = 2;
+        TaskCompletionSource<int> slowGate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<int> results = [];
+        Exception? caught = null;
+        using SelectLatestAsyncObservable<int, int>.SelectLatestAsyncSink sink = new(
+            Observer.Create<int>(results.Add, ex => caught = ex),
+            value => value == Slow ? slowGate.Task : Task.FromResult(value));
+
+        var slow = sink.OnNextAsync(Slow);
+        await sink.OnNextAsync(Fast);
+        slowGate.SetException(new InvalidOperationException(SelectorErrorMessage));
+        await slow;
+
+        await Assert.That(caught).IsNull();
+        await Assert.That(results).IsCollectionEqualTo([Fast]);
+    }
+
+    /// <summary>Verifies a projection that fails after disposal forwards nothing.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenSelectLatestAsyncProjectionFailsAfterDispose_ThenErrorDropped()
+    {
+        const int TriggerValue = 1;
+        TaskCompletionSource<int> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        Exception? caught = null;
+        SelectLatestAsyncObservable<int, int>.SelectLatestAsyncSink sink = new(
+            Observer.Create<int>(static _ => { }, ex => caught = ex),
+            _ => gate.Task);
+
+        var processing = sink.OnNextAsync(TriggerValue);
+        sink.Dispose();
+        gate.SetException(new InvalidOperationException(SelectorErrorMessage));
+        await processing;
+
+        await Assert.That(caught).IsNull();
+    }
+
+    /// <summary>Verifies a projection that fails after the source errored does not deliver a second error.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenSelectLatestAsyncProjectionFailsAfterSourceError_ThenOnlySourceErrorDelivered()
+    {
+        const int TriggerValue = 1;
+        TaskCompletionSource<int> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<Exception> errors = [];
+        InvalidOperationException sourceError = new(SourceErrorMessage);
+        using SelectLatestAsyncObservable<int, int>.SelectLatestAsyncSink sink = new(
+            Observer.Create<int>(static _ => { }, errors.Add),
+            _ => gate.Task);
+
+        var processing = sink.OnNextAsync(TriggerValue);
+        sink.OnError(sourceError);
+        gate.SetException(new InvalidOperationException(SelectorErrorMessage));
+        await processing;
+
+        await Assert.That(errors).Count().IsEqualTo(1);
+        await Assert.That(errors[0]).IsSameReferenceAs(sourceError);
+    }
+
+    /// <summary>Verifies an observer that marshals to another thread which completes the source does not deadlock the projection delivery.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Task WhenObserverMarshalsCompletionDuringProjectionDelivery_ThenNoDeadlock() =>
+        SerializedDeliveryAssertions.ObserverMarshallingCompletionDoesNotDeadlock<int>(
+            static (source, observer) => source.SelectLatestAsync(Task.FromResult).Subscribe(observer),
+            static observer => observer.OnNext(1));
 
     /// <summary>Verifies an empty source completes downstream.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>

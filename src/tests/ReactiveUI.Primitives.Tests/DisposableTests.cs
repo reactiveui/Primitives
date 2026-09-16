@@ -2,7 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Core;
@@ -40,8 +39,8 @@ public class DisposableTests
     /// <summary>The disposal count produced when a slot disposes twice.</summary>
     private const int DoubleDisposalCount = 2;
 
-    /// <summary>The disposal count produced by the replaceable-slot replacement sequence.</summary>
-    private const int ReplaceableDisposalCount = 5;
+    /// <summary>The disposal count produced by the replaceable-slot replacement sequence: three values disposed, and the action once.</summary>
+    private const int ReplaceableDisposalCount = 4;
 
     /// <summary>A fixed deterministic timestamp used for absolute scheduling.</summary>
     private static readonly DateTimeOffset FixedTimestamp = new(2024, 1, 1, 0, 0, 0, TimeSpan.Zero);
@@ -108,7 +107,9 @@ public class DisposableTests
         SingleDisposable lateSingle = new(() => disposedBeforeAssign++);
         lateSingle.Dispose();
         lateSingle.Create(new ActionDisposable(() => disposedBeforeAssign++));
-        await Assert.That(disposedBeforeAssign).IsEqualTo(1);
+
+        // Disposal runs the action even with nothing assigned, and the late value is disposed on arrival.
+        await Assert.That(disposedBeforeAssign).IsEqualTo(Two);
         _ = Assert.Throws<ArgumentNullException>(() => lateSingle.Create(null!));
         var replaced = 0;
         SingleReplaceableDisposable replaceable = new(
@@ -119,7 +120,6 @@ public class DisposableTests
         replaceable.Create(new ActionDisposable(() => replaced++));
         await Assert.That(replaced).IsEqualTo(ReplaceableDisposalCount);
         _ = Assert.Throws<ArgumentNullException>(() => replaceable.Create(null!));
-        await AssertProtectedDisposePathRunsTheUnderlyingDisposableOnce();
         await AssertMultipleDisposableRemovesItemsAndDisposesTheRest();
         await AssertMultipleDisposableFactorySkipsNullsAndDisposesOnce();
         DisposeEveryConstructedSlotShape();
@@ -193,12 +193,9 @@ public class DisposableTests
     [Test]
     public async Task CoreValueTypesDisposablesAndHandlesCoverEqualityAndLifecycleBranches()
     {
-        var ignored = 0;
         InvalidOperationException thrown = new("throw-me");
         await AssertMomentIntervalAndVoidEqualityContracts();
         await InvokeInternalHandleMembers(thrown);
-        _ = Handle.CatchIgnore<int>(new InvalidOperationException("ignored")).Subscribe(_ => ignored++);
-        await Assert.That(ignored).IsEqualTo(0);
         await AssertDisposableLifecycleBranches();
     }
 
@@ -268,28 +265,6 @@ public class DisposableTests
         await Assert.That(multiple.IsDisposed).IsTrue();
     }
 
-    /// <summary>Asserts the protected <c>Dispose(false)</c> path disposes the underlying disposable exactly once.</summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    private static async Task AssertProtectedDisposePathRunsTheUnderlyingDisposableOnce()
-    {
-        var disposeFalse = 0;
-        ExposedSingleDisposable single = new(new ActionDisposable(() => disposeFalse++));
-        single.DisposeFalse();
-        single.Dispose();
-        await Assert.That(disposeFalse).IsEqualTo(1);
-        var replaceableFalse = 0;
-        ExposedSingleReplaceableDisposable exposedReplaceable = new(
-            new ActionDisposable(() => replaceableFalse++));
-        exposedReplaceable.DisposeFalse();
-        exposedReplaceable.Dispose();
-        await Assert.That(replaceableFalse).IsEqualTo(1);
-        var multipleFalse = 0;
-        ExposedMultipleDisposable exposedMultiple = new(new ActionDisposable(() => multipleFalse++));
-        exposedMultiple.DisposeFalse();
-        exposedMultiple.Dispose();
-        await Assert.That(multipleFalse).IsEqualTo(1);
-    }
-
     /// <summary>Asserts removal detaches an item from the group and disposal reaches only the remaining items.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     private static async Task AssertMultipleDisposableRemovesItemsAndDisposesTheRest()
@@ -357,59 +332,12 @@ public class DisposableTests
     /// <returns>A task representing the asynchronous operation.</returns>
     private static async Task InvokeInternalHandleMembers(Exception exception)
     {
-        Handle.Nop();
         Handle<int>.Ignore(1);
         Handle<int, int>.Ignore(1, Two);
         Handle<int, int, int>.Ignore(1, Two, Three);
         await Assert.That(Handle<string>.Identity("x")).IsEqualTo("x");
-        _ = Assert.Throws<InvalidOperationException>(() => Handle.Throw(exception));
         _ = Assert.Throws<InvalidOperationException>(() => Handle<int>.Throw(exception, 1));
         _ = Assert.Throws<InvalidOperationException>(() => Handle<int, int>.Throw(exception, 1, Two));
         _ = Assert.Throws<InvalidOperationException>(() => Handle<int, int, int>.Throw(exception, 1, Two, Three));
-    }
-
-    /// <summary>Exposes disposal without managed-resource cleanup.</summary>
-    private sealed class ExposedSingleDisposable : SingleDisposable
-    {
-        /// <summary>Initializes a new instance of the <see cref="ExposedSingleDisposable"/> class.</summary>
-        /// <param name="disposable">The disposable to assign.</param>
-        public ExposedSingleDisposable(IDisposable disposable)
-            : base(disposable)
-        {
-        }
-
-        /// <summary>Invokes the protected dispose path with <see langword="false"/>.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void DisposeFalse() => Dispose(false);
-    }
-
-    /// <summary>Exposes disposal without managed-resource cleanup.</summary>
-    private sealed class ExposedSingleReplaceableDisposable : SingleReplaceableDisposable
-    {
-        /// <summary>Initializes a new instance of the <see cref="ExposedSingleReplaceableDisposable"/> class.</summary>
-        /// <param name="disposable">The disposable to assign.</param>
-        public ExposedSingleReplaceableDisposable(IDisposable disposable)
-            : base(disposable)
-        {
-        }
-
-        /// <summary>Invokes the protected dispose path with <see langword="false"/>.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void DisposeFalse() => Dispose(false);
-    }
-
-    /// <summary>Exposes disposal without managed-resource cleanup.</summary>
-    private sealed class ExposedMultipleDisposable : MultipleDisposable
-    {
-        /// <summary>Initializes a new instance of the <see cref="ExposedMultipleDisposable"/> class.</summary>
-        /// <param name="disposable">The disposable to assign.</param>
-        public ExposedMultipleDisposable(IDisposable disposable)
-            : base(disposable, EmptyDisposable.Instance)
-        {
-        }
-
-        /// <summary>Invokes the protected dispose path with <see langword="false"/>.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void DisposeFalse() => Dispose(false);
     }
 }

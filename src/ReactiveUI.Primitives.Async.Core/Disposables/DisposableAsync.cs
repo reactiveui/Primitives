@@ -7,8 +7,8 @@ using System.Runtime.CompilerServices;
 namespace ReactiveUI.Primitives.Async.Disposables;
 
 /// <summary>Provides factory methods for creating and working with implementations of <see cref="IAsyncDisposable"/>.</summary>
-/// <remarks>Every disposable handed out here runs its delegate at most once, however many times — and from however many
-/// threads — it is disposed.</remarks>
+/// <remarks>Every disposable handed out here runs its delegate at most once, however many times - and from however many
+/// threads - it is disposed.</remarks>
 public static class DisposableAsync
 {
     /// <summary>Gets a shared <see cref="IAsyncDisposable"/> that does nothing when disposed.</summary>

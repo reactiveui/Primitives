@@ -4,6 +4,7 @@
 
 using System.Reactive;
 using System.Reactive.Subjects;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Extensions.Operators;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
@@ -60,7 +61,7 @@ public class SelectAsyncSequentialObservableTests
         TaskCompletionSource<int> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
         List<int> results = [];
         var completed = false;
-        SelectAsyncSequentialObservable<int, int>.SelectAsyncSequentialSink sink = new(Observer.Create<int>(results.Add, () => completed = true), _ => gate.Task);
+        SelectAsyncSequentialObservable<int, int>.SelectAsyncSequentialSink sink = new(Observer.Create<int>(results.Add, () => completed = true), (_, _) => gate.Task);
         var processing = sink.OnNextAsync(TriggerValue);
         sink.Dispose();
         gate.SetResult(TriggerValue);
@@ -112,5 +113,37 @@ public class SelectAsyncSequentialObservableTests
         source.Observer.OnCompleted();
         await Assert.That(completedCount).IsEqualTo(1);
         await Assert.That(caught).IsNull();
+    }
+
+    /// <summary>Verifies an observer that marshals to another thread which completes the source does not deadlock the projection delivery.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Task WhenObserverMarshalsCompletionDuringProjectionDelivery_ThenNoDeadlock() =>
+        SerializedDeliveryAssertions.ObserverMarshallingCompletionDoesNotDeadlock<int>(
+            static (source, observer) => source.SelectAsyncSequential(Task.FromResult).Subscribe(observer),
+            static observer => observer.OnNext(1));
+
+    /// <summary>Verifies a value arriving while a projection is running is queued and projected after it, in order.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenSelectAsyncSequentialValueArrivesWhileProcessing_ThenProjectedAfterInOrder()
+    {
+        const int First = 1;
+        const int Second = 2;
+        TaskCompletionSource<int> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<int> results = [];
+        SelectAsyncSequentialObservable<int, int>.SelectAsyncSequentialSink sink = new(
+            Observer.Create<int>(results.Add),
+            (value, _) => value == First ? gate.Task : Task.FromResult(value));
+
+        var processing = sink.OnNextAsync(First);
+        var queued = sink.OnNextAsync(Second);
+        var queuedCompletedImmediately = queued.IsCompleted;
+        gate.SetResult(First);
+        await processing;
+
+        await Assert.That(queuedCompletedImmediately).IsTrue();
+        await Assert.That(results).IsCollectionEqualTo([First, Second]);
     }
 }

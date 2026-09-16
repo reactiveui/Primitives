@@ -2,20 +2,28 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>A subscription that emits incrementing ticks at a fixed interval.</summary>
 [System.Diagnostics.DebuggerDisplay("IntervalSubscription: Period = {Period}, TimeProvider = {TimeProvider}")]
-public sealed class IntervalSubscription : TaskSignalSubscription<long>
+public sealed class IntervalSubscription : IAsyncDisposable, ITaskSignalJob<long>
 {
+    /// <summary>The observer receiving the job's notifications.</summary>
+    private readonly IObserverAsync<long> _observer;
+
+    /// <summary>Runs the job and joins it on disposal.</summary>
+    private readonly TaskSignalState _task = new();
+
     /// <summary>Initializes a new instance of the <see cref="IntervalSubscription"/> class.</summary>
     /// <param name="observer">The observer receiving ticks.</param>
     /// <param name="period">The delay between ticks.</param>
     /// <param name="timeProvider">The time provider that schedules the ticks, or <see langword="null"/> for the
     /// system clock.</param>
     public IntervalSubscription(IObserverAsync<long> observer, TimeSpan period, TimeProvider? timeProvider)
-        : base(observer)
     {
+        _observer = observer;
         Period = period;
         TimeProvider = timeProvider;
     }
@@ -26,12 +34,20 @@ public sealed class IntervalSubscription : TaskSignalSubscription<long>
     /// <summary>Gets the time provider used for custom scheduling.</summary>
     private TimeProvider? TimeProvider { get; }
 
+    /// <summary>Starts the subscription's job and returns without waiting for it to finish.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Start() => _task.Start(this, _observer);
+
     /// <inheritdoc/>
-    protected override async ValueTask ExecuteAsyncCore(
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ValueTask DisposeAsync() => _task.DisposeAsync();
+
+    /// <inheritdoc/>
+    async ValueTask ITaskSignalJob<long>.ExecuteAsync(
         IObserverAsync<long> observer,
         CancellationToken cancellationToken)
     {
-        long tick = 1;
+        long tick = 0;
         while (!cancellationToken.IsCancellationRequested)
         {
             if (TimeProvider is null || TimeProvider == TimeProvider.System)

@@ -8,7 +8,7 @@ using ReactiveUI.Primitives.Signals;
 namespace ReactiveUI.Primitives.Tests;
 
 /// <summary>Tests for the fused <see cref = "LinqExtensions.SwitchMap{TIn, TOut}"/> projection operator.</summary>
-public class SwitchMapTests
+public partial class SwitchMapTests
 {
     /// <summary>The value ten.</summary>
     private const int Ten = 10;

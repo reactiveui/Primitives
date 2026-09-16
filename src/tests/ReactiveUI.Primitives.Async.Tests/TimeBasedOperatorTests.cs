@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Async.Disposables;
 using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
@@ -12,6 +13,9 @@ public class TimeBasedOperatorTests
 {
     /// <summary>The resumable source failure message.</summary>
     private const string SourceErrorMessage = "source error";
+
+    /// <summary>The failure message raised by an observer that rejects a forwarded element.</summary>
+    private const string ObserverErrorMessage = "observer failed";
 
     /// <summary>The virtual delay requested by the operators.</summary>
     private static readonly TimeSpan Window = TimeSpan.FromSeconds(1);
@@ -126,10 +130,10 @@ public class TimeBasedOperatorTests
     {
         ManualTimeProvider time = new();
         using UnhandledExceptionCapture capture = new();
-        CallbackWitnessAsync<int> observer = new(static (_, _) => throw new InvalidOperationException("observer failed"));
+        CallbackWitnessAsync<int> observer = new(static (_, _) => throw new InvalidOperationException(ObserverErrorMessage));
         await using SignalAsyncExtensions.ThrottleSignal<int>.ThrottleWitness witness = new(observer, Window, time);
         await time.RunAsync(witness.FireAfterDelayAsync(1, 0, CancellationToken.None));
-        var exception = await capture.WaitForAsync("observer failed");
+        var exception = await capture.WaitForAsync(ObserverErrorMessage);
         await Assert.That(exception).IsTypeOf<InvalidOperationException>();
     }
 
@@ -243,6 +247,23 @@ public class TimeBasedOperatorTests
         var pending = SignalAsync.Never<int>().Timeout(Window, SignalAsync.Return(FallbackValue), time).FirstAsync().AsTask();
         await time.FireNextAsync();
         await Assert.That(await pending).IsEqualTo(FallbackValue);
+    }
+
+    /// <summary>A source failure other than the deadline is propagated instead of switching to the fallback.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task WhenTimeoutWithFallbackSourceFails_ThenFailurePropagates()
+    {
+        const int FallbackValue = 99;
+        ManualTimeProvider time = new();
+        var failing = SignalAsync.Create<int>(static async (observer, _) =>
+        {
+            await observer.OnCompletedAsync(Result.Failure(new InvalidOperationException(SourceErrorMessage)));
+            return DisposableAsync.Empty;
+        });
+
+        await Assert.That(async () => await failing.Timeout(Window, SignalAsync.Return(FallbackValue), time).FirstAsync())
+            .ThrowsExactly<InvalidOperationException>();
     }
 
     /// <summary>Each value rearms the same deadline timer.</summary>
@@ -365,28 +386,28 @@ public class TimeBasedOperatorTests
             values.Add(value);
             return default;
         });
-        await using TaskSignalSubscription<long> subscription = interval
+        ITaskSignalJob<long> job = interval
             ? new IntervalSubscription(observer, Window, time)
             : new TimerSubscription(observer, Window, Window, time);
-        var execution = subscription.ExecuteAsync(cancellation.Token).AsTask();
+        var execution = TaskSignalState.ExecuteAsync(job, observer, cancellation.Token).AsTask();
         await time.FireNextAsync();
         var pendingTimer = await time.NextTimerAsync();
         await cancellation.CancelAsync();
         await execution;
         pendingTimer.Fire();
-        await Assert.That(values).IsCollectionEqualTo([interval ? 1L : 0L]);
+        await Assert.That(values).IsCollectionEqualTo([0L]);
     }
 
-    /// <summary>Intervals emit consecutive values starting at one.</summary>
+    /// <summary>Intervals emit consecutive values starting at zero.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]
     public async Task WhenIntervalWithNonSystemTimeProvider_ThenUsesTimerPath()
     {
         const int SecondValue = 2;
-        const long SecondTick = 2L;
+        const long SecondTick = 1L;
         ManualTimeProvider time = new();
         var values = await time.RunAsync(SignalAsync.Interval(Window, time).Take(SecondValue).ToListAsync().AsTask());
-        await Assert.That(values).IsCollectionEqualTo([1L, SecondTick]);
+        await Assert.That(values).IsCollectionEqualTo([0L, SecondTick]);
     }
 
     /// <summary>The default-provider overload constructs a throttle signal without starting a timer.</summary>
@@ -395,11 +416,240 @@ public class TimeBasedOperatorTests
     public async Task WhenThrottleUsesDefaultProvider_ThenCreatesThrottleSignal() =>
         await Assert.That(SignalAsync.Return(1).Throttle(Window)).IsTypeOf<SignalAsyncExtensions.ThrottleSignal<int>>();
 
+    /// <summary>A null provider falls back to the system provider.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task WhenThrottleProviderNull_ThenCreatesThrottleSignal() =>
+        await Assert.That(SignalAsync.Return(1).Throttle(Window, null)).IsTypeOf<SignalAsyncExtensions.ThrottleSignal<int>>();
+
+    /// <summary>A null provider falls back to the system provider for timers, deadlines and delays.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task WhenTimeProviderNull_ThenOperatorsUseSystemProvider()
+    {
+        var source = SignalAsync.Return(1);
+
+        await Assert.That(SignalAsync.Timer(Window, (TimeProvider?)null)).IsTypeOf<TimerSignal>();
+        await Assert.That(SignalAsync.Timer(Window, Window, null)).IsTypeOf<TimerSignal>();
+        await Assert.That(source.Timeout(Window, (TimeProvider?)null)).IsTypeOf<SignalAsyncExtensions.TimeoutSignal<int>>();
+        await Assert.That(source.Timeout(Window, source, null)).IsTypeOf<SignalAsyncExtensions.TimeoutWithFallbackSignal<int>>();
+        await Assert.That(source.Delay(Window, (TimeProvider?)null)).IsTypeOf<SignalAsyncExtensions.DelaySignal<int>>();
+        await Assert.That(source.Delay(Window)).IsTypeOf<SignalAsyncExtensions.DelaySignal<int>>();
+    }
+
+    /// <summary>A zero delay returns the source unchanged.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task WhenDelayIsZero_ThenReturnsSource()
+    {
+        ManualTimeProvider time = new();
+        var source = SignalAsync.Return(1);
+
+        await Assert.That(source.Delay(TimeSpan.Zero)).IsSameReferenceAs(source);
+        await Assert.That(source.Delay(TimeSpan.Zero, time)).IsSameReferenceAs(source);
+        await Assert.That(source.Shift(TimeSpan.Zero)).IsSameReferenceAs(source);
+    }
+
     /// <summary>Negative debounce intervals are rejected.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Test]
     public void WhenThrottleNegativeDueTime_ThenThrowsArgumentOutOfRange() =>
         Assert.Throws<ArgumentOutOfRangeException>(static () => SignalAsync.Return(1).Throttle(TimeSpan.FromTicks(-1)));
+
+    /// <summary>A tick forwards the newest element held since the previous one.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task WhenProbeReceivesRapidValues_ThenTickForwardsLatest()
+    {
+        const int SecondValue = 2;
+        const int ThirdValue = 3;
+        ManualTimeProvider time = new();
+        List<int> values = [];
+        CallbackWitnessAsync<int> observer = new((value, _) =>
+        {
+            values.Add(value);
+            return default;
+        });
+        await using SignalAsyncExtensions.ProbeSignal<int>.ProbeWitness witness = new(observer, Window, time);
+        var pending = witness.HoldAsync(1, CancellationToken.None);
+        await witness.HoldAsync(SecondValue, CancellationToken.None);
+        await witness.HoldAsync(ThirdValue, CancellationToken.None);
+        var timer = await time.NextTimerAsync();
+        await Assert.That(time.PendingTimerCount).IsEqualTo(0);
+        await Assert.That(timer.DueTime).IsEqualTo(Window);
+        await Assert.That(values).IsEmpty();
+        timer.Fire();
+        await pending;
+        await Assert.That(values).IsCollectionEqualTo([ThirdValue]);
+    }
+
+    /// <summary>A tick with nothing held forwards nothing and frees the timer for the next element.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task WhenProbeTickHasNothingHeld_ThenNothingIsForwarded()
+    {
+        const int SecondValue = 2;
+        ManualTimeProvider time = new();
+        List<int> values = [];
+        CallbackWitnessAsync<int> observer = new((value, _) =>
+        {
+            values.Add(value);
+            return default;
+        });
+        await using SignalAsyncExtensions.ProbeSignal<int>.ProbeWitness witness = new(observer, Window, time);
+        await time.RunAsync(witness.TickAfterPeriodAsync(CancellationToken.None));
+        await Assert.That(values).IsEmpty();
+        await time.RunAsync(witness.HoldAsync(SecondValue, CancellationToken.None));
+        await Assert.That(values).IsCollectionEqualTo([SecondValue]);
+    }
+
+    /// <summary>An element held when the source completes is forwarded ahead of the completion.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task WhenProbeCompletesWithHeldValue_ThenValuePrecedesCompletion()
+    {
+        ManualTimeProvider time = new();
+        List<string> notifications = [];
+        CallbackWitnessAsync<int> observer = new(
+            (value, _) =>
+        {
+            notifications.Add($"next {value}");
+            return default;
+        },
+            static (_, _) => default,
+            result =>
+        {
+            notifications.Add($"completed {result.IsSuccess}");
+            return default;
+        });
+        await using SignalAsyncExtensions.ProbeSignal<int>.ProbeWitness witness = new(observer, Window, time);
+        _ = witness.HoldAsync(1, CancellationToken.None);
+        await witness.OnCompletedAsync(Result.Success);
+        await Assert.That(notifications).IsCollectionEqualTo(["next 1", "completed True"]);
+    }
+
+    /// <summary>Completion with nothing held forwards only the completion.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task WhenProbeCompletesWithNothingHeld_ThenOnlyCompletionIsForwarded()
+    {
+        ManualTimeProvider time = new();
+        List<int> values = [];
+        List<Result> completions = [];
+        CallbackWitnessAsync<int> observer = new(
+            (value, _) =>
+        {
+            values.Add(value);
+            return default;
+        },
+            static (_, _) => default,
+            result =>
+        {
+            completions.Add(result);
+            return default;
+        });
+        await using SignalAsyncExtensions.ProbeSignal<int>.ProbeWitness witness = new(observer, Window, time);
+        await witness.OnCompletedAsync(Result.Success);
+        await Assert.That(values).IsEmpty();
+        await Assert.That(completions).Count().IsEqualTo(1);
+    }
+
+    /// <summary>Disposal drops the held element so a later tick forwards nothing.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task WhenProbeDisposed_ThenHeldValueIsDiscarded()
+    {
+        ManualTimeProvider time = new();
+        List<int> values = [];
+        CallbackWitnessAsync<int> observer = new((value, _) =>
+        {
+            values.Add(value);
+            return default;
+        });
+        SignalAsyncExtensions.ProbeSignal<int>.ProbeWitness witness = new(observer, Window, time);
+        var pending = witness.HoldAsync(1, CancellationToken.None);
+        await witness.DisposeAsync();
+        await time.RunAsync(pending);
+        await Assert.That(values).IsEmpty();
+    }
+
+    /// <summary>Resumable errors reach the downstream observer unchanged.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task WhenProbeSourceEmitsErrorResume_ThenErrorForwarded()
+    {
+        ManualTimeProvider time = new();
+        List<Exception> errors = [];
+        CallbackWitnessAsync<int> observer = new(
+            static (_, _) => default,
+            (error, _) =>
+        {
+            errors.Add(error);
+            return default;
+        });
+        await using SignalAsyncExtensions.ProbeSignal<int>.ProbeWitness witness = new(observer, Window, time);
+        InvalidOperationException expected = new(SourceErrorMessage);
+        await witness.OnErrorResumeAsync(expected, CancellationToken.None);
+        await Assert.That(errors).Count().IsEqualTo(1);
+        await Assert.That(errors[0]).IsSameReferenceAs(expected);
+    }
+
+    /// <summary>Observer failures raised by a tick reach the unhandled exception handler.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task WhenProbeOnNextThrows_ThenRoutedToUnhandledExceptionHandler()
+    {
+        ManualTimeProvider time = new();
+        using UnhandledExceptionCapture capture = new();
+        CallbackWitnessAsync<int> observer = new(static (_, _) => throw new InvalidOperationException(ObserverErrorMessage));
+        await using SignalAsyncExtensions.ProbeSignal<int>.ProbeWitness witness = new(observer, Window, time);
+        await time.RunAsync(witness.HoldAsync(1, CancellationToken.None));
+        var exception = await capture.WaitForAsync(ObserverErrorMessage);
+        await Assert.That(exception).IsTypeOf<InvalidOperationException>();
+    }
+
+    /// <summary>A subscribed source samples through to the downstream observer.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task WhenSampleSubscribed_ThenForwardsHeldValueOnCompletion()
+    {
+        const int SecondValue = 2;
+        ManualTimeProvider time = new();
+        List<int> values = [];
+        var source = Signal.Create<int>();
+        await using var subscription = await source.Values.Sample(Window, time).SubscribeAsync((value, _) =>
+        {
+            values.Add(value);
+            return default;
+        });
+        await source.OnNextAsync(1, CancellationToken.None);
+        await source.OnNextAsync(SecondValue, CancellationToken.None);
+        await source.OnCompletedAsync(Result.Success);
+        await Assert.That(values).IsCollectionEqualTo([SecondValue]);
+    }
+
+    /// <summary>Sampling without a provider uses the system clock.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task WhenProbeWithoutTimeProvider_ThenUsesSystemClock()
+    {
+        var source = SignalAsync.Return(1);
+        await Assert.That(source.Probe(Window)).IsTypeOf<SignalAsyncExtensions.ProbeSignal<int>>();
+        await Assert.That(source.Sample(Window)).IsTypeOf<SignalAsyncExtensions.ProbeSignal<int>>();
+        await Assert.That(source.Sample(Window, null)).IsTypeOf<SignalAsyncExtensions.ProbeSignal<int>>();
+    }
+
+    /// <summary>Negative sampling periods are rejected.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [Test]
+    public void WhenProbeNegativePeriod_ThenThrowsArgumentOutOfRange() =>
+        Assert.Throws<ArgumentOutOfRangeException>(static () => SignalAsync.Return(1).Probe(TimeSpan.FromTicks(-1)));
+
+    /// <summary>Negative sampling intervals are rejected by the alias.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [Test]
+    public void WhenSampleNegativeInterval_ThenThrowsArgumentOutOfRange() =>
+        Assert.Throws<ArgumentOutOfRangeException>(static () => SignalAsync.Return(1).Sample(TimeSpan.FromTicks(-1)));
 
     /// <summary>Negative delays are rejected.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

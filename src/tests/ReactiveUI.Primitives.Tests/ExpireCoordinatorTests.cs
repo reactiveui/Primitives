@@ -29,6 +29,32 @@ public sealed class ExpireCoordinatorTests
     /// <summary>The values forwarded by the active-source re-arming test.</summary>
     private static readonly int[] ExpectedActiveValues = [0, 1, 2, 3, 4];
 
+    /// <summary>Verifies an absolute deadline fires on time even while values keep arriving before it.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task AbsoluteTimeoutExpiresAtTheDueTimeWhateverValuesArrive()
+    {
+        VirtualClock clock = new(DateTimeOffset.UnixEpoch);
+        Signal<int> source = new();
+        List<int> values = [];
+        List<string> errors = [];
+        var deadline = clock.Now + TimeSpan.FromTicks(DueTicks);
+        using var subscription = source.Timeout(deadline, clock)
+            .Subscribe(values.Add, ex => errors.Add(ex.GetType().Name));
+
+        clock.AdvanceBy(TimeSpan.FromTicks(ShortGapTicks));
+        source.OnNext(One);
+        clock.AdvanceBy(TimeSpan.FromTicks(ActiveGapTicks - ShortGapTicks));
+        source.OnNext(One);
+
+        // Still short of the deadline, and an inactivity timeout would have been pushed back twice by now.
+        await Assert.That(errors.Count).IsEqualTo(0);
+
+        clock.AdvanceBy(TimeSpan.FromTicks(One));
+
+        await Assert.That(errors.SequenceEqual(["TimeoutException"])).IsTrue();
+    }
+
     /// <summary>Verifies the timeout re-arms on each value so an active source never expires.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
@@ -169,6 +195,104 @@ public sealed class ExpireCoordinatorTests
         await Assert.That(observer.ErrorEnteredDuringOnNext).IsFalse();
         await Assert.That(observer.Errors).IsEqualTo(0);
         await Assert.That(observer.Values).IsEqualTo(One);
+    }
+
+    /// <summary>An observer that marshals to another thread which completes the source is not deadlocked, and completion follows the value.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ExpireObserverMarshallingWhileTheOtherThreadCompletesDoesNotDeadlock()
+    {
+        using MarshallingThread dispatcher = new();
+        ManualSequencer sequencer = new();
+        IObserver<int>? source = null;
+        List<int> values = [];
+        CallbackRecordingWitness<int> downstream = new(value =>
+        {
+            values.Add(value);
+            dispatcher.Invoke(() => source!.OnCompleted());
+        });
+        using var subscription = new ScriptedObservable<int>(observer => source = observer)
+            .Expire(TimeSpan.FromTicks(DueTicks), sequencer)
+            .Subscribe(downstream);
+
+        var worker = BackgroundThread.Start(() => source!.OnNext(One));
+
+        await Assert.That(await BackgroundThread.FinishesPromptly(worker)).IsTrue();
+        await Assert.That(values.SequenceEqual([One])).IsTrue();
+        await Assert.That(downstream.Completions).IsEqualTo(1);
+    }
+
+    /// <summary>An error raised from another thread while a value is delivered does not wait for the observer and follows the value.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ExpireErrorRaisedDuringDeliveryFollowsTheValue()
+    {
+        using ManualResetEventSlim inside = new(false);
+        using ManualResetEventSlim release = new(false);
+        ManualSequencer sequencer = new();
+        IObserver<int>? source = null;
+        List<int> values = [];
+        var downstream = MergeDeliveryAssertions.BlockOnFirstValue(values, inside, release);
+        InvalidOperationException expected = new("expire-delivery-error");
+        using var subscription = new ScriptedObservable<int>(observer => source = observer)
+            .Expire(TimeSpan.FromTicks(DueTicks), sequencer)
+            .Subscribe(downstream);
+
+        var owner = BackgroundThread.Start(() => source!.OnNext(One));
+        inside.Wait();
+        await BackgroundThread.Start(() => source!.OnError(expected));
+        await Assert.That(downstream.Error).IsNull();
+        release.Set();
+        await owner;
+
+        await Assert.That(values.SequenceEqual([One])).IsTrue();
+        await Assert.That(downstream.Error).IsSameReferenceAs(expected);
+    }
+
+    /// <summary>Completion raised before disposal while another thread delivers is still delivered once, and disposal does not wait.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ExpireCompletionRaisedBeforeDisposeIsStillDelivered()
+    {
+        using ManualResetEventSlim inside = new(false);
+        using ManualResetEventSlim release = new(false);
+        ManualSequencer sequencer = new();
+        IObserver<int>? source = null;
+        List<int> values = [];
+        var downstream = MergeDeliveryAssertions.BlockOnFirstValue(values, inside, release);
+        var subscription = new ScriptedObservable<int>(observer => source = observer)
+            .Expire(TimeSpan.FromTicks(DueTicks), sequencer)
+            .Subscribe(downstream);
+
+        var owner = BackgroundThread.Start(() => source!.OnNext(One));
+        inside.Wait();
+        await BackgroundThread.Start(() => source!.OnCompleted());
+        var disposer = BackgroundThread.Start(subscription.Dispose);
+        await Assert.That(await BackgroundThread.FinishesPromptly(disposer)).IsTrue();
+        release.Set();
+        await owner;
+
+        await Assert.That(values.SequenceEqual([One])).IsTrue();
+        await Assert.That(downstream.Completions).IsEqualTo(1);
+    }
+
+    /// <summary>A timeout too large to add to the clock saturates the deadline, so a later value is still forwarded.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ExpireWithATimeoutBeyondTheClockRangeStillForwardsValues()
+    {
+        ManualSequencer sequencer = new();
+        IObserver<int>? source = null;
+        RecordingWitness<int> downstream = new();
+        using var subscription = new ScriptedObservable<int>(observer => source = observer)
+            .Expire(TimeSpan.MaxValue, sequencer)
+            .Subscribe(downstream);
+
+        sequencer.Advance(TimeSpan.FromTicks(DueTicks));
+        source!.OnNext(One);
+
+        await Assert.That(downstream.Values.SequenceEqual([One])).IsTrue();
+        await Assert.That(downstream.Errors.Count).IsEqualTo(0);
     }
 
     /// <summary>Tracks virtual time and accepts work without dispatching it.</summary>

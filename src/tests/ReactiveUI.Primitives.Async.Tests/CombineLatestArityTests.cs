@@ -97,21 +97,21 @@ public partial class CombineLatestArityTests
     /// <summary>Place value 31 used by arity-16 tests.</summary>
     private const int PlaceValue15 = 31;
 
-    /// <summary>Re-emit value (2 × PlaceValue1) used to verify combined-value updates from source 2.</summary>
+    /// <summary>Re-emit value (2 x PlaceValue1) used to verify combined-value updates from source 2.</summary>
     private const int ReEmitValue2 = 20;
 
-    /// <summary>Re-emit value (2 × PlaceValue2) used to verify combined-value updates from source 3.</summary>
+    /// <summary>Re-emit value (2 x PlaceValue2) used to verify combined-value updates from source 3.</summary>
     private const int ReEmitValue3 = 200;
 
-    /// <summary>Re-emit value (2 × PlaceValue3) used to verify combined-value updates from source 4.</summary>
+    /// <summary>Re-emit value (2 x PlaceValue3) used to verify combined-value updates from source 4.</summary>
     private const int ReEmitValue4 = 2_000;
 
-    /// <summary>Re-emit value (2 × PlaceValue4) used to verify combined-value updates from source 5.</summary>
+    /// <summary>Re-emit value (2 x PlaceValue4) used to verify combined-value updates from source 5.</summary>
     private const int ReEmitValue5 = 20_000;
 
-    /// <summary>Re-emit value (2 × PlaceValue5) used to verify combined-value updates from source 6.</summary>
+    /// <summary>Re-emit value (2 x PlaceValue5) used to verify combined-value updates from source 6.</summary>
     private const int ReEmitValue6 = 200_000;
 
-    /// <summary>Re-emit value (2 × PlaceValue6) used to verify combined-value updates from source 7.</summary>
+    /// <summary>Re-emit value (2 x PlaceValue6) used to verify combined-value updates from source 7.</summary>
     private const int ReEmitValue7 = 2_000_000;
 }

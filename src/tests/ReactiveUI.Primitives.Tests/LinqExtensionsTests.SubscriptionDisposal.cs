@@ -32,6 +32,76 @@ public partial class LinqExtensionsTests
         await Assert.That(observer.Values.Count).IsEqualTo(0);
     }
 
+    /// <summary>Disposing a FlatMap coordinator before it runs leaves nothing subscribed.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task FlatMap_DisposedBeforeRun_LeavesNothingSubscribed()
+    {
+        using Signal<int> source = new();
+        using Signal<int> inner = new();
+        RecordingWitness<int> observer = new();
+        LinqExtensions.FlatMapCoordinator<int, int> coordinator = new(source, _ => inner, observer);
+
+        coordinator.Dispose();
+        using var subscription = coordinator.Run();
+
+        await Assert.That(source.HasObservers).IsFalse();
+        await Assert.That(observer.Errors.Count).IsEqualTo(0);
+    }
+
+    /// <summary>An outer source that fails while subscribing forwards its error with no inner source attached.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task FlatMap_OuterFailsDuringSubscribe_ForwardsError()
+    {
+        InvalidOperationException error = new("outer");
+        RecordingWitness<int> observer = new();
+
+        using var subscription = new ScriptedObservable<int>(outer => outer.OnError(error))
+            .FlatMap(static _ => Signal.Emit(1))
+            .Subscribe(observer);
+
+        await Assert.That(observer.Errors.Single()).IsSameReferenceAs(error);
+    }
+
+    /// <summary>An outer error while an inner source is active releases both subscriptions before forwarding the error.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task FlatMap_OuterFailsWhileInnerActive_ReleasesBothSubscriptions()
+    {
+        using Signal<int> source = new();
+        using Signal<int> inner = new();
+        RecordingWitness<int> observer = new();
+        InvalidOperationException error = new("outer");
+        using var subscription = source.FlatMap(_ => inner).Subscribe(observer);
+
+        source.OnNext(1);
+        source.OnError(error);
+
+        await Assert.That(inner.HasObservers).IsFalse();
+        await Assert.That(observer.Errors.Single()).IsSameReferenceAs(error);
+    }
+
+    /// <summary>An inner source that completes twice advances the coordinator once.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task FlatMap_InnerCompletesTwice_CompletesDownstreamOnce()
+    {
+        using Signal<int> source = new();
+        IObserver<int>? innerObserver = null;
+        RecordingWitness<int> observer = new();
+        using var subscription = source
+            .FlatMap(_ => new ScriptedObservable<int>(captured => innerObserver = captured))
+            .Subscribe(observer);
+
+        source.OnNext(1);
+        innerObserver!.OnCompleted();
+        innerObserver.OnCompleted();
+        source.OnCompleted();
+
+        await Assert.That(observer.Completed).IsEqualTo(1);
+    }
+
     /// <summary>A probe disposes the timer returned after an inline callback has already disposed the subscription.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]

@@ -4,7 +4,7 @@
 
 namespace ReactiveUI.Primitives.Async.Advanced;
 
-/// <summary>Emits ticks numbered from one, waiting one period between notifications until disposal.</summary>
+/// <summary>Emits ticks numbered from zero, waiting one period between notifications until disposal.</summary>
 [System.Diagnostics.DebuggerDisplay("IntervalSignal: Period = {Period}, TimeProvider = {TimeProvider}")]
 public sealed class IntervalSignal : IObservableAsync<long>
 {

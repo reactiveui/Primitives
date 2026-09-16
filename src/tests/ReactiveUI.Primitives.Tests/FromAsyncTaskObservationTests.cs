@@ -86,6 +86,24 @@ public class FromAsyncTaskObservationTests
         await Assert.That(lifetime.IsCompleted).IsTrue();
     }
 
+    /// <summary>A successful result with a linked token source forwards the value and completes.</summary>
+    /// <returns>The asynchronous test.</returns>
+    [Test]
+    public async Task Observe_SuccessfulTaskWithLinkedSource_ForwardsValueAndCompletes()
+    {
+        using CancellationTokenSource external = new();
+        using AsyncSubscriptionLifetime lifetime = new();
+        RecordingWitness<int> observer = new();
+        using FromAsyncExternalCancellation<int> cancellation = new(observer, lifetime, external.Token);
+        using var linked = cancellation.CreateLinkedSource(lifetime.Token);
+        FromAsyncTaskObservation<int> observation = new(observer, lifetime, cancellation, linked);
+
+        observation.Observe(Task.FromResult(ResultValue));
+
+        await Assert.That(observer.Values.SequenceEqual([ResultValue])).IsTrue();
+        await Assert.That(observer.Completed).IsEqualTo(1);
+    }
+
     /// <summary>Throws after recording a value and optionally disposing its lifetime.</summary>
     /// <param name="lifetime">The subscription lifetime.</param>
     /// <param name="dispose">Whether to dispose before throwing.</param>

@@ -2,6 +2,9 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Async.Reactive;
 #else
@@ -29,11 +32,36 @@ public sealed class ContextSwitchSignalAsync<T>(
     /// <param name = "observer">The downstream observer to forward notifications to.</param>
     /// <param name = "asyncContext">The async context to switch onto.</param>
     /// <param name = "forceYielding">Whether to yield even when the calling thread is on the target context.</param>
+    [DebuggerDisplay("ContextSwitchWitness: {_witness}")]
     internal sealed class ContextSwitchWitness(
         IObserverAsync<T> observer,
         AsyncContext asyncContext,
-        bool forceYielding) : WitnessAsync<T>
+        bool forceYielding) : IWitnessAsync<T>
     {
+        /// <summary>The notification gate, cancellation link and disposal state.</summary>
+        private WitnessAsyncState _witness;
+
+        /// <inheritdoc/>
+        ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
+            WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+            WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
+
         /// <summary>Switches to the target context before forwarding the value.</summary>
         /// <param name = "value">The value to forward.</param>
         /// <param name = "cancellationToken">The cancellation token.</param>
@@ -66,20 +94,20 @@ public sealed class ContextSwitchSignalAsync<T>(
         }
 
         /// <inheritdoc/>
-        protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
+        ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
             // A matching context needs no switch unless yielding is forced.
             !forceYielding && asyncContext.IsSameAsCurrentAsyncContext()
                 ? observer.OnNextAsync(value, cancellationToken)
                 : ForwardAfterContextSwitchAsync(value, cancellationToken);
 
         /// <inheritdoc/>
-        protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+        ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
             !forceYielding && asyncContext.IsSameAsCurrentAsyncContext()
                 ? observer.OnErrorResumeAsync(error, cancellationToken)
                 : ForwardErrorAfterContextSwitchAsync(error, cancellationToken);
 
         /// <inheritdoc/>
-        protected override ValueTask OnCompletedAsyncCore(Result result) =>
+        ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) =>
             !forceYielding && asyncContext.IsSameAsCurrentAsyncContext()
                 ? observer.OnCompletedAsync(result)
                 : ForwardCompletionAfterContextSwitchAsync(result);

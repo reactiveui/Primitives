@@ -24,7 +24,7 @@ public class ConcurrentSignalBaseTests
 
         await Concurrent.ForwardOnNextConcurrently(empty, ForwardedValue, default);
 
-        // No observers → nothing to assert beyond reaching this line without throwing.
+        // No observers -> nothing to assert beyond reaching this line without throwing.
         await Assert.That(empty.Length).IsEqualTo(0);
     }
 

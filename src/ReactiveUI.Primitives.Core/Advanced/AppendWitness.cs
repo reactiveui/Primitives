@@ -23,18 +23,8 @@ public sealed class AppendWitness<T>(IObserver<T> observer, T value) : IObserver
     private IDisposable? _subscription;
 
     /// <inheritdoc/>
-    public void OnNext(T value)
-    {
-        try
-        {
-            _observer.OnNext(value);
-        }
-        catch
-        {
-            Dispose();
-            throw;
-        }
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void OnNext(T value) => SinkDelivery.Next(_observer, value, this);
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

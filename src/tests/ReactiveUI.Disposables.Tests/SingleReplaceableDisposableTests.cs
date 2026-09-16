@@ -9,8 +9,8 @@ namespace ReactiveUI.Disposables.Tests;
 /// <summary>Tests replacement ownership when an observed slot changes.</summary>
 public class SingleReplaceableDisposableTests
 {
-    /// <summary>The callback count after disposal and a later rejected assignment.</summary>
-    private const int DisposeAndAssignmentCallbacks = 2;
+    /// <summary>The action runs once on disposal, and a later rejected assignment does not run it again.</summary>
+    private const int DisposeAndAssignmentCallbacks = 1;
 
     /// <summary>A stale replacement leaves both the current and incoming resources untouched.</summary>
     /// <param name="initiallyEmpty">True when the original slot is empty.</param>
@@ -59,6 +59,39 @@ public class SingleReplaceableDisposableTests
         await Assert.That(slot.IsDisposed).IsTrue();
         await Assert.That(incoming.DisposeCount).IsEqualTo(1);
         await Assert.That(callbacks).IsEqualTo(DisposeAndAssignmentCallbacks);
+    }
+
+    /// <summary>A value assigned to a disposed slot without an action is disposed immediately.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Create_AfterDisposeWithoutAction_DisposesIncomingValue()
+    {
+        CountingDisposable incoming = new();
+        SingleReplaceableDisposable slot = new();
+        slot.Dispose();
+
+        slot.Create(incoming);
+
+        await Assert.That(incoming.DisposeCount).IsEqualTo(1);
+    }
+
+    /// <summary>Repeated assignments after disposal never run the action more than the single disposal did.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Create_RepeatedAfterDispose_RunsTheActionOnce()
+    {
+        var callbacks = 0;
+        CountingDisposable first = new();
+        CountingDisposable second = new();
+        SingleReplaceableDisposable slot = new(() => callbacks++);
+
+        slot.Dispose();
+        slot.Create(first);
+        slot.Create(second);
+
+        await Assert.That(callbacks).IsEqualTo(1);
+        await Assert.That(first.DisposeCount).IsEqualTo(1);
+        await Assert.That(second.DisposeCount).IsEqualTo(1);
     }
 
     /// <summary>Counts every disposal invocation.</summary>

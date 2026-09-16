@@ -27,7 +27,7 @@ public class OperatorAfterTerminalGuardTests
     private const int SecondValue = 2;
 
     /// <summary>Verifies <c>OnErrorRetry</c>'s sink silently drops events after a downstream
-    /// completion has set the <c>_disposed</c> latch — and that a second dispose hits the
+    /// completion has set the <c>_disposed</c> latch - and that a second dispose hits the
     /// <c>Interlocked.Exchange != 0</c> idempotency guard in <see cref = "IDisposable.Dispose"/>.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -51,7 +51,7 @@ public class OperatorAfterTerminalGuardTests
     }
 
     /// <summary>Verifies that <c>RetryWithDelay</c>'s sink silently drops a source error
-    /// arriving after dispose — exercises the <c>if (_disposed) return;</c> guard in OnError.</summary>
+    /// arriving after dispose - exercises the <c>if (_disposed) return;</c> guard in OnError.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenRetryWithDelaySourceErrorAfterDispose_ThenDropped()
@@ -69,7 +69,7 @@ public class OperatorAfterTerminalGuardTests
         await Assert.That(caught).IsNull();
     }
 
-    /// <summary>Exercises <c>RetryWithDelay.SubscribeToSource</c>'s <c>_disposed</c> guard —
+    /// <summary>Exercises <c>RetryWithDelay.SubscribeToSource</c>'s <c>_disposed</c> guard -
     /// when the source errors and schedules a delayed re-subscribe, then the subscription is
     /// disposed before the delay elapses, the scheduled callback invokes <c>SubscribeToSource</c>
     /// which sees <c>_disposed == true</c> and returns at the guard rather than re-subscribing.</summary>
@@ -100,7 +100,7 @@ public class OperatorAfterTerminalGuardTests
         await Assert.That(subscribeCount).IsEqualTo(1);
     }
 
-    /// <summary>Exercises <c>RetryWithBackoff.SubscribeToSource</c>'s <c>_disposed</c> guard — same shape as the RetryWithDelay variant.</summary>
+    /// <summary>Exercises <c>RetryWithBackoff.SubscribeToSource</c>'s <c>_disposed</c> guard - same shape as the RetryWithDelay variant.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenRetryWithBackoffDisposedDuringDelay_ThenSubscribeToSourceGuardSkipsRetry()
@@ -182,7 +182,7 @@ public class OperatorAfterTerminalGuardTests
         await Assert.That(values).IsEmpty();
     }
 
-    /// <summary>Verifies <c>DetectStale</c>'s post-completion <c>OnNext</c> guard — values
+    /// <summary>Verifies <c>DetectStale</c>'s post-completion <c>OnNext</c> guard - values
     /// arriving after the upstream completed are dropped at the <c>_state.Done</c> check.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -217,7 +217,7 @@ public class OperatorAfterTerminalGuardTests
         await Assert.That(values).IsEmpty();
     }
 
-    /// <summary>Exercises <c>WhileObservable.Iterate</c>'s <c>_disposed</c> guard — when the
+    /// <summary>Exercises <c>WhileObservable.Iterate</c>'s <c>_disposed</c> guard - when the
     /// downstream consumer's <c>OnNext</c> callback disposes the subscription captured via
     /// a single-assignment slot, the post-action call back to <c>Iterate</c> sees
     /// <c>_disposed == 1</c> and returns at the guard rather than re-entering RunActionAndContinue.</summary>
@@ -235,7 +235,7 @@ public class OperatorAfterTerminalGuardTests
         await Assert.That(actionCalls).IsEqualTo(1);
     }
 
-    /// <summary>Exercises <c>ThrottleDistinct</c>'s scheduled-emit done guard — when the source
+    /// <summary>Exercises <c>ThrottleDistinct</c>'s scheduled-emit done guard - when the source
     /// completes between a value being received and the throttle window elapsing, the
     /// scheduled <c>Emit</c> callback sees <c>_state.Done == true</c> and returns without
     /// forwarding the buffered value.</summary>
@@ -256,7 +256,7 @@ public class OperatorAfterTerminalGuardTests
         await Assert.That(values).IsEmpty();
     }
 
-    /// <summary>Exercises the <c>SampleLatest</c> trigger-error post-terminal guard — when the
+    /// <summary>Exercises the <c>SampleLatest</c> trigger-error post-terminal guard - when the
     /// source has already errored (setting <c>_done = true</c>), a subsequent error on the
     /// trigger observer hits the <c>if (_done) return;</c> guard inside the trigger's
     /// OnError delegate.</summary>
@@ -309,7 +309,7 @@ public class OperatorAfterTerminalGuardTests
         await Assert.That(completedCount).IsEqualTo(1);
     }
 
-    /// <summary>Exercises <c>Heartbeat</c>'s <c>ScheduleHeartbeats</c> <c>_done</c> guard —
+    /// <summary>Exercises <c>Heartbeat</c>'s <c>ScheduleHeartbeats</c> <c>_done</c> guard -
     /// when the source completes synchronously during <c>source.Subscribe(sink)</c>, the sink
     /// is marked done before <c>sink.Initialize()</c> runs, so the post-Initialize call to
     /// <c>ScheduleHeartbeats</c> returns at the <c>_done</c> check without arming the timer.</summary>
@@ -326,7 +326,7 @@ public class OperatorAfterTerminalGuardTests
         await Assert.That(completedCount).IsEqualTo(1);
     }
 
-    /// <summary>Verifies <c>DebounceUntil</c>'s post-completion sink guard — values arriving
+    /// <summary>Verifies <c>DebounceUntil</c>'s post-completion sink guard - values arriving
     /// after the upstream has already completed are dropped at the <c>_state.Done</c> check
     /// inside <c>OnNext</c>.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -430,7 +430,7 @@ public class OperatorAfterTerminalGuardTests
         await Assert.That(ran).IsEqualTo(1);
     }
 
-    /// <summary>Verifies <c>ScheduledSource</c>'s emit catch — when the side-effect action throws,
+    /// <summary>Verifies <c>ScheduledSource</c>'s emit catch - when the side-effect action throws,
     /// the exception is forwarded as <c>OnError</c> on the downstream observer.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -448,7 +448,7 @@ public class OperatorAfterTerminalGuardTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Verifies the <c>SubscribeSynchronous</c> sink's null-callback branches —
+    /// <summary>Verifies the <c>SubscribeSynchronous</c> sink's null-callback branches -
     /// omitting <c>onError</c> and <c>onCompleted</c> covers the null-coalescing fast paths.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]

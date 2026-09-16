@@ -34,26 +34,19 @@ public sealed class LatestOrDefaultObservable<T>(
         /// <summary>The last value emitted.</summary>
         private T? _last = defaultValue;
 
-        /// <summary>Whether any value has been emitted yet.</summary>
-        private bool _hasEmitted;
-
         /// <summary>Emits the seed value downstream, which the caller does before subscribing the source.</summary>
-        public void Initialize()
-        {
-            downstream.OnNext(_last!);
-            _hasEmitted = true;
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Initialize() => downstream.OnNext(_last!);
 
         /// <inheritdoc/>
         public void OnNext(T value)
         {
-            if (_hasEmitted && EqualityComparer<T>.Default.Equals(value, _last!))
+            if (EqualityComparer<T>.Default.Equals(value, _last!))
             {
                 return;
             }
 
             _last = value;
-            _hasEmitted = true;
             downstream.OnNext(value);
         }
 

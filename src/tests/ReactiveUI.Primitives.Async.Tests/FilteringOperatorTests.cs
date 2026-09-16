@@ -408,7 +408,7 @@ public class FilteringOperatorTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Verifies the async-predicate <c>SkipWhile</c> sync-completed predicate path —
+    /// <summary>Verifies the async-predicate <c>SkipWhile</c> sync-completed predicate path -
     /// returning <see langword="true"/> drops the value, returning <see langword="false"/> latches
     /// the gate and forwards.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -423,7 +423,7 @@ public class FilteringOperatorTests
         await Assert.That(result).IsCollectionEqualTo([ThirdElement, FourthElement, FifthElement]);
     }
 
-    /// <summary>Verifies the async-predicate <c>TakeWhile</c> sync-completed predicate path —
+    /// <summary>Verifies the async-predicate <c>TakeWhile</c> sync-completed predicate path -
     /// returning <see langword="true"/> forwards, returning <see langword="false"/> terminates.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -481,7 +481,7 @@ public class FilteringOperatorTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Exercises the <c>DistinctWitness.OnErrorResumeAsyncCore</c> forwarding —
+    /// <summary>Exercises the <c>DistinctWitness.OnErrorResumeAsyncCore</c> forwarding -
     /// upstream resumable errors propagate verbatim to the downstream observer.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -568,7 +568,7 @@ public class FilteringOperatorTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Exercises the <c>WhereSyncWitness.OnErrorResumeAsyncCore</c> forwarding —
+    /// <summary>Exercises the <c>WhereSyncWitness.OnErrorResumeAsyncCore</c> forwarding -
     /// the synchronous-predicate overload forwards upstream resumable errors.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -591,7 +591,7 @@ public class FilteringOperatorTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Exercises the <c>SkipWitness.OnErrorResumeAsyncCore</c> forwarding —
+    /// <summary>Exercises the <c>SkipWitness.OnErrorResumeAsyncCore</c> forwarding -
     /// upstream resumable errors propagate verbatim through the Skip observer.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -678,7 +678,7 @@ public class FilteringOperatorTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Exercises the <c>SelectSyncWitness.OnErrorResumeAsyncCore</c> forwarding —
+    /// <summary>Exercises the <c>SelectSyncWitness.OnErrorResumeAsyncCore</c> forwarding -
     /// upstream resumable errors propagate verbatim through the synchronous Select observer.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -701,7 +701,7 @@ public class FilteringOperatorTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Exercises the <c>SelectAsyncWitness.OnErrorResumeAsyncCore</c> forwarding —
+    /// <summary>Exercises the <c>SelectAsyncWitness.OnErrorResumeAsyncCore</c> forwarding -
     /// the async-selector overload forwards upstream resumable errors.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -724,7 +724,7 @@ public class FilteringOperatorTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Exercises the <c>WhereAsyncWitness.OnErrorResumeAsyncCore</c> forwarding —
+    /// <summary>Exercises the <c>WhereAsyncWitness.OnErrorResumeAsyncCore</c> forwarding -
     /// the async-predicate overload forwards upstream resumable errors.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]

@@ -21,6 +21,37 @@ public partial class CombiningOperatorTests
         await Assert.That(result).IsCollectionEqualTo(["1a", "2b", "3c"]);
     }
 
+    /// <summary>Tests Pair keeps waiting when the second source completes while its value still waits for a partner.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenPairSecondCompletesWithQueuedValue_ThenWaitsForFirst()
+    {
+        var first = Signal.Create<int>();
+        var second = Signal.Create<int>();
+        List<int> values = [];
+        List<Result> completions = [];
+        await using var subscription = await first.Values.Pair(second.Values, static (left, right) => left + right).SubscribeAsync(
+            (value, _) =>
+            {
+                values.Add(value);
+                return default;
+            },
+            null,
+            result =>
+            {
+                completions.Add(result);
+                return default;
+            },
+            CancellationToken.None);
+
+        await second.OnNextAsync(SampleValue2, CancellationToken.None);
+        await second.OnCompletedAsync(Result.Success);
+        await Assert.That(completions).IsEmpty();
+
+        await first.OnNextAsync(1, CancellationToken.None);
+        await Assert.That(values).IsCollectionEqualTo([1 + SampleValue2]);
+    }
+
     /// <summary>Tests Zip tuple overload creates tuples.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -474,7 +505,7 @@ public partial class CombiningOperatorTests
             null,
             static result => default);
 
-        // Complete source2 with failure → sets _done = true
+        // Complete source2 with failure -> sets _done = true
         await src2.Complete(Result.Failure(new InvalidOperationException("done")));
 
         // Now complete source1 - OnCompleted1Async checks _done and returns early
@@ -528,7 +559,7 @@ public partial class CombiningOperatorTests
         await Assert.That(sub).IsNotNull();
     }
 
-    /// <summary>Exercises the <c>Zip</c> subscription's idempotent <c>DisposeAsync</c> path —
+    /// <summary>Exercises the <c>Zip</c> subscription's idempotent <c>DisposeAsync</c> path -
     /// a second dispose hits the <c>DisposalHelper.TrySetDisposed</c> already-set short-circuit.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]

@@ -128,6 +128,33 @@ public class ContainerDisposableTests
         await Assert.That(disposalCount).IsEqualTo(DirectAndComposedCount);
     }
 
+    /// <summary>Verifies the collection members copy, enumerate and remove the held disposables.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task CollectionMembersCopyEnumerateAndRemove()
+    {
+        ActionDisposable first = new(static () => { });
+        ActionDisposable second = new(static () => { });
+        using ContainerDisposable container = new(first, second);
+        var copied = new IDisposable[PairCount];
+        List<IDisposable> enumerated = [];
+
+        container.CopyTo(copied, 0);
+        foreach (var item in (System.Collections.IEnumerable)container)
+        {
+            enumerated.Add((IDisposable)item);
+        }
+
+        var removed = container.Remove(first);
+
+        await Assert.That(container.IsReadOnly).IsFalse();
+        await Assert.That(copied.SequenceEqual([first, second])).IsTrue();
+        await Assert.That(enumerated.SequenceEqual([first, second])).IsTrue();
+        await Assert.That(removed).IsTrue();
+        await Assert.That(first.IsDisposed).IsTrue();
+        await Assert.That(container.IsDisposed).IsFalse();
+    }
+
     /// <summary>Verifies the constructors seed the container with the supplied disposables.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]

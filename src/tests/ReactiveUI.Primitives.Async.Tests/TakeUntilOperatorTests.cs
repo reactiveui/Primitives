@@ -129,7 +129,7 @@ public partial class TakeUntilOperatorTests
         await source.OnNextAsync(1, CancellationToken.None);
         await other.OnCompletedAsync(Result.Success);
 
-        // Other completed with success � according to StopSignalObserver.OnCompletedAsyncCore, success returns default (no-op)
+        // Other completed with success - according to StopSignalObserver.OnCompletedAsyncCore, success returns default (no-op)
         // Source should still be active
         await source.OnNextAsync(SecondItem, CancellationToken.None);
         await Assert.That(items).Contains(1);
@@ -388,15 +388,15 @@ public partial class TakeUntilOperatorTests
         await Assert.That(result).IsCollectionEqualTo([1, SecondItem, ThirdItem, FourthItem, FifthItem]);
     }
 
-    /// <summary>Tests that predicate returning true on first element emits nothing.</summary>
+    /// <summary>Tests that a predicate returning true on the first element emits that element and stops.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenPredicateStopSignalTrueOnFirst_ThenEmitsNothing()
+    public async Task WhenPredicateStopSignalTrueOnFirst_ThenEmitsOnlyThatElement()
     {
         const int SourceValueCount = 5;
 
         var result = await SignalAsync.Range(1, SourceValueCount).TakeUntil(static _ => true).ToListAsync();
-        await Assert.That(result).IsEmpty();
+        await Assert.That(result).IsCollectionEqualTo([1]);
     }
 
     /// <summary>Tests that source error resume is forwarded through TakeUntil(predicate).</summary>
@@ -466,10 +466,10 @@ public partial class TakeUntilOperatorTests
         await Assert.That(result).IsCollectionEqualTo([1, SecondItem, ThirdItem, FourthItem, FifthItem]);
     }
 
-    /// <summary>Tests that async predicate returning true on first element emits nothing.</summary>
+    /// <summary>Tests that an async predicate returning true on the first element emits that element and stops.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task WhenTakeUntilAsyncPredicateTrueOnFirst_ThenEmitsNothing()
+    public async Task WhenTakeUntilAsyncPredicateTrueOnFirst_ThenEmitsOnlyThatElement()
     {
         const int SourceValueCount = 5;
 
@@ -478,7 +478,7 @@ public partial class TakeUntilOperatorTests
             await Task.Yield();
             return true;
         }).ToListAsync();
-        await Assert.That(result).IsEmpty();
+        await Assert.That(result).IsCollectionEqualTo([1]);
     }
 
     /// <summary>Tests that source error resume is forwarded through TakeUntil(asyncPredicate).</summary>

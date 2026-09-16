@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
@@ -9,7 +11,9 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <summary>Pairs each source value with an independent disposable acknowledgement handle.</summary>
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <param name="source">The source observable.</param>
-/// <remarks>An undisposed handle leaves only its own acknowledgement pending.</remarks>
+/// <remarks>The handles are independent: the producer does not wait on one, and one value's handle does not gate the next.
+/// An undisposed handle leaves only its own acknowledgement pending, so a subscriber that ignores the handle still receives
+/// every value and the terminal notification.</remarks>
 public sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IObservable<(T Value, IDisposable Sync)>
 {
     /// <inheritdoc/>
@@ -25,10 +29,14 @@ public sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IObse
 
     /// <summary>Observer that pairs each value with a new acknowledgement handle and forwards the pair downstream.</summary>
     /// <param name="downstream">The downstream observer.</param>
+    /// <remarks>Deliveries are serialized, and no lock is held while the observer runs.</remarks>
     internal sealed class SynchronizeAsyncSink(IObserver<(T Value, IDisposable Sync)> downstream) : IObserver<T>, IDisposable
     {
-        /// <summary>The gate for state access.</summary>
+        /// <summary>Guards the flags; never held while the observer runs.</summary>
         private readonly Lock _gate = new();
+
+        /// <summary>Serializes downstream deliveries.</summary>
+        private SerializedDelivery<(T Value, IDisposable Sync)> _delivery = new();
 
         /// <summary>Whether the sink has completed.</summary>
         private bool _done;
@@ -62,8 +70,9 @@ public sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IObse
                 }
 
                 _done = true;
-                downstream.OnError(error);
             }
+
+            _delivery.OnError(error, new PendingDrain(this));
         }
 
         /// <inheritdoc/>
@@ -77,8 +86,9 @@ public sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IObse
                 }
 
                 _done = true;
-                downstream.OnCompleted();
             }
+
+            _delivery.OnCompleted(new PendingDrain(this));
         }
 
         /// <inheritdoc/>
@@ -96,8 +106,21 @@ public sealed class SynchronizeAsyncObservable<T>(IObservable<T> source) : IObse
         private Task ProcessAsync(T value)
         {
             SyncSignal signal = new();
-            downstream.OnNext((value, signal));
+            _delivery.OnNext(downstream, (value, signal), new PendingDrain(this));
             return signal.WaitForDisposeAsync();
+        }
+
+        /// <summary>Delivers the queued notifications to the downstream observer.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void DrainPending() => _ = _delivery.DrainTo(downstream);
+
+        /// <summary>Drains this sink's queued notifications for the delivery gate.</summary>
+        /// <param name="Owner">The sink.</param>
+        private readonly record struct PendingDrain(SynchronizeAsyncSink Owner) : IDrainTarget
+        {
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Drain() => Owner.DrainPending();
         }
 
         /// <summary>Acknowledgement handle for one emission whose disposal completes that emission's wait task.</summary>

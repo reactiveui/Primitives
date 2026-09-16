@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions;
@@ -158,36 +159,43 @@ public sealed class CurrentValueSubject<T> : IObservable<T>, IObserver<T>, IDisp
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// The replayed value or terminal is posted to the subscriber under the gate and delivered after it is released, so it
+    /// precedes every later notification and no observer runs while the gate is held.
+    /// </remarks>
     public IDisposable Subscribe(IObserver<T> observer)
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
+        SerializedWitness<T> witness = new(observer);
+        var attached = false;
         lock (_gate)
         {
             if (_disposed)
             {
-                observer.OnError(new ObjectDisposedException(nameof(CurrentValueSubject<>)));
-                return EmptyDisposable.Instance;
+                _ = witness.PostError(new ObjectDisposedException(nameof(CurrentValueSubject<>)));
             }
-
-            if (_error is not null)
+            else if (_error is not null)
             {
-                observer.OnError(_error);
-                return EmptyDisposable.Instance;
+                _ = witness.PostError(_error);
             }
-
-            observer.OnNext(_value);
-
-            if (_completed)
+            else
             {
-                observer.OnCompleted();
-                return EmptyDisposable.Instance;
+                _ = witness.Post(_value);
+                if (_completed)
+                {
+                    _ = witness.PostCompleted();
+                }
+                else
+                {
+                    AddObserverNoLock(witness);
+                    attached = true;
+                }
             }
-
-            AddObserverNoLock(observer);
         }
 
-        return new Subscription(this, observer);
+        witness.Flush();
+        return attached ? new Subscription(this, witness) : EmptyDisposable.Instance;
     }
 
     /// <summary>Returns an <see cref="IObservable{T}"/> view that hides the <see cref="IObserver{T}"/> side.</summary>

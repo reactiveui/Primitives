@@ -237,6 +237,26 @@ public partial class WitnessTests
         safe.OnError(new InvalidOperationException("ignored"));
     }
 
+    /// <summary>A value callback that completes the safe witness and then throws releases the cancel resource once.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task SafeWitnessReleasesItsCancelOnceWhenAValueCallbackCompletesThenThrows()
+    {
+        RecordingDisposable cancel = new();
+        Witness.SafeWitness<int>? safe = null;
+        safe = new(
+            Witness.Create<int>(_ =>
+            {
+                safe!.OnCompleted();
+                throw new InvalidOperationException("after completion");
+            }),
+            cancel);
+
+        _ = Assert.Throws<InvalidOperationException>(() => safe.OnNext(One));
+
+        await Assert.That(cancel.DisposeCount).IsEqualTo(1);
+    }
+
     /// <summary>Verifies task terminal witnesses validate null callbacks and error arguments.</summary>
     [Test]
     public void TaskTerminalWitnessesValidateNullPredicatesAndErrors()

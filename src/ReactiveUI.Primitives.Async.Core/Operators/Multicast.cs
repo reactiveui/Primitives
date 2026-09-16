@@ -55,7 +55,7 @@ public static partial class SignalAsyncExtensions
         /// <param name="initialValue">The initial value to be emitted to subscribers before any values are emitted by the source sequence.</param>
         /// <returns>A connectable observable sequence that multicasts the source sequence and replays the latest value, starting
         /// with the specified initial value.</returns>
-        /// <remarks>A subscriber receives the latest value — the initial value until the source publishes one — and the
+        /// <remarks>A subscriber receives the latest value - the initial value until the source publishes one - and the
         /// source is not subscribed until Connect is called.</remarks>
         public ConnectableSignalAsync<T> Publish(T initialValue) =>
             new(source, new SerialReplayLatestSignalAsync<T>(new(initialValue)));
@@ -66,7 +66,7 @@ public static partial class SignalAsyncExtensions
         /// <returns>A connectable observable sequence that multicasts the source sequence and emits the specified initial value
         /// to new subscribers.</returns>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="options"/> names an unsupported publishing option.</exception>
-        /// <remarks>A subscriber receives the latest value — the initial value until the source publishes one — and the
+        /// <remarks>A subscriber receives the latest value - the initial value until the source publishes one - and the
         /// source is not subscribed until Connect is called.</remarks>
         public ConnectableSignalAsync<T> Publish(T initialValue, BehaviorSignalCreationOptions options) =>
             new(source, options switch

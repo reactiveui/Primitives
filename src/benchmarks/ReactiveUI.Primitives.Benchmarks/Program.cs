@@ -4,7 +4,7 @@
 
 using System.Globalization;
 using System.Text;
-using BenchmarkDotNet.Running;
+using ReactiveUI.Primitives.Benchmarks.Configs;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
@@ -16,13 +16,13 @@ internal static class Program
     /// <returns>A task that completes when execution is finished.</returns>
     internal static async Task Main(string[] args)
     {
-        if (args.Contains("--alloc", StringComparer.OrdinalIgnoreCase))
+        if (HasSwitch(args, "--alloc"))
         {
             AllocationProbe.Run();
             return;
         }
 
-        if (args.Contains("--smoke", StringComparer.OrdinalIgnoreCase))
+        if (HasSwitch(args, "--smoke"))
         {
             var originalOutput = Console.Out;
             StringWriter capturedOutput = new(CultureInfo.InvariantCulture);
@@ -41,13 +41,30 @@ internal static class Program
             return;
         }
 
-        if (args.Contains("--extensions-smoke", StringComparer.OrdinalIgnoreCase))
+        if (HasSwitch(args, "--extensions-smoke"))
         {
             RunExtensionComparisonSmoke();
             return;
         }
 
-        _ = BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args);
+        BenchmarkHost.Run(typeof(Program).Assembly, args);
+    }
+
+    /// <summary>Reports whether the command line carries a switch, ignoring case.</summary>
+    /// <param name="args">The command line arguments.</param>
+    /// <param name="name">The switch to look for.</param>
+    /// <returns><see langword="true"/> when the switch is present; otherwise, <see langword="false"/>.</returns>
+    private static bool HasSwitch(string[] args, string name)
+    {
+        foreach (var arg in args)
+        {
+            if (string.Equals(arg, name, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>Runs the extension comparison scenarios once to validate benchmark delegates.</summary>

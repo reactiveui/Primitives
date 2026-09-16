@@ -1,3 +1,4 @@
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.Avalonia.Tests")]
 namespace ReactiveUI.Primitives.Concurrency;
 
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]

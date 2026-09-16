@@ -47,15 +47,7 @@ public sealed class UniqueByWitness<T, TKey>(
 
         _hasLast = true;
         _last = key;
-        try
-        {
-            _observer.OnNext(value);
-        }
-        catch
-        {
-            Dispose();
-            throw;
-        }
+        SinkDelivery.Next(_observer, value, this);
     }
 
     /// <inheritdoc/>

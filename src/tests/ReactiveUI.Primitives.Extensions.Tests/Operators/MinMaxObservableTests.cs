@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Extensions.Operators;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
@@ -282,4 +283,31 @@ public class MinMaxObservableTests
         a.Observer.OnCompleted();
         await Assert.That(completions).IsEqualTo(1);
     }
+
+    /// <summary>Verifies the binary fast path waits for the left source when the right source emits first.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenBinaryRightEmitsFirst_ThenEmitsOnceLeftHasValue()
+    {
+        Subject<int> a = new();
+        Subject<int> b = new();
+        List<int> results = [];
+        using var sub = a.GetMax(b).Subscribe(results.Add);
+
+        b.OnNext(MidValue);
+        var emittedBeforeLeft = results.Count;
+        a.OnNext(LowValue);
+
+        await Assert.That(emittedBeforeLeft).IsEqualTo(0);
+        await Assert.That(results).IsCollectionEqualTo([MidValue]);
+    }
+
+    /// <summary>Verifies an observer that marshals to another thread which completes the source does not deadlock the reduced value.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Task WhenObserverMarshalsCompletionDuringReducedValue_ThenNoDeadlock() =>
+        SerializedDeliveryAssertions.ObserverMarshallingCompletionDoesNotDeadlock<int>(
+            static (source, observer) => source.GetMax().Subscribe(observer),
+            static observer => observer.OnNext(LowValue));
 }

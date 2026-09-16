@@ -283,6 +283,20 @@ public partial class RxNamesTests
         await Assert.That(observer.Completed).IsEqualTo(0);
     }
 
+    /// <summary>Verifies the coordinator ignores an error for a generation it is not running.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task RepeatCoordinatorIgnoresErrorForAnInactiveGeneration()
+    {
+        RecordingWitness<int> observer = new();
+        RepeatSourceCoordinator<int> coordinator = new(new ScriptedObservable<int>(static _ => { }), Two, observer);
+
+        using var subscription = coordinator.Run();
+        coordinator.OnError(NegativeOne, new InvalidOperationException("stale"));
+
+        await Assert.That(observer.Errors.Count).IsEqualTo(0);
+    }
+
     /// <summary>Verifies Repeat validates null sources and negative counts.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]

@@ -507,7 +507,7 @@ public class ParityHelpersOperatorFusionsTests
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Verifies that a branch subscription disposes idempotently — the second
+    /// <summary>Verifies that a branch subscription disposes idempotently - the second
     /// <c>DisposeAsync</c> is a no-op via the latched-int short-circuit.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -543,7 +543,7 @@ public class ParityHelpersOperatorFusionsTests
         }
         catch (OperationCanceledException)
         {
-            // Expected — the sink is constructed with a cancelled token and the pipeline
+            // Expected - the sink is constructed with a cancelled token and the pipeline
             // short-circuits via OperationCanceledException somewhere in the subscribe chain.
         }
     }
@@ -679,7 +679,7 @@ public class ParityHelpersOperatorFusionsTests
     }
 
     /// <summary>Verifies that <c>Partition</c> drops upstream values whose predicate matches a
-    /// branch that has no current subscriber — exercises the
+    /// branch that has no current subscriber - exercises the
     /// <c>target?.OnNextAsync(...) ?? default</c> null-target path.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -771,7 +771,7 @@ public class ParityHelpersOperatorFusionsTests
 
     /// <summary>Verifies that <see cref="SignalAsyncExtensions.PartitionCoordinator{T}.TryAttachSourceSubscription"/>
     /// returns <see langword="false"/> when both branches have already been disposed by the time
-    /// the source subscription returns — the disposeNow race fast-path that is otherwise only
+    /// the source subscription returns - the disposeNow race fast-path that is otherwise only
     /// reachable through a real concurrency race.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]

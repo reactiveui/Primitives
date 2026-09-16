@@ -4,6 +4,7 @@
 
 using System.Reactive;
 using System.Reactive.Subjects;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Extensions.Operators;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
@@ -126,4 +127,13 @@ public class SelectAsyncConcurrentObservableTests
         await Assert.That(values).IsEmpty();
         await Assert.That(caught).IsNull();
     }
+
+    /// <summary>Verifies an observer that marshals to another thread which completes the source does not deadlock the projection delivery.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Task WhenObserverMarshalsCompletionDuringProjectionDelivery_ThenNoDeadlock() =>
+        SerializedDeliveryAssertions.ObserverMarshallingCompletionDoesNotDeadlock<int>(
+            static (source, observer) => source.SelectAsyncConcurrent(Task.FromResult, MaxConcurrencyTwo).Subscribe(observer),
+            static observer => observer.OnNext(1));
 }

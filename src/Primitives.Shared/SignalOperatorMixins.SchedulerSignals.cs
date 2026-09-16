@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Extensions;
 
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive;
@@ -19,6 +20,10 @@ public static partial class LinqExtensions
     /// <param name="dueTime">The normalized delay applied to each notification.</param>
     /// <param name="sequencer">The sequencer used to schedule delayed notifications.</param>
     /// <param name="observer">The downstream observer.</param>
+    /// <remarks>
+    /// The gate only guards the queue and the flags. Due notifications are queued in order under the gate and delivered by a
+    /// <see cref="SerializedDelivery{T}"/> after it is released, so no lock is held while the observer runs.
+    /// </remarks>
     internal sealed class ShiftCoordinator<T>(IObservable<T> source, TimeSpan dueTime, ISequencer sequencer, IObserver<T> observer) : IDisposable
     {
         /// <summary>The source observable.</summary>
@@ -33,7 +38,7 @@ public static partial class LinqExtensions
         /// <summary>The downstream observer.</summary>
         private readonly IObserver<T> _observer = observer;
 
-        /// <summary>Serializes queue state and downstream callbacks.</summary>
+        /// <summary>Guards the queue and the flags; never held while the observer runs.</summary>
         private readonly Lock _gate = new();
 
         /// <summary>Active source and timer resources.</summary>
@@ -45,13 +50,16 @@ public static partial class LinqExtensions
         /// <summary>Queued delayed notifications in source order.</summary>
         private readonly Queue<DelayedNotification> _queue = [];
 
+        /// <summary>Serializes downstream deliveries.</summary>
+        private SerializedDelivery<T> _delivery = new();
+
         /// <summary>A value indicating whether a timer or drain is active.</summary>
         private bool _timerActive;
 
         /// <summary>A value indicating whether the source has signaled a terminal notification.</summary>
         private bool _sourceStopped;
 
-        /// <summary>A value indicating whether a terminal notification has been delivered.</summary>
+        /// <summary>A value indicating whether a terminal notification has been queued for delivery.</summary>
         private bool _done;
 
         /// <summary>Tracks disposal.</summary>
@@ -167,79 +175,77 @@ public static partial class LinqExtensions
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void Schedule(TimeSpan delay) => TimerSlot.Arm(_timer, _sequencer, delay, Tick);
 
-        /// <summary>Drains all due notifications in FIFO order.</summary>
+        /// <summary>Queues every due notification in FIFO order under the gate, delivers them, then re-arms for the next one.</summary>
         private void Tick()
         {
-            while (true)
+            TimeSpan delay = default;
+            var shouldReschedule = false;
+            var posted = false;
+            var terminal = false;
+            lock (_gate)
             {
-                TimeSpan delay;
-                var shouldReschedule = false;
-                var terminal = false;
-                lock (_gate)
+                while (!IsDisposed && !_done && _queue.Count > 0)
                 {
-                    if (IsDisposed || _done)
-                    {
-                        _timerActive = false;
-                        return;
-                    }
-
-                    if (_queue.Count == 0)
-                    {
-                        _timerActive = false;
-                        return;
-                    }
-
                     delay = DelayUntil(_queue.Peek().DueAt);
                     if (delay > TimeSpan.Zero)
                     {
                         shouldReschedule = true;
+                        break;
                     }
-                    else
-                    {
-                        terminal = Deliver(_queue.Dequeue());
-                    }
+
+                    posted = true;
+                    terminal = Post(_queue.Dequeue());
                 }
 
-                if (shouldReschedule)
+                if (!shouldReschedule)
                 {
-                    Schedule(delay);
-                    return;
+                    _timerActive = false;
                 }
+            }
 
-                if (!terminal)
-                {
-                    continue;
-                }
+            if (posted)
+            {
+                _delivery.Flush(new PendingDrain(this));
+            }
 
-                Dispose();
+            if (shouldReschedule)
+            {
+                Schedule(delay);
                 return;
             }
+
+            if (!terminal)
+            {
+                return;
+            }
+
+            Dispose();
         }
 
-        /// <summary>Forwards a queued notification while the caller holds the gate.</summary>
-        /// <param name="notification">The queued notification.</param>
-        /// <returns><see langword="true"/> when a terminal notification was delivered.</returns>
-        private bool Deliver(DelayedNotification notification)
+        /// <summary>Queues a due notification for delivery while the caller holds the gate.</summary>
+        /// <param name="notification">The due notification.</param>
+        /// <returns><see langword="true"/> when the notification is terminal.</returns>
+        private bool Post(DelayedNotification notification)
         {
             switch (notification.Kind)
             {
                 case NotificationKind.Next:
                     {
-                        _observer.OnNext(notification.Value!);
+                        _ = _delivery.Post(notification.Value!);
                         return false;
                     }
 
                 case NotificationKind.Error:
                     {
                         _done = true;
-                        _observer.OnError(notification.Error!);
+                        _ = _delivery.PostError(notification.Error!);
                         return true;
                     }
 
                 default:
                     {
                         _done = true;
-                        _observer.OnCompleted();
+                        _ = _delivery.PostCompleted();
                         return true;
                     }
             }
@@ -250,6 +256,15 @@ public static partial class LinqExtensions
         /// <returns>The remaining non-negative delay.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private TimeSpan DelayUntil(DateTimeOffset dueAt) => Sequencer.Normalize(dueAt - _sequencer.Now);
+
+        /// <summary>Drains this coordinator's queued notifications for the delivery gate.</summary>
+        /// <param name="Owner">The coordinator.</param>
+        private readonly record struct PendingDrain(ShiftCoordinator<T> Owner) : IDrainTarget
+        {
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Drain() => _ = Owner._delivery.DrainTo(Owner._observer);
+        }
 
         /// <summary>A delayed source notification.</summary>
         private sealed class DelayedNotification
@@ -366,140 +381,6 @@ public static partial class LinqExtensions
         }
     }
 
-    /// <summary>Dedicated signal for absolute <c>Expire</c>/<c>Timeout</c> overloads.</summary>
-    /// <typeparam name="T">The value type.</typeparam>
-    /// <param name="source">The source observable.</param>
-    /// <param name="dueTime">The absolute timeout time.</param>
-    /// <param name="scheduler">The sequencer used to schedule the timeout.</param>
-    internal sealed class AbsoluteExpireSignal<T>(IObservable<T> source, DateTimeOffset dueTime, ISequencer scheduler) : IRequireCurrentThread<T>
-    {
-        /// <summary>The source observable.</summary>
-        private readonly IObservable<T> _source = source;
-
-        /// <summary>The absolute timeout time.</summary>
-        private readonly DateTimeOffset _dueTime = dueTime;
-
-        /// <summary>The sequencer used to schedule the timeout.</summary>
-        private readonly ISequencer _scheduler = scheduler;
-
-        /// <summary>Gets the sequencer used to schedule the timeout.</summary>
-        internal ISequencer Scheduler => _scheduler;
-
-        /// <inheritdoc/>
-        public bool IsRequiredSubscribeOnCurrentThread() =>
-            _scheduler == Sequencer.CurrentThread
-            || (_source is IRequireCurrentThread<T> currentThread && currentThread.IsRequiredSubscribeOnCurrentThread());
-
-        /// <inheritdoc/>
-        public IDisposable Subscribe(IObserver<T> observer)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(observer);
-
-            var dueTime = Sequencer.Normalize(_dueTime - _scheduler.Now);
-            return new ExpireSignal<T>(_source, dueTime, _scheduler).Subscribe(observer);
-        }
-    }
-
-    /// <summary>Dedicated signal for <c>Calm</c> (quiet-period debounce).</summary>
-    /// <typeparam name="T">The value type.</typeparam>
-    /// <param name="source">The source observable.</param>
-    /// <param name="dueTime">The quiet period.</param>
-    /// <param name="scheduler">The sequencer used to schedule quiet-period timers.</param>
-    private sealed class CalmSignal<T>(IObservable<T> source, TimeSpan dueTime, ISequencer scheduler) : IRequireCurrentThread<T>
-    {
-        /// <summary>The source observable.</summary>
-        private readonly IObservable<T> _source = source;
-
-        /// <summary>The quiet period.</summary>
-        private readonly TimeSpan _dueTime = dueTime;
-
-        /// <summary>The sequencer used to schedule quiet-period timers.</summary>
-        private readonly ISequencer _scheduler = scheduler;
-
-        /// <inheritdoc/>
-        public bool IsRequiredSubscribeOnCurrentThread() => _scheduler == Sequencer.CurrentThread;
-
-        /// <inheritdoc/>
-        public IDisposable Subscribe(IObserver<T> observer)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(observer);
-
-            CalmCoordinator<T> coordinator = new(_source, _dueTime, _scheduler);
-            if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
-            {
-                return coordinator.Run(observer);
-            }
-
-            SingleDisposable subscription = new();
-            _ = Sequencer.CurrentThread.Schedule(
-                (subscription, coordinator, observer),
-                static (_, s) =>
-                {
-                    s.subscription.Create(s.coordinator.Run(s.observer));
-                    return EmptyDisposable.Instance;
-                });
-            return subscription;
-        }
-    }
-
-    /// <summary>Dedicated signal for <c>Shift</c> (delay each notification on a sequencer).</summary>
-    /// <typeparam name="T">The value type.</typeparam>
-    private sealed class ShiftSignal<T> : IRequireCurrentThread<T>
-    {
-        /// <summary>The source observable.</summary>
-        private readonly IObservable<T> _source;
-
-        /// <summary>The delay applied to each notification.</summary>
-        private readonly TimeSpan _dueTime;
-
-        /// <summary>The sequencer used to schedule delayed notifications.</summary>
-        private readonly ISequencer _scheduler;
-
-        /// <summary>Initializes a new instance of the <see cref="ShiftSignal{T}"/> class.</summary>
-        /// <param name="source">The source observable.</param>
-        /// <param name="dueTime">The delay applied to each notification.</param>
-        /// <param name="scheduler">The sequencer used to schedule delayed notifications.</param>
-        internal ShiftSignal(IObservable<T> source, TimeSpan dueTime, ISequencer scheduler)
-        {
-            _source = source;
-            _dueTime = Sequencer.Normalize(dueTime);
-            _scheduler = scheduler;
-        }
-
-        /// <inheritdoc/>
-        public bool IsRequiredSubscribeOnCurrentThread() => _scheduler == Sequencer.CurrentThread;
-
-        /// <inheritdoc/>
-        public IDisposable Subscribe(IObserver<T> observer)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(observer);
-
-            if (!IsRequiredSubscribeOnCurrentThread() || !CurrentThreadSequencer.IsScheduleRequired)
-            {
-                return RunCore(observer);
-            }
-
-            SingleDisposable subscription = new();
-            _ = Sequencer.CurrentThread.Schedule(
-                (Self: this, subscription, observer),
-                static (_, s) =>
-                {
-                    s.subscription.Create(s.Self.RunCore(s.observer));
-                    return EmptyDisposable.Instance;
-                });
-            return subscription;
-        }
-
-        /// <summary>Subscribes to the source and schedules each notification by the delay.</summary>
-        /// <param name="observer">The downstream observer.</param>
-        /// <returns>The disposable that cancels the source subscription and pending timers.</returns>
-        private ShiftCoordinator<T> RunCore(IObserver<T> observer)
-        {
-            ShiftCoordinator<T> coordinator = new(_source, _dueTime, _scheduler, observer);
-            return coordinator.Run();
-        }
-    }
-
     /// <summary>Dedicated signal for <c>SubscribeOn</c> (defer subscription to a sequencer).</summary>
     /// <typeparam name="T">The value type.</typeparam>
     /// <param name="source">The source observable.</param>
@@ -560,83 +441,6 @@ public static partial class LinqExtensions
                     return EmptyDisposable.Instance;
                 }));
             return pocket;
-        }
-    }
-
-    /// <summary>Dedicated signal for <c>Reattempt</c> (retry on error).</summary>
-    /// <typeparam name="T">The value type.</typeparam>
-    /// <param name="source">The source observable.</param>
-    /// <param name="retryCount">The maximum number of retries after the initial subscription.</param>
-    private sealed class ReattemptSignal<T>(IObservable<T> source, int retryCount) : IObservable<T>
-    {
-        /// <summary>The source observable.</summary>
-        private readonly IObservable<T> _source = source;
-
-        /// <summary>The maximum number of retries after the initial subscription.</summary>
-        private readonly int _retryCount = retryCount;
-
-        /// <inheritdoc/>
-        public IDisposable Subscribe(IObserver<T> observer)
-        {
-            ArgumentExceptionHelper.ThrowIfNull(observer);
-
-            return new ReattemptCoordinator<T>(_source, _retryCount, observer).Run();
-        }
-    }
-
-    /// <summary>Coordinates retry-on-error resubscription for <c>Reattempt</c>.</summary>
-    /// <typeparam name="T">The value type.</typeparam>
-    /// <param name="source">The source observable.</param>
-    /// <param name="retryCount">The maximum number of retries.</param>
-    /// <param name="observer">The downstream observer.</param>
-    private sealed class ReattemptCoordinator<T>(IObservable<T> source, int retryCount, IObserver<T> observer) : IDisposable
-    {
-        /// <summary>The source observable.</summary>
-        private readonly IObservable<T> _source = source;
-
-        /// <summary>The maximum number of retries.</summary>
-        private readonly int _retryCount = retryCount;
-
-        /// <summary>The downstream observer.</summary>
-        private readonly IObserver<T> _observer = observer;
-
-        /// <summary>Active subscriptions across retries.</summary>
-        private readonly MultipleDisposable _pocket = [];
-
-        /// <summary>The number of retries attempted so far.</summary>
-        private int _attempts;
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Dispose() => _pocket.Dispose();
-
-        /// <summary>Starts the first subscription attempt.</summary>
-        /// <returns>The coordinator that owns the subscription cleanup.</returns>
-        internal ReattemptCoordinator<T> Run()
-        {
-            SubscribeNext();
-            return this;
-        }
-
-        /// <summary>Subscribes to the source for the current attempt.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void SubscribeNext() =>
-            _pocket.Add(_source.Subscribe(_observer.OnNext, OnError, _observer.OnCompleted));
-
-        /// <summary>Retries the subscription, or forwards the error once retries are exhausted.</summary>
-        /// <param name="error">The error raised by the source.</param>
-        private void OnError(Exception error)
-        {
-            var attempt = _attempts;
-            _attempts++;
-            if (attempt < _retryCount)
-            {
-                SubscribeNext();
-            }
-            else
-            {
-                _observer.OnError(error);
-            }
         }
     }
 }

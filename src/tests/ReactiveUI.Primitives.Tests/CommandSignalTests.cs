@@ -328,4 +328,39 @@ public sealed partial class CommandSignalTests
         await Assert.That(first.IsDisposed).IsFalse();
         await Assert.That(second.IsDisposed).IsTrue();
     }
+
+    /// <summary>Running-state notifications reach observers without the running gate held, in transition order.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task IsRunningNotificationsAreDeliveredOutsideTheRunningGate()
+    {
+        using CommandSignal<int> command = new(static () => CommandResult);
+        List<bool> running = [];
+        var heldGate = false;
+        _ = command.IsRunning.Changed.Subscribe(value =>
+        {
+            running.Add(value);
+#if NET9_0_OR_GREATER
+            heldGate |= command.RunningGate.IsHeldByCurrentThread;
+#else
+            heldGate |= Monitor.IsEntered(command.RunningGate);
+#endif
+        });
+
+        _ = command.ExecuteAsync();
+
+        await Assert.That(heldGate).IsFalse();
+        await Assert.That(running.SequenceEqual(ExpectedRunningValues)).IsTrue();
+    }
+
+    /// <summary>Both command constructors reject a null command body.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task ConstructorsRejectANullCommandBody()
+    {
+        await Assert.That(static () => new CommandSignal<int>((Func<CancellationToken, Task<int>>)null!))
+            .ThrowsExactly<ArgumentNullException>();
+        await Assert.That(static () => new CommandSignal<int>((Func<int>)null!))
+            .ThrowsExactly<ArgumentNullException>();
+    }
 }

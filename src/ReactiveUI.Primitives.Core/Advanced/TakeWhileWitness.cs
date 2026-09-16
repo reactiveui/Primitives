@@ -39,15 +39,7 @@ public sealed class TakeWhileWitness<T>(IObserver<T> observer, Func<T, bool> pre
             return;
         }
 
-        try
-        {
-            _observer.OnNext(value);
-        }
-        catch
-        {
-            Dispose();
-            throw;
-        }
+        SinkDelivery.Next(_observer, value, this);
     }
 
     /// <inheritdoc/>

@@ -27,6 +27,30 @@ internal static class EventCorpus
     /// <summary>The file name the unrelated source is given.</summary>
     internal const string UnrelatedFileName = "Unrelated.cs";
 
+    /// <summary>The file name the unservable requests are given.</summary>
+    internal const string UnservableFileName = "Unservable.cs";
+
+    /// <summary>Static requests for a host without events and for a generic host, which the generator reports instead of wrapping.</summary>
+    internal const string UnservableSource = """
+        using ReactiveUI.Primitives.ObservableEvents;
+
+        [assembly: GenerateStaticEventObservables(typeof(Corpus.EventlessHost))]
+        [assembly: GenerateStaticEventObservables(typeof(Corpus.GenericHost<>))]
+
+        namespace Corpus
+        {
+            public static class EventlessHost
+            {
+                public static int Value => 1;
+            }
+
+            public static class GenericHost<T>
+            {
+                public static event System.Action<T>? Changed;
+            }
+        }
+        """;
+
     /// <summary>The delegates, static host, and static request every host file shares.</summary>
     private const string SharedSource = """
         using System;

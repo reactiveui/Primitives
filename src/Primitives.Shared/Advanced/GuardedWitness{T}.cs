@@ -37,18 +37,8 @@ public sealed class GuardedWitness<T> : IObserver<T>, IDisposable
     }
 
     /// <inheritdoc/>
-    public void OnNext(T value)
-    {
-        try
-        {
-            _observer.OnNext(value);
-        }
-        catch
-        {
-            Dispose();
-            throw;
-        }
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void OnNext(T value) => SinkDelivery.Next(_observer, value, this);
 
     /// <inheritdoc/>
     public void OnError(Exception error)

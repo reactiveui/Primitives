@@ -219,7 +219,8 @@ public sealed class FromAsyncSubscription<T> : IDisposable
     {
         if (lifetime.IsCompleted)
         {
-            linkedSource?.Dispose();
+            // Only external cancellation completes the lifetime while the factory runs, so the linked source exists.
+            linkedSource!.Dispose();
             externalCancellation.Dispose();
             return true;
         }

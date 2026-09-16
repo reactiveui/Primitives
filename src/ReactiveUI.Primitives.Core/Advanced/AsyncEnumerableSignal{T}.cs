@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER || NET5_0_OR_GREATER
+using System.Runtime.ExceptionServices;
+
 namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Async-enumerable observable adapter.</summary>
@@ -88,10 +90,11 @@ public sealed class AsyncEnumerableSignal<T> : IAsyncEnumerableBackedSignal<T>
         /// <summary>Starts the asynchronous pump.</summary>
         internal void Start() => _ = PumpAsync();
 
-        /// <summary>Pumps the async enumerable into the observer.</summary>
+        /// <summary>Pumps the async enumerable into the observer, then releases the enumerator and the subscription.</summary>
         /// <returns>The asynchronous pump task.</returns>
         internal async Task PumpAsync()
         {
+            ExceptionDispatchInfo? failure = null;
             try
             {
                 var enumerator = _values.GetAsyncEnumerator(_cts.Token);
@@ -118,17 +121,20 @@ public sealed class AsyncEnumerableSignal<T> : IAsyncEnumerableBackedSignal<T>
             }
             catch (Exception error) when (!_cts.IsCancellationRequested)
             {
-                _observer.OnError(error);
+                failure = NotifyError(error);
             }
-            finally
+            catch (Exception error)
             {
-                if (TryClaimEnumerator(out var enumerator))
-                {
-                    await enumerator.DisposeAsync().ConfigureAwait(false);
-                }
-
-                Dispose();
+                failure = ExceptionDispatchInfo.Capture(error);
             }
+
+            if (TryClaimEnumerator(out var claimed))
+            {
+                await claimed.DisposeAsync().ConfigureAwait(false);
+            }
+
+            Dispose();
+            failure?.Throw();
         }
 
         /// <summary>Disposes an enumerator without surfacing the resulting task to the caller.</summary>
@@ -148,6 +154,22 @@ public sealed class AsyncEnumerableSignal<T> : IAsyncEnumerableBackedSignal<T>
                 {
                     // Unsupported concurrent enumerator disposal is ignored.
                 }
+            }
+        }
+
+        /// <summary>Forwards a pump failure, capturing a failure the observer raises so the enumerator is still released.</summary>
+        /// <param name="error">The pump failure.</param>
+        /// <returns>The observer's own failure, or <see langword="null"/> when the observer accepted the error.</returns>
+        private ExceptionDispatchInfo? NotifyError(Exception error)
+        {
+            try
+            {
+                _observer.OnError(error);
+                return null;
+            }
+            catch (Exception observerError)
+            {
+                return ExceptionDispatchInfo.Capture(observerError);
             }
         }
 

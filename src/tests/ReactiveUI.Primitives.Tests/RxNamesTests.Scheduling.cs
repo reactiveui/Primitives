@@ -37,7 +37,7 @@ public partial class RxNamesTests
         var expiring = explicitNull
             ? Signal.Silent<int>().Timeout(dueTime, null)
             : Signal.Silent<int>().Timeout(dueTime);
-        var timeout = await Assert.That(expiring).IsTypeOf<LinqExtensions.AbsoluteExpireSignal<int>>().And.IsNotNull();
+        var timeout = await Assert.That(expiring).IsTypeOf<Advanced.AbsoluteExpireSignal<int>>().And.IsNotNull();
         await Assert.That(timeout.Scheduler).IsSameReferenceAs(ThreadPoolSequencer.Instance);
     }
 
@@ -104,5 +104,38 @@ public partial class RxNamesTests
         await Assert.That(Signal.Sequence(One, Three).Delay(TimeSpan.FromTicks(DueTicks))).IsNotNull();
         await Assert.That(Signal.FromEnumerable(_oneToThree).Timeout(TimeSpan.FromTicks(DueTicks))).IsNotNull();
         await Assert.That(Signal.FromEnumerable(_oneToThree).Sample(TimeSpan.FromTicks(DueTicks))).IsNotNull();
+    }
+
+    /// <summary>Scheduler-taking time aliases fall back to the thread-pool sequencer when given a null one, over range and non-range sources.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task TimeOperatorsAcceptNullSequencer()
+    {
+        var dueTime = TimeSpan.FromTicks(DueTicks);
+        var range = Signal.Range(One, Three);
+        var values = Signal.FromEnumerable(_oneToThree);
+
+        await Assert.That(range.Delay(dueTime)).IsNotNull();
+        await Assert.That(values.Delay(dueTime)).IsNotNull();
+        await Assert.That(range.Delay(dueTime, (ISequencer?)null)).IsNotNull();
+        await Assert.That(values.Delay(dueTime, (ISequencer?)null)).IsNotNull();
+        await Assert.That(values.Throttle(dueTime, (ISequencer?)null)).IsNotNull();
+        await Assert.That(values.Timeout(dueTime, (ISequencer?)null)).IsNotNull();
+        await Assert.That(values.Sample(dueTime, (ISequencer?)null)).IsNotNull();
+    }
+
+    /// <summary>StartWith prepends a single value through the single-value signal and several through the enumerable one.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task StartWithSingleAndSeveralValuesPrepend()
+    {
+        RecordingWitness<int> single = new();
+        RecordingWitness<int> several = new();
+
+        using var singleSubscription = Signal.Return(Three).StartWith(One).Subscribe(single);
+        using var severalSubscription = Signal.Return(Three).StartWith(One, One).Subscribe(several);
+
+        await Assert.That(single.Values.SequenceEqual([One, Three])).IsTrue();
+        await Assert.That(several.Values.SequenceEqual([One, One, Three])).IsTrue();
     }
 }

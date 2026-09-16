@@ -9,7 +9,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// <summary>An observable that invokes a callback to create each subscription.</summary>
 /// <typeparam name = "T">The type of the elements in the observable sequence.</typeparam>
 /// <param name = "subscribeAsync">The asynchronous function invoked when an observer subscribes.</param>
-internal sealed class CallbackSignalAsync<T>(
+public sealed class CallbackSignalAsync<T>(
     Func<IObserverAsync<T>, CancellationToken, ValueTask<IAsyncDisposable>> subscribeAsync) : IObservableAsync<T>
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

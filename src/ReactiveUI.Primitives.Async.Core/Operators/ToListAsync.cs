@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async;
@@ -53,24 +54,59 @@ public static partial class SignalAsyncExtensions
     /// <summary>Witness that collects all elements from a sequence into a list.</summary>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
-    internal sealed class ToListTaskWitness<T>(CancellationToken cancellationToken) : TaskResultWitnessAsyncBase<T, List<T>>(cancellationToken)
+    [DebuggerDisplay("ToListTaskWitness: {_witness}")]
+    internal sealed class ToListTaskWitness<T>(CancellationToken cancellationToken) : IWitnessAsync<T>
     {
+        /// <summary>Produces and cancels the witness's single result value.</summary>
+        private readonly TaskResultCompletionSource<List<T>> _completion = new(cancellationToken);
+
         /// <summary>The list that accumulates all elements received from the source sequence.</summary>
         private readonly List<T> _items = [];
 
+        /// <summary>The notification gate, cancellation link and disposal state.</summary>
+        private WitnessAsyncState _witness;
+
         /// <inheritdoc/>
-        protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
+        ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
+            WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+            WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
+
+        /// <summary>Asynchronously waits for the witness to produce its result value.</summary>
+        /// <returns>A task representing the asynchronous operation, containing the result value.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal ValueTask<List<T>> AwaitResultAsync() => _completion.AwaitResultAsync(this);
+
+        /// <inheritdoc/>
+        ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken)
         {
             _items.Add(value);
             return default;
         }
 
         /// <inheritdoc/>
-        protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-            SetExceptionAndDisposeAsync(error);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            _completion.SetExceptionAndDisposeAsync(error, this);
 
         /// <inheritdoc/>
-        protected override ValueTask OnCompletedAsyncCore(Result result) =>
-            !result.IsSuccess ? SetExceptionAndDisposeAsync(result.Exception) : SetResultAndDisposeAsync(_items);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) =>
+            _completion.CompleteAndDisposeAsync(result, _items, this);
     }
 }

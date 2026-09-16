@@ -9,6 +9,25 @@ namespace ReactiveUI.Primitives.Async.Tests;
 /// <summary>Tests Do and Tap notification side effects.</summary>
 public partial class TransformationOperatorTests
 {
+    /// <summary>Tests Do wraps the source when only a later callback is supplied, and returns the source for a null callback.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenDoHasOnlyLaterCallbacks_ThenWrapsSource()
+    {
+        var source = SignalAsync.Return(1);
+        Func<Exception, CancellationToken, ValueTask> onErrorResume = static (_, _) => default;
+        Func<Result, ValueTask> onCompleted = static _ => default;
+
+        Func<int, CancellationToken, ValueTask>? noNext = null;
+        Func<Exception, CancellationToken, ValueTask>? noErrorResume = null;
+        Func<Result, ValueTask>? noCompleted = null;
+
+        await Assert.That(source.Do(noNext, onErrorResume, noCompleted)).IsTypeOf<SignalAsyncExtensions.TapAsyncSignal<int>>();
+        await Assert.That(source.Do(noNext, noErrorResume, onCompleted)).IsTypeOf<SignalAsyncExtensions.TapAsyncSignal<int>>();
+        await Assert.That(source.Do(noNext, noErrorResume, noCompleted)).IsSameReferenceAs(source);
+        await Assert.That(source.Do((Func<int, CancellationToken, ValueTask>?)null)).IsSameReferenceAs(source);
+    }
+
     /// <summary>Tests Tap and Do null callback overloads return the original source.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]

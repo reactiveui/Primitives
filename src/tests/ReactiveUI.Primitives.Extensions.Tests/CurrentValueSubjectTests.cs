@@ -125,6 +125,25 @@ public partial class CurrentValueSubjectTests
         await Assert.That(lateError).IsEqualTo(expected);
     }
 
+    /// <summary>Verifies that an error raised after completion or after disposal is ignored.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenOnErrorAfterCompletionOrDispose_ThenIgnored()
+    {
+        using CurrentValueSubject<int> completed = new(InitialValue);
+        Exception? caught = null;
+        using var completedSubscription = completed.Subscribe(
+            static _ => { },
+            ex => caught = ex);
+        completed.OnCompleted();
+        completed.OnError(new InvalidOperationException("after-completion"));
+        CurrentValueSubject<int> disposed = new(InitialValue);
+        disposed.Dispose();
+        disposed.OnError(new InvalidOperationException("after-dispose"));
+
+        await Assert.That(caught).IsNull();
+    }
+
     /// <summary>Verifies that OnNext after disposal is silently ignored.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -164,6 +183,32 @@ public partial class CurrentValueSubjectTests
         subject.OnNext(SecondValue);
         await Assert.That(results).IsCollectionEqualTo([InitialValue, SecondValue]);
         await Assert.That(view).IsNotTypeOf<CurrentValueSubject<int>>();
+    }
+
+    /// <summary>Verifies a subscriber that marshals the initial value to another thread which emits a new value is not deadlocked, and the new value follows the initial one.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenInitialValueObserverMarshalsOnNext_ThenNoDeadlockAndValuesStayOrdered()
+    {
+        using MarshallingThread dispatcher = new();
+        using CurrentValueSubject<int> subject = new(InitialValue);
+        List<int> results = [];
+        IDisposable? subscription = null;
+
+        var subscriber = BackgroundThread.Start(() => subscription = subject.Subscribe(value =>
+        {
+            results.Add(value);
+            if (value != InitialValue)
+            {
+                return;
+            }
+
+            dispatcher.Invoke(() => subject.OnNext(SecondValue));
+        }));
+
+        await Assert.That(await BackgroundThread.FinishesPromptly(subscriber)).IsTrue();
+        subscription?.Dispose();
+        await Assert.That(results).IsCollectionEqualTo([InitialValue, SecondValue]);
     }
 
     /// <summary>Verifies that <see cref = "SingleValueSignal{T}"/> emits exactly one value and completes.</summary>

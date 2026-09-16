@@ -30,7 +30,7 @@ public sealed class StartSubscriptionTests
             return default;
         });
         await using StartSubscription subscription = new(observer, () => calls.Add("action"), schedule ? scheduler : null);
-        var running = subscription.ExecuteAsync(CancellationToken.None).AsTask();
+        var running = TaskSignalState.ExecuteAsync(subscription, observer, CancellationToken.None).AsTask();
         if (schedule)
         {
             await Assert.That(calls).IsEmpty();
@@ -66,7 +66,7 @@ public sealed class StartSubscriptionTests
             return default;
         });
         await using StartSubscription<int> subscription = new(observer, () => throw expected, schedule ? scheduler : null);
-        var running = subscription.ExecuteAsync(CancellationToken.None).AsTask();
+        var running = TaskSignalState.ExecuteAsync(subscription, observer, CancellationToken.None).AsTask();
         if (schedule)
         {
             await Assert.That(completions).IsEmpty();
@@ -94,7 +94,7 @@ public sealed class StartSubscriptionTests
             return default;
         });
         await using StartSubscription<int> subscription = new(observer, () => ++calls, scheduler);
-        var running = subscription.ExecuteAsync(cancellation.Token).AsTask();
+        var running = TaskSignalState.ExecuteAsync(subscription, observer, cancellation.Token).AsTask();
         await cancellation.CancelAsync();
         scheduler.RunNext();
         await running;

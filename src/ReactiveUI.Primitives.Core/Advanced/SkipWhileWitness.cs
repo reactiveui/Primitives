@@ -34,15 +34,7 @@ public sealed class SkipWhileWitness<T>(IObserver<T> observer, Func<T, bool> pre
         }
 
         _skipping = false;
-        try
-        {
-            _observer.OnNext(value);
-        }
-        catch
-        {
-            Dispose();
-            throw;
-        }
+        SinkDelivery.Next(_observer, value, this);
     }
 
     /// <inheritdoc/>

@@ -288,8 +288,11 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
 
     /// <summary>Owns scheduled work and its optional one-shot timer.</summary>
     /// <typeparam name="TState">The scheduled state type.</typeparam>
-    internal sealed class StatefulWorkItem<TState> : DispatchWorkItemBase<TState>, IReadyWorkItem
+    internal sealed class StatefulWorkItem<TState> : IReadyWorkItem
     {
+        /// <summary>The run and cancel state.</summary>
+        private DispatchWorkState<TState> _work;
+
         /// <summary>The delayed item's timer release handle, or null for immediate work.</summary>
         private IDisposable? _timer;
 
@@ -297,22 +300,31 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
         /// <param name="scheduler">The scheduler passed back to the scheduled action.</param>
         /// <param name="state">Scheduled state.</param>
         /// <param name="action">Scheduled action.</param>
-        public StatefulWorkItem(WasmScheduler scheduler, TState state, Func<IScheduler, TState, IDisposable> action)
-            : base(scheduler, state, action)
-        {
-        }
+        public StatefulWorkItem(WasmScheduler scheduler, TState state, Func<IScheduler, TState, IDisposable> action) =>
+            _work = new(scheduler, state, action);
+
+        /// <summary>Gets a value indicating whether the work item has been cancelled.</summary>
+        internal bool IsDisposed => _work.IsDisposed;
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Run() => _work.Run();
 
         /// <inheritdoc/>
         public void Dispose()
         {
-            if (!TryClaimDispose())
+            if (!_work.TryClaimDispose())
             {
                 return;
             }
 
             Interlocked.Exchange(ref _timer, null)?.Dispose();
-            ReleaseStartedWork();
+            _work.ReleaseStartedWork();
         }
+
+        /// <summary>Releases the published result if the work item is cancelled.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void ReleaseCanceledResult() => _work.ReleaseCanceledResult();
 
         /// <summary>Stores the one-shot timer so the caller's disposable cancels and releases it.</summary>
         /// <param name="timer">The armed timer.</param>
@@ -325,7 +337,7 @@ public sealed class WasmScheduler : LocalScheduler, ISchedulerPeriodic, IDisposa
         /// <summary>Releases the attached timer when the work item is cancelled.</summary>
         internal void ReleaseCanceledTimer()
         {
-            if (!IsDisposed)
+            if (!_work.IsDisposed)
             {
                 return;
             }

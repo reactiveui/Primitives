@@ -2,6 +2,9 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for working with asynchronous observable sequences.</summary>
@@ -33,36 +36,55 @@ public static partial class SignalAsyncExtensions
     internal sealed class SkipSignal<T>(IObservableAsync<T> source, int count) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
-            CancellationToken cancellationToken)
-        {
-            SkipWitness sink = new(observer, count, cancellationToken);
-
-            if (observer is WitnessAsync<T> downstreamBase)
-            {
-                downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
-            }
-
-            var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
-            return sink;
-        }
+            CancellationToken cancellationToken) =>
+            WitnessSubscription.SubscribeAsync(
+                source,
+                new SkipWitness(observer, count, cancellationToken),
+                observer,
+                cancellationToken);
 
         /// <summary>Per-subscription observer that drops leading emissions then forwards.</summary>
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="budget">The skip budget, decremented per dropped value.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
+        [DebuggerDisplay("SkipWitness: {_witness}")]
         internal sealed class SkipWitness(
             IObserverAsync<T> downstream,
             int budget,
-            CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
+            CancellationToken subscribeToken) : IWitnessAsync<T>
         {
             /// <summary>Remaining skip budget; counts down to zero, at which point every subsequent value is forwarded.</summary>
             private int _remaining = budget;
 
+            /// <summary>The notification gate, cancellation link and disposal state.</summary>
+            private WitnessAsyncState _witness = new(subscribeToken);
+
             /// <inheritdoc/>
-            protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
+            ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
+                WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+                WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
+
+            /// <inheritdoc/>
+            ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken)
             {
                 if (_remaining > 0)
                 {
@@ -74,11 +96,13 @@ public static partial class SignalAsyncExtensions
             }
 
             /// <inheritdoc/>
-            protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
                 downstream.OnErrorResumeAsync(error, cancellationToken);
 
             /// <inheritdoc/>
-            protected override ValueTask OnCompletedAsyncCore(Result result) =>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) =>
                 downstream.OnCompletedAsync(result);
         }
     }

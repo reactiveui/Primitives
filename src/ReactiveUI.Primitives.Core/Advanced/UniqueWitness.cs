@@ -38,15 +38,7 @@ public sealed class UniqueWitness<T>(IObserver<T> observer, IEqualityComparer<T>
 
         _hasLast = true;
         _last = value;
-        try
-        {
-            _observer.OnNext(value);
-        }
-        catch
-        {
-            Dispose();
-            throw;
-        }
+        SinkDelivery.Next(_observer, value, this);
     }
 
     /// <inheritdoc/>

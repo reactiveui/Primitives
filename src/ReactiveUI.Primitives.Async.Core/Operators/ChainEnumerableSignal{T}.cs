@@ -119,7 +119,7 @@ public sealed class ChainEnumerableSignal<T>(IEnumerable<IObservableAsync<T>> si
 
         /// <summary>Forwards an element from the current inner sequence to the downstream observer.</summary>
         /// <param name="value">The element to forward.</param>
-        /// <param name="cancellationToken">A token to cancel the operation. Ignored — see <see cref="RelayInnerErrorAsync"/>.</param>
+        /// <param name="cancellationToken">A token to cancel the operation. Ignored - see <see cref="RelayInnerErrorAsync"/>.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
         internal ValueTask RelayInnerValueAsync(T value, CancellationToken cancellationToken)
         {

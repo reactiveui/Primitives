@@ -538,4 +538,47 @@ public sealed class ConnectableSignalTests
         await Assert.That(completions).IsEqualTo(ExpectedCompletions);
         await Assert.That(sourceSubscriptions).IsEqualTo(1);
     }
+
+    /// <summary>A source whose subscription marshals a Connect call to another thread is not deadlocked, and both calls share one connection.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ConnectToASourceThatConnectsFromAnotherThreadDoesNotDeadlock()
+    {
+        using MarshallingThread dispatcher = new();
+        ConnectableSignal<int>? connectable = null;
+        IDisposable? nested = null;
+        var cold = Signal.Create<int>(_ =>
+        {
+            dispatcher.Invoke(() => nested = connectable!.Connect());
+            return Scope.Empty;
+        });
+        connectable = new(cold, new Signal<int>());
+        IDisposable? connection = null;
+
+        var worker = BackgroundThread.Start(() => connection = connectable.Connect());
+
+        await Assert.That(await BackgroundThread.FinishesPromptly(worker)).IsTrue();
+        await Assert.That(nested).IsSameReferenceAs(connection);
+        connection!.Dispose();
+    }
+
+    /// <summary>A connection disposed while its source is still subscribing releases the source subscription once it arrives.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ConnectionDisposedWhileTheSourceSubscribesReleasesTheSubscription()
+    {
+        var sourceDisposals = 0;
+        ConnectableSignal<int>? connectable = null;
+        var cold = Signal.Create<int>(_ =>
+        {
+            connectable!.Connect().Dispose();
+            return new ActionDisposable(() => sourceDisposals++);
+        });
+        connectable = new(cold, new Signal<int>());
+
+        var connection = connectable.Connect();
+        connection.Dispose();
+
+        await Assert.That(sourceDisposals).IsEqualTo(1);
+    }
 }

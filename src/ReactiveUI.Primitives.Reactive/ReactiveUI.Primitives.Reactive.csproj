@@ -32,17 +32,10 @@
     <Compile Include="Platforms\apple\**\*.cs" />
   </ItemGroup>
 
-  <!-- The coalescing IScheduler base shared by every platform .Reactive package, included here only on the
-       apple/android TFMs that carry a concrete sequencer (CoalescingDispatchScheduler). -->
-  <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android' or $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios' or $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tvos' or $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst' or $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'macos'">
+  <!-- The coalescing dispatch types are public API of this package; every platform .Reactive package references
+       them from here rather than compiling its own copy. -->
+  <ItemGroup>
     <Compile Include="..\Primitives.Platform.Reactive.Shared\**\*.cs" Link="Primitives.Platform.Reactive.Shared\%(RecursiveDir)%(Filename)%(Extension)" />
-  </ItemGroup>
-
-  <!-- WasmScheduler compiles on every TFM and shares its run/cancel core with the mobile DispatchWorkItem via
-       DispatchWorkItemBase. Pull just that base type in on the non-platform (library) TFMs, where the whole shared
-       folder above is not linked. -->
-  <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == ''">
-    <Compile Include="..\Primitives.Platform.Reactive.Shared\DispatchWorkItemBase.cs" Link="Primitives.Platform.Reactive.Shared\DispatchWorkItemBase.cs" />
   </ItemGroup>
 
   <!-- The RxVoid/ISequencer-aware shared source, compiled here under the .Reactive namespace (REACTIVE_SHIM). -->
@@ -59,7 +52,6 @@
   <ItemGroup>
     <Compile Include="..\Primitives.Extensions.Shared\**\*.cs" Link="Primitives.Extensions.Shared\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
-
   <!-- The shared source shifts to ReactiveUI.Primitives.Reactive.* under REACTIVE_SHIM. These imports let the
        shifted files reach both their shifted siblings and the non-shifted Core siblings without per-file usings. -->
   <ItemGroup>

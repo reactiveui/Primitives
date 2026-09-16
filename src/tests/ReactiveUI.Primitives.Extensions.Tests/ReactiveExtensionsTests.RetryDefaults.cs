@@ -12,8 +12,8 @@ public partial class ReactiveExtensionsTests
     /// <summary>Identifies the original error forwarded by a retry sequence.</summary>
     private const string RetryFailureMessage = "retry";
 
-    /// <summary>Zero-delay retries notify the error callback only for the requested exception type.</summary>
-    /// <param name="matchingException">Whether the first failure matches the error callback's type.</param>
+    /// <summary>Zero-delay retries handle only the requested exception type; any other failure goes straight downstream.</summary>
+    /// <param name="matchingException">Whether the first failure matches the requested exception type.</param>
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]
     [Arguments(true)]
@@ -23,6 +23,7 @@ public partial class ReactiveExtensionsTests
         var attempts = 0;
         List<InvalidOperationException> errors = [];
         List<int> values = [];
+        Exception? observed = null;
         Exception failure = matchingException
             ? new InvalidOperationException(RetryFailureMessage)
             : new ArgumentException(RetryFailureMessage);
@@ -33,21 +34,25 @@ public partial class ReactiveExtensionsTests
         });
 
         using var subscription = source.OnErrorRetry<int, InvalidOperationException>(errors.Add, TimeSpan.Zero)
-            .Subscribe(values.Add);
+            .Subscribe(values.Add, error => observed = error);
 
-        await Assert.That(attempts).IsEqualTo(SampleValue2);
-        await Assert.That(values).IsCollectionEqualTo([SampleValue42]);
-        await Assert.That(errors.Count).IsEqualTo(matchingException ? 1 : 0);
         if (!matchingException)
         {
+            await Assert.That(attempts).IsEqualTo(1);
+            await Assert.That(values).IsEmpty();
+            await Assert.That(errors).IsEmpty();
+            await Assert.That(observed).IsSameReferenceAs(failure);
             return;
         }
 
+        await Assert.That(attempts).IsEqualTo(SampleValue2);
+        await Assert.That(values).IsCollectionEqualTo([SampleValue42]);
+        await Assert.That(errors.Count).IsEqualTo(1);
         await Assert.That(errors[0]).IsSameReferenceAs(failure);
     }
 
-    /// <summary>The limited zero-delay overload forwards the final error after spending its retry budget.</summary>
-    /// <param name="matchingException">Whether failures match the error callback's type.</param>
+    /// <summary>The limited zero-delay overload spends its retry budget on the requested exception type and forwards any other failure at once.</summary>
+    /// <param name="matchingException">Whether failures match the requested exception type.</param>
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]
     [Arguments(true)]
@@ -71,7 +76,7 @@ public partial class ReactiveExtensionsTests
             SampleValue2,
             TimeSpan.Zero).Subscribe(static _ => { }, error => observed = error);
 
-        await Assert.That(attempts).IsEqualTo(SampleValue3);
+        await Assert.That(attempts).IsEqualTo(matchingException ? SampleValue3 : 1);
         await Assert.That(callbacks).IsEqualTo(matchingException ? SampleValue3 : 0);
         await Assert.That(observed).IsSameReferenceAs(failure);
     }

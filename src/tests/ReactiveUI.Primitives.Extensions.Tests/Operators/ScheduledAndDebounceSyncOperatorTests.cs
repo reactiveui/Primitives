@@ -172,7 +172,7 @@ public class ScheduledAndDebounceSyncOperatorTests
     {
         VirtualClock scheduler = new();
         List<int> results = [];
-        using var sub = Value1.Schedule(TimeSpan.FromTicks(WindowTicks), scheduler).Subscribe(results.Add);
+        using var sub = Value1.ScheduleValue(TimeSpan.FromTicks(WindowTicks), scheduler).Subscribe(results.Add);
         await Assert.That(results).IsEmpty();
         scheduler.AdvanceBy(AdvancePastWindowTicks);
         await Assert.That(results).IsCollectionEqualTo([Value1]);
@@ -186,7 +186,7 @@ public class ScheduledAndDebounceSyncOperatorTests
         VirtualClock scheduler = new();
         List<int> results = [];
         var due = scheduler.Now.AddTicks(WindowTicks);
-        using var sub = Value1.Schedule(due, scheduler).Subscribe(results.Add);
+        using var sub = Value1.ScheduleValue(due, scheduler).Subscribe(results.Add);
         scheduler.AdvanceBy(AdvancePastWindowTicks);
         await Assert.That(results).IsCollectionEqualTo([Value1]);
     }

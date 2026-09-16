@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async;
@@ -83,44 +84,65 @@ public static partial class SignalAsyncExtensions
         Func<T, CancellationToken, ValueTask<TDest>> selector) : IObservableAsync<TDest>
     {
         /// <inheritdoc/>
-        async ValueTask<IAsyncDisposable> IObservableAsync<TDest>.SubscribeAsync(
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask<IAsyncDisposable> IObservableAsync<TDest>.SubscribeAsync(
             IObserverAsync<TDest> observer,
-            CancellationToken cancellationToken)
-        {
-            MapAsyncWitness sink = new(observer, selector, cancellationToken);
-
-            if (observer is WitnessAsync<TDest> downstreamBase)
-            {
-                downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
-            }
-
-            var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
-            return sink;
-        }
+            CancellationToken cancellationToken) =>
+            WitnessSubscription.SubscribeAsync(
+                source,
+                new MapAsyncWitness(observer, selector, cancellationToken),
+                observer,
+                cancellationToken);
 
         /// <summary>Per-subscription observer that applies the async selector and forwards each result.</summary>
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="selector">The async selector.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token, linked into the dispose chain.</param>
+        [DebuggerDisplay("MapAsyncWitness: {_witness}")]
         internal sealed class MapAsyncWitness(
             IObserverAsync<TDest> downstream,
             Func<T, CancellationToken, ValueTask<TDest>> selector,
-            CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
+            CancellationToken subscribeToken) : IWitnessAsync<T>
         {
+            /// <summary>The notification gate, cancellation link and disposal state.</summary>
+            private WitnessAsyncState _witness = new(subscribeToken);
+
             /// <inheritdoc/>
-            protected override async ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
+            ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
+                WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+                WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
+
+            /// <inheritdoc/>
+            async ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken)
             {
                 var mapped = await selector(value, cancellationToken).ConfigureAwait(false);
                 await downstream.OnNextAsync(mapped, cancellationToken).ConfigureAwait(false);
             }
 
             /// <inheritdoc/>
-            protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
                 downstream.OnErrorResumeAsync(error, cancellationToken);
 
             /// <inheritdoc/>
-            protected override ValueTask OnCompletedAsyncCore(Result result) =>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) =>
                 downstream.OnCompletedAsync(result);
         }
     }
@@ -135,41 +157,63 @@ public static partial class SignalAsyncExtensions
         Func<T, TDest> selector) : IObservableAsync<TDest>
     {
         /// <inheritdoc/>
-        async ValueTask<IAsyncDisposable> IObservableAsync<TDest>.SubscribeAsync(
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask<IAsyncDisposable> IObservableAsync<TDest>.SubscribeAsync(
             IObserverAsync<TDest> observer,
-            CancellationToken cancellationToken)
-        {
-            MapSyncWitness sink = new(observer, selector, cancellationToken);
-
-            if (observer is WitnessAsync<TDest> downstreamBase)
-            {
-                downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
-            }
-
-            var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
-            return sink;
-        }
+            CancellationToken cancellationToken) =>
+            WitnessSubscription.SubscribeAsync(
+                source,
+                new MapSyncWitness(observer, selector, cancellationToken),
+                observer,
+                cancellationToken);
 
         /// <summary>Per-subscription observer that applies the sync selector and forwards each result.</summary>
         /// <param name="downstream">The downstream observer.</param>
         /// <param name="selector">The sync selector.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token, linked into the dispose chain.</param>
+        [DebuggerDisplay("MapSyncWitness: {_witness}")]
         internal sealed class MapSyncWitness(
             IObserverAsync<TDest> downstream,
             Func<T, TDest> selector,
-            CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
+            CancellationToken subscribeToken) : IWitnessAsync<T>
         {
+            /// <summary>The notification gate, cancellation link and disposal state.</summary>
+            private WitnessAsyncState _witness = new(subscribeToken);
+
             /// <inheritdoc/>
-            protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
+            ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
+                WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+                WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
                 downstream.OnNextAsync(selector(value), cancellationToken);
 
             /// <inheritdoc/>
-            protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
                 downstream.OnErrorResumeAsync(error, cancellationToken);
 
             /// <inheritdoc/>
-            protected override ValueTask OnCompletedAsyncCore(Result result) =>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) =>
                 downstream.OnCompletedAsync(result);
         }
     }

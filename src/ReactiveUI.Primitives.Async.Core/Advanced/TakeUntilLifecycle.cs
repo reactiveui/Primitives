@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.ExceptionServices;
+
 namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>Serializes TakeUntil notifications and links their lifetime to subscription cancellation.</summary>
@@ -55,6 +57,16 @@ public sealed class TakeUntilLifecycle<T> : IAsyncDisposable
             _cts);
     }
 
+    /// <summary>Completes the sequence when <paramref name="stopToken"/> fires, so one sink watches both its own stop condition and the token.</summary>
+    /// <param name="stopToken">The token whose cancellation completes the sequence.</param>
+    /// <returns>The registration, which the caller disposes alongside its subscription.</returns>
+    public CancellationTokenRegistration CompleteWhenCancelled(CancellationToken stopToken) =>
+        stopToken.CanBeCanceled
+            ? stopToken.UnsafeRegister(
+                static state => FireAndForgetHelper.Run(((TakeUntilLifecycle<T>)state!).CompleteAfterYieldAsync),
+                this)
+            : default;
+
     /// <summary>Forwards a value to the downstream observer under the serialization gate.</summary>
     /// <param name="value">The value to forward.</param>
     /// <returns>A ValueTask representing the asynchronous forward.</returns>
@@ -92,19 +104,32 @@ public sealed class TakeUntilLifecycle<T> : IAsyncDisposable
     /// <returns>A ValueTask representing the asynchronous teardown.</returns>
     public async ValueTask DisposeAsync()
     {
+        ExceptionDispatchInfo? failure = null;
         try
         {
             await _cts.CancelAsync().ConfigureAwait(false);
         }
-        finally
+        catch (Exception e)
         {
-#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-            await _externalLinkRegistration.DisposeAsync().ConfigureAwait(false);
-#else
-            _externalLinkRegistration.Dispose();
-#endif
-            _cts.Dispose();
-            _gate.Dispose();
+            failure = ExceptionDispatchInfo.Capture(e);
         }
+
+#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+        await _externalLinkRegistration.DisposeAsync().ConfigureAwait(false);
+#else
+        _externalLinkRegistration.Dispose();
+#endif
+        _cts.Dispose();
+        _gate.Dispose();
+        failure?.Throw();
+    }
+
+    /// <summary>Completes the sequence after the cancellation callback returns.</summary>
+    /// <returns>The deferred completion.</returns>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    private async ValueTask CompleteAfterYieldAsync()
+    {
+        await Task.Yield();
+        await RelayCompletionAsync(Result.Success).ConfigureAwait(false);
     }
 }

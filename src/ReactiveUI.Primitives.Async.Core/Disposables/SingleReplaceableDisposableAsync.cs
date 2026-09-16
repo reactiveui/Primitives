@@ -15,7 +15,7 @@ public class SingleReplaceableDisposableAsync : IAsyncDisposable
     /// <summary>The tracked disposable, or the sentinel that marks the slot closed.</summary>
     private IAsyncDisposable? _current;
 
-    /// <summary>Takes over from the tracked resource, disposing the one it displaces — or disposing <paramref name="value"/> itself when this instance has been disposed.</summary>
+    /// <summary>Takes over from the tracked resource, disposing the one it displaces - or disposing <paramref name="value"/> itself when this instance has been disposed.</summary>
     /// <param name="value">The new <see cref="IAsyncDisposable"/> instance to track. Can be <see langword="null"/> to clear the current
     /// resource.</param>
     /// <returns>A <see cref="ValueTask"/> that completes once whichever resource this call gave up has been

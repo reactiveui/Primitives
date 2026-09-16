@@ -8,7 +8,7 @@ using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>TakeUntil operator tests — disposal, cancellation, forwarding errors, and integration scenarios.</summary>
+/// <summary>TakeUntil operator tests - disposal, cancellation, forwarding errors, and integration scenarios.</summary>
 public partial class TakeUntilOperatorTests
 {
     /// <summary>Message thrown by an observer from its completion callback.</summary>
@@ -171,7 +171,7 @@ public partial class TakeUntilOperatorTests
         var result = await SignalAsync.Range(1, SourceValueCount)
             .TakeUntil(static x => x > ThirdItem)
             .ToListAsync();
-        await Assert.That(result).IsCollectionEqualTo([1, SecondItem, ThirdItem]);
+        await Assert.That(result).IsCollectionEqualTo([1, SecondItem, ThirdItem, FourthItem]);
     }
 
     /// <summary>Tests that TakeUntil with async predicate stops when predicate returns true.</summary>
@@ -186,7 +186,7 @@ public partial class TakeUntilOperatorTests
             await Task.Yield();
             return x > SecondItem;
         }).ToListAsync();
-        await Assert.That(result).IsCollectionEqualTo([1, SecondItem]);
+        await Assert.That(result).IsCollectionEqualTo([1, SecondItem, ThirdItem]);
     }
 
     /// <summary>Tests that TakeUntil throws on null predicate.</summary>

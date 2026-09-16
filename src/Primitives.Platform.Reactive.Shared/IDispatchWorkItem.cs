@@ -4,7 +4,7 @@
 
 namespace ReactiveUI.Primitives.Reactive.Concurrency;
 
-/// <summary>A scheduled, cancellable unit of work drained by a <see cref="CoalescingDispatchScheduler"/>.</summary>
+/// <summary>A scheduled, cancellable unit of work drained by a <see cref="CoalescingDispatchState"/>.</summary>
 internal interface IDispatchWorkItem : IDisposable
 {
     /// <summary>Executes the work unless it has been cancelled.</summary>

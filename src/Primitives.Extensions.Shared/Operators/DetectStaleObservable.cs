@@ -38,15 +38,16 @@ internal sealed class DetectStaleObservable<T>(
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="stalenessPeriod">The staleness period.</param>
     /// <param name="scheduler">The sequencer that times the staleness window.</param>
+    /// <remarks>Updates and stale markers are queued in order under the gate and delivered after it is released.</remarks>
     private sealed class DetectStaleSink(
         IObserver<Stale<T>> downstream,
         TimeSpan stalenessPeriod,
         ISequencer scheduler) : IObserver<T>, IDisposable
     {
-        /// <summary>The gate protecting state transitions and downstream notification.</summary>
+        /// <summary>Guards the terminal state and the order notifications are queued in; never held while the observer runs.</summary>
         private readonly Lock _gate = new();
 
-        /// <summary>The timer slot and terminal-state flag shared with the operator's handlers.</summary>
+        /// <summary>The timer slot, terminal state and serialized delivery shared with the operator's handlers.</summary>
         private readonly TimerSinkState<Stale<T>> _state = new(downstream);
 
         /// <summary>Upstream subscription handle, set once via <see cref="AttachSourceSubscription"/> and disposed with the sink.</summary>
@@ -77,14 +78,14 @@ internal sealed class DetectStaleObservable<T>(
         {
             lock (_gate)
             {
-                if (_state.Done)
+                if (!_state.QueueLocked(new(value)))
                 {
                     return;
                 }
-
-                downstream.OnNext(new(value));
-                ScheduleStale();
             }
+
+            _state.Flush();
+            ScheduleStale();
         }
 
         /// <inheritdoc/>
@@ -92,8 +93,10 @@ internal sealed class DetectStaleObservable<T>(
         {
             lock (_gate)
             {
-                _state.HandleErrorLocked(error);
+                _ = _state.QueueErrorLocked(error);
             }
+
+            _state.Flush();
         }
 
         /// <inheritdoc/>
@@ -101,8 +104,10 @@ internal sealed class DetectStaleObservable<T>(
         {
             lock (_gate)
             {
-                _state.HandleCompletedLocked();
+                _ = _state.QueueCompletedLocked();
             }
+
+            _state.Flush();
         }
 
         /// <inheritdoc/>
@@ -121,18 +126,16 @@ internal sealed class DetectStaleObservable<T>(
             _state.Timer.Disposable =
                 scheduler.Schedule(this, stalenessPeriod, static (_, self) => self.OnStaleTimer());
 
-        /// <summary>Fires the stale marker downstream when the staleness window elapses.</summary>
+        /// <summary>Queues and delivers the stale marker when the staleness window elapses.</summary>
         /// <returns>The singleton empty disposable for the scheduler contract.</returns>
         private EmptyDisposable OnStaleTimer()
         {
             lock (_gate)
             {
-                if (!_state.Done)
-                {
-                    downstream.OnNext(new());
-                }
+                _ = _state.QueueLocked(new());
             }
 
+            _state.Flush();
             return EmptyDisposable.Instance;
         }
     }

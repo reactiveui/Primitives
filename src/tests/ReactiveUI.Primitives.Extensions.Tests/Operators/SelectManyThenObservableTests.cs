@@ -103,6 +103,86 @@ public class SelectManyThenObservableTests
         await Assert.That(completed).IsTrue();
     }
 
+    /// <summary>Verifies that completion arrives exactly once for a single source value.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenSelectManyThenOneSourceValue_ThenCompletesOnce()
+    {
+        Subject<int> subject = new();
+        var completions = 0;
+        using var sub = subject.SelectManyThen(Observable.Return, Observable.Return)
+            .Subscribe(
+                static _ => { },
+                () => completions++);
+        subject.OnNext(SourceValue);
+        subject.OnCompleted();
+        await Assert.That(completions).IsEqualTo(1);
+    }
+
+    /// <summary>Verifies that completion arrives exactly once however many sequences the projections opened.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenSelectManyThenSeveralSourceValues_ThenCompletesOnce()
+    {
+        const int SecondSourceValue = 4;
+        Subject<int> subject = new();
+        List<int> results = [];
+        var completions = 0;
+        using var sub = subject.SelectManyThen(
+                static x => Observable.Return(x * IntermediateMultiplier),
+                static mid => Observable.Return(mid * FinalMultiplier))
+            .Subscribe(results.Add, () => completions++);
+        subject.OnNext(SourceValue);
+        subject.OnNext(SecondSourceValue);
+        subject.OnCompleted();
+        await Assert.That(completions).IsEqualTo(1);
+        await Assert.That(results).IsCollectionEqualTo(
+        [
+            SourceValue * IntermediateMultiplier * FinalMultiplier,
+            SecondSourceValue * IntermediateMultiplier * FinalMultiplier,
+        ]);
+    }
+
+    /// <summary>Verifies that completion waits for a second-stage sequence that outlives the source.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenSelectManyThenInnerOutlivesSource_ThenCompletionWaitsForIt()
+    {
+        Subject<int> subject = new();
+        Subject<int> inner = new();
+        List<int> results = [];
+        var completed = false;
+        using var sub = subject.SelectManyThen(Observable.Return, _ => inner)
+            .Subscribe(results.Add, () => completed = true);
+        subject.OnNext(SourceValue);
+        subject.OnCompleted();
+
+        await Assert.That(completed).IsFalse();
+
+        inner.OnNext(SourceValue * FinalMultiplier);
+        inner.OnCompleted();
+
+        await Assert.That(completed).IsTrue();
+        await Assert.That(results).IsCollectionEqualTo([SourceValue * FinalMultiplier]);
+    }
+
+    /// <summary>Verifies that disposal stops delivery from a sequence still running.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenSelectManyThenDisposed_ThenInnerValuesStop()
+    {
+        Subject<int> subject = new();
+        Subject<int> inner = new();
+        List<int> results = [];
+        var sub = subject.SelectManyThen(Observable.Return, _ => inner).Subscribe(results.Add);
+        subject.OnNext(SourceValue);
+        inner.OnNext(1);
+        sub.Dispose();
+        inner.OnNext(SourceValue);
+
+        await Assert.That(results).IsCollectionEqualTo([1]);
+    }
+
     /// <summary>Verifies that an inner-observable error is forwarded.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]

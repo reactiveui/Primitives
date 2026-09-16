@@ -43,6 +43,31 @@ public partial class SignalTests
         await Assert.That(nonRangeSwitch.SequenceEqual([Five])).IsTrue();
     }
 
+    /// <summary>Switch over a live outer source, a lazily enumerated source, and a non-integer source takes the general path.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task SwitchOutsideTheRangeFastPathFlattensTheLatestInner()
+    {
+        List<int> liveValues = [];
+        using Signal<IObservable<int>> outer = new();
+        using var liveSubscription = Signal.Switch(outer).Subscribe(liveValues.Add);
+        outer.OnNext(Signal.Range(One, Two));
+        await Assert.That(liveValues.SequenceEqual([One, Two])).IsTrue();
+
+        List<int> lazyValues = [];
+        _ = Signal.Switch(Signal.FromEnumerable(LazyRanges())).Subscribe(lazyValues.Add);
+        await Assert.That(lazyValues.SequenceEqual([One, Two])).IsTrue();
+
+        List<string> textValues = [];
+        _ = Signal.Switch(Signal.FromEnumerable([Signal.Emit("text")])).Subscribe(textValues.Add);
+        await Assert.That(textValues.SequenceEqual(["text"])).IsTrue();
+
+        static IEnumerable<IObservable<int>> LazyRanges()
+        {
+            yield return Signal.Range(One, Two);
+        }
+    }
+
     /// <summary>Task conversion forwards a completed result, a cancellation, a fault, and a pending result.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]

@@ -131,7 +131,7 @@ public sealed class ReactiveExtensionsPortedTests
         const int EmittedThrottled = 3;
         VirtualClock clock = new();
         List<int> scheduled = [];
-        using var scheduledSub = ScheduledValue.Schedule(TimeSpan.FromSeconds(1), clock).Subscribe(scheduled.Add);
+        using var scheduledSub = ScheduledValue.ScheduleValue(TimeSpan.FromSeconds(1), clock).Subscribe(scheduled.Add);
         Subject<int> throttledSource = new();
         List<int> throttled = [];
         using var throttleSub = throttledSource.ThrottleFirst(TimeSpan.FromSeconds(1), clock).Subscribe(throttled.Add);

@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
@@ -72,4 +73,13 @@ public class DebounceImmediateObservableTests
         await Assert.That(caught).IsSameReferenceAs(expected);
         await Assert.That(completed).IsFalse();
     }
+
+    /// <summary>Verifies an observer that marshals to another thread which completes the source does not deadlock the first value.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Task WhenObserverMarshalsCompletionDuringFirstValue_ThenNoDeadlock() =>
+        SerializedDeliveryAssertions.ObserverMarshallingCompletionDoesNotDeadlock<int>(
+            static (source, observer) => source.DebounceImmediate(TimeSpan.FromTicks(DebounceTicks), new VirtualClock()).Subscribe(observer),
+            static observer => observer.OnNext(1));
 }

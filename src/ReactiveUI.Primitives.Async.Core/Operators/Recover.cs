@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Disposables;
 
 namespace ReactiveUI.Primitives.Async;
@@ -74,21 +76,15 @@ public static partial class SignalAsyncExtensions
         Func<Exception, CancellationToken, ValueTask>? onErrorResume) : IObservableAsync<T>
     {
         /// <inheritdoc/>
-        async ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
-            CancellationToken cancellationToken)
-        {
-            CatchWitness sink = new(observer, handler, onErrorResume, cancellationToken);
-
-            if (observer is WitnessAsync<T> downstreamBase)
-            {
-                downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
-            }
-
-            var subscription = await source.SubscribeAsync(sink, cancellationToken).ConfigureAwait(false);
-            await sink.AssignSourceSubscriptionAsync(subscription).ConfigureAwait(false);
-            return sink;
-        }
+            CancellationToken cancellationToken) =>
+            WitnessSubscription.SubscribeAsync(
+                source,
+                new CatchWitness(observer, handler, onErrorResume, cancellationToken),
+                observer,
+                cancellationToken);
 
         /// <summary>Forwards values, routes error-resume to the callback or downstream, and swaps in the fallback on failure.</summary>
         /// <param name="downstream">The downstream witness.</param>
@@ -96,11 +92,12 @@ public static partial class SignalAsyncExtensions
         /// <param name="onErrorResume">Optional async error-resume callback.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token, linked into the dispose chain and reused for the handler
         /// subscription.</param>
+        [DebuggerDisplay("CatchWitness: {_witness}")]
         internal sealed class CatchWitness(
             IObserverAsync<T> downstream,
             Func<Exception, IObservableAsync<T>> handler,
             Func<Exception, CancellationToken, ValueTask>? onErrorResume,
-            CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
+            CancellationToken subscribeToken) : IWitnessAsync<T>
         {
             /// <summary>Holds the handler-produced subscription, assigned at most once, so it disposes with the sink.</summary>
             private readonly SingleAssignmentDisposableAsync _handlerDisposable = new();
@@ -108,18 +105,39 @@ public static partial class SignalAsyncExtensions
             /// <summary>The subscribe-time token, reused when subscribing the fallback handler observable.</summary>
             private readonly CancellationToken _subscribeToken = subscribeToken;
 
+            /// <summary>The notification gate, cancellation link and disposal state.</summary>
+            private WitnessAsyncState _witness = new(subscribeToken);
+
             /// <inheritdoc/>
-            protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
+            ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
+                WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+                WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
                 downstream.OnNextAsync(value, cancellationToken);
 
             /// <inheritdoc/>
-            protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
                 onErrorResume is null
                     ? downstream.OnErrorResumeAsync(error, cancellationToken)
                     : onErrorResume(error, cancellationToken);
 
             /// <inheritdoc/>
-            protected override async ValueTask OnCompletedAsyncCore(Result result)
+            async ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result)
             {
                 if (result.IsSuccess)
                 {
@@ -142,7 +160,7 @@ public static partial class SignalAsyncExtensions
             }
 
             /// <inheritdoc/>
-            protected override async ValueTask DisposeAsyncCore()
+            public async ValueTask DisposeAsync()
             {
                 try
                 {
@@ -153,7 +171,7 @@ public static partial class SignalAsyncExtensions
                     UnhandledExceptionHandler.ReportUnhandledException(e);
                 }
 
-                await base.DisposeAsyncCore().ConfigureAwait(false);
+                await WitnessAsync.DisposeStateAsync(this).ConfigureAwait(false);
             }
         }
     }

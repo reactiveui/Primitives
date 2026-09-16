@@ -243,6 +243,20 @@ public static partial class LinqExtensions
             return new SynchronizeSignal<T>(source);
         }
 
+        /// <summary>Delivers concurrent notifications one at a time without holding a lock while the observer runs.</summary>
+        /// <returns>A sequence that forwards the source notifications one at a time.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+        /// <remarks>
+        /// A notification that arrives while another thread is delivering is queued behind it instead of blocking, so an
+        /// observer that marshals to a producer's thread cannot deadlock that producer.
+        /// </remarks>
+        public IObservable<T> Serialize()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            return new SerializeSignal<T>(source);
+        }
+
         /// <summary>Serializes notifications with every sequence using the supplied gate.</summary>
         /// <param name="gate">The gate shared with other synchronized sequences.</param>
         /// <returns>A sequence that forwards the source notifications one at a time under the shared gate.</returns>
@@ -710,7 +724,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(left);
 
-            return left is RangeSignal range && typeof(TLeft) == typeof(int)
+            return left is RangeSignal range
                 ? new ShiftedRangeSignal<TLeft>(range, Sequencer.Normalize(dueTime), ThreadPoolSequencer.Instance)
                 : new ShiftSignal<TLeft>(left, dueTime, ThreadPoolSequencer.Instance);
         }
@@ -724,7 +738,7 @@ public static partial class LinqExtensions
             ArgumentExceptionHelper.ThrowIfNull(left);
 
             scheduler ??= ThreadPoolSequencer.Instance;
-            return left is RangeSignal range && typeof(TLeft) == typeof(int)
+            return left is RangeSignal range
                 ? new ShiftedRangeSignal<TLeft>(range, Sequencer.Normalize(dueTime), scheduler)
                 : new ShiftSignal<TLeft>(left, dueTime, scheduler);
         }
@@ -751,7 +765,7 @@ public static partial class LinqExtensions
             return new AbsoluteShiftSignal<TLeft>(left, dueTime, scheduler);
         }
 
-        /// <summary>Fails the sequence if it does not terminate before the timeout.</summary>
+        /// <summary>Fails the sequence when no value arrives within the timeout; each value restarts the clock.</summary>
         /// <param name="dueTime">The timeout duration.</param>
         /// <returns>A sequence that errors with <see cref="TimeoutException"/> when the timeout elapses first.</returns>
         public IObservable<TLeft> Timeout(TimeSpan dueTime)
@@ -761,7 +775,7 @@ public static partial class LinqExtensions
             return new ExpireSignal<TLeft>(left, dueTime, ThreadPoolSequencer.Instance);
         }
 
-        /// <summary>Fails the sequence if it does not terminate before the sequencer timeout.</summary>
+        /// <summary>Fails the sequence on the sequencer when no value arrives within the timeout; each value restarts the clock.</summary>
         /// <param name="dueTime">The timeout duration.</param>
         /// <param name="scheduler">The sequencer used to schedule the timeout.</param>
         /// <returns>A sequence that errors with <see cref="TimeoutException"/> when the timeout elapses first.</returns>
@@ -773,7 +787,7 @@ public static partial class LinqExtensions
             return new ExpireSignal<TLeft>(left, dueTime, scheduler);
         }
 
-        /// <summary>Fails the sequence if it does not terminate before the absolute timeout.</summary>
+        /// <summary>Fails the sequence if it has not terminated by the absolute time, whatever values arrive first.</summary>
         /// <param name="dueTime">The absolute timeout time.</param>
         /// <returns>A sequence that errors with <see cref="TimeoutException"/> when the timeout elapses first.</returns>
         public IObservable<TLeft> Timeout(DateTimeOffset dueTime)
@@ -783,7 +797,7 @@ public static partial class LinqExtensions
             return new AbsoluteExpireSignal<TLeft>(left, dueTime, ThreadPoolSequencer.Instance);
         }
 
-        /// <summary>Fails the sequence if it does not terminate before the absolute sequencer timeout.</summary>
+        /// <summary>Fails the sequence on the sequencer if it has not terminated by the absolute time, whatever values arrive first.</summary>
         /// <param name="dueTime">The absolute timeout time.</param>
         /// <param name="scheduler">The sequencer used to schedule the timeout.</param>
         /// <returns>A sequence that errors with <see cref="TimeoutException"/> when the timeout elapses first.</returns>
@@ -795,9 +809,9 @@ public static partial class LinqExtensions
             return new AbsoluteExpireSignal<TLeft>(left, dueTime, scheduler);
         }
 
-        /// <summary>Emits the most recent value at the end of each sampling period.</summary>
+        /// <summary>Emits the most recent value once the period has passed since the value that started the timer.</summary>
         /// <param name="interval">The sampling period.</param>
-        /// <returns>A sequence containing the latest source value sampled at each period boundary.</returns>
+        /// <returns>A sequence carrying the latest source value once each period elapses; a quiet source sends nothing.</returns>
         public IObservable<TLeft> Sample(TimeSpan interval)
         {
             ArgumentExceptionHelper.ThrowIfNull(left);
@@ -807,10 +821,10 @@ public static partial class LinqExtensions
             return new ProbeSignal<TLeft>(left, interval, ThreadPoolSequencer.Instance);
         }
 
-        /// <summary>Emits the most recent value at the end of each sampling period on a sequencer.</summary>
+        /// <summary>Emits the most recent value on a sequencer once the period has passed since the value that started the timer.</summary>
         /// <param name="interval">The sampling period.</param>
         /// <param name="scheduler">The sequencer used to schedule sampling.</param>
-        /// <returns>A sequence containing the latest source value sampled at each period boundary.</returns>
+        /// <returns>A sequence carrying the latest source value once each period elapses; a quiet source sends nothing.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="left"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeExceptionHelper"><paramref name="interval"/> is less than <see cref="TimeSpan.Zero"/>.</exception>
         public IObservable<TLeft> Sample(TimeSpan interval, ISequencer? scheduler)
@@ -823,18 +837,21 @@ public static partial class LinqExtensions
             return new ProbeSignal<TLeft>(left, interval, scheduler);
         }
 
-        /// <summary>Resubscribes to the source after an error up to <paramref name="retryCount"/> times.</summary>
-        /// <param name="retryCount">The maximum number of retry attempts after the initial subscription.</param>
-        /// <returns>A sequence that retries the source before forwarding the final error.</returns>
+        /// <summary>Runs the source up to <paramref name="retryCount"/> times in total, stopping at the first run that ends without an error.</summary>
+        /// <param name="retryCount">The total number of runs. Zero runs the source not at all and completes.</param>
+        /// <returns>A sequence that runs the source again after an error before forwarding the final error.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="left"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeExceptionHelper"><paramref name="retryCount"/> is less than zero.</exception>
+        /// <remarks>The count is total runs, matching the System.Reactive operator of this name. Use <c>Reattempt</c> to count extra tries instead.</remarks>
         public IObservable<TLeft> Retry(int retryCount)
         {
             ArgumentExceptionHelper.ThrowIfNull(left);
 
             ArgumentOutOfRangeExceptionHelper.ThrowIfNegative(retryCount);
 
-            return new ReattemptSignal<TLeft>(left, retryCount);
+            return retryCount == 0
+                ? ImmutableEmptySignal<TLeft>.Instance
+                : new ReattemptSignal<TLeft>(left, retryCount - 1);
         }
 
         /// <summary>Converts source values and terminal notifications into <see cref="Spark{T}"/> values.</summary>

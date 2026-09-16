@@ -87,7 +87,7 @@ public sealed class UseSignal<TResource, T>(
                 return;
             }
 
-            Interlocked.Exchange(ref _subscription, null)?.Dispose();
+            DisposeSubscription();
         }
 
         /// <inheritdoc/>
@@ -166,8 +166,12 @@ public sealed class UseSignal<TResource, T>(
         private void Release()
         {
             _observer = EmptyWitness<T>.Instance;
-            Interlocked.Exchange(ref _subscription, null)?.Dispose();
+            DisposeSubscription();
             _resource?.Dispose();
         }
+
+        /// <summary>Disposes the inner subscription at most once.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void DisposeSubscription() => Interlocked.Exchange(ref _subscription, null)?.Dispose();
     }
 }
