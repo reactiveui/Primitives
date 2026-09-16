@@ -2798,7 +2798,7 @@ code at package or API edges.
 | R3Async                            | ReactiveUI.Primitives.Async                      | Migration detail                                                                                     |
 |------------------------------------|--------------------------------------------------|------------------------------------------------------------------------------------------------------|
 | `R3Async.AsyncObservable<T>`       | `IObservableAsync<T>` / `SignalAsync<T>`         | Use generated `AsPrimitivesAsyncObservable()` at external boundaries.                                |
-| `R3Async.AsyncObserver<T>`         | `IObserverAsync<T>` / `WitnessAsync<T>`          | Use `WitnessAsync<T>` for custom observers that need disposal, cancellation, and concurrency checks. |
+| `R3Async.AsyncObserver<T>`         | `IObserverAsync<T>` / `IWitnessAsync<T>`         | Implement `IWitnessAsync<T>` and hold a `WitnessAsyncState` field for custom observers that need disposal, cancellation and concurrency checks. |
 | `R3Async.Result`                   | `ReactiveUI.Primitives.Result`                   | Both carry success/failure; bridge adapters convert between them.                                    |
 | `OnErrorResumeAsync`               | `OnErrorResumeAsync`                             | Same error-resume concept; Primitives passes the active `CancellationToken`.                         |
 | `OnCompletedAsync(R3Async.Result)` | `OnCompletedAsync(ReactiveUI.Primitives.Result)` | Completion remains result-based.                                                                     |
