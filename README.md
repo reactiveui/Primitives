@@ -2942,11 +2942,13 @@ Sources carry concrete types too: `AnonymousSignal<T>` behind `Signal.Create`, p
 `StartSignal`, `FromAsyncSignal<T>` and `FromEventPatternSignal`. The constant fast paths
 `ImmediateReturnSignal<T>`, `ImmutableEmptySignal<T>` and `ImmutableNeverSignal<T>` allocate nothing.
 
-> [!WARNING]
-> Some fused operator types are internal, so you cannot construct them. Call the operator instead. The types behind
-> `StartWith` are internal; use `LeadSignal<T>` for a leading value. The same holds for the types behind `Fold`,
-> `Reduce`, `Unique`, `Zip`, `CombineLatest`, `Calm`, `Shift`, `Probe`, `Latch`, `KeepNotNull`, `KeepType`, `Reattempt`
-> and absolute-time `Expire`.
+Every fused operator type is public and takes its sources through the constructor, so you can build one directly
+instead of calling the operator.
+
+```csharp
+IObservable<int> viaOperator = source.Unique();
+IObservable<int> viaType = new UniqueSignal<int>(source, EqualityComparer<int>.Default);
+```
 
 ### Embedded state types
 
