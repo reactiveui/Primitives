@@ -52,8 +52,11 @@ internal sealed class RetryWithDelayObservable<T>(
         Func<int, TimeSpan> delaySelector,
         ISequencer scheduler) : IObserver<T>, IDisposable
     {
-        /// <summary>The subscription to the source sequence or the pending retry; an assignment after disposal is disposed at once.</summary>
-        private readonly MutableDisposable _subscription = new();
+        /// <summary>The subscription to the source sequence; each attempt disposes the one it replaces.</summary>
+        private readonly SwapDisposable _subscription = new();
+
+        /// <summary>The pending retry timer, held separately so re-subscribing never displaces a retry that has not fired.</summary>
+        private readonly SwapDisposable _retryTimer = new();
 
         /// <summary>The number of retries already attempted.</summary>
         private int _retries;
@@ -88,7 +91,7 @@ internal sealed class RetryWithDelayObservable<T>(
                 }
                 else
                 {
-                    _subscription.Disposable = scheduler.Schedule(this, delay, static (_, self) =>
+                    _retryTimer.Disposable = scheduler.Schedule(this, delay, static (_, self) =>
                     {
                         self.SubscribeToSource();
                         return EmptyDisposable.Instance;
@@ -109,6 +112,7 @@ internal sealed class RetryWithDelayObservable<T>(
         public void Dispose()
         {
             Volatile.Write(ref _disposed, true);
+            _retryTimer.Dispose();
             _subscription.Dispose();
         }
 

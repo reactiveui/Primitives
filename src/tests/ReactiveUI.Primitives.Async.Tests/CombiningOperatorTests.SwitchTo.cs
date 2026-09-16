@@ -148,7 +148,7 @@ public partial class CombiningOperatorTests
         });
         await outer.OnNextAsync(throwOnDispose, CancellationToken.None);
 
-        // Switch to a new inner – this will try to dispose the previous (throwing) one
+        // Switch to a new inner - this will try to dispose the previous (throwing) one
         await outer.OnNextAsync(SignalAsync.Return(Sentinel99), CancellationToken.None);
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();

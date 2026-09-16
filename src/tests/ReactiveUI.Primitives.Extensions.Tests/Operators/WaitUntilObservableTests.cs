@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Tests for <c>WaitUntilObservable</c> — covers the after-terminal guards
+/// <summary>Tests for <c>WaitUntilObservable</c> - covers the after-terminal guards
 /// on <c>OnNext</c>, <c>OnError</c>, and <c>OnCompleted</c> that fire only when an
 /// upstream pushes events past its own completion.</summary>
 public class WaitUntilObservableTests

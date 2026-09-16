@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async.Advanced;
 
-/// <summary>An observer that logs resumable errors before forwarding them downstream.</summary>
+/// <summary>An observer that logs resumable errors and terminal failures before forwarding them downstream.</summary>
 /// <typeparam name="T">The element type.</typeparam>
 [DebuggerDisplay("LogErrorsWitness: Downstream = {Downstream}, Logger = {Logger}")]
 public sealed class LogErrorsWitness<T> : IWitnessAsync<T>
@@ -67,7 +67,13 @@ public sealed class LogErrorsWitness<T> : IWitnessAsync<T>
     }
 
     /// <inheritdoc/>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) =>
-        Downstream.OnCompletedAsync(result);
+    ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result)
+    {
+        if (result.Exception is { } failure)
+        {
+            Logger(failure);
+        }
+
+        return Downstream.OnCompletedAsync(result);
+    }
 }

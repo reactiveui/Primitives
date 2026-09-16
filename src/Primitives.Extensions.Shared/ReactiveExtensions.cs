@@ -130,7 +130,7 @@ public static partial class ReactiveExtensions
     extension(IObservable<RxVoid> source)
     {
         /// <summary>Convenience overload: <c>source.CatchReturnUnit()</c> is shorthand for <c>source.CatchReturn(RxVoid.Default)</c>.</summary>
-        /// <returns>An observable that never produces an error terminal — errors are replaced with a single <see cref="RxVoid.Default"/>.</returns>
+        /// <returns>An observable that never produces an error terminal - errors are replaced with a single <see cref="RxVoid.Default"/>.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<RxVoid> CatchReturnUnit() =>
             new CatchReturnObservable<RxVoid>(source, RxVoid.Default);
@@ -563,7 +563,7 @@ public static partial class ReactiveExtensions
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<TResult> SelectAsync<TResult>(
             Func<T, CancellationToken, Task<TResult>> asyncSelector) =>
-            new SelectAsyncSequentialObservable<T, TResult>(source, x => asyncSelector(x, CancellationToken.None));
+            new SelectAsyncSequentialObservable<T, TResult>(source, asyncSelector);
 
         /// <summary>Maps values to async operations without losing ordering or cancellation semantics.</summary>
         /// <typeparam name="TResult">The type of the result.</typeparam>
@@ -693,8 +693,8 @@ public static partial class ReactiveExtensions
         /// <summary>Projects each source value through two successive observable selectors.</summary>
         /// <typeparam name="TMid">The intermediate element type.</typeparam>
         /// <typeparam name="TResult">The final result type.</typeparam>
-        /// <param name="first">First projection: source → intermediate observable.</param>
-        /// <param name="second">Second projection: intermediate → result observable.</param>
+        /// <param name="first">First projection: source -> intermediate observable.</param>
+        /// <param name="second">Second projection: intermediate -> result observable.</param>
         /// <returns>A fused two-stage SelectMany observable.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<TResult> SelectManyThen<TMid, TResult>(

@@ -395,19 +395,19 @@ public class TimeBasedOperatorTests
         await cancellation.CancelAsync();
         await execution;
         pendingTimer.Fire();
-        await Assert.That(values).IsCollectionEqualTo([interval ? 1L : 0L]);
+        await Assert.That(values).IsCollectionEqualTo([0L]);
     }
 
-    /// <summary>Intervals emit consecutive values starting at one.</summary>
+    /// <summary>Intervals emit consecutive values starting at zero.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]
     public async Task WhenIntervalWithNonSystemTimeProvider_ThenUsesTimerPath()
     {
         const int SecondValue = 2;
-        const long SecondTick = 2L;
+        const long SecondTick = 1L;
         ManualTimeProvider time = new();
         var values = await time.RunAsync(SignalAsync.Interval(Window, time).Take(SecondValue).ToListAsync().AsTask());
-        await Assert.That(values).IsCollectionEqualTo([1L, SecondTick]);
+        await Assert.That(values).IsCollectionEqualTo([0L, SecondTick]);
     }
 
     /// <summary>The default-provider overload constructs a throttle signal without starting a timer.</summary>

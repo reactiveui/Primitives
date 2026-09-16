@@ -9,7 +9,7 @@ using ReactiveUI.Primitives.Extensions.Operators;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Tests for <see cref = "RetryForeverObservable{T}"/> — exercises the resubscribe-on-error
+/// <summary>Tests for <see cref = "RetryForeverObservable{T}"/> - exercises the resubscribe-on-error
 /// loop, the dispose-after-error short-circuit that prevents a runaway resubscribe, and the
 /// null-observer subscribe guard.</summary>
 public class RetryForeverObservableTests

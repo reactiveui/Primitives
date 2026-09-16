@@ -564,6 +564,8 @@ namespace ReactiveUI.Primitives.Async
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public System.Threading.Tasks.ValueTask<bool> AnyAsync() { }
             [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+            public System.Threading.Tasks.ValueTask<bool> AnyAsync(System.Func<T, bool> predicate) { }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public System.Threading.Tasks.ValueTask<bool> AnyAsync(System.Threading.CancellationToken cancellationToken) { }
             public System.Threading.Tasks.ValueTask<bool> AnyAsync(System.Func<T, bool>? predicate, System.Threading.CancellationToken cancellationToken) { }
         }
@@ -1099,7 +1101,6 @@ namespace ReactiveUI.Primitives.Async.Advanced
         public System.Threading.Tasks.ValueTask OnErrorResumeAsync(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public System.Threading.Tasks.ValueTask OnNextAsync(T value, System.Threading.CancellationToken cancellationToken) { }
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<T>.OnCompletedAsyncCore(ReactiveUI.Primitives.Result result) { }
         System.Threading.Tasks.ValueTask ReactiveUI.Primitives.Async.IWitnessAsync<T>.OnErrorResumeAsyncCore(System.Exception error, System.Threading.CancellationToken cancellationToken) { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]

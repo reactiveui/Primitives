@@ -1327,8 +1327,10 @@ namespace ReactiveUI.Primitives.Extensions.Operators
         public SelectAsyncConcurrentObservable(System.IObservable<TSource> source, System.Func<TSource, System.Threading.Tasks.Task<TResult>> selector, int maxConcurrency) { }
         public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
     }
+    [System.Diagnostics.DebuggerDisplay("SelectAsyncSequential<{typeof(TSource).Name,nq},{typeof(TResult).Name,nq}>")]
     public sealed class SelectAsyncSequentialObservable<TSource, TResult> : System.IObservable<TResult>
     {
+        public SelectAsyncSequentialObservable(System.IObservable<TSource> source, System.Func<TSource, System.Threading.CancellationToken, System.Threading.Tasks.Task<TResult>> selector) { }
         public SelectAsyncSequentialObservable(System.IObservable<TSource> source, System.Func<TSource, System.Threading.Tasks.Task<TResult>> selector) { }
         public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
     }
@@ -1341,6 +1343,19 @@ namespace ReactiveUI.Primitives.Extensions.Operators
     {
         public SelectLatestAsyncObservable(System.IObservable<TSource> source, System.Func<TSource, System.Threading.Tasks.Task<TResult>> selector) { }
         public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("SelectManyThenCoordinator: Active = {Active}, SourceCompleted = {SourceCompleted}, Done = {Done}")]
+    public sealed class SelectManyThenCoordinator<TSource, TMid, TResult> : System.IDisposable, System.IObserver<TSource>
+    {
+        public SelectManyThenCoordinator(System.IObserver<TResult> observer, System.Func<TSource, System.IObservable<TMid>> first, System.Func<TMid, System.IObservable<TResult>> second) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Dispose() { }
+        public void OnAnyError(System.Exception error) { }
+        public void OnCompleted() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnError(System.Exception error) { }
+        public void OnNext(TSource value) { }
+        public ReactiveUI.Primitives.Extensions.Operators.SelectManyThenCoordinator<TSource, TMid, TResult> Run(System.IObservable<TSource> source) { }
     }
     public sealed class SelectManyThenObservable<TSource, TMid, TResult> : System.IObservable<TResult>
     {

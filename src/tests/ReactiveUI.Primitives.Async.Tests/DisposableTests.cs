@@ -399,7 +399,7 @@ public partial class DisposableTests
     }
 
     /// <summary>Exercises the <c>array is null</c> branch of <c>CompositeDisposableAsync.CopyTo</c>
-    /// — both bounds-check guards use <c>array?.Length</c>, so a null array lets control fall
+    /// - both bounds-check guards use <c>array?.Length</c>, so a null array lets control fall
     /// through to the body where the per-item-assignment <c>array is not null</c> guard
     /// short-circuits.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>

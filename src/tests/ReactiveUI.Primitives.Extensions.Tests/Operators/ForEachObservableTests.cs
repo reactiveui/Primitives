@@ -8,7 +8,7 @@ using ReactiveUI.Primitives.Extensions.Operators;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Tests for <see cref = "ForEachObservable{T}"/> — null batches, scheduled delivery, and error forwarding.</summary>
+/// <summary>Tests for <see cref = "ForEachObservable{T}"/> - null batches, scheduled delivery, and error forwarding.</summary>
 public class ForEachObservableTests
 {
     /// <summary>Sentinel batch element.</summary>

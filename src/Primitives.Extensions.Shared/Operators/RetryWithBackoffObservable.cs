@@ -44,8 +44,11 @@ internal sealed class RetryWithBackoffObservable<T>(
         IObservable<T> source,
         RetryBackoffPolicy policy) : IObserver<T>, IDisposable
     {
-        /// <summary>The subscription to the source sequence or the pending retry; an assignment after disposal is disposed at once.</summary>
-        private readonly MutableDisposable _subscription = new();
+        /// <summary>The subscription to the source sequence; each attempt disposes the one it replaces.</summary>
+        private readonly SwapDisposable _subscription = new();
+
+        /// <summary>The pending retry timer, held separately so re-subscribing never displaces a retry that has not fired.</summary>
+        private readonly SwapDisposable _retryTimer = new();
 
         /// <summary>The number of retries attempted so far.</summary>
         private int _retries;
@@ -64,6 +67,12 @@ internal sealed class RetryWithBackoffObservable<T>(
         /// <inheritdoc/>
         public void OnError(Exception error)
         {
+            if (policy.ShouldRetry is not null && !policy.ShouldRetry(error))
+            {
+                downstream.OnError(error);
+                return;
+            }
+
             policy.OnError?.Invoke(error);
 
             if (Volatile.Read(ref _disposed))
@@ -88,7 +97,7 @@ internal sealed class RetryWithBackoffObservable<T>(
                 }
                 else
                 {
-                    _subscription.Disposable = policy.Scheduler.Schedule(delay, SubscribeToSource);
+                    _retryTimer.Disposable = policy.Scheduler.Schedule(delay, SubscribeToSource);
                 }
             }
             else
@@ -105,6 +114,7 @@ internal sealed class RetryWithBackoffObservable<T>(
         public void Dispose()
         {
             Volatile.Write(ref _disposed, true);
+            _retryTimer.Dispose();
             _subscription.Dispose();
         }
 

@@ -27,7 +27,7 @@ public sealed class IntervalSubscriptionTests
 
         await TaskSignalState.ExecuteAsync(subscription, observer, cancellation.Token);
 
-        await Assert.That(ticks).IsCollectionEqualTo([1L]);
+        await Assert.That(ticks).IsCollectionEqualTo([0L]);
     }
 
     /// <summary>Cancellation while waiting prevents the pending tick from being delivered.</summary>
@@ -89,7 +89,7 @@ public sealed class IntervalSubscriptionTests
         await cancellation.CancelAsync();
         resume.SetResult();
         await running;
-        await Assert.That(ticks).IsCollectionEqualTo([1L]);
+        await Assert.That(ticks).IsCollectionEqualTo([0L]);
         await Assert.That(time.PendingTimerCount).IsEqualTo(0);
     }
 

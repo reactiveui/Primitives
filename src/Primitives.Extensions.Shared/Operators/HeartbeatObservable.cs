@@ -51,7 +51,7 @@ internal sealed class HeartbeatObservable<T>(
         private readonly Lock _gate = new();
 
         /// <summary>The subscription to the periodic heartbeat timer.</summary>
-        private readonly MutableDisposable _timerSubscription = new();
+        private readonly SwapDisposable _timerSubscription = new();
 
         /// <summary>Serializes downstream deliveries.</summary>
         private SerializedDelivery<Heartbeat<T>> _delivery = new();
@@ -150,7 +150,7 @@ internal sealed class HeartbeatObservable<T>(
             subscription?.Dispose();
         }
 
-        /// <summary>Restarts the periodic heartbeat timer, dropping the one it replaces.</summary>
+        /// <summary>Restarts the periodic heartbeat timer, disposing the one it replaces.</summary>
         private void ScheduleHeartbeats()
         {
             lock (_gate)

@@ -165,7 +165,7 @@ public class ErrorHandlingOperatorTests
         await Assert.That(result).IsCollectionEqualTo([ExpectedValue]);
     }
 
-    /// <summary>Exercises <c>CatchObserver.OnErrorResumeAsyncCore</c>'s null-callback branch —
+    /// <summary>Exercises <c>CatchObserver.OnErrorResumeAsyncCore</c>'s null-callback branch -
     /// when <c>Catch(handler)</c> is used without an <c>onErrorResume</c> argument, source
     /// <c>OnErrorResumeAsync</c> notifications flow through to the downstream verbatim.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
@@ -331,7 +331,7 @@ public class ErrorHandlingOperatorTests
         await sub.DisposeAsync();
     }
 
-    /// <summary>Exercises the <c>CatchObserver.DisposeAsyncCore</c> catch branch — when the
+    /// <summary>Exercises the <c>CatchObserver.DisposeAsyncCore</c> catch branch - when the
     /// handler-produced subscription throws on <see cref = "IAsyncDisposable.DisposeAsync"/>, the
     /// failure is routed through <see cref = "UnhandledExceptionHandler"/> rather than re-thrown.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>

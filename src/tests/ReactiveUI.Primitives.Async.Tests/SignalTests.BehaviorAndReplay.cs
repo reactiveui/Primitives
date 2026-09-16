@@ -797,7 +797,7 @@ public partial class SignalTests
         await Assert.That(sub).IsNotNull();
     }
 
-    /// <summary>Exercises the <c>_isDisposed</c> idempotency guard on <c>BaseReplayLatestSignalAsync.DisposeAsync</c> — a second dispose is a no-op.</summary>
+    /// <summary>Exercises the <c>_isDisposed</c> idempotency guard on <c>BaseReplayLatestSignalAsync.DisposeAsync</c> - a second dispose is a no-op.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenReplayLatestSignalDisposedTwice_ThenIdempotent()

@@ -317,7 +317,7 @@ public partial class CombiningOperatorTests
         var failTask = subscription.FinishAsync(Result.Failure(new InvalidOperationException("fail")));
         await completionBlocked.Task;
 
-        // _disposed is 1, gate is still alive → OnNextAsync acquires gate and hits post-gate check
+        // _disposed is 1, gate is still alive -> OnNextAsync acquires gate and hits post-gate check
         await subscription.RelayNextAsync(Sentinel99, CancellationToken.None);
 
         await Assert.That(items).IsEmpty();

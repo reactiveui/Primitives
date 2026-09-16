@@ -139,17 +139,20 @@ public sealed class SwitchToSignal<T>(IObservableAsync<IObservableAsync<T>> sour
             Result? actualResult = null;
             lock (_gate)
             {
-                if (generation == _innerGeneration)
+                // A superseded inner was torn down by the switch, so its outcome is no longer the sequence's.
+                if (generation != _innerGeneration)
                 {
-                    _currentInnerSubscription = null;
-                    _innerActive = false;
+                    return default;
                 }
+
+                _currentInnerSubscription = null;
+                _innerActive = false;
 
                 if (result.IsFailure)
                 {
                     actualResult = result;
                 }
-                else if (_outerCompleted && !_innerActive)
+                else if (_outerCompleted)
                 {
                     actualResult = Result.Success;
                 }

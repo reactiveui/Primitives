@@ -117,7 +117,7 @@ public partial class PartitionObservableTests
         await Assert.That(oddResults).IsCollectionEqualTo([Three]);
     }
 
-    /// <summary>Verifies that the partition can be resubscribed after all sides drop — the source subscription is re-established.</summary>
+    /// <summary>Verifies that the partition can be resubscribed after all sides drop - the source subscription is re-established.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenPartitionResubscribedAfterAllSidesDropped_ThenSourceRebound()
@@ -132,7 +132,7 @@ public partial class PartitionObservableTests
         await Assert.That(secondResults).IsCollectionEqualTo([Two]);
     }
 
-    /// <summary>Verifies the mid-array remove path on the false-side observer set — subscribes
+    /// <summary>Verifies the mid-array remove path on the false-side observer set - subscribes
     /// three odd-side observers, disposes the middle one, and confirms the remaining two still
     /// see odd values.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>

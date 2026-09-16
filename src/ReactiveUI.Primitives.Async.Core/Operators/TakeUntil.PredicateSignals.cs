@@ -82,7 +82,7 @@ public static partial class SignalAsyncExtensions
             /// <inheritdoc/>
             ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
                 parent._predicate(value)
-                    ? ((IWitnessAsync<T>)this).OnCompletedAsyncCore(Result.Success)
+                    ? SendThenCompleteAsync(value, cancellationToken)
                     : observer.OnNextAsync(value, cancellationToken);
 
             /// <inheritdoc/>
@@ -93,6 +93,16 @@ public static partial class SignalAsyncExtensions
             /// <inheritdoc/>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) => observer.OnCompletedAsync(result);
+
+            /// <summary>Forwards the element that matched, then completes.</summary>
+            /// <param name="value">The matching element.</param>
+            /// <param name="cancellationToken">A token to cancel the forwarding.</param>
+            /// <returns>The forwarding operation.</returns>
+            private async ValueTask SendThenCompleteAsync(T value, CancellationToken cancellationToken)
+            {
+                await observer.OnNextAsync(value, cancellationToken).ConfigureAwait(false);
+                await observer.OnCompletedAsync(Result.Success).ConfigureAwait(false);
+            }
         }
     }
 
@@ -172,13 +182,13 @@ public static partial class SignalAsyncExtensions
             /// <inheritdoc/>
             async ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken)
             {
-                if (await parent._asyncPredicate(value, cancellationToken).ConfigureAwait(false))
-                {
-                    await ((IWitnessAsync<T>)this).OnCompletedAsyncCore(Result.Success).ConfigureAwait(false);
-                    return;
-                }
-
+                var matched = await parent._asyncPredicate(value, cancellationToken).ConfigureAwait(false);
                 await observer.OnNextAsync(value, cancellationToken).ConfigureAwait(false);
+
+                if (matched)
+                {
+                    await observer.OnCompletedAsync(Result.Success).ConfigureAwait(false);
+                }
             }
 
             /// <inheritdoc/>

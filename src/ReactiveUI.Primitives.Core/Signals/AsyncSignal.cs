@@ -228,7 +228,7 @@ public sealed class AsyncSignal<T> : IAwaitSignal<T>
 
         if (!_hasValue)
         {
-            throw new InvalidOperationException("NO_ELEMENTS");
+            throw new InvalidOperationException("The source completed without producing a value.");
         }
 
         return _lastValue!;

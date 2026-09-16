@@ -14,7 +14,7 @@ public class UsingFuncObservableTests
     /// <summary>Sentinel result emitted by the happy-path test.</summary>
     private const int Sentinel = 42;
 
-    /// <summary>Verifies the happy path — the function's result is emitted, completion fires,
+    /// <summary>Verifies the happy path - the function's result is emitted, completion fires,
     /// and the resource is disposed exactly once.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -32,7 +32,7 @@ public class UsingFuncObservableTests
         await Assert.That(resource.DisposeCount).IsEqualTo(1);
     }
 
-    /// <summary>Verifies the secondary-dispose-failure swallow branch — when the function
+    /// <summary>Verifies the secondary-dispose-failure swallow branch - when the function
     /// throws AND the resource also throws on Dispose, the primary function exception is
     /// forwarded and the dispose failure is silently swallowed.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>

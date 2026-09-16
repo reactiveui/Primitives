@@ -41,7 +41,7 @@ public sealed class SwitchIfEmptyObservable<T>(
         private readonly Lock _gate = new();
 
         /// <summary>The active subscription, replaced by the fallback's when the source turns out empty.</summary>
-        private readonly MutableDisposable _subscription = new();
+        private readonly SwapDisposable _subscription = new();
 
         /// <summary>Serializes downstream deliveries from the source.</summary>
         private SerializedDelivery<T> _delivery = new();

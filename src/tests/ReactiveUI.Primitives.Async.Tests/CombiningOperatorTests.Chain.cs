@@ -239,7 +239,7 @@ public partial class CombiningOperatorTests
         await Assert.That(completionResult).IsNotNull();
         await Assert.That(completionResult!.Value.IsFailure).IsTrue();
 
-        // Now dispose – this will call FinishAsync(null) which will hit the already-disposed path
+        // Now dispose - this will call FinishAsync(null) which will hit the already-disposed path
         await sub.DisposeAsync();
         await outer.DisposeAsync();
     }

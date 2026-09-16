@@ -505,7 +505,7 @@ public partial class CombiningOperatorTests
             null,
             static result => default);
 
-        // Complete source2 with failure → sets _done = true
+        // Complete source2 with failure -> sets _done = true
         await src2.Complete(Result.Failure(new InvalidOperationException("done")));
 
         // Now complete source1 - OnCompleted1Async checks _done and returns early
@@ -559,7 +559,7 @@ public partial class CombiningOperatorTests
         await Assert.That(sub).IsNotNull();
     }
 
-    /// <summary>Exercises the <c>Zip</c> subscription's idempotent <c>DisposeAsync</c> path —
+    /// <summary>Exercises the <c>Zip</c> subscription's idempotent <c>DisposeAsync</c> path -
     /// a second dispose hits the <c>DisposalHelper.TrySetDisposed</c> already-set short-circuit.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]

@@ -211,7 +211,7 @@ public partial class CombiningOperatorTests
         }
         catch (OperationCanceledException)
         {
-            // Expected – the linked CTS may be cancelled
+            // Expected - the linked CTS may be cancelled
         }
 
         await Assert.That(items).Contains(1);
@@ -281,10 +281,10 @@ public partial class CombiningOperatorTests
                 static (_, _) => default,
                 null);
 
-        // First source fails – triggers FinishAsync and disposes subscription
+        // First source fails - triggers FinishAsync and disposes subscription
         await directSource1.Complete(Result.Failure(new InvalidOperationException(FirstLiteral)));
 
-        // Second source fails – already disposed, error goes to UnhandledExceptionHandler
+        // Second source fails - already disposed, error goes to UnhandledExceptionHandler
         await directSource2.Complete(Result.Failure(new InvalidOperationException(SecondLiteral)));
 
         await Assert.That(unhandledException is not null).IsTrue();

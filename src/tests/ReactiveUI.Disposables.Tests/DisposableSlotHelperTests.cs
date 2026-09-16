@@ -24,7 +24,7 @@ public class DisposableSlotHelperTests
         await Assert.That(slot).IsNull();
     }
 
-    /// <summary>Verifies the steady-state assign — slot transitions to the new value without disposing the previous.</summary>
+    /// <summary>Verifies the steady-state assign - slot transitions to the new value without disposing the previous.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenAssignWithoutDisposingPreviousOpen_ThenStoresAndLeavesPreviousAlone()

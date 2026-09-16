@@ -45,7 +45,7 @@ public partial class CombiningOperatorTests
         }
         catch (OperationCanceledException)
         {
-            // Expected – the inner observer may throw on cancellation
+            // Expected - the inner observer may throw on cancellation
         }
 
         await Assert.That(items).Contains(1);
@@ -198,7 +198,7 @@ public partial class CombiningOperatorTests
         // Dispose the merge subscription
         await sub.DisposeAsync();
 
-        // Emit after dispose – DirectSource still holds the inner observer reference,
+        // Emit after dispose - DirectSource still holds the inner observer reference,
         // so this reaches OnNextAsync which should return early at the pre-gate check.
         try
         {
@@ -206,7 +206,7 @@ public partial class CombiningOperatorTests
         }
         catch (OperationCanceledException)
         {
-            // Expected – the linked CTS may be cancelled
+            // Expected - the linked CTS may be cancelled
         }
 
         await Assert.That(items).Contains(1);

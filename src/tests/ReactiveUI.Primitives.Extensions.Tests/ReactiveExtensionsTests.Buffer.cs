@@ -42,7 +42,7 @@ public partial class ReactiveExtensionsTests
         }
     }
 
-    /// <summary>Exercises <c>BufferUntilObservable</c>'s <c>OnError</c> forwarding —
+    /// <summary>Exercises <c>BufferUntilObservable</c>'s <c>OnError</c> forwarding -
     /// the observer hands the source's error straight to the downstream subscriber.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]

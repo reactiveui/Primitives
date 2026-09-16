@@ -1684,7 +1684,7 @@ These build a stream from scratch. You call them on `SignalAsync`, not on an exi
 | `SignalAsync.After(dueTime)` | Another name for `Timer`. | - |
 | `SignalAsync.Every(period)` | Ticks forever, starting one period from now. | - |
 | `SignalAsync.Pulse(period)` | Another name for `Every`. | - |
-| `SignalAsync.Interval(period)` | Emits a counter that starts at 1 and rises on every tick. | - |
+| `SignalAsync.Interval(period)` | Another name for `Every`. | - |
 | `SignalAsync.Blend(sources)` | Merges several streams into one. | - |
 | `SignalAsync.Chain(sources)` | Runs streams in order, each starting when the one before it ends. | - |
 | `SignalAsync.Start(function)` | Runs a plain function and emits what it returns. | - |
@@ -1785,8 +1785,8 @@ These drop values you do not want, or stop the stream early.
 | `WhereFalse()` | Keeps only `false` values. | - |
 | `Distinct()` | Emits each value only the first time it ever appears. | - |
 | `DistinctBy(keySelector)` | Drops a value when its key has appeared before. | - |
-| `Unique()` | Another name for `Distinct`. | - |
-| `UniqueBy(keySelector)` | Another name for `DistinctBy`. | - |
+| `Unique()` | Another name for `DistinctUntilChanged`. | - |
+| `UniqueBy(keySelector)` | Another name for `DistinctUntilChangedBy`. | - |
 | `DistinctUntilChanged()` | Drops a value when it equals the one right before it. | - |
 | `DistinctUntilChangedBy(keySelector)` | Drops a value when its key equals the key right before it. | - |
 | `Take(count)` | Emits at most that many values, then completes. | - |
@@ -1917,8 +1917,8 @@ A stream can fail in two ways. A terminal failure ends it. A resumable error is 
 | `CatchAndIgnoreErrorResume(handler)` | Recovers from a failure and sends resumable errors to the global handler instead of downstream. | - |
 | `CatchIgnore()` | Swallows a failure and completes normally, with an overload that matches one exception type. | - |
 | `CatchAndReturn(fallback)` | Emits one fallback value and completes when the source fails. | - |
-| `Retry()` | Subscribes again every time the source fails, forever or up to a count you set. | - |
-| `Reattempt(retryCount)` | Another name for `Retry(retryCount)`. | - |
+| `Retry()`, `Retry(retryCount)` | Subscribes again every time the source fails, forever or for `retryCount` runs in total. | - |
+| `Reattempt(retryCount)` | Subscribes again after a failure, up to `retryCount` extra times on top of the first run. | - |
 | `OnErrorResumeAsFailure()` | Turns a resumable error into a terminal failure. | - |
 | `LogErrors(logger)` | Reports errors to your logger as they pass, and changes nothing. | - |
 
@@ -1932,7 +1932,7 @@ var values = await safe.ToListAsync();
 ```csharp
 var load = SignalAsync.FromAsync(ct => LoadAsync(ct));
 var value = await load.Retry(3).FirstAsync();
-// LoadAsync runs again after each failure, up to three extra times
+// LoadAsync runs three times in total, stopping at the first success
 ```
 
 ### Terminal operations

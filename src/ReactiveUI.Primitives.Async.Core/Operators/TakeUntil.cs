@@ -121,7 +121,7 @@ public static partial class SignalAsyncExtensions
 
         /// <summary>
         /// Returns an observable sequence that emits items from the source until <paramref name="task"/> completes or
-        /// <paramref name="cancellationToken"/> is cancelled — whichever comes first.
+        /// <paramref name="cancellationToken"/> is cancelled - whichever comes first.
         /// </summary>
         /// <param name="task">The task whose completion terminates the result.</param>
         /// <param name="cancellationToken">A cancellation token that also terminates the result when cancelled.</param>
@@ -140,7 +140,7 @@ public static partial class SignalAsyncExtensions
 
         /// <summary>
         /// Returns an observable sequence that emits items from the source until <paramref name="task"/> completes or
-        /// <paramref name="cancellationToken"/> is cancelled — whichever comes first.
+        /// <paramref name="cancellationToken"/> is cancelled - whichever comes first.
         /// </summary>
         /// <param name="task">The task whose completion terminates the result.</param>
         /// <param name="options">Options controlling the take-until behavior, or null for defaults.</param>
@@ -171,9 +171,9 @@ public static partial class SignalAsyncExtensions
             new CancellationStopSignal<T>(source, cancellationToken);
 
         /// <summary>Returns a sequence that emits elements from the source until the specified predicate returns true for an element.</summary>
-        /// <param name="predicate">A function to test each element for a condition. The sequence will stop emitting elements when this function
-        /// returns true.</param>
-        /// <returns>An observable sequence that contains the elements from the source sequence up to, but not including, the
+        /// <param name="predicate">A function to test each element for a condition. The sequence stops after the first
+        /// element for which this function returns true.</param>
+        /// <returns>An observable sequence that contains the elements from the source sequence up to and including the
         /// first element for which the predicate returns true.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="predicate"/> is null.</exception>
         public IObservableAsync<T> TakeUntil(Func<T, bool> predicate)
@@ -185,7 +185,7 @@ public static partial class SignalAsyncExtensions
 
         /// <summary>
         /// Returns an observable sequence that emits items from the source until <paramref name="predicate"/> returns
-        /// <see langword="true"/> for an element or <paramref name="cancellationToken"/> is cancelled — whichever
+        /// <see langword="true"/> for an element or <paramref name="cancellationToken"/> is cancelled - whichever
         /// comes first.
         /// </summary>
         /// <param name="predicate">A predicate evaluated for each element; first true terminates the sequence.</param>
@@ -203,8 +203,8 @@ public static partial class SignalAsyncExtensions
 
         /// <summary>Returns an observable sequence that emits elements from the source sequence until the specified asynchronous predicate returns true for an element.</summary>
         /// <param name="asyncPredicate">A function that evaluates each element and its associated cancellation token asynchronously. The sequence
-        /// stops emitting elements when this function returns true.</param>
-        /// <returns>An observable sequence that contains the elements from the source sequence up to, but not including, the
+        /// stops after the first element for which this function returns true.</param>
+        /// <returns>An observable sequence that contains the elements from the source sequence up to and including the
         /// first element for which the asynchronous predicate returns true.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="asyncPredicate"/> is null.</exception>
         public IObservableAsync<T> TakeUntil(Func<T, CancellationToken, ValueTask<bool>> asyncPredicate)
@@ -216,7 +216,7 @@ public static partial class SignalAsyncExtensions
 
         /// <summary>
         /// Returns an observable sequence that emits items from the source until <paramref name="asyncPredicate"/>
-        /// returns <see langword="true"/> for an element or <paramref name="cancellationToken"/> is cancelled —
+        /// returns <see langword="true"/> for an element or <paramref name="cancellationToken"/> is cancelled -
         /// whichever comes first.
         /// </summary>
         /// <param name="asyncPredicate">An async predicate evaluated for each element; first true terminates the sequence.</param>

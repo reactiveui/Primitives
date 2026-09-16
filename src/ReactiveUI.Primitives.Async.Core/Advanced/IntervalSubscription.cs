@@ -47,7 +47,7 @@ public sealed class IntervalSubscription : IAsyncDisposable, ITaskSignalJob<long
         IObserverAsync<long> observer,
         CancellationToken cancellationToken)
     {
-        long tick = 1;
+        long tick = 0;
         while (!cancellationToken.IsCancellationRequested)
         {
             if (TimeProvider is null || TimeProvider == TimeProvider.System)

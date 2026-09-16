@@ -11,19 +11,42 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <summary>Queues asynchronous projections and emits results in source order.</summary>
 /// <typeparam name = "TSource">The type of elements in the source sequence.</typeparam>
 /// <typeparam name = "TResult">The type of the result of the asynchronous operation.</typeparam>
-/// <param name = "source">The source observable.</param>
-/// <param name = "selector">The asynchronous projection function.</param>
 /// <remarks>Selector failure terminates immediately; source completion waits for queued projections to finish.</remarks>
-public sealed class SelectAsyncSequentialObservable<TSource, TResult>(IObservable<TSource> source, Func<TSource, Task<TResult>> selector) : IObservable<TResult>
+[System.Diagnostics.DebuggerDisplay("SelectAsyncSequential<{typeof(TSource).Name,nq},{typeof(TResult).Name,nq}>")]
+public sealed class SelectAsyncSequentialObservable<TSource, TResult> : IObservable<TResult>
 {
+    /// <summary>The source observable.</summary>
+    private readonly IObservable<TSource> _source;
+
+    /// <summary>The asynchronous projection, given a token that fires when the subscription is disposed.</summary>
+    private readonly Func<TSource, CancellationToken, Task<TResult>>? _selector;
+
+    /// <summary>Initializes a new instance of the <see cref="SelectAsyncSequentialObservable{TSource, TResult}"/> class.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="selector">The asynchronous projection function.</param>
+    public SelectAsyncSequentialObservable(IObservable<TSource> source, Func<TSource, Task<TResult>> selector)
+    {
+        _source = source;
+        _selector = selector is null ? null : (value, _) => selector(value);
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="SelectAsyncSequentialObservable{TSource, TResult}"/> class.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="selector">The asynchronous projection function. Its token fires when the subscription is disposed.</param>
+    public SelectAsyncSequentialObservable(IObservable<TSource> source, Func<TSource, CancellationToken, Task<TResult>> selector)
+    {
+        _source = source;
+        _selector = selector;
+    }
+
     /// <inheritdoc/>
     public IDisposable Subscribe(IObserver<TResult> observer)
     {
-        InvalidOperationExceptionHelper.ThrowIfNull(source);
-        InvalidOperationExceptionHelper.ThrowIfNull(selector);
+        InvalidOperationExceptionHelper.ThrowIfNull(_source);
+        InvalidOperationExceptionHelper.ThrowIfNull(_selector);
         ArgumentExceptionHelper.ThrowIfNull(observer);
-        SelectAsyncSequentialSink sink = new(observer, selector);
-        var sub = source.Subscribe(sink);
+        SelectAsyncSequentialSink sink = new(observer, _selector);
+        var sub = _source.Subscribe(sink);
         return new DisposableBag(sub, sink);
     }
 
@@ -31,10 +54,13 @@ public sealed class SelectAsyncSequentialObservable<TSource, TResult>(IObservabl
     /// <param name = "downstream">The downstream observer.</param>
     /// <param name = "selector">The asynchronous operation.</param>
     /// <remarks>The gate only guards the queue and the flags; the selector and the observer run without it held.</remarks>
-    internal sealed class SelectAsyncSequentialSink(IObserver<TResult> downstream, Func<TSource, Task<TResult>> selector) : IObserver<TSource>, IDisposable
+    internal sealed class SelectAsyncSequentialSink(IObserver<TResult> downstream, Func<TSource, CancellationToken, Task<TResult>> selector) : IObserver<TSource>, IDisposable
     {
         /// <summary>Guards the queue and the flags; never held while the selector or the observer runs.</summary>
         private readonly Lock _gate = new();
+
+        /// <summary>Cancelled when the subscription is disposed, so an in-flight projection can stop.</summary>
+        private readonly CancellationTokenSource _cancellation = new();
 
         /// <summary>Queue of values to process.</summary>
         private readonly Queue<TSource> _queue = new();
@@ -99,6 +125,9 @@ public sealed class SelectAsyncSequentialObservable<TSource, TResult>(IObservabl
             {
                 _disposed = true;
             }
+
+            _cancellation.Cancel();
+            _cancellation.Dispose();
         }
 
         /// <summary>Queues the value and starts the drain loop when no operation is running.</summary>
@@ -133,7 +162,7 @@ public sealed class SelectAsyncSequentialObservable<TSource, TResult>(IObservabl
             {
                 try
                 {
-                    var result = await selector(value).ConfigureAwait(false);
+                    var result = await selector(value, _cancellation.Token).ConfigureAwait(false);
                     lock (_gate)
                     {
                         if (!_disposed)

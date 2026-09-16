@@ -70,7 +70,7 @@ public static partial class SignalAsyncExtensions
             Func<T, bool> predicate,
             CancellationToken subscribeToken) : IWitnessAsync<T>
         {
-            /// <summary>Latches to <see langword="false"/> once the predicate fails — every subsequent value forwards.</summary>
+            /// <summary>Latches to <see langword="false"/> once the predicate fails - every subsequent value forwards.</summary>
             private bool _skipping = true;
 
             /// <summary>The notification gate, cancellation link and disposal state.</summary>

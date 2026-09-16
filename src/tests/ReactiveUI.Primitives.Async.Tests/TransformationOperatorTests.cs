@@ -793,7 +793,7 @@ public partial class TransformationOperatorTests
         await Assert.That(disposed.Value).IsTrue();
     }
 
-    /// <summary>Verifies the async-accumulator <c>Scan</c> overload's sync-completed fast path —
+    /// <summary>Verifies the async-accumulator <c>Scan</c> overload's sync-completed fast path -
     /// returning a synchronously-completed <see cref = "ValueTask{TResult}"/> from the accumulator
     /// takes the inline <c>pending.Result</c> branch.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>

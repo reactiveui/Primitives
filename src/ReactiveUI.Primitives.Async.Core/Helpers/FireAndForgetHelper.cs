@@ -7,7 +7,7 @@ using System.Diagnostics.CodeAnalysis;
 namespace ReactiveUI.Primitives.Async.Helpers;
 
 /// <summary>
-/// Runs asynchronous work from a synchronous callback — a cancellation-token registration, a signal handler — where
+/// Runs asynchronous work from a synchronous callback - a cancellation-token registration, a signal handler - where
 /// there is no caller to observe a task, reporting failures to <see cref="UnhandledExceptionHandler"/>.
 /// </summary>
 public static class FireAndForgetHelper

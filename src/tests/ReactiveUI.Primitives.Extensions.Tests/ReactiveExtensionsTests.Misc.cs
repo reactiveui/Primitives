@@ -672,7 +672,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(completed).IsTrue();
     }
 
-    /// <summary>Exercises <c>CatchReturn</c>'s <c>OnCompleted</c> forwarder — when the source
+    /// <summary>Exercises <c>CatchReturn</c>'s <c>OnCompleted</c> forwarder - when the source
     /// completes normally without erroring, completion passes through to the downstream.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -689,7 +689,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(completed).IsTrue();
     }
 
-    /// <summary>Exercises <c>CatchIgnore&lt;T,TException&gt;</c>'s <c>OnCompleted</c> forwarder —
+    /// <summary>Exercises <c>CatchIgnore&lt;T,TException&gt;</c>'s <c>OnCompleted</c> forwarder -
     /// when the source completes normally, the observer passes completion straight through.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
@@ -707,7 +707,7 @@ public partial class ReactiveExtensionsTests
     }
 
     /// <summary>Exercises the empty-on-error <c>CatchIgnore&lt;T&gt;</c> overload's <c>OnCompleted</c>
-    /// forwarder — when the source completes normally, the observer forwards completion.</summary>
+    /// forwarder - when the source completes normally, the observer forwards completion.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenCatchIgnoreEmptyOverloadSourceCompletesNormally_ThenForwardsCompletion()
@@ -722,7 +722,7 @@ public partial class ReactiveExtensionsTests
     }
 
     /// <summary>Exercises <c>ToPropertyObservable</c>'s <c>as MemberExpression ?? throw</c> branch
-    /// — passing an expression whose body is not a member access raises ArgumentException.</summary>
+    /// - passing an expression whose body is not a member access raises ArgumentException.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenToPropertyObservableNonMemberExpression_ThenThrowsArgumentException()
@@ -733,7 +733,7 @@ public partial class ReactiveExtensionsTests
         await Assert.That(ex).IsNotNull();
     }
 
-    /// <summary>Exercises <c>AsSignalObservable</c>'s <c>OnError</c> forwarder — the synthesized
+    /// <summary>Exercises <c>AsSignalObservable</c>'s <c>OnError</c> forwarder - the synthesized
     /// RxVoid-stream propagates the source's error verbatim.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]

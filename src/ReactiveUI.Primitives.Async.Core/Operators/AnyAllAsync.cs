@@ -45,6 +45,15 @@ public static partial class SignalAsyncExtensions
         public ValueTask<bool> AnyAsync(CancellationToken cancellationToken) =>
             source.AnyAsync(null, cancellationToken);
 
+        /// <summary>Asynchronously determines whether any element in the sequence satisfies the specified predicate.</summary>
+        /// <param name="predicate">A function to test each element for a condition.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains <see langword="true"/> if any
+        /// element of the sequence passes the test in the specified predicate; otherwise, <see langword="false"/>.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="predicate"/> is <see langword="null"/>.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask<bool> AnyAsync(Func<T, bool> predicate) =>
+            source.AnyAsync(predicate, CancellationToken.None);
+
         /// <summary>Asynchronously determines whether all elements in the sequence satisfy the specified predicate.</summary>
         /// <param name="predicate">A function to test each element for a condition. The method evaluates this predicate for each element in the
         /// sequence.</param>

@@ -27,7 +27,7 @@ public sealed class RetryForeverObservable<T>(IObservable<T> source) : IObservab
     private sealed class RetrySink(IObservable<T> source, IObserver<T> downstream) : IObserver<T>, IDisposable
     {
         /// <summary>Holds the current inner subscription; swapped on each resubscribe.</summary>
-        private readonly MutableDisposable _inner = new();
+        private readonly SwapDisposable _inner = new();
 
         /// <summary>Latches to <c>1</c> on the first dispose so teardown is idempotent.</summary>
         private int _disposed;

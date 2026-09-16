@@ -775,7 +775,7 @@ public partial class ReactiveExtensionsTests
         });
         List<int> results = [];
 
-        // When — backoffFactor 500 with initialDelay 1ms yields huge computed delays,
+        // When - backoffFactor 500 with initialDelay 1ms yields huge computed delays,
         // all of which must be capped to maxDelay 5ms.
         using var sub = source.RetryWithBackoff(
             MaxRetries,

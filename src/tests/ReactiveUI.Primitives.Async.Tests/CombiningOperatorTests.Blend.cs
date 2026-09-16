@@ -742,7 +742,7 @@ public partial class CombiningOperatorTests
 
     /// <summary>Verifies the <see cref = "SignalAsyncExtensions.BlendCoordinator{T}.RelayNextIfActiveAsync"/>
     /// inside-gate after-dispose guard by subscribing, disposing the subscription, then calling
-    /// the locked-helper directly — exercising the defensive branch that is otherwise only
+    /// the locked-helper directly - exercising the defensive branch that is otherwise only
     /// reachable through a real concurrency race between dispose and gate acquisition.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]

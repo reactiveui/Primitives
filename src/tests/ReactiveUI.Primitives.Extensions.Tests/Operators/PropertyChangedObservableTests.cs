@@ -96,7 +96,7 @@ public class PropertyChangedObservableTests
         await Assert.That(caught).IsTypeOf<InvalidOperationException>();
     }
 
-    /// <summary>Exercises the <c>OnPropertyChanged</c> <c>_disposed</c> guard — fires a
+    /// <summary>Exercises the <c>OnPropertyChanged</c> <c>_disposed</c> guard - fires a
     /// PropertyChanged event for the subscribed property after the subscription has been
     /// disposed but using an owner whose remove-handler is a no-op so the event delivery
     /// reaches the still-bound handler, which then sees <c>_disposed != 0</c> and returns.</summary>

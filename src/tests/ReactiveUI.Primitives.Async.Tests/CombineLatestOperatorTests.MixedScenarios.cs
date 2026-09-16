@@ -196,7 +196,7 @@ public partial class CombineLatestOperatorTests
         await s2.OnNextAsync(Step1, CancellationToken.None);
         var countBefore = results.Count;
 
-        // Dispose, then emit — the OnNextCombined path should hit _disposed == 1 and return.
+        // Dispose, then emit - the OnNextCombined path should hit _disposed == 1 and return.
         await sub.DisposeAsync();
 
         await s1.OnNextAsync(SentinelValue, CancellationToken.None);

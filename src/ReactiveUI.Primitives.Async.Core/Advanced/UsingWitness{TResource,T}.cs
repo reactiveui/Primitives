@@ -18,6 +18,9 @@ public sealed class UsingWitness<TResource, T> : IWitnessAsync<T>
     /// <summary>The notification gate, cancellation link and disposal state.</summary>
     private WitnessAsyncState _witness;
 
+    /// <summary>Claims the resource for disposal, so only the first caller releases it (0 = held, 1 = released).</summary>
+    private int _resourceReleased;
+
     /// <summary>Initializes a new instance of the <see cref="UsingWitness{TResource,T}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="resource">The resource to dispose.</param>
@@ -68,13 +71,16 @@ public sealed class UsingWitness<TResource, T> : IWitnessAsync<T>
     public async ValueTask DisposeAsync()
     {
         ExceptionDispatchInfo? failure = null;
-        try
+        if (Interlocked.Exchange(ref _resourceReleased, 1) == 0)
         {
-            await Resource.DisposeAsync().ConfigureAwait(false);
-        }
-        catch (Exception e)
-        {
-            failure = ExceptionDispatchInfo.Capture(e);
+            try
+            {
+                await Resource.DisposeAsync().ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                failure = ExceptionDispatchInfo.Capture(e);
+            }
         }
 
         await WitnessAsync.DisposeStateAsync(this).ConfigureAwait(false);

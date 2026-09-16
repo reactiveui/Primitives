@@ -61,7 +61,7 @@ public class SelectAsyncSequentialObservableTests
         TaskCompletionSource<int> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
         List<int> results = [];
         var completed = false;
-        SelectAsyncSequentialObservable<int, int>.SelectAsyncSequentialSink sink = new(Observer.Create<int>(results.Add, () => completed = true), _ => gate.Task);
+        SelectAsyncSequentialObservable<int, int>.SelectAsyncSequentialSink sink = new(Observer.Create<int>(results.Add, () => completed = true), (_, _) => gate.Task);
         var processing = sink.OnNextAsync(TriggerValue);
         sink.Dispose();
         gate.SetResult(TriggerValue);
@@ -135,7 +135,7 @@ public class SelectAsyncSequentialObservableTests
         List<int> results = [];
         SelectAsyncSequentialObservable<int, int>.SelectAsyncSequentialSink sink = new(
             Observer.Create<int>(results.Add),
-            value => value == First ? gate.Task : Task.FromResult(value));
+            (value, _) => value == First ? gate.Task : Task.FromResult(value));
 
         var processing = sink.OnNextAsync(First);
         var queued = sink.OnNextAsync(Second);

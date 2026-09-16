@@ -121,7 +121,7 @@ public partial class ReactiveExtensionsTests
 
     /// <summary>
     /// Verifies that RunAll on an empty list still emits the terminal <see cref="RxVoid.Default"/> and
-    /// completes — the empty case is vacuously "all sources completed".
+    /// completes - the empty case is vacuously "all sources completed".
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]

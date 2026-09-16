@@ -7,7 +7,7 @@ using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
 
-/// <summary>TakeUntil operator tests — CompletionSignalDelegate overload and option behavior.</summary>
+/// <summary>TakeUntil operator tests - CompletionSignalDelegate overload and option behavior.</summary>
 [System.Diagnostics.DebuggerDisplay("TakeUntilOperatorTests")]
 public partial class TakeUntilOperatorTests
 {
@@ -165,7 +165,7 @@ public partial class TakeUntilOperatorTests
         var result = await SignalAsync.Range(1, SourceValueCount)
             .TakeUntil(static x => x > ThirdItem)
             .ToListAsync();
-        await Assert.That(result).IsCollectionEqualTo([1, SecondItem, ThirdItem]);
+        await Assert.That(result).IsCollectionEqualTo([1, SecondItem, ThirdItem, FourthItem]);
     }
 
     /// <summary>
@@ -341,7 +341,7 @@ public partial class TakeUntilOperatorTests
             await Task.Yield();
             return x > ThirdItem;
         }).ToListAsync();
-        await Assert.That(result).IsCollectionEqualTo([1, SecondItem, ThirdItem]);
+        await Assert.That(result).IsCollectionEqualTo([1, SecondItem, ThirdItem, FourthItem]);
     }
 
     /// <summary>Tests TakeUntil with Task overload stops emitting when task completes.</summary>
@@ -487,7 +487,7 @@ public partial class TakeUntilOperatorTests
     }
 
     /// <summary>Exercises the <c>TakeUntil(CompletionSignalDelegate, CancellationToken)</c>
-    /// overload — the no-options shortcut that forwards to the full overload with null options.</summary>
+    /// overload - the no-options shortcut that forwards to the full overload with null options.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
     public async Task WhenTakeUntilCompletionDelegateWithCancellationTokenOverload_ThenForwardsValues()
@@ -506,7 +506,7 @@ public partial class TakeUntilOperatorTests
     }
 
     /// <summary>Exercises the <c>cancellationToken.CanBeCanceled ? ... : ...</c> branch of the
-    /// full <c>TakeUntil</c> overload — supplying a cancellable token routes the result through
+    /// full <c>TakeUntil</c> overload - supplying a cancellable token routes the result through
     /// <c>inner.TakeUntil(cancellationToken)</c>, while <see cref = "CancellationToken.None"/>
     /// returns the inner observable unwrapped (already covered by other tests).</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>

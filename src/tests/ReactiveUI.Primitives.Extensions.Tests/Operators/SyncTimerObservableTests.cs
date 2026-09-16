@@ -6,7 +6,7 @@ using ReactiveUI.Primitives.Concurrency;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
-/// <summary>Tests for <c>SyncTimerObservable</c> — covers the mid-array remove path of the
+/// <summary>Tests for <c>SyncTimerObservable</c> - covers the mid-array remove path of the
 /// shared timer's observer set, the idempotent subscription dispose, and the empty-targets
 /// fast-path inside the tick callback.</summary>
 public class SyncTimerObservableTests
