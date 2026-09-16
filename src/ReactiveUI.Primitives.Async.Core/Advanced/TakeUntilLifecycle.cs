@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.ExceptionServices;
+
 namespace ReactiveUI.Primitives.Async.Advanced;
 
 /// <summary>Serializes TakeUntil notifications and links their lifetime to subscription cancellation.</summary>
@@ -92,19 +94,23 @@ public sealed class TakeUntilLifecycle<T> : IAsyncDisposable
     /// <returns>A ValueTask representing the asynchronous teardown.</returns>
     public async ValueTask DisposeAsync()
     {
+        ExceptionDispatchInfo? failure = null;
         try
         {
             await _cts.CancelAsync().ConfigureAwait(false);
         }
-        finally
+        catch (Exception e)
         {
-#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-            await _externalLinkRegistration.DisposeAsync().ConfigureAwait(false);
-#else
-            _externalLinkRegistration.Dispose();
-#endif
-            _cts.Dispose();
-            _gate.Dispose();
+            failure = ExceptionDispatchInfo.Capture(e);
         }
+
+#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+        await _externalLinkRegistration.DisposeAsync().ConfigureAwait(false);
+#else
+        _externalLinkRegistration.Dispose();
+#endif
+        _cts.Dispose();
+        _gate.Dispose();
+        failure?.Throw();
     }
 }

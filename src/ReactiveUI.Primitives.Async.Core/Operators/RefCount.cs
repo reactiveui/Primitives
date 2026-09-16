@@ -103,31 +103,55 @@ public static partial class SignalAsyncExtensions
         /// <summary>Witness wrapper that forwards all notifications and decrements the parent's reference count on disposal, disconnecting from the source when the count reaches zero.</summary>
         /// <param name="parent">The parent ref-count observable.</param>
         /// <param name="observer">The downstream witness to forward notifications to.</param>
-        internal sealed class RefCountWitness(RefCountSignal<T> parent, IObserverAsync<T> observer) : WitnessAsync<T>
+        [DebuggerDisplay("RefCountWitness: {_witness}")]
+        internal sealed class RefCountWitness(RefCountSignal<T> parent, IObserverAsync<T> observer) : IWitnessAsync<T>
         {
+            /// <summary>The notification gate, cancellation link and disposal state.</summary>
+            private WitnessAsyncState _witness;
+
+            /// <inheritdoc/>
+            ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
+                WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+                WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
             /// <summary>Forwards an element to the downstream witness.</summary>
             /// <param name="value">The element to forward.</param>
             /// <param name="cancellationToken">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
-            protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
                 observer.OnNextAsync(value, cancellationToken);
 
             /// <summary>Forwards a non-fatal error to the downstream witness.</summary>
             /// <param name="error">The error to forward.</param>
             /// <param name="cancellationToken">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
-            protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
                 observer.OnErrorResumeAsync(error, cancellationToken);
 
             /// <summary>Forwards completion to the downstream observer.</summary>
             /// <param name="result">The completion result.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
-            protected override ValueTask OnCompletedAsyncCore(Result result) => observer.OnCompletedAsync(result);
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) => observer.OnCompletedAsync(result);
 
             /// <summary>Decrements the parent's reference count and disconnects from the source when it reaches zero.</summary>
             /// <returns>A task representing the asynchronous disposal operation.</returns>
             [DebuggerStepThrough]
-            protected override async ValueTask DisposeAsyncCore()
+            public async ValueTask DisposeAsync()
             {
                 using (await parent._gate.EnterAsync().ConfigureAwait(false))
                 {
@@ -143,7 +167,7 @@ public static partial class SignalAsyncExtensions
                     }
                 }
 
-                await base.DisposeAsyncCore().ConfigureAwait(false);
+                await WitnessAsync.DisposeStateAsync(this).ConfigureAwait(false);
             }
         }
     }

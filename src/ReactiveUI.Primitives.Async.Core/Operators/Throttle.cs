@@ -2,6 +2,9 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides Throttle (debounce) extension methods for asynchronous observable sequences.</summary>
@@ -88,13 +91,46 @@ public static partial class SignalAsyncExtensions
         /// <param name="observer">The downstream observer to forward debounced elements to.</param>
         /// <param name="dueTime">The quiet period that must elapse before an element is forwarded.</param>
         /// <param name="timeProvider">The time provider used for scheduling the debounce timer.</param>
-        internal sealed class ThrottleWitness(IObserverAsync<T> observer, TimeSpan dueTime, TimeProvider timeProvider) : WitnessAsync<T>
+        [DebuggerDisplay("ThrottleWitness: {_witness}")]
+        internal sealed class ThrottleWitness(IObserverAsync<T> observer, TimeSpan dueTime, TimeProvider timeProvider) : IWitnessAsync<T>
         {
             /// <summary>The synchronization gate protecting shared throttle state.</summary>
             private readonly Lock _gate = new();
 
             /// <summary>A monotonically increasing identifier used to detect whether a newer element has superseded the current timer.</summary>
             private long _id;
+
+            /// <summary>The notification gate, cancellation link and disposal state.</summary>
+            private WitnessAsyncState _witness;
+
+            /// <inheritdoc/>
+            ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
+                WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+                WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+            /// <summary>Invalidates pending values before releasing the observer.</summary>
+            /// <returns>A completed task.</returns>
+            public ValueTask DisposeAsync()
+            {
+                lock (_gate)
+                {
+                    _id++;
+                }
+
+                return WitnessAsync.DisposeStateAsync(this);
+            }
 
             /// <summary>Starts a debounce delay with a fresh identifier.</summary>
             /// <param name="value">The value to forward if it remains current.</param>
@@ -142,7 +178,7 @@ public static partial class SignalAsyncExtensions
             /// <param name="value">The element to potentially forward after the debounce period.</param>
             /// <param name="cancellationToken">A token to cancel the operation.</param>
             /// <returns>A completed task; the actual forwarding happens asynchronously after the delay.</returns>
-            protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
+            ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken)
             {
                 _ = StartDelayAsync(value, cancellationToken);
                 return default;
@@ -152,7 +188,7 @@ public static partial class SignalAsyncExtensions
             /// <param name="error">The error to forward.</param>
             /// <param name="cancellationToken">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
-            protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken)
+            ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken)
             {
                 lock (_gate)
                 {
@@ -165,7 +201,7 @@ public static partial class SignalAsyncExtensions
             /// <summary>Marks any in-flight delay as superseded and forwards completion to the downstream observer.</summary>
             /// <param name="result">The completion result.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
-            protected override ValueTask OnCompletedAsyncCore(Result result)
+            ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result)
             {
                 lock (_gate)
                 {
@@ -173,18 +209,6 @@ public static partial class SignalAsyncExtensions
                 }
 
                 return observer.OnCompletedAsync(result);
-            }
-
-            /// <summary>Invalidates pending values before releasing the observer.</summary>
-            /// <returns>A completed task.</returns>
-            protected override ValueTask DisposeAsyncCore()
-            {
-                lock (_gate)
-                {
-                    _id++;
-                }
-
-                return base.DisposeAsyncCore();
             }
         }
     }

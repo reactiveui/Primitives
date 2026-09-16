@@ -114,4 +114,45 @@ public partial class SignalFactoriesTests
         await Assert.That(source.HasObservers).IsFalse();
         await Assert.That(static () => Signal.Expire<int>(null!, ShortExpiry)).ThrowsExactly<ArgumentNullException>();
     }
+
+    /// <summary>The expiry factory falls back to the thread-pool sequencer when given a null scheduler.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Expire_NullScheduler_CreatesTimeoutSignal()
+    {
+        using Signal<int> source = new();
+
+        await Assert.That(Signal.Expire(source, ShortExpiry, null)).IsTypeOf<ExpireSignal<int>>();
+    }
+
+    /// <summary>The empty and failing factories complete immediately on the immediate sequencer and schedule otherwise.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task NoneAndFail_ImmediateAndScheduledSequencers_Terminate()
+    {
+        InvalidOperationException error = new("fail");
+        RecordingWitness<int> noneImmediate = new();
+        RecordingWitness<int> failImmediate = new();
+
+        using var noneSubscription = Signal.None(Sequencer.Immediate, 0).Subscribe(noneImmediate);
+        using var failSubscription = Signal.Fail(error, Sequencer.Immediate, 0).Subscribe(failImmediate);
+
+        await Assert.That(noneImmediate.Completed).IsEqualTo(1);
+        await Assert.That(failImmediate.Errors).HasSingleItem();
+        await Assert.That(Signal.None(ThreadPoolSequencer.Instance, 0)).IsNotNull();
+        await Assert.That(Signal.Fail(error, ThreadPoolSequencer.Instance, 0)).IsNotNull();
+    }
+
+    /// <summary>An empty range completes without emitting a value.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Range_ZeroCount_CompletesWithoutValues()
+    {
+        RecordingWitness<int> observer = new();
+
+        using var subscription = Signal.Range(1, 0).Subscribe(observer);
+
+        await Assert.That(observer.Values).IsEmpty();
+        await Assert.That(observer.Completed).IsEqualTo(1);
+    }
 }

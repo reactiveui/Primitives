@@ -25,7 +25,7 @@ public sealed class AsyncSignal<T> : IAwaitSignal<T>
     /// <summary>The terminal error, when the signal faulted.</summary>
     private Exception? _lastError;
 
-    /// <summary>The dispatch target: the empty witness, a single observer, or a <see cref="ListWitness{T}"/> fan-out.</summary>
+    /// <summary>The dispatch target: the empty witness or a <see cref="ListWitness{T}"/> fan-out.</summary>
     private IObserver<T> _outObserver = EmptyWitness<T>.Instance;
 
     /// <summary>Gets a value indicating whether this instance is disposed.</summary>
@@ -167,10 +167,8 @@ public sealed class AsyncSignal<T> : IAwaitSignal<T>
                 }
                 else
                 {
-                    var current = _outObserver;
-                    _outObserver = current is EmptyWitness<T>
-                        ? new ListWitness<T>(new([observer]))
-                        : new ListWitness<T>(new([current, observer]));
+                    // Removal collapses the fan-out to the empty witness, never to a lone observer.
+                    _outObserver = new ListWitness<T>(new([observer]));
                 }
 
                 return new ObserverHandler<T>(this, observer);

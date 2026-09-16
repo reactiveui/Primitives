@@ -1,24 +1,15 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.Maui.Reactive.Tests")]
 namespace ReactiveUI.Primitives.Reactive.Concurrency;
 
-[System.Diagnostics.DebuggerDisplay("CoalescingDispatchScheduler: ReadyCount = {_readyCount}, DrainPosted = {_drainPosted}")]
-public abstract class CoalescingDispatchScheduler : System.Reactive.Concurrency.LocalScheduler
-{
-    protected CoalescingDispatchScheduler() { }
-    protected abstract bool Post(System.Action drain) { }
-    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    protected void RequestDrain() { }
-    public override System.IDisposable Schedule<TState>(TState state, System.Func<System.Reactive.Concurrency.IScheduler, TState, System.IDisposable> action) { }
-    public override System.IDisposable Schedule<TState>(TState state, System.TimeSpan dueTime, System.Func<System.Reactive.Concurrency.IScheduler, TState, System.IDisposable> action) { }
-    protected virtual System.IDisposable ScheduleOnDispatcher(System.Action work, System.TimeSpan dueTime) { }
-}
 [System.Diagnostics.DebuggerDisplay("MauiDispatcherSequencer: Dispatcher = {Dispatcher}")]
-public sealed class MauiDispatcherSequencer : ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler
+public sealed class MauiDispatcherSequencer : System.Reactive.Concurrency.LocalScheduler
 {
     public MauiDispatcherSequencer(Microsoft.Maui.Dispatching.IDispatcher dispatcher) { }
     public Microsoft.Maui.Dispatching.IDispatcher Dispatcher { get; }
-    protected override bool Post(System.Action drain) { }
-    protected override System.IDisposable ScheduleOnDispatcher(System.Action work, System.TimeSpan dueTime) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public override System.IDisposable Schedule<TState>(TState state, System.Func<System.Reactive.Concurrency.IScheduler, TState, System.IDisposable> action) { }
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public override System.IDisposable Schedule<TState>(TState state, System.TimeSpan dueTime, System.Func<System.Reactive.Concurrency.IScheduler, TState, System.IDisposable> action) { }
 }
 public static class MauiDispatcherSequencerExtensions
 {

@@ -2,20 +2,16 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Disposables;
 
 /// <summary>A disposable slot that accepts one assignment: a second assignment throws, and a value assigned after disposal is disposed immediately.</summary>
-[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public class SingleDisposable : IsDisposed
+[System.Diagnostics.DebuggerDisplay("SingleDisposable: IsDisposed = {IsDisposed}")]
+public sealed class SingleDisposable : IsDisposed
 {
-    /// <summary>Marker used once the slot has been disposed.</summary>
-    private static readonly IDisposable DisposedSentinel = new DisposedMarker();
-
-    /// <summary>Action invoked before disposal.</summary>
-    private readonly Action? _action;
-
-    /// <summary>Assigned disposable or the disposed marker.</summary>
-    private IDisposable? _disposable;
+    /// <summary>The slot state.</summary>
+    private AssignmentState _state;
 
     /// <summary>Initializes a new instance of the <see cref="SingleDisposable"/> class.</summary>
     public SingleDisposable()
@@ -24,7 +20,7 @@ public class SingleDisposable : IsDisposed
 
     /// <summary>Initializes a new instance of the <see cref="SingleDisposable"/> class.</summary>
     /// <param name="action">Action to invoke before the assigned disposable is disposed.</param>
-    public SingleDisposable(Action? action) => _action = action;
+    public SingleDisposable(Action? action) => _state = new(action);
 
     /// <summary>Initializes a new instance of the <see cref="SingleDisposable"/> class.</summary>
     /// <param name="disposable">The disposable.</param>
@@ -37,73 +33,19 @@ public class SingleDisposable : IsDisposed
     /// <param name="disposable">The disposable.</param>
     /// <param name="action">Action to invoke before the assigned disposable is disposed.</param>
     public SingleDisposable(IDisposable disposable, Action? action)
-        : this(action) => Create(disposable);
+        : this(action) => _state.Create(disposable);
 
     /// <summary>Gets a value indicating whether this instance is disposed.</summary>
-    public bool IsDisposed => ReferenceEquals(Volatile.Read(ref _disposable), DisposedSentinel);
-
-    /// <summary>Gets the debugger display text.</summary>
-    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
-    private string DebuggerDisplay => ToString() ?? string.Empty;
+    public bool IsDisposed => _state.IsDisposed;
 
     /// <summary>Assigns the disposable held by this slot.</summary>
     /// <param name="disposable">The disposable.</param>
-    /// <exception cref="ArgumentExceptionHelper"><paramref name="disposable"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="disposable"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException">The slot holds an earlier assignment.</exception>
-    public void Create(IDisposable disposable)
-    {
-        ArgumentExceptionHelper.ThrowIfNull(disposable);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Create(IDisposable disposable) => _state.Create(disposable);
 
-        var current = Interlocked.CompareExchange(ref _disposable, disposable, null);
-        if (current is null)
-        {
-            return;
-        }
-
-        if (ReferenceEquals(current, DisposedSentinel))
-        {
-            disposable.Dispose();
-            return;
-        }
-
-        throw new InvalidOperationException($"The {nameof(disposable)} slot has already been assigned.");
-    }
-
-    /// <summary>Disposes the assigned value and blocks further assignments; repeated calls have no further effect.</summary>
-    public void Dispose()
-    {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
-
-    /// <summary>Runs the constructor-supplied action and then disposes the assigned value, once.</summary>
-    /// <param name="disposing"><see langword="true"/> to dispose the assigned value; <see langword="false"/> to release nothing.</param>
-    protected virtual void Dispose(bool disposing)
-    {
-        if (!disposing)
-        {
-            return;
-        }
-
-        var disposable = Interlocked.Exchange(ref _disposable, DisposedSentinel);
-        if (disposable is null || ReferenceEquals(disposable, DisposedSentinel))
-        {
-            return;
-        }
-
-        _action?.Invoke();
-        disposable.Dispose();
-    }
-
-    /// <summary>Disposable marker for disposed slots.</summary>
-    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-    private sealed class DisposedMarker : IDisposable
-    {
-        /// <inheritdoc/>
-        public void Dispose()
-        {
-            // Disposing the terminal marker has no effect.
-        }
-    }
+    /// <summary>Runs the constructor-supplied action, then disposes the assigned value and blocks further assignments; repeated calls have no further effect.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Dispose() => _state.Dispose();
 }

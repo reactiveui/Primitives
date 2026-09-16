@@ -3,6 +3,12 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Extensions;
+#if REACTIVE_SHIM
+using ReactiveUI.Primitives.Reactive.Internal;
+#else
+using ReactiveUI.Primitives.Internal;
+#endif
 
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive;
@@ -88,7 +94,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
 
-            return new ZipCoordinator<TLeft, TRight, TResult>(observer, _selector).Run(_left, _right);
+            return new PairWitness<TLeft, TRight, TResult>(observer, _selector).Run(_left, _right);
         }
     }
 
@@ -144,25 +150,26 @@ public static partial class LinqExtensions
 
     /// <summary>Coordinates concurrent merging of inner sources for <c>Blend</c>.</summary>
     /// <typeparam name="T">The value type.</typeparam>
+    /// <remarks>
+    /// Deliveries are serialized by a <see cref="SerializedDelivery{T}"/>, so no lock is held while the downstream observer
+    /// runs; values that arrive while another thread is delivering are delivered in arrival order.
+    /// </remarks>
     private sealed class BlendCoordinator<T> : IDisposable
     {
-        /// <summary>Serializes downstream callbacks and guards counters.</summary>
-        private readonly Lock _gate = new();
-
         /// <summary>Active subscriptions.</summary>
         private readonly MultipleDisposable _pocket = [];
 
         /// <summary>The downstream observer.</summary>
         private readonly IObserver<T> _observer;
 
-        /// <summary>A value indicating whether the outer source completed.</summary>
-        private bool _outerCompleted;
+        /// <summary>Serializes downstream deliveries.</summary>
+        private SerializedDelivery<T> _delivery = new();
+
+        /// <summary>Whether the outer source completed, as 0 or 1.</summary>
+        private int _outerCompleted;
 
         /// <summary>The number of active inner sources.</summary>
         private int _active;
-
-        /// <summary>A value indicating whether a terminal notification has been emitted.</summary>
-        private bool _done;
 
         /// <summary>Initializes a new instance of the <see cref="BlendCoordinator{T}"/> class.</summary>
         /// <param name="observer">The downstream observer.</param>
@@ -191,78 +198,52 @@ public static partial class LinqExtensions
                 return;
             }
 
-            lock (_gate)
-            {
-                _active++;
-            }
-
+            _ = Interlocked.Increment(ref _active);
             _pocket.Add(source.Subscribe(OnInnerNext, OnAnyError, OnInnerCompleted));
         }
 
-        /// <summary>Forwards an inner value under the serialization gate.</summary>
+        /// <summary>Forwards an inner value, directly when nothing else is delivering.</summary>
         /// <param name="value">The value to forward.</param>
-        private void OnInnerNext(T value)
-        {
-            lock (_gate)
-            {
-                if (!_done)
-                {
-                    _observer.OnNext(value);
-                }
-            }
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void OnInnerNext(T value) => _delivery.OnNext(_observer, value, new PendingDrain(this));
 
         /// <summary>Forwards the first terminal error and suppresses later notifications.</summary>
         /// <param name="error">The error to forward.</param>
-        private void OnAnyError(Exception error)
-        {
-            lock (_gate)
-            {
-                if (_done)
-                {
-                    return;
-                }
-
-                _done = true;
-                _observer.OnError(error);
-            }
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void OnAnyError(Exception error) => _delivery.OnError(error, new PendingDrain(this));
 
         /// <summary>Decrements the active count and attempts completion.</summary>
         private void OnInnerCompleted()
         {
-            lock (_gate)
-            {
-                _active--;
-            }
-
+            _ = Interlocked.Decrement(ref _active);
             TryComplete();
         }
 
         /// <summary>Marks the outer source complete and attempts completion.</summary>
         private void OnOuterCompleted()
         {
-            lock (_gate)
-            {
-                _outerCompleted = true;
-            }
-
+            Volatile.Write(ref _outerCompleted, 1);
             TryComplete();
         }
 
-        /// <summary>Completes downstream once the outer and all inners are done.</summary>
+        /// <summary>Delivers completion once the outer and all inners are done.</summary>
         private void TryComplete()
         {
-            lock (_gate)
+            if (Volatile.Read(ref _outerCompleted) == 0 || Volatile.Read(ref _active) != 0)
             {
-                if (_done || !_outerCompleted || _active != 0)
-                {
-                    return;
-                }
-
-                _done = true;
-                _observer.OnCompleted();
+                return;
             }
+
+            _delivery.OnCompleted(new PendingDrain(this));
+        }
+
+        /// <summary>Drains this coordinator's queued notifications for the delivery gate.</summary>
+        /// <param name="Owner">The coordinator.</param>
+        private readonly record struct PendingDrain(BlendCoordinator<T> Owner) : IDrainTarget
+        {
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Drain() => _ = Owner._delivery.DrainTo(Owner._observer);
         }
     }
 
@@ -392,137 +373,31 @@ public static partial class LinqExtensions
         }
     }
 
-    /// <summary>Coordinates a two-source zip operation.</summary>
-    /// <typeparam name="TLeft">The left value type.</typeparam>
-    /// <typeparam name="TRight">The right value type.</typeparam>
-    /// <typeparam name="TResult">The result value type.</typeparam>
-    /// <param name="observer">The downstream observer.</param>
-    /// <param name="selector">The projection function.</param>
-    private sealed class ZipCoordinator<TLeft, TRight, TResult>(IObserver<TResult> observer, Func<TLeft, TRight, TResult> selector)
-    {
-        /// <summary>The synchronization gate.</summary>
-        private readonly Lock _gate = new();
-
-        /// <summary>The downstream observer.</summary>
-        private readonly IObserver<TResult> _observer = observer;
-
-        /// <summary>The projection function.</summary>
-        private readonly Func<TLeft, TRight, TResult> _selector = selector;
-
-        /// <summary>The queued left values.</summary>
-        private readonly Queue<TLeft> _leftQueue = new();
-
-        /// <summary>The queued right values.</summary>
-        private readonly Queue<TRight> _rightQueue = new();
-
-        /// <summary>A value indicating whether the left source completed.</summary>
-        private bool _leftCompleted;
-
-        /// <summary>A value indicating whether the right source completed.</summary>
-        private bool _rightCompleted;
-
-        /// <summary>A value indicating whether completion has been emitted downstream.</summary>
-        private bool _completed;
-
-        /// <summary>Subscribes to both zip sources.</summary>
-        /// <param name="left">The left source.</param>
-        /// <param name="right">The right source.</param>
-        /// <returns>The subscription cleanup.</returns>
-        internal MultipleDisposable Run(IObservable<TLeft> left, IObservable<TRight> right) =>
-            new(
-                left.Subscribe(OnLeftNext, _observer.OnError, OnLeftCompleted),
-                right.Subscribe(OnRightNext, _observer.OnError, OnRightCompleted));
-
-        /// <summary>Queues a left value.</summary>
-        /// <param name="value">The value to queue.</param>
-        private void OnLeftNext(TLeft value)
-        {
-            lock (_gate)
-            {
-                _leftQueue.Enqueue(value);
-            }
-
-            Drain();
-        }
-
-        /// <summary>Queues a right value.</summary>
-        /// <param name="value">The value to queue.</param>
-        private void OnRightNext(TRight value)
-        {
-            lock (_gate)
-            {
-                _rightQueue.Enqueue(value);
-            }
-
-            Drain();
-        }
-
-        /// <summary>Marks the left source as complete.</summary>
-        private void OnLeftCompleted()
-        {
-            lock (_gate)
-            {
-                _leftCompleted = true;
-            }
-
-            Drain();
-        }
-
-        /// <summary>Marks the right source as complete.</summary>
-        private void OnRightCompleted()
-        {
-            lock (_gate)
-            {
-                _rightCompleted = true;
-            }
-
-            Drain();
-        }
-
-        /// <summary>Projects and emits queued pairs under the gate, preserving emission order.</summary>
-        private void Drain()
-        {
-            lock (_gate)
-            {
-                if (_completed)
-                {
-                    return;
-                }
-
-                while (_leftQueue.Count != 0 && _rightQueue.Count != 0)
-                {
-                    var left = _leftQueue.Dequeue();
-                    var right = _rightQueue.Dequeue();
-                    _observer.OnNext(_selector(left, right));
-                }
-
-                if ((!_leftCompleted || _leftQueue.Count != 0) && (!_rightCompleted || _rightQueue.Count != 0))
-                {
-                    return;
-                }
-
-                _completed = true;
-                _observer.OnCompleted();
-            }
-        }
-    }
-
     /// <summary>Coordinates a two-source combine-latest operation.</summary>
     /// <typeparam name="TLeft">The left value type.</typeparam>
     /// <typeparam name="TRight">The right value type.</typeparam>
     /// <typeparam name="TResult">The result value type.</typeparam>
     /// <param name="observer">The downstream observer.</param>
     /// <param name="selector">The projection function.</param>
-    private sealed class CombineLatestCoordinator<TLeft, TRight, TResult>(IObserver<TResult> observer, Func<TLeft, TRight, TResult> selector)
+    private sealed class CombineLatestCoordinator<TLeft, TRight, TResult>(IObserver<TResult> observer, Func<TLeft, TRight, TResult> selector) : IDrainTarget
     {
-        /// <summary>The synchronization gate.</summary>
-        private readonly Lock _gate = new();
-
         /// <summary>The downstream observer.</summary>
         private readonly IObserver<TResult> _observer = observer;
 
         /// <summary>The projection function.</summary>
         private readonly Func<TLeft, TRight, TResult> _selector = selector;
+
+        /// <summary>Serializes downstream deliveries, so no lock is held while the projection or the observer runs.</summary>
+        private DeliveryGateState _delivery;
+
+        /// <summary>Updates and the terminal notification queued while another thread delivers.</summary>
+        private PendingNotifications<Update> _pending = new();
+
+        /// <summary>Whether the left source completed, as 0 or 1.</summary>
+        private int _leftDone;
+
+        /// <summary>Whether the right source completed, as 0 or 1.</summary>
+        private int _rightDone;
 
         /// <summary>A value indicating whether the left source has produced a value.</summary>
         private bool _hasLeft;
@@ -530,20 +405,44 @@ public static partial class LinqExtensions
         /// <summary>A value indicating whether the right source has produced a value.</summary>
         private bool _hasRight;
 
-        /// <summary>A value indicating whether the left source completed.</summary>
-        private bool _leftDone;
-
-        /// <summary>A value indicating whether the right source completed.</summary>
-        private bool _rightDone;
-
         /// <summary>The latest left value.</summary>
         private TLeft? _latestLeft;
 
         /// <summary>The latest right value.</summary>
         private TRight? _latestRight;
 
-        /// <summary>A value indicating whether completion has been emitted downstream.</summary>
-        private bool _completed;
+        /// <inheritdoc/>
+        public void Drain()
+        {
+            while (true)
+            {
+                switch (_pending.TakeNext(out var update, out var error))
+                {
+                    case PendingDelivery.Value:
+                    {
+                        Apply(update);
+                        break;
+                    }
+
+                    case PendingDelivery.Terminal when error is null:
+                    {
+                        _observer.OnCompleted();
+                        return;
+                    }
+
+                    case PendingDelivery.Terminal:
+                    {
+                        _observer.OnError(error);
+                        return;
+                    }
+
+                    default:
+                    {
+                        return;
+                    }
+                }
+            }
+        }
 
         /// <summary>Subscribes to both combine-latest sources.</summary>
         /// <param name="left">The left source.</param>
@@ -551,84 +450,147 @@ public static partial class LinqExtensions
         /// <returns>The subscription cleanup.</returns>
         internal MultipleDisposable Run(IObservable<TLeft> left, IObservable<TRight> right) =>
             new(
-                left.Subscribe(OnLeftNext, _observer.OnError, OnLeftCompleted),
-                right.Subscribe(OnRightNext, _observer.OnError, OnRightCompleted));
+                left.Subscribe(OnLeftNext, OnError, OnLeftCompleted),
+                right.Subscribe(OnRightNext, OnError, OnRightCompleted));
 
-        /// <summary>Handles a left value, holding the gate across the projection so emissions cannot interleave.</summary>
+        /// <summary>Records a left value directly when nothing else is delivering, otherwise queues it for the delivering thread.</summary>
         /// <param name="value">The left value.</param>
         private void OnLeftNext(TLeft value)
         {
-            lock (_gate)
+            if (_pending.HasItems || !DeliveryGate.TryEnter(ref _delivery))
             {
-                _latestLeft = value;
-                _hasLeft = true;
-                if (!_completed && TryProject(out var projected))
+                Queue(new(IsLeft: true, value, default!));
+                return;
+            }
+
+            try
+            {
+                if (!_pending.IsTerminated)
                 {
-                    _observer.OnNext(projected);
+                    _latestLeft = value;
+                    _hasLeft = true;
+                    EmitLatest();
                 }
             }
+            catch
+            {
+                _ = DeliveryGate.Reset(ref _delivery);
+                throw;
+            }
+
+            DeliveryGate.Exit(ref _delivery, this);
         }
 
-        /// <summary>Handles a right value.</summary>
+        /// <summary>Records a right value directly when nothing else is delivering, otherwise queues it for the delivering thread.</summary>
         /// <param name="value">The right value.</param>
         private void OnRightNext(TRight value)
         {
-            lock (_gate)
+            if (_pending.HasItems || !DeliveryGate.TryEnter(ref _delivery))
             {
-                _latestRight = value;
-                _hasRight = true;
-                if (!_completed && TryProject(out var projected))
+                Queue(new(IsLeft: false, default!, value));
+                return;
+            }
+
+            try
+            {
+                if (!_pending.IsTerminated)
                 {
-                    _observer.OnNext(projected);
+                    _latestRight = value;
+                    _hasRight = true;
+                    EmitLatest();
                 }
             }
+            catch
+            {
+                _ = DeliveryGate.Reset(ref _delivery);
+                throw;
+            }
+
+            DeliveryGate.Exit(ref _delivery, this);
+        }
+
+        /// <summary>Queues an update for the delivering thread and signals it.</summary>
+        /// <param name="update">The update.</param>
+        private void Queue(Update update)
+        {
+            if (!_pending.TryEnqueue(update))
+            {
+                return;
+            }
+
+            DeliveryGate.Signal(ref _delivery, this);
+        }
+
+        /// <summary>Records an update and emits the projection once both sources have a value.</summary>
+        /// <param name="update">The update.</param>
+        private void Apply(in Update update)
+        {
+            if (update.IsLeft)
+            {
+                _latestLeft = update.Left;
+                _hasLeft = true;
+            }
+            else
+            {
+                _latestRight = update.Right;
+                _hasRight = true;
+            }
+
+            EmitLatest();
+        }
+
+        /// <summary>Emits the projection of the latest values once both sources have produced one.</summary>
+        private void EmitLatest()
+        {
+            if (!_hasLeft || !_hasRight)
+            {
+                return;
+            }
+
+            _observer.OnNext(_selector(_latestLeft!, _latestRight!));
+        }
+
+        /// <summary>Requests the first error as the terminal notification.</summary>
+        /// <param name="error">The error.</param>
+        private void OnError(Exception error)
+        {
+            if (!_pending.TryRequestTerminal(error))
+            {
+                return;
+            }
+
+            DeliveryGate.Signal(ref _delivery, this);
         }
 
         /// <summary>Marks the left source as complete.</summary>
         private void OnLeftCompleted()
         {
-            lock (_gate)
-            {
-                _leftDone = true;
-                if (_completed || !_rightDone)
-                {
-                    return;
-                }
-
-                _completed = true;
-                _observer.OnCompleted();
-            }
+            Volatile.Write(ref _leftDone, 1);
+            TryComplete();
         }
 
         /// <summary>Marks the right source as complete.</summary>
         private void OnRightCompleted()
         {
-            lock (_gate)
-            {
-                _rightDone = true;
-                if (_completed || !_leftDone)
-                {
-                    return;
-                }
-
-                _completed = true;
-                _observer.OnCompleted();
-            }
+            Volatile.Write(ref _rightDone, 1);
+            TryComplete();
         }
 
-        /// <summary>Projects the current latest values.</summary>
-        /// <param name="result">The projected value.</param>
-        /// <returns><c>true</c> when both sources have values; otherwise, <c>false</c>.</returns>
-        private bool TryProject(out TResult result)
+        /// <summary>Requests completion once both sources have completed.</summary>
+        private void TryComplete()
         {
-            if (!_hasLeft || !_hasRight)
+            if (Volatile.Read(ref _leftDone) == 0 || Volatile.Read(ref _rightDone) == 0 || !_pending.TryRequestTerminal(null))
             {
-                result = default!;
-                return false;
+                return;
             }
 
-            result = _selector(_latestLeft!, _latestRight!);
-            return true;
+            DeliveryGate.Signal(ref _delivery, this);
         }
+
+        /// <summary>A value from one side, queued while another thread delivers.</summary>
+        /// <param name="IsLeft">Whether the value came from the left source.</param>
+        /// <param name="Left">The left value, when <paramref name="IsLeft"/> is set.</param>
+        /// <param name="Right">The right value, when <paramref name="IsLeft"/> is clear.</param>
+        private readonly record struct Update(bool IsLeft, TLeft Left, TRight Right);
     }
 }

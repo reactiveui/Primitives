@@ -1,7 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net10.0;net11.0</TargetFrameworks>
+    <TargetFrameworks>net8.0;net10.0;net11.0</TargetFrameworks>
+    <!-- Pass -p:BenchmarkPlatform=windows or unix to compile the other platform's configs. -->
+    <BenchmarkPlatform Condition="'$(BenchmarkPlatform)' == '' and $([MSBuild]::IsOsPlatform('Windows'))">windows</BenchmarkPlatform>
+    <BenchmarkPlatform Condition="'$(BenchmarkPlatform)' == ''">unix</BenchmarkPlatform>
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
@@ -19,8 +22,19 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\Shared\Configs\**\*.cs" Link="Configs\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\Shared\Platforms\$(BenchmarkPlatform)\**\*.cs" Link="Platforms\$(BenchmarkPlatform)\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(BenchmarkPlatform)' == 'windows'">
+    <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\ReactiveUI.Primitives\ReactiveUI.Primitives.csproj" />
     <ProjectReference Include="..\..\ReactiveUI.Primitives.Async\ReactiveUI.Primitives.Async.csproj" />
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.Reactive\ReactiveUI.Primitives.Reactive.csproj" />
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.Async.Reactive\ReactiveUI.Primitives.Async.Reactive.csproj" />
   </ItemGroup>
 
 </Project>

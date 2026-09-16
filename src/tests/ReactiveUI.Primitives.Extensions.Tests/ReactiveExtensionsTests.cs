@@ -58,9 +58,6 @@ public partial class ReactiveExtensionsTests
     /// <summary>Sample integer value (99) used by multiple tests.</summary>
     private const int SampleValue99 = 99;
 
-    /// <summary>Throttle/debounce wait window in milliseconds.</summary>
-    private const int ThrottleWaitMilliseconds = 150;
-
     /// <summary>Settle delay in milliseconds used by buffer/foreach tests.</summary>
     private const int SettleDelayMilliseconds = 200;
 
@@ -72,9 +69,6 @@ public partial class ReactiveExtensionsTests
 
     /// <summary>One tick past the scheduler window, used to advance virtual time.</summary>
     private const int SchedulerAdvancePastWindowTicks = 101;
-
-    /// <summary>Short delay supplied to virtual schedulers, in milliseconds.</summary>
-    private const int ShortDelayMilliseconds = 500;
 
     /// <summary>Long delay supplied to virtual schedulers, in milliseconds.</summary>
     private const int LongDelayMilliseconds = 1_000;

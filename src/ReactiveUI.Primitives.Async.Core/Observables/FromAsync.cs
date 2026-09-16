@@ -2,8 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Diagnostics.CodeAnalysis;
-
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides factory methods for creating asynchronous observables from asynchronous operations.</summary>
@@ -17,10 +15,6 @@ public static partial class SignalAsync
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="factory"/> is null.</exception>
     /// <remarks><paramref name="factory"/> runs once per subscriber, started by the subscribe call rather than awaited
     /// by it.</remarks>
-    [SuppressMessage(
-        "Roslynator",
-        "RCS1047:Non-asynchronous method name should not end with \'Async\'",
-        Justification = "The name states where the values come from; the method itself returns a sequence synchronously.")]
     public static IObservableAsync<T> FromAsync<T>(Func<CancellationToken, ValueTask<T>> factory)
     {
         ArgumentExceptionHelper.ThrowIfNull(factory);

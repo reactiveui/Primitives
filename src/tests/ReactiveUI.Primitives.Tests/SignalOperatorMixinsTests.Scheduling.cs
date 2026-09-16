@@ -141,18 +141,6 @@ public partial class SignalOperatorMixinsTests
             .Subscribe((IObserver<int>)null!));
         _ = Assert.Throws<ArgumentNullException>(() => inlineShift.Subscribe((Action<int>)null!, static _ => { }, static () => { }));
         _ = Assert.Throws<ArgumentNullException>(() => inlineShift.Subscribe(static _ => { }, static _ => { }, null!));
-        List<int> helperValues = [];
-        SequencerWorkItem<ISequencer, int> helper = new(Sequencer.Immediate, One, (_, state) =>
-        {
-            helperValues.Add(state);
-            return new ActionDisposable(static () => { });
-        });
-        helper.Invoke();
-        helper.Dispose();
-        helper.Invoke();
-        int[] expectedHelperValues = [One];
-        await Assert.That(helperValues.SequenceEqual(expectedHelperValues)).IsTrue();
-        await VerifySequencerWorkItemDisposalBranches();
         var unusedScheduled =
             ScheduledItem.Create(Sequencer.Immediate, "unused", static (_, _) => EmptyDisposable.Instance, One);
         await Assert.That(new SequencerQueue<int>().Remove(unusedScheduled)).IsFalse();
@@ -167,69 +155,6 @@ public partial class SignalOperatorMixinsTests
         {
             await Assert.That(shrink.Dequeue()).IsEqualTo(i);
         }
-    }
-
-    /// <summary>Verifies the sequencer work item disposes the action's disposable across invoke and dispose orderings.</summary>
-    /// <returns>A task representing the asynchronous verification.</returns>
-    private static async Task VerifySequencerWorkItemDisposalBranches()
-    {
-        var invokeThenDisposeReleased = 0;
-        SequencerWorkItem<ISequencer, int> invokeThenDispose = new(Sequencer.Immediate, One, (_, _) =>
-            new ActionDisposable(() => Interlocked.Increment(ref invokeThenDisposeReleased)));
-        invokeThenDispose.Invoke();
-        invokeThenDispose.Dispose();
-        invokeThenDispose.Dispose();
-        await Assert.That(invokeThenDisposeReleased).IsEqualTo(1);
-
-        // A null action result is coalesced to an empty disposable and never throws.
-        var nullActionRan = false;
-        SequencerWorkItem<ISequencer, int> nullAction = new(Sequencer.Immediate, One, (_, _) =>
-        {
-            nullActionRan = true;
-            return null!;
-        });
-        nullAction.Invoke();
-        nullAction.Dispose();
-        await Assert.That(nullActionRan).IsTrue();
-
-        await VerifySequencerWorkItemPublishBranches();
-        await VerifySequencerWorkItemDisposeRaceInvariant();
-    }
-
-    /// <summary>Publish stores its disposable into an empty slot and releases it when the slot is claimed.</summary>
-    /// <returns>A task representing the asynchronous verification.</returns>
-    private static async Task VerifySequencerWorkItemPublishBranches()
-    {
-        var stored = 0;
-        ActionDisposable storedDisposable = new(() => Interlocked.Increment(ref stored));
-        IDisposable? winSlot = null;
-        SequencerWorkItemDisposal.Publish(ref winSlot, storedDisposable);
-        await Assert.That(ReferenceEquals(winSlot, storedDisposable)).IsTrue();
-        await Assert.That(stored).IsEqualTo(0);
-
-        // A non-null slot means disposal claimed it first, so Publish releases the disposable.
-        var loserDisposed = 0;
-        ActionDisposable loser = new(() => Interlocked.Increment(ref loserDisposed));
-        IDisposable? loseSlot = EmptyDisposable.Instance;
-        SequencerWorkItemDisposal.Publish(ref loseSlot, loser);
-        await Assert.That(loserDisposed).IsEqualTo(1);
-        await Assert.That(ReferenceEquals(loseSlot, EmptyDisposable.Instance)).IsTrue();
-    }
-
-    /// <summary>Verifies the action's disposable is released exactly once when invoke and dispose race.</summary>
-    /// <returns>A task representing the asynchronous verification.</returns>
-    private static async Task VerifySequencerWorkItemDisposeRaceInvariant()
-{
-        var disposed = 0;
-        SequencerWorkItem<ISequencer, int>? item = null;
-        item = new(Sequencer.Immediate, One, (_, _) =>
-        {
-            item!.Dispose();
-            return new ActionDisposable(() => disposed++);
-        });
-        item.Invoke();
-        item.Dispose();
-        await Assert.That(disposed).IsEqualTo(1);
     }
 
     /// <summary>Verifies absolute thread pool scheduling and the disposal of a scheduled work item.</summary>

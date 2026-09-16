@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Extensions;
 
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive;
@@ -19,6 +20,10 @@ public static partial class LinqExtensions
     /// <param name="dueTime">The normalized delay applied to each notification.</param>
     /// <param name="sequencer">The sequencer used to schedule delayed notifications.</param>
     /// <param name="observer">The downstream observer.</param>
+    /// <remarks>
+    /// The gate only guards the queue and the flags. Due notifications are queued in order under the gate and delivered by a
+    /// <see cref="SerializedDelivery{T}"/> after it is released, so no lock is held while the observer runs.
+    /// </remarks>
     internal sealed class ShiftCoordinator<T>(IObservable<T> source, TimeSpan dueTime, ISequencer sequencer, IObserver<T> observer) : IDisposable
     {
         /// <summary>The source observable.</summary>
@@ -33,7 +38,7 @@ public static partial class LinqExtensions
         /// <summary>The downstream observer.</summary>
         private readonly IObserver<T> _observer = observer;
 
-        /// <summary>Serializes queue state and downstream callbacks.</summary>
+        /// <summary>Guards the queue and the flags; never held while the observer runs.</summary>
         private readonly Lock _gate = new();
 
         /// <summary>Active source and timer resources.</summary>
@@ -45,13 +50,16 @@ public static partial class LinqExtensions
         /// <summary>Queued delayed notifications in source order.</summary>
         private readonly Queue<DelayedNotification> _queue = [];
 
+        /// <summary>Serializes downstream deliveries.</summary>
+        private SerializedDelivery<T> _delivery = new();
+
         /// <summary>A value indicating whether a timer or drain is active.</summary>
         private bool _timerActive;
 
         /// <summary>A value indicating whether the source has signaled a terminal notification.</summary>
         private bool _sourceStopped;
 
-        /// <summary>A value indicating whether a terminal notification has been delivered.</summary>
+        /// <summary>A value indicating whether a terminal notification has been queued for delivery.</summary>
         private bool _done;
 
         /// <summary>Tracks disposal.</summary>
@@ -167,79 +175,77 @@ public static partial class LinqExtensions
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void Schedule(TimeSpan delay) => TimerSlot.Arm(_timer, _sequencer, delay, Tick);
 
-        /// <summary>Drains all due notifications in FIFO order.</summary>
+        /// <summary>Queues every due notification in FIFO order under the gate, delivers them, then re-arms for the next one.</summary>
         private void Tick()
         {
-            while (true)
+            TimeSpan delay = default;
+            var shouldReschedule = false;
+            var posted = false;
+            var terminal = false;
+            lock (_gate)
             {
-                TimeSpan delay;
-                var shouldReschedule = false;
-                var terminal = false;
-                lock (_gate)
+                while (!IsDisposed && !_done && _queue.Count > 0)
                 {
-                    if (IsDisposed || _done)
-                    {
-                        _timerActive = false;
-                        return;
-                    }
-
-                    if (_queue.Count == 0)
-                    {
-                        _timerActive = false;
-                        return;
-                    }
-
                     delay = DelayUntil(_queue.Peek().DueAt);
                     if (delay > TimeSpan.Zero)
                     {
                         shouldReschedule = true;
+                        break;
                     }
-                    else
-                    {
-                        terminal = Deliver(_queue.Dequeue());
-                    }
+
+                    posted = true;
+                    terminal = Post(_queue.Dequeue());
                 }
 
-                if (shouldReschedule)
+                if (!shouldReschedule)
                 {
-                    Schedule(delay);
-                    return;
+                    _timerActive = false;
                 }
+            }
 
-                if (!terminal)
-                {
-                    continue;
-                }
+            if (posted)
+            {
+                _delivery.Flush(new PendingDrain(this));
+            }
 
-                Dispose();
+            if (shouldReschedule)
+            {
+                Schedule(delay);
                 return;
             }
+
+            if (!terminal)
+            {
+                return;
+            }
+
+            Dispose();
         }
 
-        /// <summary>Forwards a queued notification while the caller holds the gate.</summary>
-        /// <param name="notification">The queued notification.</param>
-        /// <returns><see langword="true"/> when a terminal notification was delivered.</returns>
-        private bool Deliver(DelayedNotification notification)
+        /// <summary>Queues a due notification for delivery while the caller holds the gate.</summary>
+        /// <param name="notification">The due notification.</param>
+        /// <returns><see langword="true"/> when the notification is terminal.</returns>
+        private bool Post(DelayedNotification notification)
         {
             switch (notification.Kind)
             {
                 case NotificationKind.Next:
                     {
-                        _observer.OnNext(notification.Value!);
+                        _ = _delivery.Post(notification.Value!);
                         return false;
                     }
 
                 case NotificationKind.Error:
                     {
                         _done = true;
-                        _observer.OnError(notification.Error!);
+                        _ = _delivery.PostError(notification.Error!);
                         return true;
                     }
 
                 default:
                     {
                         _done = true;
-                        _observer.OnCompleted();
+                        _ = _delivery.PostCompleted();
                         return true;
                     }
             }
@@ -250,6 +256,15 @@ public static partial class LinqExtensions
         /// <returns>The remaining non-negative delay.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private TimeSpan DelayUntil(DateTimeOffset dueAt) => Sequencer.Normalize(dueAt - _sequencer.Now);
+
+        /// <summary>Drains this coordinator's queued notifications for the delivery gate.</summary>
+        /// <param name="Owner">The coordinator.</param>
+        private readonly record struct PendingDrain(ShiftCoordinator<T> Owner) : IDrainTarget
+        {
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Drain() => _ = Owner._delivery.DrainTo(Owner._observer);
+        }
 
         /// <summary>A delayed source notification.</summary>
         private sealed class DelayedNotification

@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Disposables;
 
@@ -202,20 +203,46 @@ public sealed class ChainSignalSourcesSignal<T>(IObservableAsync<IObservableAsyn
 
         /// <summary>A witness for the outer observable sequence that delegates to the parent <see cref="ChainCoordinator"/>.</summary>
         /// <param name="subscription">The parent concat subscription.</param>
-        internal sealed class ChainOuterWitness(ChainCoordinator subscription) : WitnessAsync<IObservableAsync<T>>
+        [DebuggerDisplay("ChainOuterWitness: {_witness}")]
+        internal sealed class ChainOuterWitness(ChainCoordinator subscription) : IWitnessAsync<IObservableAsync<T>>
         {
+            /// <summary>The notification gate, cancellation link and disposal state.</summary>
+            private WitnessAsyncState _witness;
+
+            /// <inheritdoc/>
+            ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnNextAsync(IObservableAsync<T> value, CancellationToken cancellationToken) =>
+                WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+                WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
+
             /// <summary>Forwards a new inner observable to the parent subscription for buffering and sequential subscription.</summary>
             /// <param name="value">The new inner observable.</param>
             /// <param name="cancellationToken">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
-            protected override ValueTask OnNextAsyncCore(IObservableAsync<T> value, CancellationToken cancellationToken) =>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<IObservableAsync<T>>.OnNextAsyncCore(IObservableAsync<T> value, CancellationToken cancellationToken) =>
                 subscription.AcceptOuterValueAsync(value);
 
             /// <summary>Forwards a non-fatal error from the outer sequence to the downstream observer.</summary>
             /// <param name="error">The error to forward.</param>
             /// <param name="cancellationToken">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
-            protected override async ValueTask OnErrorResumeAsyncCore(
+            async ValueTask IWitnessAsync<IObservableAsync<T>>.OnErrorResumeAsyncCore(
                 Exception error,
                 CancellationToken cancellationToken)
             {
@@ -231,19 +258,45 @@ public sealed class ChainSignalSourcesSignal<T>(IObservableAsync<IObservableAsyn
             /// <summary>Handles the outer sequence completing.</summary>
             /// <param name="result">The completion result.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
-            protected override ValueTask OnCompletedAsyncCore(Result result) =>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<IObservableAsync<T>>.OnCompletedAsyncCore(Result result) =>
                 subscription.AcceptOuterCompletionAsync(result);
         }
 
         /// <summary>A witness for the currently active inner observable sequence that delegates to the parent <see cref="ChainCoordinator"/>.</summary>
         /// <param name="subscription">The parent concat subscription.</param>
-        internal sealed class ChainInnerWitness(ChainCoordinator subscription) : WitnessAsync<T>
+        [DebuggerDisplay("ChainInnerWitness: {_witness}")]
+        internal sealed class ChainInnerWitness(ChainCoordinator subscription) : IWitnessAsync<T>
         {
+            /// <summary>The notification gate, cancellation link and disposal state.</summary>
+            private WitnessAsyncState _witness;
+
+            /// <inheritdoc/>
+            ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
+                WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+                WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
+
             /// <summary>Forwards an element from the inner sequence to the downstream observer.</summary>
             /// <param name="value">The element to forward.</param>
             /// <param name="cancellationToken">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
-            protected override async ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
+            async ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken)
             {
                 _ = cancellationToken;
                 var token = subscription._disposedCancellationToken;
@@ -257,7 +310,7 @@ public sealed class ChainSignalSourcesSignal<T>(IObservableAsync<IObservableAsyn
             /// <param name="error">The error to forward.</param>
             /// <param name="cancellationToken">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
-            protected override async ValueTask OnErrorResumeAsyncCore(
+            async ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(
                 Exception error,
                 CancellationToken cancellationToken)
             {
@@ -272,7 +325,8 @@ public sealed class ChainSignalSourcesSignal<T>(IObservableAsync<IObservableAsyn
             /// <summary>Handles the inner sequence completing, triggering subscription to the next buffered sequence.</summary>
             /// <param name="result">The completion result.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
-            protected override ValueTask OnCompletedAsyncCore(Result result) =>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) =>
                 subscription.AcceptInnerCompletionAsync(result);
         }
     }

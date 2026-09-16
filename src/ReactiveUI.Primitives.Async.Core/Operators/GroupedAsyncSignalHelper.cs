@@ -24,7 +24,7 @@ internal static class GroupedAsyncSignalHelper
     {
         RelayWitnessAsync<TValue> wrap = new(observer);
         wrap.LinkUpstreamCancellation(state.ParentDisposedToken);
-        if (observer is WitnessAsync<TValue> downstream)
+        if (observer is IWitnessAsync<TValue> downstream)
         {
             downstream.LinkUpstreamCancellation(wrap.InternalDisposedToken);
         }

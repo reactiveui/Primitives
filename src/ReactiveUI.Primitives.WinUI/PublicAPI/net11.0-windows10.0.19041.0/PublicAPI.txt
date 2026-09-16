@@ -1,3 +1,4 @@
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ReactiveUI.Primitives.WinUI.Tests")]
 [assembly: System.Runtime.Versioning.SupportedOSPlatform("Windows10.0.19041.0")]
 namespace ReactiveUI.Primitives.Concurrency;
 

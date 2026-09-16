@@ -64,4 +64,45 @@ public partial class ReactiveExtensionsTests
 
         await Assert.That(timer).IsSameReferenceAs(period.SyncTimer(Sequencer.Default));
     }
+
+    /// <summary>Scheduler-taking overloads fall back to the default sequencer when given none.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task SchedulerOverloads_NullScheduler_UseDefaultSequencer()
+    {
+        const int MaxRetries = 1;
+        const double BackoffFactor = 2;
+        var window = TimeSpan.FromDays(1);
+        var source = Observable.Return(1);
+
+        await Assert.That(source.BufferUntilIdle(window, null)).IsNotNull();
+        await Assert.That(source.ThrottleFirst(window, null)).IsNotNull();
+        await Assert.That(source.DebounceImmediate(window, null)).IsNotNull();
+        await Assert.That(source.DebounceUntil(window, static value => value > 0, null)).IsNotNull();
+        await Assert.That(source.BufferUntilInactive(window, null)).IsNotNull();
+        await Assert.That(source.RetryWithBackoff(MaxRetries, window, BackoffFactor, null, null)).IsNotNull();
+    }
+
+    /// <summary>The using operators run against a null resource, completing on success and erroring when the body throws.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Using_NullResource_RunsWithoutDisposing()
+    {
+        const int Result = 3;
+        IDisposable resource = null!;
+        List<int> results = [];
+        List<Exception> actionErrors = [];
+        List<Exception> functionErrors = [];
+        var actionCompleted = false;
+
+        _ = resource.Using(static _ => { }, Sequencer.Immediate).Subscribe(static _ => { }, static _ => { }, () => actionCompleted = true);
+        _ = resource.Using(static _ => Result, Sequencer.Immediate).Subscribe(results.Add);
+        _ = resource.Using(static _ => throw new InvalidOperationException("action"), Sequencer.Immediate).Subscribe(static _ => { }, actionErrors.Add);
+        _ = resource.Using<IDisposable, int>(static _ => throw new InvalidOperationException("function"), Sequencer.Immediate).Subscribe(static _ => { }, functionErrors.Add);
+
+        await Assert.That(actionCompleted).IsTrue();
+        await Assert.That(results).IsCollectionEqualTo([Result]);
+        await Assert.That(actionErrors).HasSingleItem();
+        await Assert.That(functionErrors).HasSingleItem();
+    }
 }

@@ -10,6 +10,7 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
 /// <remarks>
 /// Handler failure invokes the error callback and stops processing. Completion waits for queued values; disposal drops them and unsubscribes.
+/// The gate only guards the queue and flags; every handler and callback runs after it is released.
 /// </remarks>
 [System.Diagnostics.DebuggerDisplay("SubscribeAsyncObservable: Queued = {_queue.Count}, Processing = {_isProcessing}, Done = {_done}")]
 public sealed class SubscribeAsyncObservable<T> : IDisposable
@@ -64,8 +65,9 @@ public sealed class SubscribeAsyncObservable<T> : IDisposable
         lock (_gate)
         {
             _disposed = true;
-            _subscription.Dispose();
         }
+
+        _subscription.Dispose();
     }
 
     /// <summary>Queues a source value and returns the operation started by it.</summary>
@@ -73,7 +75,6 @@ public sealed class SubscribeAsyncObservable<T> : IDisposable
     /// <returns>The processing task, or a completed task if no work starts.</returns>
     internal Task OnNextAsync(T value)
     {
-        var processing = Task.CompletedTask;
         lock (_gate)
         {
             if (_done || _disposed)
@@ -82,14 +83,15 @@ public sealed class SubscribeAsyncObservable<T> : IDisposable
             }
 
             _queue.Enqueue(value);
-            if (!_isProcessing)
+            if (_isProcessing)
             {
-                _isProcessing = true;
-                processing = ProcessNextAsync();
+                return Task.CompletedTask;
             }
+
+            _isProcessing = true;
         }
 
-        return processing;
+        return ProcessNextAsync();
     }
 
     /// <summary>Queues a source value.</summary>
@@ -109,8 +111,9 @@ public sealed class SubscribeAsyncObservable<T> : IDisposable
             }
 
             _done = true;
-            _onError?.Invoke(error);
         }
+
+        _onError?.Invoke(error);
     }
 
     /// <summary>Marks the source finished and runs the completion callback when no handler is in flight.</summary>
@@ -124,54 +127,76 @@ public sealed class SubscribeAsyncObservable<T> : IDisposable
             }
 
             _done = true;
-            if (!_isProcessing)
+            if (_isProcessing)
             {
-                _onCompleted?.Invoke();
+                return;
             }
         }
+
+        _onCompleted?.Invoke();
     }
 
     /// <summary>Runs the handler for queued values in turn, invoking the completion callback when the queue empties after the source finishes.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     private async Task ProcessNextAsync()
     {
-        while (true)
+        bool complete;
+        while (TryTakeNext(out var value, out complete))
         {
-            T value;
-            lock (_gate)
-            {
-                if (_disposed || _queue.Count == 0)
-                {
-                    _isProcessing = false;
-                    if (_done && !_disposed)
-                    {
-                        _onCompleted?.Invoke();
-                    }
-
-                    return;
-                }
-
-                value = _queue.Dequeue();
-            }
-
             try
             {
                 await _onNext(value).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                lock (_gate)
-                {
-                    if (!_disposed)
-                    {
-                        _done = true;
-                        _onError?.Invoke(ex);
-                    }
-
-                    _isProcessing = false;
-                    return;
-                }
+                FailProcessing(ex);
+                return;
             }
+        }
+
+        if (complete)
+        {
+            _onCompleted?.Invoke();
+        }
+    }
+
+    /// <summary>Takes the next queued value, or stops processing and reports whether the completion callback is due.</summary>
+    /// <param name="value">The dequeued value, when one was taken.</param>
+    /// <param name="complete">Whether the source finished and the completion callback should run.</param>
+    /// <returns><see langword="true"/> when a value was taken; otherwise, <see langword="false"/>.</returns>
+    private bool TryTakeNext(out T value, out bool complete)
+    {
+        lock (_gate)
+        {
+            if (_disposed || _queue.Count == 0)
+            {
+                _isProcessing = false;
+                complete = _done && !_disposed;
+                value = default!;
+                return false;
+            }
+
+            complete = false;
+            value = _queue.Dequeue();
+            return true;
+        }
+    }
+
+    /// <summary>Stops processing after a handler failure and routes the failure to the error callback unless disposed.</summary>
+    /// <param name="error">The handler failure.</param>
+    private void FailProcessing(Exception error)
+    {
+        bool notify;
+        lock (_gate)
+        {
+            notify = !_disposed;
+            _done |= notify;
+            _isProcessing = false;
+        }
+
+        if (notify)
+        {
+            _onError?.Invoke(error);
         }
     }
 }

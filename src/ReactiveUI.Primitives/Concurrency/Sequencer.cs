@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Concurrency;
 
 /// <summary>Provides built-in sequencers for scheduling work over time.</summary>
@@ -65,14 +67,21 @@ public static partial class Sequencer
     /// <summary>Converts a monotonic timestamp delta to a relative duration.</summary>
     /// <param name="timestampDelta">Monotonic timestamp delta.</param>
     /// <returns>The duration represented by <paramref name="timestampDelta"/>.</returns>
-    internal static TimeSpan ToTimeSpanDelta(long timestampDelta)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static TimeSpan ToTimeSpanDelta(long timestampDelta) =>
+        ToTimeSpanDelta(timestampDelta, System.Diagnostics.Stopwatch.Frequency);
+
+    /// <summary>Converts a timestamp delta counted at <paramref name="frequency"/> ticks per second to a relative duration.</summary>
+    /// <param name="timestampDelta">Timestamp delta.</param>
+    /// <param name="frequency">Timestamp ticks per second.</param>
+    /// <returns>The duration represented by <paramref name="timestampDelta"/>, saturating at <see cref="TimeSpan.MaxValue"/>.</returns>
+    internal static TimeSpan ToTimeSpanDelta(long timestampDelta, long frequency)
     {
         if (timestampDelta <= 0)
         {
             return TimeSpan.Zero;
         }
 
-        var frequency = System.Diagnostics.Stopwatch.Frequency;
         var seconds = timestampDelta / frequency;
         if (seconds >= TimeSpan.MaxValue.Ticks / TimeSpan.TicksPerSecond)
         {

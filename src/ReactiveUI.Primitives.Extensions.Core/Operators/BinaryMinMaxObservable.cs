@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
@@ -37,10 +38,14 @@ public sealed class BinaryMinMaxObservable<T>(IObservable<T> left, IObservable<T
     /// <summary>Holds latest values and terminal state for two sources.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="emitMaximum"><c>true</c> for max; <c>false</c> for min.</param>
+    /// <remarks>Emissions and terminals are queued in order under the gate and delivered after it is released.</remarks>
     private sealed class Sink(IObserver<T> downstream, bool emitMaximum)
     {
-        /// <summary>The synchronization gate.</summary>
+        /// <summary>Guards the latest values, the flags and the order notifications are queued in; never held while the observer runs.</summary>
         private readonly Lock _gate = new();
+
+        /// <summary>Serializes downstream deliveries.</summary>
+        private SerializedDelivery<T> _delivery = new();
 
         /// <summary>The latest left value.</summary>
         private T _leftValue;
@@ -54,11 +59,11 @@ public sealed class BinaryMinMaxObservable<T>(IObservable<T> left, IObservable<T
         /// <summary>Whether the right source has produced a value.</summary>
         private bool _hasRight;
 
-        /// <summary>Whether the left source has completed.</summary>
-        private bool _leftCompleted;
+        /// <summary>Latch set to one when the left source completes.</summary>
+        private int _leftCompleted;
 
-        /// <summary>Whether the right source has completed.</summary>
-        private bool _rightCompleted;
+        /// <summary>Latch set to one when the right source completes.</summary>
+        private int _rightCompleted;
 
         /// <summary>Whether the sink is terminal.</summary>
         private bool _isDone;
@@ -93,8 +98,10 @@ public sealed class BinaryMinMaxObservable<T>(IObservable<T> left, IObservable<T
 
                 var compare = _leftValue.CompareTo(_rightValue);
                 var useLeft = emitMaximum ? compare >= 0 : compare <= 0;
-                downstream.OnNext(useLeft ? _leftValue : _rightValue);
+                _ = _delivery.Post(useLeft ? _leftValue : _rightValue);
             }
+
+            Flush();
         }
 
         /// <summary>Forwards the first error downstream and marks the sink terminal.</summary>
@@ -109,8 +116,10 @@ public sealed class BinaryMinMaxObservable<T>(IObservable<T> left, IObservable<T
                 }
 
                 _isDone = true;
-                downstream.OnError(error);
+                _ = _delivery.PostError(error);
             }
+
+            Flush();
         }
 
         /// <summary>Records one side's completion, completing downstream when both sides finish or when this side never emitted.</summary>
@@ -119,52 +128,76 @@ public sealed class BinaryMinMaxObservable<T>(IObservable<T> left, IObservable<T
         {
             lock (_gate)
             {
-                if (_isDone)
+                RecordCompletionLocked(isLeft);
+            }
+
+            Flush();
+        }
+
+        /// <summary>Records one side's completion and queues completion when the sequence is finished, while the caller holds the gate.</summary>
+        /// <param name="isLeft"><c>true</c> for the left source.</param>
+        private void RecordCompletionLocked(bool isLeft)
+        {
+            if (_isDone)
+            {
+                return;
+            }
+
+            if (isLeft)
+            {
+                if (Interlocked.Exchange(ref _leftCompleted, 1) != 0)
                 {
                     return;
                 }
 
-                if (isLeft)
-                {
-                    if (_leftCompleted)
-                    {
-                        return;
-                    }
-
-                    _leftCompleted = true;
-                    if (!_hasLeft)
-                    {
-                        Complete();
-                        return;
-                    }
-                }
-                else
-                {
-                    if (_rightCompleted)
-                    {
-                        return;
-                    }
-
-                    _rightCompleted = true;
-                    if (!_hasRight)
-                    {
-                        Complete();
-                        return;
-                    }
-                }
-
-                if (_leftCompleted && _rightCompleted)
+                if (!_hasLeft)
                 {
                     Complete();
+                    return;
                 }
+            }
+            else
+            {
+                if (Interlocked.Exchange(ref _rightCompleted, 1) != 0)
+                {
+                    return;
+                }
+
+                if (!_hasRight)
+                {
+                    Complete();
+                    return;
+                }
+            }
+
+            if (Volatile.Read(ref _leftCompleted) != 0 && Volatile.Read(ref _rightCompleted) != 0)
+            {
+                Complete();
             }
         }
 
-        /// <summary>Marks the sink terminal and completes the downstream observer.</summary>
+        /// <summary>Marks the sink terminal and queues completion.</summary>
         private void Complete()
         {
             _isDone = true;
-            downstream.OnCompleted();
+            _ = _delivery.PostCompleted();
+        }
+
+        /// <summary>Delivers the queued notifications on the calling thread, or hands them to the thread already delivering.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void Flush() => _delivery.Flush(new PendingDrain(this));
+
+        /// <summary>Delivers the queued notifications to the downstream observer.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void DrainPending() => _ = _delivery.DrainTo(downstream);
+
+        /// <summary>Drains this sink's queued notifications for the delivery gate.</summary>
+        /// <param name="Owner">The sink.</param>
+        private readonly record struct PendingDrain(Sink Owner) : IDrainTarget
+        {
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Drain() => Owner.DrainPending();
         }
     }
 

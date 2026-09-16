@@ -222,6 +222,18 @@ public partial class SequencerTests
         await Assert.That(pool.Sequencer.Dispose).ThrowsNothing();
     }
 
+    /// <summary>A thread-pool sequencer that owns a runtime timer releases it and rejects later work.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ThreadPoolSequencerWithARuntimeTimerRejectsWorkAfterDispose()
+    {
+        ThreadPoolSequencer sequencer = new();
+
+        sequencer.Dispose();
+
+        await Assert.That(() => sequencer.Schedule(new CancellableWorkItem())).ThrowsExactly<ObjectDisposedException>();
+    }
+
     /// <summary>Work item that counts how many times a sequencer released it.</summary>
     private sealed class DisposeCountingWorkItem : IWorkItem, IsDisposed
     {

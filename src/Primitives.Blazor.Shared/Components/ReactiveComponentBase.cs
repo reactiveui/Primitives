@@ -168,14 +168,22 @@ public class ReactiveComponentBase : ComponentBase, IDisposable
     /// <returns>A task that completes when the callback (or its failure dispatch) has finished.</returns>
     private async Task InvokeGuardedAsync(Action callback)
     {
+        Exception? failure = null;
         try
         {
             await InvokeAsync(callback).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            await DispatchExceptionAsync(ex).ConfigureAwait(false);
+            failure = ex;
         }
+
+        if (failure is null)
+        {
+            return;
+        }
+
+        await DispatchExceptionAsync(failure).ConfigureAwait(false);
     }
 
     /// <summary>Refreshes the component when requested and the component is undisposed.</summary>

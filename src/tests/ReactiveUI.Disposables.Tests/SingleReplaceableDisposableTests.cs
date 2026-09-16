@@ -61,6 +61,20 @@ public class SingleReplaceableDisposableTests
         await Assert.That(callbacks).IsEqualTo(DisposeAndAssignmentCallbacks);
     }
 
+    /// <summary>A value assigned to a disposed slot without an action is disposed immediately.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Create_AfterDisposeWithoutAction_DisposesIncomingValue()
+    {
+        CountingDisposable incoming = new();
+        SingleReplaceableDisposable slot = new();
+        slot.Dispose();
+
+        slot.Create(incoming);
+
+        await Assert.That(incoming.DisposeCount).IsEqualTo(1);
+    }
+
     /// <summary>Counts every disposal invocation.</summary>
     private sealed class CountingDisposable : IDisposable
     {

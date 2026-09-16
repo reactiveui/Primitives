@@ -66,4 +66,43 @@ public partial class SignalOperatorParityMixinsTests
         await Assert.That(anyErrors.Count).IsEqualTo(1);
         await Assert.That(anyErrors[0]).IsSameReferenceAs(predicateFault);
     }
+
+    /// <summary>Verifies the collection operators answer a range source directly and collect any other source.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task CollectionOperators_RangeAndOtherSources_CollectEveryValue()
+    {
+        List<int[]> rangeArrays = [];
+        List<IList<int>> rangeLists = [];
+        List<int[]> otherArrays = [];
+        List<IList<int>> otherLists = [];
+
+        _ = Signal.Range(First, Second).ToArray().Subscribe(rangeArrays.Add);
+        _ = Signal.Range(First, Second).ToList().Subscribe(rangeLists.Add);
+        _ = Signal.FromEnumerable([First, Second]).ToArray().Subscribe(otherArrays.Add);
+        _ = Signal.FromEnumerable([First, Second]).ToList().Subscribe(otherLists.Add);
+
+        await Assert.That(rangeArrays[0].SequenceEqual([First, Second])).IsTrue();
+        await Assert.That(rangeLists[0].SequenceEqual([First, Second])).IsTrue();
+        await Assert.That(otherArrays[0].SequenceEqual([First, Second])).IsTrue();
+        await Assert.That(otherLists[0].SequenceEqual([First, Second])).IsTrue();
+    }
+
+    /// <summary>Verifies Contains over a range reports values below, inside and above the range.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task Contains_RangeSource_ReportsBoundsDirectly()
+    {
+        List<bool> below = [];
+        List<bool> inside = [];
+        List<bool> above = [];
+
+        _ = Signal.Range(Second, Second).Contains(First).Subscribe(below.Add);
+        _ = Signal.Range(Second, Second).Contains(Second).Subscribe(inside.Add);
+        _ = Signal.Range(Second, Second).Contains(Fourth).Subscribe(above.Add);
+
+        await Assert.That(below.SequenceEqual([false])).IsTrue();
+        await Assert.That(inside.SequenceEqual([true])).IsTrue();
+        await Assert.That(above.SequenceEqual([false])).IsTrue();
+    }
 }

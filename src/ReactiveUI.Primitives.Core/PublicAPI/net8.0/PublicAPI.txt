@@ -291,6 +291,38 @@ namespace ReactiveUI.Primitives.Advanced
         public int Result { get; }
         public readonly ReactiveUI.Primitives.Advanced.CountPredicateAggregator<T> Add(T value) { }
     }
+    [System.Diagnostics.DebuggerDisplay("CurrentValueDelivery: HasValue = {_hasValue}, Started = {_started}, Stopped = {_stopped}, Terminal = {_terminal}")]
+    public record struct CurrentValueDelivery<T> : System.IEquatable<ReactiveUI.Primitives.Advanced.CurrentValueDelivery<T>>
+    {
+        public CurrentValueDelivery(System.Collections.Generic.IEqualityComparer<T>? comparer) { }
+        public CurrentValueDelivery(bool distinctUntilChanged) { }
+        public bool IsTerminated { get; }
+        public void Changed<TDrain>(TDrain drain) where TDrain : ReactiveUI.Primitives.Extensions.IDrainTarget { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Complete<TDrain>(TDrain drain) where TDrain : ReactiveUI.Primitives.Extensions.IDrainTarget { }
+        public bool DrainTo<TReader>(System.IObserver<T> observer, TReader reader) where TReader : ReactiveUI.Primitives.Advanced.ICurrentValueReader<T> { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Fault<TDrain>(System.Exception error, TDrain drain) where TDrain : ReactiveUI.Primitives.Extensions.IDrainTarget { }
+        public void Start<TDrain>(TDrain drain) where TDrain : ReactiveUI.Primitives.Extensions.IDrainTarget { }
+        public void Stop() { }
+    }
+    [System.Diagnostics.DebuggerDisplay("CurrentValueWitness: {_delivery}")]
+    public sealed class CurrentValueWitness<T> : System.IDisposable
+    {
+        public CurrentValueWitness(System.IObserver<T> observer, ReactiveUI.Primitives.Advanced.ICurrentValueReader<T> reader) { }
+        public CurrentValueWitness(System.IObserver<T> observer, ReactiveUI.Primitives.Advanced.ICurrentValueReader<T> reader, System.Collections.Generic.IEqualityComparer<T>? comparer) { }
+        public bool IsTerminated { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Changed() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Complete() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Dispose() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Fault(System.Exception error) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Start() { }
+    }
     [System.Diagnostics.DebuggerDisplay("DefaultIfEmptyWitness: Seen = {_seen}, DefaultValue = {_defaultValue}")]
     public sealed class DefaultIfEmptyWitness<T> : System.IDisposable, System.IObserver<T>
     {
@@ -303,6 +335,25 @@ namespace ReactiveUI.Primitives.Advanced
         public void OnNext(T value) { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void SetSubscription(System.IDisposable subscription) { }
+    }
+    public static class DeliveryGate
+    {
+        public static System.TimeSpan DefaultWaitBudget { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static void Exit<TDrain>(ref ReactiveUI.Primitives.Advanced.DeliveryGateState gate, TDrain drain) where TDrain : ReactiveUI.Primitives.Extensions.IDrainTarget { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static bool Reset(ref ReactiveUI.Primitives.Advanced.DeliveryGateState gate) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static void Signal<TDrain>(ref ReactiveUI.Primitives.Advanced.DeliveryGateState gate, TDrain drain) where TDrain : ReactiveUI.Primitives.Extensions.IDrainTarget { }
+        public static void Signal<TDrain>(ref ReactiveUI.Primitives.Advanced.DeliveryGateState gate, TDrain drain, System.TimeSpan waitBudget) where TDrain : ReactiveUI.Primitives.Extensions.IDrainTarget { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static bool TryEnter(ref ReactiveUI.Primitives.Advanced.DeliveryGateState gate) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static bool TryEnterReentrant(ref ReactiveUI.Primitives.Advanced.DeliveryGateState gate) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("DeliveryGateState: State = {_state}, Owner = {_owner}, Waiters = {_waiters}, Depth = {_depth}")]
+    public record struct DeliveryGateState : System.IEquatable<ReactiveUI.Primitives.Advanced.DeliveryGateState>
+    {
     }
     public sealed class DisposedMarker : System.IDisposable
     {
@@ -418,6 +469,10 @@ namespace ReactiveUI.Primitives.Advanced
     {
         System.Threading.CancellationToken CancellationToken { get; }
         System.Collections.Generic.IAsyncEnumerable<T> Values { get; }
+    }
+    public interface ICurrentValueReader<out T>
+    {
+        T Read() { }
     }
     public interface IInlineSignal<T> : System.IObservable<T>
     {
@@ -603,6 +658,90 @@ namespace ReactiveUI.Primitives.Advanced
         public bool IsRequiredSubscribeOnCurrentThread() { }
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
         public System.IDisposable Subscribe(System.Action<T> onNext, System.Action<System.Exception> onError, System.Action onCompleted) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("SerializeWitness: {_delivery}")]
+    public sealed class SerializeWitness<T> : System.IDisposable, System.IObserver<T>
+    {
+        public SerializeWitness(System.IObserver<T> observer) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Dispose() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnCompleted() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnError(System.Exception error) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnNext(T value) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void SetSubscription(System.IDisposable subscription) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("SerializedBroadcast: {_witnesses}, Claimed = {_claimed}")]
+    public readonly record struct SerializedBroadcast<T> : System.IEquatable<ReactiveUI.Primitives.Advanced.SerializedBroadcast<T>>
+    {
+        public readonly void Flush() { }
+    }
+    [System.Diagnostics.DebuggerDisplay("SerializedBroadcaster: HasObservers = {HasObservers}")]
+    public record struct SerializedBroadcaster<T> : System.IEquatable<ReactiveUI.Primitives.Advanced.SerializedBroadcaster<T>>
+    {
+        public bool HasObservers { get; }
+        public void Add(ReactiveUI.Primitives.Advanced.SerializedWitness<T> witness) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Clear() { }
+        public ReactiveUI.Primitives.Advanced.SerializedBroadcast<T> PostCompleted() { }
+        public ReactiveUI.Primitives.Advanced.SerializedBroadcast<T> PostError(System.Exception error) { }
+        public ReactiveUI.Primitives.Advanced.SerializedBroadcast<T> PostNext(T value) { }
+        public void Remove(ReactiveUI.Primitives.Advanced.SerializedWitness<T> witness) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("SerializedDelivery: Reentrant = {_reentrant}, {_pending}")]
+    public record struct SerializedDelivery<T> : System.IEquatable<ReactiveUI.Primitives.Advanced.SerializedDelivery<T>>
+    {
+        public SerializedDelivery() { }
+        public SerializedDelivery(bool reentrant) { }
+        public bool IsTerminated { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void DeliverClaimed<TDrain>(System.IObserver<T> observer, T value, TDrain drain) where TDrain : ReactiveUI.Primitives.Extensions.IDrainTarget { }
+        public void DeliverClaimed<TDrain>(System.IObserver<T> observer, T[] values, TDrain drain) where TDrain : ReactiveUI.Primitives.Extensions.IDrainTarget { }
+        public bool DrainTo(System.IObserver<T> observer) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Flush<TDrain>(TDrain drain) where TDrain : ReactiveUI.Primitives.Extensions.IDrainTarget { }
+        public void OnCompleted<TDrain>(TDrain drain) where TDrain : ReactiveUI.Primitives.Extensions.IDrainTarget { }
+        public void OnError<TDrain>(System.Exception error, TDrain drain) where TDrain : ReactiveUI.Primitives.Extensions.IDrainTarget { }
+        public void OnNext<TDrain>(System.IObserver<T> observer, T value, TDrain drain) where TDrain : ReactiveUI.Primitives.Extensions.IDrainTarget { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public bool Post(T value) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public bool PostCompleted() { }
+        public bool PostError(System.Exception error) { }
+        public void Start<TReader, TDrain>(System.IObserver<T> observer, TReader reader, TDrain drain) where TReader : ReactiveUI.Primitives.Advanced.ICurrentValueReader<T> where TDrain : ReactiveUI.Primitives.Extensions.IDrainTarget { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Stop() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public bool TryClaim() { }
+    }
+    [System.Diagnostics.DebuggerDisplay("SerializedWitness: {_delivery}")]
+    public sealed class SerializedWitness<T> : System.IObserver<T>
+    {
+        public SerializedWitness(System.IObserver<T> observer) { }
+        public bool IsTerminated { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void DeliverClaimed(T value) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void DeliverClaimed(T[] values) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Flush() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnCompleted() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnError(System.Exception error) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnNext(T value) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public bool Post(T value) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public bool PostCompleted() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public bool PostError(System.Exception error) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public bool TryClaim() { }
     }
     public static class SinkSubscription
     {
@@ -1041,9 +1180,12 @@ namespace ReactiveUI.Primitives.Extensions
         public TimerSinkState(System.IObserver<T> downstream) { }
         public bool Done { get; }
         public ReactiveUI.Primitives.Disposables.SwapDisposable Timer { get; }
-        public void HandleCompletedLocked() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Flush() { }
         public void HandleDisposeLocked() { }
-        public void HandleErrorLocked(System.Exception error) { }
+        public bool QueueCompletedLocked() { }
+        public bool QueueErrorLocked(System.Exception error) { }
+        public bool QueueLocked(T value) { }
     }
 }
 namespace ReactiveUI.Primitives.Extensions.Operators
@@ -1369,6 +1511,13 @@ namespace ReactiveUI.Primitives.Signals
         public ReactiveUI.Primitives.Signals.CommandExecution<TResult> ExecuteAsync(System.Threading.CancellationToken cancellationToken) { }
         public System.IDisposable Subscribe(System.IObserver<TResult> observer) { }
     }
+    [System.Diagnostics.DebuggerDisplay("CurrentValueSignal: Distinct = {_comparer != null}")]
+    public sealed class CurrentValueSignal<T> : System.IObservable<T>
+    {
+        public CurrentValueSignal(System.Func<T> read, System.Func<System.Action, System.IDisposable> attach) { }
+        public CurrentValueSignal(System.Func<T> read, System.Func<System.Action, System.IDisposable> attach, System.Collections.Generic.IEqualityComparer<T>? comparer) { }
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
     [System.Diagnostics.DebuggerDisplay("DelayableNotificationSignal: Stopped = {_stopped}, Buffer = {_buffer}")]
     public sealed class DelayableNotificationSignal<T> : ReactiveUI.Primitives.Signals.ISignal<T>
     {
@@ -1466,6 +1615,24 @@ namespace ReactiveUI.Primitives.Signals
         public System.IObservable<T> Changed { get; }
         public T Value { get; }
         public void Dispose() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("SerializedSignal: HasObservers = {HasObservers}, IsDisposed = {IsDisposed}")]
+    public sealed class SerializedSignal<T> : ReactiveUI.Primitives.Signals.ISignal<T>
+    {
+        public SerializedSignal() { }
+        public SerializedSignal(ReactiveUI.Primitives.Signals.ISignal<T> signal) { }
+        public bool HasObservers { get; }
+        public bool IsDisposed { get; }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void Dispose() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnCompleted() { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnError(System.Exception error) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public void OnNext(T value) { }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public System.IDisposable Subscribe(System.IObserver<T> observer) { }
     }

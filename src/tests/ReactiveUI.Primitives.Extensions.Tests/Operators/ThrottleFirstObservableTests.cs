@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
+using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
@@ -83,4 +84,13 @@ public class ThrottleFirstObservableTests
         await Assert.That(values).IsEmpty();
         await Assert.That(caught).IsNull();
     }
+
+    /// <summary>Verifies an observer that marshals to another thread which completes the source does not deadlock the value delivery.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Task WhenObserverMarshalsCompletionDuringValue_ThenNoDeadlock() =>
+        SerializedDeliveryAssertions.ObserverMarshallingCompletionDoesNotDeadlock<int>(
+            static (source, observer) => source.ThrottleFirst(ThrottleFirstWindow).Subscribe(observer),
+            static observer => observer.OnNext(1));
 }

@@ -44,31 +44,22 @@ public sealed class FinallySignal<T>(IObservable<T> source, Action finallyAction
         new Finally(this, observer, cancel).Run();
 
     /// <summary>Forwards notifications downstream and pairs the subscription with the end-of-subscription action.</summary>
-    private sealed class Finally : IObserver<T>, IDisposable
+    /// <param name="parent">The signal supplying the source and the action.</param>
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="cancel">The outer subscription handle.</param>
+    private sealed class Finally(FinallySignal<T> parent, IObserver<T> observer, IDisposable cancel) : IObserver<T>, IDisposable
     {
         /// <summary>The signal supplying the source and the action.</summary>
-        private readonly FinallySignal<T> _parent;
+        private readonly FinallySignal<T> _parent = parent;
 
         /// <summary>The downstream observer.</summary>
-        private readonly IObserver<T> _observer;
+        private readonly IObserver<T> _observer = observer;
 
         /// <summary>The outer subscription handle released on teardown.</summary>
-        private IDisposable? _cancel;
+        private IDisposable? _cancel = cancel;
 
         /// <summary>Disposed latch; 0 when alive, 1 once disposed.</summary>
         private int _disposed;
-
-        /// <summary>Initializes a new instance of the <see cref="Finally"/> class.</summary>
-        /// <param name="parent">The signal supplying the source and the action.</param>
-        /// <param name="observer">The downstream observer.</param>
-        /// <param name="cancel">The outer subscription handle.</param>
-        /// <exception cref="ArgumentNullException"><paramref name="cancel"/> is <see langword="null"/>.</exception>
-        public Finally(FinallySignal<T> parent, IObserver<T> observer, IDisposable cancel)
-        {
-            _cancel = cancel ?? throw new ArgumentNullException(nameof(cancel));
-            _observer = observer;
-            _parent = parent;
-        }
 
         /// <summary>Subscribes to the source, running the action immediately if subscription throws.</summary>
         /// <returns>The disposable that releases the source subscription and then runs the action.</returns>

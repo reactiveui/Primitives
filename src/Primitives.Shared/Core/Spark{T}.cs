@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 
@@ -16,6 +17,10 @@ namespace ReactiveUI.Primitives.Core;
 /// <typeparam name="T">The type of the elements received by the observer.</typeparam>
 [Serializable]
 [DebuggerDisplay("{DebuggerDisplay,nq}")]
+[SuppressMessage(
+    "Design",
+    "SST2338:Declare discriminated payloads as a union",
+    Justification = "Zero-allocation public notification struct shared by every target framework; union types are not available on the older targets.")]
 public readonly record struct Spark<T>
 {
     /// <summary>The carried exception for an OnError spark; otherwise <see langword="null"/>.</summary>

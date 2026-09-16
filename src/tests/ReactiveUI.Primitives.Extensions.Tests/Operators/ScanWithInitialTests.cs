@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
+using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
@@ -129,4 +130,13 @@ public partial class ScanWithInitialTests
             await Assert.That(results).Count().IsEqualTo(EmissionsBeforeCompletion);
         }
     }
+
+    /// <summary>Tests that an observer that marshals to another thread which completes the source does not deadlock an accumulated value.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Task ObserverMarshallingCompletionDuringAccumulation_DoesNotDeadlock() =>
+        SerializedDeliveryAssertions.ObserverMarshallingCompletionDoesNotDeadlock<int>(
+            static (source, observer) => new ScanWithInitialObservable<int, int>(source, 0, static (acc, x) => acc + x).Subscribe(observer),
+            static observer => observer.OnNext(1));
 }

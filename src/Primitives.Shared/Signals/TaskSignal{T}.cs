@@ -33,10 +33,10 @@ internal sealed class TaskSignal<T> : ITaskSignal<T>
     public IObservable<T>? Source { get; set; }
 
     /// <summary>Gets the cancellation source that cancels the backing task.</summary>
-    public CancellationTokenSource? CancellationTokenSource { get; }
+    public CancellationTokenSource CancellationTokenSource { get; }
 
     /// <summary>Gets a value indicating whether cancellation has been requested.</summary>
-    public bool IsCancellationRequested => CancellationTokenSource?.IsCancellationRequested == true;
+    public bool IsCancellationRequested => CancellationTokenSource.IsCancellationRequested;
 
     /// <summary>Gets a value indicating whether the signal has been disposed.</summary>
     public bool IsDisposed => _cleanUp.IsDisposed;
@@ -45,7 +45,7 @@ internal sealed class TaskSignal<T> : ITaskSignal<T>
     /// <param name="observer">The observer notified on cancellation.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void GetOperationCanceled(IObserver<Exception> observer) =>
-        CancellationTokenSource?.Token
+        CancellationTokenSource.Token
             .UnsafeRegister(static o => ((IObserver<Exception>)o!).OnNext(new OperationCanceledException()), observer)
             .DisposeWith(_cleanUp);
 
@@ -93,7 +93,7 @@ internal sealed class TaskSignal<T> : ITaskSignal<T>
 
         try
         {
-            CancellationTokenSource?.Cancel();
+            CancellationTokenSource.Cancel();
         }
         catch (ObjectDisposedException)
         {
@@ -101,6 +101,6 @@ internal sealed class TaskSignal<T> : ITaskSignal<T>
         }
 
         _cleanUp.Dispose();
-        CancellationTokenSource?.Dispose();
+        CancellationTokenSource.Dispose();
     }
 }

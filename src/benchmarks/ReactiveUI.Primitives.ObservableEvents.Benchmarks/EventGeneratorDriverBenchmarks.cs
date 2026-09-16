@@ -4,7 +4,7 @@
 
 using System.Runtime.CompilerServices;
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Diagnosers;
+
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
@@ -13,7 +13,7 @@ namespace ReactiveUI.Primitives.ObservableEvents.Benchmarks;
 /// <summary>Generator execution for cold, unchanged, unrelated-edit, and event-edit inputs, excluding compilation updates.</summary>
 [System.Diagnostics.DebuggerDisplay("EventGeneratorDriverBenchmarks: {Size}")]
 [SimpleJob(warmupCount: 5, iterationCount: 15)]
-[EventPipeProfiler(EventPipeProfile.CpuSampling)]
+
 public class EventGeneratorDriverBenchmarks
 {
     /// <summary>The compilation the cold driver runs against.</summary>

@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async.Advanced;
 
@@ -21,7 +22,7 @@ namespace ReactiveUI.Primitives.Async.Advanced;
 /// <typeparam name="TResult">The projected element type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("SyncLatest11Coordinator: SourceCount = {SourceCount}, Sources = {Sources}")]
 public sealed class
-    SyncLatest11Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult> : SyncLatestCoordinatorBase<TResult>
+    SyncLatest11Coordinator<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult> : ISyncLatestCoordinator<TResult>
 {
     /// <summary>Number of upstream sources this coordinator combines.</summary>
     private const int SourceCount = 11;
@@ -97,11 +98,14 @@ public sealed class
         IObserverAsync<TResult> observer,
         SyncLatest11State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> sources,
         Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult> selector)
-        : base(observer, SourceCount)
     {
+        Lifecycle = new(observer, SourceCount);
         Sources = sources;
         Selector = selector;
     }
+
+    /// <inheritdoc/>
+    public SyncLatestLifecycle<TResult> Lifecycle { get; }
 
     /// <summary>Gets the bundled source observables.</summary>
     private SyncLatest11State<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Sources { get; }
@@ -143,7 +147,18 @@ public sealed class
     private Optional<T11> Value11 { get; set; } = Optional<T11>.Empty;
 
     /// <inheritdoc/>
-    internal override ValueTask EmitLatestAsync()
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ValueTask DisposeAsync() => Lifecycle.DisposeAsync();
+
+    /// <summary>Subscribes to every source in index order.</summary>
+    /// <param name="cancellationToken">A token to cancel the subscription.</param>
+    /// <returns>A task representing the asynchronous subscribe operation.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ValueTask SubscribeSourcesAsync(CancellationToken cancellationToken) =>
+        SyncLatestCoordinator.SubscribeSourcesAsync(this, cancellationToken);
+
+    /// <inheritdoc/>
+    public ValueTask EmitLatestAsync()
     {
         if (!TryReadValues(out var values))
         {
@@ -166,7 +181,7 @@ public sealed class
     }
 
     /// <inheritdoc/>
-    protected override ValueTask<IAsyncDisposable> SubscribeAtAsync(int index, CancellationToken cancellationToken) =>
+    public ValueTask<IAsyncDisposable> SubscribeAtAsync(int index, CancellationToken cancellationToken) =>
         index switch
         {
             Source1Index => Sources.Source1.SubscribeAsync(new SyncLatestWitness<T1, TResult>(this, Source1Bit, value => Value1 = new(value)), cancellationToken),

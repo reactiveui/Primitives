@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 
 #if REACTIVE_SHIM
@@ -49,13 +50,17 @@ internal sealed class ThrottleUntilTrueObservable<T>(
     /// <param name="throttle">The throttle duration.</param>
     /// <param name="predicate">The predicate.</param>
     /// <param name="scheduler">The scheduler used to time throttled emissions.</param>
+    /// <remarks>
+    /// Notifications are queued in order under the gate and delivered after it is released, so neither the observer nor the
+    /// predicate runs while the gate is held.
+    /// </remarks>
     private sealed class ThrottleUntilTrueSink(
         IObserver<T> downstream,
         TimeSpan throttle,
         Func<T, bool> predicate,
         ISequencer scheduler) : IObserver<T>, IDisposable
     {
-        /// <summary>The gate for synchronization.</summary>
+        /// <summary>Guards the terminal flag and the order notifications are queued in.</summary>
         private readonly Lock _gate = new();
 
         /// <summary>The downstream observer.</summary>
@@ -70,12 +75,28 @@ internal sealed class ThrottleUntilTrueObservable<T>(
         /// <summary>The timer for throttling.</summary>
         private readonly SwapDisposable _timer = new();
 
+        /// <summary>Serializes downstream deliveries.</summary>
+        private SerializedDelivery<T> _delivery = new();
+
         /// <summary>Whether the sequence is done.</summary>
         private bool _done;
 
         /// <inheritdoc/>
         public void OnNext(T value)
         {
+            if (!_predicate(value))
+            {
+                _timer.Disposable = scheduler.Schedule(
+                    (Sink: this, Value: value),
+                    _throttle,
+                    static (_, state) =>
+                    {
+                        state.Sink.EmitThrottled(state.Value);
+                        return EmptyDisposable.Instance;
+                    });
+                return;
+            }
+
             lock (_gate)
             {
                 if (_done)
@@ -83,30 +104,11 @@ internal sealed class ThrottleUntilTrueObservable<T>(
                     return;
                 }
 
-                if (_predicate(value))
-                {
-                    _timer.Disposable = null;
-                    _downstream.OnNext(value);
-                }
-                else
-                {
-                    _timer.Disposable = scheduler.Schedule(
-                        (Sink: this, value),
-                        _throttle,
-                        static (_, state) =>
-                        {
-                            lock (state.Sink._gate)
-                            {
-                                if (!state.Sink._done)
-                                {
-                                    state.Sink._downstream.OnNext(state.value);
-                                }
-                            }
-
-                            return EmptyDisposable.Instance;
-                        });
-                }
+                _timer.Disposable = null;
+                _ = _delivery.Post(value);
             }
+
+            Flush();
         }
 
         /// <inheritdoc/>
@@ -121,8 +123,10 @@ internal sealed class ThrottleUntilTrueObservable<T>(
 
                 _done = true;
                 _timer.Dispose();
-                _downstream.OnError(error);
+                _ = _delivery.PostError(error);
             }
+
+            Flush();
         }
 
         /// <inheritdoc/>
@@ -137,8 +141,10 @@ internal sealed class ThrottleUntilTrueObservable<T>(
 
                 _done = true;
                 _timer.Dispose();
-                _downstream.OnCompleted();
+                _ = _delivery.PostCompleted();
             }
+
+            Flush();
         }
 
         /// <inheritdoc/>
@@ -149,6 +155,27 @@ internal sealed class ThrottleUntilTrueObservable<T>(
                 _done = true;
                 _timer.Dispose();
             }
+        }
+
+        /// <summary>Queues and delivers a throttled value; the delivery refuses it once a terminal notification is queued.</summary>
+        /// <param name="value">The throttled value.</param>
+        private void EmitThrottled(T value)
+        {
+            _ = _delivery.Post(value);
+            Flush();
+        }
+
+        /// <summary>Delivers the queued notifications on the calling thread, or hands them to the thread already delivering.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void Flush() => _delivery.Flush(new PendingDrain(this));
+
+        /// <summary>Drains this sink's queued notifications for the delivery gate.</summary>
+        /// <param name="Owner">The sink.</param>
+        private readonly record struct PendingDrain(ThrottleUntilTrueSink Owner) : IDrainTarget
+        {
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Drain() => _ = Owner._delivery.DrainTo(Owner._downstream);
         }
     }
 }

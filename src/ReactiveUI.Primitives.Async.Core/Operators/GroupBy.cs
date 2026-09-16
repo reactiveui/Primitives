@@ -2,8 +2,11 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 using ReactiveUI.Primitives.Async.Disposables;
+using ReactiveUI.Primitives.Async.Helpers;
 using ReactiveUI.Primitives.Async.Signals;
 using AsyncSignalFactory = ReactiveUI.Primitives.Async.Signals.Signal;
 
@@ -84,29 +87,61 @@ public static partial class SignalAsyncExtensions
             CancellationToken cancellationToken)
         {
             GroupingCoordinator subscription = new(this, observer);
+            ExceptionDispatchInfo failure;
             try
             {
                 return await subscription.SubscribeSourcesAsync(cancellationToken).ConfigureAwait(false);
             }
-            catch
+            catch (Exception e)
             {
-                await subscription.DisposeAsync().ConfigureAwait(false);
-                throw;
+                failure = ExceptionDispatchInfo.Capture(e);
             }
+
+            await subscription.DisposeAsync().ConfigureAwait(false);
+            return CapturedFailure.Rethrow<IAsyncDisposable>(failure);
         }
 
         /// <summary>Observer subscription that tracks groups by key, creating new grouped observables as new keys are encountered.</summary>
         /// <param name="parent">The parent GroupBy observable that provides the key selector and signal factory.</param>
         /// <param name="observer">The downstream observer to receive grouped observables.</param>
+        [DebuggerDisplay("GroupingCoordinator: {_witness}")]
         internal sealed class GroupingCoordinator(
             GroupByAsyncSignal<TKey, TValue> parent,
-            IObserverAsync<GroupedAsyncSignal<TKey, TValue>> observer) : WitnessAsync<TValue>
+            IObserverAsync<GroupedAsyncSignal<TKey, TValue>> observer) : IWitnessAsync<TValue>
         {
             /// <summary>The composite disposable that tracks all group subscription disposables.</summary>
             private readonly MultipleDisposableAsync _disposables = new();
 
             /// <summary>A dictionary mapping each encountered key to its corresponding group signal.</summary>
             private Dictionary<TKey, ISignalAsync<TValue>> _signalsByKey = [];
+
+            /// <summary>The notification gate, cancellation link and disposal state.</summary>
+            private WitnessAsyncState _witness;
+
+            /// <inheritdoc/>
+            ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnNextAsync(TValue value, CancellationToken cancellationToken) =>
+                WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+                WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+            /// <summary>Disposes all tracked group subscriptions.</summary>
+            /// <returns>A task representing the asynchronous disposal operation.</returns>
+            public async ValueTask DisposeAsync()
+            {
+                await WitnessAsync.DisposeStateAsync(this).ConfigureAwait(false);
+                await _disposables.DisposeAsync().ConfigureAwait(false);
+            }
 
             /// <summary>Subscribes this observer to the parent's source sequence.</summary>
             /// <param name="cancellationToken">A token to cancel the subscription.</param>
@@ -119,7 +154,7 @@ public static partial class SignalAsyncExtensions
             /// <param name="value">The element to route.</param>
             /// <param name="cancellationToken">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
-            protected override async ValueTask OnNextAsyncCore(TValue value, CancellationToken cancellationToken)
+            async ValueTask IWitnessAsync<TValue>.OnNextAsyncCore(TValue value, CancellationToken cancellationToken)
             {
                 var key = parent._keySelector(value);
                 if (!_signalsByKey.TryGetValue(key, out var signal))
@@ -132,7 +167,7 @@ public static partial class SignalAsyncExtensions
                             key,
                             signal.Values,
                             _disposables,
-                            InternalDisposedToken),
+                            this.InternalDisposedToken),
                         cancellationToken).ConfigureAwait(false);
                 }
 
@@ -143,13 +178,14 @@ public static partial class SignalAsyncExtensions
             /// <param name="error">The error to forward.</param>
             /// <param name="cancellationToken">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
-            protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<TValue>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
                 observer.OnErrorResumeAsync(error, cancellationToken);
 
             /// <summary>Completes all group signals and then completes the downstream observer.</summary>
             /// <param name="result">The completion result.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
-            protected override async ValueTask OnCompletedAsyncCore(Result result)
+            async ValueTask IWitnessAsync<TValue>.OnCompletedAsyncCore(Result result)
             {
                 var signals = _signalsByKey.Values;
                 _signalsByKey = null!;
@@ -159,14 +195,6 @@ public static partial class SignalAsyncExtensions
                 }
 
                 await observer.OnCompletedAsync(result).ConfigureAwait(false);
-            }
-
-            /// <summary>Disposes all tracked group subscriptions.</summary>
-            /// <returns>A task representing the asynchronous disposal operation.</returns>
-            protected override async ValueTask DisposeAsyncCore()
-            {
-                await base.DisposeAsyncCore().ConfigureAwait(false);
-                await _disposables.DisposeAsync().ConfigureAwait(false);
             }
         }
     }

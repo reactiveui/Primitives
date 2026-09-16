@@ -37,7 +37,7 @@ public sealed class ImmediateSequencer : ISequencer
     /// <param name="action">Action to execute.</param>
     /// <returns>An empty disposable; the action runs before this method returns.</returns>
     /// <exception cref="ArgumentExceptionHelper"><paramref name="action"/> is <see langword="null"/>.</exception>
-    public IDisposable Schedule(Action action)
+    public static IDisposable Schedule(Action action)
     {
         ArgumentExceptionHelper.ThrowIfNull(action);
 

@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Concurrency;
 
@@ -135,13 +136,13 @@ public sealed class AsyncRenameCoverageTests
         using UnhandledExceptionCapture unhandled = new();
         InvalidOperationException expected = new("task-signal-completion");
         ThrowingCompletionWitness observer = new(expected);
-        await TaskSignalSubscription<int>.CompleteWithFailureAsync(observer, new InvalidOperationException("source"))
+        await TaskSignalState.CompleteWithFailureAsync(observer, new InvalidOperationException("source"))
             .ConfigureAwait(false);
         var reported = await unhandled.WaitForAsync(expected.Message).ConfigureAwait(false);
         await Assert.That(reported).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Verifies renamed <see cref = "WitnessAsync{T}"/> disposal members track and dispose an assigned source subscription.</summary>
+    /// <summary>Verifies renamed <see cref = "IWitnessAsync{T}"/> disposal members track and dispose an assigned source subscription.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]
     public async Task ObserverAsyncRenamedDisposalMembersTrackAssignedSubscription()
@@ -170,7 +171,7 @@ public sealed class AsyncRenameCoverageTests
         await Assert.That(reported).IsSameReferenceAs(expected);
     }
 
-    /// <summary>Verifies renamed <see cref = "WitnessAsync{T}.RouteObserverErrorAsync"/> routes canceled and thrown handlers through the unhandled exception hook.</summary>
+    /// <summary>Verifies renamed <see cref = "WitnessAsync.RouteObserverErrorCoreAsync{T}"/> routes canceled and thrown handlers through the unhandled exception hook.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]
     public async Task RouteObserverErrorAsyncReportsCanceledAndThrownHandlerPaths()
@@ -228,21 +229,47 @@ public sealed class AsyncRenameCoverageTests
     }
 
     /// <summary>Test observer exposing the renamed internal observer members.</summary>
-    /// <param name = "onError">Optional error handler used by <see cref = "OnErrorResumeAsyncCore"/>.</param>
-    /// <param name = "onCompleted">Optional completion handler used by <see cref = "OnCompletedAsyncCore"/>.</param>
+    /// <param name = "onError">Optional error handler used by <see cref = "IWitnessAsync{T}.OnErrorResumeAsyncCore"/>.</param>
+    /// <param name = "onCompleted">Optional completion handler used by <see cref = "IWitnessAsync{T}.OnCompletedAsyncCore"/>.</param>
+    [DebuggerDisplay("RenameCoverageWitness: {_witness}")]
     private sealed class RenameCoverageWitness(
         Func<Exception, CancellationToken, ValueTask>? onError = null,
-        Func<Result, ValueTask>? onCompleted = null) : WitnessAsync<int>
+        Func<Result, ValueTask>? onCompleted = null) : IWitnessAsync<int>
     {
-        /// <inheritdoc/>
-        protected override ValueTask OnCompletedAsyncCore(Result result) => onCompleted?.Invoke(result) ?? default;
+        /// <summary>The notification gate, cancellation link and disposal state.</summary>
+        private WitnessAsyncState _witness;
 
         /// <inheritdoc/>
-        protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+        ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnNextAsync(int value, CancellationToken cancellationToken) =>
+            WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+            WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
+
+        /// <inheritdoc/>
+        ValueTask IWitnessAsync<int>.OnCompletedAsyncCore(Result result) => onCompleted?.Invoke(result) ?? default;
+
+        /// <inheritdoc/>
+        ValueTask IWitnessAsync<int>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
             onError?.Invoke(error, cancellationToken) ?? default;
 
         /// <inheritdoc/>
-        protected override ValueTask OnNextAsyncCore(int value, CancellationToken cancellationToken) => default;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask IWitnessAsync<int>.OnNextAsyncCore(int value, CancellationToken cancellationToken) => default;
     }
 
     /// <summary>Async disposable that invokes a callback when disposed.</summary>

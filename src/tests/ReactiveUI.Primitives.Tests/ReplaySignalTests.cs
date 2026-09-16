@@ -214,13 +214,41 @@ public class ReplaySignalTests
         await Assert.That(state.ParamName).IsEqualTo("selector");
     }
 
-    /// <summary>Replay and live delivery hold one shared gate and deliver each value once in order.</summary>
+    /// <summary>Replay and live delivery run without the shared gate held and deliver each value once in order.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
-    public async Task SubscribeAndOnNextHoldTheSharedDeliveryGate()
+    public async Task SubscribeAndOnNextDeliverInOrderOutsideTheGate()
     {
-        await AssertReplayAndLiveDeliveryHoldTheGate(static () => new(1));
-        await AssertReplayAndLiveDeliveryHoldTheGate(static () => new(Three));
+        await AssertReplayAndLiveDeliveryRunOutsideTheGate(static () => new(1));
+        await AssertReplayAndLiveDeliveryRunOutsideTheGate(static () => new(Three));
+    }
+
+    /// <summary>An observer that marshals a replayed value to another thread which emits a new value is not deadlocked, and the new value follows the replay.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ObserverMarshallingOnNextDuringReplayDoesNotDeadlock()
+    {
+        using MarshallingThread dispatcher = new();
+        using ReplaySignal<int> signal = new(Three);
+        signal.OnNext(One);
+        signal.OnNext(Two);
+        List<int> values = [];
+        IDisposable? subscription = null;
+
+        var subscriber = BackgroundThread.Start(() => subscription = signal.Subscribe(value =>
+        {
+            values.Add(value);
+            if (value != One)
+            {
+                return;
+            }
+
+            dispatcher.Invoke(() => signal.OnNext(Three));
+        }));
+
+        await Assert.That(await BackgroundThread.FinishesPromptly(subscriber)).IsTrue();
+        subscription?.Dispose();
+        await Assert.That(values.SequenceEqual([One, Two, Three])).IsTrue();
     }
 
     /// <summary>Asserts a behavior signal keeps its first terminal notification and replays it to late subscribers.</summary>
@@ -302,27 +330,27 @@ public class ReplaySignalTests
         await Assert.That(windowedLate.Values.SequenceEqual(expectedWindowedLate)).IsTrue();
     }
 
-    /// <summary>Checks gate ownership and ordered handover from replay to live delivery.</summary>
+    /// <summary>Checks that replay hands over to live delivery in order without the gate held while the observer runs.</summary>
     /// <param name = "factory">Factory that creates the replay signal under test.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    private static async Task AssertReplayAndLiveDeliveryHoldTheGate(Func<ReplaySignal<int>> factory)
+    private static async Task AssertReplayAndLiveDeliveryRunOutsideTheGate(Func<ReplaySignal<int>> factory)
     {
         using var signal = factory();
         List<int> values = [];
-        var ownsGate = true;
+        var heldGate = false;
         signal.OnNext(1);
         using var subscription = signal.Subscribe(value =>
         {
             values.Add(value);
 #if NET9_0_OR_GREATER
-            ownsGate &= signal.Gate.IsHeldByCurrentThread;
+            heldGate |= signal.Gate.IsHeldByCurrentThread;
 #else
-            ownsGate &= Monitor.IsEntered(signal.Gate);
+            heldGate |= Monitor.IsEntered(signal.Gate);
 #endif
         });
         signal.OnNext(Two);
         signal.OnNext(Three);
-        await Assert.That(ownsGate).IsTrue();
+        await Assert.That(heldGate).IsFalse();
         await Assert.That(values.SequenceEqual([1, Two, Three])).IsTrue();
     }
 

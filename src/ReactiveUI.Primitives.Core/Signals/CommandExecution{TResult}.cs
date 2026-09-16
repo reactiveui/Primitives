@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
-using System.Runtime.ExceptionServices;
 
 namespace ReactiveUI.Primitives.Signals;
 
@@ -124,12 +123,7 @@ public readonly record struct CommandExecution<TResult>
                 return _task.GetAwaiter().GetResult();
             }
 
-            if (_exception is not null)
-            {
-                ExceptionDispatchInfo.Capture(_exception).Throw();
-            }
-
-            return _result!;
+            return _exception is null ? _result! : CapturedFailure.Rethrow(_exception, _result!);
         }
 
         /// <inheritdoc/>

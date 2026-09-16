@@ -143,6 +143,15 @@ public class ThrottleUntilTrueObservableTests
         await Assert.That(caught).IsNull();
     }
 
+    /// <summary>Verifies an observer that marshals to another thread which completes the source does not deadlock an immediate value.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public Task WhenObserverMarshalsCompletionDuringImmediateValue_ThenNoDeadlock() =>
+        SerializedDeliveryAssertions.ObserverMarshallingCompletionDoesNotDeadlock<int>(
+            static (source, observer) => Throttled(source, new(), static _ => true).Subscribe(observer),
+            static observer => observer.OnNext(1));
+
     /// <summary>Creates a throttle using the supplied clock and bypass predicate.</summary>
     /// <param name="source">The source sequence.</param>
     /// <param name="scheduler">The virtual clock timing throttled emissions.</param>

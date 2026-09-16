@@ -1,6 +1,9 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
+using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
@@ -27,10 +30,14 @@ public sealed class SelectLatestAsyncObservable<TSource, TResult>(IObservable<TS
     /// <summary>Processes source values and owns the subscription state.</summary>
     /// <param name = "downstream">The downstream observer.</param>
     /// <param name = "selector">The asynchronous operation.</param>
+    /// <remarks>Results and terminals are queued in order under the gate and delivered after it is released.</remarks>
     internal sealed class SelectLatestAsyncSink(IObserver<TResult> downstream, Func<TSource, Task<TResult>> selector) : IObserver<TSource>, IDisposable
     {
-        /// <summary>The gate for state access.</summary>
+        /// <summary>Guards the projection bookkeeping and the order notifications are queued in; never held while the observer runs.</summary>
         private readonly Lock _gate = new();
+
+        /// <summary>Serializes downstream deliveries.</summary>
+        private SerializedDelivery<TResult> _delivery = new();
 
         /// <summary>Identifier of the most recent projection; a result carrying an older identifier is dropped.</summary>
         private long _currentId;
@@ -48,7 +55,7 @@ public sealed class SelectLatestAsyncObservable<TSource, TResult>(IObservable<TS
         private bool _disposed;
 
         /// <inheritdoc/>
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnNext(TSource value) => _ = OnNextAsync(value);
 
         /// <inheritdoc/>
@@ -63,8 +70,10 @@ public sealed class SelectLatestAsyncObservable<TSource, TResult>(IObservable<TS
 
                 _sourceCompleted = true;
                 _completionSignalled = true;
-                downstream.OnError(error);
+                _ = _delivery.PostError(error);
             }
+
+            Flush();
         }
 
         /// <inheritdoc/>
@@ -136,15 +145,17 @@ public sealed class SelectLatestAsyncObservable<TSource, TResult>(IObservable<TS
                 }
 
                 _completionSignalled = true;
-                downstream.OnCompleted();
+                _ = _delivery.PostCompleted();
             }
+
+            Flush();
         }
 
         /// <summary>Registers completion delivery for the pending projection.</summary>
         /// <param name="task">The pending projection.</param>
         /// <param name="sink">The completion recipient.</param>
         [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void RegisterCompletion(Task task, SelectLatestAsyncSink sink) =>
             _ = task.ContinueWith(static (_, state) => ((SelectLatestAsyncSink)state!).SignalCompleted(), sink, TaskScheduler.Default);
 
@@ -165,10 +176,11 @@ public sealed class SelectLatestAsyncObservable<TSource, TResult>(IObservable<TS
                         return;
                     }
 
-                    downstream.OnNext(result);
+                    _ = _delivery.Post(result);
                     sourceDone = _sourceCompleted;
                 }
 
+                Flush();
                 if (sourceDone)
                 {
                     SignalCompleted();
@@ -182,10 +194,29 @@ public sealed class SelectLatestAsyncObservable<TSource, TResult>(IObservable<TS
                     {
                         _sourceCompleted = true;
                         _completionSignalled = true;
-                        downstream.OnError(ex);
+                        _ = _delivery.PostError(ex);
                     }
                 }
+
+                Flush();
             }
+        }
+
+        /// <summary>Delivers the queued notifications on the calling thread, or hands them to the thread already delivering.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void Flush() => _delivery.Flush(new PendingDrain(this));
+
+        /// <summary>Delivers the queued notifications to the downstream observer.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void DrainPending() => _ = _delivery.DrainTo(downstream);
+
+        /// <summary>Drains this sink's queued notifications for the delivery gate.</summary>
+        /// <param name="Owner">The sink.</param>
+        private readonly record struct PendingDrain(SelectLatestAsyncSink Owner) : IDrainTarget
+        {
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Drain() => Owner.DrainPending();
         }
     }
 }

@@ -8,7 +8,7 @@ using ReactiveUI.Primitives.Disposables;
 namespace ReactiveUI.Primitives.Tests;
 
 /// <summary>Tests for <see cref="ForkJoinWitness{TLeft, TRight, TResult}"/>.</summary>
-public sealed class ForkJoinWitnessTests
+public sealed partial class ForkJoinWitnessTests
 {
     /// <summary>The integer constant one.</summary>
     private const int One = 1;

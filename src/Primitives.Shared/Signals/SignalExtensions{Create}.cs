@@ -48,13 +48,21 @@ public static partial class SignalExtensions
 
             WaitForCompletion(completed);
 
-            if (error is not null)
-            {
-                ExceptionDispatchInfo.Capture(error).Throw();
-            }
-
-            return values;
+            return error is null ? values : Rethrow(error, values);
         }
+    }
+
+    /// <summary>Rethrows <paramref name="error"/> with its original stack, typed by <paramref name="fallback"/> so a value-returning caller can return the call.</summary>
+    /// <typeparam name="TResult">The caller's return type.</typeparam>
+    /// <param name="error">The failure to rethrow.</param>
+    /// <param name="fallback">The value the caller would otherwise return; never returned.</param>
+    /// <returns>Never returns; the return after the throw is unreachable.</returns>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static TResult Rethrow<TResult>(Exception error, TResult fallback)
+    {
+        ExceptionDispatchInfo.Capture(error).Throw();
+        return fallback;
     }
 
     /// <summary>Blocks until the source signals completion.</summary>

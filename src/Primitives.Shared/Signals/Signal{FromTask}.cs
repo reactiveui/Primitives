@@ -216,7 +216,7 @@ public static partial class Signal
             return false;
         }
 
-        observer.OnError(task.Exception!.InnerException ?? task.Exception);
+        observer.OnError(task.Exception!.InnerException!);
         return true;
     }
 

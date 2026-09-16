@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Advanced;
 
 namespace ReactiveUI.Primitives.Tests;
@@ -22,11 +23,7 @@ public sealed class FromAsyncSubscriptionTests
 
         FromAsyncSubscription<int> subscription = new(
             witness,
-            _ =>
-            {
-                externalCancellation.Cancel();
-                return Task.FromResult(FactoryValue);
-            },
+            CancelThenReturn(externalCancellation),
             externalCancellation.Token);
 
         using var handle = subscription.Start();
@@ -50,16 +47,7 @@ public sealed class FromAsyncSubscriptionTests
             witness,
             _ =>
             {
-                using var registration = externalCancellation.Token.UnsafeRegister(static state => throw (Exception)state!, expected);
-                try
-                {
-                    externalCancellation.Cancel(true);
-                }
-                catch (InvalidOperationException error)
-                {
-                    callbackFailure = error;
-                }
-
+                callbackFailure = CancelThroughThrowingCallback(externalCancellation, expected);
                 return Task.FromCanceled<int>(externalCancellation.Token);
             },
             externalCancellation.Token);
@@ -138,5 +126,60 @@ public sealed class FromAsyncSubscriptionTests
         await Assert.That(observer.Completed).IsEqualTo(0);
         await Assert.That(observer.Errors).Count().IsEqualTo(1);
         await Assert.That(observer.Errors[0]).IsSameReferenceAs(expected);
+    }
+
+    /// <summary>A factory that throws forwards the failure once, with or without a linked external token.</summary>
+    /// <param name="linked">Whether an external cancellation token is linked into the subscription.</param>
+    /// <returns>The asynchronous test.</returns>
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task Start_FactoryThrows_ForwardsFailure(bool linked)
+    {
+        using CancellationTokenSource external = new();
+        RecordingWitness<int> observer = new();
+        InvalidOperationException expected = new("factory failed");
+        using FromAsyncSubscription<int> subscription = new(
+            observer,
+            _ => throw expected,
+            linked ? external.Token : CancellationToken.None);
+
+        using var handle = subscription.Start();
+
+        await Assert.That(observer.Errors).Count().IsEqualTo(1);
+        await Assert.That(observer.Errors[0]).IsSameReferenceAs(expected);
+    }
+
+    /// <summary>Creates a factory that cancels the source synchronously, then returns a completed result.</summary>
+    /// <param name="source">The source to cancel while the factory runs.</param>
+    /// <returns>The factory.</returns>
+    private static Func<CancellationToken, Task<int>> CancelThenReturn(CancellationTokenSource source) =>
+        _ =>
+        {
+            CancelSynchronously(source);
+            return Task.FromResult(FactoryValue);
+        };
+
+    /// <summary>Cancels the source on the calling thread, running its registrations before returning.</summary>
+    /// <param name="source">The source to cancel.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void CancelSynchronously(CancellationTokenSource source) => source.Cancel();
+
+    /// <summary>Cancels the source synchronously through a registration that throws, capturing the callback failure.</summary>
+    /// <param name="source">The source to cancel.</param>
+    /// <param name="failure">The exception the registration throws.</param>
+    /// <returns>The failure raised by the callback, or <see langword="null"/> when none surfaced.</returns>
+    private static InvalidOperationException? CancelThroughThrowingCallback(CancellationTokenSource source, InvalidOperationException failure)
+    {
+        using var registration = source.Token.UnsafeRegister(static state => throw (Exception)state!, failure);
+        try
+        {
+            source.Cancel(true);
+            return null;
+        }
+        catch (InvalidOperationException error)
+        {
+            return error;
+        }
     }
 }

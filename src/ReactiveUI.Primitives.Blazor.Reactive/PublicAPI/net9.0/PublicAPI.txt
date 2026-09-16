@@ -23,12 +23,15 @@ namespace ReactiveUI.Primitives.Blazor.Reactive.Components
 namespace ReactiveUI.Primitives.Blazor.Reactive.Concurrency
 {
     [System.Diagnostics.DebuggerDisplay("BlazorRendererSequencer: InvokeAsync = {_invokeAsync}, UnhandledExceptionHandler = {UnhandledExceptionHandler}")]
-    public sealed class BlazorRendererSequencer : ReactiveUI.Primitives.Reactive.Concurrency.CoalescingDispatchScheduler
+    public sealed class BlazorRendererSequencer : System.Reactive.Concurrency.LocalScheduler
     {
         public BlazorRendererSequencer(Microsoft.AspNetCore.Components.Dispatcher dispatcher) { }
         public BlazorRendererSequencer(System.Func<System.Action, System.Threading.Tasks.Task> invokeAsync) { }
         public System.Action<System.Exception>? UnhandledExceptionHandler { get; set; }
-        protected override bool Post(System.Action drain) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public override System.IDisposable Schedule<TState>(TState state, System.Func<System.Reactive.Concurrency.IScheduler, TState, System.IDisposable> action) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public override System.IDisposable Schedule<TState>(TState state, System.TimeSpan dueTime, System.Func<System.Reactive.Concurrency.IScheduler, TState, System.IDisposable> action) { }
     }
     public static class BlazorRendererSequencerExtensions
     {
@@ -36,19 +39,5 @@ namespace ReactiveUI.Primitives.Blazor.Reactive.Concurrency
         {
             public ReactiveUI.Primitives.Blazor.Reactive.Concurrency.BlazorRendererSequencer ToSequencer() { }
         }
-    }
-}
-namespace ReactiveUI.Primitives.Reactive.Concurrency
-{
-    [System.Diagnostics.DebuggerDisplay("CoalescingDispatchScheduler: ReadyCount = {_readyCount}, DrainPosted = {_drainPosted}")]
-    public abstract class CoalescingDispatchScheduler : System.Reactive.Concurrency.LocalScheduler
-    {
-        protected CoalescingDispatchScheduler() { }
-        protected abstract bool Post(System.Action drain) { }
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        protected void RequestDrain() { }
-        public override System.IDisposable Schedule<TState>(TState state, System.Func<System.Reactive.Concurrency.IScheduler, TState, System.IDisposable> action) { }
-        public override System.IDisposable Schedule<TState>(TState state, System.TimeSpan dueTime, System.Func<System.Reactive.Concurrency.IScheduler, TState, System.IDisposable> action) { }
-        protected virtual System.IDisposable ScheduleOnDispatcher(System.Action work, System.TimeSpan dueTime) { }
     }
 }

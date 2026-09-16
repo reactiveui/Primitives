@@ -257,7 +257,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return source is RangeSignal range && typeof(T) == typeof(int)
+            return source is RangeSignal range
                 ? new RangeArraySignal<T>(range)
                 : new CollectArraySignal<T>(source);
         }
@@ -300,7 +300,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return source is RangeSignal range && typeof(T) == typeof(int)
+            return source is RangeSignal range
                 ? new RangeListSignal<T>(range)
                 : new CollectListSignal<T>(source);
         }

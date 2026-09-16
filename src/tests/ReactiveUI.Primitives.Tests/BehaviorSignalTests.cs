@@ -265,6 +265,62 @@ public class BehaviorSignalTests
         await Assert.That(values.SequenceEqual([0, 1])).IsTrue();
     }
 
+    /// <summary>An observer that marshals the initial value to another thread which emits a new value is not deadlocked, and the new value follows the initial one.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task Subscribe_ObserverMarshallingOnNextDuringTheInitialValue_DoesNotDeadlock()
+    {
+        using MarshallingThread dispatcher = new();
+        using BehaviorSignal<int> signal = new(InitialValue);
+        List<int> values = [];
+        IDisposable? subscription = null;
+
+        var subscriber = BackgroundThread.Start(() => subscription = signal.Subscribe(value =>
+        {
+            values.Add(value);
+            if (value != InitialValue)
+            {
+                return;
+            }
+
+            dispatcher.Invoke(() => signal.OnNext(FirstUpdatedValue));
+        }));
+
+        await Assert.That(await BackgroundThread.FinishesPromptly(subscriber)).IsTrue();
+        subscription?.Dispose();
+        await Assert.That(values.SequenceEqual([InitialValue, FirstUpdatedValue])).IsTrue();
+    }
+
+    /// <summary>An observer that marshals a live value to another thread which completes the signal is not deadlocked, and completion follows the value.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task OnNext_ObserverMarshallingCompletion_DoesNotDeadlock()
+    {
+        using MarshallingThread dispatcher = new();
+        using BehaviorSignal<int> signal = new(InitialValue);
+        List<int> values = [];
+        var completions = 0;
+        using var subscription = signal.Subscribe(
+            value =>
+            {
+                values.Add(value);
+                if (value != FirstUpdatedValue)
+                {
+                    return;
+                }
+
+                dispatcher.Invoke(signal.OnCompleted);
+            },
+            static _ => { },
+            () => completions++);
+
+        var worker = BackgroundThread.Start(() => signal.OnNext(FirstUpdatedValue));
+
+        await Assert.That(await BackgroundThread.FinishesPromptly(worker)).IsTrue();
+        await Assert.That(values.SequenceEqual([InitialValue, FirstUpdatedValue])).IsTrue();
+        await Assert.That(completions).IsEqualTo(1);
+    }
+
 #if NET9_0_OR_GREATER
     /// <summary>Invokes the getter used by the debugger without reflection.</summary>
     /// <param name="signal">The instance to display.</param>

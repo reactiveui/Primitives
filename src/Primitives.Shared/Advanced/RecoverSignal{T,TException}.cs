@@ -75,7 +75,7 @@ public sealed class RecoverSignal<T, TException>(IObservable<T> source, Func<TEx
                 IObservable<T> next;
                 try
                 {
-                    next = _handler == Handle.CatchIgnore<T> ? Signal.None<T>() : _handler(typed);
+                    next = _handler(typed);
                 }
                 catch (Exception handlerError)
                 {

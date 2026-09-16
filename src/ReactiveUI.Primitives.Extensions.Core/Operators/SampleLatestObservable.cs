@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
@@ -31,10 +32,14 @@ public sealed class SampleLatestObservable<T>(
 
     /// <summary>Holds the latest source value and the terminal state shared by the source and trigger observers.</summary>
     /// <param name="downstream">The downstream observer.</param>
+    /// <remarks>Samples and terminals are serialized, and no lock is held while the observer runs.</remarks>
     private sealed class SampleLatestSink(IObserver<T> downstream) : IDisposable
     {
-        /// <summary>The gate for synchronization.</summary>
+        /// <summary>Guards the latest value and the terminal flag; never held while the observer runs.</summary>
         private readonly Lock _gate = new();
+
+        /// <summary>Serializes downstream deliveries.</summary>
+        private SerializedDelivery<T> _delivery = new();
 
         /// <summary>The latest value from the source.</summary>
         private T? _latest;
@@ -83,8 +88,9 @@ public sealed class SampleLatestObservable<T>(
                 }
 
                 _done = true;
-                downstream.OnError(error);
             }
+
+            _delivery.OnError(error, new PendingDrain(this));
         }
 
         /// <summary>Completes the downstream observer once, ignoring later notifications.</summary>
@@ -98,8 +104,9 @@ public sealed class SampleLatestObservable<T>(
                 }
 
                 _done = true;
-                downstream.OnCompleted();
             }
+
+            _delivery.OnCompleted(new PendingDrain(this));
         }
 
         /// <summary>Samples and forwards the latest source value if one is available.</summary>
@@ -118,7 +125,20 @@ public sealed class SampleLatestObservable<T>(
                 return;
             }
 
-            downstream.OnNext(value!);
+            _delivery.OnNext(downstream, value!, new PendingDrain(this));
+        }
+
+        /// <summary>Delivers the queued notifications to the downstream observer.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void DrainPending() => _ = _delivery.DrainTo(downstream);
+
+        /// <summary>Drains this sink's queued notifications for the delivery gate.</summary>
+        /// <param name="Owner">The sink.</param>
+        private readonly record struct PendingDrain(SampleLatestSink Owner) : IDrainTarget
+        {
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Drain() => Owner.DrainPending();
         }
 
         /// <summary>Observer that stores each source value in the sink.</summary>

@@ -41,7 +41,7 @@ public class SequencerQueue<TAbsolute>
 
     /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
-    private string DebuggerDisplay => ToString() ?? string.Empty;
+    private string? DebuggerDisplay => ToString();
 
     /// <summary>Enqueues the specified work item to be scheduled.</summary>
     /// <param name="scheduledItem">Work item to be scheduled.</param>

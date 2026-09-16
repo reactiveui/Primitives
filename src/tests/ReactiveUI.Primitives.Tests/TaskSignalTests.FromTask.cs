@@ -228,6 +228,37 @@ public partial class TaskSignalTests
         }
     }
 
+    /// <summary>A factory that returns no task reports an invalid operation on both delivery paths.</summary>
+    /// <param name="immediate">Whether the signal delivers on the immediate sequencer.</param>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous unit test.</returns>
+    [Test]
+    [Arguments(true)]
+    [Arguments(false)]
+    public async Task FactoryReturningNoTaskForwardsInvalidOperation(bool immediate)
+    {
+        ConcurrentQueue<Exception> errors = new();
+        var taskSignal = Signal.FromTask<int>(
+            static _ => null!,
+            immediate ? Sequencer.Immediate : (ISequencer)Sequencer.CurrentThread);
+        try
+        {
+            _ = taskSignal.Subscribe(static _ => { }, errors.Enqueue, static () => { });
+            await Assert.That(errors.Count).IsEqualTo(1);
+            await Assert.That(errors.Single()).IsTypeOf<InvalidOperationException>();
+        }
+        finally
+        {
+            (taskSignal as IDisposable)?.Dispose();
+        }
+    }
+
+    /// <summary>The immediate factory rejects a missing execution delegate.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous unit test.</returns>
+    [Test]
+    public async Task ImmediateFactoryRejectsAMissingExecution() =>
+        await Assert.That(static () => Signal.FromTask<int>(null!, Sequencer.Immediate))
+            .ThrowsExactly<ArgumentNullException>();
+
     /// <summary>Subscribing to a disposed immediate signal throws.</summary>
     [Test]
     public void ImmediateSignalSubscribeAfterDisposeThrows()

@@ -28,6 +28,6 @@ internal sealed class CompilerFeatureRequiredAttribute : Attribute
         FeatureName = featureName;
 
     /// <summary>Gets the name of the required compiler feature.</summary>
-    internal string FeatureName { get; }
+    public string FeatureName { get; }
 }
 #endif

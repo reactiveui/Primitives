@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Advanced;
 
 namespace ReactiveUI.Primitives.Signals;
 
@@ -17,7 +18,7 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
     /// <summary>The synchronous command body, or <see langword="null"/> for an asynchronous command.</summary>
     private readonly Func<TResult>? _executeSync;
 
-    /// <summary>Serializes running-flag writes with running-state stream notifications so the two never diverge.</summary>
+    /// <summary>Orders running-flag writes with the running-state notifications they post, so the two never diverge; never held while an observer runs.</summary>
     private readonly Lock _runningGate = new();
 
     /// <summary>Stores null, a single result observer, or an observer array.</summary>
@@ -89,6 +90,9 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
 
     /// <summary>Gets a value indicating whether the command can currently run.</summary>
     public bool CanRun => Volatile.Read(ref _canRun);
+
+    /// <summary>Gets the gate that orders running-flag writes with the running-state notifications they post.</summary>
+    internal Lock RunningGate => _runningGate;
 
     /// <summary>Gets the lazily allocated fault stream.</summary>
     private Signal<Exception> FaultsSignal => Volatile.Read(ref _faults) ?? InstallFaultsSignal(new());
@@ -337,16 +341,18 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
         SetRunning(true);
     }
 
-    /// <summary>Updates running state and notifies the optional public state stream.</summary>
+    /// <summary>Updates running state and notifies the optional public state stream after releasing the gate.</summary>
     /// <param name="value">The running state.</param>
     private void SetRunning(bool value)
     {
+        SerializedBroadcast<bool> broadcast;
         lock (_runningGate)
         {
             _isRunning = value;
-            PublishRunningState();
+            broadcast = PostRunningState();
         }
 
+        broadcast.Flush();
         if (value)
         {
             return;
@@ -358,15 +364,19 @@ public sealed class CommandSignal<TResult> : IObservable<TResult>, IDisposable
     /// <summary>Seeds a just-installed stream from the authoritative flag without losing a concurrent update.</summary>
     private void ReconcileRunningState()
     {
+        SerializedBroadcast<bool> broadcast;
         lock (_runningGate)
         {
-            PublishRunningState();
+            broadcast = PostRunningState();
         }
+
+        broadcast.Flush();
     }
 
-    /// <summary>Publishes the current running state, when observed, while the caller holds the gate.</summary>
+    /// <summary>Posts the current running state to the stream, when observed, while the caller holds the gate.</summary>
+    /// <returns>The batch to flush after the gate is released.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void PublishRunningState() => Volatile.Read(ref _isRunningState)?.OnNext(_isRunning);
+    private SerializedBroadcast<bool> PostRunningState() => Volatile.Read(ref _isRunningState)?.Post(_isRunning) ?? default;
 
     /// <summary>Publishes a successful result when the results surface has been requested.</summary>
     /// <param name="result">The command result.</param>

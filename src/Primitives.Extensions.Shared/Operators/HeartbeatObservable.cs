@@ -41,16 +41,20 @@ internal sealed class HeartbeatObservable<T>(
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="heartbeatPeriod">The period between heartbeats.</param>
     /// <param name="scheduler">The scheduler to run the heartbeat timer on.</param>
+    /// <remarks>Updates, heartbeats and terminals are serialized, so a heartbeat never overlaps an update.</remarks>
     private sealed class HeartbeatSink(
         IObserver<Heartbeat<T>> downstream,
         TimeSpan heartbeatPeriod,
         ISequencer scheduler) : IObserver<T>, IDisposable
     {
-        /// <summary>The gate to synchronize access to the sink's state.</summary>
+        /// <summary>Guards the flags and the order notifications are queued in; never held while the observer runs.</summary>
         private readonly Lock _gate = new();
 
         /// <summary>The subscription to the periodic heartbeat timer.</summary>
         private readonly MutableDisposable _timerSubscription = new();
+
+        /// <summary>Serializes downstream deliveries.</summary>
+        private SerializedDelivery<Heartbeat<T>> _delivery = new();
 
         /// <summary>Upstream subscription handle, set once via <see cref="AttachSourceSubscription"/> and torn down in <see cref="Dispose"/>.</summary>
         private IDisposable? _sourceSubscription;
@@ -88,9 +92,11 @@ internal sealed class HeartbeatObservable<T>(
                     return;
                 }
 
-                downstream.OnNext(new(value));
-                ScheduleHeartbeats();
+                _ = _delivery.Post(new(value));
             }
+
+            Flush();
+            ScheduleHeartbeats();
         }
 
         /// <inheritdoc/>
@@ -105,8 +111,10 @@ internal sealed class HeartbeatObservable<T>(
 
                 _done = true;
                 _timerSubscription.Dispose();
-                downstream.OnError(error);
+                _ = _delivery.PostError(error);
             }
+
+            Flush();
         }
 
         /// <inheritdoc/>
@@ -121,8 +129,10 @@ internal sealed class HeartbeatObservable<T>(
 
                 _done = true;
                 _timerSubscription.Dispose();
-                downstream.OnCompleted();
+                _ = _delivery.PostCompleted();
             }
+
+            Flush();
         }
 
         /// <inheritdoc/>
@@ -151,10 +161,34 @@ internal sealed class HeartbeatObservable<T>(
                 }
 
                 _timerSubscription.Disposable = scheduler.SchedulePeriodic(
-                    downstream,
+                    this,
                     heartbeatPeriod,
-                    static d => d.OnNext(new()));
+                    static sink => sink.EmitHeartbeat());
             }
+        }
+
+        /// <summary>Queues and delivers a heartbeat; nothing is delivered once a terminal notification is queued.</summary>
+        private void EmitHeartbeat()
+        {
+            _ = _delivery.Post(new());
+            Flush();
+        }
+
+        /// <summary>Delivers the queued notifications on the calling thread, or hands them to the thread already delivering.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void Flush() => _delivery.Flush(new PendingDrain(this));
+
+        /// <summary>Delivers the queued notifications to the downstream observer.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void DrainPending() => _ = _delivery.DrainTo(downstream);
+
+        /// <summary>Drains this sink's queued notifications for the delivery gate.</summary>
+        /// <param name="Owner">The sink.</param>
+        private readonly record struct PendingDrain(HeartbeatSink Owner) : IDrainTarget
+        {
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Drain() => Owner.DrainPending();
         }
     }
 }

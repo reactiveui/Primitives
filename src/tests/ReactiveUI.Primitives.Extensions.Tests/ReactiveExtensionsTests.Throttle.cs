@@ -3,8 +3,10 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reactive.Subjects;
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Extensions.Operators;
+using ReactiveUI.Primitives.Extensions.Tests.Operators;
 
 namespace ReactiveUI.Primitives.Extensions.Tests;
 
@@ -327,4 +329,13 @@ public partial class ReactiveExtensionsTests
         subject.OnError(expected);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
+
+    /// <summary>Verifies a DebounceUntil observer that marshals to another thread which completes the source does not deadlock an immediate value.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Task WhenDebounceUntilObserverMarshalsCompletionDuringImmediateValue_ThenNoDeadlock() =>
+        SerializedDeliveryAssertions.ObserverMarshallingCompletionDoesNotDeadlock<int>(
+            static (source, observer) => source.DebounceUntil(TimeSpan.FromTicks(SchedulerWindowTicks), static _ => true, new VirtualClock()).Subscribe(observer),
+            static observer => observer.OnNext(1));
 }

@@ -16,7 +16,7 @@ public readonly struct RxVoid : IEquatable<RxVoid>
 
     /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
-    private string DebuggerDisplay => ToString() ?? string.Empty;
+    private string? DebuggerDisplay => ToString();
 
     /// <summary>Returns false because all RxVoid values are equal.</summary>
     /// <param name="first">The first <see cref="RxVoid"/> value to compare.</param>

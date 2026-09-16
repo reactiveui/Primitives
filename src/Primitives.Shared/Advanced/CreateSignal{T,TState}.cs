@@ -70,26 +70,18 @@ internal sealed class CreateSignal<T, TState> : IRequireCurrentThread<T>
     }
 
     /// <summary>Forwards notifications downstream and releases the subscription on termination.</summary>
-    private sealed class Create : IObserver<T>, IDisposable
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="cancel">The outer subscription handle.</param>
+    private sealed class Create(IObserver<T> observer, IDisposable cancel) : IObserver<T>, IDisposable
     {
         /// <summary>The downstream observer.</summary>
-        private readonly IObserver<T> _observer;
+        private readonly IObserver<T> _observer = observer;
 
         /// <summary>The outer subscription handle released on teardown.</summary>
-        private IDisposable? _cancel;
+        private IDisposable? _cancel = cancel;
 
         /// <summary>Disposed latch; 0 when alive, 1 once disposed.</summary>
         private int _disposed;
-
-        /// <summary>Initializes a new instance of the <see cref="Create"/> class.</summary>
-        /// <param name="observer">The downstream observer.</param>
-        /// <param name="cancel">The outer subscription handle.</param>
-        /// <exception cref="ArgumentNullException"><paramref name="cancel"/> is <see langword="null"/>.</exception>
-        public Create(IObserver<T> observer, IDisposable cancel)
-        {
-            _cancel = cancel ?? throw new ArgumentNullException(nameof(cancel));
-            _observer = observer;
-        }
 
         /// <summary>Forwards a value downstream.</summary>
         /// <param name="value">The value to forward.</param>

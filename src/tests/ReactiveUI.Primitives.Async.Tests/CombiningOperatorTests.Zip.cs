@@ -21,6 +21,37 @@ public partial class CombiningOperatorTests
         await Assert.That(result).IsCollectionEqualTo(["1a", "2b", "3c"]);
     }
 
+    /// <summary>Tests Pair keeps waiting when the second source completes while its value still waits for a partner.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenPairSecondCompletesWithQueuedValue_ThenWaitsForFirst()
+    {
+        var first = Signal.Create<int>();
+        var second = Signal.Create<int>();
+        List<int> values = [];
+        List<Result> completions = [];
+        await using var subscription = await first.Values.Pair(second.Values, static (left, right) => left + right).SubscribeAsync(
+            (value, _) =>
+            {
+                values.Add(value);
+                return default;
+            },
+            null,
+            result =>
+            {
+                completions.Add(result);
+                return default;
+            },
+            CancellationToken.None);
+
+        await second.OnNextAsync(SampleValue2, CancellationToken.None);
+        await second.OnCompletedAsync(Result.Success);
+        await Assert.That(completions).IsEmpty();
+
+        await first.OnNextAsync(1, CancellationToken.None);
+        await Assert.That(values).IsCollectionEqualTo([1 + SampleValue2]);
+    }
+
     /// <summary>Tests Zip tuple overload creates tuples.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]

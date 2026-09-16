@@ -7,6 +7,7 @@ using System.Reactive.Subjects;
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Concurrency;
 using ReactiveUI.Primitives.Disposables;
+using ReactiveUI.Primitives.Extensions.Tests.Operators;
 
 namespace ReactiveUI.Primitives.Extensions.Tests;
 
@@ -747,6 +748,37 @@ public partial class ReactiveExtensionsTests
         subject.OnError(expected);
         await Assert.That(caught).IsSameReferenceAs(expected);
     }
+
+    /// <summary>Verifies a Pairwise observer that marshals to another thread which completes the source does not deadlock the pair delivery.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Task Pairwise_ObserverMarshallingCompletion_DoesNotDeadlock() =>
+        SerializedDeliveryAssertions.ObserverMarshallingCompletionDoesNotDeadlock<(int Previous, int Current)>(
+            static (source, observer) => source.Pairwise().Subscribe(observer),
+            static observer =>
+            {
+                observer.OnNext(1);
+                observer.OnNext(SampleValue2);
+            });
+
+    /// <summary>Verifies a TakeUntil observer that marshals to another thread which completes the source does not deadlock a value before the match.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Task TakeUntil_ObserverMarshallingCompletion_DoesNotDeadlock() =>
+        SerializedDeliveryAssertions.ObserverMarshallingCompletionDoesNotDeadlock<int>(
+            static (source, observer) => source.TakeUntil(static x => x >= PredicateThreshold).Subscribe(observer),
+            static observer => observer.OnNext(1));
+
+    /// <summary>Verifies a SwitchIfEmpty observer that marshals to another thread which completes the source does not deadlock a source value.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Task SwitchIfEmpty_ObserverMarshallingCompletion_DoesNotDeadlock() =>
+        SerializedDeliveryAssertions.ObserverMarshallingCompletionDoesNotDeadlock<int>(
+            static (source, observer) => source.SwitchIfEmpty(Observable.Empty<int>()).Subscribe(observer),
+            static observer => observer.OnNext(1));
 
     /// <summary>Test class for INotifyPropertyChanged.</summary>
     private sealed class TestNotifyPropertyChanged : INotifyPropertyChanged

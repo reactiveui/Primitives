@@ -41,6 +41,10 @@ internal sealed class RetryWithDelayObservable<T>(
     /// <param name="maxRetries">The maximum number of retries.</param>
     /// <param name="delaySelector">The delay selector.</param>
     /// <param name="scheduler">The scheduler used to time retry delays.</param>
+    /// <remarks>
+    /// The retry count is advanced only by the source's serialized notifications, so no lock is needed; the observer, the
+    /// delay selector and the source subscription all run without one.
+    /// </remarks>
     private sealed class RetryWithDelaySink(
         IObserver<T> downstream,
         IObservable<T> source,
@@ -48,10 +52,7 @@ internal sealed class RetryWithDelayObservable<T>(
         Func<int, TimeSpan> delaySelector,
         ISequencer scheduler) : IObserver<T>, IDisposable
     {
-        /// <summary>The gate for state access.</summary>
-        private readonly Lock _gate = new();
-
-        /// <summary>The subscription to the source sequence.</summary>
+        /// <summary>The subscription to the source sequence or the pending retry; an assignment after disposal is disposed at once.</summary>
         private readonly MutableDisposable _subscription = new();
 
         /// <summary>The number of retries already attempted.</summary>
@@ -71,35 +72,32 @@ internal sealed class RetryWithDelayObservable<T>(
         /// <inheritdoc/>
         public void OnError(Exception error)
         {
-            lock (_gate)
+            if (Volatile.Read(ref _disposed))
             {
-                if (_disposed)
-                {
-                    return;
-                }
+                return;
+            }
 
-                if (_retries < maxRetries)
-                {
-                    var delay = delaySelector(_retries);
-                    _retries++;
+            if (_retries < maxRetries)
+            {
+                var delay = delaySelector(_retries);
+                _retries++;
 
-                    if (delay == TimeSpan.Zero)
-                    {
-                        SubscribeToSource();
-                    }
-                    else
-                    {
-                        _subscription.Disposable = scheduler.Schedule(this, delay, static (_, self) =>
-                        {
-                            self.SubscribeToSource();
-                            return EmptyDisposable.Instance;
-                        });
-                    }
+                if (delay == TimeSpan.Zero)
+                {
+                    SubscribeToSource();
                 }
                 else
                 {
-                    downstream.OnError(error);
+                    _subscription.Disposable = scheduler.Schedule(this, delay, static (_, self) =>
+                    {
+                        self.SubscribeToSource();
+                        return EmptyDisposable.Instance;
+                    });
                 }
+            }
+            else
+            {
+                downstream.OnError(error);
             }
         }
 
@@ -110,25 +108,19 @@ internal sealed class RetryWithDelayObservable<T>(
         /// <inheritdoc/>
         public void Dispose()
         {
-            lock (_gate)
-            {
-                _disposed = true;
-                _subscription.Dispose();
-            }
+            Volatile.Write(ref _disposed, true);
+            _subscription.Dispose();
         }
 
-        /// <summary>Subscribes to the source sequence.</summary>
+        /// <summary>Subscribes to the source sequence unless the sink has been disposed.</summary>
         private void SubscribeToSource()
         {
-            lock (_gate)
+            if (Volatile.Read(ref _disposed))
             {
-                if (_disposed)
-                {
-                    return;
-                }
-
-                _subscription.Disposable = source.Subscribe(this);
+                return;
             }
+
+            _subscription.Disposable = source.Subscribe(this);
         }
     }
 }

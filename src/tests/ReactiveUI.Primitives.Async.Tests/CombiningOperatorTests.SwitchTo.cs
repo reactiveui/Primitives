@@ -405,4 +405,33 @@ public partial class CombiningOperatorTests
         await cts.CancelAsync();
         await Assert.That(sub).IsNotNull();
     }
+
+    /// <summary>Verifies that inners completing inside their own subscribe still let outer completion finish the switch.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenSwitchInnersCompleteDuringSubscribe_ThenOuterCompletionCompletes()
+    {
+        var outer = Signal.Create<IObservableAsync<int>>();
+        List<int> values = [];
+        Result? completionResult = null;
+        await using var sub = await outer.Values.Switch().SubscribeAsync(
+            (value, _) =>
+            {
+                values.Add(value);
+                return default;
+            },
+            null,
+            result =>
+            {
+                completionResult = result;
+                return default;
+            });
+        await outer.OnNextAsync(SignalAsync.Return(1), CancellationToken.None);
+        await outer.OnNextAsync(SignalAsync.Return(SampleValue2), CancellationToken.None);
+        await outer.OnCompletedAsync(Result.Success);
+        await Assert.That(completionResult).IsNotNull();
+        await Assert.That(completionResult!.Value.IsFailure).IsFalse();
+        await Assert.That(values.SequenceEqual([1, SampleValue2])).IsTrue();
+        await outer.DisposeAsync();
+    }
 }

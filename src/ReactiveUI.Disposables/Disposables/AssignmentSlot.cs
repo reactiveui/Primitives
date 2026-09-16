@@ -2,12 +2,17 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Disposables;
 
 /// <summary>Primitives alias for a single-assignment disposable slot.</summary>
-[System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed class AssignmentSlot : SingleDisposable
+[System.Diagnostics.DebuggerDisplay("AssignmentSlot: IsDisposed = {IsDisposed}")]
+public sealed class AssignmentSlot : IsDisposed
 {
+    /// <summary>The slot state.</summary>
+    private AssignmentState _state;
+
     /// <summary>Initializes a new instance of the <see cref="AssignmentSlot"/> class.</summary>
     public AssignmentSlot()
     {
@@ -15,15 +20,12 @@ public sealed class AssignmentSlot : SingleDisposable
 
     /// <summary>Initializes a new instance of the <see cref="AssignmentSlot"/> class.</summary>
     /// <param name="action">Action to invoke before the assigned disposable is disposed.</param>
-    public AssignmentSlot(Action? action)
-        : base(action)
-    {
-    }
+    public AssignmentSlot(Action? action) => _state = new(action);
 
     /// <summary>Initializes a new instance of the <see cref="AssignmentSlot"/> class.</summary>
     /// <param name="disposable">Initial assignment.</param>
     public AssignmentSlot(IDisposable disposable)
-        : base(disposable)
+        : this(disposable, null)
     {
     }
 
@@ -31,11 +33,19 @@ public sealed class AssignmentSlot : SingleDisposable
     /// <param name="disposable">Initial assignment.</param>
     /// <param name="action">Action to invoke before the assigned disposable is disposed.</param>
     public AssignmentSlot(IDisposable disposable, Action? action)
-        : base(disposable, action)
-    {
-    }
+        : this(action) => _state.Create(disposable);
 
-    /// <summary>Gets the debugger display text.</summary>
-    [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
-    private string DebuggerDisplay => ToString() ?? string.Empty;
+    /// <summary>Gets a value indicating whether this instance is disposed.</summary>
+    public bool IsDisposed => _state.IsDisposed;
+
+    /// <summary>Assigns the disposable held by this slot.</summary>
+    /// <param name="disposable">The disposable.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="disposable"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">The slot holds an earlier assignment.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Create(IDisposable disposable) => _state.Create(disposable);
+
+    /// <summary>Runs the constructor-supplied action, then disposes the assigned value and blocks further assignments; repeated calls have no further effect.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Dispose() => _state.Dispose();
 }

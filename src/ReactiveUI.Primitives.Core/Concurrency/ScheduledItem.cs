@@ -163,7 +163,7 @@ public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICompa
             return;
         }
 
-        Interlocked.Exchange(ref _disposable, EmptyDisposable.Instance)?.Dispose();
+        ReleaseResult();
     }
 
     /// <summary>Determines whether the specified object is the same scheduled item instance.</summary>
@@ -206,6 +206,10 @@ public sealed class ScheduledItem<TAbsolute> : IScheduledItem<TAbsolute>, ICompa
             return;
         }
 
-        Interlocked.Exchange(ref _disposable, EmptyDisposable.Instance)?.Dispose();
+        ReleaseResult();
     }
+
+    /// <summary>Takes and disposes the published result, leaving the empty disposable in its place.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void ReleaseResult() => Interlocked.Exchange(ref _disposable, EmptyDisposable.Instance)?.Dispose();
 }

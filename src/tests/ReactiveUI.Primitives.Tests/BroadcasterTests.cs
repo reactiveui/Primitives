@@ -104,6 +104,21 @@ public class BroadcasterTests
         await Assert.That(ReferenceEquals(observers, current)).IsTrue();
     }
 
+    /// <summary>Removing the second of two observers leaves the first as the single observer.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task TryRemove_SecondOfTwo_LeavesTheFirst()
+    {
+        RecordingWitness<int> first = new();
+        RecordingWitness<int> second = new();
+        object? observers = new IObserver<int>[] { first, second };
+
+        var removed = Broadcaster<int>.TryRemove(ref observers, observers, second);
+
+        await Assert.That(removed).IsTrue();
+        await Assert.That(observers).IsSameReferenceAs(first);
+    }
+
     /// <summary>The equality operators compare the underlying observer set by reference.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]

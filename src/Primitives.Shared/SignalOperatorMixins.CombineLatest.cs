@@ -2,8 +2,15 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Extensions;
+#if REACTIVE_SHIM
+using ReactiveUI.Primitives.Reactive.Internal;
+#else
+using ReactiveUI.Primitives.Internal;
+#endif
 
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive;
@@ -15,11 +22,14 @@ namespace ReactiveUI.Primitives;
 public static partial class LinqExtensions
 {
     /// <summary>The element-type-agnostic view of a latest-value slot, so the coordinator can hold them all.</summary>
-    private abstract class CombineLatestSlot
+    private interface ICombineLatestSlot
     {
         /// <summary>Subscribes the slot to the source it holds the latest value of.</summary>
         /// <returns>The source subscription.</returns>
-        internal abstract IDisposable Subscribe();
+        IDisposable Subscribe();
+
+        /// <summary>Applies the oldest value this slot queued while another thread was delivering.</summary>
+        void ApplyQueued();
     }
 
     /// <summary>Observable implementation for generated multi-source combine-latest overloads.</summary>
@@ -354,33 +364,62 @@ public static partial class LinqExtensions
     /// <typeparam name="T">The source element type.</typeparam>
     /// <param name="coordinator">The coordinator that serializes this slot against its siblings.</param>
     /// <param name="source">The source observable.</param>
-    /// <param name="index">The source index.</param>
-    [System.Diagnostics.DebuggerDisplay("CombineLatestSlot: Value = {Value}")]
+    [System.Diagnostics.DebuggerDisplay("CombineLatestSlot: Value = {Value}, HasValue = {HasValue}")]
     private sealed class CombineLatestSlot<TResult, T>(
         CombineLatestCoordinator<TResult> coordinator,
-        IObservable<T> source,
-        int index) : CombineLatestSlot, IObserver<T>
+        IObservable<T> source) : ICombineLatestSlot, IObserver<T>
     {
+        /// <summary>Values this source produced while another thread was delivering, in order; created on first contention.</summary>
+        private ConcurrentQueue<T>? _queued;
+
+        /// <summary>Whether this source has completed, as 0 or 1.</summary>
+        private int _completed;
+
         /// <summary>Gets the latest value this source produced, valid once every slot has one.</summary>
         internal T Value { get; private set; } = default!;
 
+        /// <summary>Gets or sets a value indicating whether the source has produced a value; touched only while the delivery gate is held.</summary>
+        internal bool HasValue { get; set; }
+
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void OnNext(T value) => coordinator.OnNext(index, this, value);
+        public void OnNext(T value) => coordinator.OnNext(this, value);
 
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnError(Exception error) => coordinator.OnError(error);
 
         /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void OnCompleted() => coordinator.OnCompleted(index);
+        public void OnCompleted()
+        {
+            if (Interlocked.Exchange(ref _completed, 1) != 0)
+            {
+                return;
+            }
+
+            coordinator.OnCompleted();
+        }
 
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal override IDisposable Subscribe() => source.Subscribe(this);
+        public IDisposable Subscribe() => source.Subscribe(this);
 
-        /// <summary>Records the latest value while the coordinator holds the serialization gate.</summary>
+        /// <inheritdoc/>
+        public void ApplyQueued()
+        {
+            _ = Volatile.Read(ref _queued)!.TryDequeue(out var value);
+            coordinator.Apply(this, value!);
+        }
+
+        /// <summary>Queues a value for the delivering thread; the coordinator records the slot's turn separately.</summary>
+        /// <param name="value">The value the source produced.</param>
+        internal void Queue(T value)
+        {
+            _ = Interlocked.CompareExchange(ref _queued, new(), null);
+            Volatile.Read(ref _queued)!.Enqueue(value);
+        }
+
+        /// <summary>Records the latest value while the coordinator's delivery gate is held.</summary>
         /// <param name="value">The value the source produced.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void Accept(T value) => Value = value;
@@ -388,25 +427,22 @@ public static partial class LinqExtensions
 
     /// <summary>Coordinates latest values, completion, and errors for a multi-source combine-latest subscription.</summary>
     /// <typeparam name="TResult">The projected result type.</typeparam>
-    private sealed class CombineLatestCoordinator<TResult> : IDisposable
+    private sealed class CombineLatestCoordinator<TResult> : IDisposable, IDrainTarget
     {
-        /// <summary>The number of flag slots each source occupies: one for its value, one for its completion.</summary>
-        private const int FlagsPerSource = 2;
-
-        /// <summary>Serializes notifications across all sources.</summary>
-        private readonly Lock _gate = new();
-
         /// <summary>The downstream observer.</summary>
         private readonly IObserver<TResult> _observer;
 
         /// <summary>The typed latest-value slot for each source, in source order.</summary>
-        private readonly List<CombineLatestSlot> _slots = [];
+        private readonly List<ICombineLatestSlot> _slots = [];
 
         /// <summary>The active source subscriptions.</summary>
         private readonly MultipleDisposable _subscriptions = [];
 
-        /// <summary>One flag per source twice over: the first half records whether a source has produced a value, the second whether it has completed.</summary>
-        private bool[] _flags = [];
+        /// <summary>Serializes downstream deliveries, so no lock is held while the projection or the observer runs.</summary>
+        private DeliveryGateState _delivery;
+
+        /// <summary>The slots with a queued value, in arrival order, and the terminal notification.</summary>
+        private PendingNotifications<ICombineLatestSlot> _pending = new();
 
         /// <summary>The projection over this subscription's slots.</summary>
         private Func<TResult> _project = null!;
@@ -417,9 +453,6 @@ public static partial class LinqExtensions
         /// <summary>The number of sources that have not completed.</summary>
         private int _remainingCompletions;
 
-        /// <summary>Whether a terminal notification has been forwarded.</summary>
-        private bool _completed;
-
         /// <summary>Initializes a new instance of the <see cref="CombineLatestCoordinator{TResult}"/> class.</summary>
         /// <param name="observer">The downstream observer.</param>
         internal CombineLatestCoordinator(IObserver<TResult> observer) => _observer = observer;
@@ -428,13 +461,48 @@ public static partial class LinqExtensions
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose() => _subscriptions.Dispose();
 
+        /// <inheritdoc/>
+        public void Drain()
+        {
+            while (true)
+            {
+                switch (_pending.TakeNext(out var slot, out var error))
+                {
+                    case PendingDelivery.Value:
+                    {
+                        slot.ApplyQueued();
+                        break;
+                    }
+
+                    case PendingDelivery.Terminal when error is null:
+                    {
+                        _observer.OnCompleted();
+                        _subscriptions.Dispose();
+                        return;
+                    }
+
+                    case PendingDelivery.Terminal:
+                    {
+                        _observer.OnError(error);
+                        _subscriptions.Dispose();
+                        return;
+                    }
+
+                    default:
+                    {
+                        return;
+                    }
+                }
+            }
+        }
+
         /// <summary>Creates the next source's typed slot, without subscribing to it yet.</summary>
         /// <typeparam name="T">The source element type.</typeparam>
         /// <param name="source">The source observable.</param>
         /// <returns>The slot that will hold the source's latest value.</returns>
         internal CombineLatestSlot<TResult, T> Attach<T>(IObservable<T> source)
         {
-            CombineLatestSlot<TResult, T> slot = new(this, source, _slots.Count);
+            CombineLatestSlot<TResult, T> slot = new(this, source);
             _slots.Add(slot);
             return slot;
         }
@@ -445,9 +513,8 @@ public static partial class LinqExtensions
         internal CombineLatestCoordinator<TResult> Run(Func<TResult> project)
         {
             _project = project;
-            _flags = new bool[_slots.Count * FlagsPerSource];
             _missingValues = _slots.Count;
-            _remainingCompletions = _slots.Count;
+            Volatile.Write(ref _remainingCompletions, _slots.Count);
             try
             {
                 for (var i = 0; i < _slots.Count; i++)
@@ -464,76 +531,91 @@ public static partial class LinqExtensions
             return this;
         }
 
-        /// <summary>Records a latest source value and emits a projected value once every source has produced one.</summary>
+        /// <summary>Applies a source value directly when nothing else is delivering, otherwise queues it for the delivering thread.</summary>
         /// <typeparam name="T">The source element type.</typeparam>
-        /// <param name="index">The source index.</param>
         /// <param name="slot">The slot that holds the source's latest value.</param>
         /// <param name="value">The source value.</param>
-        internal void OnNext<T>(int index, CombineLatestSlot<TResult, T> slot, T value)
+        internal void OnNext<T>(CombineLatestSlot<TResult, T> slot, T value)
         {
-            lock (_gate)
+            if (!_pending.HasItems && DeliveryGate.TryEnter(ref _delivery))
             {
-                if (_completed)
-                {
-                    return;
-                }
-
-                slot.Accept(value);
-                if (!_flags[index])
-                {
-                    _flags[index] = true;
-                    _missingValues--;
-                }
-
-                if (_missingValues == 0)
-                {
-                    _observer.OnNext(_project());
-                }
+                DeliverEntered(slot, value);
+                return;
             }
+
+            slot.Queue(value);
+            if (!_pending.TryEnqueue(slot))
+            {
+                return;
+            }
+
+            DeliveryGate.Signal(ref _delivery, this);
         }
 
-        /// <summary>Forwards an error and disposes all source subscriptions.</summary>
+        /// <summary>Records a latest source value and emits a projected value once every source has produced one.</summary>
+        /// <typeparam name="T">The source element type.</typeparam>
+        /// <param name="slot">The slot that holds the source's latest value.</param>
+        /// <param name="value">The source value.</param>
+        internal void Apply<T>(CombineLatestSlot<TResult, T> slot, T value)
+        {
+            slot.Accept(value);
+            if (!slot.HasValue)
+            {
+                slot.HasValue = true;
+                _missingValues--;
+            }
+
+            if (_missingValues != 0)
+            {
+                return;
+            }
+
+            _observer.OnNext(_project());
+        }
+
+        /// <summary>Requests the first error as the terminal notification.</summary>
         /// <param name="error">The source error.</param>
         internal void OnError(Exception error)
         {
-            lock (_gate)
+            if (!_pending.TryRequestTerminal(error))
             {
-                if (_completed)
-                {
-                    return;
-                }
-
-                _completed = true;
-                _observer.OnError(error);
+                return;
             }
 
-            _subscriptions.Dispose();
+            DeliveryGate.Signal(ref _delivery, this);
         }
 
-        /// <summary>Tracks source completion and completes downstream after every source completes.</summary>
-        /// <param name="index">The source index.</param>
-        internal void OnCompleted(int index)
+        /// <summary>Requests completion once every source has completed.</summary>
+        internal void OnCompleted()
         {
-            var done = _slots.Count + index;
-            lock (_gate)
+            if (Interlocked.Decrement(ref _remainingCompletions) != 0 || !_pending.TryRequestTerminal(null))
             {
-                if (_completed || _flags[done])
-                {
-                    return;
-                }
-
-                _flags[done] = true;
-                _remainingCompletions--;
-                if (_remainingCompletions != 0)
-                {
-                    return;
-                }
-
-                _completed = true;
-                _observer.OnCompleted();
+                return;
             }
 
-            _subscriptions.Dispose();
+            DeliveryGate.Signal(ref _delivery, this);
+        }
+
+        /// <summary>Applies a source value on a gate this thread entered while nothing was queued.</summary>
+        /// <typeparam name="T">The source element type.</typeparam>
+        /// <param name="slot">The slot that holds the source's latest value.</param>
+        /// <param name="value">The source value.</param>
+        private void DeliverEntered<T>(CombineLatestSlot<TResult, T> slot, T value)
+        {
+            try
+            {
+                if (!_pending.IsTerminated)
+                {
+                    Apply(slot, value);
+                }
+            }
+            catch
+            {
+                _ = DeliveryGate.Reset(ref _delivery);
+                throw;
+            }
+
+            DeliveryGate.Exit(ref _delivery, this);
         }
     }
 }

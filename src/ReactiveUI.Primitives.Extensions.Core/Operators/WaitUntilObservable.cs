@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
@@ -33,13 +35,14 @@ public sealed class WaitUntilObservable<T>(
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="predicate">The match predicate.</param>
     /// <param name="subscription">The handle controlling the upstream subscription.</param>
+    /// <remarks>Deliveries are serialized, and the predicate and the observer run without a lock held.</remarks>
     private sealed class WaitUntilWitness(
         IObserver<T> downstream,
         Func<T, bool> predicate,
         IDisposable subscription) : IObserver<T>
     {
-        /// <summary>The gate for state access.</summary>
-        private readonly Lock _gate = new();
+        /// <summary>Serializes downstream deliveries; the first terminal notification wins.</summary>
+        private SerializedDelivery<T> _delivery = new();
 
         /// <summary>Whether the observer is done.</summary>
         private bool _done;
@@ -47,67 +50,61 @@ public sealed class WaitUntilObservable<T>(
         /// <inheritdoc/>
         public void OnNext(T value)
         {
-            lock (_gate)
+            if (Volatile.Read(ref _done))
             {
-                if (_done)
-                {
-                    return;
-                }
-
-                bool isMatch;
-                try
-                {
-                    isMatch = predicate(value);
-                }
-                catch (Exception ex)
-                {
-                    _done = true;
-                    downstream.OnError(ex);
-                    subscription.Dispose();
-                    return;
-                }
-
-                if (!isMatch)
-                {
-                    return;
-                }
-
-                _done = true;
-                downstream.OnNext(value);
-                downstream.OnCompleted();
+                return;
             }
 
+            bool isMatch;
+            try
+            {
+                isMatch = predicate(value);
+            }
+            catch (Exception ex)
+            {
+                Volatile.Write(ref _done, true);
+                _delivery.OnError(ex, new PendingDrain(this));
+                subscription.Dispose();
+                return;
+            }
+
+            if (!isMatch)
+            {
+                return;
+            }
+
+            Volatile.Write(ref _done, true);
+            _ = _delivery.Post(value);
+            _ = _delivery.PostCompleted();
+            _delivery.Flush(new PendingDrain(this));
             subscription.Dispose();
         }
 
         /// <inheritdoc/>
         public void OnError(Exception error)
         {
-            lock (_gate)
-            {
-                if (_done)
-                {
-                    return;
-                }
-
-                _done = true;
-                downstream.OnError(error);
-            }
+            Volatile.Write(ref _done, true);
+            _delivery.OnError(error, new PendingDrain(this));
         }
 
         /// <inheritdoc/>
         public void OnCompleted()
         {
-            lock (_gate)
-            {
-                if (_done)
-                {
-                    return;
-                }
+            Volatile.Write(ref _done, true);
+            _delivery.OnCompleted(new PendingDrain(this));
+        }
 
-                _done = true;
-                downstream.OnCompleted();
-            }
+        /// <summary>Delivers the queued notifications to the downstream observer.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void DrainPending() => _ = _delivery.DrainTo(downstream);
+
+        /// <summary>Drains this observer's queued notifications for the delivery gate.</summary>
+        /// <param name="Owner">The observer.</param>
+        private readonly record struct PendingDrain(WaitUntilWitness Owner) : IDrainTarget
+        {
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Drain() => Owner.DrainPending();
         }
     }
 }

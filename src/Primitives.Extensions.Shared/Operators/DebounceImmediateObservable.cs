@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Disposables;
 
 #if REACTIVE_SHIM
@@ -36,18 +37,22 @@ internal sealed class DebounceImmediateObservable<T>(
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="dueTime">The debounce duration.</param>
     /// <param name="scheduler">The scheduler to use for timing.</param>
+    /// <remarks>Emissions and terminals are queued in order under the gate and delivered after it is released.</remarks>
     private sealed class DebounceImmediateSink(
         IObserver<T> downstream,
         TimeSpan dueTime,
         ISequencer scheduler) : IObserver<T>, IDisposable
     {
-        /// <summary>The gate for thread safety.</summary>
+        /// <summary>Guards the pending value, the flags and the order notifications are queued in; never held while the observer runs.</summary>
         private readonly Lock _gate = new();
 
         /// <summary>The pending debounce timer, replaced whenever a newer value arrives.</summary>
         private readonly SwapDisposable _timer = new();
 
-        /// <summary>Whether the first value has been emitted.</summary>
+        /// <summary>Serializes downstream deliveries.</summary>
+        private SerializedDelivery<T> _delivery = new();
+
+        /// <summary>Whether the first value has yet to be emitted.</summary>
         private bool _isFirst = true;
 
         /// <summary>The last value received.</summary>
@@ -62,6 +67,7 @@ internal sealed class DebounceImmediateObservable<T>(
         /// <inheritdoc/>
         public void OnNext(T value)
         {
+            bool isFirst;
             lock (_gate)
             {
                 if (_done)
@@ -69,17 +75,26 @@ internal sealed class DebounceImmediateObservable<T>(
                     return;
                 }
 
-                if (_isFirst)
+                isFirst = _isFirst;
+                _isFirst = false;
+                if (isFirst)
                 {
-                    _isFirst = false;
-                    downstream.OnNext(value);
-                    return;
+                    _ = _delivery.Post(value);
                 }
-
-                _lastValue = value;
-                _hasValue = true;
-                _timer.Disposable = scheduler.Schedule(dueTime, Emit);
+                else
+                {
+                    _lastValue = value;
+                    _hasValue = true;
+                }
             }
+
+            if (isFirst)
+            {
+                Flush();
+                return;
+            }
+
+            _timer.Disposable = scheduler.Schedule(dueTime, Emit);
         }
 
         /// <inheritdoc/>
@@ -93,10 +108,12 @@ internal sealed class DebounceImmediateObservable<T>(
                 }
 
                 _done = true;
-                Emit();
+                QueuePendingLocked();
                 _timer.Dispose();
-                downstream.OnError(error);
+                _ = _delivery.PostError(error);
             }
+
+            Flush();
         }
 
         /// <inheritdoc/>
@@ -110,10 +127,12 @@ internal sealed class DebounceImmediateObservable<T>(
                 }
 
                 _done = true;
-                Emit();
+                QueuePendingLocked();
                 _timer.Dispose();
-                downstream.OnCompleted();
+                _ = _delivery.PostCompleted();
             }
+
+            Flush();
         }
 
         /// <inheritdoc/>
@@ -126,25 +145,44 @@ internal sealed class DebounceImmediateObservable<T>(
             }
         }
 
-        /// <summary>Emits the waiting value, if there is one, and clears it.</summary>
+        /// <summary>Queues and delivers the waiting value, if there is one.</summary>
         private void Emit()
         {
-            T? toEmit;
-            bool shouldEmit;
-
             lock (_gate)
             {
-                shouldEmit = _hasValue;
-                toEmit = _lastValue;
-                _hasValue = false;
+                QueuePendingLocked();
             }
 
-            if (!shouldEmit)
+            Flush();
+        }
+
+        /// <summary>Queues the waiting value, if there is one, and clears it while the caller holds the gate.</summary>
+        private void QueuePendingLocked()
+        {
+            if (!_hasValue)
             {
                 return;
             }
 
-            downstream.OnNext(toEmit!);
+            _hasValue = false;
+            _ = _delivery.Post(_lastValue!);
+        }
+
+        /// <summary>Delivers the queued notifications on the calling thread, or hands them to the thread already delivering.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void Flush() => _delivery.Flush(new PendingDrain(this));
+
+        /// <summary>Delivers the queued notifications to the downstream observer.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void DrainPending() => _ = _delivery.DrainTo(downstream);
+
+        /// <summary>Drains this sink's queued notifications for the delivery gate.</summary>
+        /// <param name="Owner">The sink.</param>
+        private readonly record struct PendingDrain(DebounceImmediateSink Owner) : IDrainTarget
+        {
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Drain() => Owner.DrainPending();
         }
     }
 }

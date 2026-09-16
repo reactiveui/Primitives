@@ -2,27 +2,33 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Signals;
 
 /// <summary>Stores the latest value, subscribers, and terminal state of a behavior signal.</summary>
 /// <typeparam name="T">The value type.</typeparam>
+/// <remarks>
+/// Notifications are posted to each subscriber under the gate, so every subscriber sees its initial value first and later values
+/// in the order they were set, and are delivered after the gate is released; no observer runs while it is held.
+/// </remarks>
 [System.Diagnostics.CodeAnalysis.SuppressMessage(
     "Performance",
     "SST1803:Make record struct readonly",
     Justification = "The members mutate these fields in place.")]
 internal record struct BehaviorSignalState<T>
 {
-    /// <summary>Protects observer and terminal-state mutations.</summary>
+    /// <summary>Protects the latest value, the subscriber set, and terminal-state mutations.</summary>
     private readonly Lock _gate;
 
-    /// <summary>The fan-out broadcaster.</summary>
+    /// <summary>The subscribers notifications are posted to.</summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Performance",
         "SST1424:Make field readonly",
         Justification = "A readonly field would mutate a defensive copy of this mutable struct and lose observer updates.")]
-    private Broadcaster<T> _broadcaster;
+    private SerializedBroadcaster<T> _broadcaster;
 
     /// <summary>The last error, when terminated exceptionally.</summary>
     private Exception? _lastError;
@@ -81,9 +87,10 @@ internal record struct BehaviorSignalState<T>
         }
     }
 
-    /// <summary>Publishes completion under the subscription gate, preventing duplicate or out-of-order terminal notifications.</summary>
+    /// <summary>Posts completion under the gate, preventing duplicate or out-of-order terminal notifications, then delivers it.</summary>
     internal void OnCompleted()
     {
+        SerializedBroadcast<T> broadcast;
         lock (_gate)
         {
             ThrowIfDisposed();
@@ -93,9 +100,11 @@ internal record struct BehaviorSignalState<T>
             }
 
             _isStopped = true;
-            _broadcaster.Completed();
+            broadcast = _broadcaster.PostCompleted();
             _broadcaster.Clear();
         }
+
+        broadcast.Flush();
     }
 
     /// <summary>Notifies all observers about the exception.</summary>
@@ -104,6 +113,7 @@ internal record struct BehaviorSignalState<T>
     {
         ArgumentExceptionHelper.ThrowIfNull(error);
 
+        SerializedBroadcast<T> broadcast;
         lock (_gate)
         {
             ThrowIfDisposed();
@@ -114,24 +124,32 @@ internal record struct BehaviorSignalState<T>
 
             _isStopped = true;
             _lastError = error;
-            _broadcaster.Error(error);
+            broadcast = _broadcaster.PostError(error);
             _broadcaster.Clear();
         }
+
+        broadcast.Flush();
     }
 
-    /// <summary>Updates and broadcasts the latest value under the subscription gate, preserving initial-value ordering.</summary>
+    /// <summary>Updates the latest value, posts it to every subscriber, and delivers it.</summary>
     /// <param name="value">The value to send to all observers.</param>
-    internal void OnNext(T value)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void OnNext(T value) => Post(value).Flush();
+
+    /// <summary>Updates the latest value and posts it to every subscriber under the gate, without delivering it.</summary>
+    /// <param name="value">The value to post.</param>
+    /// <returns>The batch to flush once any lock the caller holds is released.</returns>
+    internal SerializedBroadcast<T> Post(T value)
     {
         lock (_gate)
         {
             if (_isStopped)
             {
-                return;
+                return default;
             }
 
             _lastValue = value;
-            _broadcaster.Next(value);
+            return _broadcaster.PostNext(value);
         }
     }
 
@@ -143,26 +161,32 @@ internal record struct BehaviorSignalState<T>
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        var ex = default(Exception);
-
+        SerializedWitness<T>? witness = null;
+        T? initial = default;
+        Exception? error;
         lock (_gate)
         {
             ThrowIfDisposed();
+            error = _lastError;
             if (!_isStopped)
             {
-                // Initial and live values are delivered in order without duplicates.
-                _broadcaster.Add(observer);
-                var subscription = new BehaviorWitnessHandler<T>(owner, observer);
-                observer.OnNext(_lastValue!);
-                return subscription;
+                // A new witness is always claimable; claiming it before it is added queues later values behind the initial value.
+                witness = new(observer);
+                _ = witness.TryClaim();
+                initial = _lastValue;
+                _broadcaster.Add(witness);
             }
-
-            ex = _lastError;
         }
 
-        if (ex is not null)
+        if (witness is not null)
         {
-            observer.OnError(ex);
+            witness.DeliverClaimed(initial!);
+            return new BehaviorWitnessHandler<T>(owner, witness);
+        }
+
+        if (error is not null)
+        {
+            observer.OnError(error);
         }
         else
         {
@@ -172,13 +196,13 @@ internal record struct BehaviorSignalState<T>
         return EmptyDisposable.Instance;
     }
 
-    /// <summary>Removes a subscribed observer from the broadcaster.</summary>
-    /// <param name="observer">The observer to remove.</param>
+    /// <summary>Removes a subscribed observer from the subscriber set.</summary>
+    /// <param name="observer">The subscriber's witness, as handed to its subscription handle.</param>
     internal void RemoveObserver(IObserver<T> observer)
     {
         lock (_gate)
         {
-            _broadcaster.Remove(observer);
+            _broadcaster.Remove((SerializedWitness<T>)observer);
         }
     }
 

@@ -386,7 +386,7 @@ public class FactorySignalTests
         });
         const int RangeCount = 100;
         EnumerableSubscription<int> subscription = new(observer, Enumerable.Range(0, RangeCount));
-        await subscription.ExecuteAsync(cts.Token);
+        await TaskSignalState.ExecuteAsync(subscription, observer, cts.Token);
         await subscription.DisposeAsync();
         await Assert.That(items).IsEmpty();
     }

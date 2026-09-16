@@ -24,4 +24,18 @@ public class OnceDisposableTests
         await Assert.That(holder.IsDisposed).IsTrue();
         await Assert.That(holder.Disposable).IsNull();
     }
+
+    /// <summary>Assigning nothing after disposal is ignored.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Disposable_AssignNullAfterDispose_IsIgnored()
+    {
+        OnceDisposable holder = new();
+        holder.Dispose();
+
+        holder.Disposable = null;
+
+        await Assert.That(holder.IsDisposed).IsTrue();
+        await Assert.That(holder.Disposable).IsNull();
+    }
 }

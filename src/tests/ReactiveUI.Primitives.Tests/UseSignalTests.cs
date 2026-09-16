@@ -131,6 +131,19 @@ public class UseSignalTests
         await Assert.That(observer.Values.Count).IsEqualTo(0);
     }
 
+    /// <summary>A resource factory that returns no resource still runs the scoped source.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task UseRunsTheScopedSourceWithoutAResource()
+    {
+        Recorder<int> observer = new();
+
+        _ = Signal.Use<IDisposable, int>(static () => null!, static _ => Signal.Emit(FirstValue)).Subscribe(observer);
+
+        await Assert.That(observer.Values.SequenceEqual([FirstValue])).IsTrue();
+        await Assert.That(observer.Completed).IsEqualTo(1);
+    }
+
     /// <summary>Observable that hands back the observer it was subscribed with and counts its own disposals.</summary>
     /// <typeparam name="T">The observed value type.</typeparam>
     private sealed class CapturingObservable<T> : IObservable<T>

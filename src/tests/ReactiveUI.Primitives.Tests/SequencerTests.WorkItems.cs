@@ -30,7 +30,7 @@ public partial class SequencerTests
     {
         var ran = 0;
 
-        var subscription = Sequencer.Immediate.Schedule(() => ran++);
+        var subscription = ImmediateSequencer.Schedule(() => ran++);
 
         await Assert.That(ran).IsEqualTo(1);
         await Assert.That(subscription).IsSameReferenceAs(EmptyDisposable.Instance);
@@ -205,6 +205,44 @@ public partial class SequencerTests
         item.Dispose();
         await Assert.That(item.IsDisposed).IsTrue();
         await Assert.That(disposed).IsEqualTo(1);
+    }
+
+    /// <summary>A delegate work item whose action returns no disposable runs and cancels cleanly.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task DelegateWorkItemToleratesANullActionResult()
+    {
+        var ran = 0;
+        Sequencer.DelegateWorkItem<int> item = new(Sequencer.Immediate, One, (_, _) =>
+        {
+            ran++;
+            return null!;
+        });
+
+        item.Execute();
+        item.Dispose();
+
+        await Assert.That(ran).IsEqualTo(1);
+        await Assert.That(item.IsDisposed).IsTrue();
+    }
+
+    /// <summary>A thread-pool work item whose action returns no disposable runs and cancels cleanly.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ScheduledWorkItemToleratesANullActionResult()
+    {
+        var ran = 0;
+        ThreadPoolSequencer.ScheduledWorkItem<int> item = new(ThreadPoolSequencer.Instance, One, (_, _) =>
+        {
+            ran++;
+            return null!;
+        });
+
+        item.Execute();
+        item.Dispose();
+
+        await Assert.That(ran).IsEqualTo(1);
+        await Assert.That(item.IsDisposed).IsTrue();
     }
 
     /// <summary>Work item that counts executions and can be cancelled before a sequencer reaches it.</summary>
