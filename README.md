@@ -1256,7 +1256,7 @@ These change each value into a different value.
 | `source.SelectLatestAsync(selector)` | Runs the async selector for each value and emits only the newest result. |
 | `source.SelectAsyncConcurrent(selector, maxConcurrency)` | Runs the async selector with a cap on parallel calls and emits results as they finish. |
 | `source.BufferUntil(startsWith, endsWith)` | Gathers characters between the two marker characters into a string, markers included. |
-| `source.ReplayLastOnSubscribe(initialValue)` | Emits the initial value to each new subscriber before the source values. |
+| `source.ReplayLastOnSubscribe(initialValue)` | Emits the initial value to each new subscriber before the source values. Each subscriber gets its own subscription, so a late subscriber receives the initial value, not the newest one. The async operator of the same name shares one subscription and replays the newest value instead. |
 | `source.LatestOrDefault(defaultValue)` | Emits the default on subscribe, then each value that differs from the one before it. |
 
 ### Filtering
@@ -1273,7 +1273,7 @@ These drop values you do not want.
 | `source.WaitUntil(predicate)` | Emits only the first matching value, then completes. |
 | `source.Filter(regexPattern)` | Keeps the strings that match the pattern, using a 30 second match timeout. |
 | `source.Filter(regex)` | Keeps the strings that match the regular expression you built yourself. |
-| `source.Partition(predicate)` | Splits the source into a true sequence and a false sequence that share one subscription. |
+| `source.Partition(predicate)` | Splits the source into a true sequence and a false sequence that share one subscription. Over a cold source the first side to subscribe consumes it, so share the source first when both sides need it. |
 | `source.DropIfBusy(asyncAction)` | Runs the async action for a value and drops any value that arrives while it is running. |
 
 ### Combination
@@ -1479,6 +1479,10 @@ source.OnNext(2);
 // prints: odd 1
 // prints: even 2
 ```
+
+Both sides share one subscription, so subscribe both before values flow. Over a cold source that produces its values during
+subscribe, the first side to subscribe consumes the sequence and the other side sees nothing. Share the source first when
+both sides need a cold one.
 
 #### ScanWithInitial
 

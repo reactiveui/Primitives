@@ -463,9 +463,11 @@ public static partial class ReactiveExtensions
             return new CatchAndReturnWithFactoryObservable<T, TException>(source, fallbackFactory);
         }
 
-        /// <summary>Always replay the last value, even if the source hasnt produced one yet.</summary>
-        /// <param name="initialValue">The initial value.</param>
+        /// <summary>Emits <paramref name="initialValue"/> to each new subscriber, then that subscriber's own source values.</summary>
+        /// <param name="initialValue">The value every new subscriber receives before any source value.</param>
         /// <returns>An IObservable of T.</returns>
+        /// <remarks>Each subscriber gets its own subscription to the source, so a late subscriber receives
+        /// <paramref name="initialValue"/> rather than the value the source produced most recently.</remarks>
         public IObservable<T> ReplayLastOnSubscribe(T initialValue)
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -617,6 +619,10 @@ public static partial class ReactiveExtensions
         /// <summary>Partitions a sequence into two based on predicate.</summary>
         /// <param name="predicate">Predicate.</param>
         /// <returns>Tuple of (trueSequence, falseSequence).</returns>
+        /// <remarks>Both sides share one subscription to the source, which the first side to subscribe opens and the last
+        /// side to unsubscribe closes. Over a cold source that produces its values during subscribe, the first side to
+        /// subscribe consumes the sequence and the other side sees nothing, so share the source first when both sides
+        /// need it.</remarks>
         public (IObservable<T> True, IObservable<T> False) Partition(Func<T, bool> predicate)
         {
             PartitionObservable<T> partition = new(source, predicate);

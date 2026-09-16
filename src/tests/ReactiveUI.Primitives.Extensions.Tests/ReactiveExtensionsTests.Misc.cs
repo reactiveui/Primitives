@@ -387,10 +387,10 @@ public partial class ReactiveExtensionsTests
         await Assert.That(results).IsCollectionEqualTo(["first", null, "second"]);
     }
 
-    /// <summary>Tests ReplayLastOnSubscribe replays last value to new subscribers.</summary>
+    /// <summary>Tests ReplayLastOnSubscribe gives every subscriber the initial value rather than the source's most recent one.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]
-    public async Task ReplayLastOnSubscribe_ReplaysLastValueToNewSubscribers()
+    public async Task ReplayLastOnSubscribe_GivesEachSubscriberTheInitialValue()
     {
         Subject<int> subject = new();
         var replayed = subject.ReplayLastOnSubscribe(SampleValue99);
