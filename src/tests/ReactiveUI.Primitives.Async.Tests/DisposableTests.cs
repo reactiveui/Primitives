@@ -52,6 +52,37 @@ public partial class DisposableTests
         await Assert.That(callCount.Value).IsEqualTo(1);
     }
 
+    /// <summary>Tests the delegate overload of DisposableAsync.Create invokes the delegate once: only the first dispose faults.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenDisposableAsyncCreateDelegate_ThenDoubleDisposeOnlyCallsOnce()
+    {
+        var disposable = DisposableAsync.Create(static () => ValueTask.FromException(new InvalidOperationException("dispose")));
+
+        await Assert.That(async () => await disposable.DisposeAsync()).ThrowsExactly<InvalidOperationException>();
+        await Assert.That(async () => await disposable.DisposeAsync()).ThrowsNothing();
+    }
+
+    /// <summary>Tests MultipleDisposableAsync skips a removed slot when enumerating and copying.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenMultipleDisposableAsyncSlotRemoved_ThenEnumerationAndCopySkipIt()
+    {
+        var removed = DisposableAsync.Create(static () => default);
+        var kept = DisposableAsync.Create(static () => default);
+        MultipleDisposableAsync disposables = new();
+        await disposables.AddAsync(removed);
+        await disposables.AddAsync(kept);
+        await disposables.Remove(removed);
+
+        var copied = new IAsyncDisposable[1];
+        disposables.CopyTo(copied, 0);
+        IAsyncDisposable[] enumerated = [.. disposables];
+
+        await Assert.That(enumerated).IsCollectionEqualTo([kept]);
+        await Assert.That(copied[0]).IsSameReferenceAs(kept);
+    }
+
     /// <summary>Tests CompositeDisposableAsync disposes all.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]

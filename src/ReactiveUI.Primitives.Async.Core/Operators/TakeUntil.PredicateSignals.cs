@@ -2,6 +2,9 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides the predicate-driven stop signals that evaluate their stop condition inline on each source element.</summary>
@@ -33,10 +36,42 @@ public static partial class SignalAsyncExtensions
         /// <summary>Observer that forwards items from the source until the predicate returns true.</summary>
         /// <param name="parent">The parent observable that owns this subscription.</param>
         /// <param name="observer">The downstream observer to forward items to.</param>
-        internal sealed class PredicateStopCoordinator(PredicateStopSignal<T> parent, IObserverAsync<T> observer) : WitnessAsync<T>
+        [DebuggerDisplay("PredicateStopCoordinator: {_witness}")]
+        internal sealed class PredicateStopCoordinator(PredicateStopSignal<T> parent, IObserverAsync<T> observer) : IWitnessAsync<T>
         {
             /// <summary>The inner subscription handle.</summary>
             private IAsyncDisposable? _subscription;
+
+            /// <summary>The notification gate, cancellation link and disposal state.</summary>
+            private WitnessAsyncState _witness;
+
+            /// <inheritdoc/>
+            ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
+                WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+                WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+            /// <inheritdoc/>
+            public async ValueTask DisposeAsync()
+            {
+                if (_subscription is not null)
+                {
+                    await _subscription.DisposeAsync().ConfigureAwait(false);
+                }
+
+                await WitnessAsync.DisposeStateAsync(this).ConfigureAwait(false);
+            }
 
             /// <summary>Subscribes to the source observable.</summary>
             /// <param name="cancellationToken">A token to cancel the subscription.</param>
@@ -45,28 +80,19 @@ public static partial class SignalAsyncExtensions
                 _subscription = await parent._source.SubscribeAsync(this, cancellationToken).ConfigureAwait(false);
 
             /// <inheritdoc/>
-            protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
+            ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
                 parent._predicate(value)
-                    ? OnCompletedAsyncCore(Result.Success)
+                    ? ((IWitnessAsync<T>)this).OnCompletedAsyncCore(Result.Success)
                     : observer.OnNextAsync(value, cancellationToken);
 
             /// <inheritdoc/>
-            protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
                 observer.OnErrorResumeAsync(error, cancellationToken);
 
             /// <inheritdoc/>
-            protected override ValueTask OnCompletedAsyncCore(Result result) => observer.OnCompletedAsync(result);
-
-            /// <inheritdoc/>
-            protected override async ValueTask DisposeAsyncCore()
-            {
-                if (_subscription is not null)
-                {
-                    await _subscription.DisposeAsync().ConfigureAwait(false);
-                }
-
-                await base.DisposeAsyncCore().ConfigureAwait(false);
-            }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) => observer.OnCompletedAsync(result);
         }
     }
 
@@ -98,12 +124,44 @@ public static partial class SignalAsyncExtensions
         /// <summary>Forwards source items until the async predicate returns true.</summary>
         /// <param name="parent">The owning signal.</param>
         /// <param name="observer">The downstream observer.</param>
+        [DebuggerDisplay("AsyncPredicateStopCoordinator: {_witness}")]
         internal sealed class AsyncPredicateStopCoordinator(
             AsyncPredicateStopSignal<T> parent,
-            IObserverAsync<T> observer) : WitnessAsync<T>
+            IObserverAsync<T> observer) : IWitnessAsync<T>
         {
             /// <summary>The inner subscription handle.</summary>
             private IAsyncDisposable? _subscription;
+
+            /// <summary>The notification gate, cancellation link and disposal state.</summary>
+            private WitnessAsyncState _witness;
+
+            /// <inheritdoc/>
+            ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
+                WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+                WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+            /// <inheritdoc/>
+            public async ValueTask DisposeAsync()
+            {
+                if (_subscription is not null)
+                {
+                    await _subscription.DisposeAsync().ConfigureAwait(false);
+                }
+
+                await WitnessAsync.DisposeStateAsync(this).ConfigureAwait(false);
+            }
 
             /// <summary>Subscribes to the source observable.</summary>
             /// <param name="cancellationToken">A token to cancel the subscription.</param>
@@ -112,11 +170,11 @@ public static partial class SignalAsyncExtensions
                 _subscription = await parent._source.SubscribeAsync(this, cancellationToken).ConfigureAwait(false);
 
             /// <inheritdoc/>
-            protected override async ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
+            async ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken)
             {
                 if (await parent._asyncPredicate(value, cancellationToken).ConfigureAwait(false))
                 {
-                    await OnCompletedAsyncCore(Result.Success).ConfigureAwait(false);
+                    await ((IWitnessAsync<T>)this).OnCompletedAsyncCore(Result.Success).ConfigureAwait(false);
                     return;
                 }
 
@@ -124,22 +182,13 @@ public static partial class SignalAsyncExtensions
             }
 
             /// <inheritdoc/>
-            protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
                 observer.OnErrorResumeAsync(error, cancellationToken);
 
             /// <inheritdoc/>
-            protected override ValueTask OnCompletedAsyncCore(Result result) => observer.OnCompletedAsync(result);
-
-            /// <inheritdoc/>
-            protected override async ValueTask DisposeAsyncCore()
-            {
-                if (_subscription is not null)
-                {
-                    await _subscription.DisposeAsync().ConfigureAwait(false);
-                }
-
-                await base.DisposeAsyncCore().ConfigureAwait(false);
-            }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) => observer.OnCompletedAsync(result);
         }
     }
 }

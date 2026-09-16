@@ -2,6 +2,9 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Advanced;
+
 namespace ReactiveUI.Primitives.Extensions.Operators;
 
 /// <summary>Emits values through the first predicate match and completes, terminating before emission if the predicate throws.</summary>
@@ -25,12 +28,13 @@ public sealed class TakeUntilInclusiveObservable<T>(
     /// <summary>Observer that completes the sequence right after forwarding the first element the predicate accepts.</summary>
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="predicate">The predicate to determine when to stop taking elements.</param>
+    /// <remarks>Deliveries are serialized, and the predicate and the observer run without a lock held.</remarks>
     private sealed class TakeUntilInclusiveWitness(
         IObserver<T> downstream,
         Func<T, bool> predicate) : IObserver<T>
     {
-        /// <summary>The gate for state access.</summary>
-        private readonly Lock _gate = new();
+        /// <summary>Serializes downstream deliveries; the first terminal notification wins.</summary>
+        private SerializedDelivery<T> _delivery = new();
 
         /// <summary>Whether the observer is done.</summary>
         private bool _done;
@@ -39,66 +43,60 @@ public sealed class TakeUntilInclusiveObservable<T>(
         /// <param name="value">The value to forward.</param>
         public void OnNext(T value)
         {
-            lock (_gate)
+            if (Volatile.Read(ref _done))
             {
-                if (_done)
-                {
-                    return;
-                }
-
-                bool isMatch;
-                try
-                {
-                    isMatch = predicate(value);
-                }
-                catch (Exception ex)
-                {
-                    _done = true;
-                    downstream.OnError(ex);
-                    return;
-                }
-
-                downstream.OnNext(value);
-
-                if (!isMatch)
-                {
-                    return;
-                }
-
-                _done = true;
-                downstream.OnCompleted();
+                return;
             }
+
+            bool isMatch;
+            try
+            {
+                isMatch = predicate(value);
+            }
+            catch (Exception ex)
+            {
+                Volatile.Write(ref _done, true);
+                _delivery.OnError(ex, new PendingDrain(this));
+                return;
+            }
+
+            _delivery.OnNext(downstream, value, new PendingDrain(this));
+
+            if (!isMatch)
+            {
+                return;
+            }
+
+            Volatile.Write(ref _done, true);
+            _delivery.OnCompleted(new PendingDrain(this));
         }
 
         /// <inheritdoc/>
         /// <param name="error">The error.</param>
         public void OnError(Exception error)
         {
-            lock (_gate)
-            {
-                if (_done)
-                {
-                    return;
-                }
-
-                _done = true;
-                downstream.OnError(error);
-            }
+            Volatile.Write(ref _done, true);
+            _delivery.OnError(error, new PendingDrain(this));
         }
 
         /// <inheritdoc/>
         public void OnCompleted()
         {
-            lock (_gate)
-            {
-                if (_done)
-                {
-                    return;
-                }
+            Volatile.Write(ref _done, true);
+            _delivery.OnCompleted(new PendingDrain(this));
+        }
 
-                _done = true;
-                downstream.OnCompleted();
-            }
+        /// <summary>Delivers the queued notifications to the downstream observer.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void DrainPending() => _ = _delivery.DrainTo(downstream);
+
+        /// <summary>Drains this observer's queued notifications for the delivery gate.</summary>
+        /// <param name="Owner">The observer.</param>
+        private readonly record struct PendingDrain(TakeUntilInclusiveWitness Owner) : IDrainTarget
+        {
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Drain() => Owner.DrainPending();
         }
     }
 }

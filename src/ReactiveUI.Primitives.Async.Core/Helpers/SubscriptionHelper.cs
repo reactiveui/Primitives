@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.ExceptionServices;
+
 namespace ReactiveUI.Primitives.Async.Helpers;
 
 /// <summary>Provides a helper for safely subscribing an <see cref="IAsyncDisposable"/> subscription, ensuring the subscription is disposed if the subscribe action throws.</summary>
@@ -15,16 +17,18 @@ public static class SubscriptionHelper
         IAsyncDisposable subscription,
         Func<ValueTask> subscribeAsync)
     {
+        ExceptionDispatchInfo failure;
         try
         {
             await subscribeAsync().ConfigureAwait(false);
+            return subscription;
         }
-        catch
+        catch (Exception e)
         {
-            await subscription.DisposeAsync().ConfigureAwait(false);
-            throw;
+            failure = ExceptionDispatchInfo.Capture(e);
         }
 
-        return subscription;
+        await subscription.DisposeAsync().ConfigureAwait(false);
+        return CapturedFailure.Rethrow<IAsyncDisposable>(failure);
     }
 }

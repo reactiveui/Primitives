@@ -35,15 +35,16 @@ internal sealed class RetryWithBackoffObservable<T>(
     /// <param name="downstream">The downstream observer.</param>
     /// <param name="source">The source observable.</param>
     /// <param name="policy">The retry / backoff configuration.</param>
+    /// <remarks>
+    /// The retry count is advanced only by the source's serialized notifications, so no lock is needed; the observer, the
+    /// error callback and the source subscription all run without one.
+    /// </remarks>
     private sealed class RetryWithBackoffSink(
         IObserver<T> downstream,
         IObservable<T> source,
         RetryBackoffPolicy policy) : IObserver<T>, IDisposable
     {
-        /// <summary>The gate for state access.</summary>
-        private readonly Lock _gate = new();
-
-        /// <summary>The subscription to the source sequence.</summary>
+        /// <summary>The subscription to the source sequence or the pending retry; an assignment after disposal is disposed at once.</summary>
         private readonly MutableDisposable _subscription = new();
 
         /// <summary>The number of retries attempted so far.</summary>
@@ -65,37 +66,34 @@ internal sealed class RetryWithBackoffObservable<T>(
         {
             policy.OnError?.Invoke(error);
 
-            lock (_gate)
+            if (Volatile.Read(ref _disposed))
             {
-                if (_disposed)
+                return;
+            }
+
+            if (_retries < policy.MaxRetries)
+            {
+                var delay = TimeSpan.FromTicks((long)(policy.InitialDelay.Ticks
+                                                      * Math.Pow(policy.BackoffFactor, _retries)));
+                if (policy.MaxDelay.HasValue && delay > policy.MaxDelay.Value)
                 {
-                    return;
+                    delay = policy.MaxDelay.Value;
                 }
 
-                if (_retries < policy.MaxRetries)
+                _retries++;
+
+                if (delay == TimeSpan.Zero)
                 {
-                    var delay = TimeSpan.FromTicks((long)(policy.InitialDelay.Ticks
-                                                          * Math.Pow(policy.BackoffFactor, _retries)));
-                    if (policy.MaxDelay.HasValue && delay > policy.MaxDelay.Value)
-                    {
-                        delay = policy.MaxDelay.Value;
-                    }
-
-                    _retries++;
-
-                    if (delay == TimeSpan.Zero)
-                    {
-                        SubscribeToSource();
-                    }
-                    else
-                    {
-                        _subscription.Disposable = policy.Scheduler.Schedule(delay, SubscribeToSource);
-                    }
+                    SubscribeToSource();
                 }
                 else
                 {
-                    downstream.OnError(error);
+                    _subscription.Disposable = policy.Scheduler.Schedule(delay, SubscribeToSource);
                 }
+            }
+            else
+            {
+                downstream.OnError(error);
             }
         }
 
@@ -106,25 +104,19 @@ internal sealed class RetryWithBackoffObservable<T>(
         /// <inheritdoc/>
         public void Dispose()
         {
-            lock (_gate)
-            {
-                _disposed = true;
-                _subscription.Dispose();
-            }
+            Volatile.Write(ref _disposed, true);
+            _subscription.Dispose();
         }
 
-        /// <summary>Subscribes to the source sequence.</summary>
+        /// <summary>Subscribes to the source sequence unless the sink has been disposed.</summary>
         private void SubscribeToSource()
         {
-            lock (_gate)
+            if (Volatile.Read(ref _disposed))
             {
-                if (_disposed)
-                {
-                    return;
-                }
-
-                _subscription.Disposable = source.Subscribe(this);
+                return;
             }
+
+            _subscription.Disposable = source.Subscribe(this);
         }
     }
 }

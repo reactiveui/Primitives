@@ -323,7 +323,7 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
                 return;
             }
 
-            Interlocked.Exchange(ref _disposable, EmptyDisposable.Instance)?.Dispose();
+            ReleaseResult();
         }
 
         /// <inheritdoc/>
@@ -348,8 +348,12 @@ public sealed class ThreadPoolSequencer : ISequencer, IDisposable
                 return;
             }
 
-            Interlocked.Exchange(ref _disposable, EmptyDisposable.Instance)?.Dispose();
+            ReleaseResult();
         }
+
+        /// <summary>Takes and disposes the published result, leaving the empty disposable in its place.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ReleaseResult() => Interlocked.Exchange(ref _disposable, EmptyDisposable.Instance)?.Dispose();
 
         /// <summary>Runs scheduled work.</summary>
         private void Run()

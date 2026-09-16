@@ -4,7 +4,7 @@
 
 using System.Runtime.CompilerServices;
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Diagnosers;
+
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
@@ -15,7 +15,7 @@ namespace ReactiveUI.Primitives.ObservableEvents.Benchmarks;
 /// the allocations come from. Opt in with <c>--filter "*GcProfile*"</c>.
 /// </summary>
 [ShortRunJob]
-[EventPipeProfiler(EventPipeProfile.GcVerbose)]
+
 [System.Diagnostics.DebuggerDisplay("EventGeneratorGcProfileBenchmarks: {nameof(EventGeneratorGcProfileBenchmarks),nq}")]
 public class EventGeneratorGcProfileBenchmarks
 {

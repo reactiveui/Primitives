@@ -1,6 +1,9 @@
 // Copyright (c) 2019-2026 ReactiveUI Association Incorporated. All rights reserved.
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
+
+using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Disposables;
 
 namespace ReactiveUI.Primitives.Extensions.Operators;
@@ -29,13 +32,17 @@ public sealed class SelectAsyncConcurrentObservable<TSource, TResult>(IObservabl
     /// <param name = "downstream">The downstream observer.</param>
     /// <param name = "selector">The asynchronous operation.</param>
     /// <param name = "maxConcurrency">The maximum concurrency.</param>
+    /// <remarks>The gate only guards the queue and the counters; the selector and the observer run without it held.</remarks>
     internal sealed class SelectAsyncConcurrentSink(IObserver<TResult> downstream, Func<TSource, Task<TResult>> selector, int maxConcurrency) : IObserver<TSource>, IDisposable
     {
-        /// <summary>The gate for state access.</summary>
+        /// <summary>Guards the queue and the counters; never held while the selector or the observer runs.</summary>
         private readonly Lock _gate = new();
 
         /// <summary>Queue of values to process.</summary>
         private readonly Queue<TSource> _queue = new();
+
+        /// <summary>Serializes downstream deliveries.</summary>
+        private SerializedDelivery<TResult> _delivery = new();
 
         /// <summary>The number of currently running async operations.</summary>
         private int _running;
@@ -47,7 +54,7 @@ public sealed class SelectAsyncConcurrentObservable<TSource, TResult>(IObservabl
         private bool _disposed;
 
         /// <inheritdoc/>
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void OnNext(TSource value) => _ = OnNextAsync(value);
 
         /// <inheritdoc/>
@@ -61,8 +68,10 @@ public sealed class SelectAsyncConcurrentObservable<TSource, TResult>(IObservabl
                 }
 
                 _done = true;
-                downstream.OnError(error);
+                _ = _delivery.PostError(error);
             }
+
+            Flush();
         }
 
         /// <inheritdoc/>
@@ -78,9 +87,11 @@ public sealed class SelectAsyncConcurrentObservable<TSource, TResult>(IObservabl
                 _done = true;
                 if (_running == 0 && _queue.Count == 0)
                 {
-                    downstream.OnCompleted();
+                    _ = _delivery.PostCompleted();
                 }
             }
+
+            Flush();
         }
 
         /// <inheritdoc/>
@@ -97,7 +108,6 @@ public sealed class SelectAsyncConcurrentObservable<TSource, TResult>(IObservabl
         /// <returns>The processing task, or a completed task when no work starts.</returns>
         internal Task OnNextAsync(TSource value)
         {
-            Task processing;
             lock (_gate)
             {
                 if (_done || _disposed)
@@ -106,25 +116,41 @@ public sealed class SelectAsyncConcurrentObservable<TSource, TResult>(IObservabl
                 }
 
                 _queue.Enqueue(value);
-                processing = TryProcessNext();
+            }
+
+            return StartQueued();
+        }
+
+        /// <summary>Starts queued values up to the concurrency limit, invoking the selector outside the gate.</summary>
+        /// <returns>The last operation started, or a completed task when the queue cannot advance.</returns>
+        private Task StartQueued()
+        {
+            var processing = Task.CompletedTask;
+            while (TryTakeNext(out var value))
+            {
+                processing = ProcessAsync(value);
             }
 
             return processing;
         }
 
-        /// <summary>Attempts to process the next value in the queue.</summary>
-        /// <returns>The last operation started, or a completed task when the queue cannot advance.</returns>
-        private Task TryProcessNext()
+        /// <summary>Claims the next queued value when a concurrency slot is free.</summary>
+        /// <param name="value">The claimed value.</param>
+        /// <returns><see langword="true"/> when a value was claimed.</returns>
+        private bool TryTakeNext(out TSource value)
         {
-            var processing = Task.CompletedTask;
-            while (_running < maxConcurrency && _queue.Count > 0)
+            lock (_gate)
             {
-                var value = _queue.Dequeue();
-                _running++;
-                processing = ProcessAsync(value);
-            }
+                if (_running >= maxConcurrency || _queue.Count == 0)
+                {
+                    value = default!;
+                    return false;
+                }
 
-            return processing;
+                value = _queue.Dequeue();
+                _running++;
+                return true;
+            }
         }
 
         /// <summary>Awaits the selector, emits its result, then starts queued work or completes the sequence.</summary>
@@ -139,9 +165,11 @@ public sealed class SelectAsyncConcurrentObservable<TSource, TResult>(IObservabl
                 {
                     if (!_disposed)
                     {
-                        downstream.OnNext(result);
+                        _ = _delivery.Post(result);
                     }
                 }
+
+                Flush();
             }
             catch (Exception ex)
             {
@@ -150,12 +178,15 @@ public sealed class SelectAsyncConcurrentObservable<TSource, TResult>(IObservabl
                     if (!_disposed)
                     {
                         _done = true;
-                        downstream.OnError(ex);
+                        _ = _delivery.PostError(ex);
                     }
                 }
+
+                Flush();
             }
             finally
             {
+                var startNext = false;
                 lock (_gate)
                 {
                     _running--;
@@ -163,15 +194,38 @@ public sealed class SelectAsyncConcurrentObservable<TSource, TResult>(IObservabl
                     {
                         if (_done && _running == 0 && _queue.Count == 0)
                         {
-                            downstream.OnCompleted();
+                            _ = _delivery.PostCompleted();
                         }
                         else
                         {
-                            _ = TryProcessNext();
+                            startNext = true;
                         }
                     }
                 }
+
+                Flush();
+                if (startNext)
+                {
+                    _ = StartQueued();
+                }
             }
+        }
+
+        /// <summary>Delivers the queued notifications on the calling thread, or hands them to the thread already delivering.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void Flush() => _delivery.Flush(new PendingDrain(this));
+
+        /// <summary>Delivers the queued notifications to the downstream observer.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void DrainPending() => _ = _delivery.DrainTo(downstream);
+
+        /// <summary>Drains this sink's queued notifications for the delivery gate.</summary>
+        /// <param name="Owner">The sink.</param>
+        private readonly record struct PendingDrain(SelectAsyncConcurrentSink Owner) : IDrainTarget
+        {
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Drain() => Owner.DrainPending();
         }
     }
 }

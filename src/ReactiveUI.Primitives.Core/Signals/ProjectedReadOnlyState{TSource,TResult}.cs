@@ -192,7 +192,7 @@ public sealed class ProjectedReadOnlyState<TSource, TResult> : IObservable<TResu
             return;
         }
 
-        _subscription?.Dispose();
+        _subscription!.Dispose();
         lock (_gate)
         {
             _broadcaster.Clear();

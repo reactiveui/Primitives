@@ -151,6 +151,20 @@ public sealed class ReactiveComponentBaseTests
         await Assert.That(component.IsDisposedState).IsTrue();
     }
 
+    /// <summary>Verifies disposal without managed resources leaves the component undisposed.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task DisposalWithoutManagedResourcesLeavesTheComponentUndisposed()
+    {
+        HarnessComponent component = new();
+
+        component.DisposeWithoutManagedResources();
+        await Assert.That(component.IsDisposedState).IsFalse();
+
+        component.Dispose();
+        await Assert.That(component.IsDisposedState).IsTrue();
+    }
+
     /// <summary>Invokes the getter used by the debugger without reflection.</summary>
     /// <param name="component">The component to display.</param>
     /// <returns>The debugger display text.</returns>
@@ -228,6 +242,10 @@ public sealed class ReactiveComponentBaseTests
         /// <returns>A task that completes when the invalidation is accepted.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Task InvalidateComponentAsync() => InvalidateAsync();
+
+        /// <summary>Runs the disposal path that releases no managed resources.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void DisposeWithoutManagedResources() => Dispose(false);
 
         /// <inheritdoc/>
         protected override void OnParametersSet() => Captured?.Invoke(this);

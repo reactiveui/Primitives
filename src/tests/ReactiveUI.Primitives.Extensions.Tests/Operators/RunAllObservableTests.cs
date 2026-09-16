@@ -183,6 +183,28 @@ public class RunAllObservableTests
         await Assert.That(completed).IsFalse();
     }
 
+    /// <summary>Verifies disposal from inside a synchronously completing source stops the walk without completing.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task RunDisposedDuringSynchronousCompletionStopsWithoutCompleting()
+    {
+        List<RxVoid> values = [];
+        var completed = false;
+        RunAllObservable.Sink? sink = null;
+        IObservable<RxVoid>[] sources =
+        [
+            new SyncCompletingObservable<RxVoid>(() => sink!.Dispose()),
+            Observable.Return(RxVoid.Default),
+        ];
+        sink = new(Observer.Create<RxVoid>(values.Add, () => completed = true), sources);
+        using var owned = sink;
+
+        sink.RunNext();
+
+        await Assert.That(values).IsEmpty();
+        await Assert.That(completed).IsFalse();
+    }
+
     /// <summary>Builds a zero-based index sequence of the given length.</summary>
     /// <param name = "count">The exclusive upper bound.</param>
     /// <returns>A new array of zero-based indices.</returns>
@@ -195,6 +217,20 @@ public class RunAllObservableTests
         }
 
         return output;
+    }
+
+    /// <summary>Observable that completes synchronously and then runs a callback before its subscribe call returns.</summary>
+    /// <typeparam name = "T">The element type.</typeparam>
+    /// <param name = "afterCompletion">The callback run after completion.</param>
+    private sealed class SyncCompletingObservable<T>(Action afterCompletion) : IObservable<T>
+    {
+        /// <inheritdoc/>
+        public IDisposable Subscribe(IObserver<T> observer)
+        {
+            observer.OnCompleted();
+            afterCompletion();
+            return EmptyDisposable.Instance;
+        }
     }
 
     /// <summary>Synchronously-erroring observable used to drive the sync-error path of <c>RunAll.RunNext</c>.</summary>

@@ -28,4 +28,23 @@ public class ScopeTests
         await Assert.That(counts[0]).IsEqualTo(1);
         await Assert.That(counts[1]).IsEqualTo(1);
     }
+
+    /// <summary>A null dispose action yields the shared empty disposable from both factory overloads.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Create_NullAction_ReturnsEmpty()
+    {
+        await Assert.That(Scope.Create(null!)).IsSameReferenceAs(Scope.Empty);
+        await Assert.That(Scope.Create(0, (Action<int>)null!)).IsSameReferenceAs(Scope.Empty);
+    }
+
+    /// <summary>A dispose action yields a disposable of its own rather than the shared empty one.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Create_Action_ReturnsActionDisposable()
+    {
+        using var disposable = Scope.Create(static () => { });
+
+        await Assert.That(disposable).IsNotSameReferenceAs(Scope.Empty);
+    }
 }

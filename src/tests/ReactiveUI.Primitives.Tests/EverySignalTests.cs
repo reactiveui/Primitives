@@ -187,6 +187,21 @@ public sealed class EverySignalTests
         await Assert.That(failure).IsTypeOf<TimeoutException>();
     }
 
+    /// <summary>A tick that runs after the subscription was disposed emits nothing.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task EveryTickRunningAfterDisposalEmitsNothing()
+    {
+        DisposingSequencer sequencer = new();
+        List<long> ticks = [];
+        using var subscription = Signal.Every(TickPeriod, sequencer).Subscribe(ticks.Add);
+        sequencer.BeforeInlineRun = subscription.Dispose;
+
+        sequencer.RunPending();
+
+        await Assert.That(ticks.SequenceEqual([0L])).IsTrue();
+    }
+
     /// <summary>Checks the bounding result and completion on the subscribing thread.</summary>
     /// <param name="bound">Applies the bounding operator to the current-thread tick source.</param>
     /// <param name="expectedResult">The value the bounded sequence must emit before it completes.</param>
@@ -211,5 +226,49 @@ public sealed class EverySignalTests
         await Assert.That(results).IsEquivalentTo([expectedResult], EqualityComparer<bool>.Default);
         await Assert.That(completions).IsEqualTo(1);
         await Assert.That(resultThreadIds.TrueForAll(id => id == subscriberThreadId)).IsTrue();
+    }
+
+    /// <summary>Queues work, or runs it inline after a callback the test installs for the next schedule.</summary>
+    private sealed class DisposingSequencer : ISequencer
+    {
+        /// <summary>Work items queued and not yet run.</summary>
+        private readonly Queue<IWorkItem> _pending = new();
+
+        /// <inheritdoc/>
+        public DateTimeOffset Now => DateTimeOffset.UnixEpoch;
+
+        /// <inheritdoc/>
+        public long Timestamp => 0;
+
+        /// <summary>Gets or sets the callback run before the next scheduled item, which then runs inline.</summary>
+        internal Action? BeforeInlineRun { get; set; }
+
+        /// <inheritdoc/>
+        public void Schedule(IWorkItem item)
+        {
+            var beforeInlineRun = BeforeInlineRun;
+            if (beforeInlineRun is null)
+            {
+                _pending.Enqueue(item);
+                return;
+            }
+
+            BeforeInlineRun = null;
+            beforeInlineRun();
+            item.Execute();
+        }
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Schedule(IWorkItem item, long dueTimestamp) => Schedule(item);
+
+        /// <summary>Runs the queued work items.</summary>
+        internal void RunPending()
+        {
+            while (_pending.Count > 0)
+            {
+                _pending.Dequeue().Execute();
+            }
+        }
     }
 }

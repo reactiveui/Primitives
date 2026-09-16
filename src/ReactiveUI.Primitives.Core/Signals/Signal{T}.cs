@@ -219,12 +219,7 @@ public class Signal<T> : ISignal<T>
             return subscription;
         }
 
-        if (ex is not null)
-        {
-            ExceptionDispatchInfo.Capture(ex).Throw();
-        }
-
-        return EmptyDisposable.Instance;
+        return ex is null ? EmptyDisposable.Instance : CapturedFailure.Rethrow<IDisposable>(ex, EmptyDisposable.Instance);
     }
 
     /// <summary>Publishes the disposed marker and detaches the subscriptions it replaced.</summary>

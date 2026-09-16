@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async;
@@ -52,7 +53,8 @@ public static partial class SignalAsyncExtensions
         /// <param name="observer">The downstream observer to forward elements to.</param>
         /// <param name="dueTime">The maximum allowed inter-element interval.</param>
         /// <param name="timeProvider">The time provider used to schedule the deadline.</param>
-        internal sealed class TimeoutWitness(IObserverAsync<T> observer, TimeSpan dueTime, TimeProvider timeProvider) : WitnessAsync<T>
+        [DebuggerDisplay("TimeoutWitness: {_witness}")]
+        internal sealed class TimeoutWitness(IObserverAsync<T> observer, TimeSpan dueTime, TimeProvider timeProvider) : IWitnessAsync<T>
         {
             /// <summary>Synchronization gate protecting timer state.</summary>
             private readonly Lock _gate = new();
@@ -65,6 +67,44 @@ public static partial class SignalAsyncExtensions
 
             /// <summary>Set once the observer has been terminated; suppresses any later timeout signal.</summary>
             private bool _completed;
+
+            /// <summary>The notification gate, cancellation link and disposal state.</summary>
+            private WitnessAsyncState _witness;
+
+            /// <inheritdoc/>
+            ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
+                WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+                WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+            /// <summary>Disposes the deadline timer during teardown.</summary>
+            /// <returns>A completed task.</returns>
+            public async ValueTask DisposeAsync()
+            {
+                lock (_gate)
+                {
+                    _completed = true;
+                }
+
+                if (_timer is not null)
+                {
+                    await _timer.DisposeAsync().ConfigureAwait(false);
+                    _timer = null;
+                }
+
+                await WitnessAsync.DisposeStateAsync(this).ConfigureAwait(false);
+            }
 
             /// <summary>Allocates the timer and schedules the first deadline tick.</summary>
             /// <param name="cancellationToken">Unused; the timer carries its own deadline.</param>
@@ -100,7 +140,7 @@ public static partial class SignalAsyncExtensions
             /// <param name="value">The element to forward.</param>
             /// <param name="cancellationToken">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
-            protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
+            ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken)
             {
                 RearmTimer();
                 return observer.OnNextAsync(value, cancellationToken);
@@ -110,7 +150,7 @@ public static partial class SignalAsyncExtensions
             /// <param name="error">The error to forward.</param>
             /// <param name="cancellationToken">A token to cancel the operation.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
-            protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken)
+            ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken)
             {
                 lock (_gate)
                 {
@@ -124,7 +164,7 @@ public static partial class SignalAsyncExtensions
             /// <summary>Stops the deadline timer and forwards completion to the downstream observer.</summary>
             /// <param name="result">The completion result.</param>
             /// <returns>A task representing the asynchronous operation.</returns>
-            protected override ValueTask OnCompletedAsyncCore(Result result)
+            ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result)
             {
                 lock (_gate)
                 {
@@ -133,24 +173,6 @@ public static partial class SignalAsyncExtensions
 
                 StopTimer();
                 return observer.OnCompletedAsync(result);
-            }
-
-            /// <summary>Disposes the deadline timer during teardown.</summary>
-            /// <returns>A completed task.</returns>
-            protected override async ValueTask DisposeAsyncCore()
-            {
-                lock (_gate)
-                {
-                    _completed = true;
-                }
-
-                if (_timer is not null)
-                {
-                    await _timer.DisposeAsync().ConfigureAwait(false);
-                    _timer = null;
-                }
-
-                await base.DisposeAsyncCore().ConfigureAwait(false);
             }
 
             /// <summary>Awaits the downstream <c>OnCompletedAsync</c> hand-off from the timer-pool callback.</summary>

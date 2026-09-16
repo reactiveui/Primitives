@@ -218,6 +218,78 @@ public sealed class DelayableNotificationSignalTests
         await Assert.That(signal.IsDisposed).IsTrue();
     }
 
+    /// <summary>A delay check that marshals a subscription to another thread is not deadlocked.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task DelayCheckMarshallingASubscriptionDoesNotDeadlock()
+    {
+        using MarshallingThread dispatcher = new();
+        DelayableNotificationSignal<string>? signal = null;
+        RecordingObserver<string> recorder = new();
+        signal = new(
+            () =>
+            {
+                dispatcher.Invoke(() =>
+                {
+                    _ = signal!.Subscribe(recorder);
+                });
+                return false;
+            },
+            static items => items);
+
+        var worker = BackgroundThread.Start(() => signal.OnNext(Buffered));
+
+        await Assert.That(await BackgroundThread.FinishesPromptly(worker)).IsTrue();
+        await Assert.That(recorder.Values.Contains(Buffered)).IsTrue();
+    }
+
+    /// <summary>A flush de-duplication that marshals an emission to another thread is not deadlocked, and the emission is buffered for the next flush.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task FlushDistinctMarshallingAnEmissionDoesNotDeadlock()
+    {
+        using MarshallingThread dispatcher = new();
+        DelayableNotificationSignal<string>? signal = null;
+        RecordingObserver<string> recorder = new();
+        signal = new(
+            static () => true,
+            items =>
+            {
+                dispatcher.Invoke(() => signal!.OnNext("during-flush"));
+                return items;
+            });
+        using var subscription = signal.Subscribe(recorder);
+        signal.OnNext(Buffered);
+
+        var worker = BackgroundThread.Start(signal.Flush);
+
+        await Assert.That(await BackgroundThread.FinishesPromptly(worker)).IsTrue();
+        await Assert.That(recorder.Values.SequenceEqual([Buffered])).IsTrue();
+    }
+
+    /// <summary>A late subscriber whose error handler marshals an emission to another thread is not deadlocked by the replayed error.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task ReplayedErrorMarshallingAnEmissionDoesNotDeadlock()
+    {
+        using MarshallingThread dispatcher = new();
+        DelayableNotificationSignal<string> signal = new(static () => false, static items => items);
+        InvalidOperationException error = new("delayable-replay");
+        signal.OnError(error);
+        Exception? received = null;
+
+        var worker = BackgroundThread.Start(() => _ = signal.Subscribe(
+            static _ => { },
+            ex =>
+            {
+                received = ex;
+                dispatcher.Invoke(() => signal.OnNext(Buffered));
+            }));
+
+        await Assert.That(await BackgroundThread.FinishesPromptly(worker)).IsTrue();
+        await Assert.That(received).IsSameReferenceAs(error);
+    }
+
     /// <summary>Records the notifications delivered to an observer.</summary>
     /// <typeparam name="T">The notification type.</typeparam>
     private sealed class RecordingObserver<T> : IObserver<T>

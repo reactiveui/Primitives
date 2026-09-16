@@ -61,7 +61,7 @@ internal sealed class WitnessOnSignal<T>(IObservable<T> source, ISequencer sched
         private readonly Queue<Notification> _actions = new();
 
         /// <summary>Upstream subscription disposed on teardown.</summary>
-        private IDisposable? _cancel = cancel;
+        private readonly IDisposable _cancel = cancel;
 
         /// <summary>Whether the sink has been torn down.</summary>
         private bool _isDisposed;
@@ -143,7 +143,6 @@ internal sealed class WitnessOnSignal<T>(IObservable<T> source, ISequencer sched
         /// <summary>Clears the queue and releases the upstream subscription, once.</summary>
         public void Dispose()
         {
-            IDisposable? cancel;
             lock (_gate)
             {
                 if (_isDisposed)
@@ -153,11 +152,9 @@ internal sealed class WitnessOnSignal<T>(IObservable<T> source, ISequencer sched
 
                 _isDisposed = true;
                 _actions.Clear();
-                cancel = _cancel;
-                _cancel = null;
             }
 
-            cancel?.Dispose();
+            _cancel.Dispose();
         }
 
         /// <summary>Queues a notification and schedules a drain when one is not pending.</summary>
@@ -187,26 +184,19 @@ internal sealed class WitnessOnSignal<T>(IObservable<T> source, ISequencer sched
         /// <param name="action">The notification to forward.</param>
         private void Dispatch(in Notification action)
         {
-            switch (action.Kind)
+            if (action.Kind == SparkKind.OnNext)
             {
-                case SparkKind.OnNext:
-                    {
-                        _observer.OnNext(action.Value);
-                        break;
-                    }
-
-                case SparkKind.OnError:
-                    {
-                        _observer.OnError(action.Exception);
-                        break;
-                    }
-
-                case SparkKind.OnCompleted:
-                    {
-                        _observer.OnCompleted();
-                        break;
-                    }
+                _observer.OnNext(action.Value);
+                return;
             }
+
+            if (action.Kind == SparkKind.OnError)
+            {
+                _observer.OnError(action.Exception);
+                return;
+            }
+
+            _observer.OnCompleted();
         }
 
         /// <summary>Value-type observer notification used for the dispatch queue to avoid a per-OnNext heap allocation.</summary>

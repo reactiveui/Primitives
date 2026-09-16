@@ -2,6 +2,9 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for working with asynchronous observable sequences, enabling operations such as suppressing consecutive duplicate elements.</summary>
@@ -85,7 +88,7 @@ public static partial class SignalAsyncExtensions
         {
             UniqueWitness sink = new(observer, comparer, cancellationToken);
 
-            if (observer is WitnessAsync<T> downstreamBase)
+            if (observer is IWitnessAsync<T> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
             }
@@ -99,10 +102,11 @@ public static partial class SignalAsyncExtensions
         /// <param name="downstream">The downstream witness.</param>
         /// <param name="comparer">The equality comparer.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
+        [DebuggerDisplay("UniqueWitness: {_witness}")]
         internal sealed class UniqueWitness(
             IObserverAsync<T> downstream,
             IEqualityComparer<T> comparer,
-            CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
+            CancellationToken subscribeToken) : IWitnessAsync<T>
         {
             /// <summary>The most-recently-forwarded value; valid only when <see cref="_hasPrevious"/> is set.</summary>
             private T? _previous;
@@ -110,8 +114,32 @@ public static partial class SignalAsyncExtensions
             /// <summary>Latches to <see langword="true"/> after the first emission has been forwarded.</summary>
             private bool _hasPrevious;
 
+            /// <summary>The notification gate, cancellation link and disposal state.</summary>
+            private WitnessAsyncState _witness = new(subscribeToken);
+
             /// <inheritdoc/>
-            protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
+            ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
+                WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+                WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
+
+            /// <inheritdoc/>
+            ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken)
             {
                 if (_hasPrevious && comparer.Equals(_previous!, value))
                 {
@@ -124,11 +152,13 @@ public static partial class SignalAsyncExtensions
             }
 
             /// <inheritdoc/>
-            protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
                 downstream.OnErrorResumeAsync(error, cancellationToken);
 
             /// <inheritdoc/>
-            protected override ValueTask OnCompletedAsyncCore(Result result) =>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) =>
                 downstream.OnCompletedAsync(result);
         }
     }
@@ -151,7 +181,7 @@ public static partial class SignalAsyncExtensions
         {
             UniqueByWitness sink = new(observer, keySelector, comparer, cancellationToken);
 
-            if (observer is WitnessAsync<T> downstreamBase)
+            if (observer is IWitnessAsync<T> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
             }
@@ -166,11 +196,12 @@ public static partial class SignalAsyncExtensions
         /// <param name="keySelector">The key selector.</param>
         /// <param name="comparer">The key equality comparer.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token.</param>
+        [DebuggerDisplay("UniqueByWitness: {_witness}")]
         internal sealed class UniqueByWitness(
             IObserverAsync<T> downstream,
             Func<T, TKey> keySelector,
             IEqualityComparer<TKey> comparer,
-            CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
+            CancellationToken subscribeToken) : IWitnessAsync<T>
         {
             /// <summary>The most-recently-forwarded key; valid only when <see cref="_hasPrevious"/> is set.</summary>
             private TKey? _previousKey;
@@ -178,8 +209,32 @@ public static partial class SignalAsyncExtensions
             /// <summary>Latches to <see langword="true"/> after the first emission has been forwarded.</summary>
             private bool _hasPrevious;
 
+            /// <summary>The notification gate, cancellation link and disposal state.</summary>
+            private WitnessAsyncState _witness = new(subscribeToken);
+
             /// <inheritdoc/>
-            protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
+            ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
+                WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+                WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
+
+            /// <inheritdoc/>
+            ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken)
             {
                 var key = keySelector(value);
                 if (_hasPrevious && comparer.Equals(_previousKey!, key))
@@ -193,11 +248,13 @@ public static partial class SignalAsyncExtensions
             }
 
             /// <inheritdoc/>
-            protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
                 downstream.OnErrorResumeAsync(error, cancellationToken);
 
             /// <inheritdoc/>
-            protected override ValueTask OnCompletedAsyncCore(Result result) =>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) =>
                 downstream.OnCompletedAsync(result);
         }
     }

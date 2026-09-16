@@ -10,6 +10,36 @@ namespace ReactiveUI.Primitives.Async.Tests;
 /// <summary>Tests for the OnDispose operator.</summary>
 public partial class CombiningOperatorTests
 {
+    /// <summary>Verifies that a throwing synchronous dispose action still disposes the witness and surfaces the failure.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenOnDisposeSyncActionThrows_ThenWitnessDisposedAndFailureRethrown()
+    {
+        InvalidOperationException expected = new("dispose action failed");
+        CallbackWitnessAsync<int> observer = new(static (_, _) => default);
+        SignalAsyncExtensions.OnDisposeWitnessSync<int> witness = new(observer, () => throw expected);
+
+        var error = await Assert.That(async () => await witness.DisposeAsync()).ThrowsExactly<InvalidOperationException>();
+
+        await Assert.That(error).IsSameReferenceAs(expected);
+        await Assert.That(witness.HasDisposed).IsTrue();
+    }
+
+    /// <summary>Verifies that a faulted asynchronous dispose callback still disposes the witness and surfaces the failure.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenOnDisposeAsyncCallbackFaults_ThenWitnessDisposedAndFailureRethrown()
+    {
+        InvalidOperationException expected = new("dispose callback failed");
+        CallbackWitnessAsync<int> observer = new(static (_, _) => default);
+        SignalAsyncExtensions.OnDisposeWitness<int> witness = new(observer, () => ValueTask.FromException(expected));
+
+        var error = await Assert.That(async () => await witness.DisposeAsync()).ThrowsExactly<InvalidOperationException>();
+
+        await Assert.That(error).IsSameReferenceAs(expected);
+        await Assert.That(witness.HasDisposed).IsTrue();
+    }
+
     /// <summary>Verifies that the synchronous OnDispose overload forwards OnNext values to the downstream observer.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
     [Test]

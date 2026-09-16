@@ -156,6 +156,35 @@ public class SubscribeAsyncObservableTests
         await Assert.That(completedCount).IsEqualTo(0);
     }
 
+    /// <summary>Verifies disposal between queued values stops the pump before the next handler runs.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenSubscribeAsyncDisposedBetweenQueuedValues_ThenStopsBeforeTheNextHandler()
+    {
+        const int First = 1;
+        const int Second = 2;
+        Subject<int> subject = new();
+        TaskCompletionSource gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<int> handled = [];
+        SubscribeAsyncObservable<int> subscription = new(
+            subject,
+            value =>
+            {
+                handled.Add(value);
+                return new ValueTask(gate.Task);
+            },
+            null,
+            null);
+        var processing = subscription.OnNextAsync(First);
+        _ = subscription.OnNextAsync(Second);
+
+        subscription.Dispose();
+        gate.SetResult();
+        await processing;
+
+        await Assert.That(handled).IsCollectionEqualTo([First]);
+    }
+
     /// <summary>Verifies that disposing the subscription stops further handler invocations.</summary>
     /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
     [Test]

@@ -103,6 +103,23 @@ public class WhileObservableTests
         await Assert.That(ran).IsEqualTo(1);
     }
 
+    /// <summary>Verifies an iteration that runs after disposal skips its action.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    public async Task WhenWhileIterationRunsAfterDisposal_ThenActionIsSkipped()
+    {
+        var ran = 0;
+        ManualSequencer sequencer = new();
+
+        using var sub = ReactiveExtensions.While(static () => true, () => ran++, sequencer)
+            .Subscribe(static _ => { });
+        sequencer.BeforeInlineRun = sub.Dispose;
+
+        sequencer.RunNext();
+
+        await Assert.That(ran).IsEqualTo(1);
+    }
+
     /// <summary>A sequencer that queues every work item so the test decides when each iteration runs.</summary>
     private sealed class ManualSequencer : ISequencer
     {
@@ -115,9 +132,23 @@ public class WhileObservableTests
         /// <summary>Gets the sequencer's monotonic timestamp, which never moves.</summary>
         public long Timestamp => 0;
 
+        /// <summary>Gets or sets a callback run before the next scheduled item, which then runs inline instead of queueing.</summary>
+        internal Action? BeforeInlineRun { get; set; }
+
         /// <inheritdoc/>
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        public void Schedule(IWorkItem item) => _pending.Enqueue(item);
+        public void Schedule(IWorkItem item)
+        {
+            var beforeInlineRun = BeforeInlineRun;
+            if (beforeInlineRun is null)
+            {
+                _pending.Enqueue(item);
+                return;
+            }
+
+            BeforeInlineRun = null;
+            beforeInlineRun();
+            item.Execute();
+        }
 
         /// <inheritdoc/>
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]

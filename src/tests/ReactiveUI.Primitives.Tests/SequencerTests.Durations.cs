@@ -35,4 +35,14 @@ public partial class SequencerTests
         clock.AdvanceTo(due);
         await Assert.That(pending.Count).IsEqualTo(0);
     }
+
+    /// <summary>A delta past TimeSpan's range saturates at a coarse timestamp frequency.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task ToTimeSpanDelta_BeyondRangeAtCoarseFrequency_Saturates()
+    {
+        const long CoarseFrequency = TimeSpan.TicksPerSecond;
+
+        await Assert.That(Sequencer.ToTimeSpanDelta(long.MaxValue, CoarseFrequency)).IsEqualTo(TimeSpan.MaxValue);
+    }
 }

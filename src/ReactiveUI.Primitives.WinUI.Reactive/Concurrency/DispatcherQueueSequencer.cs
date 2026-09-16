@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
 using System.Runtime.CompilerServices;
 using Microsoft.UI.Dispatching;
@@ -12,13 +13,16 @@ namespace ReactiveUI.Primitives.Reactive.Concurrency;
 /// <remarks>Callbacks run on the dispatcher queue thread; cancellation stops pending timers and suppresses unstarted actions.</remarks>
 /// <seealso cref="System.Reactive.Concurrency.IScheduler" />
 [System.Diagnostics.DebuggerDisplay("DispatcherQueueSequencer: DispatcherQueue = {DispatcherQueue}, Priority = {Priority}")]
-public sealed class DispatcherQueueSequencer : CoalescingDispatchScheduler
+public sealed class DispatcherQueueSequencer : LocalScheduler
 {
     /// <summary>Optional callback for enqueueing native drain delegates.</summary>
     private readonly Func<DispatcherQueuePriority, DispatcherQueueHandler, bool>? _tryEnqueue;
 
     /// <summary>Optional callback for delayed work.</summary>
     private readonly Func<Action, TimeSpan, IDisposable>? _scheduleDelayed;
+
+    /// <summary>Queues work and coalesces dispatcher queue drains.</summary>
+    private CoalescingDispatchState _dispatch;
 
     /// <summary>Cached dispatcher queue handler used for the drain.</summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
@@ -43,6 +47,7 @@ public sealed class DispatcherQueueSequencer : CoalescingDispatchScheduler
     {
         DispatcherQueue = dispatcherQueue ?? throw new ArgumentNullException(nameof(dispatcherQueue));
         Priority = priority;
+        _dispatch = new(RunDrain, DefaultScheduler.Instance);
     }
 
     /// <summary>Initializes a new instance of the <see cref="DispatcherQueueSequencer"/> class.</summary>
@@ -58,6 +63,7 @@ public sealed class DispatcherQueueSequencer : CoalescingDispatchScheduler
         Priority = priority;
         _tryEnqueue = tryEnqueue;
         _scheduleDelayed = scheduleDelayed;
+        _dispatch = new(RunDrain, DefaultScheduler.Instance);
     }
 
     /// <summary>Gets the dispatcher queue used to marshal work to the UI thread.</summary>
@@ -67,8 +73,24 @@ public sealed class DispatcherQueueSequencer : CoalescingDispatchScheduler
     public DispatcherQueuePriority Priority { get; }
 
     /// <inheritdoc/>
+    /// <exception cref="ArgumentNullException"><paramref name="action"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException">The dispatcher queue rejected the work.</exception>
-    protected override bool Post(Action drain)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override IDisposable Schedule<TState>(TState state, Func<IScheduler, TState, IDisposable> action) =>
+        _dispatch.Schedule(new DispatchHost(this), this, state, action);
+
+    /// <inheritdoc/>
+    /// <exception cref="ArgumentNullException"><paramref name="action"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">The dispatcher queue rejected the work.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override IDisposable Schedule<TState>(TState state, TimeSpan dueTime, Func<IScheduler, TState, IDisposable> action) =>
+        _dispatch.Schedule(new DispatchHost(this), this, state, dueTime, action);
+
+    /// <summary>Enqueues the drain callback on the dispatcher queue.</summary>
+    /// <param name="drain">The drain callback.</param>
+    /// <returns>Always <see langword="true"/>.</returns>
+    /// <exception cref="InvalidOperationException">The dispatcher queue rejected the work.</exception>
+    private bool Post(Action drain)
     {
         _handler ??= drain.Invoke;
         if (_tryEnqueue is null ? TryEnqueue(_handler) : _tryEnqueue(Priority, _handler))
@@ -79,10 +101,17 @@ public sealed class DispatcherQueueSequencer : CoalescingDispatchScheduler
         throw new InvalidOperationException("The dispatcher queue is no longer accepting work.");
     }
 
-    /// <inheritdoc/>
+    /// <summary>Schedules delayed work on a dispatcher queue timer, or through the test hook when one was supplied.</summary>
+    /// <param name="work">The callback to run.</param>
+    /// <param name="dueTime">The requested delay.</param>
+    /// <returns>The timer cancellation handle.</returns>
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-    protected override IDisposable ScheduleOnDispatcher(Action work, TimeSpan dueTime) =>
+    private IDisposable ScheduleOnDispatcher(Action work, TimeSpan dueTime) =>
         _scheduleDelayed is null ? StartDispatcherTimer(work, dueTime) : _scheduleDelayed(work, dueTime);
+
+    /// <summary>Runs one dispatcher queue batch.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void RunDrain() => _dispatch.RunDrain(new DispatchHost(this));
 
     /// <summary>Schedules a cancellable native dispatcher timer.</summary>
     /// <param name="work">The callback to run.</param>
@@ -109,4 +138,17 @@ public sealed class DispatcherQueueSequencer : CoalescingDispatchScheduler
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private bool TryEnqueue(DispatcherQueueHandler handler) => DispatcherQueue.TryEnqueue(Priority, handler);
+
+    /// <summary>Reaches this scheduler's dispatcher queue for its dispatch state.</summary>
+    /// <param name="Owner">The scheduler.</param>
+    private readonly record struct DispatchHost(DispatcherQueueSequencer Owner) : IDispatchHost
+    {
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Post(Action drain) => Owner.Post(drain);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IDisposable ScheduleOnDispatcher(Action work, TimeSpan dueTime) => Owner.ScheduleOnDispatcher(work, dueTime);
+    }
 }

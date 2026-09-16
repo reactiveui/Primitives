@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async.Tests;
 
 /// <summary>Tests interval cancellation and notification ordering with a controlled clock.</summary>
@@ -17,18 +19,13 @@ public sealed class IntervalSubscriptionTests
     {
         using CancellationTokenSource cancellation = new();
         List<long> ticks = [];
-        CallbackWitnessAsync<long> observer = new((tick, _) =>
-        {
-            ticks.Add(tick);
-            cancellation.Cancel();
-            return default;
-        });
+        CallbackWitnessAsync<long> observer = new(RecordThenCancel(ticks, cancellation));
         await using IntervalSubscription subscription = new(
             observer,
             TimeSpan.Zero,
             explicitSystemProvider ? TimeProvider.System : null);
 
-        await subscription.ExecuteAsync(cancellation.Token);
+        await TaskSignalState.ExecuteAsync(subscription, observer, cancellation.Token);
 
         await Assert.That(ticks).IsCollectionEqualTo([1L]);
     }
@@ -55,7 +52,7 @@ public sealed class IntervalSubscriptionTests
             return default;
         });
         await using IntervalSubscription subscription = new(observer, TimeSpan.FromSeconds(1), time);
-        var running = subscription.ExecuteAsync(cancellation.Token).AsTask();
+        var running = TaskSignalState.ExecuteAsync(subscription, observer, cancellation.Token).AsTask();
         var timer = await time.NextTimerAsync();
         await cancellation.CancelAsync();
         await running;
@@ -85,7 +82,7 @@ public sealed class IntervalSubscriptionTests
             null,
             null);
         await using IntervalSubscription subscription = new(observer, TimeSpan.FromSeconds(1), time);
-        var running = subscription.ExecuteAsync(cancellation.Token).AsTask();
+        var running = TaskSignalState.ExecuteAsync(subscription, observer, cancellation.Token).AsTask();
         await time.FireNextAsync();
         await entered.Task;
         await Assert.That(time.PendingTimerCount).IsEqualTo(0);
@@ -95,4 +92,21 @@ public sealed class IntervalSubscriptionTests
         await Assert.That(ticks).IsCollectionEqualTo([1L]);
         await Assert.That(time.PendingTimerCount).IsEqualTo(0);
     }
+
+    /// <summary>Creates a tick callback that records the tick and cancels the source synchronously.</summary>
+    /// <param name="ticks">Receives the delivered ticks.</param>
+    /// <param name="cancellation">The source to cancel on the first tick.</param>
+    /// <returns>The tick callback.</returns>
+    private static Func<long, CancellationToken, ValueTask> RecordThenCancel(List<long> ticks, CancellationTokenSource cancellation) =>
+        (tick, _) =>
+        {
+            ticks.Add(tick);
+            CancelSynchronously(cancellation);
+            return default;
+        };
+
+    /// <summary>Cancels the source on the calling thread, running its registrations before returning.</summary>
+    /// <param name="source">The source to cancel.</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void CancelSynchronously(CancellationTokenSource source) => source.Cancel();
 }

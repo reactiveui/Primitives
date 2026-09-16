@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Advanced;
 
 namespace ReactiveUI.Primitives.Extensions;
 
@@ -29,17 +30,21 @@ public sealed class ScanWithInitialObservable<TSource, TAccumulate>(
         return source.Subscribe(sink);
     }
 
-    /// <summary>Observer that keeps the running accumulation under a gate and emits it after each element.</summary>
+    /// <summary>Observer that keeps the running accumulation and emits it after each element.</summary>
     /// <param name="downstream">The observer to forward elements to.</param>
     /// <param name="initial">The initial accumulated value.</param>
     /// <param name="accumulator">The accumulator function.</param>
+    /// <remarks>
+    /// The accumulation is advanced by the source's serialized notifications; deliveries are serialized, and the accumulator
+    /// and the observer run without a lock held.
+    /// </remarks>
     private sealed class ScanWithInitialSink(
         IObserver<TAccumulate> downstream,
         TAccumulate initial,
         Func<TAccumulate, TSource, TAccumulate> accumulator) : IObserver<TSource>
     {
-        /// <summary>The gate to synchronize access to the sink state.</summary>
-        private readonly Lock _gate = new();
+        /// <summary>Serializes downstream deliveries.</summary>
+        private SerializedDelivery<TAccumulate> _delivery = new();
 
         /// <summary>The current accumulated value.</summary>
         private TAccumulate _current = initial;
@@ -49,65 +54,57 @@ public sealed class ScanWithInitialObservable<TSource, TAccumulate>(
 
         /// <summary>Emits the seed accumulation downstream, which the caller does before subscribing the source.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Initialize() => downstream.OnNext(_current);
+        public void Initialize() => _delivery.OnNext(downstream, _current, new PendingDrain(this));
 
         /// <inheritdoc/>
         public void OnNext(TSource value)
         {
-            TAccumulate current;
-            lock (_gate)
+            if (Volatile.Read(ref _done))
             {
-                if (_done)
-                {
-                    return;
-                }
-
-                try
-                {
-                    _current = accumulator(_current, value);
-                    current = _current;
-                }
-                catch (Exception ex)
-                {
-                    _done = true;
-                    downstream.OnError(ex);
-                    return;
-                }
+                return;
             }
 
-            downstream.OnNext(current);
+            TAccumulate current;
+            try
+            {
+                current = accumulator(_current, value);
+            }
+            catch (Exception ex)
+            {
+                Volatile.Write(ref _done, true);
+                _delivery.OnError(ex, new PendingDrain(this));
+                return;
+            }
+
+            _current = current;
+            _delivery.OnNext(downstream, current, new PendingDrain(this));
         }
 
         /// <inheritdoc/>
         public void OnError(Exception error)
         {
-            lock (_gate)
-            {
-                if (_done)
-                {
-                    return;
-                }
-
-                _done = true;
-            }
-
-            downstream.OnError(error);
+            Volatile.Write(ref _done, true);
+            _delivery.OnError(error, new PendingDrain(this));
         }
 
         /// <inheritdoc/>
         public void OnCompleted()
         {
-            lock (_gate)
-            {
-                if (_done)
-                {
-                    return;
-                }
+            Volatile.Write(ref _done, true);
+            _delivery.OnCompleted(new PendingDrain(this));
+        }
 
-                _done = true;
-            }
+        /// <summary>Delivers the queued notifications to the downstream observer.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void DrainPending() => _ = _delivery.DrainTo(downstream);
 
-            downstream.OnCompleted();
+        /// <summary>Drains this observer's queued notifications for the delivery gate.</summary>
+        /// <param name="Owner">The observer.</param>
+        private readonly record struct PendingDrain(ScanWithInitialSink Owner) : IDrainTarget
+        {
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Drain() => Owner.DrainPending();
         }
     }
 }

@@ -91,7 +91,7 @@ public partial class SignalOperatorMixinsTests
         _ = Signal.Chain(Signal.Emit("value")).Subscribe(chainedStrings.Add);
         await Assert.That(chainedStrings.SequenceEqual(ExpectedSingleValue)).IsTrue();
         var ignoredCatchCompleted = 0;
-        _ = Signal.Fail<int>(new InvalidOperationException("ignored")).Recover<int, Exception>(Handle.CatchIgnore<int>)
+        _ = Signal.Fail<int>(new InvalidOperationException("ignored")).Recover<int, Exception>(static _ => Signal.None<int>())
             .Subscribe(static _ => { }, static ex => throw ex, () => ignoredCatchCompleted++);
         await Assert.That(ignoredCatchCompleted).IsEqualTo(1);
     }

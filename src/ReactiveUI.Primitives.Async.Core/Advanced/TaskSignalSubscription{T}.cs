@@ -2,91 +2,36 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async.Advanced;
 
-/// <summary>A subscription that runs a cancellable asynchronous job feeding a single observer, and joins that job on disposal.</summary>
+/// <summary>A subscription that runs a cancellable asynchronous job, supplied as a function, feeding a single observer, and joins that job on disposal.</summary>
 /// <typeparam name="T">The type of the elements observed by the subscription.</typeparam>
-/// <param name="observer">The observer that receives notifications for the subscription. Cannot be null.</param>
+/// <param name="executeAsyncCore">The asynchronous function that defines the subscription logic.</param>
+/// <param name="downstream">The observer that receives notifications.</param>
 /// <remarks>Disposal waits for the cancelled job except when called from inside that job.</remarks>
-[System.Diagnostics.DebuggerDisplay("TaskSignalSubscription: Disposed = {_disposed}, Completed = {_tcs.Task.IsCompleted}")]
-public abstract class TaskSignalSubscription<T>(IObserverAsync<T> observer) : IAsyncDisposable
+[System.Diagnostics.DebuggerDisplay("TaskSignalSubscription: {_task}")]
+public sealed class TaskSignalSubscription<T>(
+    Func<IObserverAsync<T>, CancellationToken, ValueTask> executeAsyncCore,
+    IObserverAsync<T> downstream) : IAsyncDisposable, ITaskSignalJob<T>
 {
-    /// <summary>The task completion source that signals when the subscription's job has finished.</summary>
-    private readonly TaskCompletionSource<bool> _tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    /// <summary>The function that runs the job.</summary>
+    private readonly Func<IObserverAsync<T>, CancellationToken, ValueTask> _executeAsyncCore = executeAsyncCore;
 
-    /// <summary>The cancellation token source that cancels the subscription's job on disposal.</summary>
-    private readonly CancellationTokenSource _cts = new();
-
-    /// <summary>Set while the job runs, so a reentrant <see cref="DisposeAsync"/> from inside it skips the self-join.</summary>
-    private readonly AsyncLocal<bool> _executing = new();
-
-    /// <summary>Set on the first disposal so later calls are no-ops.</summary>
-    private int _disposed;
+    /// <summary>Runs the job and joins it on disposal.</summary>
+    private readonly TaskSignalState _task = new();
 
     /// <summary>Starts the subscription's job and returns without waiting for it to finish.</summary>
-    public void Start() => _ = ExecuteAsync(_cts.Token).AsTask();
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Start() => _task.Start(this, downstream);
 
-    /// <summary>Asynchronously releases the resources used by the object and cancels any ongoing operations.</summary>
-    /// <returns>A ValueTask that represents the asynchronous dispose operation.</returns>
-    /// <remarks>Joins the in-flight job before returning, except when called from inside that job's own
-    /// notification, where joining would deadlock.</remarks>
-    public async ValueTask DisposeAsync()
-    {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0)
-        {
-            return;
-        }
+    /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ValueTask DisposeAsync() => _task.DisposeAsync();
 
-        await _cts.CancelAsync().ConfigureAwait(false);
-        if (!_executing.Value)
-        {
-            await _tcs.Task.ConfigureAwait(false);
-        }
-
-        _cts.Dispose();
-
-        GC.SuppressFinalize(this);
-    }
-
-    /// <summary>Forwards a failure result, reporting a throwing completion handler to the unhandled exception handler.</summary>
-    /// <param name="observer">The observer to complete.</param>
-    /// <param name="error">The original exception.</param>
-    /// <returns>A <see cref="ValueTask"/> representing the operation.</returns>
-    internal static async ValueTask CompleteWithFailureAsync(IObserverAsync<T> observer, Exception error)
-    {
-        try
-        {
-            await observer.OnCompletedAsync(Result.Failure(error)).ConfigureAwait(false);
-        }
-        catch (Exception exception)
-        {
-            UnhandledExceptionHandler.ReportUnhandledException(exception);
-        }
-    }
-
-    /// <summary>Executes the subscription's core logic, handling exceptions by completing the observer with a failure result.</summary>
-    /// <param name="cancellationToken">A token that cancels the subscription's job.</param>
-    /// <returns>A <see cref="ValueTask"/> representing the asynchronous operation.</returns>
-    internal async ValueTask ExecuteAsync(CancellationToken cancellationToken)
-    {
-        _executing.Value = true;
-        try
-        {
-            await ExecuteAsyncCore(observer, cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception e)
-        {
-            await CompleteWithFailureAsync(observer, e).ConfigureAwait(false);
-        }
-        finally
-        {
-            _tcs.SetResult(true);
-        }
-    }
-
-    /// <summary>When overridden in a derived class, executes the core subscription logic asynchronously.</summary>
-    /// <param name="observer">The observer that receives notifications.</param>
-    /// <param name="cancellationToken">A token that cancels the subscription's job.</param>
-    /// <returns>A <see cref="ValueTask"/> representing the asynchronous operation.</returns>
-    protected abstract ValueTask ExecuteAsyncCore(IObserverAsync<T> observer, CancellationToken cancellationToken);
+    /// <inheritdoc/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    ValueTask ITaskSignalJob<T>.ExecuteAsync(IObserverAsync<T> observer, CancellationToken cancellationToken) =>
+        _executeAsyncCore(observer, cancellationToken);
 }

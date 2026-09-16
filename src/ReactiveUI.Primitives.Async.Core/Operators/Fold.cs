@@ -2,6 +2,9 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for asynchronous observable sequences, enabling functional operations such as scanning and accumulation over streamed data.</summary>
@@ -64,7 +67,7 @@ public static partial class SignalAsyncExtensions
         {
             FoldAsyncWitness sink = new(observer, seed, accumulator, cancellationToken);
 
-            if (observer is WitnessAsync<TAcc> downstreamBase)
+            if (observer is IWitnessAsync<TAcc> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
             }
@@ -79,17 +82,42 @@ public static partial class SignalAsyncExtensions
         /// <param name="seed">The initial accumulator value used to prime <see cref="_acc"/>.</param>
         /// <param name="accumulator">The asynchronous accumulator.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token, linked into the dispose chain.</param>
+        [DebuggerDisplay("FoldAsyncWitness: {_witness}")]
         internal sealed class FoldAsyncWitness(
             IObserverAsync<TAcc> downstream,
             TAcc seed,
             Func<TAcc, T, CancellationToken, ValueTask<TAcc>> accumulator,
-            CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
+            CancellationToken subscribeToken) : IWitnessAsync<T>
         {
             /// <summary>The accumulator state protected by the observer's notification gate.</summary>
             private TAcc _acc = seed;
 
+            /// <summary>The notification gate, cancellation link and disposal state.</summary>
+            private WitnessAsyncState _witness = new(subscribeToken);
+
             /// <inheritdoc/>
-            protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
+            ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
+                WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+                WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
+
+            /// <inheritdoc/>
+            ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken)
             {
                 var pending = accumulator(_acc, value, cancellationToken);
                 if (pending.IsCompletedSuccessfully)
@@ -102,11 +130,13 @@ public static partial class SignalAsyncExtensions
             }
 
             /// <inheritdoc/>
-            protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
                 downstream.OnErrorResumeAsync(error, cancellationToken);
 
             /// <inheritdoc/>
-            protected override ValueTask OnCompletedAsyncCore(Result result) =>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) =>
                 downstream.OnCompletedAsync(result);
 
             /// <summary>Slow path for asynchronously-completing accumulators; awaits and then forwards.</summary>
@@ -142,7 +172,7 @@ public static partial class SignalAsyncExtensions
         {
             FoldSyncWitness sink = new(observer, seed, accumulator, cancellationToken);
 
-            if (observer is WitnessAsync<TAcc> downstreamBase)
+            if (observer is IWitnessAsync<TAcc> downstreamBase)
             {
                 downstreamBase.LinkUpstreamCancellation(sink.InternalDisposedToken);
             }
@@ -157,28 +187,55 @@ public static partial class SignalAsyncExtensions
         /// <param name="seed">The initial accumulator value used to prime <see cref="_acc"/>.</param>
         /// <param name="accumulator">The synchronous accumulator.</param>
         /// <param name="subscribeToken">The subscribe-time cancellation token, linked into the dispose chain.</param>
+        [DebuggerDisplay("FoldSyncWitness: {_witness}")]
         internal sealed class FoldSyncWitness(
             IObserverAsync<TAcc> downstream,
             TAcc seed,
             Func<TAcc, T, TAcc> accumulator,
-            CancellationToken subscribeToken) : WitnessAsync<T>(subscribeToken)
+            CancellationToken subscribeToken) : IWitnessAsync<T>
         {
             /// <summary>The accumulator state protected by the observer's notification gate.</summary>
             private TAcc _acc = seed;
 
+            /// <summary>The notification gate, cancellation link and disposal state.</summary>
+            private WitnessAsyncState _witness = new(subscribeToken);
+
             /// <inheritdoc/>
-            protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
+            ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
+                WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+                WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
+
+            /// <inheritdoc/>
+            ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken)
             {
                 _acc = accumulator(_acc, value);
                 return downstream.OnNextAsync(_acc, cancellationToken);
             }
 
             /// <inheritdoc/>
-            protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
                 downstream.OnErrorResumeAsync(error, cancellationToken);
 
             /// <inheritdoc/>
-            protected override ValueTask OnCompletedAsyncCore(Result result) =>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) =>
                 downstream.OnCompletedAsync(result);
         }
     }

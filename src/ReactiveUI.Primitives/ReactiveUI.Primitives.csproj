@@ -38,7 +38,6 @@
   <ItemGroup>
     <Compile Include="..\Primitives.Extensions.Shared\**\*.cs" Link="Primitives.Extensions.Shared\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
-
   <!-- Namespaces the shared source resolves; globalized so the linked files carry no per-file usings
        (the Reactive leaf shifts the shared namespaces and so needs its own global imports). -->
   <ItemGroup>

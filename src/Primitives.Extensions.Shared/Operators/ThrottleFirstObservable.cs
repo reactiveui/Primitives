@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Extensions.Reactive.Operators;
 #else
@@ -32,13 +34,17 @@ internal sealed class ThrottleFirstObservable<T>(
     /// <param name="downstream">The observer to forward elements to.</param>
     /// <param name="window">The window duration.</param>
     /// <param name="scheduler">The scheduler to use for timing.</param>
+    /// <remarks>Deliveries are serialized, and no lock is held while the observer runs.</remarks>
     private sealed class ThrottleFirstWitness(
         IObserver<T> downstream,
         TimeSpan window,
         ISequencer scheduler) : IObserver<T>
     {
-        /// <summary>The gate to synchronize access to the observer state.</summary>
+        /// <summary>Guards the window state and the terminal flag; never held while the observer runs.</summary>
         private readonly Lock _gate = new();
+
+        /// <summary>Serializes downstream deliveries.</summary>
+        private SerializedDelivery<T> _delivery = new();
 
         /// <summary>The last time an element was emitted.</summary>
         private DateTimeOffset _last;
@@ -75,7 +81,7 @@ internal sealed class ThrottleFirstObservable<T>(
                 return;
             }
 
-            downstream.OnNext(value);
+            _delivery.OnNext(downstream, value, new PendingDrain(this));
         }
 
         /// <inheritdoc/>
@@ -89,8 +95,9 @@ internal sealed class ThrottleFirstObservable<T>(
                 }
 
                 _done = true;
-                downstream.OnError(error);
             }
+
+            _delivery.OnError(error, new PendingDrain(this));
         }
 
         /// <inheritdoc/>
@@ -104,8 +111,22 @@ internal sealed class ThrottleFirstObservable<T>(
                 }
 
                 _done = true;
-                downstream.OnCompleted();
             }
+
+            _delivery.OnCompleted(new PendingDrain(this));
+        }
+
+        /// <summary>Delivers the queued notifications to the downstream observer.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void DrainPending() => _ = _delivery.DrainTo(downstream);
+
+        /// <summary>Drains this observer's queued notifications for the delivery gate.</summary>
+        /// <param name="Owner">The observer.</param>
+        private readonly record struct PendingDrain(ThrottleFirstWitness Owner) : IDrainTarget
+        {
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Drain() => Owner.DrainPending();
         }
     }
 }

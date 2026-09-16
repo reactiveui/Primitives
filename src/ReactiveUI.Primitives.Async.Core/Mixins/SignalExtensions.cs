@@ -2,7 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Async.Signals;
 
@@ -18,10 +18,6 @@ public static class SignalExtensions
     {
         /// <summary>Creates an asynchronous observer wrapper for the specified signal.</summary>
         /// <returns>An asynchronous observer that forwards notifications to the specified signal.</returns>
-        [SuppressMessage(
-            "Roslynator",
-            "RCS1047:Non-asynchronous method name should not end with \'Async\'",
-            Justification = "The suffix names the IObserverAsync the method returns, not asynchronous work.")]
         public IObserverAsync<T> AsObserverAsync()
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
@@ -84,13 +80,38 @@ public static class SignalExtensions
     /// <summary>An asynchronous observer that forwards all notifications to the wrapped signal.</summary>
     /// <typeparam name="T">The type of elements processed by the observer.</typeparam>
     /// <param name="signal">The signal to forward notifications to.</param>
-    internal sealed class SignalAsyncWitness<T>(ISignalAsync<T> signal) : WitnessAsync<T>
+    [DebuggerDisplay("SignalAsyncWitness: {_witness}")]
+    internal sealed class SignalAsyncWitness<T>(ISignalAsync<T> signal) : IWitnessAsync<T>
     {
+        /// <summary>The notification gate, cancellation link and disposal state.</summary>
+        private WitnessAsyncState _witness;
+
+        /// <inheritdoc/>
+        ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
+            WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+            WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
+
         /// <summary>Forwards the value with an uncancelable token after the observer's disposal check.</summary>
         /// <param name="value">The value to be processed by the observer.</param>
         /// <param name="cancellationToken">The token captured by the base observer's TryEnter scope. Ignored on the forward.</param>
         /// <returns>A ValueTask that represents the asynchronous operation.</returns>
-        protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
+        ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken)
         {
             _ = cancellationToken;
             return signal.OnNextAsync(value, CancellationToken.None);
@@ -100,7 +121,7 @@ public static class SignalExtensions
         /// <param name="error">The exception that caused the error condition. Cannot be null.</param>
         /// <param name="cancellationToken">The token captured by the base observer's TryEnter scope. Ignored on the forward.</param>
         /// <returns>A ValueTask that represents the asynchronous error handling operation.</returns>
-        protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken)
+        ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken)
         {
             _ = cancellationToken;
             return signal.OnErrorResumeAsync(error, CancellationToken.None);
@@ -109,6 +130,7 @@ public static class SignalExtensions
         /// <summary>Forwards the terminal result to the wrapped signal.</summary>
         /// <param name="result">The result of the completed operation, containing any relevant outcome information.</param>
         /// <returns>A task that completes when the signal has handled the result.</returns>
-        protected override ValueTask OnCompletedAsyncCore(Result result) => signal.OnCompletedAsync(result);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) => signal.OnCompletedAsync(result);
     }
 }

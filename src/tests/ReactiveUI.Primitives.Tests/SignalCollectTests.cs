@@ -37,6 +37,42 @@ public sealed class SignalCollectTests
         await Assert.That(batches.Count).IsEqualTo(1);
     }
 
+    /// <summary>Completion flushes the values buffered in the open time window.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task BufferFlushesTheOpenWindowOnCompletion()
+    {
+        const int First = 1;
+        ManualSequencer sequencer = new();
+        IObserver<int>? source = null;
+        List<IList<int>> batches = [];
+        using var subscription = new ScriptedObservable<int>(observer => source = observer)
+            .Buffer(CollectWindow, sequencer)
+            .Subscribe(batches.Add);
+
+        source!.OnNext(First);
+        source.OnCompleted();
+
+        await Assert.That(batches.Count).IsEqualTo(1);
+        await Assert.That(batches[0].SequenceEqual([First])).IsTrue();
+    }
+
+    /// <summary>Completion with an empty time window completes without emitting a batch.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task BufferCompletesWithoutABatchWhenTheWindowIsEmpty()
+    {
+        ManualSequencer sequencer = new();
+        List<IList<int>> batches = [];
+        var completions = 0;
+        using var subscription = new ScriptedObservable<int>(static observer => observer.OnCompleted())
+            .Buffer(CollectWindow, sequencer)
+            .Subscribe(batches.Add, static _ => { }, () => completions++);
+
+        await Assert.That(batches.Count).IsEqualTo(0);
+        await Assert.That(completions).IsEqualTo(1);
+    }
+
     /// <summary>Collect emits immediately with a zero window, batches on a clock, and forwards completion and errors.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]

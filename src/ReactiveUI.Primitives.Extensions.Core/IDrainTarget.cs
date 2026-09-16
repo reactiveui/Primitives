@@ -4,9 +4,9 @@
 
 namespace ReactiveUI.Primitives.Extensions;
 
-/// <summary>Receives the drain callback a <c>ScheduledDrainState&lt;T&gt;</c> raises once per scheduled pass.</summary>
+/// <summary>Receives the callback that delivers queued notifications, from a delivery gate or a scheduled drain.</summary>
 public interface IDrainTarget
 {
-    /// <summary>Drains the queued notifications on the scheduler thread.</summary>
+    /// <summary>Delivers every queued notification that has not been delivered yet.</summary>
     void Drain();
 }

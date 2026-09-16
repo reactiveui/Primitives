@@ -3,7 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Diagnosers;
+
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Benchmarks;
@@ -15,7 +15,7 @@ namespace ReactiveUI.Primitives.Benchmarks;
 /// </summary>
 [ShortRunJob]
 [MemoryDiagnoser]
-[EventPipeProfiler(EventPipeProfile.GcVerbose)]
+
 public class SubjectHotPathGcProfileBenchmarks
 {
     /// <summary>The number of values emitted in each steady-state emission benchmark.</summary>

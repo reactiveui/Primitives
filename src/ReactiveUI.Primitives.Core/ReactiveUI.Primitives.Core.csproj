@@ -40,6 +40,8 @@
 
   <ItemGroup>
     <Compile Include="..\Primitives.Extensions.Shared\Internal\InvalidOperationExceptionHelper.cs" Link="Extensions\InvalidOperationExceptionHelper.cs"/>
+    <Compile Include="..\Primitives.Shared\Internal\PendingDelivery.cs" Link="Shared\Internal\PendingDelivery.cs"/>
+    <Compile Include="..\Primitives.Shared\Internal\PendingNotifications{TItem}.cs" Link="Shared\Internal\PendingNotifications{TItem}.cs"/>
     <Compile Include="..\ReactiveUI.Primitives.Extensions.Core\**\*.cs" Link="Extensions\%(RecursiveDir)%(Filename)%(Extension)"/>
   </ItemGroup>
 </Project>

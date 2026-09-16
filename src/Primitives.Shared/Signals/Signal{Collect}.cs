@@ -81,7 +81,7 @@ public static partial class Signal
         private void OnCompleted()
         {
             var batch = CompleteAndTakeFinalBatch();
-            if (batch is { Length: > 0 })
+            if (batch is not null)
             {
                 _observer.OnNext(batch);
             }

@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async;
@@ -88,16 +89,49 @@ public static partial class SignalAsyncExtensions
     /// <param name="predicate">An optional predicate to filter elements.</param>
     /// <param name="defaultValue">The default value to return if no element matches.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
+    [DebuggerDisplay("LastOrDefaultTaskWitness: {_witness}")]
     internal sealed class LastOrDefaultTaskWitness<T>(
         Func<T, bool>? predicate,
         T? defaultValue,
-        CancellationToken cancellationToken) : TaskResultWitnessAsyncBase<T, T>(cancellationToken)
+        CancellationToken cancellationToken) : IWitnessAsync<T>
     {
+        /// <summary>Produces and cancels the witness's single result value.</summary>
+        private readonly TaskResultCompletionSource<T> _completion = new(cancellationToken);
+
         /// <summary>The most recently observed matching element, or the default value if no match has been found.</summary>
         private T? _last = defaultValue;
 
+        /// <summary>The notification gate, cancellation link and disposal state.</summary>
+        private WitnessAsyncState _witness;
+
         /// <inheritdoc/>
-        protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
+        ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
+            WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+            WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
+
+        /// <summary>Asynchronously waits for the witness to produce its result value.</summary>
+        /// <returns>A task representing the asynchronous operation, containing the result value.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal ValueTask<T> AwaitResultAsync() => _completion.AwaitResultAsync(this);
+
+        /// <inheritdoc/>
+        ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken)
         {
             if (predicate is not null && !predicate(value))
             {
@@ -110,11 +144,24 @@ public static partial class SignalAsyncExtensions
         }
 
         /// <inheritdoc/>
-        protected override ValueTask OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
             SetExceptionAndDisposeAsync(error);
 
         /// <inheritdoc/>
-        protected override ValueTask OnCompletedAsyncCore(Result result) =>
+        ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) =>
             result.IsSuccess ? SetResultAndDisposeAsync(_last!) : SetExceptionAndDisposeAsync(result.Exception);
+
+        /// <summary>Sets the result value and disposes this witness.</summary>
+        /// <param name="value">The result value.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private ValueTask SetResultAndDisposeAsync(T value) => _completion.SetResultAndDisposeAsync(value, this);
+
+        /// <summary>Faults the result with an exception and disposes this witness.</summary>
+        /// <param name="e">The exception that caused the fault.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private ValueTask SetExceptionAndDisposeAsync(Exception e) => _completion.SetExceptionAndDisposeAsync(e, this);
     }
 }

@@ -155,4 +155,60 @@ public sealed class CalmCoordinatorTests
         await Assert.That(witness.Errors.Count).IsEqualTo(1);
         await Assert.That(witness.Completed).IsEqualTo(0);
     }
+
+    /// <summary>An observer that marshals to another thread which completes the source is not deadlocked by the quiet-period emission.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task CalmObserverMarshallingWhileTheOtherThreadCompletesDoesNotDeadlock()
+    {
+        using MarshallingThread dispatcher = new();
+        ManualSequencer sequencer = new();
+        IObserver<int>? source = null;
+        List<int> values = [];
+        CallbackRecordingWitness<int> downstream = new(value =>
+        {
+            values.Add(value);
+            dispatcher.Invoke(() => source!.OnCompleted());
+        });
+        using var subscription = new ScriptedObservable<int>(observer => source = observer)
+            .Calm(QuietPeriod, sequencer)
+            .Subscribe(downstream);
+
+        source!.OnNext(One);
+        sequencer.Advance(QuietPeriod);
+        var worker = BackgroundThread.Start(sequencer.RunPending);
+
+        await Assert.That(await BackgroundThread.FinishesPromptly(worker)).IsTrue();
+        await Assert.That(values.SequenceEqual([One])).IsTrue();
+        await Assert.That(downstream.Completions).IsEqualTo(1);
+    }
+
+    /// <summary>An error raised from another thread while the quiet-period value is delivered does not wait for the observer and follows the value.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task CalmErrorRaisedDuringEmissionFollowsTheValue()
+    {
+        using ManualResetEventSlim inside = new(false);
+        using ManualResetEventSlim release = new(false);
+        ManualSequencer sequencer = new();
+        IObserver<int>? source = null;
+        List<int> values = [];
+        var downstream = MergeDeliveryAssertions.BlockOnFirstValue(values, inside, release);
+        InvalidOperationException expected = new("calm-delivery-error");
+        using var subscription = new ScriptedObservable<int>(observer => source = observer)
+            .Calm(QuietPeriod, sequencer)
+            .Subscribe(downstream);
+
+        source!.OnNext(One);
+        sequencer.Advance(QuietPeriod);
+        var owner = BackgroundThread.Start(sequencer.RunPending);
+        inside.Wait();
+        await BackgroundThread.Start(() => source!.OnError(expected));
+        await Assert.That(downstream.Error).IsNull();
+        release.Set();
+        await owner;
+
+        await Assert.That(values.SequenceEqual([One])).IsTrue();
+        await Assert.That(downstream.Error).IsSameReferenceAs(expected);
+    }
 }

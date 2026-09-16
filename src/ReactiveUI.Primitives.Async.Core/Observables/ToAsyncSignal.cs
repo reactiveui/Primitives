@@ -2,7 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async;
@@ -19,10 +18,6 @@ public static partial class SignalAsyncExtensions
         /// <returns>An asynchronous observable sequence that emits the elements of the source sequence.</returns>
         /// <remarks>The source is enumerated once per subscriber.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [SuppressMessage(
-            "Roslynator",
-            "RCS1047:Non-asynchronous method name should not end with \'Async\'",
-            Justification = "The suffix names the asynchronous signal the method returns, not asynchronous work.")]
         public IObservableAsync<T> ToAsyncSignal() => new AsyncEnumerableSignal<T>(source);
     }
 
@@ -36,10 +31,6 @@ public static partial class SignalAsyncExtensions
         /// elements have been emitted.</returns>
         /// <remarks>Enumeration starts on the subscribing thread, once per subscriber.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [SuppressMessage(
-            "Roslynator",
-            "RCS1047:Non-asynchronous method name should not end with \'Async\'",
-            Justification = "The suffix names the asynchronous signal the method returns, not asynchronous work.")]
         public IObservableAsync<T> ToAsyncSignal() => new EnumerableSignal<T>(source);
     }
 
@@ -51,10 +42,6 @@ public static partial class SignalAsyncExtensions
         /// <summary>Null-checks and returns the source unchanged, so generic code can convert without testing the source's type.</summary>
         /// <returns>The same sequence.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
-        [SuppressMessage(
-            "Roslynator",
-            "RCS1047:Non-asynchronous method name should not end with \'Async\'",
-            Justification = "The suffix names the asynchronous signal the method returns, not asynchronous work.")]
         public IObservableAsync<T> ToAsyncSignal() =>
             source ?? throw new ArgumentNullException(nameof(source));
     }
@@ -70,10 +57,6 @@ public static partial class SignalAsyncExtensions
         /// <remarks>A faulted or cancelled task terminates the sequence with that error. Since the task is a single
         /// shared instance, every subscriber observes the same outcome.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [SuppressMessage(
-            "Roslynator",
-            "RCS1047:Non-asynchronous method name should not end with \'Async\'",
-            Justification = "The suffix names the asynchronous signal the method returns, not asynchronous work.")]
         public IObservableAsync<T> ToAsyncSignal() => new TaskResultSignal<T>(task);
     }
 }

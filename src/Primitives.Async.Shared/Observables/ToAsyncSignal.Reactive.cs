@@ -29,10 +29,6 @@ public static partial class SignalAsyncReactiveExtensions
         /// a completion notification.</returns>
         /// <remarks>Task failure or cancellation terminates the sequence with the corresponding error.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [SuppressMessage(
-            "Roslynator",
-            "RCS1047:Non-asynchronous method name should not end with \'Async\'",
-            Justification = "Names the asynchronous observable conversion.")]
         public IObservableAsync<RxVoid> ToAsyncSignal() => new TaskToAsyncSignal(task);
     }
 }

@@ -16,22 +16,8 @@ public static class TaskSignalSubscription
         Func<IObserverAsync<T>, CancellationToken, ValueTask> executeAsyncCore,
         IObserverAsync<T> observer)
     {
-        AnonymousTaskSignalSubscription<T> ret = new(executeAsyncCore, observer);
-        ret.Start();
-        return ret;
-    }
-
-    /// <summary>A cancelable task subscription that delegates its core logic to a user-supplied function.</summary>
-    /// <typeparam name="T">The type of the elements observed by the subscription.</typeparam>
-    /// <param name="executeAsyncCore">The asynchronous function that defines the subscription logic.</param>
-    /// <param name="observer">The observer that receives notifications.</param>
-    internal sealed class AnonymousTaskSignalSubscription<T>(
-        Func<IObserverAsync<T>, CancellationToken, ValueTask> executeAsyncCore,
-        IObserverAsync<T> observer) : TaskSignalSubscription<T>(observer)
-    {
-        /// <inheritdoc/>
-        protected override ValueTask
-            ExecuteAsyncCore(IObserverAsync<T> observer, CancellationToken cancellationToken) =>
-            executeAsyncCore(observer, cancellationToken);
+        TaskSignalSubscription<T> subscription = new(executeAsyncCore, observer);
+        subscription.Start();
+        return subscription;
     }
 }

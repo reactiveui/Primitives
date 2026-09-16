@@ -18,6 +18,6 @@ namespace System.Runtime.CompilerServices;
 internal sealed class OverloadResolutionPriorityAttribute(int priority) : Attribute
 {
     /// <summary>Gets the overload resolution priority.</summary>
-    internal int Priority { get; } = priority;
+    public int Priority { get; } = priority;
 }
 #endif

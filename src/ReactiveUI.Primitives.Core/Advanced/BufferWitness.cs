@@ -95,7 +95,7 @@ public sealed class BufferWitness<T>(IObserver<IList<T>> observer, int count, in
 
         try
         {
-            if (buffer is not null && length > 0)
+            if (buffer is not null)
             {
                 _observer.OnNext(Trim(buffer, length));
             }

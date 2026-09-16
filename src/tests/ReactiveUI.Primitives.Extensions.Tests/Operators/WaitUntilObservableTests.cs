@@ -2,6 +2,8 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
 
 /// <summary>Tests for <c>WaitUntilObservable</c> — covers the after-terminal guards
@@ -63,4 +65,13 @@ public class WaitUntilObservableTests
         await Assert.That(caught).IsSameReferenceAs(expected);
         await Assert.That(completedCount).IsEqualTo(0);
     }
+
+    /// <summary>Verifies an observer that marshals to another thread which completes the source does not deadlock the matched value.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Task WhenObserverMarshalsCompletionDuringMatch_ThenNoDeadlock() =>
+        SerializedDeliveryAssertions.ObserverMarshallingCompletionDoesNotDeadlock<int>(
+            static (source, observer) => source.WaitUntil(static value => value == 1).Subscribe(observer),
+            static observer => observer.OnNext(1));
 }

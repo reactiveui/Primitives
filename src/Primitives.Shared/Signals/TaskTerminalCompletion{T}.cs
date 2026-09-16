@@ -82,7 +82,7 @@ internal sealed class TaskTerminalCompletion<T>
     /// <summary>Cancels the task and disposes the subscription; runs on the canceling thread.</summary>
     private void Cancel()
     {
-        _subscription?.Dispose();
+        _subscription!.Dispose();
         _ = _completion.TrySetCanceled(_cancellationToken);
     }
 

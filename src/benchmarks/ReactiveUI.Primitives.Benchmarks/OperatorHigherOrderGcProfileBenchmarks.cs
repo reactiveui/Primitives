@@ -4,7 +4,6 @@
 
 using System.Runtime.CompilerServices;
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Diagnosers;
 
 namespace ReactiveUI.Primitives.Benchmarks;
 
@@ -15,7 +14,7 @@ namespace ReactiveUI.Primitives.Benchmarks;
 /// </summary>
 [ShortRunJob]
 [MemoryDiagnoser]
-[EventPipeProfiler(EventPipeProfile.GcVerbose)]
+
 [System.Diagnostics.DebuggerDisplay("OperatorHigherOrderGcProfileBenchmarks: Delegate = {_b}")]
 public class OperatorHigherOrderGcProfileBenchmarks
 {

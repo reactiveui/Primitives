@@ -4,6 +4,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Advanced;
 using ReactiveUI.Primitives.Signals;
 
 namespace ReactiveUI.Primitives.Tests;
@@ -334,11 +335,48 @@ public partial class SignalOperatorParityMixinsTests
             .Throws<TaskCanceledException>();
     }
 
+    /// <summary>Count, long-count and distinct signals over a source with no current-thread requirement report none.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task AggregateSignals_PlainSource_DoNotRequireCurrentThread()
+    {
+        PlainObservable source = new();
+
+        await Assert.That(((IRequireCurrentThread<int>)source.Count()).IsRequiredSubscribeOnCurrentThread()).IsFalse();
+        await Assert.That(((IRequireCurrentThread<int>)source.Count(static value => value > First)).IsRequiredSubscribeOnCurrentThread()).IsFalse();
+        await Assert.That(((IRequireCurrentThread<long>)source.LongCount()).IsRequiredSubscribeOnCurrentThread()).IsFalse();
+        await Assert.That(((IRequireCurrentThread<long>)source.LongCount(static value => value > First)).IsRequiredSubscribeOnCurrentThread()).IsFalse();
+        await Assert.That(((IRequireCurrentThread<int>)source.DistinctBy(static value => value)).IsRequiredSubscribeOnCurrentThread()).IsFalse();
+    }
+
+    /// <summary>Counting distinct keys honours a supplied key comparer for both count widths.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task DistinctByCount_WithComparer_CountsDistinctKeys()
+    {
+        List<int> counts = [];
+        List<long> longCounts = [];
+
+        _ = Signal.Sequence(First, Fourth).DistinctBy(static value => value % Second, EqualityComparer<int>.Default).Count().Subscribe(counts.Add);
+        _ = Signal.Sequence(First, Fourth).DistinctBy(static value => value % Second, EqualityComparer<int>.Default).LongCount().Subscribe(longCounts.Add);
+
+        await Assert.That(counts.SequenceEqual([Second])).IsTrue();
+        await Assert.That(longCounts.SequenceEqual([(long)Second])).IsTrue();
+    }
+
     /// <summary>Returns a scalar signal for the supplied value.</summary>
     /// <param name="value">The value to emit.</param>
     /// <returns>A scalar signal.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static IObservable<int> ReturnValue(int value) => Signal.Emit(value);
+
+    /// <summary>Source with no current-thread subscription requirement.</summary>
+    private sealed class PlainObservable : IObservable<int>
+    {
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public IDisposable Subscribe(IObserver<int> observer) => Signal.None<int>().Subscribe(observer);
+    }
 
     /// <summary>Contact reference record with nullable fields.</summary>
     /// <param name="FirstName">The first name.</param>

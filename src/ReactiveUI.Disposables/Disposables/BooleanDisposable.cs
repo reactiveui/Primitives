@@ -19,7 +19,7 @@ public sealed class BooleanDisposable : IsDisposed
 
     /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
-    private string DebuggerDisplay => ToString() ?? string.Empty;
+    private string? DebuggerDisplay => ToString();
 
     /// <summary>Latches the disposed flag; repeated calls have no further effect.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

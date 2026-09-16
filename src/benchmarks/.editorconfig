@@ -1,19 +1,12 @@
-# Relaxations for the benchmark tree. These mirror the test tree's, with one addition: a benchmark
-# harness is a console application whose output is the product, so writing results to the console is
-# what it is for. Everything else inherits the repository-root .editorconfig.
 [*.cs]
 
 ###################
-# StyleSharp (SST)
+# Benchmark harness relaxations
+#
+# A benchmark class is a harness the runner instantiates and drives; nobody stops on one in a
+# debugger to read a summary of it. The models these benchmarks observe still carry a display
+# attribute where it earns its place.
 ###################
-dotnet_diagnostic.SST1432.severity = none # Benchmark fixtures need not be static
-dotnet_diagnostic.SST1449.severity = none # Writing results to the console is what a benchmark harness does; there is no application logger to route them to
-dotnet_diagnostic.SST2410.severity = none # A benchmark measures the cost of creating the disposable; disposing it would measure something else
-
-###################
-# PerformanceSharp (PSH)
-###################
-performancesharp.avoid_linq_on_hot_path = false
-dotnet_diagnostic.PSH1100.severity = none # Benchmarks can use LINQ for clarity
-dotnet_diagnostic.PSH1101.severity = error # In benchmarks, simplify LINQ Where plus terminal calls instead of banning LINQ
-dotnet_diagnostic.PSH1102.severity = error # In benchmarks, simplify LINQ type filters instead of banning LINQ
+dotnet_diagnostic.SST1449.severity = none # TODO re-assess: harness entry points and smoke runners report to the console; remove that output from the benchmarks and re-enable
+dotnet_diagnostic.SST2334.severity = none # Harness types are driven by the runner, not inspected
+dotnet_diagnostic.SST2410.severity = none # The runner owns the lifetime of objects a benchmark creates

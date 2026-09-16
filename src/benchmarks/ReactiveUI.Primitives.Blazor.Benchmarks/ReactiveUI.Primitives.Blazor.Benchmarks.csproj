@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(BlazorTargetFrameworks)</TargetFrameworks>
+    <!-- Pass -p:BenchmarkPlatform=windows or unix to compile the other platform's configs. -->
+    <BenchmarkPlatform Condition="'$(BenchmarkPlatform)' == '' and $([MSBuild]::IsOsPlatform('Windows'))">windows</BenchmarkPlatform>
+    <BenchmarkPlatform Condition="'$(BenchmarkPlatform)' == ''">unix</BenchmarkPlatform>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <RunAnalyzers>true</RunAnalyzers>
+    <NoWarn>$(NoWarn);CA1822</NoWarn>
+    <RootNamespace>ReactiveUI.Primitives.Benchmarks</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" />
+    <PackageReference Include="System.Reactive" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Shared\Configs\**\*.cs" Link="Configs\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\Shared\Platforms\$(BenchmarkPlatform)\**\*.cs" Link="Platforms\$(BenchmarkPlatform)\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\ReactiveUI.Primitives.Benchmarks\IntSignalWitness.cs" Link="Helpers\IntSignalWitness.cs" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(BenchmarkPlatform)' == 'windows'">
+    <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\ReactiveUI.Primitives\ReactiveUI.Primitives.csproj" />
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.Blazor\ReactiveUI.Primitives.Blazor.csproj" />
+    <ProjectReference Include="..\..\ReactiveUI.Primitives.Blazor.Reactive\ReactiveUI.Primitives.Blazor.Reactive.csproj" />
+  </ItemGroup>
+
+</Project>

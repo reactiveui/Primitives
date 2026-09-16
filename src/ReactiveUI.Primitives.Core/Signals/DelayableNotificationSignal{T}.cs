@@ -9,10 +9,11 @@ namespace ReactiveUI.Primitives.Signals;
 
 /// <summary>Forwards notifications immediately unless delayed, then buffers them until Flush emits a batch with duplicates removed.</summary>
 /// <typeparam name="T">The notification type.</typeparam>
+/// <remarks>The gate only guards the buffer and terminal state; the delay check, the de-duplication and the observers run without it held.</remarks>
 [System.Diagnostics.DebuggerDisplay("DelayableNotificationSignal: Stopped = {_stopped}, Buffer = {_buffer}")]
 public sealed class DelayableNotificationSignal<T> : ISignal<T>
 {
-    /// <summary>Guards the observer set, buffer, and terminal state.</summary>
+    /// <summary>Guards the observer set, buffer, and terminal state; never held while user code runs.</summary>
     private readonly Lock _gate = new();
 
     /// <summary>Returns whether notifications are currently delayed.</summary>
@@ -24,7 +25,7 @@ public sealed class DelayableNotificationSignal<T> : ISignal<T>
     /// <summary>The observers subscribed to this signal.</summary>
     private Broadcaster<T> _broadcaster;
 
-    /// <summary>Holds notifications produced while delayed; null until the first buffered notification.</summary>
+    /// <summary>Holds notifications produced while delayed; null until the first buffered notification after a flush.</summary>
     private List<T>? _buffer;
 
     /// <summary>The terminal error, if the signal errored.</summary>
@@ -58,6 +59,7 @@ public sealed class DelayableNotificationSignal<T> : ISignal<T>
     /// <inheritdoc/>
     public void OnNext(T value)
     {
+        var delayed = _isDelayed();
         lock (_gate)
         {
             if (_stopped)
@@ -65,7 +67,7 @@ public sealed class DelayableNotificationSignal<T> : ISignal<T>
                 return;
             }
 
-            if (_isDelayed())
+            if (delayed)
             {
                 (_buffer ??= []).Add(value);
                 return;
@@ -111,21 +113,21 @@ public sealed class DelayableNotificationSignal<T> : ISignal<T>
     /// <summary>Emits any buffered notifications as a de-duplicated batch; call when the delay window opens or closes.</summary>
     public void Flush()
     {
-        List<T> batch;
+        List<T> buffered;
         lock (_gate)
         {
-            if (_stopped || _buffer is null || _buffer.Count == 0)
+            if (_stopped || _buffer is null)
             {
                 return;
             }
 
-            batch = [.. _flushDistinct(_buffer)];
-            _buffer.Clear();
+            buffered = _buffer;
+            _buffer = null;
         }
 
-        for (var i = 0; i < batch.Count; i++)
+        foreach (var item in _flushDistinct(buffered))
         {
-            _broadcaster.Next(batch[i]);
+            _broadcaster.Next(item);
         }
     }
 
@@ -133,24 +135,34 @@ public sealed class DelayableNotificationSignal<T> : ISignal<T>
     public IDisposable Subscribe(IObserver<T> observer)
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
+
+        Exception? error;
+        bool stopped;
         lock (_gate)
         {
-            if (_error is not null)
+            error = _error;
+            stopped = _stopped;
+            if (!stopped)
             {
-                observer.OnError(_error);
-                return EmptyDisposable.Instance;
+                _broadcaster.Add(observer);
             }
-
-            if (_stopped)
-            {
-                observer.OnCompleted();
-                return EmptyDisposable.Instance;
-            }
-
-            _broadcaster.Add(observer);
         }
 
-        return new Subscription(this, observer);
+        if (!stopped)
+        {
+            return new Subscription(this, observer);
+        }
+
+        if (error is not null)
+        {
+            observer.OnError(error);
+        }
+        else
+        {
+            observer.OnCompleted();
+        }
+
+        return EmptyDisposable.Instance;
     }
 
     /// <inheritdoc/>

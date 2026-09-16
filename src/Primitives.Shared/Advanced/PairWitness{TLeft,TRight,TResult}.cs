@@ -2,6 +2,14 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Extensions;
+#if REACTIVE_SHIM
+using ReactiveUI.Primitives.Reactive.Internal;
+#else
+using ReactiveUI.Primitives.Internal;
+#endif
+
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
 #else
@@ -12,11 +20,19 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <typeparam name="TLeft">The left value type.</typeparam>
 /// <typeparam name="TRight">The right value type.</typeparam>
 /// <typeparam name="TResult">The result value type.</typeparam>
+/// <remarks>
+/// Each side's values and completion are applied inside a serialized delivery, so the projection and the downstream
+/// observer run with no lock held. Notifications that arrive while another thread is delivering are queued and applied in
+/// arrival order; the first error is delivered after them.
+/// </remarks>
 [System.Diagnostics.DebuggerDisplay("PairWitness: IsCompleted = {IsCompleted}, LeftQueue = {LeftQueue.Count}, RightQueue = {RightQueue.Count}")]
 public sealed class PairWitness<TLeft, TRight, TResult>
 {
-    /// <summary>The synchronization gate.</summary>
-    private readonly Lock _gate = new();
+    /// <summary>Serializes applying updates and downstream deliveries.</summary>
+    private DeliveryGateState _delivery;
+
+    /// <summary>Updates and the terminal notification queued while another thread delivers.</summary>
+    private PendingNotifications<Update> _pending = new();
 
     /// <summary>Initializes a new instance of the <see cref="PairWitness{TLeft, TRight, TResult}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
@@ -33,19 +49,19 @@ public sealed class PairWitness<TLeft, TRight, TResult>
     /// <summary>Gets the result projection.</summary>
     private Func<TLeft, TRight, TResult> Selector { get; }
 
-    /// <summary>Gets queued left values.</summary>
+    /// <summary>Gets left values waiting for a partner; touched only inside a delivery.</summary>
     private Queue<TLeft> LeftQueue { get; } = new();
 
-    /// <summary>Gets queued right values.</summary>
+    /// <summary>Gets right values waiting for a partner; touched only inside a delivery.</summary>
     private Queue<TRight> RightQueue { get; } = new();
 
-    /// <summary>Gets or sets a value indicating whether the left source completed.</summary>
+    /// <summary>Gets or sets a value indicating whether the left source completed; touched only inside a delivery.</summary>
     private bool IsLeftCompleted { get; set; }
 
-    /// <summary>Gets or sets a value indicating whether the right source completed.</summary>
+    /// <summary>Gets or sets a value indicating whether the right source completed; touched only inside a delivery.</summary>
     private bool IsRightCompleted { get; set; }
 
-    /// <summary>Gets or sets a value indicating whether completion has been emitted.</summary>
+    /// <summary>Gets or sets a value indicating whether completion has been requested; touched only inside a delivery.</summary>
     private bool IsCompleted { get; set; }
 
     /// <summary>Subscribes to both sources.</summary>
@@ -54,77 +70,175 @@ public sealed class PairWitness<TLeft, TRight, TResult>
     /// <returns>The subscriptions.</returns>
     public MultipleDisposable Run(IObservable<TLeft> left, IObservable<TRight> right) =>
         new(
-            left.Subscribe(OnLeftNext, Observer.OnError, OnLeftCompleted),
-            right.Subscribe(OnRightNext, Observer.OnError, OnRightCompleted));
+            left.Subscribe(OnLeftNext, OnError, OnLeftCompleted),
+            right.Subscribe(OnRightNext, OnError, OnRightCompleted));
 
-    /// <summary>Queues a left value.</summary>
+    /// <summary>Applies a left value.</summary>
     /// <param name="value">The left value.</param>
-    private void OnLeftNext(TLeft value)
-    {
-        lock (_gate)
-        {
-            LeftQueue.Enqueue(value);
-        }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void OnLeftNext(TLeft value) => Process(new(IsLeft: true, IsCompletion: false, value, default!));
 
-        Drain();
-    }
-
-    /// <summary>Queues a right value.</summary>
+    /// <summary>Applies a right value.</summary>
     /// <param name="value">The right value.</param>
-    private void OnRightNext(TRight value)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void OnRightNext(TRight value) => Process(new(IsLeft: false, IsCompletion: false, default!, value));
+
+    /// <summary>Applies the left source's completion.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void OnLeftCompleted() => Process(new(IsLeft: true, IsCompletion: true, default!, default!));
+
+    /// <summary>Applies the right source's completion.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void OnRightCompleted() => Process(new(IsLeft: false, IsCompletion: true, default!, default!));
+
+    /// <summary>Applies an update directly when nothing else is delivering, otherwise queues it for the delivering thread.</summary>
+    /// <param name="update">The update.</param>
+    private void Process(Update update)
     {
-        lock (_gate)
+        if (_pending.HasItems || !DeliveryGate.TryEnter(ref _delivery))
         {
-            RightQueue.Enqueue(value);
-        }
-
-        Drain();
-    }
-
-    /// <summary>Marks the left source complete.</summary>
-    private void OnLeftCompleted()
-    {
-        lock (_gate)
-        {
-            IsLeftCompleted = true;
-        }
-
-        Drain();
-    }
-
-    /// <summary>Marks the right source complete.</summary>
-    private void OnRightCompleted()
-    {
-        lock (_gate)
-        {
-            IsRightCompleted = true;
-        }
-
-        Drain();
-    }
-
-    /// <summary>Emits available pairs and completes when no more pairs can be formed.</summary>
-    private void Drain()
-    {
-        lock (_gate)
-        {
-            if (IsCompleted)
+            if (_pending.TryEnqueue(update))
             {
-                return;
+                DeliveryGate.Signal(ref _delivery, new PendingDrain(this));
             }
 
-            while (LeftQueue.Count != 0 && RightQueue.Count != 0)
-            {
-                Observer.OnNext(Selector(LeftQueue.Dequeue(), RightQueue.Dequeue()));
-            }
-
-            if ((!IsLeftCompleted || LeftQueue.Count != 0) && (!IsRightCompleted || RightQueue.Count != 0))
-            {
-                return;
-            }
-
-            IsCompleted = true;
-            Observer.OnCompleted();
+            return;
         }
+
+        try
+        {
+            if (!_pending.IsTerminated)
+            {
+                Apply(update);
+            }
+        }
+        catch
+        {
+            _ = DeliveryGate.Reset(ref _delivery);
+            throw;
+        }
+
+        DeliveryGate.Exit(ref _delivery, new PendingDrain(this));
+    }
+
+    /// <summary>Requests the first error as the terminal notification.</summary>
+    /// <param name="error">The error.</param>
+    private void OnError(Exception error)
+    {
+        if (!_pending.TryRequestTerminal(error))
+        {
+            return;
+        }
+
+        DeliveryGate.Signal(ref _delivery, new PendingDrain(this));
+    }
+
+    /// <summary>Applies queued updates in order, then delivers the terminal notification.</summary>
+    private void DrainPending()
+    {
+        while (true)
+        {
+            switch (_pending.TakeNext(out var update, out var error))
+            {
+                case PendingDelivery.Value:
+                {
+                    Apply(update);
+                    break;
+                }
+
+                case PendingDelivery.Terminal when error is null:
+                {
+                    Observer.OnCompleted();
+                    return;
+                }
+
+                case PendingDelivery.Terminal:
+                {
+                    Observer.OnError(error);
+                    return;
+                }
+
+                default:
+                {
+                    return;
+                }
+            }
+        }
+    }
+
+    /// <summary>Records an update, emits the pair it completes, and requests completion once no more pairs can form.</summary>
+    /// <param name="update">The update.</param>
+    private void Apply(in Update update)
+    {
+        if (IsCompleted)
+        {
+            return;
+        }
+
+        Record(update);
+        if (LeftQueue.Count != 0 && RightQueue.Count != 0)
+        {
+            Observer.OnNext(Selector(LeftQueue.Dequeue(), RightQueue.Dequeue()));
+        }
+
+        TryComplete();
+    }
+
+    /// <summary>Queues a value for its side, or marks the side complete.</summary>
+    /// <param name="update">The update.</param>
+    private void Record(in Update update)
+    {
+        if (update.IsCompletion)
+        {
+            if (update.IsLeft)
+            {
+                IsLeftCompleted = true;
+            }
+            else
+            {
+                IsRightCompleted = true;
+            }
+        }
+        else if (update.IsLeft)
+        {
+            LeftQueue.Enqueue(update.Left);
+        }
+        else
+        {
+            RightQueue.Enqueue(update.Right);
+        }
+    }
+
+    /// <summary>Requests completion once a completed side has no value left to pair.</summary>
+    private void TryComplete()
+    {
+        if ((!IsLeftCompleted || LeftQueue.Count != 0) && (!IsRightCompleted || RightQueue.Count != 0))
+        {
+            return;
+        }
+
+        IsCompleted = true;
+        if (!_pending.TryRequestTerminal(null))
+        {
+            return;
+        }
+
+        DeliveryGate.Signal(ref _delivery, new PendingDrain(this));
+    }
+
+    /// <summary>A value or completion from one side.</summary>
+    /// <param name="IsLeft">Whether the notification came from the left source.</param>
+    /// <param name="IsCompletion">Whether the notification is the side's completion.</param>
+    /// <param name="Left">The left value, for a left value.</param>
+    /// <param name="Right">The right value, for a right value.</param>
+    private readonly record struct Update(bool IsLeft, bool IsCompletion, TLeft Left, TRight Right);
+
+    /// <summary>Drains this witness's queued updates for the delivery gate.</summary>
+    /// <param name="Owner">The witness.</param>
+    private readonly record struct PendingDrain(PairWitness<TLeft, TRight, TResult> Owner) : IDrainTarget
+    {
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Drain() => Owner.DrainPending();
     }
 }

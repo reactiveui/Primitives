@@ -2,6 +2,10 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
+
 namespace ReactiveUI.Primitives.Async;
 
 /// <summary>Provides extension methods for composing and managing asynchronous observable sequences.</summary>
@@ -76,19 +80,61 @@ public static partial class SignalAsyncExtensions
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
     /// <param name="observer">The downstream observer to forward notifications to.</param>
     /// <param name="finallySync">The synchronous action to invoke when disposed.</param>
-    internal sealed class OnDisposeWitnessSync<T>(IObserverAsync<T> observer, Action finallySync) : ForwardingWitnessAsync<T>(observer)
+    [DebuggerDisplay("OnDisposeWitnessSync: {_witness}")]
+    internal sealed class OnDisposeWitnessSync<T>(IObserverAsync<T> observer, Action finallySync) : IWitnessAsync<T>
     {
+        /// <summary>The notification gate, cancellation link and disposal state.</summary>
+        private WitnessAsyncState _witness;
+
+        /// <summary>Gets the observer that receives forwarded notifications.</summary>
+        private IObserverAsync<T> Downstream { get; } = observer;
+
         /// <inheritdoc/>
-        protected override async ValueTask DisposeAsyncCore()
+        ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
+            WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+            WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
+            Downstream.OnNextAsync(value, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            Downstream.OnErrorResumeAsync(error, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) => Downstream.OnCompletedAsync(result);
+
+        /// <inheritdoc/>
+        public async ValueTask DisposeAsync()
         {
+            ExceptionDispatchInfo? failure = null;
             try
             {
                 finallySync();
             }
-            finally
+            catch (Exception e)
             {
-                await base.DisposeAsyncCore().ConfigureAwait(false);
+                failure = ExceptionDispatchInfo.Capture(e);
             }
+
+            await WitnessAsync.DisposeStateAsync(this).ConfigureAwait(false);
+            failure?.Throw();
         }
     }
 
@@ -96,19 +142,61 @@ public static partial class SignalAsyncExtensions
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
     /// <param name="observer">The downstream observer to forward notifications to.</param>
     /// <param name="finallyAsync">The asynchronous callback to invoke when disposed.</param>
-    internal sealed class OnDisposeWitness<T>(IObserverAsync<T> observer, Func<ValueTask> finallyAsync) : ForwardingWitnessAsync<T>(observer)
+    [DebuggerDisplay("OnDisposeWitness: {_witness}")]
+    internal sealed class OnDisposeWitness<T>(IObserverAsync<T> observer, Func<ValueTask> finallyAsync) : IWitnessAsync<T>
     {
+        /// <summary>The notification gate, cancellation link and disposal state.</summary>
+        private WitnessAsyncState _witness;
+
+        /// <summary>Gets the observer that receives forwarded notifications.</summary>
+        private IObserverAsync<T> Downstream { get; } = observer;
+
         /// <inheritdoc/>
-        protected override async ValueTask DisposeAsyncCore()
+        ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
+            WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
+            WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
+            Downstream.OnNextAsync(value, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
+            Downstream.OnErrorResumeAsync(error, cancellationToken);
+
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) => Downstream.OnCompletedAsync(result);
+
+        /// <inheritdoc/>
+        public async ValueTask DisposeAsync()
         {
+            ExceptionDispatchInfo? failure = null;
             try
             {
                 await finallyAsync().ConfigureAwait(false);
             }
-            finally
+            catch (Exception e)
             {
-                await base.DisposeAsyncCore().ConfigureAwait(false);
+                failure = ExceptionDispatchInfo.Capture(e);
             }
+
+            await WitnessAsync.DisposeStateAsync(this).ConfigureAwait(false);
+            failure?.Throw();
         }
     }
 }

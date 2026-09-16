@@ -36,7 +36,7 @@ public sealed class ReadOnlyState<T> : IObservable<T>, IDisposable
 
     /// <summary>Gets the debugger display text.</summary>
     [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
-    private string DebuggerDisplay => ToString() ?? string.Empty;
+    private string? DebuggerDisplay => ToString();
 
     /// <summary>Subscribes an observer, which receives the current value followed by every later one.</summary>
     /// <param name="observer">The observer to subscribe.</param>

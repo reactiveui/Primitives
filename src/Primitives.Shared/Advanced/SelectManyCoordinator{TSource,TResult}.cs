@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Extensions;
 
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
@@ -13,11 +14,25 @@ namespace ReactiveUI.Primitives.Advanced;
 /// <summary>Coordinates concurrent observable <c>SelectMany</c> subscriptions.</summary>
 /// <typeparam name="TSource">The source value type.</typeparam>
 /// <typeparam name="TResult">The result value type.</typeparam>
+/// <remarks>
+/// Deliveries are serialized by a <see cref="SerializedDelivery{T}"/>, so no lock is held while the selector, an inner
+/// subscription or the downstream observer runs. Values that arrive while another thread is delivering are queued and
+/// delivered in arrival order; a value raised by the delivering thread itself is delivered after the observer returns.
+/// </remarks>
 [System.Diagnostics.DebuggerDisplay("SelectManyCoordinator: Active = {Active}, OuterCompleted = {OuterCompleted}, Done = {Done}")]
 public sealed class SelectManyCoordinator<TSource, TResult> : IObserver<TSource>, IDisposable
 {
-    /// <summary>Serializes downstream callbacks and counters.</summary>
-    private readonly Lock _gate = new();
+    /// <summary>Serializes downstream deliveries.</summary>
+    private SerializedDelivery<TResult> _delivery = new();
+
+    /// <summary>The number of active inner subscriptions.</summary>
+    private int _active;
+
+    /// <summary>Whether the outer source has completed, as 0 or 1.</summary>
+    private int _outerCompleted;
+
+    /// <summary>Whether a terminal notification has been requested, as 0 or 1.</summary>
+    private int _done;
 
     /// <summary>Initializes a new instance of the <see cref="SelectManyCoordinator{TSource, TResult}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
@@ -51,14 +66,14 @@ public sealed class SelectManyCoordinator<TSource, TResult> : IObserver<TSource>
     /// <summary>Gets the constant inner observable, when constant-inner based.</summary>
     private IObservable<TResult>? Inner { get; }
 
-    /// <summary>Gets or sets a value indicating whether the outer source has completed.</summary>
-    private bool OuterCompleted { get; set; }
+    /// <summary>Gets a value indicating whether the outer source has completed.</summary>
+    private bool OuterCompleted => Volatile.Read(ref _outerCompleted) != 0;
 
-    /// <summary>Gets or sets the number of active inner subscriptions.</summary>
-    private int Active { get; set; }
+    /// <summary>Gets the number of active inner subscriptions.</summary>
+    private int Active => Volatile.Read(ref _active);
 
-    /// <summary>Gets or sets a value indicating whether a terminal notification has been emitted.</summary>
-    private bool Done { get; set; }
+    /// <summary>Gets a value indicating whether a terminal notification has been requested.</summary>
+    private bool Done => Volatile.Read(ref _done) != 0;
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -67,11 +82,7 @@ public sealed class SelectManyCoordinator<TSource, TResult> : IObserver<TSource>
     /// <inheritdoc/>
     public void OnCompleted()
     {
-        lock (_gate)
-        {
-            OuterCompleted = true;
-        }
-
+        Volatile.Write(ref _outerCompleted, 1);
         TryComplete();
     }
 
@@ -99,16 +110,12 @@ public sealed class SelectManyCoordinator<TSource, TResult> : IObserver<TSource>
             return;
         }
 
-        lock (_gate)
+        if (Done)
         {
-            if (Done)
-            {
-                return;
-            }
-
-            Active++;
+            return;
         }
 
+        _ = Interlocked.Increment(ref _active);
         Subscriptions.Add(inner.Subscribe(OnInnerNext, OnAnyError, OnInnerCompleted));
     }
 
@@ -125,54 +132,40 @@ public sealed class SelectManyCoordinator<TSource, TResult> : IObserver<TSource>
     /// <param name="error">The error to forward.</param>
     public void OnAnyError(Exception error)
     {
-        lock (_gate)
-        {
-            if (Done)
-            {
-                return;
-            }
-
-            Done = true;
-            Observer.OnError(error);
-        }
+        Volatile.Write(ref _done, 1);
+        _delivery.OnError(error, new PendingDrain(this));
     }
 
-    /// <summary>Forwards an inner value.</summary>
+    /// <summary>Forwards an inner value, directly when nothing else is delivering.</summary>
     /// <param name="value">The value to forward.</param>
-    private void OnInnerNext(TResult value)
-    {
-        lock (_gate)
-        {
-            if (!Done)
-            {
-                Observer.OnNext(value);
-            }
-        }
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void OnInnerNext(TResult value) => _delivery.OnNext(Observer, value, new PendingDrain(this));
 
     /// <summary>Marks one inner source complete.</summary>
     private void OnInnerCompleted()
     {
-        lock (_gate)
-        {
-            Active--;
-        }
-
+        _ = Interlocked.Decrement(ref _active);
         TryComplete();
     }
 
-    /// <summary>Completes once the outer and all inners are done.</summary>
+    /// <summary>Delivers completion once the outer and all inners are done.</summary>
     private void TryComplete()
     {
-        lock (_gate)
+        if (!OuterCompleted || Active != 0)
         {
-            if (Done || !OuterCompleted || Active != 0)
-            {
-                return;
-            }
-
-            Done = true;
-            Observer.OnCompleted();
+            return;
         }
+
+        Volatile.Write(ref _done, 1);
+        _delivery.OnCompleted(new PendingDrain(this));
+    }
+
+    /// <summary>Drains this coordinator's queued notifications for the delivery gate.</summary>
+    /// <param name="Owner">The coordinator.</param>
+    private readonly record struct PendingDrain(SelectManyCoordinator<TSource, TResult> Owner) : IDrainTarget
+    {
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Drain() => _ = Owner._delivery.DrainTo(Owner.Observer);
     }
 }

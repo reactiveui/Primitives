@@ -17,10 +17,6 @@ namespace ReactiveUI.Primitives.Extensions;
 #endif
 
 /// <summary>Extension methods for Reactive objects.</summary>
-[SuppressMessage(
-    "Roslynator",
-    "RCS1047:Non-asynchronous method name should not end with \'Async\'",
-    Justification = "The SubscribeAsync overloads are named for the asynchronous handler they invoke and return a subscription handle rather than a task.")]
 public static partial class ReactiveExtensions
 {
     /// <summary>Default match timeout for regex filters created from string patterns.</summary>
@@ -404,10 +400,6 @@ public static partial class ReactiveExtensions
         /// <param name="onNext">Action to invoke for each element in the observable sequence.</param>
         /// <returns><see cref="IDisposable"/> object used to unsubscribe from the observable sequence.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [SuppressMessage(
-            "Roslynator",
-            "RCS1047:Non-asynchronous method name should not end with \'Async\'",
-            Justification = "The name describes the asynchronous handler this overload invokes; it returns a subscription handle rather than a task.")]
         public IDisposable SubscribeAsync(Func<T, ValueTask> onNext) =>
             new SubscribeAsyncObservable<T>(source, onNext, null, null);
 
@@ -418,10 +410,6 @@ public static partial class ReactiveExtensions
         ///   <see cref="IDisposable" /> object used to unsubscribe from the observable sequence.
         /// </returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [SuppressMessage(
-            "Roslynator",
-            "RCS1047:Non-asynchronous method name should not end with \'Async\'",
-            Justification = "The name describes the asynchronous handler this overload invokes; it returns a subscription handle rather than a task.")]
         public IDisposable SubscribeAsync(Func<T, ValueTask> onNext, Action onCompleted) =>
             new SubscribeAsyncObservable<T>(source, onNext, null, onCompleted);
 
@@ -432,10 +420,6 @@ public static partial class ReactiveExtensions
         ///   <see cref="IDisposable" /> object used to unsubscribe from the observable sequence.
         /// </returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [SuppressMessage(
-            "Roslynator",
-            "RCS1047:Non-asynchronous method name should not end with \'Async\'",
-            Justification = "The name describes the asynchronous handler this overload invokes; it returns a subscription handle rather than a task.")]
         public IDisposable SubscribeAsync(Func<T, ValueTask> onNext, Action<Exception> onError) =>
             new SubscribeAsyncObservable<T>(source, onNext, onError, null);
 
@@ -447,10 +431,6 @@ public static partial class ReactiveExtensions
         ///   <see cref="IDisposable" /> object used to unsubscribe from the observable sequence.
         /// </returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [SuppressMessage(
-            "Roslynator",
-            "RCS1047:Non-asynchronous method name should not end with \'Async\'",
-            Justification = "The name describes the asynchronous handler this overload invokes; it returns a subscription handle rather than a task.")]
         public IDisposable SubscribeAsync(
             Func<T, ValueTask> onNext,
             Action<Exception> onError,

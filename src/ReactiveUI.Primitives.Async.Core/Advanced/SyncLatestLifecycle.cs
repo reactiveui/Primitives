@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 
 namespace ReactiveUI.Primitives.Async.Advanced;
 
@@ -58,6 +59,9 @@ public sealed class SyncLatestLifecycle<TResult> : IAsyncDisposable
 
     /// <summary>Gets a value indicating whether disposal has been signalled.</summary>
     public bool HasDisposed => DisposalHelper.HasDisposed(_disposed);
+
+    /// <summary>Gets the lock guarding the coordinator's latest-value slots; held only while a value is recorded.</summary>
+    internal Lock ValuesLock { get; } = new();
 
     /// <summary>
     /// Links the subscribe-time cancellation token into this subscription's dispose chain, so
@@ -150,6 +154,7 @@ public sealed class SyncLatestLifecycle<TResult> : IAsyncDisposable
             return;
         }
 
+        ExceptionDispatchInfo? failure = null;
         try
         {
             await _disposeCts.CancelAsync().ConfigureAwait(false);
@@ -168,16 +173,19 @@ public sealed class SyncLatestLifecycle<TResult> : IAsyncDisposable
                 await _observer.OnCompletedAsync(result.Value).ConfigureAwait(false);
             }
         }
-        finally
+        catch (Exception e)
         {
-            // Cleanup completes even when completion or upstream disposal throws.
-#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-            await _externalLinkRegistration.DisposeAsync().ConfigureAwait(false);
-#else
-            _externalLinkRegistration.Dispose();
-#endif
-            _disposeCts.Dispose();
-            _gate.Dispose();
+            failure = ExceptionDispatchInfo.Capture(e);
         }
+
+        // Cleanup completes even when completion or upstream disposal throws.
+#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+        await _externalLinkRegistration.DisposeAsync().ConfigureAwait(false);
+#else
+        _externalLinkRegistration.Dispose();
+#endif
+        _disposeCts.Dispose();
+        _gate.Dispose();
+        failure?.Throw();
     }
 }

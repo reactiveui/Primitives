@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 
 namespace ReactiveUI.Primitives.Async.Advanced;
 
@@ -23,27 +24,27 @@ public sealed class TaskResultCompletionSource<T>(CancellationToken cancellation
     /// <returns>The terminal result value.</returns>
     public async ValueTask<T> AwaitResultAsync(IAsyncDisposable owner)
     {
-        CancellationTokenRegistration cancellationRegistration = default;
+        var cancellationRegistration = RegisterCancellation();
+        ExceptionDispatchInfo? failure = null;
+        T result;
         try
         {
-            cancellationRegistration = RegisterCancellation();
-            return await _taskSource.Task.ConfigureAwait(false);
+            result = await _taskSource.Task.ConfigureAwait(false);
         }
-        finally
+        catch (Exception e)
         {
-            try
-            {
-#if NET8_0_OR_GREATER
-                await cancellationRegistration.DisposeAsync().ConfigureAwait(false);
-#else
-                cancellationRegistration.Dispose();
-#endif
-            }
-            finally
-            {
-                await owner.DisposeAsync().ConfigureAwait(false);
-            }
+            failure = ExceptionDispatchInfo.Capture(e);
+            result = default!;
         }
+
+#if NET8_0_OR_GREATER
+        await cancellationRegistration.DisposeAsync().ConfigureAwait(false);
+#else
+        cancellationRegistration.Dispose();
+#endif
+        await owner.DisposeAsync().ConfigureAwait(false);
+        failure?.Throw();
+        return result;
     }
 
     /// <summary>Completes the result successfully and disposes <paramref name="owner"/>.</summary>
@@ -51,16 +52,10 @@ public sealed class TaskResultCompletionSource<T>(CancellationToken cancellation
     /// <param name="owner">The owner to dispose after publishing the result. Disposed via the reentrant path
     /// because this runs from within the owner's own in-flight notification.</param>
     /// <returns>A task that completes when the owner has been disposed.</returns>
-    public async ValueTask SetResultAndDisposeAsync(T value, IReentrantAsyncDisposable owner)
+    public ValueTask SetResultAndDisposeAsync(T value, IWitnessState owner)
     {
-        try
-        {
-            _ = _taskSource.TrySetResult(value);
-        }
-        finally
-        {
-            await owner.DisposeFromNotificationAsync().ConfigureAwait(false);
-        }
+        _ = _taskSource.TrySetResult(value);
+        return WitnessAsync.DisposeFromNotificationAsync(owner);
     }
 
     /// <summary>Completes the result with an exception and disposes <paramref name="owner"/>.</summary>
@@ -68,16 +63,10 @@ public sealed class TaskResultCompletionSource<T>(CancellationToken cancellation
     /// <param name="owner">The owner to dispose after publishing the exception. Disposed via the reentrant path
     /// because this runs from within the owner's own in-flight notification.</param>
     /// <returns>A task that completes when the owner has been disposed.</returns>
-    public async ValueTask SetExceptionAndDisposeAsync(Exception exception, IReentrantAsyncDisposable owner)
+    public ValueTask SetExceptionAndDisposeAsync(Exception exception, IWitnessState owner)
     {
-        try
-        {
-            _ = _taskSource.TrySetException(exception);
-        }
-        finally
-        {
-            await owner.DisposeFromNotificationAsync().ConfigureAwait(false);
-        }
+        _ = _taskSource.TrySetException(exception);
+        return WitnessAsync.DisposeFromNotificationAsync(owner);
     }
 
     /// <summary>Registers cancellation for the pending result task.</summary>

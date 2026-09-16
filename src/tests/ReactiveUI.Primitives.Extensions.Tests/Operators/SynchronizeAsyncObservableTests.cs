@@ -2,6 +2,7 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using ReactiveUI.Primitives.Extensions.Operators;
 
 namespace ReactiveUI.Primitives.Extensions.Tests.Operators;
@@ -91,4 +92,13 @@ public class SynchronizeAsyncObservableTests
         source.Observer.OnNext(1);
         await Assert.That(processed).IsEqualTo(1);
     }
+
+    /// <summary>Verifies an observer that marshals to another thread which completes the source does not deadlock the paired value.</summary>
+    /// <returns>A <see cref = "Task"/> representing the asynchronous test operation.</returns>
+    [Test]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Task WhenObserverMarshalsCompletionDuringValue_ThenNoDeadlock() =>
+        SerializedDeliveryAssertions.ObserverMarshallingCompletionDoesNotDeadlock<(int Value, IDisposable Sync)>(
+            static (source, observer) => source.SynchronizeAsync().Subscribe(observer),
+            static observer => observer.OnNext(1));
 }

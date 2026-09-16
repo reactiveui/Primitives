@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Extensions;
 
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive;
@@ -407,6 +408,10 @@ public static partial class LinqExtensions
 
     /// <summary>Coordinates quiet-period emission with one active timer.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
+    /// <remarks>
+    /// The gate only guards the latest value and the flags. Emissions and terminals are queued in order under the gate and
+    /// delivered by a <see cref="SerializedDelivery{T}"/> after it is released, so no lock is held while the observer runs.
+    /// </remarks>
     private sealed class CalmCoordinator<T> : IDisposable
     {
         /// <summary>The source observable.</summary>
@@ -418,7 +423,7 @@ public static partial class LinqExtensions
         /// <summary>The sequencer used to schedule quiet-period timers.</summary>
         private readonly ISequencer _sequencer;
 
-        /// <summary>The synchronization gate.</summary>
+        /// <summary>Guards the latest value and the flags; never held while the observer runs.</summary>
         private readonly Lock _gate = new();
 
         /// <summary>Active subscription and timer resources.</summary>
@@ -426,6 +431,9 @@ public static partial class LinqExtensions
 
         /// <summary>The active timer slot.</summary>
         private readonly SingleReplaceableDisposable _timer = new();
+
+        /// <summary>Serializes downstream deliveries.</summary>
+        private SerializedDelivery<T> _delivery = new();
 
         /// <summary>The downstream observer.</summary>
         private IObserver<T>? _observer;
@@ -513,7 +521,7 @@ public static partial class LinqExtensions
             Schedule(_dueTime);
         }
 
-        /// <summary>Forwards a terminal error and releases active resources.</summary>
+        /// <summary>Queues a terminal error, delivers it and releases active resources.</summary>
         /// <param name="error">The terminal error.</param>
         private void OnError(Exception error)
         {
@@ -525,13 +533,14 @@ public static partial class LinqExtensions
                 }
 
                 _done = true;
-                _observer!.OnError(error);
+                _ = _delivery.PostError(error);
             }
 
+            _delivery.Flush(new PendingDrain(this));
             Dispose();
         }
 
-        /// <summary>Emits any value waiting inside the quiet window, then forwards completion.</summary>
+        /// <summary>Queues any value waiting inside the quiet window followed by completion, delivers them and releases active resources.</summary>
         private void OnCompleted()
         {
             lock (_gate)
@@ -546,12 +555,13 @@ public static partial class LinqExtensions
                 if (_hasLatest)
                 {
                     _hasLatest = false;
-                    _observer!.OnNext(_latest!);
+                    _ = _delivery.Post(_latest!);
                 }
 
-                _observer!.OnCompleted();
+                _ = _delivery.PostCompleted();
             }
 
+            _delivery.Flush(new PendingDrain(this));
             Dispose();
         }
 
@@ -563,7 +573,7 @@ public static partial class LinqExtensions
         /// <summary>Handles a timer tick.</summary>
         private void Tick()
         {
-            var action = GetTimerAction(out var delay, out var value);
+            var action = GetTimerAction(out var delay);
             if (action == TimerAction.Reschedule)
             {
                 Schedule(delay);
@@ -575,22 +585,13 @@ public static partial class LinqExtensions
                 return;
             }
 
-            lock (_gate)
-            {
-                if (_done)
-                {
-                    return;
-                }
-
-                _observer!.OnNext(value);
-            }
+            _delivery.Flush(new PendingDrain(this));
         }
 
-        /// <summary>Determines what the active timer should do.</summary>
+        /// <summary>Determines what the active timer should do, queuing the value to emit under the gate.</summary>
         /// <param name="delay">The remaining delay when rescheduling is needed.</param>
-        /// <param name="value">The value to emit.</param>
         /// <returns>The timer action.</returns>
-        private TimerAction GetTimerAction(out TimeSpan delay, out T value)
+        private TimerAction GetTimerAction(out TimeSpan delay)
         {
             lock (_gate)
             {
@@ -598,22 +599,29 @@ public static partial class LinqExtensions
                 if (remaining > TimeSpan.Zero)
                 {
                     delay = remaining;
-                    value = default!;
                     return TimerAction.Reschedule;
                 }
 
                 _timerActive = false;
                 delay = default;
-                if (!_hasLatest)
+                if (_done || !_hasLatest)
                 {
-                    value = default!;
                     return TimerAction.None;
                 }
 
-                value = _latest!;
                 _hasLatest = false;
+                _ = _delivery.Post(_latest!);
                 return TimerAction.Emit;
             }
+        }
+
+        /// <summary>Drains this coordinator's queued notifications for the delivery gate.</summary>
+        /// <param name="Owner">The coordinator.</param>
+        private readonly record struct PendingDrain(CalmCoordinator<T> Owner) : IDrainTarget
+        {
+            /// <inheritdoc/>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Drain() => _ = Owner._delivery.DrainTo(Owner._observer!);
         }
     }
 }

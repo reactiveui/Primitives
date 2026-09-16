@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Async.Disposables;
 using ReactiveUI.Primitives.Async.Signals;
 
 namespace ReactiveUI.Primitives.Async.Tests;
@@ -245,6 +246,23 @@ public class TimeBasedOperatorTests
         await Assert.That(await pending).IsEqualTo(FallbackValue);
     }
 
+    /// <summary>A source failure other than the deadline is propagated instead of switching to the fallback.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task WhenTimeoutWithFallbackSourceFails_ThenFailurePropagates()
+    {
+        const int FallbackValue = 99;
+        ManualTimeProvider time = new();
+        var failing = SignalAsync.Create<int>(static async (observer, _) =>
+        {
+            await observer.OnCompletedAsync(Result.Failure(new InvalidOperationException(SourceErrorMessage)));
+            return DisposableAsync.Empty;
+        });
+
+        await Assert.That(async () => await failing.Timeout(Window, SignalAsync.Return(FallbackValue), time).FirstAsync())
+            .ThrowsExactly<InvalidOperationException>();
+    }
+
     /// <summary>Each value rearms the same deadline timer.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]
@@ -365,10 +383,10 @@ public class TimeBasedOperatorTests
             values.Add(value);
             return default;
         });
-        await using TaskSignalSubscription<long> subscription = interval
+        ITaskSignalJob<long> job = interval
             ? new IntervalSubscription(observer, Window, time)
             : new TimerSubscription(observer, Window, Window, time);
-        var execution = subscription.ExecuteAsync(cancellation.Token).AsTask();
+        var execution = TaskSignalState.ExecuteAsync(job, observer, cancellation.Token).AsTask();
         await time.FireNextAsync();
         var pendingTimer = await time.NextTimerAsync();
         await cancellation.CancelAsync();
@@ -394,6 +412,40 @@ public class TimeBasedOperatorTests
     [Test]
     public async Task WhenThrottleUsesDefaultProvider_ThenCreatesThrottleSignal() =>
         await Assert.That(SignalAsync.Return(1).Throttle(Window)).IsTypeOf<SignalAsyncExtensions.ThrottleSignal<int>>();
+
+    /// <summary>A null provider falls back to the system provider.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task WhenThrottleProviderNull_ThenCreatesThrottleSignal() =>
+        await Assert.That(SignalAsync.Return(1).Throttle(Window, null)).IsTypeOf<SignalAsyncExtensions.ThrottleSignal<int>>();
+
+    /// <summary>A null provider falls back to the system provider for timers, deadlines and delays.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task WhenTimeProviderNull_ThenOperatorsUseSystemProvider()
+    {
+        var source = SignalAsync.Return(1);
+
+        await Assert.That(SignalAsync.Timer(Window, (TimeProvider?)null)).IsTypeOf<TimerSignal>();
+        await Assert.That(SignalAsync.Timer(Window, Window, null)).IsTypeOf<TimerSignal>();
+        await Assert.That(source.Timeout(Window, (TimeProvider?)null)).IsTypeOf<SignalAsyncExtensions.TimeoutSignal<int>>();
+        await Assert.That(source.Timeout(Window, source, null)).IsTypeOf<SignalAsyncExtensions.TimeoutWithFallbackSignal<int>>();
+        await Assert.That(source.Delay(Window, (TimeProvider?)null)).IsTypeOf<SignalAsyncExtensions.DelaySignal<int>>();
+        await Assert.That(source.Delay(Window)).IsTypeOf<SignalAsyncExtensions.DelaySignal<int>>();
+    }
+
+    /// <summary>A zero delay returns the source unchanged.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task WhenDelayIsZero_ThenReturnsSource()
+    {
+        ManualTimeProvider time = new();
+        var source = SignalAsync.Return(1);
+
+        await Assert.That(source.Delay(TimeSpan.Zero)).IsSameReferenceAs(source);
+        await Assert.That(source.Delay(TimeSpan.Zero, time)).IsSameReferenceAs(source);
+        await Assert.That(source.Shift(TimeSpan.Zero)).IsSameReferenceAs(source);
+    }
 
     /// <summary>Negative debounce intervals are rejected.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

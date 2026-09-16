@@ -243,6 +243,20 @@ public static partial class LinqExtensions
             return new SynchronizeSignal<T>(source);
         }
 
+        /// <summary>Delivers concurrent notifications one at a time without holding a lock while the observer runs.</summary>
+        /// <returns>A sequence that forwards the source notifications one at a time.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+        /// <remarks>
+        /// A notification that arrives while another thread is delivering is queued behind it instead of blocking, so an
+        /// observer that marshals to a producer's thread cannot deadlock that producer.
+        /// </remarks>
+        public IObservable<T> Serialize()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            return new SerializeSignal<T>(source);
+        }
+
         /// <summary>Serializes notifications with every sequence using the supplied gate.</summary>
         /// <param name="gate">The gate shared with other synchronized sequences.</param>
         /// <returns>A sequence that forwards the source notifications one at a time under the shared gate.</returns>
@@ -710,7 +724,7 @@ public static partial class LinqExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(left);
 
-            return left is RangeSignal range && typeof(TLeft) == typeof(int)
+            return left is RangeSignal range
                 ? new ShiftedRangeSignal<TLeft>(range, Sequencer.Normalize(dueTime), ThreadPoolSequencer.Instance)
                 : new ShiftSignal<TLeft>(left, dueTime, ThreadPoolSequencer.Instance);
         }
@@ -724,7 +738,7 @@ public static partial class LinqExtensions
             ArgumentExceptionHelper.ThrowIfNull(left);
 
             scheduler ??= ThreadPoolSequencer.Instance;
-            return left is RangeSignal range && typeof(TLeft) == typeof(int)
+            return left is RangeSignal range
                 ? new ShiftedRangeSignal<TLeft>(range, Sequencer.Normalize(dueTime), scheduler)
                 : new ShiftSignal<TLeft>(left, dueTime, scheduler);
         }

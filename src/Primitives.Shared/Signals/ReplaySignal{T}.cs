@@ -12,6 +12,11 @@ namespace ReactiveUI.Primitives.Signals;
 
 /// <summary>A signal that replays buffered values to new subscribers.</summary>
 /// <typeparam name="T">The element type.</typeparam>
+/// <remarks>
+/// Buffered values and live notifications are posted to each subscriber under the gate, so a subscriber sees its replay first
+/// and every later notification once in emission order, and are delivered after the gate is released; no observer runs while
+/// it is held.
+/// </remarks>
 [System.Diagnostics.DebuggerDisplay("{DebuggerDisplay,nq}")]
 public sealed class ReplaySignal<T> : ISignal<T>
 {
@@ -30,11 +35,11 @@ public sealed class ReplaySignal<T> : ISignal<T>
     /// <summary>Whether a finite replay window is in effect.</summary>
     private readonly bool _usesWindow;
 
-    /// <summary>Serializes buffer mutation, broadcast and subscription.</summary>
+    /// <summary>Orders buffer mutation, posting and subscription; never held while an observer runs.</summary>
     private readonly Lock _observerLock = new();
 
-    /// <summary>The observers values are broadcast to.</summary>
-    private Broadcaster<T> _broadcaster;
+    /// <summary>The subscribers notifications are posted to.</summary>
+    private SerializedBroadcaster<T> _broadcaster;
 
     /// <summary>Whether the signal has terminated.</summary>
     private bool _isStopped;
@@ -137,7 +142,7 @@ public sealed class ReplaySignal<T> : ISignal<T>
     /// <summary>Gets a value indicating whether this instance is disposed.</summary>
     public bool IsDisposed { get; private set; }
 
-    /// <summary>Gets the gate shared by replay and live delivery.</summary>
+    /// <summary>Gets the gate that orders replay and live posting.</summary>
     internal Lock Gate => _observerLock;
 
     /// <summary>Gets the debugger display text.</summary>
@@ -169,6 +174,7 @@ public sealed class ReplaySignal<T> : ISignal<T>
     /// <summary>Terminates the signal and completes every observer; later calls are ignored.</summary>
     public void OnCompleted()
     {
+        SerializedBroadcast<T> broadcast;
         lock (_observerLock)
         {
             ThrowIfDisposed();
@@ -183,9 +189,11 @@ public sealed class ReplaySignal<T> : ISignal<T>
                 Trim();
             }
 
-            _broadcaster.Completed();
+            broadcast = _broadcaster.PostCompleted();
             _broadcaster.Clear();
         }
+
+        broadcast.Flush();
     }
 
     /// <summary>Terminates the signal with the error, forwarding it to every observer and replaying it to later subscribers.</summary>
@@ -195,6 +203,7 @@ public sealed class ReplaySignal<T> : ISignal<T>
     {
         ArgumentExceptionHelper.ThrowIfNull(error);
 
+        SerializedBroadcast<T> broadcast;
         lock (_observerLock)
         {
             ThrowIfDisposed();
@@ -210,9 +219,11 @@ public sealed class ReplaySignal<T> : ISignal<T>
                 Trim();
             }
 
-            _broadcaster.Error(error);
+            broadcast = _broadcaster.PostError(error);
             _broadcaster.Clear();
         }
+
+        broadcast.Flush();
     }
 
     /// <summary>Buffers the value for replay and broadcasts it to the current observers.</summary>
@@ -221,6 +232,7 @@ public sealed class ReplaySignal<T> : ISignal<T>
     public void OnNext(T value)
     {
         var interval = _usesWindow ? _scheduler.Now - _startTime : TimeSpan.Zero;
+        SerializedBroadcast<T> broadcast;
         lock (_observerLock)
         {
             ThrowIfDisposed();
@@ -239,8 +251,10 @@ public sealed class ReplaySignal<T> : ISignal<T>
                 Trim();
             }
 
-            _broadcaster.Next(value);
+            broadcast = _broadcaster.PostNext(value);
         }
+
+        broadcast.Flush();
     }
 
     /// <summary>Replays the buffered values to the observer, then attaches it unless the signal has terminated.</summary>
@@ -251,47 +265,39 @@ public sealed class ReplaySignal<T> : ISignal<T>
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
-        Exception? ex;
-        var subscription = default(ObserverHandler);
-
+        SerializedWitness<T> witness = new(observer);
+        ObserverHandler? subscription = null;
+        T[] replay;
         lock (_observerLock)
         {
             ThrowIfDisposed();
+
+            // A new witness is always claimable; claiming it first queues live values and the terminal behind the replay.
+            _ = witness.TryClaim();
+            replay = _ring is not null ? SnapshotRing() : SnapshotQueue();
             if (!_isStopped)
             {
-                _broadcaster.Add(observer);
-                subscription = new(this, observer);
+                _broadcaster.Add(witness);
+                subscription = new(this, witness);
             }
-
-            ex = _lastError;
-            if (_ring is not null)
+            else if (_lastError is not null)
             {
-                ReplayRing(observer);
+                _ = witness.PostError(_lastError);
             }
             else
             {
-                Trim();
-                foreach (var item in _queue!)
-                {
-                    observer.OnNext(item.Value);
-                }
+                _ = witness.PostCompleted();
             }
         }
 
+        witness.DeliverClaimed(replay);
         if (subscription is not null)
         {
             return subscription;
         }
 
-        if (ex is not null)
-        {
-            observer.OnError(ex);
-        }
-        else
-        {
-            observer.OnCompleted();
-        }
-
+        // The terminal was queued behind the replay without a signal, so it is delivered here.
+        witness.Flush();
         return EmptyDisposable.Instance;
     }
 
@@ -353,41 +359,59 @@ public sealed class ReplaySignal<T> : ISignal<T>
         _ringCount++;
     }
 
-    /// <summary>Replays the ring contents to the observer in arrival order.</summary>
-    /// <param name="observer">The observer receiving the replay.</param>
-    private void ReplayRing(IObserver<T> observer)
+    /// <summary>Copies the ring contents in arrival order for replay outside the gate.</summary>
+    /// <returns>The buffered values, oldest first.</returns>
+    private T[] SnapshotRing()
     {
         var ring = _ring!;
-        if (_ringCount == 0 || ring.Length == 0)
+        if (_ringCount == 0)
         {
-            return;
+            return [];
         }
 
+        var snapshot = new T[_ringCount];
         var index = _ringNext - _ringCount;
         if (index < 0)
         {
             index += ring.Length;
         }
 
-        for (var i = 0; i < _ringCount; i++)
+        var tail = Math.Min(_ringCount, ring.Length - index);
+        Array.Copy(ring, index, snapshot, 0, tail);
+        Array.Copy(ring, 0, snapshot, tail, _ringCount - tail);
+        return snapshot;
+    }
+
+    /// <summary>Trims the timed buffer and copies what remains for replay outside the gate.</summary>
+    /// <returns>The buffered values, oldest first.</returns>
+    private T[] SnapshotQueue()
+    {
+        Trim();
+        var queue = _queue!;
+        if (queue.Count == 0)
         {
-            observer.OnNext(ring[index]);
-            index++;
-            if (index == ring.Length)
-            {
-                index = 0;
-            }
+            return [];
         }
+
+        var snapshot = new T[queue.Count];
+        var i = 0;
+        foreach (var item in queue)
+        {
+            snapshot[i] = item.Value;
+            i++;
+        }
+
+        return snapshot;
     }
 
     /// <summary>Detaches one observer from the signal when disposed.</summary>
     /// <param name="subject">The signal the observer is attached to.</param>
-    /// <param name="observer">The observer to detach.</param>
+    /// <param name="witness">The subscriber to detach.</param>
     [SuppressMessage(
         "Usage",
         "CA2213:Disposable fields should be disposed",
         Justification = "The field references the owning signal, not a resource this subscription owns.")]
-    private sealed class ObserverHandler(ReplaySignal<T> subject, IObserver<T> observer) : IDisposable
+    private sealed class ObserverHandler(ReplaySignal<T> subject, SerializedWitness<T> witness) : IDisposable
     {
         /// <summary>Serializes concurrent disposal.</summary>
         private readonly Lock _lock = new();
@@ -395,10 +419,10 @@ public sealed class ReplaySignal<T> : ISignal<T>
         /// <summary>The signal the observer is attached to; null once disposed.</summary>
         private ReplaySignal<T>? _subject = subject;
 
-        /// <summary>The observer to detach; null once disposed.</summary>
-        private IObserver<T>? _observer = observer;
+        /// <summary>The subscriber to detach; null once disposed.</summary>
+        private SerializedWitness<T>? _witness = witness;
 
-        /// <summary>Removes the observer from the signal and clears both references.</summary>
+        /// <summary>Removes the subscriber from the signal and clears both references.</summary>
         public void Dispose()
         {
             lock (_lock)
@@ -407,8 +431,8 @@ public sealed class ReplaySignal<T> : ISignal<T>
                 {
                     lock (_subject._observerLock)
                     {
-                        _subject._broadcaster.Remove(_observer!);
-                        _observer = null;
+                        _subject._broadcaster.Remove(_witness!);
+                        _witness = null;
                         _subject = null;
                     }
                 }

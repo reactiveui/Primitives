@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Runtime.CompilerServices;
+using ReactiveUI.Primitives.Extensions;
 
 #if REACTIVE_SHIM
 namespace ReactiveUI.Primitives.Reactive.Advanced;
@@ -12,11 +13,22 @@ namespace ReactiveUI.Primitives.Advanced;
 
 /// <summary>Coordinates concurrent merge subscriptions.</summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.DebuggerDisplay("MergeCoordinator: Active = {Active}, Done = {Done}")]
+/// <remarks>
+/// Deliveries are serialized by a <see cref="SerializedDelivery{T}"/>, so no lock is held while the downstream observer
+/// runs. Values that arrive while another thread is delivering are queued and delivered in arrival order; a value raised
+/// by the delivering thread itself is delivered after the observer returns.
+/// </remarks>
+[System.Diagnostics.DebuggerDisplay("MergeCoordinator: Active = {_active}, Done = {_delivery.IsTerminated}")]
 public sealed class MergeCoordinator<T> : IDisposable
 {
-    /// <summary>Serializes downstream callbacks and counters.</summary>
-    private readonly Lock _gate = new();
+    /// <summary>Serializes downstream deliveries.</summary>
+    private SerializedDelivery<T> _delivery = new();
+
+    /// <summary>The number of active inner subscriptions.</summary>
+    private int _active;
+
+    /// <summary>Whether the outer source has completed, as 0 or 1.</summary>
+    private int _outerCompleted;
 
     /// <summary>Initializes a new instance of the <see cref="MergeCoordinator{T}"/> class.</summary>
     /// <param name="observer">The downstream observer.</param>
@@ -29,15 +41,6 @@ public sealed class MergeCoordinator<T> : IDisposable
 
     /// <summary>Gets the downstream observer.</summary>
     private IObserver<T> Observer { get; }
-
-    /// <summary>Gets or sets a value indicating whether the outer source has completed.</summary>
-    private bool OuterCompleted { get; set; }
-
-    /// <summary>Gets or sets the number of active inner subscriptions.</summary>
-    private int Active { get; set; }
-
-    /// <summary>Gets or sets a value indicating whether a terminal notification has been emitted.</summary>
-    private bool Done { get; set; }
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -79,11 +82,7 @@ public sealed class MergeCoordinator<T> : IDisposable
             return;
         }
 
-        lock (_gate)
-        {
-            Active++;
-        }
-
+        _ = Interlocked.Increment(ref _active);
         var completed = 0;
         Subscriptions.Add(source.Subscribe(
             OnInnerNext,
@@ -101,67 +100,45 @@ public sealed class MergeCoordinator<T> : IDisposable
 
     /// <summary>Forwards the first terminal error.</summary>
     /// <param name="error">The error to forward.</param>
-    public void OnAnyError(Exception error)
-    {
-        lock (_gate)
-        {
-            if (Done)
-            {
-                return;
-            }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void OnAnyError(Exception error) => _delivery.OnError(error, new PendingDrain(this));
 
-            Done = true;
-            Observer.OnError(error);
-        }
-    }
-
-    /// <summary>Forwards an inner value.</summary>
+    /// <summary>Forwards an inner value, directly when nothing else is delivering.</summary>
     /// <param name="value">The value to forward.</param>
-    private void OnInnerNext(T value)
-    {
-        lock (_gate)
-        {
-            if (!Done)
-            {
-                Observer.OnNext(value);
-            }
-        }
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void OnInnerNext(T value) => _delivery.OnNext(Observer, value, new PendingDrain(this));
 
     /// <summary>Marks one inner source complete.</summary>
     private void OnInnerCompleted()
     {
-        lock (_gate)
-        {
-            Active--;
-        }
-
+        _ = Interlocked.Decrement(ref _active);
         TryComplete();
     }
 
     /// <summary>Marks source enumeration complete.</summary>
     private void OnOuterCompleted()
     {
-        lock (_gate)
-        {
-            OuterCompleted = true;
-        }
-
+        Volatile.Write(ref _outerCompleted, 1);
         TryComplete();
     }
 
-    /// <summary>Completes once enumeration and all inners are done.</summary>
+    /// <summary>Delivers completion once enumeration and all inners are done.</summary>
     private void TryComplete()
     {
-        lock (_gate)
+        if (Volatile.Read(ref _outerCompleted) == 0 || Volatile.Read(ref _active) != 0)
         {
-            if (Done || !OuterCompleted || Active != 0)
-            {
-                return;
-            }
-
-            Done = true;
-            Observer.OnCompleted();
+            return;
         }
+
+        _delivery.OnCompleted(new PendingDrain(this));
+    }
+
+    /// <summary>Drains this coordinator's queued notifications for the delivery gate.</summary>
+    /// <param name="Owner">The coordinator.</param>
+    private readonly record struct PendingDrain(MergeCoordinator<T> Owner) : IDrainTarget
+    {
+        /// <inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Drain() => _ = Owner._delivery.DrainTo(Owner.Observer);
     }
 }

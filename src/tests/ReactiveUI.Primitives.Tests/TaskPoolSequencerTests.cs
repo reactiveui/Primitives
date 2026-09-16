@@ -151,4 +151,10 @@ public class TaskPoolSequencerTests
         tasks.RunPending();
         await Assert.That(runs.Value).IsEqualTo(1);
     }
+
+    /// <summary>A null task factory is rejected.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Constructor_NullTaskFactory_ThrowsArgumentNull() =>
+        await Assert.That(static () => new TaskPoolSequencer(null!)).ThrowsExactly<ArgumentNullException>();
 }

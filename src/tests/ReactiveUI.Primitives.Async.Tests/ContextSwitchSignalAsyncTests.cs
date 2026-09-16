@@ -203,6 +203,27 @@ public class ContextSwitchSignalAsyncTests
         await Assert.That(observer.Completion!.Value.IsSuccess).IsTrue();
     }
 
+    /// <summary>Notifications raised on the target context forward directly when yielding is not forced.</summary>
+    /// <returns>The test operation.</returns>
+    [Test]
+    public async Task MatchingContextWithoutForcedYieldForwardsDirectly()
+    {
+        RecordingWitness observer = new();
+        InvalidOperationException expected = new();
+        await using ContextSwitchSignalAsync<int>.ContextSwitchWitness witness = new(observer, AsyncContext.GetCurrent(), false);
+        IWitnessAsync<int> core = witness;
+
+        var value = core.OnNextAsyncCore(Sentinel, CancellationToken.None);
+        var error = core.OnErrorResumeAsyncCore(expected, CancellationToken.None);
+        var completion = core.OnCompletedAsyncCore(Result.Success);
+        var forwardedDirectly = value.IsCompletedSuccessfully && error.IsCompletedSuccessfully && completion.IsCompletedSuccessfully;
+
+        await Assert.That(forwardedDirectly).IsTrue();
+        await Assert.That(observer.Value).IsEqualTo(Sentinel);
+        await Assert.That(observer.Error).IsSameReferenceAs(expected);
+        await Assert.That(observer.Completion!.Value.IsSuccess).IsTrue();
+    }
+
     /// <summary>Retains context continuations until explicitly invoked.</summary>
     private sealed class ManualContext : SynchronizationContext
     {

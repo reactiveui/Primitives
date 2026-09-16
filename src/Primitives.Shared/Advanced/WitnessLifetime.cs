@@ -108,7 +108,7 @@ internal static class WitnessLifetime
             return;
         }
 
-        Interlocked.Exchange(ref cancelSlot, null)?.Dispose();
+        Dispose(ref cancelSlot, ref stopped);
     }
 
     /// <summary>Forwards a value while the witness is active.</summary>

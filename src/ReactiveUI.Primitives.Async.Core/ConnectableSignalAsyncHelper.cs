@@ -109,7 +109,7 @@ internal static class ConnectableSignalAsyncHelper
         CancellationToken cancellationToken)
     {
         RelayWitnessAsync<T> wrap = new(observer);
-        if (observer is WitnessAsync<T> downstream)
+        if (observer is IWitnessAsync<T> downstream)
         {
             downstream.LinkUpstreamCancellation(wrap.InternalDisposedToken);
         }
