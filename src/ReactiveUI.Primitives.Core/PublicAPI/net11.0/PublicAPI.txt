@@ -24,6 +24,7 @@ namespace ReactiveUI.Primitives
     {
         extension(System.Exception exception)
         {
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
             public void Throw() { }
         }
     }

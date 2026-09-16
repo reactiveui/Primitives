@@ -542,6 +542,13 @@ namespace ReactiveUI.Primitives.Advanced
         public void Dispose() { }
         public ReactiveUI.Primitives.Advanced.AfterSubscription Run() { }
     }
+    [System.Diagnostics.DebuggerDisplay("AsObservableSignal: Source = {_source}")]
+    public sealed class AsObservableSignal<T> : ReactiveUI.Primitives.Advanced.IRequireCurrentThread<T>
+    {
+        public AsObservableSignal(System.IObservable<T> source) { }
+        public bool IsRequiredSubscribeOnCurrentThread() { }
+        public System.IDisposable Subscribe(System.IObserver<T> observer) { }
+    }
     [System.Diagnostics.DebuggerDisplay("AsyncCreateSignal: SubscribeAsync = {SubscribeAsync}")]
     public sealed class AsyncCreateSignal<T> : System.IObservable<T>
     {
