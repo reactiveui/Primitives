@@ -546,13 +546,9 @@ page.Subscribe(body => Console.WriteLine(body.Length));
 
 `FromEventPattern` turns a .NET event into a signal. Each value carries the sender and the event arguments.
 
-Every overload requires `TEventArgs` to derive from `EventArgs`. That constraint is what lets the library bind your
-event's handler at compile time. Accepting any argument type means building the handler delegate at run time, which
-needs reflection, and reflection does not survive trimming or ahead-of-time compilation. Every package here is
-AOT-compatible, so the constraint stays and the reflection does not.
-
-For an event whose argument type does not derive from `EventArgs`, use `Signal.FromEvent`. It places no constraint on
-the argument type.
+Every overload requires `TEventArgs` to derive from `EventArgs`, which binds the handler at compile time and keeps the
+factory free of reflection. For an argument type that does not derive from `EventArgs`, use `Signal.FromEvent`, which
+places no constraint on it.
 
 ```csharp
 // chat.MessageReceived is an event EventHandler<MessageEventArgs>
@@ -2350,22 +2346,14 @@ more classes and pays you back in speed and allocations. We chose speed, and we 
 
 ### Reflection, and why some signatures are narrower
 
-Several System.Reactive entry points reach for reflection at run time. The event factories are the clearest case.
-`Observable.FromEventPattern` builds your event's handler with `Delegate.CreateDelegate` when you do not supply a
-conversion, and the overloads that take a target object and an event name look the event up by name. .NET marks that
-last group as incompatible with trimming.
+Several System.Reactive entry points use reflection at run time. `Observable.FromEventPattern` builds the handler with
+`Delegate.CreateDelegate` when you pass no conversion, and the overloads taking a target object and an event name look
+the event up by name. .NET marks that last group as incompatible with trimming.
 
-Reflection of that kind does not survive trimming or ahead-of-time compilation. A trimmer cannot see a method looked up
-by name, so it removes it, and the call fails at run time rather than at build time. Every package here sets
-`IsAotCompatible`, and that promise is only worth making if the code behind it holds.
-
-So where a signature here is narrower than its System.Reactive counterpart, that is usually the reason.
-`Signal.FromEventPattern` requires `TEventArgs` to derive from `EventArgs`, which lets it bind
-`EventHandler<TEventArgs>` at compile time instead of constructing a delegate at run time. There is no overload that
-takes an event name. `Signal.FromEvent` covers the argument types the constraint excludes.
-
-You give up the loosest of the reflection-based shapes. You get a library that trims, publishes ahead of time, and
-fails at build time rather than on a user's device.
+Reflection of that kind does not survive trimming or ahead-of-time compilation. Every package here sets
+`IsAotCompatible`, so where a signature is narrower than its System.Reactive counterpart, that is usually why.
+`Signal.FromEventPattern` requires `TEventArgs` to derive from `EventArgs`, which binds `EventHandler<TEventArgs>` at
+compile time. There is no event-name overload. `Signal.FromEvent` places no constraint on the argument type.
 
 ### Where we could not stay on the standard types
 
@@ -2687,7 +2675,7 @@ dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.Maui.R
 | `new ReplaySubject<T>()`           | `new ReplaySignal<T>()`           | Unbounded replay.                                                |
 | `new ReplaySubject<T>(bufferSize)` | `new ReplaySignal<T>(bufferSize)` | Size-limited replay.                                             |
 | `new ReplaySubject<T>(window)`     | `new ReplaySignal<T>(window)`     | Time-window replay.                                              |
-| `new AsyncSubject<T>()`            | `new FinalSignal<T>()`            | Awaitable final-value signal shape.                              |
+| `new AsyncSubject<T>()`            | `new AsyncSignal<T>()`            | Awaitable final-value signal shape.                              |
 
 ### Operator mapping
 
@@ -2732,8 +2720,8 @@ dotnet add xyz.Reactive/xyz.Reactive.csproj package ReactiveUI.Primitives.Maui.R
 
 | System.Reactive              | ReactiveUI.Primitives                   |
 |------------------------------|-----------------------------------------|
-| `Disposable.Create`          | `Disposable.Create`                     |
-| `Disposable.Empty`           | `Disposable.Empty`                      |
+| `Disposable.Create`          | `Scope.Create`                          |
+| `Disposable.Empty`           | `Scope.Empty` or `EmptyDisposable.Instance` |
 | `BooleanDisposable`          | `BooleanDisposable`                     |
 | `CancellationDisposable`     | `CancellationDisposable`                |
 | `CompositeDisposable`        | `MultipleDisposable` or `Pocket`        |
