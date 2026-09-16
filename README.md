@@ -857,15 +857,16 @@ These change when values arrive.
 | `Stabilize(dueTime)`, `Stabilize(dueTime, sequencer)` | Another name for `Calm`. | `Throttle` |
 | `Throttle(dueTime)`, `Throttle(dueTime, sequencer)` | A third name for `Calm`. | `Throttle` |
 | `EmitIfQuiet(dueTime)`, `EmitIfQuiet(dueTime, sequencer)` | Works like `Calm` and hands back the source unchanged when `dueTime` is zero or less. | `Throttle` |
-| `Probe(period)`, `Probe(period, sequencer)` | Emits the latest value each time the period ticks. | `Sample` |
+| `Probe(period)`, `Probe(period, sequencer)` | Emits the latest value once the period has passed since the value that started the timer. A quiet source sends nothing, and a steady source drifts away from a fixed schedule. | `Sample` |
 | `Sample(interval)`, `Sample(interval, sequencer)` | Another name for `Probe`. | `Sample` |
 | `Buffer(timeSpan)`, `Buffer(timeSpan, sequencer)` | Gathers values into one batch per time window. | `Buffer` |
 | `Buffer(count)` | Gathers values into batches of a fixed size that do not overlap. | `Buffer` |
 | `Buffer(count, skip)` | Opens a fixed-size batch every `skip` values, so batches can overlap. | `Buffer` |
 | `Collect(timeSpan)`, `Collect(timeSpan, sequencer)` | Another name for the time-window `Buffer`. | `Buffer(TimeSpan)` |
-| `Expire(dueTime)`, `Expire(dueTime, sequencer)` | Fails with `TimeoutException` when the source does not finish in time. | `Timeout` |
+| `Expire(dueTime)`, `Expire(dueTime, sequencer)` | Fails with `TimeoutException` when no value arrives within the time you give. Each value restarts the clock, so a busy source never fails. | `Timeout` |
 | `Signal.Expire(source, dueTime)`, `Signal.Expire(source, dueTime, sequencer)` | Static form of `Expire`. | `Timeout` |
-| `Timeout(dueTime)`, `Timeout(DateTimeOffset)`, and their sequencer overloads | Another name for `Expire`. | `Timeout` |
+| `Timeout(dueTime)` and its sequencer overload | Another name for `Expire`. Each value restarts the clock. | `Timeout` |
+| `Timeout(DateTimeOffset)` and its sequencer overload | Fails with `TimeoutException` if the sequence has not finished by that moment, whatever values arrive first. | `Timeout` |
 | `Signal.Timeout(source, dueTime)`, `Signal.Timeout(source, dueTime, sequencer)` | Static form of `Timeout`. | `Timeout` |
 
 `Shift` moves everything later by a fixed amount.
@@ -928,11 +929,11 @@ These decide what happens when a signal fails.
 | `Catch<TException>(handler)` | Another name for the typed `Recover`. | `Catch` |
 | `Recover()` on a collection of signals | Tries each source in turn until one finishes without an error. | `Catch(params)` |
 | `Resume(fallback)` | Carries on with your fallback signal after an error. | `OnErrorResumeNext` |
-| `OnErrorResumeNext(second)` | Another name for `Resume`, and it moves on the same way after a clean completion. | `OnErrorResumeNext` |
-| `Reattempt(retryCount)` | Subscribes again after an error, up to the number of extra tries you allow, then passes the last error along. | `Retry` |
+| `OnErrorResumeNext(second)` | Carries on with `second` when this signal completes or fails. Unlike `Resume`, it also moves on after a clean completion. | `OnErrorResumeNext` |
+| `Reattempt(retryCount)` | Subscribes again after an error, up to the number of extra tries you allow, then passes the last error along. The count is extra tries, so `Reattempt(2)` subscribes three times. | `Retry` |
 | `Retry(retryCount)` | Another name for `Reattempt`. | `Retry` |
 | `Repeat()` | Subscribes again each time the source completes, forever. | `Repeat` |
-| `Repeat(repeatCount)` | Subscribes again the number of times you name. | `Repeat` |
+| `Repeat(repeatCount)` | Runs the source the number of times you name in total, starting each run when the one before it completes. `Repeat(3)` runs it three times, not four. | `Repeat` |
 | `Finally(finallyAction)` | Runs your cleanup action once when the subscription ends, whatever ends it. | `Finally` |
 | `OnCleanup(finallyAction)` | Another name for `Finally`. | `Finally` |
 | `Exception.Throw()` | Throws the exception and keeps its stack trace on older frameworks. | - |
@@ -1101,7 +1102,7 @@ share one subscription instead of starting the work over each time.
 | `TapWith(state, onNext)` | Works like `Tap` and threads a state object through, so your lambda can be `static`. | `Do` |
 | `Do(onNext)` and its 3 overloads | Another name for `Tap`. | `Do` |
 | `DoWith(state, onNext)` | Another name for `TapWith`. | `Do` |
-| `AsObservable()` | Hands back the same signal and hides its concrete type. | `AsObservable` |
+| `AsObservable()` | Wraps the signal in a read-only view, so a caller cannot cast it back and push values in. | `AsObservable` |
 | `ToSignal()` on a signal | Hands back the same signal after a null check. | `AsObservable` |
 | `IDisposable.DisposeWith()` | Wraps a disposable so the wrapper disposes it exactly once. | - |
 | `IDisposable.DisposeWith(action)` | Does the same and runs your action just before disposal. | - |

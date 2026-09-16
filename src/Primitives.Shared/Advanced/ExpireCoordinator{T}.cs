@@ -36,6 +36,9 @@ public sealed class ExpireCoordinator<T> : IObserver<T>, IDisposable
     /// <summary>The downstream observer.</summary>
     private readonly IObserver<T> _observer;
 
+    /// <summary>Whether a value restarts the timeout window, which is what separates an inactivity timeout from a deadline.</summary>
+    private readonly bool _restartOnValue;
+
     /// <summary>Serializes downstream deliveries.</summary>
     private SerializedDelivery<T> _delivery = new();
 
@@ -68,6 +71,22 @@ public sealed class ExpireCoordinator<T> : IObserver<T>, IDisposable
     /// <param name="sequencer">The sequencer that schedules the timeout.</param>
     /// <param name="observer">The downstream observer.</param>
     public ExpireCoordinator(IObservable<T> source, TimeSpan dueTime, ISequencer sequencer, IObserver<T> observer)
+        : this(source, dueTime, sequencer, observer, restartOnValue: true)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="ExpireCoordinator{T}"/> class.</summary>
+    /// <param name="source">The source observable.</param>
+    /// <param name="dueTime">The timeout period.</param>
+    /// <param name="sequencer">The sequencer that schedules the timeout.</param>
+    /// <param name="observer">The downstream observer.</param>
+    /// <param name="restartOnValue">When <see langword="true"/> each value restarts the window; when <see langword="false"/> the window runs once from subscription.</param>
+    internal ExpireCoordinator(
+        IObservable<T> source,
+        TimeSpan dueTime,
+        ISequencer sequencer,
+        IObserver<T> observer,
+        bool restartOnValue)
     {
         ArgumentExceptionHelper.ThrowIfNull(source);
 
@@ -79,6 +98,7 @@ public sealed class ExpireCoordinator<T> : IObserver<T>, IDisposable
         _dueTime = dueTime;
         _sequencer = sequencer;
         _observer = observer;
+        _restartOnValue = restartOnValue;
     }
 
     /// <inheritdoc/>
@@ -144,7 +164,7 @@ public sealed class ExpireCoordinator<T> : IObserver<T>, IDisposable
                 expired = true;
                 _ = _delivery.PostError(new TimeoutException());
             }
-            else
+            else if (_restartOnValue)
             {
                 epoch = ++_epoch;
             }
@@ -157,7 +177,12 @@ public sealed class ExpireCoordinator<T> : IObserver<T>, IDisposable
         }
 
         _delivery.OnNext(_observer, value, new PendingDrain(this));
-        ArmTimer(epoch);
+
+        // A deadline keeps the window armed at subscription; only an inactivity timeout restarts it.
+        if (_restartOnValue)
+        {
+            ArmTimer(epoch);
+        }
     }
 
     /// <summary>Starts observing the source and timeout timer.</summary>

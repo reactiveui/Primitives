@@ -51,7 +51,8 @@ public sealed class AbsoluteExpireSignal<T> : IRequireCurrentThread<T>
     {
         ArgumentExceptionHelper.ThrowIfNull(observer);
 
+        // The window runs once from here to the due time, so values arriving before it do not push it back.
         var dueTime = Sequencer.Normalize(_dueTime - _scheduler.Now);
-        return new ExpireSignal<T>(_source, dueTime, _scheduler).Subscribe(observer);
+        return new ExpireSignal<T>(_source, dueTime, _scheduler, restartOnValue: false).Subscribe(observer);
     }
 }

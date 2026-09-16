@@ -29,6 +29,32 @@ public sealed class ExpireCoordinatorTests
     /// <summary>The values forwarded by the active-source re-arming test.</summary>
     private static readonly int[] ExpectedActiveValues = [0, 1, 2, 3, 4];
 
+    /// <summary>Verifies an absolute deadline fires on time even while values keep arriving before it.</summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    [Test]
+    public async Task AbsoluteTimeoutExpiresAtTheDueTimeWhateverValuesArrive()
+    {
+        VirtualClock clock = new(DateTimeOffset.UnixEpoch);
+        Signal<int> source = new();
+        List<int> values = [];
+        List<string> errors = [];
+        var deadline = clock.Now + TimeSpan.FromTicks(DueTicks);
+        using var subscription = source.Timeout(deadline, clock)
+            .Subscribe(values.Add, ex => errors.Add(ex.GetType().Name));
+
+        clock.AdvanceBy(TimeSpan.FromTicks(ShortGapTicks));
+        source.OnNext(One);
+        clock.AdvanceBy(TimeSpan.FromTicks(ActiveGapTicks - ShortGapTicks));
+        source.OnNext(One);
+
+        // Still short of the deadline, and an inactivity timeout would have been pushed back twice by now.
+        await Assert.That(errors.Count).IsEqualTo(0);
+
+        clock.AdvanceBy(TimeSpan.FromTicks(One));
+
+        await Assert.That(errors.SequenceEqual(["TimeoutException"])).IsTrue();
+    }
+
     /// <summary>Verifies the timeout re-arms on each value so an active source never expires.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]

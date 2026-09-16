@@ -765,7 +765,7 @@ public static partial class LinqExtensions
             return new AbsoluteShiftSignal<TLeft>(left, dueTime, scheduler);
         }
 
-        /// <summary>Fails the sequence if it does not terminate before the timeout.</summary>
+        /// <summary>Fails the sequence when no value arrives within the timeout; each value restarts the clock.</summary>
         /// <param name="dueTime">The timeout duration.</param>
         /// <returns>A sequence that errors with <see cref="TimeoutException"/> when the timeout elapses first.</returns>
         public IObservable<TLeft> Timeout(TimeSpan dueTime)
@@ -775,7 +775,7 @@ public static partial class LinqExtensions
             return new ExpireSignal<TLeft>(left, dueTime, ThreadPoolSequencer.Instance);
         }
 
-        /// <summary>Fails the sequence if it does not terminate before the sequencer timeout.</summary>
+        /// <summary>Fails the sequence on the sequencer when no value arrives within the timeout; each value restarts the clock.</summary>
         /// <param name="dueTime">The timeout duration.</param>
         /// <param name="scheduler">The sequencer used to schedule the timeout.</param>
         /// <returns>A sequence that errors with <see cref="TimeoutException"/> when the timeout elapses first.</returns>
@@ -787,7 +787,7 @@ public static partial class LinqExtensions
             return new ExpireSignal<TLeft>(left, dueTime, scheduler);
         }
 
-        /// <summary>Fails the sequence if it does not terminate before the absolute timeout.</summary>
+        /// <summary>Fails the sequence if it has not terminated by the absolute time, whatever values arrive first.</summary>
         /// <param name="dueTime">The absolute timeout time.</param>
         /// <returns>A sequence that errors with <see cref="TimeoutException"/> when the timeout elapses first.</returns>
         public IObservable<TLeft> Timeout(DateTimeOffset dueTime)
@@ -797,7 +797,7 @@ public static partial class LinqExtensions
             return new AbsoluteExpireSignal<TLeft>(left, dueTime, ThreadPoolSequencer.Instance);
         }
 
-        /// <summary>Fails the sequence if it does not terminate before the absolute sequencer timeout.</summary>
+        /// <summary>Fails the sequence on the sequencer if it has not terminated by the absolute time, whatever values arrive first.</summary>
         /// <param name="dueTime">The absolute timeout time.</param>
         /// <param name="scheduler">The sequencer used to schedule the timeout.</param>
         /// <returns>A sequence that errors with <see cref="TimeoutException"/> when the timeout elapses first.</returns>
@@ -809,9 +809,9 @@ public static partial class LinqExtensions
             return new AbsoluteExpireSignal<TLeft>(left, dueTime, scheduler);
         }
 
-        /// <summary>Emits the most recent value at the end of each sampling period.</summary>
+        /// <summary>Emits the most recent value once the period has passed since the value that started the timer.</summary>
         /// <param name="interval">The sampling period.</param>
-        /// <returns>A sequence containing the latest source value sampled at each period boundary.</returns>
+        /// <returns>A sequence carrying the latest source value once each period elapses; a quiet source sends nothing.</returns>
         public IObservable<TLeft> Sample(TimeSpan interval)
         {
             ArgumentExceptionHelper.ThrowIfNull(left);
@@ -821,10 +821,10 @@ public static partial class LinqExtensions
             return new ProbeSignal<TLeft>(left, interval, ThreadPoolSequencer.Instance);
         }
 
-        /// <summary>Emits the most recent value at the end of each sampling period on a sequencer.</summary>
+        /// <summary>Emits the most recent value on a sequencer once the period has passed since the value that started the timer.</summary>
         /// <param name="interval">The sampling period.</param>
         /// <param name="scheduler">The sequencer used to schedule sampling.</param>
-        /// <returns>A sequence containing the latest source value sampled at each period boundary.</returns>
+        /// <returns>A sequence carrying the latest source value once each period elapses; a quiet source sends nothing.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="left"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeExceptionHelper"><paramref name="interval"/> is less than <see cref="TimeSpan.Zero"/>.</exception>
         public IObservable<TLeft> Sample(TimeSpan interval, ISequencer? scheduler)

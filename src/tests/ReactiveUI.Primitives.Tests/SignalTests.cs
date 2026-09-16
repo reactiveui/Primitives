@@ -83,6 +83,9 @@ public partial class SignalTests
     /// <summary>Expected third pair of buffered values.</summary>
     private static readonly int[] ThirdPair = [ValueFive, ValueSix];
 
+    /// <summary>The fourth batch a two-value window emits.</summary>
+    private static readonly int[] FourthPair = [ValueSeven, ValueEight];
+
     /// <summary>Expected single RxVoid notification.</summary>
     private static readonly RxVoid[] SingleRxVoid = [RxVoid.Default];
 
@@ -398,7 +401,7 @@ public partial class SignalTests
         subject.Dispose();
     }
 
-    /// <summary>A skipping buffer emits only the batches its window covers.</summary>
+    /// <summary>A skip equal to the window size emits consecutive batches with no values dropped between them.</summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     [Test]
     public async Task SubjectBufferTake2Skip2()
@@ -411,13 +414,13 @@ public partial class SignalTests
         await Assert.That(result.SequenceEqual(FirstPair)).IsTrue();
         subject.OnNext(ValueThree);
         subject.OnNext(ValueFour);
-        await Assert.That(result.SequenceEqual(FirstPair)).IsTrue();
+        await Assert.That(result.SequenceEqual(SecondPair)).IsTrue();
         subject.OnNext(ValueFive);
         subject.OnNext(ValueSix);
         await Assert.That(result.SequenceEqual(ThirdPair)).IsTrue();
         subject.OnNext(ValueSeven);
         subject.OnNext(ValueEight);
-        await Assert.That(result.SequenceEqual(ThirdPair)).IsTrue();
+        await Assert.That(result.SequenceEqual(FourthPair)).IsTrue();
         subject.Dispose();
     }
 

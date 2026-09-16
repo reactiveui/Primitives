@@ -537,7 +537,7 @@ public static partial class LinqExtensions
                 : new ShiftSignal<T>(source, dueTime, scheduler);
         }
 
-        /// <summary>Fails the sequence if it does not terminate before the timeout.</summary>
+        /// <summary>Fails the sequence when no value arrives within the timeout; each value restarts the clock.</summary>
         /// <param name="dueTime">The timeout duration.</param>
         /// <returns>A sequence that errors with <see cref="TimeoutException"/> when the timeout elapses first.</returns>
         public IObservable<T> Expire(TimeSpan dueTime)
@@ -547,7 +547,7 @@ public static partial class LinqExtensions
             return new ExpireSignal<T>(source, dueTime, ThreadPoolSequencer.Instance);
         }
 
-        /// <summary>Fails the sequence if it does not terminate before the sequencer timeout.</summary>
+        /// <summary>Fails the sequence on the sequencer when no value arrives within the timeout; each value restarts the clock.</summary>
         /// <param name="dueTime">The timeout duration.</param>
         /// <param name="scheduler">The sequencer used to schedule the timeout.</param>
         /// <returns>A sequence that errors with <see cref="TimeoutException"/> when the timeout elapses first.</returns>

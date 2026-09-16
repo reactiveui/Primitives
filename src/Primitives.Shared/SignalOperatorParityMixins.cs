@@ -128,10 +128,16 @@ public static partial class LinqExtensions
                 : new AppendSignal<T>(source, value);
         }
 
-        /// <summary>Returns the source observable unchanged.</summary>
-        /// <returns>The supplied source sequence.</returns>
+        /// <summary>Returns a view of the source that hides the source's own type.</summary>
+        /// <returns>A sequence that forwards to the source and cannot be cast back to it.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
-        public IObservable<T> AsObservable() => source ?? throw new ArgumentNullException(nameof(source));
+        /// <remarks>Hand this to a caller that should read the sequence but never push into it.</remarks>
+        public IObservable<T> AsObservable()
+        {
+            ArgumentExceptionHelper.ThrowIfNull(source);
+
+            return source as AsObservableSignal<T> ?? new AsObservableSignal<T>(source);
+        }
 
         /// <summary>Schedules observer notifications on the supplied scheduler using the System.Reactive operator name.</summary>
         /// <param name="scheduler">The sequencer used to deliver observer notifications.</param>
@@ -608,7 +614,7 @@ public static partial class LinqExtensions
             return new CalmSignal<T>(source, dueTime, sequencer);
         }
 
-        /// <summary>Emits the latest source value whenever the sampling period ticks.</summary>
+        /// <summary>Emits the latest source value once the period has passed since the value that started the timer.</summary>
         /// <param name="period">The interval between sampling ticks.</param>
         /// <returns>A sequence that emits the latest source value on each sampling tick.</returns>
         /// <exception cref="ArgumentNullException">The receiver sequence is <see langword="null"/>.</exception>
@@ -622,7 +628,7 @@ public static partial class LinqExtensions
             return new ProbeSignal<T>(source, period, ThreadPoolSequencer.Instance);
         }
 
-        /// <summary>Emits the latest source value whenever the sampling period ticks.</summary>
+        /// <summary>Emits the latest source value once the period has passed since the value that started the timer.</summary>
         /// <param name="period">The interval between sampling ticks.</param>
         /// <param name="scheduler">The sequencer used to schedule sampling ticks.</param>
         /// <returns>A sequence that emits the latest source value on each sampling tick.</returns>

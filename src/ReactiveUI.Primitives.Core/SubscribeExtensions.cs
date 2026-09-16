@@ -21,7 +21,7 @@ public static class SubscribeExtensions
     /// <param name="exception">The receiver exception, which may be <see langword="null"/>.</param>
     extension(Exception? exception)
     {
-        /// <summary>Rethrows the exception, doing nothing when there is none.</summary>
+        /// <summary>Rethrows the exception with its original stack trace, doing nothing when there is none.</summary>
         public void Rethrow()
         {
             if (exception is null)
@@ -29,7 +29,7 @@ public static class SubscribeExtensions
                 return;
             }
 
-            throw exception;
+            ExceptionDispatchInfo.Capture(exception).Throw();
         }
     }
 

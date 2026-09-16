@@ -483,7 +483,7 @@ public static partial class Signal
         return new FromAsyncExternalCancellationSignal<T>(taskFactory, cancellationToken);
     }
 
-    /// <summary>Fails the sequence if it does not terminate before the timeout.</summary>
+    /// <summary>Fails the sequence when no value arrives within the timeout; each value restarts the clock.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     /// <param name="source">The source sequence.</param>
     /// <param name="dueTime">The timeout duration.</param>
@@ -495,7 +495,7 @@ public static partial class Signal
         return new ExpireSignal<T>(source, dueTime, ThreadPoolSequencer.Instance);
     }
 
-    /// <summary>Fails the sequence if it does not terminate before the sequencer timeout.</summary>
+    /// <summary>Fails the sequence on the sequencer when no value arrives within the timeout; each value restarts the clock.</summary>
     /// <typeparam name="T">The source value type.</typeparam>
     /// <param name="source">The source sequence.</param>
     /// <param name="dueTime">The timeout duration.</param>
