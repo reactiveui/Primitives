@@ -112,21 +112,21 @@ public sealed class DurableOutboxDemoTests
         }
     }
 
-    /// <summary>Verifies an owned immediate child under a volume root is cleaned safely.</summary>
+    /// <summary>Verifies an owned immediate child under a writable root is cleaned safely.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
     [Test]
-    public async Task WhenRootIsVolumeRoot_ThenOwnedImmediateChildIsCleaned()
+    public async Task WhenRootIsWritable_ThenOwnedImmediateChildIsCleaned()
     {
-        var volumeRoot = Path.GetPathRoot(Path.GetFullPath(AppContext.BaseDirectory)) ?? TemporaryDirectory.GetTemporaryDirectory();
+        var writableRoot = TemporaryDirectory.GetTemporaryDirectory();
         var generatedDirectory = string.Empty;
         DurableOutboxDemo demo = new(
-            volumeRoot,
+            writableRoot,
             [
                 (databasePath, _) =>
                 {
                     generatedDirectory = Path.GetDirectoryName(databasePath) ?? string.Empty;
                     return ValueTask.FromResult(
-                        new OutboxCommandResult(0, $"volume-root stage{Environment.NewLine}", string.Empty));
+                        new OutboxCommandResult(0, $"writable-root stage{Environment.NewLine}", string.Empty));
                 },
             ]);
 
@@ -135,13 +135,13 @@ public sealed class DurableOutboxDemoTests
             var result = await demo.RunAsync(CancellationToken.None);
 
             await Assert.That(result.ExitCode).IsEqualTo(0);
-            await Assert.That(IsGeneratedImmediateChild(volumeRoot, generatedDirectory)).IsTrue();
+            await Assert.That(IsGeneratedImmediateChild(writableRoot, generatedDirectory)).IsTrue();
             await Assert.That(result.StandardOutput).Contains("owned directory removed: True");
             await Assert.That(Directory.Exists(generatedDirectory)).IsFalse();
         }
         finally
         {
-            DeleteGeneratedChildIfLeaked(volumeRoot, generatedDirectory);
+            DeleteGeneratedChildIfLeaked(writableRoot, generatedDirectory);
         }
     }
 
