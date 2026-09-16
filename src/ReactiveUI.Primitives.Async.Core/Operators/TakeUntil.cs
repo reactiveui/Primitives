@@ -64,11 +64,7 @@ public static partial class SignalAsyncExtensions
             ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(other);
 
-            return cancellationToken.CanBeCanceled
-                ? new CancellationStopSignal<T>(
-                    new TakeUntilAsyncSignal<T, TOther>(source, other, TakeUntilOptions.Default),
-                    cancellationToken)
-                : new TakeUntilAsyncSignal<T, TOther>(source, other, TakeUntilOptions.Default);
+            return new TakeUntilAsyncSignal<T, TOther>(source, other, TakeUntilOptions.Default, cancellationToken);
         }
 
         /// <summary>Emits source items until <paramref name="other"/> or <paramref name="cancellationToken"/> fires.</summary>
@@ -86,11 +82,7 @@ public static partial class SignalAsyncExtensions
             ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(other);
 
-            return cancellationToken.CanBeCanceled
-                ? new CancellationStopSignal<T>(
-                    new TakeUntilAsyncSignal<T, TOther>(source, other, options ?? TakeUntilOptions.Default),
-                    cancellationToken)
-                : new TakeUntilAsyncSignal<T, TOther>(source, other, options ?? TakeUntilOptions.Default);
+            return new TakeUntilAsyncSignal<T, TOther>(source, other, options ?? TakeUntilOptions.Default, cancellationToken);
         }
 
         /// <summary>Returns an observable sequence that emits items from the source until the specified task completes.</summary>
@@ -131,11 +123,7 @@ public static partial class SignalAsyncExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return cancellationToken.CanBeCanceled
-                ? new CancellationStopSignal<T>(
-                    new TaskStopSignal<T>(source, task, TakeUntilOptions.Default),
-                    cancellationToken)
-                : new TaskStopSignal<T>(source, task, TakeUntilOptions.Default);
+            return new TaskStopSignal<T>(source, task, TakeUntilOptions.Default, cancellationToken);
         }
 
         /// <summary>
@@ -154,11 +142,7 @@ public static partial class SignalAsyncExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(source);
 
-            return cancellationToken.CanBeCanceled
-                ? new CancellationStopSignal<T>(
-                    new TaskStopSignal<T>(source, task, options ?? TakeUntilOptions.Default),
-                    cancellationToken)
-                : new TaskStopSignal<T>(source, task, options ?? TakeUntilOptions.Default);
+            return new TaskStopSignal<T>(source, task, options ?? TakeUntilOptions.Default, cancellationToken);
         }
 
         /// <summary>Returns an observable sequence that emits items from the source sequence until the specified cancellation token is canceled.</summary>
@@ -196,9 +180,7 @@ public static partial class SignalAsyncExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(predicate);
 
-            return cancellationToken.CanBeCanceled
-                ? new CancellationStopSignal<T>(new PredicateStopSignal<T>(source, predicate), cancellationToken)
-                : new PredicateStopSignal<T>(source, predicate);
+            return new PredicateStopSignal<T>(source, predicate, cancellationToken);
         }
 
         /// <summary>Returns an observable sequence that emits elements from the source sequence until the specified asynchronous predicate returns true for an element.</summary>
@@ -229,11 +211,7 @@ public static partial class SignalAsyncExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(asyncPredicate);
 
-            return cancellationToken.CanBeCanceled
-                ? new CancellationStopSignal<T>(
-                    new AsyncPredicateStopSignal<T>(source, asyncPredicate),
-                    cancellationToken)
-                : new AsyncPredicateStopSignal<T>(source, asyncPredicate);
+            return new AsyncPredicateStopSignal<T>(source, asyncPredicate, cancellationToken);
         }
 
         /// <summary>Returns an observable sequence that emits items from the source sequence until the specified stop signal completes.</summary>
@@ -275,11 +253,7 @@ public static partial class SignalAsyncExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(stopSignal);
 
-            return cancellationToken.CanBeCanceled
-                ? new CancellationStopSignal<T>(
-                    new DelegateStopSignal<T>(source, stopSignal, TakeUntilOptions.Default),
-                    cancellationToken)
-                : new DelegateStopSignal<T>(source, stopSignal, TakeUntilOptions.Default);
+            return new DelegateStopSignal<T>(source, stopSignal, TakeUntilOptions.Default, cancellationToken);
         }
 
         /// <summary>Emits source items until <paramref name="stopSignal"/> or <paramref name="cancellationToken"/> fires.</summary>
@@ -295,11 +269,7 @@ public static partial class SignalAsyncExtensions
         {
             ArgumentExceptionHelper.ThrowIfNull(stopSignal);
 
-            return cancellationToken.CanBeCanceled
-                ? new CancellationStopSignal<T>(
-                    new DelegateStopSignal<T>(source, stopSignal, options ?? TakeUntilOptions.Default),
-                    cancellationToken)
-                : new DelegateStopSignal<T>(source, stopSignal, options ?? TakeUntilOptions.Default);
+            return new DelegateStopSignal<T>(source, stopSignal, options ?? TakeUntilOptions.Default, cancellationToken);
         }
     }
 
@@ -413,10 +383,12 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The source observable sequence.</param>
     /// <param name="stopSignal">The delegate that provides the stop signal.</param>
     /// <param name="options">Options controlling the take-until behavior.</param>
+    /// <param name="stopToken">A token whose cancellation also completes the sequence.</param>
     internal sealed class DelegateStopSignal<T>(
         IObservableAsync<T> source,
         CompletionSignalDelegate stopSignal,
-        TakeUntilOptions options) : IObservableAsync<T>
+        TakeUntilOptions options,
+        CancellationToken stopToken = default) : IObservableAsync<T>
     {
         /// <summary>The source observable sequence.</summary>
         private readonly IObservableAsync<T> _source = source;
@@ -426,6 +398,9 @@ public static partial class SignalAsyncExtensions
 
         /// <summary>Options controlling the take-until behavior.</summary>
         private readonly TakeUntilOptions _options = options;
+
+        /// <summary>A token whose cancellation also completes the sequence.</summary>
+        private readonly CancellationToken _stopToken = stopToken;
 
         /// <inheritdoc/>
         ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
@@ -460,6 +435,9 @@ public static partial class SignalAsyncExtensions
             /// <summary>Set once <see cref="_stopRegistration"/> has been disposed, so it is disposed once.</summary>
             private int _stopRegistrationDisposed;
 
+            /// <summary>The registration that completes this sequence when the stop token fires.</summary>
+            private CancellationTokenRegistration _stopTokenRegistration;
+
             /// <summary>Initializes a new instance of the <see cref="DelegateStopCoordinator"/> class.</summary>
             /// <param name="parent">The parent observable that owns this subscription.</param>
             /// <param name="observer">The downstream observer to forward items to.</param>
@@ -473,6 +451,12 @@ public static partial class SignalAsyncExtensions
             /// <returns>A task representing the asynchronous dispose operation.</returns>
             public async ValueTask DisposeAsync()
             {
+#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+                await _stopTokenRegistration.DisposeAsync().ConfigureAwait(false);
+#else
+                _stopTokenRegistration.Dispose();
+#endif
+
                 if (_subscription is not null)
                 {
                     await _subscription.DisposeAsync().ConfigureAwait(false);
@@ -487,6 +471,7 @@ public static partial class SignalAsyncExtensions
             /// <returns>A task representing the asynchronous subscribe operation.</returns>
             internal async ValueTask SubscribeSourcesAsync(CancellationToken cancellationToken)
             {
+                _stopTokenRegistration = _lifecycle.CompleteWhenCancelled(_parent._stopToken);
                 AwaitStopThenComplete();
                 _subscription = await _parent._source
                     .SubscribeAsync(new TakeUntilSourceWitness<T>(_lifecycle), cancellationToken).ConfigureAwait(false);
@@ -575,7 +560,12 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The source observable sequence.</param>
     /// <param name="task">The task whose completion triggers the end of the sequence.</param>
     /// <param name="options">Options controlling the take-until behavior.</param>
-    internal sealed class TaskStopSignal<T>(IObservableAsync<T> source, Task task, TakeUntilOptions options) : IObservableAsync<T>
+    /// <param name="stopToken">A token whose cancellation also completes the sequence.</param>
+    internal sealed class TaskStopSignal<T>(
+        IObservableAsync<T> source,
+        Task task,
+        TakeUntilOptions options,
+        CancellationToken stopToken = default) : IObservableAsync<T>
     {
         /// <summary>The source observable sequence.</summary>
         private readonly IObservableAsync<T> _source = source;
@@ -585,6 +575,9 @@ public static partial class SignalAsyncExtensions
 
         /// <summary>Options controlling the take-until behavior.</summary>
         private readonly TakeUntilOptions _options = options;
+
+        /// <summary>A token whose cancellation also completes the sequence.</summary>
+        private readonly CancellationToken _stopToken = stopToken;
 
         /// <inheritdoc/>
         ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
@@ -610,6 +603,9 @@ public static partial class SignalAsyncExtensions
             /// <summary>The inner subscription handle.</summary>
             private IAsyncDisposable? _subscription;
 
+            /// <summary>The registration that completes this sequence when the stop token fires.</summary>
+            private CancellationTokenRegistration _stopTokenRegistration;
+
             /// <summary>Initializes a new instance of the <see cref="TaskStopCoordinator"/> class.</summary>
             /// <param name="parent">The parent observable that owns this subscription.</param>
             /// <param name="observer">The downstream observer to forward items to.</param>
@@ -623,6 +619,12 @@ public static partial class SignalAsyncExtensions
             /// <returns>A task representing the asynchronous dispose operation.</returns>
             public async ValueTask DisposeAsync()
             {
+#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+                await _stopTokenRegistration.DisposeAsync().ConfigureAwait(false);
+#else
+                _stopTokenRegistration.Dispose();
+#endif
+
                 if (_subscription is not null)
                 {
                     await _subscription.DisposeAsync().ConfigureAwait(false);
@@ -636,6 +638,7 @@ public static partial class SignalAsyncExtensions
             /// <returns>A task representing the asynchronous subscribe operation.</returns>
             internal async ValueTask SubscribeSourcesAsync(CancellationToken cancellationToken)
             {
+                _stopTokenRegistration = _lifecycle.CompleteWhenCancelled(_parent._stopToken);
                 AwaitStopThenComplete(_parent._task);
                 _subscription = await _parent._source
                     .SubscribeAsync(new TakeUntilSourceWitness<T>(_lifecycle), cancellationToken).ConfigureAwait(false);
@@ -679,10 +682,12 @@ public static partial class SignalAsyncExtensions
     /// <param name="source">The source observable sequence.</param>
     /// <param name="other">The signal observable whose emission triggers completion.</param>
     /// <param name="options">Options controlling the take-until behavior.</param>
+    /// <param name="stopToken">A token whose cancellation also completes the sequence.</param>
     internal sealed class TakeUntilAsyncSignal<T, TOther>(
         IObservableAsync<T> source,
         IObservableAsync<TOther> other,
-        TakeUntilOptions options) : IObservableAsync<T>
+        TakeUntilOptions options,
+        CancellationToken stopToken = default) : IObservableAsync<T>
     {
         /// <summary>The source observable sequence.</summary>
         private readonly IObservableAsync<T> _source = source;
@@ -692,6 +697,9 @@ public static partial class SignalAsyncExtensions
 
         /// <summary>Options controlling the take-until behavior.</summary>
         private readonly TakeUntilOptions _options = options;
+
+        /// <summary>A token whose cancellation also completes the sequence.</summary>
+        private readonly CancellationToken _stopToken = stopToken;
 
         /// <inheritdoc/>
         ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
@@ -720,6 +728,9 @@ public static partial class SignalAsyncExtensions
             /// <summary>Holds the signal subscription so it can be disposed on teardown.</summary>
             private readonly SingleAssignmentDisposableAsync _otherDisposable = new();
 
+            /// <summary>The registration that completes this sequence when the stop token fires.</summary>
+            private CancellationTokenRegistration _stopTokenRegistration;
+
             /// <summary>Initializes a new instance of the <see cref="AsyncStopCoordinator"/> class.</summary>
             /// <param name="parent">The parent observable that owns this subscription.</param>
             /// <param name="observer">The downstream observer to forward items to.</param>
@@ -733,6 +744,11 @@ public static partial class SignalAsyncExtensions
             /// <returns>A task representing the asynchronous dispose operation.</returns>
             public async ValueTask DisposeAsync()
             {
+#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+                await _stopTokenRegistration.DisposeAsync().ConfigureAwait(false);
+#else
+                _stopTokenRegistration.Dispose();
+#endif
                 await _otherDisposable.DisposeAsync().ConfigureAwait(false);
                 await _disposable.DisposeAsync().ConfigureAwait(false);
                 await _lifecycle.DisposeAsync().ConfigureAwait(false);
@@ -743,6 +759,8 @@ public static partial class SignalAsyncExtensions
             /// <returns>This subscription as an async disposable.</returns>
             internal async ValueTask<IAsyncDisposable> SubscribeSourcesAsync(CancellationToken cancellationToken)
             {
+                _stopTokenRegistration = _lifecycle.CompleteWhenCancelled(_parent._stopToken);
+
                 var otherSubscription = await _parent._other
                     .SubscribeAsync(new StopSignalWitness(this), cancellationToken).ConfigureAwait(false);
                 await _otherDisposable.SetDisposableAsync(otherSubscription).ConfigureAwait(false);

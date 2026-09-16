@@ -57,6 +57,16 @@ public sealed class TakeUntilLifecycle<T> : IAsyncDisposable
             _cts);
     }
 
+    /// <summary>Completes the sequence when <paramref name="stopToken"/> fires, so one sink watches both its own stop condition and the token.</summary>
+    /// <param name="stopToken">The token whose cancellation completes the sequence.</param>
+    /// <returns>The registration, which the caller disposes alongside its subscription.</returns>
+    public CancellationTokenRegistration CompleteWhenCancelled(CancellationToken stopToken) =>
+        stopToken.CanBeCanceled
+            ? stopToken.UnsafeRegister(
+                static state => FireAndForgetHelper.Run(((TakeUntilLifecycle<T>)state!).CompleteAfterYieldAsync),
+                this)
+            : default;
+
     /// <summary>Forwards a value to the downstream observer under the serialization gate.</summary>
     /// <param name="value">The value to forward.</param>
     /// <returns>A ValueTask representing the asynchronous forward.</returns>
@@ -112,5 +122,14 @@ public sealed class TakeUntilLifecycle<T> : IAsyncDisposable
         _cts.Dispose();
         _gate.Dispose();
         failure?.Throw();
+    }
+
+    /// <summary>Completes the sequence after the cancellation callback returns.</summary>
+    /// <returns>The deferred completion.</returns>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    private async ValueTask CompleteAfterYieldAsync()
+    {
+        await Task.Yield();
+        await RelayCompletionAsync(Result.Success).ConfigureAwait(false);
     }
 }

@@ -14,13 +14,20 @@ public static partial class SignalAsyncExtensions
     /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
     /// <param name="source">The source observable sequence.</param>
     /// <param name="predicate">The predicate that signals when to stop emitting items.</param>
-    internal sealed class PredicateStopSignal<T>(IObservableAsync<T> source, Func<T, bool> predicate) : IObservableAsync<T>
+    /// <param name="stopToken">A token whose cancellation also completes the sequence.</param>
+    internal sealed class PredicateStopSignal<T>(
+        IObservableAsync<T> source,
+        Func<T, bool> predicate,
+        CancellationToken stopToken = default) : IObservableAsync<T>
     {
         /// <summary>The predicate that signals when to stop emitting items.</summary>
         private readonly Func<T, bool> _predicate = predicate;
 
         /// <summary>The source observable sequence.</summary>
         private readonly IObservableAsync<T> _source = source;
+
+        /// <summary>A token whose cancellation also completes the sequence.</summary>
+        private readonly CancellationToken _stopToken = stopToken;
 
         /// <inheritdoc/>
         ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
@@ -41,6 +48,9 @@ public static partial class SignalAsyncExtensions
         {
             /// <summary>The inner subscription handle.</summary>
             private IAsyncDisposable? _subscription;
+
+            /// <summary>The registration that completes this sequence when the stop token fires.</summary>
+            private CancellationTokenRegistration _stopRegistration;
 
             /// <summary>The notification gate, cancellation link and disposal state.</summary>
             private WitnessAsyncState _witness;
@@ -65,6 +75,12 @@ public static partial class SignalAsyncExtensions
             /// <inheritdoc/>
             public async ValueTask DisposeAsync()
             {
+#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+                await _stopRegistration.DisposeAsync().ConfigureAwait(false);
+#else
+                _stopRegistration.Dispose();
+#endif
+
                 if (_subscription is not null)
                 {
                     await _subscription.DisposeAsync().ConfigureAwait(false);
@@ -76,8 +92,29 @@ public static partial class SignalAsyncExtensions
             /// <summary>Subscribes to the source observable.</summary>
             /// <param name="cancellationToken">A token to cancel the subscription.</param>
             /// <returns>A task representing the asynchronous subscribe operation.</returns>
-            internal async ValueTask SubscribeSourcesAsync(CancellationToken cancellationToken) =>
+            internal async ValueTask SubscribeSourcesAsync(CancellationToken cancellationToken)
+            {
+                _stopRegistration = WatchStopToken();
                 _subscription = await parent._source.SubscribeAsync(this, cancellationToken).ConfigureAwait(false);
+            }
+
+            /// <summary>Registers the stop token, so this one sink watches both the predicate and the token.</summary>
+            /// <returns>The registration, or a default one when no token can fire.</returns>
+            private CancellationTokenRegistration WatchStopToken() =>
+                parent._stopToken.CanBeCanceled
+                    ? parent._stopToken.UnsafeRegister(
+                        static state => FireAndForgetHelper.Run(((PredicateStopCoordinator)state!).CompleteAfterYieldAsync),
+                        this)
+                    : default;
+
+            /// <summary>Completes the sequence after the cancellation callback returns.</summary>
+            /// <returns>The deferred completion.</returns>
+            [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+            private async ValueTask CompleteAfterYieldAsync()
+            {
+                await Task.Yield();
+                await OnCompletedAsync(Result.Success).ConfigureAwait(false);
+            }
 
             /// <inheritdoc/>
             ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
@@ -110,15 +147,20 @@ public static partial class SignalAsyncExtensions
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The source sequence.</param>
     /// <param name="asyncPredicate">Predicate that signals when to stop.</param>
+    /// <param name="stopToken">A token whose cancellation also completes the sequence.</param>
     internal sealed class AsyncPredicateStopSignal<T>(
         IObservableAsync<T> source,
-        Func<T, CancellationToken, ValueTask<bool>> asyncPredicate) : IObservableAsync<T>
+        Func<T, CancellationToken, ValueTask<bool>> asyncPredicate,
+        CancellationToken stopToken = default) : IObservableAsync<T>
     {
         /// <summary>The async predicate that signals when to stop emitting items.</summary>
         private readonly Func<T, CancellationToken, ValueTask<bool>> _asyncPredicate = asyncPredicate;
 
         /// <summary>The source observable sequence.</summary>
         private readonly IObservableAsync<T> _source = source;
+
+        /// <summary>A token whose cancellation also completes the sequence.</summary>
+        private readonly CancellationToken _stopToken = stopToken;
 
         /// <inheritdoc/>
         ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
@@ -141,6 +183,9 @@ public static partial class SignalAsyncExtensions
         {
             /// <summary>The inner subscription handle.</summary>
             private IAsyncDisposable? _subscription;
+
+            /// <summary>The registration that completes this sequence when the stop token fires.</summary>
+            private CancellationTokenRegistration _stopRegistration;
 
             /// <summary>The notification gate, cancellation link and disposal state.</summary>
             private WitnessAsyncState _witness;
@@ -165,6 +210,12 @@ public static partial class SignalAsyncExtensions
             /// <inheritdoc/>
             public async ValueTask DisposeAsync()
             {
+#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+                await _stopRegistration.DisposeAsync().ConfigureAwait(false);
+#else
+                _stopRegistration.Dispose();
+#endif
+
                 if (_subscription is not null)
                 {
                     await _subscription.DisposeAsync().ConfigureAwait(false);
@@ -176,8 +227,29 @@ public static partial class SignalAsyncExtensions
             /// <summary>Subscribes to the source observable.</summary>
             /// <param name="cancellationToken">A token to cancel the subscription.</param>
             /// <returns>A task representing the asynchronous subscribe operation.</returns>
-            internal async ValueTask SubscribeSourcesAsync(CancellationToken cancellationToken) =>
+            internal async ValueTask SubscribeSourcesAsync(CancellationToken cancellationToken)
+            {
+                _stopRegistration = WatchStopToken();
                 _subscription = await parent._source.SubscribeAsync(this, cancellationToken).ConfigureAwait(false);
+            }
+
+            /// <summary>Registers the stop token, so this one sink watches both the predicate and the token.</summary>
+            /// <returns>The registration, or a default one when no token can fire.</returns>
+            private CancellationTokenRegistration WatchStopToken() =>
+                parent._stopToken.CanBeCanceled
+                    ? parent._stopToken.UnsafeRegister(
+                        static state => FireAndForgetHelper.Run(((AsyncPredicateStopCoordinator)state!).CompleteAfterYieldAsync),
+                        this)
+                    : default;
+
+            /// <summary>Completes the sequence after the cancellation callback returns.</summary>
+            /// <returns>The deferred completion.</returns>
+            [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+            private async ValueTask CompleteAfterYieldAsync()
+            {
+                await Task.Yield();
+                await OnCompletedAsync(Result.Success).ConfigureAwait(false);
+            }
 
             /// <inheritdoc/>
             async ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken)

@@ -2086,6 +2086,7 @@ namespace ReactiveUI.Primitives.Reactive.Signals
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public static System.Threading.Tasks.Task<TSource> ToTask<TSource>(System.IObservable<TSource> source) { }
         public static System.Threading.Tasks.Task<TSource> ToTask<TSource>(System.IObservable<TSource> source, System.Threading.CancellationToken cancellationToken) { }
+        public static System.Threading.Tasks.Task<TSource> ToTaskOrDefault<TSource>(System.IObservable<TSource> source, TSource defaultValue, System.Threading.CancellationToken cancellationToken) { }
         public static System.IObservable<TResult> Unfold<TState, TResult>(TState initialState, System.Func<TState, bool> condition, System.Func<TState, TState> iterate, System.Func<TState, TResult> resultSelector) { }
         public static System.IObservable<T> Use<TResource, T>(System.Func<TResource> resourceFactory, System.Func<TResource, System.IObservable<T>> signalFactory) where TResource : System.IDisposable { }
         public static System.IObservable<T> Using<TResource, T>(System.Func<TResource> resourceFactory, System.Func<TResource, System.IObservable<T>> observableFactory) where TResource : System.IDisposable { }

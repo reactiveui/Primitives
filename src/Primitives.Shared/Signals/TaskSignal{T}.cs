@@ -5,8 +5,12 @@
 using System.Runtime.CompilerServices;
 
 #if REACTIVE_SHIM
+using ReactiveUI.Primitives.Reactive.Advanced;
+
 namespace ReactiveUI.Primitives.Reactive.Signals;
 #else
+using ReactiveUI.Primitives.Advanced;
+
 namespace ReactiveUI.Primitives.Signals;
 #endif
 
@@ -56,7 +60,7 @@ internal sealed class TaskSignal<T> : ITaskSignal<T>
     {
         var subscription = ReferenceEquals(_sequencer, Sequencer.Immediate)
             ? Source!.Subscribe(observer)
-            : Source!.WitnessOn(_sequencer).Subscribe(observer);
+            : new WitnessOnSignal<T>(Source!, _sequencer).Subscribe(observer);
 
         return subscription.DisposeWith(_cleanUp);
     }

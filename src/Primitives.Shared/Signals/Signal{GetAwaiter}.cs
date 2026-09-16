@@ -101,6 +101,39 @@ public static partial class Signal
         return completion.Attach(subscription, cancellationToken);
     }
 
+    /// <summary>Awaits source completion and returns the last value produced by the source, or <paramref name="defaultValue"/> when the source is empty.</summary>
+    /// <typeparam name="TSource">The source value type.</typeparam>
+    /// <param name="source">The source sequence.</param>
+    /// <param name="defaultValue">The value the task completes with when the source produces nothing.</param>
+    /// <param name="cancellationToken">The token used to cancel the task and dispose the subscription.</param>
+    /// <returns>A task that completes with the final source value, or <paramref name="defaultValue"/> when the source is empty.</returns>
+    public static Task<TSource> ToTaskOrDefault<TSource>(
+        IObservable<TSource> source,
+        TSource defaultValue,
+        CancellationToken cancellationToken)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(source);
+
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return Task.FromCanceled<TSource>(cancellationToken);
+        }
+
+        TaskTerminalCompletion<TSource> completion = new();
+        var seen = false;
+        var last = default(TSource);
+        var subscription = source.Subscribe(
+            value =>
+            {
+                seen = true;
+                last = value;
+            },
+            completion.Fail,
+            () => completion.Resolve(seen ? last! : defaultValue));
+
+        return completion.Attach(subscription, cancellationToken);
+    }
+
     /// <summary>Faults the awaiter with an <see cref="OperationCanceledException"/> carrying the token.</summary>
     /// <typeparam name="T">The awaited value type.</typeparam>
     /// <param name="subject">The awaiter to fault.</param>

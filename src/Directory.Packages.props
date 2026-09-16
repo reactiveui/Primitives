@@ -5,7 +5,7 @@
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
     <!-- StyleSharp.Analyzers, PerformanceSharp.Analyzers and SecuritySharp.Analyzers ship from the
          same release pipeline and always share a version. -->
-    <RoslynCommonAnalyzersVersion>5.0.2</RoslynCommonAnalyzersVersion>
+    <RoslynCommonAnalyzersVersion>5.0.3</RoslynCommonAnalyzersVersion>
     <AvaloniaVersion>12.1.2</AvaloniaVersion>
   </PropertyGroup>
   <ItemGroup>
@@ -68,7 +68,7 @@
     <!-- BenchmarkDotNet needs Roslyn 5.3+; this also reaches the job projects it generates under the benchmark bin folders. -->
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" Condition="$(MSBuildProjectDirectory.Replace('\', '/').Contains('/benchmarks/'))"/>
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1"/>
-    <PackageVersion Include="TUnit" Version="1.68.0"/>
+    <PackageVersion Include="TUnit" Version="1.68.4"/>
     <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.11.2"/>
   </ItemGroup>
   <Import Project="$(MSBuildThisFileDirectory)/directory.packages.support.props" Condition="Exists('$(MSBuildThisFileDirectory)/directory.packages.support.props')"/>

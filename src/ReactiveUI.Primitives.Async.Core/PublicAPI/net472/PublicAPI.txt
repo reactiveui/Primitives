@@ -1807,6 +1807,7 @@ namespace ReactiveUI.Primitives.Async.Advanced
     {
         public TakeUntilLifecycle(ReactiveUI.Primitives.Async.IObserverAsync<T> observer) { }
         public System.Threading.CancellationToken DisposeToken { get; }
+        public System.Threading.CancellationTokenRegistration CompleteWhenCancelled(System.Threading.CancellationToken stopToken) { }
         public System.Threading.Tasks.ValueTask DisposeAsync() { }
         public void LinkExternalCancellation(System.Threading.CancellationToken external) { }
         public System.Threading.Tasks.ValueTask RelayCompletionAsync(ReactiveUI.Primitives.Result result) { }
