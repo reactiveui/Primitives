@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async.Advanced;
 
-/// <summary>An observable that logs resumable errors without changing the source sequence.</summary>
+/// <summary>An observable that logs resumable errors and terminal failures without changing the source sequence.</summary>
 /// <typeparam name="T">The element type.</typeparam>
 [System.Diagnostics.DebuggerDisplay("LogErrorsSignal: Source = {Source}, Logger = {Logger}")]
 public sealed class LogErrorsSignal<T> : IObservableAsync<T>
