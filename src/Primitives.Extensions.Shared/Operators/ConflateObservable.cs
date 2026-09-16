@@ -16,6 +16,9 @@ namespace ReactiveUI.Primitives.Extensions.Operators;
 /// <param name="source">The source observable.</param>
 /// <param name="minimumUpdatePeriod">The minimum period between emissions.</param>
 /// <param name="scheduler">The scheduler to run the conflation on.</param>
+/// <remarks>Each window emits its newest value at the end of that window, not at the start. The clock starts at
+/// subscription, so the first value is held for a full period; a value arriving after a quiet gap longer than the period
+/// goes out at once.</remarks>
 internal sealed class ConflateObservable<T>(
     IObservable<T> source,
     TimeSpan minimumUpdatePeriod,

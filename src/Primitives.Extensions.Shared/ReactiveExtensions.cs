@@ -185,10 +185,14 @@ public static partial class ReactiveExtensions
         public IObservable<Stale<T>> DetectStale(TimeSpan stalenessPeriod, ISequencer scheduler) =>
             new DetectStaleObservable<T>(source, stalenessPeriod, scheduler);
 
-        /// <summary>Emits updates at least minimumUpdatePeriod apart, retaining only the latest pending update.</summary>
+        /// <summary>Emits updates at least <paramref name="minimumUpdatePeriod"/> apart, retaining only the latest pending update.</summary>
         /// <param name="minimumUpdatePeriod">Minimum delay between two updates.</param>
         /// <param name="scheduler">Scheduler to publish updates.</param>
         /// <returns>The conflated stream.</returns>
+        /// <remarks>A value arriving less than <paramref name="minimumUpdatePeriod"/> after the last emission is held until
+        /// the period ends, and a later value replaces it, so each window emits its newest value at the end of that window.
+        /// The clock starts at subscription, so the first value is held too. A value arriving after a quiet gap longer than
+        /// the period goes out at once.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IObservable<T> Conflate(TimeSpan minimumUpdatePeriod, ISequencer scheduler) =>
             new ConflateObservable<T>(source, minimumUpdatePeriod, scheduler);
