@@ -546,6 +546,9 @@ page.Subscribe(body => Console.WriteLine(body.Length));
 
 `FromEventPattern` turns a .NET event into a signal. Each value carries the sender and the event arguments.
 
+Every overload requires `TEventArgs` to derive from `EventArgs`. System.Reactive accepts any type there, so an event
+whose argument type does not derive from `EventArgs` needs `Signal.FromEvent` instead.
+
 ```csharp
 // chat.MessageReceived is an event EventHandler<MessageEventArgs>
 Signal.FromEventPattern<MessageEventArgs>(
@@ -2231,6 +2234,17 @@ namespace. Note that the namespace and the package name differ.
 | `BooleanDisposable` | Sets `IsDisposed` to true and nothing else. Use it as a cheap "should I stop?" flag. |
 | `CancellationDisposable` | Cancels a `CancellationTokenSource` on dispose and exposes its `Token`. |
 | `EmptyDisposable` | Does nothing. Use the shared `EmptyDisposable.Instance`. |
+
+The single-value slots come in two families, and they run a constructor-supplied action at opposite points. Read this
+before you swap one for the other.
+
+| Slot | What it does on dispose |
+|---|---|
+| `SingleDisposable`, `AssignmentSlot` | Runs the action, then disposes the value it holds. |
+| `SingleReplaceableDisposable`, `Slot` | Disposes the value it holds, then runs the action. |
+
+Either way the action runs exactly once, whether or not a value was ever assigned, and a value handed to a slot after
+disposal is disposed on arrival without running the action again.
 
 `DisposeWith` adds a subscription to a `MultipleDisposable` and gives the subscription straight back, so you can
 chain it onto the call that created it. Dispose the group and every subscription in it detaches.
