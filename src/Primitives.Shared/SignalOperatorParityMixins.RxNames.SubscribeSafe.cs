@@ -139,10 +139,6 @@ public static partial class LinqExtensions
     /// <returns>A disposable that cancels the subscription.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
     [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "PublicApi",
-        "PAS0003:Public API differs from the baseline",
-        Justification = "The twin overloads differ only by a generic constraint, which the baseline lookup erases.")]
     public static IDisposable SubscribeSafe<T>(
         IObservable<T?> source,
         Action<Exception> onError,
@@ -208,10 +204,6 @@ public static partial class LinqExtensions
         "Design",
         "SST2318:Members should not have identical bodies",
         Justification = "The class-constrained and struct-constrained overloads cannot forward to one another.")]
-    [System.Diagnostics.CodeAnalysis.SuppressMessage(
-        "PublicApi",
-        "PAS0003:Public API differs from the baseline",
-        Justification = "The twin overloads differ only by a generic constraint, which the baseline lookup erases.")]
     public static IDisposable SubscribeSafe<T>(
         IObservable<T?> source,
         Action<Exception> onError,
