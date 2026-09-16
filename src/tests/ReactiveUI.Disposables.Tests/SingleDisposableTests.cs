@@ -9,8 +9,8 @@ namespace ReactiveUI.Disposables.Tests;
 /// <summary>Tests the single-assignment disposable slot.</summary>
 public class SingleDisposableTests
 {
-    /// <summary>The number of callbacks run by the action and the assigned disposable.</summary>
-    private const int ActionAndDisposal = 2;
+    /// <summary>The callbacks the sequence runs: an action and its assignment, plus an action with nothing assigned.</summary>
+    private const int ActionAndDisposal = 3;
 
     /// <summary>Every constructor shape assigns once, and disposal runs the action then disposes the assignment once.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
@@ -35,5 +35,34 @@ public class SingleDisposableTests
         await Assert.That(late.IsDisposed).IsTrue();
         await Assert.That(callbacks).IsEqualTo(ActionAndDisposal);
         await Assert.That(withBoth.IsDisposed).IsTrue();
+    }
+
+    /// <summary>Disposal runs the action even when the slot never took an assignment.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Dispose_WithNothingAssigned_RunsTheAction()
+    {
+        var callbacks = 0;
+        SingleDisposable slot = new(() => callbacks++);
+
+        slot.Dispose();
+
+        await Assert.That(callbacks).IsEqualTo(1);
+        await Assert.That(slot.IsDisposed).IsTrue();
+    }
+
+    /// <summary>Repeated disposal runs the action once, whether or not a value was assigned.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task Dispose_Repeated_RunsTheActionOnce()
+    {
+        var callbacks = 0;
+        SingleDisposable slot = new(() => callbacks++);
+
+        slot.Dispose();
+        slot.Dispose();
+        slot.Create(new BooleanDisposable());
+
+        await Assert.That(callbacks).IsEqualTo(1);
     }
 }

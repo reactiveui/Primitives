@@ -29,13 +29,14 @@ internal record struct AssignmentState : IDisposable
     public void Dispose()
     {
         var disposable = Interlocked.Exchange(ref _disposable, DisposedSentinel);
-        if (disposable is null || ReferenceEquals(disposable, DisposedSentinel))
+        if (ReferenceEquals(disposable, DisposedSentinel))
         {
             return;
         }
 
+        // The action runs whether or not a value was ever assigned; only the value is conditional.
         _action?.Invoke();
-        disposable.Dispose();
+        disposable?.Dispose();
     }
 
     /// <summary>Assigns the disposable held by the slot.</summary>

@@ -9,8 +9,8 @@ namespace ReactiveUI.Disposables.Tests;
 /// <summary>Tests the Primitives alias for a single-assignment disposable slot.</summary>
 public class AssignmentSlotTests
 {
-    /// <summary>The number of callbacks run by the action and the assigned disposable.</summary>
-    private const int ActionAndDisposal = 2;
+    /// <summary>The callbacks the sequence runs: an action and its assignment, plus an action with nothing assigned.</summary>
+    private const int ActionAndDisposal = 3;
 
     /// <summary>Every constructor shape assigns once, and disposal runs the action then disposes the assignment once.</summary>
     /// <returns>A task representing the asynchronous test.</returns>

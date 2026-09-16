@@ -39,8 +39,8 @@ public class DisposableTests
     /// <summary>The disposal count produced when a slot disposes twice.</summary>
     private const int DoubleDisposalCount = 2;
 
-    /// <summary>The disposal count produced by the replaceable-slot replacement sequence.</summary>
-    private const int ReplaceableDisposalCount = 5;
+    /// <summary>The disposal count produced by the replaceable-slot replacement sequence: three values disposed, and the action once.</summary>
+    private const int ReplaceableDisposalCount = 4;
 
     /// <summary>A fixed deterministic timestamp used for absolute scheduling.</summary>
     private static readonly DateTimeOffset FixedTimestamp = new(2024, 1, 1, 0, 0, 0, TimeSpan.Zero);
@@ -107,7 +107,9 @@ public class DisposableTests
         SingleDisposable lateSingle = new(() => disposedBeforeAssign++);
         lateSingle.Dispose();
         lateSingle.Create(new ActionDisposable(() => disposedBeforeAssign++));
-        await Assert.That(disposedBeforeAssign).IsEqualTo(1);
+
+        // Disposal runs the action even with nothing assigned, and the late value is disposed on arrival.
+        await Assert.That(disposedBeforeAssign).IsEqualTo(Two);
         _ = Assert.Throws<ArgumentNullException>(() => lateSingle.Create(null!));
         var replaced = 0;
         SingleReplaceableDisposable replaceable = new(

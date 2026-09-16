@@ -9,8 +9,8 @@ namespace ReactiveUI.Disposables.Tests;
 /// <summary>Tests the Primitives alias for a replaceable disposable slot.</summary>
 public class SlotTests
 {
-    /// <summary>The number of callbacks run when a value is assigned after disposal.</summary>
-    private const int DisposeAndLateAssignment = 2;
+    /// <summary>Disposal runs the action once, and a value assigned afterwards does not run it again.</summary>
+    private const int DisposeAndLateAssignment = 1;
 
     /// <summary>Replacing the value disposes the displaced one, and disposal releases the current value and runs the action once.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
@@ -35,7 +35,7 @@ public class SlotTests
         await Assert.That(() => slot.Create(null!)).Throws<ArgumentNullException>();
     }
 
-    /// <summary>A slot with no value runs its action on disposal, and a value assigned afterwards is disposed and runs the action again.</summary>
+    /// <summary>A slot with no value runs its action on disposal, and a value assigned afterwards is disposed without running it again.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]
     public async Task Create_AfterDispose_DisposesTheIncomingValue()

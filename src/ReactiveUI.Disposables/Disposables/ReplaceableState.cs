@@ -55,8 +55,8 @@ internal record struct ReplaceableState : IDisposable
     {
         if (ReferenceEquals(current, DisposedSentinel))
         {
+            // The slot is closed and Dispose already ran the action, so the late value is only disposed.
             disposable.Dispose();
-            _action?.Invoke();
             return true;
         }
 
