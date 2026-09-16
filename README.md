@@ -546,8 +546,13 @@ page.Subscribe(body => Console.WriteLine(body.Length));
 
 `FromEventPattern` turns a .NET event into a signal. Each value carries the sender and the event arguments.
 
-Every overload requires `TEventArgs` to derive from `EventArgs`. System.Reactive accepts any type there, so an event
-whose argument type does not derive from `EventArgs` needs `Signal.FromEvent` instead.
+Every overload requires `TEventArgs` to derive from `EventArgs`. That constraint is what lets the library bind your
+event's handler at compile time. Accepting any argument type means building the handler delegate at run time, which
+needs reflection, and reflection does not survive trimming or ahead-of-time compilation. Every package here is
+AOT-compatible, so the constraint stays and the reflection does not.
+
+For an event whose argument type does not derive from `EventArgs`, use `Signal.FromEvent`. It places no constraint on
+the argument type.
 
 ```csharp
 // chat.MessageReceived is an event EventHandler<MessageEventArgs>
@@ -2342,6 +2347,25 @@ it and your code.
 
 Neither path is wrong. They trade different things. The composed path costs less surface area. The dedicated path costs
 more classes and pays you back in speed and allocations. We chose speed, and we accepted the extra classes to get it.
+
+### Reflection, and why some signatures are narrower
+
+Several System.Reactive entry points reach for reflection at run time. The event factories are the clearest case.
+`Observable.FromEventPattern` builds your event's handler with `Delegate.CreateDelegate` when you do not supply a
+conversion, and the overloads that take a target object and an event name look the event up by name. .NET marks that
+last group as incompatible with trimming.
+
+Reflection of that kind does not survive trimming or ahead-of-time compilation. A trimmer cannot see a method looked up
+by name, so it removes it, and the call fails at run time rather than at build time. Every package here sets
+`IsAotCompatible`, and that promise is only worth making if the code behind it holds.
+
+So where a signature here is narrower than its System.Reactive counterpart, that is usually the reason.
+`Signal.FromEventPattern` requires `TEventArgs` to derive from `EventArgs`, which lets it bind
+`EventHandler<TEventArgs>` at compile time instead of constructing a delegate at run time. There is no overload that
+takes an event name. `Signal.FromEvent` covers the argument types the constraint excludes.
+
+You give up the loosest of the reflection-based shapes. You get a library that trims, publishes ahead of time, and
+fails at build time rather than on a user's device.
 
 ### Where we could not stay on the standard types
 
