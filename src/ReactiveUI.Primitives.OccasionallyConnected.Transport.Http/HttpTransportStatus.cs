@@ -10,6 +10,9 @@ namespace ReactiveUI.Primitives.OccasionallyConnected.Transport.Http;
 /// <summary>Classifies HTTP status codes and retry hints.</summary>
 internal static class HttpTransportStatus
 {
+    /// <summary>The HTTP Too Many Requests status code.</summary>
+    internal const HttpStatusCode TooManyRequests = (HttpStatusCode)TooManyRequestsStatusCode;
+
     /// <summary>The first redirection status code.</summary>
     private const int RedirectionStatusCodeStart = 300;
 
