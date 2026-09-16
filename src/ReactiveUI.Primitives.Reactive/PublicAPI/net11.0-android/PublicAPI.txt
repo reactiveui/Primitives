@@ -1189,6 +1189,7 @@ namespace ReactiveUI.Primitives.Reactive.Advanced
         public void Dispose() { }
         public void OnCompleted() { }
         public void OnError(System.Exception error) { }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public void OnNext(T value) { }
     }
     [System.Diagnostics.DebuggerDisplay("IgnoreValuesSignal: Source = {Source}")]

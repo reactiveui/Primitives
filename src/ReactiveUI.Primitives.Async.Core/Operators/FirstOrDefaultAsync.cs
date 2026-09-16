@@ -2,7 +2,6 @@
 // ReactiveUI Association Incorporated licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace ReactiveUI.Primitives.Async;
@@ -40,7 +39,7 @@ public static partial class SignalAsyncExtensions
             CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            FirstOrDefaultTaskWitness<T> observer = new(predicate, defaultValue, cancellationToken);
+            FirstTaskWitness<T> observer = new(predicate, true, defaultValue, cancellationToken);
             await using var subscription =
                 await source.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
             return await observer.AwaitResultAsync().ConfigureAwait(false);
@@ -77,73 +76,10 @@ public static partial class SignalAsyncExtensions
         public async ValueTask<T?> FirstOrDefaultAsync(T? defaultValue, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            FirstOrDefaultTaskWitness<T> observer = new(null, defaultValue, cancellationToken);
+            FirstTaskWitness<T> observer = new(null, true, defaultValue, cancellationToken);
             await using var subscription =
                 await source.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
             return await observer.AwaitResultAsync().ConfigureAwait(false);
         }
-    }
-
-    /// <summary>A witness that captures the first element matching an optional predicate, or returns a default value.</summary>
-    /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-    /// <param name="predicate">An optional predicate to filter elements.</param>
-    /// <param name="defaultValue">The default value to return if no element matches.</param>
-    /// <param name="cancellationToken">A cancellation token for the operation.</param>
-    [DebuggerDisplay("FirstOrDefaultTaskWitness: {_witness}")]
-    internal sealed class FirstOrDefaultTaskWitness<T>(
-        Func<T, bool>? predicate,
-        T? defaultValue,
-        CancellationToken cancellationToken) : IWitnessAsync<T>
-    {
-        /// <summary>Produces and cancels the witness's single result value.</summary>
-        private readonly TaskResultCompletionSource<T> _completion = new(cancellationToken);
-
-        /// <summary>The notification gate, cancellation link and disposal state.</summary>
-        private WitnessAsyncState _witness;
-
-        /// <inheritdoc/>
-        ref WitnessAsyncState IWitnessState.Witness => ref _witness;
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
-            WitnessAsync.OnNextAsync(this, value, cancellationToken);
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
-            WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
-
-        /// <summary>Asynchronously waits for the witness to produce its result value.</summary>
-        /// <returns>A task representing the asynchronous operation, containing the result value.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal ValueTask<T> AwaitResultAsync() => _completion.AwaitResultAsync(this);
-
-        /// <inheritdoc/>
-        ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken)
-        {
-            _ = cancellationToken;
-            return predicate is not null && !predicate(value)
-                ? default
-                : _completion.SetResultAndDisposeAsync(value, this);
-        }
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-            _completion.SetExceptionAndDisposeAsync(error, this);
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) =>
-            _completion.CompleteAndDisposeAsync(result, defaultValue!, this);
     }
 }

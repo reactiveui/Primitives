@@ -35,7 +35,7 @@ public static partial class SignalAsyncExtensions
         public async ValueTask<T> FirstAsync(Func<T, bool> predicate, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            FirstTaskWitness<T> observer = new(predicate, cancellationToken);
+            FirstTaskWitness<T> observer = new(predicate, false, default, cancellationToken);
             await using var subscription =
                 await source.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
             return await observer.AwaitResultAsync().ConfigureAwait(false);
@@ -57,7 +57,7 @@ public static partial class SignalAsyncExtensions
         public async ValueTask<T> FirstAsync(CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            FirstTaskWitness<T> observer = new(null, cancellationToken);
+            FirstTaskWitness<T> observer = new(null, false, default, cancellationToken);
             await using var subscription =
                 await source.SubscribeAsync(observer, cancellationToken).ConfigureAwait(false);
             return await observer.AwaitResultAsync().ConfigureAwait(false);
@@ -67,9 +67,15 @@ public static partial class SignalAsyncExtensions
     /// <summary>A witness that captures the first element matching an optional predicate.</summary>
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
     /// <param name="predicate">An optional predicate to filter elements.</param>
+    /// <param name="hasDefault">When <see langword="true"/>, an empty sequence yields <paramref name="defaultValue"/> instead of failing.</param>
+    /// <param name="defaultValue">The value an empty sequence yields when <paramref name="hasDefault"/> is set.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     [DebuggerDisplay("FirstTaskWitness: {_witness}")]
-    internal sealed class FirstTaskWitness<T>(Func<T, bool>? predicate, CancellationToken cancellationToken) : IWitnessAsync<T>
+    internal sealed class FirstTaskWitness<T>(
+        Func<T, bool>? predicate,
+        bool hasDefault,
+        T? defaultValue,
+        CancellationToken cancellationToken) : IWitnessAsync<T>
     {
         /// <summary>Produces and cancels the witness's single result value.</summary>
         private readonly TaskResultCompletionSource<T> _completion = new(cancellationToken);
@@ -120,6 +126,11 @@ public static partial class SignalAsyncExtensions
         /// <inheritdoc/>
         ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result)
         {
+            if (hasDefault)
+            {
+                return _completion.CompleteAndDisposeAsync(result, defaultValue!, this);
+            }
+
             Exception exception;
             if (result.IsSuccess)
             {

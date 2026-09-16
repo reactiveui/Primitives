@@ -40,110 +40,61 @@ public static partial class SignalAsyncExtensions
             ArgumentExceptionHelper.ThrowIfNull(source);
             ArgumentExceptionHelper.ThrowIfNull(disposeAction);
 
-            return new OnDisposeSyncSignal<T>(source, disposeAction);
+            return new OnDisposeSignal<T>(source, disposeAction);
         }
     }
 
-    /// <summary>Wraps a source observable with an observer that awaits a callback when the subscription is disposed.</summary>
+    /// <summary>Wraps a source observable with an observer that runs a callback when the subscription is disposed.</summary>
     /// <typeparam name="T">The element type.</typeparam>
-    /// <param name="source">The upstream observable.</param>
-    /// <param name="disposeAction">The async dispose action.</param>
-    internal sealed class OnDisposeSignal<T>(IObservableAsync<T> source, Func<ValueTask> disposeAction) : IObservableAsync<T>
+    internal sealed class OnDisposeSignal<T> : IObservableAsync<T>
     {
+        /// <summary>The upstream observable.</summary>
+        private readonly IObservableAsync<T> _source;
+
+        /// <summary>The synchronous dispose action; <see langword="null"/> when the callback is asynchronous.</summary>
+        private readonly Action? _finallySync;
+
+        /// <summary>The asynchronous dispose callback; <see langword="null"/> when the callback is synchronous.</summary>
+        private readonly Func<ValueTask>? _finallyAsync;
+
+        /// <summary>Initializes a new instance of the <see cref="OnDisposeSignal{T}"/> class with an asynchronous callback.</summary>
+        /// <param name="source">The upstream observable.</param>
+        /// <param name="disposeAction">The asynchronous dispose callback.</param>
+        internal OnDisposeSignal(IObservableAsync<T> source, Func<ValueTask> disposeAction)
+        {
+            _source = source;
+            _finallyAsync = disposeAction;
+        }
+
+        /// <summary>Initializes a new instance of the <see cref="OnDisposeSignal{T}"/> class with a synchronous action.</summary>
+        /// <param name="source">The upstream observable.</param>
+        /// <param name="disposeAction">The synchronous dispose action.</param>
+        internal OnDisposeSignal(IObservableAsync<T> source, Action disposeAction)
+        {
+            _source = source;
+            _finallySync = disposeAction;
+        }
+
         /// <inheritdoc/>
         ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
             IObserverAsync<T> observer,
             CancellationToken cancellationToken)
         {
-            OnDisposeWitness<T> sink = new(observer, disposeAction);
-            return source.SubscribeAsync(sink, cancellationToken);
+            OnDisposeWitness<T> sink = new(observer, _finallySync, _finallyAsync);
+            return _source.SubscribeAsync(sink, cancellationToken);
         }
     }
 
-    /// <summary>Wraps a source observable with an observer that runs an action when the subscription is disposed.</summary>
-    /// <typeparam name="T">The element type.</typeparam>
-    /// <param name="source">The upstream observable.</param>
-    /// <param name="disposeAction">The sync dispose action.</param>
-    internal sealed class OnDisposeSyncSignal<T>(IObservableAsync<T> source, Action disposeAction) : IObservableAsync<T>
-    {
-        /// <inheritdoc/>
-        ValueTask<IAsyncDisposable> IObservableAsync<T>.SubscribeAsync(
-            IObserverAsync<T> observer,
-            CancellationToken cancellationToken)
-        {
-            OnDisposeWitnessSync<T> sink = new(observer, disposeAction);
-            return source.SubscribeAsync(sink, cancellationToken);
-        }
-    }
-
-    /// <summary>A witness that invokes a synchronous action when disposed.</summary>
+    /// <summary>A witness that runs a callback when disposed.</summary>
     /// <typeparam name="T">The type of elements in the sequence.</typeparam>
     /// <param name="observer">The downstream observer to forward notifications to.</param>
-    /// <param name="finallySync">The synchronous action to invoke when disposed.</param>
-    [DebuggerDisplay("OnDisposeWitnessSync: {_witness}")]
-    internal sealed class OnDisposeWitnessSync<T>(IObserverAsync<T> observer, Action finallySync) : IWitnessAsync<T>
-    {
-        /// <summary>The notification gate, cancellation link and disposal state.</summary>
-        private WitnessAsyncState _witness;
-
-        /// <summary>Gets the observer that receives forwarded notifications.</summary>
-        private IObserverAsync<T> Downstream { get; } = observer;
-
-        /// <inheritdoc/>
-        ref WitnessAsyncState IWitnessState.Witness => ref _witness;
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask OnNextAsync(T value, CancellationToken cancellationToken) =>
-            WitnessAsync.OnNextAsync(this, value, cancellationToken);
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken) =>
-            WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask OnCompletedAsync(Result result) => WitnessAsync.OnCompletedAsync(this, result);
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken) =>
-            Downstream.OnNextAsync(value, cancellationToken);
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(Exception error, CancellationToken cancellationToken) =>
-            Downstream.OnErrorResumeAsync(error, cancellationToken);
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(Result result) => Downstream.OnCompletedAsync(result);
-
-        /// <inheritdoc/>
-        public async ValueTask DisposeAsync()
-        {
-            ExceptionDispatchInfo? failure = null;
-            try
-            {
-                finallySync();
-            }
-            catch (Exception e)
-            {
-                failure = ExceptionDispatchInfo.Capture(e);
-            }
-
-            await WitnessAsync.DisposeStateAsync(this).ConfigureAwait(false);
-            failure?.Throw();
-        }
-    }
-
-    /// <summary>A witness that invokes an asynchronous callback when disposed.</summary>
-    /// <typeparam name="T">The type of elements in the sequence.</typeparam>
-    /// <param name="observer">The downstream observer to forward notifications to.</param>
-    /// <param name="finallyAsync">The asynchronous callback to invoke when disposed.</param>
+    /// <param name="finallySync">The synchronous action to invoke when disposed; <see langword="null"/> when the callback is asynchronous.</param>
+    /// <param name="finallyAsync">The asynchronous callback to invoke when disposed; <see langword="null"/> when the callback is synchronous.</param>
     [DebuggerDisplay("OnDisposeWitness: {_witness}")]
-    internal sealed class OnDisposeWitness<T>(IObserverAsync<T> observer, Func<ValueTask> finallyAsync) : IWitnessAsync<T>
+    internal sealed class OnDisposeWitness<T>(
+        IObserverAsync<T> observer,
+        Action? finallySync,
+        Func<ValueTask>? finallyAsync) : IWitnessAsync<T>
     {
         /// <summary>The notification gate, cancellation link and disposal state.</summary>
         private WitnessAsyncState _witness;
@@ -188,7 +139,14 @@ public static partial class SignalAsyncExtensions
             ExceptionDispatchInfo? failure = null;
             try
             {
-                await finallyAsync().ConfigureAwait(false);
+                if (finallySync is not null)
+                {
+                    finallySync();
+                }
+                else if (finallyAsync is not null)
+                {
+                    await finallyAsync().ConfigureAwait(false);
+                }
             }
             catch (Exception e)
             {

@@ -17,7 +17,7 @@ public partial class CombiningOperatorTests
     {
         InvalidOperationException expected = new("dispose action failed");
         CallbackWitnessAsync<int> observer = new(static (_, _) => default);
-        SignalAsyncExtensions.OnDisposeWitnessSync<int> witness = new(observer, () => throw expected);
+        SignalAsyncExtensions.OnDisposeWitness<int> witness = new(observer, () => throw expected, null);
 
         var error = await Assert.That(async () => await witness.DisposeAsync()).ThrowsExactly<InvalidOperationException>();
 
@@ -32,7 +32,7 @@ public partial class CombiningOperatorTests
     {
         InvalidOperationException expected = new("dispose callback failed");
         CallbackWitnessAsync<int> observer = new(static (_, _) => default);
-        SignalAsyncExtensions.OnDisposeWitness<int> witness = new(observer, () => ValueTask.FromException(expected));
+        SignalAsyncExtensions.OnDisposeWitness<int> witness = new(observer, null, () => ValueTask.FromException(expected));
 
         var error = await Assert.That(async () => await witness.DisposeAsync()).ThrowsExactly<InvalidOperationException>();
 
