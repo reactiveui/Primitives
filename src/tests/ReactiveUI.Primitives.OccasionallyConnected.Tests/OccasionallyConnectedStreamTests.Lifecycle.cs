@@ -214,7 +214,7 @@ public sealed partial class OccasionallyConnectedStreamTests
         var scheduler = new ControlledObserverScheduler();
         var serializer = new ThrowingStatePayloadSerializer();
         await using var stream = new OccasionallyConnectedStream<CounterState, CounterInput>(
-            CreateOptions(store, serializer, scheduler) with { LocalStateSnapshotFactory = (payload, _) => new(serializer.CreateCounterStateSnapshot(payload)) });
+            CreateOptions(store, serializer, scheduler) with { LocalStateSnapshotFactory = static (payload, _) => new(ThrowingStatePayloadSerializer.CreateCounterStateSnapshot(payload)) });
         var faults = new RecordingObserver<OccasionallyConnectedFault>();
         using var faultSubscription = stream.Faults.Subscribe(faults);
 
@@ -372,8 +372,8 @@ public sealed partial class OccasionallyConnectedStreamTests
             OperationIdSource = new SequenceOperationIdSource(),
             Coordinator = new RecordingCoordinator(store),
             InputProducer = new RecordingInputProducer<CounterInput>(),
-            LocalStateSnapshotFactory = (payload, _) => new(serializer is ScriptedPayloadSerializer scripted ? scripted.CreateCounterStateSnapshot(payload) : new CounterState(0)),
-            RemoteInputSnapshotFactory = (payload, _) => new(serializer is ScriptedPayloadSerializer scriptedRemote ? scriptedRemote.CreateCounterInputSnapshot(payload) : new CounterInput(0)),
+            LocalStateSnapshotFactory = (payload, _) => new(serializer is ScriptedPayloadSerializer ? ScriptedPayloadSerializer.CreateCounterStateSnapshot(payload) : new CounterState(0)),
+            RemoteInputSnapshotFactory = (payload, _) => new(serializer is ScriptedPayloadSerializer ? ScriptedPayloadSerializer.CreateCounterInputSnapshot(payload) : new CounterInput(0)),
             NotificationScheduler = scheduler,
             NotificationOptions = new(NotificationCapacity, NotificationCapacityBytes, ObserverNotificationOverflowMode.CoalesceLatest),
             WorkCapacity = WorkCapacity,
@@ -389,13 +389,13 @@ public sealed partial class OccasionallyConnectedStreamTests
         /// <summary>Creates a counter state snapshot.</summary>
         /// <param name="envelope">The payload envelope.</param>
         /// <returns>The counter state.</returns>
-        public CounterState CreateCounterStateSnapshot(PayloadEnvelope envelope) =>
+        public static CounterState CreateCounterStateSnapshot(PayloadEnvelope envelope) =>
             new(ParsePayloadValue(envelope));
 
         /// <summary>Creates a counter input snapshot.</summary>
         /// <param name="envelope">The payload envelope.</param>
         /// <returns>The counter input.</returns>
-        public CounterInput CreateCounterInputSnapshot(PayloadEnvelope envelope) =>
+        public static CounterInput CreateCounterInputSnapshot(PayloadEnvelope envelope) =>
             new(CreateCounterStateSnapshot(envelope).Sum);
 
         /// <inheritdoc />

@@ -743,11 +743,11 @@ public sealed partial class LocalStreamCommitterTests
         /// <param name="value">The decoded value.</param>
         /// <returns>The decoded input object.</returns>
         /// <exception cref="OperationCanceledException">The test serializer was configured to cancel input deserialization.</exception>
-        private ValueTask<object> DeserializeInputAsync(PayloadEnvelope envelope, string text, int value)
+        private async ValueTask<object> DeserializeInputAsync(PayloadEnvelope envelope, string text, int value)
         {
-            CancelDuringInputDeserialization?.Cancel();
             if (CancelDuringInputDeserialization is not null)
             {
+                await CancelDuringInputDeserialization.CancelAsync().ConfigureAwait(false);
                 throw new OperationCanceledException(CancelDuringInputDeserialization.Token);
             }
 
@@ -759,8 +759,8 @@ public sealed partial class LocalStreamCommitterTests
             }
 
             return DeserializeInputAsState
-                ? ValueTask.FromResult<object>(new ReadingState(value))
-                : ValueTask.FromResult<object>(new MutableReading { Value = value });
+                ? new ReadingState(value)
+                : new MutableReading { Value = value };
         }
 
         /// <summary>Deserializes a state payload.</summary>
@@ -768,16 +768,20 @@ public sealed partial class LocalStreamCommitterTests
         /// <param name="text">The decoded text.</param>
         /// <param name="value">The decoded value.</param>
         /// <returns>The decoded state object.</returns>
-        private ValueTask<object> DeserializeStateAsync(PayloadEnvelope envelope, string text, int value)
+        private async ValueTask<object> DeserializeStateAsync(PayloadEnvelope envelope, string text, int value)
         {
             ValidateStateHash(envelope, text);
             if (DeserializeStateAsInput)
             {
-                return ValueTask.FromResult<object>(new MutableReading { Value = value });
+                return new MutableReading { Value = value };
             }
 
-            CancelAfterStateDeserialization?.Cancel();
-            return ValueTask.FromResult<object>(new ReadingState(value));
+            if (CancelAfterStateDeserialization is not null)
+            {
+                await CancelAfterStateDeserialization.CancelAsync().ConfigureAwait(false);
+            }
+
+            return new ReadingState(value);
         }
 
         /// <summary>Validates a scripted input hash.</summary>

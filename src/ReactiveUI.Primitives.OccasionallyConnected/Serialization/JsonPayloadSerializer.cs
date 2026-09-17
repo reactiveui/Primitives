@@ -90,29 +90,7 @@ public sealed class JsonPayloadSerializer : IPayloadSerializer
         string contractId,
         int schemaVersion,
         T value,
-        CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        var jsonTypeInfo = _schemaRegistry.GetJsonTypeInfo(contractId, schemaVersion, typeof(T));
-        BoundedPayloadBufferWriter bufferWriter = new(_maximumPayloadBytes);
-        try
-        {
-            using Utf8JsonWriter jsonWriter = new(bufferWriter);
-            JsonSerializer.Serialize(jsonWriter, value, (JsonTypeInfo<T>)jsonTypeInfo);
-            jsonWriter.Flush();
-        }
-        catch (PayloadSchemaException)
-        {
-            throw;
-        }
-        catch (JsonException exception)
-        {
-            throw new PayloadSchemaException(PayloadSchemaFailureReason.SerializationFailed, "The payload could not be serialized as the registered schema.", exception);
-        }
-
-        var payload = bufferWriter.ToArray();
-        return new(new PayloadEnvelope(contractId, schemaVersion, ContentType, payload, ComputePayloadHash(payload)));
-    }
+        CancellationToken cancellationToken) => new(SerializePayload(contractId, schemaVersion, value, cancellationToken));
 
     /// <summary>Deserializes an allowlisted payload envelope.</summary>
     /// <param name="envelope">The payload envelope to deserialize.</param>
@@ -256,6 +234,38 @@ public sealed class JsonPayloadSerializer : IPayloadSerializer
         }
 
         throw new PayloadSchemaException(PayloadSchemaFailureReason.UpcasterContractMismatch, "The upcaster changed immutable payload contract metadata.");
+    }
+
+    /// <summary>Serializes a registered value into the bounded in-memory payload buffer.</summary>
+    /// <typeparam name="T">The payload value type.</typeparam>
+    /// <param name="contractId">The stable wire contract identifier.</param>
+    /// <param name="schemaVersion">The positive contract schema version.</param>
+    /// <param name="value">The payload value.</param>
+    /// <param name="cancellationToken">The caller cancellation token.</param>
+    /// <returns>The serialized payload envelope.</returns>
+    /// <exception cref="PayloadSchemaException">The schema is not registered or the value cannot be serialized within the payload limit.</exception>
+    private PayloadEnvelope SerializePayload<T>(string contractId, int schemaVersion, T value, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var jsonTypeInfo = _schemaRegistry.GetJsonTypeInfo(contractId, schemaVersion, typeof(T));
+        BoundedPayloadBufferWriter bufferWriter = new(_maximumPayloadBytes);
+        try
+        {
+            using Utf8JsonWriter jsonWriter = new(bufferWriter);
+            JsonSerializer.Serialize(jsonWriter, value, (JsonTypeInfo<T>)jsonTypeInfo);
+            jsonWriter.Flush();
+        }
+        catch (PayloadSchemaException)
+        {
+            throw;
+        }
+        catch (JsonException exception)
+        {
+            throw new PayloadSchemaException(PayloadSchemaFailureReason.SerializationFailed, "The payload could not be serialized as the registered schema.", exception);
+        }
+
+        var payload = bufferWriter.ToArray();
+        return new(contractId, schemaVersion, ContentType, payload, ComputePayloadHash(payload));
     }
 
     /// <summary>Writes UTF-8 JSON bytes while enforcing an exact payload byte limit.</summary>

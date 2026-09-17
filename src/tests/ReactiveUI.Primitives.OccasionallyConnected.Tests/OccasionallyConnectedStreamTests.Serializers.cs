@@ -26,13 +26,13 @@ public sealed partial class OccasionallyConnectedStreamTests
         /// <summary>Creates an immutable counter state snapshot from a payload.</summary>
         /// <param name="envelope">The payload envelope.</param>
         /// <returns>The state snapshot.</returns>
-        public CounterState CreateCounterStateSnapshot(PayloadEnvelope envelope) =>
+        public static CounterState CreateCounterStateSnapshot(PayloadEnvelope envelope) =>
             new(ParsePayloadValue(envelope));
 
         /// <summary>Creates an immutable counter input snapshot from a payload.</summary>
         /// <param name="envelope">The payload envelope.</param>
         /// <returns>The input snapshot.</returns>
-        public CounterInput CreateCounterInputSnapshot(PayloadEnvelope envelope) =>
+        public static CounterInput CreateCounterInputSnapshot(PayloadEnvelope envelope) =>
             new(CreateCounterStateSnapshot(envelope).Sum);
 
         /// <inheritdoc />
@@ -110,13 +110,13 @@ public sealed partial class OccasionallyConnectedStreamTests
         /// <summary>Creates a mutable counter state snapshot from a payload.</summary>
         /// <param name="envelope">The payload envelope.</param>
         /// <returns>The state snapshot.</returns>
-        public MutableCounterState CreateMutableCounterStateSnapshot(PayloadEnvelope envelope) =>
+        public static MutableCounterState CreateMutableCounterStateSnapshot(PayloadEnvelope envelope) =>
             new(ParsePayloadValue(envelope));
 
         /// <summary>Creates an immutable counter input snapshot from a payload.</summary>
         /// <param name="envelope">The payload envelope.</param>
         /// <returns>The input snapshot.</returns>
-        public CounterInput CreateCounterInputSnapshot(PayloadEnvelope envelope) =>
+        public static CounterInput CreateCounterInputSnapshot(PayloadEnvelope envelope) =>
             new(CreateMutableCounterStateSnapshot(envelope).Sum);
 
         /// <inheritdoc />

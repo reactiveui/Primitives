@@ -380,7 +380,7 @@ public sealed partial class LocalStreamCommitterTests
             throw new NotSupportedException();
 
         /// <inheritdoc/>
-        public ValueTask<LocalPayloadQuarantineResult> QuarantinePayloadAsync(
+        public async ValueTask<LocalPayloadQuarantineResult> QuarantinePayloadAsync(
             LocalPayloadQuarantineRequest request,
             CancellationToken cancellationToken)
         {
@@ -388,7 +388,11 @@ public sealed partial class LocalStreamCommitterTests
             QuarantineRequest = request;
             if (QuarantineException is not null)
             {
-                CancelBeforeQuarantineException?.Cancel();
+                if (CancelBeforeQuarantineException is not null)
+                {
+                    await CancelBeforeQuarantineException.CancelAsync().ConfigureAwait(false);
+                }
+
                 throw QuarantineException;
             }
 
@@ -406,7 +410,7 @@ public sealed partial class LocalStreamCommitterTests
                 evidence,
                 request.ObservedAtUtc);
             Recovery = Recovery with { Quarantine = record };
-            return ValueTask.FromResult(new LocalPayloadQuarantineResult(record, Created: true));
+            return new(record, Created: true);
         }
 
         /// <inheritdoc/>

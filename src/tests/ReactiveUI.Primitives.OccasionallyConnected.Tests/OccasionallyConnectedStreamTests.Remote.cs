@@ -29,8 +29,8 @@ public sealed partial class OccasionallyConnectedStreamTests
                 OperationIdSource = new SequenceOperationIdSource(),
                 Coordinator = new RecordingCoordinator(store),
                 InputProducer = new RecordingInputProducer<MutableCounterInput>(),
-                LocalStateSnapshotFactory = (payload, _) => new(serializer.CreateCounterStateSnapshot(payload)),
-                RemoteInputSnapshotFactory = (payload, _) => new(serializer.CreateMutableInputSnapshot(payload)),
+                LocalStateSnapshotFactory = static (payload, _) => new(MutableInputPayloadSerializer.CreateCounterStateSnapshot(payload)),
+                RemoteInputSnapshotFactory = static (payload, _) => new(MutableInputPayloadSerializer.CreateMutableInputSnapshot(payload)),
                 NotificationScheduler = scheduler,
                 NotificationOptions = new(NotificationCapacity, NotificationCapacityBytes, ObserverNotificationOverflowMode.CoalesceLatest),
                 WorkCapacity = WorkCapacity,
@@ -75,8 +75,8 @@ public sealed partial class OccasionallyConnectedStreamTests
                 OperationIdSource = new SequenceOperationIdSource(),
                 Coordinator = new RecordingCoordinator(store),
                 InputProducer = new RecordingInputProducer<CounterInput>(),
-                LocalStateSnapshotFactory = (payload, _) => new(payloadSerializer.CreateCounterStateSnapshot(payload)),
-                RemoteInputSnapshotFactory = (payload, _) => new(payloadSerializer.CreateCounterInputSnapshot(payload)),
+                LocalStateSnapshotFactory = static (payload, _) => new(ScriptedPayloadSerializer.CreateCounterStateSnapshot(payload)),
+                RemoteInputSnapshotFactory = static (payload, _) => new(ScriptedPayloadSerializer.CreateCounterInputSnapshot(payload)),
                 NotificationScheduler = scheduler,
                 NotificationOptions = new(NotificationCapacity, TinyNotificationCapacityBytes, ObserverNotificationOverflowMode.Disconnect),
                 WorkCapacity = WorkCapacity,
@@ -117,7 +117,7 @@ public sealed partial class OccasionallyConnectedStreamTests
                 OperationIdSource = new SequenceOperationIdSource(),
                 Coordinator = new RecordingCoordinator(store),
                 InputProducer = new RecordingInputProducer<CounterInput>(),
-                LocalStateSnapshotFactory = (payload, _) => new(payloadSerializer.CreateCounterStateSnapshot(payload)),
+                LocalStateSnapshotFactory = static (payload, _) => new(ScriptedPayloadSerializer.CreateCounterStateSnapshot(payload)),
                 RemoteInputSnapshotFactory = static (_, _) => MissingSnapshotAsync<CounterInput>(),
                 NotificationScheduler = scheduler,
                 NotificationOptions = new(NotificationCapacity, NotificationCapacityBytes, ObserverNotificationOverflowMode.CoalesceLatest),
@@ -177,13 +177,13 @@ public sealed partial class OccasionallyConnectedStreamTests
         /// <summary>Creates an immutable counter state snapshot from a payload.</summary>
         /// <param name="envelope">The payload envelope.</param>
         /// <returns>The state snapshot.</returns>
-        public CounterState CreateCounterStateSnapshot(PayloadEnvelope envelope) =>
+        public static CounterState CreateCounterStateSnapshot(PayloadEnvelope envelope) =>
             new(ParsePayloadValue(envelope));
 
         /// <summary>Creates a mutable counter input snapshot from a payload.</summary>
         /// <param name="envelope">The payload envelope.</param>
         /// <returns>The input snapshot.</returns>
-        public MutableCounterInput CreateMutableInputSnapshot(PayloadEnvelope envelope) =>
+        public static MutableCounterInput CreateMutableInputSnapshot(PayloadEnvelope envelope) =>
             new(CreateCounterStateSnapshot(envelope).Sum);
 
         /// <inheritdoc />
