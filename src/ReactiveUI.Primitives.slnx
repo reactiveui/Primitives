@@ -4,6 +4,7 @@
         <Project Path="benchmarks/ReactiveUI.Primitives.ObservableEvents.Benchmarks/ReactiveUI.Primitives.ObservableEvents.Benchmarks.csproj" />
     </Folder>
     <Folder Name="/examples/">
+        <Project Path="examples/OccasionallyConnected.Collaboration.Server/OccasionallyConnected.Collaboration.Server.csproj" />
         <Project Path="examples/OccasionallyConnected.DurableOutbox/OccasionallyConnected.DurableOutbox.csproj" />
     </Folder>
     <Folder Name="/SolutionConfig/">
@@ -46,6 +47,7 @@
     <Folder Name="/tests/">
         <Project Path="tests/ReactiveUI.Disposables.Tests/ReactiveUI.Disposables.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.ObservableEvents.Tests/ReactiveUI.Primitives.ObservableEvents.Tests.csproj" />
+        <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Server.Tests/ReactiveUI.Primitives.OccasionallyConnected.Collaboration.Server.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Core.Tests/ReactiveUI.Primitives.OccasionallyConnected.Core.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Examples.Tests/ReactiveUI.Primitives.OccasionallyConnected.Examples.Tests.csproj" />
         <Project Path="tests/ReactiveUI.Primitives.OccasionallyConnected.Server.Tests/ReactiveUI.Primitives.OccasionallyConnected.Server.Tests.csproj" />
