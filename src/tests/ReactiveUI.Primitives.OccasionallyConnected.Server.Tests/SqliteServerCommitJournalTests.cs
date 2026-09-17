@@ -545,7 +545,7 @@ public sealed partial class SqliteServerCommitJournalTests
 
         await RunCrashChildUntilSignalAsync(database.Path, signalPath, operationId, CrashAfterCommitMode);
 
-        using var reopened = CreateJournal(database.Path);
+        using var reopened = ReopenJournalAfterCrash(database.Path);
         var key = new ServerOperationKey(Client, new(operationId));
         var replay = reopened.Read(StreamKey(), [key]);
 
@@ -571,7 +571,7 @@ public sealed partial class SqliteServerCommitJournalTests
 
         await RunCrashChildUntilSignalAsync(database.Path, signalPath, operationId, CrashBeforeCommitMode);
 
-        using var reopened = CreateJournal(database.Path);
+        using var reopened = ReopenJournalAfterCrash(database.Path);
         await Assert.That(reopened.StreamCount).IsEqualTo(0);
         await Assert.That(reopened.LedgerEntryCount).IsEqualTo(0);
         await Assert.That(reopened.EventCount).IsEqualTo(0);
