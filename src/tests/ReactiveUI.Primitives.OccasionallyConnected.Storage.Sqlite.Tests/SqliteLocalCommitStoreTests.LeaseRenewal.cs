@@ -33,7 +33,7 @@ public sealed partial class SqliteLocalCommitStoreTests
             command.CommandText = "CREATE TRIGGER reject_release BEFORE DELETE ON oc_outbox_leases BEGIN SELECT RAISE(IGNORE); END;";
         }
 
-        _ = command.ExecuteNonQuery();
+        _ = await command.ExecuteNonQueryAsync();
 
         await Assert.That(async () =>
         {
@@ -61,7 +61,7 @@ public sealed partial class SqliteLocalCommitStoreTests
         await using var connection = OpenRawConnection(database.Path);
         await using var command = connection.CreateCommand();
         command.CommandText = "UPDATE oc_outbox_leases SET lease_id = 'invalid';";
-        _ = command.ExecuteNonQuery();
+        _ = await command.ExecuteNonQueryAsync();
 
         await Assert.That(() => LeaseSingleBatch(store, new(Stream, 1, DefaultLeaseBytes, TimeSpan.FromMinutes(1))))
             .ThrowsExactly<InvalidOperationException>();
@@ -83,7 +83,7 @@ public sealed partial class SqliteLocalCommitStoreTests
         command.CommandText = "UPDATE oc_outbox_leases SET lease_expires_at_utc = $expiry WHERE operation_id = $operationId;";
         _ = command.Parameters.AddWithValue("$expiry", DateTimeOffset.UnixEpoch.ToString("O", CultureInfo.InvariantCulture));
         _ = command.Parameters.AddWithValue("$operationId", operation.OperationId.Value.ToString("D"));
-        _ = command.ExecuteNonQuery();
+        _ = await command.ExecuteNonQueryAsync();
 
         await Assert.That(async () => await store.RenewLeaseAsync(lease.LeaseId, TimeSpan.FromMinutes(1), CancellationToken.None))
             .ThrowsExactly<InvalidOperationException>();
@@ -115,13 +115,13 @@ public sealed partial class SqliteLocalCommitStoreTests
         using var database = TempDatabase.Create();
         await using (var connection = OpenRawConnection(database.Path))
         {
-            await using var transaction = connection.BeginTransaction();
+            await using var transaction = (Microsoft.Data.Sqlite.SqliteTransaction)await connection.BeginTransactionAsync();
             SqliteStoreSchemaTests.CreateRemoteApplySchema(connection, transaction);
             await using var command = connection.CreateCommand();
             command.Transaction = transaction;
             command.CommandText = "UPDATE oc_metadata SET value = 'invalid' WHERE key = 'schema_version';";
-            _ = command.ExecuteNonQuery();
-            transaction.Commit();
+            _ = await command.ExecuteNonQueryAsync();
+            await transaction.CommitAsync();
         }
 
         await Assert.That(() => CreateInitializedStore(database.Path)).ThrowsExactly<InvalidOperationException>();

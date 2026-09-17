@@ -261,10 +261,10 @@ public sealed partial class SqliteLocalCommitStoreTests
         var operation = CreateOperation(clientSequence: 1);
         await using (var connection = OpenRawConnection(database.Path))
         {
-            await using var transaction = connection.BeginTransaction();
+            await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
             SqliteStoreSchemaTests.CreateRemoteApplySchema(connection, transaction);
             InsertLegacyLocalCommitRows(connection, transaction, subscriptionId, operation, CreateSnapshotMutation(expectedRevision: 0));
-            transaction.Commit();
+            await transaction.CommitAsync();
         }
 
         using var store = CreateInitializedStore(database.Path);
@@ -283,9 +283,9 @@ public sealed partial class SqliteLocalCommitStoreTests
         using var database = TempDatabase.Create();
         await using (var connection = OpenRawConnection(database.Path))
         {
-            await using var transaction = connection.BeginTransaction();
+            await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
             SqliteStoreSchemaTests.CreatePreQuarantineLocalCommitSchema(connection, transaction);
-            transaction.Commit();
+            await transaction.CommitAsync();
         }
 
         using var store = CreateInitializedStore(database.Path);

@@ -94,10 +94,10 @@ public sealed partial class SqliteLocalCommitStoreTests
         var operation = CreateOperation(clientSequence: 1);
         await using (var connection = OpenRawConnection(database.Path))
         {
-            await using var transaction = connection.BeginTransaction();
+            await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
             SqliteStoreSchemaTests.CreateLegacyLocalCommitSchema(connection, transaction);
             InsertLegacyLocalCommitRows(connection, transaction, subscriptionId, operation, CreateSnapshotMutation(expectedRevision: 0));
-            transaction.Commit();
+            await transaction.CommitAsync();
         }
 
         using var store = CreateInitializedStore(database.Path);
@@ -243,7 +243,7 @@ public sealed partial class SqliteLocalCommitStoreTests
         using var store = CreateInitializedStore(database.Path);
         _ = store.GetOrCreateSubscriptionId(Stream, SubscriptionId.New(), CancellationToken.None);
         await using var connection = OpenRawConnection(database.Path);
-        await using var transaction = connection.BeginTransaction();
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
 
         Action action = () => SqliteLocalCommitSql.UpdateServerCursor(
             connection,

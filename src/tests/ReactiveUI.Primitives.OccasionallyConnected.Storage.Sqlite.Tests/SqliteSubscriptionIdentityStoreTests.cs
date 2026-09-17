@@ -194,7 +194,7 @@ public sealed class SqliteSubscriptionIdentityStoreTests
         {
             await using var command = connection.CreateCommand();
             command.CommandText = "PRAGMA user_version = 2;";
-            _ = command.ExecuteNonQuery();
+            _ = await command.ExecuteNonQueryAsync();
         }
 
         using var store = new SqliteSubscriptionIdentityStore(database.Path);
@@ -228,7 +228,7 @@ public sealed class SqliteSubscriptionIdentityStoreTests
         {
             await using var command = connection.CreateCommand();
             command.CommandText = "CREATE TABLE unexpected_identity_table (value TEXT NOT NULL);";
-            _ = command.ExecuteNonQuery();
+            _ = await command.ExecuteNonQueryAsync();
         }
 
         using var store = new SqliteSubscriptionIdentityStore(database.Path);
@@ -249,12 +249,12 @@ public sealed class SqliteSubscriptionIdentityStoreTests
             await using (var versionCommand = connection.CreateCommand())
             {
                 versionCommand.CommandText = SetUserVersionSql;
-                _ = versionCommand.ExecuteNonQuery();
+                _ = await versionCommand.ExecuteNonQueryAsync();
             }
 
             await using var metadataCommand = connection.CreateCommand();
             metadataCommand.CommandText = "CREATE TABLE oc_metadata (name TEXT NOT NULL PRIMARY KEY);";
-            _ = metadataCommand.ExecuteNonQuery();
+            _ = await metadataCommand.ExecuteNonQueryAsync();
         }
 
         using var store = new SqliteSubscriptionIdentityStore(database.Path);
@@ -273,7 +273,7 @@ public sealed class SqliteSubscriptionIdentityStoreTests
         {
             await using var command = connection.CreateCommand();
             command.CommandText = SetUserVersionSql;
-            _ = command.ExecuteNonQuery();
+            _ = await command.ExecuteNonQueryAsync();
         }
 
         using var store = new SqliteSubscriptionIdentityStore(database.Path);
@@ -293,19 +293,19 @@ public sealed class SqliteSubscriptionIdentityStoreTests
             await using (var versionCommand = connection.CreateCommand())
             {
                 versionCommand.CommandText = SetUserVersionSql;
-                _ = versionCommand.ExecuteNonQuery();
+                _ = await versionCommand.ExecuteNonQueryAsync();
             }
 
             await using (var metadataCommand = connection.CreateCommand())
             {
                 metadataCommand.CommandText = "CREATE TABLE oc_metadata (key TEXT NOT NULL PRIMARY KEY);";
-                _ = metadataCommand.ExecuteNonQuery();
+                _ = await metadataCommand.ExecuteNonQueryAsync();
             }
 
             await using (var writableCommand = connection.CreateCommand())
             {
                 writableCommand.CommandText = "PRAGMA writable_schema = ON;";
-                _ = writableCommand.ExecuteNonQuery();
+                _ = await writableCommand.ExecuteNonQueryAsync();
             }
 
             await using (var tamperCommand = connection.CreateCommand())
@@ -315,12 +315,12 @@ public sealed class SqliteSubscriptionIdentityStoreTests
                     SET sql = 'CREATE TABLE oc_metadata (key TEXT NOT NULL PRIMARY KEY, value TEXT NOT NULL)'
                     WHERE type = 'table' AND name = 'oc_metadata';
                     """;
-                _ = tamperCommand.ExecuteNonQuery();
+                _ = await tamperCommand.ExecuteNonQueryAsync();
             }
 
             await using var readOnlyCommand = connection.CreateCommand();
             readOnlyCommand.CommandText = "PRAGMA writable_schema = OFF;";
-            _ = readOnlyCommand.ExecuteNonQuery();
+            _ = await readOnlyCommand.ExecuteNonQueryAsync();
         }
 
         using var store = new SqliteSubscriptionIdentityStore(database.Path);
@@ -340,13 +340,13 @@ public sealed class SqliteSubscriptionIdentityStoreTests
             await using (var versionCommand = connection.CreateCommand())
             {
                 versionCommand.CommandText = SetUserVersionSql;
-                _ = versionCommand.ExecuteNonQuery();
+                _ = await versionCommand.ExecuteNonQueryAsync();
             }
 
             await using (var metadataCommand = connection.CreateCommand())
             {
                 metadataCommand.CommandText = "CREATE TABLE oc_metadata (key TEXT NOT NULL PRIMARY KEY, value TEXT NOT NULL);";
-                _ = metadataCommand.ExecuteNonQuery();
+                _ = await metadataCommand.ExecuteNonQueryAsync();
             }
 
             await using (var schemaCommand = connection.CreateCommand())
@@ -357,12 +357,12 @@ public sealed class SqliteSubscriptionIdentityStoreTests
                         stream_id TEXT NOT NULL,
                         subscription_id TEXT NOT NULL);
                     """;
-                _ = schemaCommand.ExecuteNonQuery();
+                _ = await schemaCommand.ExecuteNonQueryAsync();
             }
 
             await using var metadataInsert = connection.CreateCommand();
             metadataInsert.CommandText = "INSERT INTO oc_metadata (key, value) VALUES ('schema_version', '1');";
-            _ = metadataInsert.ExecuteNonQuery();
+            _ = await metadataInsert.ExecuteNonQueryAsync();
         }
 
         using var store = new SqliteSubscriptionIdentityStore(database.Path);
@@ -383,7 +383,7 @@ public sealed class SqliteSubscriptionIdentityStoreTests
             CreateSchemaShell(connection);
             await using var metadataCommand = connection.CreateCommand();
             metadataCommand.CommandText = "INSERT INTO oc_metadata (key, value) VALUES ('schema_version', '2');";
-            _ = metadataCommand.ExecuteNonQuery();
+            _ = await metadataCommand.ExecuteNonQueryAsync();
         }
 
         using var store = new SqliteSubscriptionIdentityStore(database.Path);
@@ -530,7 +530,7 @@ public sealed class SqliteSubscriptionIdentityStoreTests
         _ = store.GetOrCreateSubscriptionId(Stream, existing, CancellationToken.None);
 
         await using var blocker = OpenRawConnection(database.Path);
-        await using var transaction = blocker.BeginTransaction();
+        await using var transaction = (SqliteTransaction)await blocker.BeginTransactionAsync();
         await using (var command = blocker.CreateCommand())
         {
             command.Transaction = transaction;
@@ -543,7 +543,7 @@ public sealed class SqliteSubscriptionIdentityStoreTests
             _ = command.Parameters.AddWithValue("$storeIdentity", StoreIdentity);
             _ = command.Parameters.AddWithValue("$streamId", "sensor/held-lock");
             _ = command.Parameters.AddWithValue("$subscriptionId", SubscriptionId.New().Value.ToString("D"));
-            _ = command.ExecuteNonQuery();
+            _ = await command.ExecuteNonQueryAsync();
         }
 
         using var cancellation = new CancellationTokenSource();
@@ -563,7 +563,7 @@ public sealed class SqliteSubscriptionIdentityStoreTests
         finally
         {
             await cancellation.CancelAsync();
-            transaction.Rollback();
+            await transaction.RollbackAsync();
             await Assert.That(async () => await blockedLookup).ThrowsExactly<OperationCanceledException>();
         }
 
@@ -627,7 +627,7 @@ public sealed class SqliteSubscriptionIdentityStoreTests
         await using var connection = OpenRawConnection(database.Path);
         await using var command = connection.CreateCommand();
         command.CommandText = "PRAGMA journal_mode;";
-        var journalMode = command.ExecuteScalar();
+        var journalMode = await command.ExecuteScalarAsync();
 
         await Assert.That(journalMode).IsEqualTo("wal");
     }
@@ -648,7 +648,7 @@ public sealed class SqliteSubscriptionIdentityStoreTests
             await using var command = connection.CreateCommand();
             command.CommandText = "UPDATE oc_subscription_identities SET subscription_id = $subscriptionId;";
             _ = command.Parameters.AddWithValue("$subscriptionId", subscriptionId);
-            _ = command.ExecuteNonQuery();
+            _ = await command.ExecuteNonQueryAsync();
         }
 
         Action action = () => store.GetOrCreateSubscriptionId(Stream, null, CancellationToken.None);

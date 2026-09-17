@@ -635,9 +635,8 @@ public sealed partial class SqliteLocalStoreAdapterTests
     /// <summary>Reads child process settings from environment variables.</summary>
     /// <returns>The child context, or null during a normal test run.</returns>
     /// <exception cref="InvalidOperationException">The child crash recovery environment is incomplete.</exception>
-    private static CrashRecoveryChildContext? ReadCrashRecoveryChildContext()
-    {
-        return !string.Equals(Environment.GetEnvironmentVariable(CrashRecoveryChildModeVariable), CrashRecoveryChildMode, StringComparison.Ordinal)
+    private static CrashRecoveryChildContext? ReadCrashRecoveryChildContext() =>
+        !string.Equals(Environment.GetEnvironmentVariable(CrashRecoveryChildModeVariable), CrashRecoveryChildMode, StringComparison.Ordinal)
             ? null
             : new(
             ReadRequiredCrashRecoveryValue(CrashRecoveryDatabasePathVariable),
@@ -650,7 +649,6 @@ public sealed partial class SqliteLocalStoreAdapterTests
             ParseCrashRecoveryGuid(CrashRecoveryEventIdVariable),
             ParseCrashRecoveryGuid(CrashRecoveryBatchIdVariable),
             ParseCrashRecoveryDeliveryGuarantee());
-    }
 
     /// <summary>Creates a diagnostic timeout message from child process output.</summary>
     /// <param name="output">The child process output.</param>

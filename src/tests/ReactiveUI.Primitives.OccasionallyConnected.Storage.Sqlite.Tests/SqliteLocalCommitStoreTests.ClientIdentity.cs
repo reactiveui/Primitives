@@ -32,6 +32,10 @@ public sealed partial class SqliteLocalCommitStoreTests
         var attempts = await Task.WhenAll(first, second);
         var successes = attempts.Where(static attempt => attempt.Exception is null).ToArray();
         var failures = attempts.Where(static attempt => attempt.Exception is not null).ToArray();
+        await Assert.That(successes.Length).IsEqualTo(1);
+        await Assert.That(failures.Length).IsEqualTo(1);
+        await Assert.That(failures[0].Exception).IsTypeOf<InvalidOperationException>()
+            .Because(failures[0].Exception?.ToString() ?? "The losing binding must report its captured failure.");
         var winner = successes[0].ClientId;
         var loser = failures[0].ClientId;
 
@@ -40,9 +44,6 @@ public sealed partial class SqliteLocalCommitStoreTests
         using var rejected = new SqliteLocalCommitStore(database.Path);
         Action conflict = () => rejected.Initialize(new(StoreIdentity, SchemaVersion, false) { ClientId = loser }, CancellationToken.None);
 
-        await Assert.That(successes.Length).IsEqualTo(1);
-        await Assert.That(failures.Length).IsEqualTo(1);
-        await Assert.That(failures[0].Exception).IsTypeOf<InvalidOperationException>();
         await Assert.That(conflict).ThrowsExactly<InvalidOperationException>();
     }
 
@@ -61,7 +62,7 @@ public sealed partial class SqliteLocalCommitStoreTests
         await using (var command = connection.CreateCommand())
         {
             command.CommandText = "UPDATE oc_metadata SET value = X'00' WHERE key LIKE 'rxui.localstore.client_id:%';";
-            await Assert.That(command.ExecuteNonQuery()).IsEqualTo(1);
+            await Assert.That(command.ExecuteNonQueryAsync()).IsEqualTo(1);
         }
 
         using var legacy = new SqliteLocalCommitStore(database.Path);

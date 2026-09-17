@@ -17,7 +17,7 @@ public sealed partial class SqliteStoreSchemaTests
     {
         using var database = TempDatabase.Create();
         await using var connection = OpenRawConnection(database.Path);
-        await using var transaction = connection.BeginTransaction();
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
         SqliteStoreSchema.CreateLocalCommitSchema(connection, transaction);
         SetMetadataVersion(connection, transaction, SqliteStoreSchema.IdentitySchemaVersion);
 
@@ -33,7 +33,7 @@ public sealed partial class SqliteStoreSchemaTests
     {
         using var database = TempDatabase.Create();
         await using var connection = OpenRawConnection(database.Path);
-        await using var transaction = connection.BeginTransaction();
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
         CreateLegacyLocalCommitSchema(connection, transaction);
         SetMetadataVersion(connection, transaction, SqliteStoreSchema.LocalCommitSchemaVersion);
 
@@ -49,7 +49,7 @@ public sealed partial class SqliteStoreSchemaTests
     {
         using var database = TempDatabase.Create();
         await using var connection = OpenRawConnection(database.Path);
-        await using var transaction = connection.BeginTransaction();
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
         SqliteStoreSchema.CreateLocalCommitSchema(connection, transaction);
         ClearTableDefinition(connection, transaction, SqliteStoreSchema.MetadataTableName);
 
@@ -65,14 +65,14 @@ public sealed partial class SqliteStoreSchemaTests
     {
         using var database = TempDatabase.Create();
         await using var connection = OpenRawConnection(database.Path);
-        await using (var transaction = connection.BeginTransaction())
+        await using (var transaction = (SqliteTransaction)await connection.BeginTransactionAsync())
         {
             SqliteStoreSchema.CreateIdentitySchema(connection, transaction);
-            transaction.Commit();
+            await transaction.CommitAsync();
         }
 
         CreateMetadataUpdateIgnoreTrigger(connection);
-        await using var migrationTransaction = connection.BeginTransaction();
+        await using var migrationTransaction = (SqliteTransaction)await connection.BeginTransactionAsync();
         Action action = () => SqliteStoreSchema.MigrateIdentityToLocalCommit(connection, migrationTransaction);
 
         await Assert.That(action).ThrowsExactly<InvalidOperationException>();
@@ -85,7 +85,7 @@ public sealed partial class SqliteStoreSchemaTests
     {
         using var database = TempDatabase.Create();
         await using var connection = OpenRawConnection(database.Path);
-        await using var transaction = connection.BeginTransaction();
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
         SchemaSixFixture.Create(connection, transaction);
 
         _ = AssertNoThrow(() => SqliteStoreSchema.ValidateExistingSchemaForLocalCommit(
@@ -108,7 +108,7 @@ public sealed partial class SqliteStoreSchemaTests
     {
         using var database = TempDatabase.Create();
         await using var connection = OpenRawConnection(database.Path);
-        await using var transaction = connection.BeginTransaction();
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
         SchemaSixFixture.Create(connection, transaction);
         SetMetadataVersion(connection, transaction, SqliteStoreSchema.LocalCommitSchemaVersion);
 
@@ -124,7 +124,7 @@ public sealed partial class SqliteStoreSchemaTests
     {
         using var database = TempDatabase.Create();
         await using var connection = OpenRawConnection(database.Path);
-        await using var transaction = connection.BeginTransaction();
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
         CreatePreQuarantineLocalCommitSchema(connection, transaction);
 
         _ = AssertNoThrow(() => SqliteStoreSchema.ValidateExistingSchemaForLocalCommit(
@@ -151,7 +151,7 @@ public sealed partial class SqliteStoreSchemaTests
     {
         using var database = TempDatabase.Create();
         await using var connection = OpenRawConnection(database.Path);
-        await using var transaction = connection.BeginTransaction();
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
         CreatePreQuarantineLocalCommitSchema(connection, transaction);
         SetMetadataVersion(connection, transaction, SqliteStoreSchema.LocalCommitSchemaVersion);
 
