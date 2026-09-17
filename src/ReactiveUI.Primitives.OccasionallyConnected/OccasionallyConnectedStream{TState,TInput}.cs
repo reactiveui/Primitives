@@ -23,6 +23,9 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> : IOcc
     /// <summary>Serializes typed store mutations so the fail-fast committer never sees overlap.</summary>
     private readonly BoundedSerializedStreamWorkLane _workLane;
 
+    /// <summary>Owns the public synchronous input observer.</summary>
+    private readonly IOccasionallyConnectedInputProducer<TInput> _inputProducer;
+
     /// <summary>Dispatches local state notifications.</summary>
     private readonly ObserverNotificationDispatcher<TState> _local;
 
@@ -76,6 +79,7 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> : IOcc
         _remote = new(options.NotificationScheduler, ReportObserverFault);
         _syncStates = new(options.NotificationScheduler, ReportObserverFault);
         _operationStates = new(options.NotificationScheduler, ReportObserverFault);
+        _inputProducer = options.InputProducer ?? CreateInputProducer();
     }
 
     /// <inheritdoc />
@@ -115,7 +119,7 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> : IOcc
     public IObservable<OccasionallyConnectedFault> Faults => new DispatcherObservable<OccasionallyConnectedFault>(_faults, _options.NotificationOptions);
 
     /// <inheritdoc />
-    public IObserver<TInput> Input => _options.InputProducer.Observer;
+    public IObserver<TInput> Input => _inputProducer.Observer;
 
     /// <inheritdoc />
     public ValueTask<PublishReceipt> PublishAsync(
@@ -215,6 +219,10 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> : IOcc
         }
 
         Exception? failure = null;
+        failure = await CaptureFailureAsync(
+                () => _inputProducer.DisposeAsync().AsTask(),
+                failure)
+            .ConfigureAwait(false);
         failure = await CaptureFailureAsync(() => SetDesiredLifecycleState(false, allowDisposed: true), failure).ConfigureAwait(false);
         failure = await CaptureFailureAsync(() => _workLane.WhenIdleAsync(CancellationToken.None), failure).ConfigureAwait(false);
         _workLane.Dispose();
@@ -223,7 +231,6 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> : IOcc
         _syncStates.Dispose();
         _operationStates.Dispose();
         _faults.Dispose();
-        failure = await CaptureFailureAsync(() => _options.InputProducer.DisposeAsync().AsTask(), failure).ConfigureAwait(false);
         if (failure is null)
         {
             return;
@@ -339,7 +346,7 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> : IOcc
             if (shouldBeStarted)
             {
                 await _options.Coordinator.StartStreamAsync(StreamId, CancellationToken.None).ConfigureAwait(false);
-                _ = await _workLane.EnqueueAsync(EnsureInitializedCoreAsync, CancellationToken.None).ConfigureAwait(false);
+                _ = await _workLane.EnqueueAsync(token => EnsureInitializedCoreAsync(token), CancellationToken.None).ConfigureAwait(false);
                 lock (_gate)
                 {
                     _started = true;
@@ -368,13 +375,54 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> : IOcc
         CancellationToken cancellationToken)
     {
         ValidatePublishOptions(options);
-        var committer = await EnsureInitializedCoreAsync(cancellationToken).ConfigureAwait(false);
+        var committer = await EnsureInitializedCoreAsync(cancellationToken, allowDisposed: true).ConfigureAwait(false);
         var effectiveOptions = options ?? _options.Definition.Publish;
         var result = await committer.CommitAsync(value, CreatePolicy(effectiveOptions), effectiveOptions?.BaseVersion, cancellationToken)
             .ConfigureAwait(false);
+        NotifyCommitReady(result);
         await PublishLocalAsync(result.State, result.Receipt.OperationId, CancellationToken.None).ConfigureAwait(false);
         PublishOperationStatus(result.Receipt);
+        return result.Receipt;
+    }
+
+    /// <summary>Runs one producer-captured serialized input inside the serialized stream lane.</summary>
+    /// <param name="payload">The owned input payload.</param>
+    /// <param name="options">The optional publish options.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The durable publish receipt.</returns>
+    private ValueTask<PublishReceipt> PublishSerializedAsync(
+        PayloadEnvelope payload,
+        RemotePublishOptions? options,
+        CancellationToken cancellationToken)
+    {
+        var task = _workLane.EnqueueAsync(
+            token => PublishSerializedCoreAsync(payload, options, token),
+            cancellationToken);
+        return new(task);
+    }
+
+    /// <summary>Commits one producer-captured serialized input using the initialized local committer.</summary>
+    /// <param name="payload">The owned input payload.</param>
+    /// <param name="options">The optional publish options.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The durable publish receipt.</returns>
+    private async ValueTask<PublishReceipt> PublishSerializedCoreAsync(
+        PayloadEnvelope payload,
+        RemotePublishOptions? options,
+        CancellationToken cancellationToken)
+    {
+        ValidatePublishOptions(options);
+        var committer = await EnsureInitializedCoreAsync(cancellationToken, allowDisposed: true).ConfigureAwait(false);
+        var effectiveOptions = options ?? _options.Definition.Publish;
+        var result = await committer.CommitSerializedAsync(
+                payload,
+                CreatePolicy(effectiveOptions),
+                effectiveOptions?.BaseVersion,
+                cancellationToken)
+            .ConfigureAwait(false);
         NotifyCommitReady(result);
+        await PublishLocalAsync(result.State, result.Receipt.OperationId, CancellationToken.None).ConfigureAwait(false);
+        PublishOperationStatus(result.Receipt);
         return result.Receipt;
     }
 
@@ -395,24 +443,32 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> : IOcc
 
     /// <summary>Ensures durable identity and recovery have completed.</summary>
     /// <param name="cancellationToken">The cancellation token used by the first initializer.</param>
+    /// <param name="allowDisposed">A value indicating whether previously admitted publications may initialize during disposal.</param>
     /// <returns>The initialized typed committer.</returns>
-    private async ValueTask<LocalStreamCommitter<TState, TInput>> EnsureInitializedCoreAsync(CancellationToken cancellationToken)
+    private async ValueTask<LocalStreamCommitter<TState, TInput>> EnsureInitializedCoreAsync(
+        CancellationToken cancellationToken,
+        bool allowDisposed = false)
     {
-        var task = GetOrCreateInitializeTask();
+        var task = GetOrCreateInitializeTask(allowDisposed);
         return await WaitForInitializationAsync(task, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Gets or creates the shared initialization task.</summary>
+    /// <param name="allowDisposed">A value indicating whether previously admitted publications may initialize during disposal.</param>
     /// <returns>The initialization task.</returns>
-    private Task<LocalStreamCommitter<TState, TInput>> GetOrCreateInitializeTask()
+    private Task<LocalStreamCommitter<TState, TInput>> GetOrCreateInitializeTask(bool allowDisposed)
     {
         TaskCompletionSource<LocalStreamCommitter<TState, TInput>>? completion = null;
         Task<LocalStreamCommitter<TState, TInput>> task;
         lock (_gate)
         {
-            ThrowIfDisposed();
             if (_initializeTask is null)
             {
+                if (!allowDisposed)
+                {
+                    ThrowIfDisposed();
+                }
+
                 completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
                 _initializeTask = completion.Task;
             }
@@ -692,6 +748,24 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> : IOcc
         _ = _faults.PublishEvent(fault, GetFaultNotificationSize(fault, diagnostic));
     }
 
+    /// <summary>Creates the stream-owned input producer when observer input is configured.</summary>
+    /// <returns>The input producer used by the public observer facade.</returns>
+    private IOccasionallyConnectedInputProducer<TInput> CreateInputProducer()
+    {
+        var definition = _options.Definition;
+        return definition.Input is not { } admission || definition.InputCapture is not { } capture
+            ? new DisabledInputProducer()
+            : new OccasionallyConnectedInputProducer<TInput>(new()
+            {
+                StreamId = StreamId,
+                Admission = admission,
+                Capture = capture,
+                PublishAsync = PublishSerializedAsync,
+                PublishFault = PublishFault,
+                PublishOptions = definition.Publish,
+            });
+    }
+
     /// <summary>Throws when the stream has been disposed.</summary>
     /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -722,6 +796,37 @@ internal sealed partial class OccasionallyConnectedStream<TState, TInput> : IOcc
         {
             ArgumentExceptionHelper.ThrowIfNull(observer);
             return dispatcher.Subscribe(observer, options);
+        }
+    }
+
+    /// <summary>Provides an inert observer when a stream has no observer input bridge.</summary>
+    private sealed class DisabledInputProducer : IOccasionallyConnectedInputProducer<TInput>
+    {
+        /// <inheritdoc />
+        public IObserver<TInput> Observer { get; } = new DisabledInputObserver();
+
+        /// <inheritdoc />
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask DisposeAsync() => default;
+
+        /// <summary>Ignores observer signals for streams without observer input configuration.</summary>
+        private sealed class DisabledInputObserver : IObserver<TInput>
+        {
+            /// <inheritdoc />
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void OnCompleted()
+            {
+            }
+
+            /// <inheritdoc />
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void OnError(Exception error) => ArgumentExceptionHelper.ThrowIfNull(error);
+
+            /// <inheritdoc />
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void OnNext(TInput value)
+            {
+            }
         }
     }
 

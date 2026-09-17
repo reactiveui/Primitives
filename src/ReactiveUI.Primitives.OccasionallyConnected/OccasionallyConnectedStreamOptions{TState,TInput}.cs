@@ -33,8 +33,8 @@ internal sealed record OccasionallyConnectedStreamOptions<TState, TInput>
     /// <summary>Gets the context-owned coordinator dependency.</summary>
     public required IOccasionallyConnectedStreamCoordinator Coordinator { get; init; }
 
-    /// <summary>Gets the public input producer dependency.</summary>
-    public required IOccasionallyConnectedInputProducer<TInput> InputProducer { get; init; }
+    /// <summary>Gets the optional public input producer dependency.</summary>
+    public IOccasionallyConnectedInputProducer<TInput>? InputProducer { get; init; }
 
     /// <summary>Gets the source-backed local state snapshot materializer.</summary>
     public required Func<PayloadEnvelope, CancellationToken, ValueTask<TState>> LocalStateSnapshotFactory { get; init; }
@@ -71,7 +71,6 @@ internal sealed record OccasionallyConnectedStreamOptions<TState, TInput>
         ValidateRequired(TimeProvider, nameof(TimeProvider));
         ValidateRequired(OperationIdSource, nameof(OperationIdSource));
         ValidateRequired(Coordinator, nameof(Coordinator));
-        ValidateRequired(InputProducer, nameof(InputProducer));
         ValidateRequired(LocalStateSnapshotFactory, nameof(LocalStateSnapshotFactory));
         ValidateRequired(RemoteInputSnapshotFactory, nameof(RemoteInputSnapshotFactory));
         ValidateRequired(NotificationScheduler, nameof(NotificationScheduler));

@@ -36,19 +36,84 @@ internal sealed partial class LocalStreamCommitter<TState, TInput>
                 throw new InvalidOperationException("Serialized operation client sequence does not match the next expected sequence.");
             }
 
-            var decodedInput = await DecodeLocalInputAsync(operation.Payload, cancellationToken).ConfigureAwait(false);
-            cancellationToken.ThrowIfCancellationRequested();
-            var prepared = await PrepareProjectionStateAsync(observed, cancellationToken).ConfigureAwait(false);
-            cancellationToken.ThrowIfCancellationRequested();
-            var nextStateValue = _options.Dependencies.Projection.ApplyLocal(prepared.State, decodedInput, operation);
-            cancellationToken.ThrowIfCancellationRequested();
-            return await CommitPreparedLocalAsync(operation, decodedInput, nextStateValue, prepared.Payload, observed, cancellationToken)
+            return await CommitObservedSerializedAsync(operation, observed, cancellationToken)
                 .ConfigureAwait(false);
         }
         finally
         {
             ExitExclusive();
         }
+    }
+
+    /// <summary>Commits a captured input payload atomically with its optimistic snapshot.</summary>
+    /// <param name="payload">The caller-supplied serialized input payload.</param>
+    /// <param name="policy">The persisted operation policy.</param>
+    /// <param name="baseVersion">The optional authoritative version observed by the caller.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The local commit result.</returns>
+    /// <exception cref="ArgumentNullException">A required argument is null.</exception>
+    /// <exception cref="InvalidOperationException">The payload or metadata does not match the contract.</exception>
+    internal async ValueTask<LocalStreamCommitResult<TState, TInput>> CommitSerializedAsync(
+        PayloadEnvelope payload,
+        OperationPolicy policy,
+        string? baseVersion,
+        CancellationToken cancellationToken)
+    {
+        ArgumentExceptionHelper.ThrowIfNull(payload);
+        ArgumentExceptionHelper.ThrowIfNull(policy);
+        EnterExclusive();
+        try
+        {
+            ValidatePolicy(policy);
+            SerializedOperationValidation.ValidateOptionalText(baseVersion, "Operation base version is malformed.");
+            cancellationToken.ThrowIfCancellationRequested();
+            ThrowIfNotRecovered();
+            var observed = Current;
+            ThrowIfSequenceOverflow(observed.NextClientSequence);
+            ThrowIfRevisionOverflow(observed.Revision);
+            var operationId = _options.Dependencies.OperationIdSource.New();
+            ThrowIfDefaultOperationId(operationId);
+            var operation = CreateOperation(
+                policy,
+                observed.NextClientSequence,
+                operationId,
+                _options.Dependencies.TimeProvider.GetUtcNow(),
+                payload,
+                baseVersion);
+            ValidateSerializedOperationHeader(operation);
+            return await CommitObservedSerializedAsync(operation, observed, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        finally
+        {
+            ExitExclusive();
+        }
+    }
+
+    /// <summary>Projects and persists a serialized local operation against observed committer state.</summary>
+    /// <param name="operation">The validated serialized operation.</param>
+    /// <param name="observed">The state observed under exclusive ownership.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The local commit result.</returns>
+    private async ValueTask<LocalStreamCommitResult<TState, TInput>> CommitObservedSerializedAsync(
+        SyncOperation operation,
+        LocalStreamCommitterState<TState> observed,
+        CancellationToken cancellationToken)
+    {
+        var decodedInput = await DecodeLocalInputAsync(operation.Payload, cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        var prepared = await PrepareProjectionStateAsync(observed, cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        var nextStateValue = _options.Dependencies.Projection.ApplyLocal(prepared.State, decodedInput, operation);
+        cancellationToken.ThrowIfCancellationRequested();
+        return await CommitPreparedLocalAsync(
+                operation,
+                decodedInput,
+                nextStateValue,
+                prepared.Payload,
+                observed,
+                cancellationToken)
+            .ConfigureAwait(false);
     }
 
     /// <summary>Validates caller-owned operation metadata before payload decoding and projection.</summary>

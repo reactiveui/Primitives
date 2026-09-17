@@ -74,17 +74,17 @@ public sealed class ObserverInputOptionsTests
         await Assert.That(action).ThrowsExactly<InvalidOperationException>();
     }
 
-    /// <summary>Verifies custom strategies require an explicit capability acknowledgement.</summary>
+    /// <summary>Verifies custom strategies remain unsupported on synchronous observer bridges.</summary>
     /// <returns>A task that represents the asynchronous operation.</returns>
     [Test]
-    public async Task CustomBufferStrategyRequiresCapability()
+    public async Task CustomBufferStrategyThrowsEvenWithCapability()
     {
         var options = new ObserverInputOptions { BufferStrategy = BufferStrategy.Custom };
 
         Action unsupported = options.Validate;
-        var supported = () => options.Validate(supportsCustomPolicy: true);
+        Action supported = () => options.Validate(supportsCustomPolicy: true);
 
         await Assert.That(unsupported).ThrowsExactly<InvalidOperationException>();
-        supported();
+        await Assert.That(supported).ThrowsExactly<InvalidOperationException>();
     }
 }

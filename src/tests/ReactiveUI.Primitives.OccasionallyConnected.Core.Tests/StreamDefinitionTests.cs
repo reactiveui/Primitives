@@ -14,6 +14,12 @@ public sealed class StreamDefinitionTests
     /// <summary>Defines the publication priority outside the custom range.</summary>
     private const int PriorityOutsideCustomRange = 3;
 
+    /// <summary>Defines the stable input contract identifier used by stream definition tests.</summary>
+    private const string InputContractId = "temperature-input";
+
+    /// <summary>Defines the stable state contract identifier used by stream definition tests.</summary>
+    private const string StateContractId = "temperature-state";
+
     /// <summary>Defines a valid stream identifier used by stream definition tests.</summary>
     private static readonly StreamId ValidStreamId = new("sensor/temperature");
 
@@ -32,14 +38,15 @@ public sealed class StreamDefinitionTests
         await Assert.That(definition.StreamId).IsEqualTo(ValidStreamId);
         await Assert.That(definition.SubscriptionId).IsNull();
         await Assert.That(definition.Projection).IsEqualTo(Projection);
-        await Assert.That(definition.InputContractId).IsEqualTo("temperature-input");
-        await Assert.That(definition.StateContractId).IsEqualTo("temperature-state");
+        await Assert.That(definition.InputContractId).IsEqualTo(InputContractId);
+        await Assert.That(definition.StateContractId).IsEqualTo(StateContractId);
         await Assert.That(definition.InputSchemaVersion).IsEqualTo(1);
         await Assert.That(definition.StateSchemaVersion).IsEqualTo(1);
         await Assert.That(definition.SnapshotFormatVersion).IsEqualTo(1);
         await Assert.That(definition.Subscription).IsNull();
         await Assert.That(definition.Publish).IsNull();
         await Assert.That(definition.Input).IsNull();
+        await Assert.That(definition.InputCapture).IsNull();
     }
 
     /// <summary>Verifies a default stream identifier is rejected.</summary>
@@ -80,8 +87,8 @@ public sealed class StreamDefinitionTests
     /// <param name="stateContractId">The candidate state contract identifier.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     [Test]
-    [Arguments(" ", "temperature-state")]
-    [Arguments("temperature-input", "\t")]
+    [Arguments(" ", StateContractId)]
+    [Arguments(InputContractId, "\t")]
     public async Task WhitespaceContractIdThrows(string inputContractId, string stateContractId)
     {
         var definition = CreateValidDefinition() with { InputContractId = inputContractId, StateContractId = stateContractId };
@@ -151,7 +158,6 @@ public sealed class StreamDefinitionTests
         {
             Subscription = new() { StreamId = ValidStreamId, BufferStrategy = BufferStrategy.Custom },
             Publish = new() { StreamId = ValidStreamId, AdmissionStrategy = BufferStrategy.Custom, ConflictPolicy = ConflictPolicy.Custom },
-            Input = new() { BufferStrategy = BufferStrategy.Custom },
         };
         Action unsupported = definition.Validate;
         void ValidateWithCustomPolicies() => definition.Validate(supportsCustomPolicy: true);
@@ -201,20 +207,33 @@ public sealed class StreamDefinitionTests
         await Assert.That(definition.SubscriptionId ?? definition.Subscription?.SubscriptionId).IsEqualTo(identity);
     }
 
-    /// <summary>Verifies each nested custom-policy requirement is checked even when other options are absent.</summary>
-    /// <param name="location">The independently configured option.</param>
+    /// <summary>Verifies isolated publish custom-policy requirements are validated alone.</summary>
     /// <returns>A task representing the assertions.</returns>
     [Test]
-    [Arguments("publish")]
-    [Arguments("input")]
-    public async Task IsolatedCustomPoliciesRequireRegistration(string location)
+    public async Task IsolatedPublishCustomPolicyRequiresRegistration()
     {
-        var definition = CreateValidDefinition();
-        definition = location == "publish"
-            ? definition with { Publish = new() { StreamId = ValidStreamId, AdmissionStrategy = BufferStrategy.Custom } }
-            : definition with { Input = new() { BufferStrategy = BufferStrategy.Custom } };
+        var definition = CreateValidDefinition() with
+        {
+            Publish = new() { StreamId = ValidStreamId, AdmissionStrategy = BufferStrategy.Custom },
+        };
+
         await Assert.That(definition.Validate).ThrowsExactly<InvalidOperationException>();
         definition.Validate(supportsCustomPolicy: true);
+    }
+
+    /// <summary>Verifies synchronous observer input custom admission remains unsupported.</summary>
+    /// <returns>A task representing the assertions.</returns>
+    [Test]
+    public async Task InputCustomPolicyIsRejectedEvenWhenCustomPoliciesAreSupported()
+    {
+        var definition = CreateValidDefinition() with
+        {
+            Input = new() { BufferStrategy = BufferStrategy.Custom },
+            InputCapture = new TestInputCapture(),
+        };
+
+        await Assert.That(() => definition.Validate(supportsCustomPolicy: true))
+            .ThrowsExactly<InvalidOperationException>();
     }
 
     /// <summary>Verifies an invalid input bridge cannot hide behind otherwise valid stream settings.</summary>
@@ -222,8 +241,50 @@ public sealed class StreamDefinitionTests
     [Test]
     public async Task InputBridgeRejectsBlockingObserverAdmission()
     {
-        var definition = CreateValidDefinition() with { Input = new() { BufferStrategy = BufferStrategy.Block } };
+        var definition = CreateValidDefinition() with
+        {
+            Input = new() { BufferStrategy = BufferStrategy.Block },
+            InputCapture = new TestInputCapture(),
+        };
+
         await Assert.That(definition.Validate).ThrowsExactly<InvalidOperationException>();
+    }
+
+    /// <summary>Verifies observer input requires a reviewed serialized capture contract.</summary>
+    /// <returns>A task representing the assertions.</returns>
+    [Test]
+    public async Task InputBridgeWithoutOwnedCaptureContractThrows()
+    {
+        var definition = CreateValidDefinition() with { Input = new() };
+
+        await Assert.That(definition.Validate).ThrowsExactly<InvalidOperationException>();
+    }
+
+    /// <summary>Verifies an owned serialized input capture contract requires an observer input bridge.</summary>
+    /// <returns>A task representing the assertions.</returns>
+    [Test]
+    public async Task InputCaptureRequiresInputBridge()
+    {
+        var definition = CreateValidDefinition() with { InputCapture = new TestInputCapture() };
+
+        await Assert.That(definition.Validate).ThrowsExactly<InvalidOperationException>();
+    }
+
+    /// <summary>Verifies an observer input bridge accepts its owned serialized capture provider.</summary>
+    /// <returns>A task representing the assertions.</returns>
+    [Test]
+    public async Task InputBridgeAcceptsCaptureProvider()
+    {
+        var capture = new TestInputCapture();
+        var definition = CreateValidDefinition() with
+        {
+            Input = new(),
+            InputCapture = capture,
+        };
+
+        definition.Validate();
+
+        await Assert.That(definition.InputCapture).IsSameReferenceAs(capture);
     }
 
     /// <summary>Verifies invalid priority bounds fail even before publication options are added.</summary>
@@ -254,9 +315,46 @@ public sealed class StreamDefinitionTests
     {
         StreamId = ValidStreamId,
         Projection = Projection,
-        InputContractId = "temperature-input",
-        StateContractId = "temperature-state",
+        InputContractId = InputContractId,
+        StateContractId = StateContractId,
     };
+
+    /// <summary>Provides a deterministic owned serialized input capture provider for validation tests.</summary>
+    private sealed class TestInputCapture : IOccasionallyConnectedInputCapture<string>
+    {
+        /// <summary>Defines the nominal object overhead charged for test retained envelopes.</summary>
+        private const long EnvelopeObjectOverheadBytes = 32;
+
+        /// <summary>Returns the retained byte count without retaining the caller input.</summary>
+        /// <param name="value">The caller-owned input value.</param>
+        /// <returns>The retained byte count.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public long GetRetainedByteCount(string value) =>
+            System.Text.Encoding.UTF8.GetByteCount(value)
+            + EnvelopeObjectOverheadBytes
+            + sizeof(int)
+            + GetTextSize(InputContractId)
+            + GetTextSize("text/plain")
+            + GetTextSize("sha256:test");
+
+        /// <summary>Returns an owned serialized payload envelope for the caller input.</summary>
+        /// <param name="value">The caller-owned input value.</param>
+        /// <returns>The serialized payload envelope.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public PayloadEnvelope Capture(string value) => new(
+            InputContractId,
+            1,
+            "text/plain",
+            System.Text.Encoding.UTF8.GetBytes(value),
+            "sha256:test");
+
+        /// <summary>Gets the retained size of a test envelope text value.</summary>
+        /// <param name="text">The text retained by the envelope.</param>
+        /// <returns>The retained text size.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static long GetTextSize(string text) =>
+            EnvelopeObjectOverheadBytes + ((long)text.Length * sizeof(char));
+    }
 
     /// <summary>Provides a deterministic projection for validating the definition contract.</summary>
     private sealed class TestProjection : ILocalProjection<int, string>
