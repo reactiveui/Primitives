@@ -46,6 +46,9 @@ public sealed record StreamDefinition<TState, TInput>
     /// <summary>Gets the optional observer input bridge configuration.</summary>
     public ObserverInputOptions? Input { get; init; }
 
+    /// <summary>Gets the optional provider that captures observer input as owned serialized payloads.</summary>
+    public IOccasionallyConnectedInputCapture<TInput>? InputCapture { get; init; }
+
     /// <summary>Validates this definition using the default policy capability and priority range.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Validate() => Validate(supportsCustomPolicy: false);
@@ -74,7 +77,7 @@ public sealed record StreamDefinition<TState, TInput>
         OccasionallyConnectedOptionsValidation.ValidatePriorityRange(minimumPriority, maximumPriority);
         ValidateSubscription(supportsCustomPolicy);
         ValidatePublish(supportsCustomPolicy, minimumPriority, maximumPriority);
-        Input?.Validate(supportsCustomPolicy);
+        ValidateInput(supportsCustomPolicy);
     }
 
     /// <summary>Validates the optional durable subscription identity.</summary>
@@ -139,6 +142,29 @@ public sealed record StreamDefinition<TState, TInput>
 
         Publish.Validate(supportsCustomPolicy, minimumPriority, maximumPriority);
         ValidateNestedStreamId(Publish.StreamId, nameof(Publish));
+    }
+
+    /// <summary>Validates observer input configuration and its required capture provider.</summary>
+    /// <param name="supportsCustomPolicy">Whether custom nested policies have been registered and supported.</param>
+    /// <exception cref="InvalidOperationException">Observer input is incomplete or unsupported.</exception>
+    private void ValidateInput(bool supportsCustomPolicy)
+    {
+        if (Input is null && InputCapture is null)
+        {
+            return;
+        }
+
+        if (Input is null)
+        {
+            throw new InvalidOperationException("InputCapture requires observer input options.");
+        }
+
+        if (InputCapture is null)
+        {
+            throw new InvalidOperationException("Input requires an owned input capture provider.");
+        }
+
+        Input.Validate(supportsCustomPolicy);
     }
 
     /// <summary>Validates compatibility with an explicit nested subscription identity.</summary>

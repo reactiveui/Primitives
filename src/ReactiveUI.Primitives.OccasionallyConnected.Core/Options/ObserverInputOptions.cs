@@ -23,7 +23,7 @@ public sealed record ObserverInputOptions
     /// <summary>Gets the maximum number of items admitted to the observer bridge queue.</summary>
     public int BufferCapacity { get; init; } = DefaultBufferCapacity;
 
-    /// <summary>Gets the maximum estimated number of bytes admitted to the observer bridge queue.</summary>
+    /// <summary>Gets the maximum retained byte count admitted to the observer bridge queue.</summary>
     public long BufferCapacityBytes { get; init; } = DefaultBufferCapacityBytes;
 
     /// <summary>Validates this option record using structural rules only.</summary>
@@ -31,14 +31,14 @@ public sealed record ObserverInputOptions
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Validate() => Validate(supportsCustomPolicy: false);
 
-    /// <summary>Validates this option record.</summary>
-    /// <param name="supportsCustomPolicy">Whether a custom admission policy has been registered and supported.</param>
+    /// <summary>Validates this option record and rejects unsupported Block and Custom admission.</summary>
+    /// <param name="supportsCustomPolicy">Retained for API compatibility; it does not enable custom input admission.</param>
     /// <exception cref="InvalidOperationException">The option record contains an invalid value.</exception>
     public void Validate(bool supportsCustomPolicy)
     {
         OccasionallyConnectedOptionsValidation.ValidateBufferStrategy(BufferStrategy);
         OccasionallyConnectedOptionsValidation.ValidateCapacities(BufferCapacity, BufferCapacityBytes);
-        OccasionallyConnectedOptionsValidation.ValidateCustomPolicy(BufferStrategy == BufferStrategy.Custom, supportsCustomPolicy);
+        ValidateCustomPolicy();
 
         if (BufferStrategy != BufferStrategy.Block)
         {
@@ -46,5 +46,17 @@ public sealed record ObserverInputOptions
         }
 
         throw new InvalidOperationException("Observer input bridges cannot use Block because OnNext cannot perform asynchronous backpressure.");
+    }
+
+    /// <summary>Rejects custom policies for synchronous observer input bridges.</summary>
+    /// <exception cref="InvalidOperationException">The custom observer input policy is unsupported.</exception>
+    private void ValidateCustomPolicy()
+    {
+        if (BufferStrategy != BufferStrategy.Custom)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException("Observer input bridges do not support custom admission policies.");
     }
 }

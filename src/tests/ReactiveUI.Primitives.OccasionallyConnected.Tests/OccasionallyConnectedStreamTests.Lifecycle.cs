@@ -125,10 +125,10 @@ public sealed partial class OccasionallyConnectedStreamTests
         await Assert.That(() => stream.Local.Subscribe(new RecordingObserver<CounterState>())).ThrowsExactly<ObjectDisposedException>();
     }
 
-    /// <summary>Verifies a synchronously throwing input producer cannot replace the coordinator shutdown failure.</summary>
+    /// <summary>Verifies a synchronous input disposal failure is reported while coordinator shutdown still runs.</summary>
     /// <returns>The asynchronous assertion operation.</returns>
     [Test]
-    public async Task DisposeAsyncPreservesStopFailureWhenInputDisposalThrowsSynchronously()
+    public async Task DisposeAsyncReportsInputDisposalFailureAndStillStopsCoordinator()
     {
         await using var store = await CreateInitializedStoreAsync();
         var coordinator = new RecordingCoordinator(store) { ThrowOnStop = true };
@@ -137,9 +137,9 @@ public sealed partial class OccasionallyConnectedStreamTests
         await stream.StartAsync(CancellationToken.None);
 
         var exception = await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => stream.DisposeAsync().AsTask());
-
-        await Assert.That(exception?.Message).IsEqualTo("stop failed");
+        await Assert.That(exception?.Message).IsEqualTo("synchronous input disposal failed");
         await Assert.That(inputProducer.DisposeCalls).IsEqualTo(1);
+        await Assert.That(coordinator.StopCalls).IsEqualTo(1);
         await Assert.That(() => stream.Local.Subscribe(new RecordingObserver<CounterState>())).ThrowsExactly<ObjectDisposedException>();
     }
 

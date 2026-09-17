@@ -51,6 +51,9 @@ public sealed partial class OccasionallyConnectedStreamTests
     /// <summary>The serializer target type failure message used by test serializers.</summary>
     private const string UnexpectedTargetTypeMessage = "Unexpected target type.";
 
+    /// <summary>The explicit base version used by publish-option propagation tests.</summary>
+    private const string ExplicitBaseVersion = "server-v1";
+
     /// <summary>The stream work lane capacity used by tests.</summary>
     private const int WorkCapacity = 2;
 
@@ -62,6 +65,9 @@ public sealed partial class OccasionallyConnectedStreamTests
 
     /// <summary>A deliberately tiny notification queue byte capacity for retained-size tests.</summary>
     private const int TinyNotificationCapacityBytes = 1;
+
+    /// <summary>The number of seconds allowed for test synchronization waits.</summary>
+    private const int TestWaitTimeoutSeconds = 5;
 
     /// <summary>The local SQLite file name used by tests.</summary>
     private const string LocalDatabaseFileName = "local.db";
@@ -164,8 +170,8 @@ public sealed partial class OccasionallyConnectedStreamTests
             await using var secondStore = await CreateInitializedStoreAsync(databasePath);
             await using var secondStream = CreateStream(secondStore, CreateDefinition(subscriptionId: OtherSubscription));
 
-            _ = await Assert.ThrowsExactlyAsync<InvalidOperationException>(
-                () => secondStream.StartAsync(CancellationToken.None).AsTask());
+            await Assert.That(() => secondStream.StartAsync(CancellationToken.None).AsTask())
+                .ThrowsExactly<InvalidOperationException>();
         }
         finally
         {
@@ -219,6 +225,59 @@ public sealed partial class OccasionallyConnectedStreamTests
         await AssertSequenceAsync(receipts.Select(static receipt => receipt.ClientSequence).ToArray(), [FirstSequence, SecondSequence]);
         await AssertSequenceAsync(local.Values.Select(static state => state.Sum).ToArray(), [0, FirstValue, FirstValue + SecondValue]);
         await AssertSequenceAsync(recovery.PendingOperations.Select(static operation => operation.ClientSequence).ToArray(), [FirstSequence, SecondSequence]);
+    }
+
+    /// <summary>Verifies facade disposal waits for accepted durable input before lane close.</summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Test]
+    public async Task DisposeAsyncWaitsForAcceptedDurablePublishBeforeClosingLane()
+    {
+        await using var store = await CreateInitializedStoreAsync();
+        TaskCompletionSource inputSerializeEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource releaseInputSerialize = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var serializer = new ScriptedPayloadSerializer { InputSerializeEntered = inputSerializeEntered, ReleaseInputSerialize = releaseInputSerialize };
+        await using var stream = CreateStream(store, serializer: serializer);
+        await stream.StartAsync(CancellationToken.None);
+        var subscriptionId = stream.SubscriptionId;
+
+        var publish = stream.PublishAsync(new(FirstValue), null, CancellationToken.None).AsTask();
+        await inputSerializeEntered.Task.WaitAsync(TimeSpan.FromSeconds(TestWaitTimeoutSeconds));
+        var dispose = stream.DisposeAsync().AsTask();
+
+        await Assert.That(dispose.IsCompleted).IsFalse();
+        await Assert.That(publish.IsCompleted).IsFalse();
+
+        _ = releaseInputSerialize.TrySetResult();
+        var receipt = await publish.WaitAsync(TimeSpan.FromSeconds(TestWaitTimeoutSeconds));
+        await dispose.WaitAsync(TimeSpan.FromSeconds(TestWaitTimeoutSeconds));
+        var recovery = await store.RecoverStreamAsync(Stream, subscriptionId, CancellationToken.None);
+
+        await Assert.That(receipt.ClientSequence).IsEqualTo(FirstSequence);
+        await Assert.That(recovery.PendingOperations.Count).IsEqualTo(1);
+        await Assert.That(recovery.PendingOperations[0].OperationId).IsEqualTo(receipt.OperationId);
+        await Assert.That(async () => await stream.PublishAsync(new(SecondValue), null, CancellationToken.None))
+            .ThrowsExactly<ObjectDisposedException>();
+    }
+
+    /// <summary>Verifies typed publish admitted before first initialization drains during dispose.</summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Test]
+    public async Task PublishAsyncBeforeStartInitializesAndDrainsDuringDispose()
+    {
+        await using var store = await CreateInitializedStoreAsync();
+        await using var stream = CreateStream(store, CreateDefinition(subscriptionId: ExplicitSubscription));
+
+        var publish = stream.PublishAsync(new(FirstValue), null, CancellationToken.None).AsTask();
+        var dispose = stream.DisposeAsync().AsTask();
+        var receipt = await publish.WaitAsync(TimeSpan.FromSeconds(TestWaitTimeoutSeconds));
+        await dispose.WaitAsync(TimeSpan.FromSeconds(TestWaitTimeoutSeconds));
+        var recovery = await store.RecoverStreamAsync(Stream, ExplicitSubscription, CancellationToken.None);
+
+        await Assert.That(receipt.ClientSequence).IsEqualTo(FirstSequence);
+        await Assert.That(recovery.PendingOperations.Count).IsEqualTo(1);
+        await Assert.That(recovery.PendingOperations[0].OperationId).IsEqualTo(receipt.OperationId);
+        await Assert.That(async () => await stream.PublishAsync(new(SecondValue), null, CancellationToken.None))
+            .ThrowsExactly<ObjectDisposedException>();
     }
 
     /// <summary>Verifies a commit-ready nudge failure is reported without discarding the durable receipt.</summary>
@@ -408,7 +467,7 @@ public sealed partial class OccasionallyConnectedStreamTests
                 TimeProvider = new FixedTimeProvider(Now),
                 OperationIdSource = new SequenceOperationIdSource(),
                 Coordinator = coordinator ?? new RecordingCoordinator(store),
-                InputProducer = inputProducer ?? new RecordingInputProducer<CounterInput>(),
+                InputProducer = inputProducer,
                 LocalStateSnapshotFactory = (payload, _) => new(payloadSerializer.CreateCounterStateSnapshot(payload)),
                 RemoteInputSnapshotFactory = (payload, _) => new(payloadSerializer.CreateCounterInputSnapshot(payload)),
                 NotificationScheduler = scheduler ?? new ControlledObserverScheduler(),
@@ -792,140 +851,4 @@ public sealed partial class OccasionallyConnectedStreamTests
         /// <inheritdoc />
         public override DateTimeOffset GetUtcNow() => utcNow;
     }
-
-    /// <summary>Serializes immutable counter payloads as invariant text.</summary>
-    private sealed class ScriptedPayloadSerializer : IPayloadSerializer
-    {
-        /// <inheritdoc />
-        public string ContentType => PayloadContentType;
-
-        /// <summary>Creates an immutable counter state snapshot from a payload.</summary>
-        /// <param name="envelope">The payload envelope.</param>
-        /// <returns>The state snapshot.</returns>
-        public CounterState CreateCounterStateSnapshot(PayloadEnvelope envelope) =>
-            new(ParsePayloadValue(envelope));
-
-        /// <summary>Creates an immutable counter input snapshot from a payload.</summary>
-        /// <param name="envelope">The payload envelope.</param>
-        /// <returns>The input snapshot.</returns>
-        public CounterInput CreateCounterInputSnapshot(PayloadEnvelope envelope) =>
-            new(CreateCounterStateSnapshot(envelope).Sum);
-
-        /// <inheritdoc />
-        public ValueTask<PayloadEnvelope> SerializeAsync<T>(
-            string contractId,
-            int schemaVersion,
-            T value,
-            CancellationToken cancellationToken)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var numeric = value switch
-            {
-                CounterInput input => input.Delta,
-                CounterState state => state.Sum,
-                _ => throw new InvalidOperationException(UnexpectedPayloadTypeMessage),
-            };
-            var text = numeric.ToString(CultureInfo.InvariantCulture);
-            var payload = System.Text.Encoding.UTF8.GetBytes(text);
-            return ValueTask.FromResult(new PayloadEnvelope(contractId, schemaVersion, ContentType, payload, $"hash-{text}"));
-        }
-
-        /// <inheritdoc />
-        public ValueTask<object> DeserializeAsync(PayloadEnvelope envelope, Type targetType, CancellationToken cancellationToken)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var value = ParsePayloadValue(envelope);
-            if (targetType == typeof(CounterInput))
-            {
-                return ValueTask.FromResult<object>(new CounterInput(value));
-            }
-
-            if (targetType == typeof(CounterState))
-            {
-                return ValueTask.FromResult<object>(new CounterState(value));
-            }
-
-            throw new InvalidOperationException(UnexpectedTargetTypeMessage);
-        }
-    }
-
-    /// <summary>Serializes mutable counter state as invariant text.</summary>
-    private sealed class MutableCounterPayloadSerializer : IPayloadSerializer
-    {
-        /// <inheritdoc />
-        public string ContentType => PayloadContentType;
-
-        /// <summary>Creates a mutable counter state snapshot from a payload.</summary>
-        /// <param name="envelope">The payload envelope.</param>
-        /// <returns>The state snapshot.</returns>
-        public MutableCounterState CreateMutableCounterStateSnapshot(PayloadEnvelope envelope) =>
-            new(ParsePayloadValue(envelope));
-
-        /// <summary>Creates an immutable counter input snapshot from a payload.</summary>
-        /// <param name="envelope">The payload envelope.</param>
-        /// <returns>The input snapshot.</returns>
-        public CounterInput CreateCounterInputSnapshot(PayloadEnvelope envelope) =>
-            new(CreateMutableCounterStateSnapshot(envelope).Sum);
-
-        /// <inheritdoc />
-        public ValueTask<PayloadEnvelope> SerializeAsync<T>(
-            string contractId,
-            int schemaVersion,
-            T value,
-            CancellationToken cancellationToken)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var numeric = value switch
-            {
-                CounterInput input => input.Delta,
-                MutableCounterState state => state.Sum,
-                _ => throw new InvalidOperationException(UnexpectedPayloadTypeMessage),
-            };
-            var text = numeric.ToString(CultureInfo.InvariantCulture);
-            var payload = System.Text.Encoding.UTF8.GetBytes(text);
-            return ValueTask.FromResult(new PayloadEnvelope(contractId, schemaVersion, ContentType, payload, $"hash-{text}"));
-        }
-
-        /// <inheritdoc />
-        public ValueTask<object> DeserializeAsync(PayloadEnvelope envelope, Type targetType, CancellationToken cancellationToken)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var value = ParsePayloadValue(envelope);
-            if (targetType == typeof(CounterInput))
-            {
-                return ValueTask.FromResult<object>(new CounterInput(value));
-            }
-
-            if (targetType == typeof(MutableCounterState))
-            {
-                return ValueTask.FromResult<object>(new MutableCounterState(value));
-            }
-
-            throw new InvalidOperationException(UnexpectedTargetTypeMessage);
-        }
-    }
-
-    /// <summary>Stores mutable counter state.</summary>
-    private sealed class MutableCounterState
-    {
-        /// <summary>Initializes a new instance of the <see cref="MutableCounterState"/> class.</summary>
-        /// <param name="sum">The initial sum.</param>
-        public MutableCounterState(int sum) => Sum = sum;
-
-        /// <summary>Gets the current sum.</summary>
-        public int Sum { get; private set; }
-
-        /// <summary>Replaces the current sum.</summary>
-        /// <param name="value">The replacement value.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Replace(int value) => Sum = value;
-    }
-
-    /// <summary>Stores a counter input.</summary>
-    /// <param name="Delta">The input delta.</param>
-    private sealed record CounterInput(int Delta);
-
-    /// <summary>Stores immutable counter state.</summary>
-    /// <param name="Sum">The current sum.</param>
-    private sealed record CounterState(int Sum);
 }

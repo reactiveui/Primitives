@@ -260,6 +260,11 @@ public static class IOccasionallyConnectedContextExtensions
         public System.Threading.Tasks.ValueTask StopAsync() { }
     }
 }
+public interface IOccasionallyConnectedInputCapture<in TInput>
+{
+    ReactiveUI.Primitives.OccasionallyConnected.PayloadEnvelope Capture(TInput value) { }
+    long GetRetainedByteCount(TInput value) { }
+}
 public interface IOccasionallyConnectedStream<T> : ReactiveUI.Primitives.OccasionallyConnected.IOccasionallyConnectedStream<T, T>
 {
 }
@@ -1211,6 +1216,7 @@ public enum StartPositionKind
 public record StreamDefinition<TState, TInput> : System.IEquatable<ReactiveUI.Primitives.OccasionallyConnected.StreamDefinition<TState, TInput>>
 {
     public ReactiveUI.Primitives.OccasionallyConnected.ObserverInputOptions? Input { get; init; }
+    public ReactiveUI.Primitives.OccasionallyConnected.IOccasionallyConnectedInputCapture<TInput>? InputCapture { get; init; }
     public required string InputContractId { get; init; }
     public int InputSchemaVersion { get; init; }
     public required ReactiveUI.Primitives.OccasionallyConnected.ILocalProjection<TState, TInput> Projection { get; init; }
