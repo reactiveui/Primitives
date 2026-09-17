@@ -76,15 +76,22 @@ public sealed partial class OccasionallyConnectedInputProducerTests
         var publisher = new RecordingPublisher();
         await using var producer = CreateProducer(capture, publisher.PublishAsync);
 
-        var first = Task.Run(() => producer.Observer.OnNext(new(FirstInputSequence, NormalRetainedBytes)));
-        capture.WaitForFirstCapture();
-        var second = Task.Run(() => producer.Observer.OnNext(new(SecondInputSequence, NormalRetainedBytes)));
-        capture.WaitForSecondCapture();
+        var first = RunSynchronousProducer(() => producer.Observer.OnNext(new(FirstInputSequence, NormalRetainedBytes)));
+        try
+        {
+            capture.WaitForFirstCapture();
+            var second = RunSynchronousProducer(() => producer.Observer.OnNext(new(SecondInputSequence, NormalRetainedBytes)));
+            await second;
+            capture.WaitForSecondCapture();
 
-        await Assert.That(publisher.PublishedValues.Count).IsEqualTo(0);
+            await Assert.That(publisher.PublishedValues.Count).IsEqualTo(0);
+        }
+        finally
+        {
+            capture.ReleaseFirstCapture();
+            await first;
+        }
 
-        capture.ReleaseFirstCapture();
-        await Task.WhenAll(first, second);
         await publisher.WaitForPublishedCountAsync(SecondInputSequence);
 
         await Assert.That(publisher.PublishedValues[0]).IsEqualTo(FirstInputSequence);
@@ -195,15 +202,22 @@ public sealed partial class OccasionallyConnectedInputProducerTests
             new() { BufferStrategy = BufferStrategy.DropOldest, BufferCapacity = TwoInputCapacity, BufferCapacityBytes = ProducerBufferCapacityBytes },
             durable: false);
 
-        var first = Task.Run(() => producer.Observer.OnNext(new(FirstInputSequence, NormalRetainedBytes)));
-        capture.WaitForFirstCapture();
-        var second = Task.Run(() => producer.Observer.OnNext(new(SecondInputSequence, NormalRetainedBytes)));
-        capture.WaitForSecondCapture();
-        await second;
+        var first = RunSynchronousProducer(() => producer.Observer.OnNext(new(FirstInputSequence, NormalRetainedBytes)));
+        try
+        {
+            capture.WaitForFirstCapture();
+            var second = RunSynchronousProducer(() => producer.Observer.OnNext(new(SecondInputSequence, NormalRetainedBytes)));
+            await second;
+            capture.WaitForSecondCapture();
 
-        producer.Observer.OnNext(new(ThirdInputSequence, NormalRetainedBytes));
-        capture.ReleaseFirstCapture();
-        await first;
+            producer.Observer.OnNext(new(ThirdInputSequence, NormalRetainedBytes));
+        }
+        finally
+        {
+            capture.ReleaseFirstCapture();
+            await first;
+        }
+
         await publisher.WaitForPublishedCountAsync(SecondInputSequence);
 
         await Assert.That(publisher.PublishedValues[0]).IsEqualTo(FirstInputSequence);
@@ -226,15 +240,22 @@ public sealed partial class OccasionallyConnectedInputProducerTests
             new() { BufferStrategy = BufferStrategy.DropOldest, BufferCapacity = TwoInputCapacity, BufferCapacityBytes = ProducerBufferCapacityBytes },
             durable: false);
 
-        var first = Task.Run(() => producer.Observer.OnNext(new(FirstInputSequence, NormalRetainedBytes)));
-        capture.WaitForFirstCapture();
-        var second = Task.Run(() => producer.Observer.OnNext(new(SecondInputSequence, NormalRetainedBytes)));
-        capture.WaitForSecondCapture();
-        await second;
+        var first = RunSynchronousProducer(() => producer.Observer.OnNext(new(FirstInputSequence, NormalRetainedBytes)));
+        try
+        {
+            capture.WaitForFirstCapture();
+            var second = RunSynchronousProducer(() => producer.Observer.OnNext(new(SecondInputSequence, NormalRetainedBytes)));
+            await second;
+            capture.WaitForSecondCapture();
 
-        producer.Observer.OnNext(new(ThirdInputSequence, OversizedRetainedBytes));
-        capture.ReleaseFirstCapture();
-        await first;
+            producer.Observer.OnNext(new(ThirdInputSequence, OversizedRetainedBytes));
+        }
+        finally
+        {
+            capture.ReleaseFirstCapture();
+            await first;
+        }
+
         await producer.DisposeAsync();
 
         await Assert.That(publisher.PublishedValues.Count).IsEqualTo(SecondInputSequence);
@@ -366,20 +387,27 @@ public sealed partial class OccasionallyConnectedInputProducerTests
 
         await using var producer = CreateProducer(capture, publisher.PublishAsync, faults);
 
-        var publish = Task.Run(() => producer.Observer.OnNext(new(FirstInputSequence, NormalRetainedBytes)));
-        WaitForSignal(sizingEntered);
-        var dispose = producer.DisposeAsync().AsTask();
+        var publish = RunSynchronousProducer(() => producer.Observer.OnNext(new(FirstInputSequence, NormalRetainedBytes)));
+        try
+        {
+            WaitForSignal(sizingEntered);
+            var dispose = producer.DisposeAsync().AsTask();
 
-        await Assert.That(dispose.IsCompleted).IsFalse();
+            await Assert.That(dispose.IsCompleted).IsFalse();
 
-        releaseSizing.Set();
-        WaitForSignal(faultEntered);
+            releaseSizing.Set();
+            WaitForSignal(faultEntered);
 
-        await Assert.That(dispose.IsCompleted).IsFalse();
+            await Assert.That(dispose.IsCompleted).IsFalse();
+        }
+        finally
+        {
+            releaseSizing.Set();
+            releaseFault.Set();
+            await publish;
+        }
 
-        releaseFault.Set();
-        await publish;
-        await dispose;
+        await producer.DisposeAsync();
 
         void BlockFaultCallback(RecordedFault _)
         {
@@ -403,20 +431,27 @@ public sealed partial class OccasionallyConnectedInputProducerTests
 
         await using var producer = CreateProducer(capture, publisher.PublishAsync, faults);
 
-        var publish = Task.Run(() => producer.Observer.OnNext(new(FirstInputSequence, NormalRetainedBytes)));
-        WaitForSignal(captureEntered);
-        var dispose = producer.DisposeAsync().AsTask();
+        var publish = RunSynchronousProducer(() => producer.Observer.OnNext(new(FirstInputSequence, NormalRetainedBytes)));
+        try
+        {
+            WaitForSignal(captureEntered);
+            var dispose = producer.DisposeAsync().AsTask();
 
-        await Assert.That(dispose.IsCompleted).IsFalse();
+            await Assert.That(dispose.IsCompleted).IsFalse();
 
-        releaseCapture.Set();
-        WaitForSignal(faultEntered);
+            releaseCapture.Set();
+            WaitForSignal(faultEntered);
 
-        await Assert.That(dispose.IsCompleted).IsFalse();
+            await Assert.That(dispose.IsCompleted).IsFalse();
+        }
+        finally
+        {
+            releaseCapture.Set();
+            releaseFault.Set();
+            await publish;
+        }
 
-        releaseFault.Set();
-        await publish;
-        await dispose;
+        await producer.DisposeAsync();
 
         void BlockFaultCallback(RecordedFault _)
         {
@@ -519,15 +554,21 @@ public sealed partial class OccasionallyConnectedInputProducerTests
         var publisher = new RecordingPublisher();
         await using var producer = CreateProducer(capture, publisher.PublishAsync);
 
-        var publish = Task.Run(() => producer.Observer.OnNext(new(FirstInputSequence, NormalRetainedBytes)));
-        capture.WaitForFirstCapture();
-        var dispose = producer.DisposeAsync().AsTask();
+        var publish = RunSynchronousProducer(() => producer.Observer.OnNext(new(FirstInputSequence, NormalRetainedBytes)));
+        try
+        {
+            capture.WaitForFirstCapture();
+            var dispose = producer.DisposeAsync().AsTask();
 
-        await Assert.That(dispose.IsCompleted).IsFalse();
+            await Assert.That(dispose.IsCompleted).IsFalse();
+        }
+        finally
+        {
+            capture.ReleaseFirstCapture();
+            await publish;
+        }
 
-        capture.ReleaseFirstCapture();
-        await publish;
-        await dispose;
+        await producer.DisposeAsync();
         await publisher.WaitForPublishedCountAsync(SingleInputCapacity);
     }
 
@@ -606,6 +647,13 @@ public sealed partial class OccasionallyConnectedInputProducerTests
         var text = System.Text.Encoding.UTF8.GetString(payload.Payload.Span);
         return int.Parse(text, CultureInfo.InvariantCulture);
     }
+
+    /// <summary>Runs a deliberately blocking observer call independently of the test runner's thread pool.</summary>
+    /// <param name="publish">The synchronous observer call.</param>
+    /// <returns>The observer completion task.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static Task RunSynchronousProducer(Action publish) =>
+        Task.Factory.StartNew(publish, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
     /// <summary>Waits for a synchronous test signal.</summary>
     /// <param name="signal">The signal to wait for.</param>

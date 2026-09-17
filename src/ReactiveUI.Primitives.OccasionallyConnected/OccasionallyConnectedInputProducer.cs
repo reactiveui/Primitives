@@ -315,6 +315,7 @@ internal sealed partial class OccasionallyConnectedInputProducer<TInput> : IOcca
     /// <summary>Schedules the ordered publish pump when needed.</summary>
     private void SchedulePump()
     {
+        InputTicket? ticket;
         lock (_gate)
         {
             if (_pumpRunning || _terminalFailure is not null)
@@ -323,25 +324,34 @@ internal sealed partial class OccasionallyConnectedInputProducer<TInput> : IOcca
             }
 
             _pumpRunning = true;
-            _ = Task.Run(RunPumpAsync);
+            ticket = TryTakeReadyTicketLocked();
         }
+
+        if (ticket is null)
+        {
+            return;
+        }
+
+        _ = Task.Run(() => RunPumpAsync(ticket));
     }
 
     /// <summary>Publishes captured tickets in FIFO order and releases ownership before fault callbacks.</summary>
+    /// <param name="ticket">The first ready ticket owned by this pump.</param>
     /// <returns>The pump task.</returns>
-    private async Task RunPumpAsync()
+    private async Task RunPumpAsync(InputTicket ticket)
     {
         try
         {
             while (true)
             {
-                var ticket = TryTakeReadyTicket();
-                if (ticket is null)
+                await PublishTicketAsync(ticket).ConfigureAwait(false);
+                var next = TryTakeReadyTicket();
+                if (next is null)
                 {
                     return;
                 }
 
-                await PublishTicketAsync(ticket).ConfigureAwait(false);
+                ticket = next;
             }
         }
         catch (Exception exception)
@@ -356,27 +366,34 @@ internal sealed partial class OccasionallyConnectedInputProducer<TInput> : IOcca
     {
         lock (_gate)
         {
-            var node = _tickets.First;
-            if (node is null)
-            {
-                _pumpRunning = false;
-                CompleteDisposeIfDrained();
-                return null;
-            }
-
-            var ticket = node.Value;
-            if (!ticket.Ready)
-            {
-                _pumpRunning = false;
-                CompleteDisposeIfDrained();
-                return null;
-            }
-
-            _tickets.Remove(node);
-            ticket.Node = null;
-            ticket.Publishing = true;
-            return ticket;
+            return TryTakeReadyTicketLocked();
         }
+    }
+
+    /// <summary>Acquires the ready FIFO head or relinquishes pump ownership while the admission gate is held.</summary>
+    /// <returns>The ready ticket, or null when no pump work is ready.</returns>
+    private InputTicket? TryTakeReadyTicketLocked()
+    {
+        var node = _tickets.First;
+        if (node is null)
+        {
+            _pumpRunning = false;
+            CompleteDisposeIfDrained();
+            return null;
+        }
+
+        var ticket = node.Value;
+        if (!ticket.Ready)
+        {
+            _pumpRunning = false;
+            CompleteDisposeIfDrained();
+            return null;
+        }
+
+        _tickets.Remove(node);
+        ticket.Node = null;
+        ticket.Publishing = true;
+        return ticket;
     }
 
     /// <summary>Publishes one captured ticket and releases ownership before reporting publish failure.</summary>

@@ -37,9 +37,6 @@ public sealed partial class InMemoryLocalStoreAdapterTests
     /// <summary>The default lease byte limit.</summary>
     private const long DefaultLeaseBytes = 128;
 
-    /// <summary>The byte capacity used by bounded tests.</summary>
-    private const long StoreByteCapacity = 12;
-
     /// <summary>The store byte capacity used for metadata accounting tests.</summary>
     private const int MetadataStoreByteCapacity = 512;
 

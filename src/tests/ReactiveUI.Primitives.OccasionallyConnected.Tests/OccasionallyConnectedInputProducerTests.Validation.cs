@@ -165,18 +165,25 @@ public sealed partial class OccasionallyConnectedInputProducerTests
 
         producer.Observer.OnNext(new(FirstInputSequence, NormalRetainedBytes));
         await publisher.WaitForAttemptCountAsync(SingleInputCapacity);
-        var secondCapture = Task.Run(() => producer.Observer.OnNext(new(SecondInputSequence, NormalRetainedBytes)));
-        capture.WaitForSecondCapture();
-        _ = releaseFirstFailure.TrySetResult();
-        await faults.WaitForFaultCountAsync(SecondInputSequence);
-        var dispose = producer.DisposeAsync().AsTask();
+        var secondCapture = RunSynchronousProducer(() => producer.Observer.OnNext(new(SecondInputSequence, NormalRetainedBytes)));
+        try
+        {
+            capture.WaitForSecondCapture();
+            _ = releaseFirstFailure.TrySetResult();
+            await faults.WaitForFaultCountAsync(SecondInputSequence);
+            var dispose = producer.DisposeAsync().AsTask();
 
-        await Assert.That(dispose.IsCompleted).IsFalse();
+            await Assert.That(dispose.IsCompleted).IsFalse();
+        }
+        finally
+        {
+            _ = releaseFirstFailure.TrySetResult();
+            capture.ReleaseSecondCapture();
+            await secondCapture;
+        }
 
-        capture.ReleaseSecondCapture();
-        await secondCapture;
         var exception = await Assert.ThrowsExactlyAsync<OutOfMemoryException>(
-            () => dispose.WaitAsync(TimeSpan.FromSeconds(SignalTimeoutSeconds)));
+            () => producer.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(SignalTimeoutSeconds)));
         await Assert.That(exception).IsSameReferenceAs(FatalCallbackFailure);
         await Assert.That(publisher.AttemptCount).IsEqualTo(SingleInputCapacity);
         await Assert.That(publisher.PublishedValues.Count).IsEqualTo(0);

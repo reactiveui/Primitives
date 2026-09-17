@@ -178,7 +178,7 @@ public sealed partial class LoopbackTransportAdapter : IRemoteTransportAdapter
         /// <exception cref="SyncBatchValidationException">The hub result does not exactly match the pushed batch.</exception>
         public async ValueTask<RemoteSyncResult> PushAsync(SyncBatch batch, CancellationToken cancellationToken)
         {
-            await using var prepared = PreparePush(batch, cancellationToken);
+            await using var prepared = CreatePreparedPush(batch, cancellationToken);
             return await prepared.SendAsync(cancellationToken).ConfigureAwait(false);
         }
 
@@ -240,7 +240,7 @@ public sealed partial class LoopbackTransportAdapter : IRemoteTransportAdapter
         /// <inheritdoc/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         ValueTask<IPreparedRemotePush> IRemoteTransportBatchPreparer.PreparePushAsync(SyncBatch batch, CancellationToken cancellationToken) =>
-            new(PreparePush(batch, cancellationToken));
+            new(CreatePreparedPush(batch, cancellationToken));
 
         /// <summary>Prepares a push batch and reserves loopback capacity until send or disposal.</summary>
         /// <param name="batch">The synchronization batch to prepare.</param>
@@ -249,7 +249,7 @@ public sealed partial class LoopbackTransportAdapter : IRemoteTransportAdapter
         /// <exception cref="ArgumentNullException"><paramref name="batch"/> is <see langword="null"/>.</exception>
         /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> is canceled.</exception>
         /// <exception cref="InvalidOperationException">The batch exceeds loopback bounds.</exception>
-        private LoopbackPreparedPush PreparePush(SyncBatch batch, CancellationToken cancellationToken)
+        private LoopbackPreparedPush CreatePreparedPush(SyncBatch batch, CancellationToken cancellationToken)
         {
             ArgumentExceptionHelper.ThrowIfNull(batch);
             var prepared = AdmitPreparedPush(batch, cancellationToken);
@@ -523,15 +523,8 @@ public sealed partial class LoopbackTransportAdapter : IRemoteTransportAdapter
 
         /// <summary>Cancels the session disposal token.</summary>
         /// <returns>The cancellation task.</returns>
-        private Task CancelDisposeTokenAsync()
-        {
-#if NET8_0_OR_GREATER
-            return _disposeCts.CancelAsync();
-#else
-            _disposeCts.Cancel();
-            return Task.CompletedTask;
-#endif
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private Task CancelDisposeTokenAsync() => _disposeCts.CancelAsync();
 
         /// <summary>Throws when the session is disposed.</summary>
         /// <exception cref="ObjectDisposedException">The session is disposed.</exception>
